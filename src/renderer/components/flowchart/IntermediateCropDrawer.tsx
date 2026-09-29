@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/flowchart/IntermediateCropDrawer.tsx
- * Inspection & Industrial Style 19-ROI Intermediate Detailed Inspection Drawer.
+ * Inspection results from an executed pipeline.
  * High-contrast dark steel chassis (#131822 / #1A212E), strict tabular-nums font-mono,
  * master annotated vector overlay, and industrial stage latency breakdown table.
  */
@@ -15,7 +15,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
-import { STANDARD_19_ROIS, STANDARD_EXECUTION_STEPS } from './flowchartMockData';
 import type { FlowchartCrop } from '../../types';
 
 export const IntermediateCropDrawer: React.FC = () => {
@@ -26,23 +25,10 @@ export const IntermediateCropDrawer: React.FC = () => {
   const [sortKey, setSortKey] = useState<'score_desc' | 'score_asc' | 'id_asc' | 'label_asc'>('score_desc');
   const [hoveredRoiId, setHoveredRoiId] = useState<string | null>(null);
 
-  // If real execution result has crops, use them; if fewer than 5 (e.g. initial fallback), augment with standard 19 ROIs
-  const crops: FlowchartCrop[] = useMemo(() => {
-    if (executionResult?.crops && executionResult.crops.length >= 10) {
-      return executionResult.crops;
-    }
-    return STANDARD_19_ROIS;
-  }, [executionResult]);
-
-  const executionSteps = useMemo(() => {
-    if (executionResult?.execution_steps && executionResult.execution_steps.length > 0) {
-      return executionResult.execution_steps;
-    }
-    return STANDARD_EXECUTION_STEPS;
-  }, [executionResult]);
-
-  const totalLatencyMs = executionResult?.total_latency_ms || 54.2;
-  const isOk = executionResult ? executionResult.is_ok : false;
+  const crops: FlowchartCrop[] = executionResult?.crops ?? [];
+  const executionSteps = executionResult?.execution_steps ?? [];
+  const totalLatencyMs = executionResult?.total_latency_ms ?? 0;
+  const isOk = executionResult?.is_ok;
   const defectiveCount = crops.filter((c) => c.verdict === 'NG').length;
   const normalCount = crops.length - defectiveCount;
 
@@ -77,6 +63,14 @@ export const IntermediateCropDrawer: React.FC = () => {
     return result;
   }, [crops, filter, searchQuery, sortKey]);
 
+  if (!executionResult) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#0B0E14] text-slate-400 text-sm">
+        실행된 검사 결과가 없습니다. 모델과 이미지를 선택한 뒤 회로를 실행하세요.
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex p-5 space-x-5 overflow-hidden bg-[#0B0E14] text-slate-200">
       {/* =================================================================== */}
@@ -93,7 +87,7 @@ export const IntermediateCropDrawer: React.FC = () => {
               </h3>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              1차 부품 검출(Faster R-CNN) ➔ 2차 결함 이상탐지(PaDiM) 합성 오버레이
+              실행된 모델의 이미지와 검출 영역
             </p>
           </div>
 
@@ -110,130 +104,19 @@ export const IntermediateCropDrawer: React.FC = () => {
                 isOk ? 'bg-[#10B981]' : 'bg-[#EF4444] animate-pulse'
               }`}
             />
-            <span>최종 판정: {isOk ? 'PASS (합격)' : 'FAIL (불량 검출)'}</span>
+            <span>최종 판정: {isOk ? 'OK' : 'NG'}</span>
           </div>
         </div>
 
-        {/* Master Inspection Image / Canvas with Vector Overlays */}
+        {/* Annotated image returned by the executed pipeline */}
         <div className="flex-1 bg-[#0B0E14] rounded border border-[#2B3547] mt-3 relative overflow-hidden flex items-center justify-center min-h-[340px]">
-          {/* Synthetic or Real Annotated Image Viewport */}
-          <svg
-            className="w-full h-full max-h-[380px]"
-            viewBox="0 0 700 550"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            {/* PCB Background Substrate */}
-            <rect width="700" height="550" fill="#0c1815" rx="4" />
-            
-            {/* Ground Grid Pattern */}
-            <pattern id="pcbGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#162e26" strokeWidth="0.8" />
-            </pattern>
-            <rect width="700" height="550" fill="url(#pcbGrid)" />
-
-            {/* Copper Traces */}
-            <g stroke="#235242" strokeWidth="2" fill="none">
-              <path d="M 80 50 L 80 500" />
-              <path d="M 80 180 L 280 180" />
-              <path d="M 245 200 L 245 310" />
-              <path d="M 350 140 L 380 140" />
-              <path d="M 475 150 L 510 150" />
-              <path d="M 175 335 L 200 335" />
-              <path d="M 265 335 L 285 335" />
-              <path d="M 350 335 L 370 335" />
-              <path d="M 420 335 L 440 335" />
-              <path d="M 490 335 L 510 335" />
-              <path d="M 155 410 L 180 410" />
-              <path d="M 260 410 L 285 410" />
-              <path d="M 380 430 L 405 410" />
-              <path d="M 455 410 L 480 410" />
-              <path d="M 525 410 L 550 410" />
-            </g>
-
-            {/* Render All 19 BBoxes */}
-            {crops.map((crop) => {
-              const [x1, y1, x2, y2] = crop.bbox;
-              const w = x2 - x1;
-              const h = y2 - y1;
-              const isNg = crop.verdict === 'NG';
-              const isHovered = hoveredRoiId === crop.roi_id;
-              const strokeColor = isHovered ? '#F59E0B' : isNg ? '#EF4444' : '#10B981';
-
-              return (
-                <g
-                  key={crop.roi_id}
-                  className="cursor-pointer transition-all duration-150"
-                  onClick={() => setInspectedCrop(crop)}
-                  onMouseEnter={() => setHoveredRoiId(crop.roi_id)}
-                  onMouseLeave={() => setHoveredRoiId(null)}
-                >
-                  {/* Bounding Box Rect */}
-                  <rect
-                    x={x1}
-                    y={y1}
-                    width={w}
-                    height={h}
-                    fill={isNg ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.08)'}
-                    stroke={strokeColor}
-                    strokeWidth={isHovered ? 2.5 : 1.5}
-                    rx="2"
-                  />
-
-                  {/* Corner Reticle Markers (Inspection Style) */}
-                  <path
-                    d={`M ${x1} ${y1 + 6} L ${x1} ${y1} L ${x1 + 6} ${y1}`}
-                    stroke={strokeColor}
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <path
-                    d={`M ${x2 - 6} ${y1} L ${x2} ${y1} L ${x2} ${y1 + 6}`}
-                    stroke={strokeColor}
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <path
-                    d={`M ${x1} ${y2 - 6} L ${x1} ${y2} L ${x1 + 6} ${y2}`}
-                    stroke={strokeColor}
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <path
-                    d={`M ${x2 - 6} ${y2} L ${x2} ${y2} L ${x2} ${y2 - 6}`}
-                    stroke={strokeColor}
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-
-                  {/* Label Pill */}
-                  <rect
-                    x={x1}
-                    y={Math.max(12, y1 - 15)}
-                    width={Math.min(w, 75)}
-                    height="13"
-                    fill="#0B0E14"
-                    stroke={strokeColor}
-                    strokeWidth="1"
-                    rx="2"
-                  />
-                  <text
-                    x={x1 + 3}
-                    y={Math.max(12, y1 - 15) + 9.5}
-                    fill={strokeColor}
-                    fontFamily="monospace"
-                    fontSize="8"
-                    fontWeight="bold"
-                  >
-                    {crop.roi_id} | {isNg ? 'NG' : 'OK'}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Viewport Overlay Tag */}
+          {executionResult.annotated_image ? (
+            <img src={executionResult.annotated_image} alt="실제 검사 결과" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <span className="text-slate-400 text-xs">결과 이미지가 없습니다.</span>
+          )}
           <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] px-2 py-1 rounded text-[10px] font-mono text-slate-300">
-            해상도: 700 × 550 px | 19-ROI 매핑 완료
+            {executionResult.roi_count} ROI 검사 결과
           </div>
         </div>
 
@@ -250,14 +133,11 @@ export const IntermediateCropDrawer: React.FC = () => {
             <span>
               판정 사유:{' '}
               <strong className="text-white">
-                {executionResult?.rejection_reason ||
-                  (isOk
-                    ? '전체 19개 부품 공정 기준 충족 (정상 합격)'
-                    : `${defectiveCount}개 결함 ROI 검출 (납 브릿지 쇼트, 보이드 미납, 툼스톤 들뜸)`)}
+                {executionResult.rejection_reason || '판정 사유가 제공되지 않았습니다.'}
               </strong>
             </span>
           </div>
-          <span className="text-[10px] text-slate-400">규격: Zero-Defect Rule</span>
+          <span className="text-[10px] text-slate-400">로컬 모델 결과</span>
         </div>
 
         {/* =================================================================== */}
@@ -268,15 +148,12 @@ export const IntermediateCropDrawer: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Clock className="w-3.5 h-3.5 text-[#3B82F6]" />
               <h4 className="text-[11px] font-bold font-mono uppercase text-slate-200">
-                공정 단계별 정밀 지연 시간 (Stage Latency Breakdown Table)
+                실행 단계별 지연 시간
               </h4>
             </div>
             <div className="text-[11px] font-mono">
-              <span className="text-slate-400">총 사이클 타임 (Takt Time): </span>
+              <span className="text-slate-400">로컬 실행 시간: </span>
               <span className="text-white font-bold tabular-nums">{totalLatencyMs.toFixed(1)} ms</span>
-              <span className="text-slate-400 ml-2">
-                (처리율: <strong className="text-[#10B981] tabular-nums">{(1000 / totalLatencyMs).toFixed(1)} FPS</strong>)
-              </span>
             </div>
           </div>
 
@@ -292,8 +169,8 @@ export const IntermediateCropDrawer: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[#1A212E]">
               {executionSteps.map((step, idx) => {
-                const stepLat = step.latency_ms || 1.0;
-                const ratio = Math.min(100, (stepLat / totalLatencyMs) * 100);
+                const stepLat = step.latency_ms ?? 0;
+                const ratio = totalLatencyMs > 0 ? Math.min(100, (stepLat / totalLatencyMs) * 100) : 0;
                 const isStepNg = step.status === 'flagged_ng';
 
                 return (
@@ -311,7 +188,7 @@ export const IntermediateCropDrawer: React.FC = () => {
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${isStepNg ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
-                        <span>{isStepNg ? 'NG 감지' : '정상 통과'}</span>
+                        <span>{step.status}</span>
                       </span>
                     </td>
                     <td className="py-1 px-2 text-right font-bold text-slate-100 tabular-nums">
@@ -339,7 +216,7 @@ export const IntermediateCropDrawer: React.FC = () => {
       </div>
 
       {/* =================================================================== */}
-      {/* RIGHT COLUMN: 19-ROI Crop Gallery (w-[460px]) */}
+      {/* RIGHT COLUMN: Real crop gallery */}
       {/* =================================================================== */}
       <div className="w-[460px] bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col overflow-hidden">
         {/* Gallery Header */}
@@ -407,7 +284,7 @@ export const IntermediateCropDrawer: React.FC = () => {
           </select>
         </div>
 
-        {/* 19-ROI Cards List */}
+        {/* ROI Cards List */}
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
           {processedCrops.length === 0 ? (
             <div className="text-center py-20 text-slate-400 text-xs font-mono">

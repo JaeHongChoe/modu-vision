@@ -249,18 +249,12 @@ def test_no_random_beta_fallback(client):
     assert "random.beta" not in eval_text, "routes_evaluation.py must not contain np.random.beta"
     assert "random.beta" not in analyzer_text, "zero_escape_analyzer.py must not contain np.random.beta"
 
-    # 2. Endpoint determinism: two subsequent requests without job must return deterministic results
+    # 2. No job cannot produce an evidence-backed curve.
     resp1 = client.get("/api/evaluation/overkill-underkill")
-    assert resp1.status_code == 200
-    data1 = resp1.json()
+    assert resp1.status_code == 422
 
     resp2 = client.get("/api/evaluation/overkill-underkill")
-    assert resp2.status_code == 200
-    data2 = resp2.json()
-
-    assert data1["optimal_threshold"] == data2["optimal_threshold"]
-    assert data1["total_defects"] == data2["total_defects"]
-    assert data1["optimal_stats"] == data2["optimal_stats"]
+    assert resp2.status_code == 422
 
     # 3. Linkage with real eval_results.json:
     # Write a test eval_results.json to a temporary job directory and ensure the API loads it

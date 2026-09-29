@@ -10,6 +10,8 @@ import { api } from '../services/api';
 interface DatasetState {
   folderPath: string;
   totalImages: number;
+  sourceImages: number;
+  unlabeledImages: number;
   classes: Record<string, number>;
   split: { train: number; val: number; test: number };
   images: ImageMeta[];
@@ -37,13 +39,17 @@ interface DatasetState {
     modality: 'pcb' | 'wafer' | 'metal';
     split_ratio: number;
   }) => Promise<void>;
-  applySplit: (ratio: number) => Promise<void>;
+  applySplit: (ratio: number, valRatio?: number, testRatio?: number) => Promise<void>;
   loadImages: (page?: number) => Promise<void>;
 }
+
+let latestImageRequest = 0;
 
 export const useDatasetStore = create<DatasetState>((set, get) => ({
   folderPath: './datasets/synthetic',
   totalImages: 0,
+  sourceImages: 0,
+  unlabeledImages: 0,
   classes: {},
   split: { train: 0, val: 0, test: 0 },
   images: [],
@@ -72,12 +78,16 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
   importFolder: async (folder, task) => {
-    set({ isLoading: true });
+    latestImageRequest += 1;
+    set({ folderPath: folder, images: [], totalImagesCount: 0, totalImages: 0, sourceImages: 0, unlabeledImages: 0,
+      split: { train: 0, val: 0, test: 0 }, activeSplitFilter: 'all', page: 1, isLoading: true });
     try {
       const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
+      if (get().folderPath !== folder) return;
       set({
-        folderPath: folder,
         totalImages: res.total_images,
+        sourceImages: res.source_images ?? res.total_images,
+        unlabeledImages: res.unlabeled_images ?? 0,
         classes: res.classes || {},
         split: {
           train: res.split.train,
@@ -114,19 +124,21 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     }
   },
 
-  applySplit: async (ratio) => {
+  applySplit: async (ratio, valRatio, testRatio = 0) => {
     set({ isSplitting: true });
     try {
       const res = await api.dataset.split({
         folder_path: get().folderPath,
         train_ratio: ratio,
+        val_ratio: valRatio,
+        test_ratio: testRatio,
         seed: 42,
       });
-      set((s) => ({
+      set({
         isSplitting: false,
         trainRatio: ratio,
-        split: { ...s.split, train: res.split.train, val: res.split.val },
-      }));
+        split: res.split,
+      });
       await get().loadImages(1);
     } catch (err) {
       set({ isSplitting: false });
@@ -135,6 +147,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   loadImages: async (pageArg) => {
+    const requestId = ++latestImageRequest;
     const { folderPath, pageSize, activeSplitFilter, activeClassFilter } = get();
     const p = pageArg || get().page;
     const offset = (p - 1) * pageSize;
@@ -146,6 +159,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         split: activeSplitFilter === 'all' ? undefined : activeSplitFilter,
         class_name: activeClassFilter || undefined,
       });
+      if (requestId !== latestImageRequest || get().folderPath !== folderPath) return;
       set({
         images: res.items || [],
         totalImagesCount: res.total || 0,

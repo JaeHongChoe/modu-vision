@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import urllib.parse
 
 from fastapi import APIRouter, HTTPException
+import torch
 
 from backend.engine.flowchart_engine import (
     CropInspectionResult,
@@ -133,12 +134,33 @@ def run_flowchart(req: FlowchartRunRequest):
     """
     try:
         pipeline = req.pipeline or get_pipeline()
+        for node in pipeline.nodes:
+            if node.data.node_type not in ("detection_crop", "inspection"):
+                continue
+            job_id = node.data.model_job_id
+            if not job_id:
+                raise HTTPException(status_code=409, detail=f"Model job is missing for {node.data.label}.")
+            checkpoint = _ENGINE._resolve_checkpoint(job_id, node.data.task or "")
+            if checkpoint is None:
+                raise HTTPException(status_code=409, detail=f"Trained model is unavailable for {node.data.label}.")
+            try:
+                metadata = torch.load(checkpoint, map_location="cpu", weights_only=False)
+                actual_task = str(metadata.get("task", "")).lower()
+                expected_task = "detection" if node.data.node_type == "detection_crop" else (node.data.task or "").lower()
+                if actual_task != expected_task or "model_state_dict" not in metadata:
+                    raise ValueError(f"Expected {expected_task}, found {actual_task or 'unknown'}")
+            except Exception as exc:
+                raise HTTPException(status_code=409, detail=f"Model is incompatible with {node.data.label}: {exc}") from exc
+        if not req.image_path or not Path(req.image_path).is_file():
+            raise HTTPException(status_code=422, detail="Select an existing inspection image before running the flowchart.")
         result = _ENGINE.execute(
             pipeline=pipeline,
             image_path=req.image_path,
             image_id=req.image_id,
         )
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error executing flowchart pipeline: %s", e)
         raise HTTPException(

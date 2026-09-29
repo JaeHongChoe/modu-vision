@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import base64
+import binascii
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -110,6 +112,7 @@ def save_annotations(req: AnnotationSaveRequest):
 
     sanitized_items = []
     polygons_for_mask = []
+    brush_masks = []
 
     for item in req.annotations:
         item_dict = item.model_dump()
@@ -161,13 +164,28 @@ def save_annotations(req: AnnotationSaveRequest):
             item_dict["polygon"] = pts_int
             item_dict["points"] = pts_int
 
+        if item.type == "brush_mask" and item.mask_rle:
+            try:
+                prefix, encoded = item.mask_rle.split(",", 1)
+                if prefix != "data:image/png;base64" or len(encoded) > 32_000_000:
+                    raise ValueError("Brush mask must be a PNG data URL under 24 MB")
+                decoded = base64.b64decode(encoded, validate=True)
+                rgba = cv2.imdecode(np.frombuffer(decoded, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+                if rgba is None or rgba.shape[:2] != (img_h, img_w) or rgba.ndim != 3 or rgba.shape[2] != 4:
+                    raise ValueError("Brush mask dimensions or alpha channel are invalid")
+                brush_masks.append((rgba[:, :, 3] > 0, item.category_id or 1))
+            except (ValueError, binascii.Error, cv2.error) as exc:
+                raise HTTPException(status_code=422, detail=f"Invalid brush mask: {exc}") from exc
+
         sanitized_items.append(item_dict)
 
     # If polygon contours provided, auto-rasterize mask PNG
     mask_file_path = None
-    if polygons_for_mask:
+    if polygons_for_mask or brush_masks:
         try:
-            mask_arr = polygons_to_mask(polygons_for_mask, height=img_h, width=img_w)
+            mask_arr = polygons_to_mask(polygons_for_mask, height=img_h, width=img_w) if polygons_for_mask else np.zeros((img_h, img_w), dtype=np.uint8)
+            for brush_pixels, category_id in brush_masks:
+                mask_arr[brush_pixels] = category_id
             mask_file = masks_dir / f"{req.image_id}.png"
             cv2.imwrite(str(mask_file), mask_arr)
             mask_file_path = str(mask_file)
@@ -604,4 +622,3 @@ def api_shape_converter(req: ShapeConverterRequest):
             status_code=400,
             detail=format_error_response("ERR_UNKNOWN", details=f"Shape conversion error: {e}"),
         )
-

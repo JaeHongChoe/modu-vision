@@ -33,6 +33,7 @@ import torch.nn.functional as F
 
 from backend.engine.anomaly.feature_extractor import ResNetFeatureExtractor
 from backend.engine.anomaly.padim import PaDiMDetector
+from backend.engine.anomaly.patchcore import PatchCoreDetector
 from backend.engine.classification.model import create_classification_model
 from backend.engine.detection.model import create_detection_model
 from backend.engine.device import get_device
@@ -254,9 +255,9 @@ def get_default_flowchart() -> FlowchartPipeline:
                 id="node_output",
                 position={"x": 1200, "y": 180},
                 data=FlowNodeData(
-                    label="라인 PLC 디스패치",
+                    label="판정 결과 (로컬 확인)",
                     node_type="output",
-                    params={"reject_actuator": "Line_Cylinder_1", "mes_log": True},
+                    params={},
                 ),
             ),
         ],
@@ -296,7 +297,6 @@ class FlowchartEngine:
             Path(f"./projects/{job_id}/models/best_model.pt"),
             Path(job_id) / "best_model.pt" if Path(job_id).is_dir() else None,
             Path(job_id) if Path(job_id).is_file() else None,
-            Path("./models/best_model.pt"),
         ]
         for cand in candidates:
             if cand and cand.is_file():
@@ -311,17 +311,21 @@ class FlowchartEngine:
 
         ckpt_path = self._resolve_checkpoint(job_id, "detection")
         is_trained = False
-        model = create_detection_model(preset=preset, num_classes=2, pretrained=(ckpt_path is None))
-
         if ckpt_path:
             try:
-                ckpt = torch.load(str(ckpt_path), map_location=self.device)
-                state = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
-                model.load_state_dict(state, strict=False)
+                ckpt = torch.load(str(ckpt_path), map_location=self.device, weights_only=False)
+                model = create_detection_model(
+                    preset=ckpt.get("detector_preset", ckpt.get("preset", preset)),
+                    num_classes=max(2, len(ckpt.get("classes", []))), pretrained=False,
+                )
+                state = ckpt.get("model_state_dict", ckpt.get("model_state", ckpt.get("state_dict", ckpt)))
+                model.load_state_dict(state, strict=True)
                 is_trained = True
                 logger.info("Loaded detection checkpoint from %s", ckpt_path)
             except Exception as e:
-                logger.warning("Could not load detection checkpoint %s: %s", ckpt_path, e)
+                raise RuntimeError(f"Could not load detection checkpoint {ckpt_path}: {e}") from e
+        else:
+            model = create_detection_model(preset=preset, num_classes=2, pretrained=True)
 
         model = model.to(self.device)
         model.eval()
@@ -341,48 +345,64 @@ class FlowchartEngine:
         is_trained = False
 
         if task_clean == "anomaly":
-            detector = PaDiMDetector(backbone_name="resnet18", device=self.device, pretrained=True)
             if ckpt_path:
                 try:
-                    ckpt = torch.load(str(ckpt_path), map_location=self.device)
-                    if "mean" in ckpt and "cov_inv" in ckpt:
-                        detector.mean = ckpt["mean"].to(self.device)
-                        detector.cov_inv = ckpt["cov_inv"].to(self.device)
-                        detector.threshold = float(ckpt.get("threshold", 0.5))
-                        is_trained = True
-                        logger.info("Loaded PaDiM anomaly checkpoint from %s", ckpt_path)
+                    ckpt = torch.load(str(ckpt_path), map_location=self.device, weights_only=False)
+                    state = ckpt.get("model_state_dict", ckpt)
+                    use_patchcore = "patchcore" in str(ckpt.get("detector_type", "")).lower() or "coreset" in state
+                    detector = (PatchCoreDetector if use_patchcore else PaDiMDetector)(
+                        backbone_name="resnet18", device=self.device, pretrained=True,
+                    )
+                    detector.load_state_dict(state)
+                    is_trained = detector.coreset is not None if use_patchcore else (detector.mean is not None and detector.cov_inv is not None)
+                    if not is_trained:
+                        raise ValueError("checkpoint has no fitted anomaly statistics")
+                    logger.info("Loaded PaDiM anomaly checkpoint from %s", ckpt_path)
                 except Exception as e:
-                    logger.warning("Could not load PaDiM checkpoint %s: %s", ckpt_path, e)
+                    raise RuntimeError(f"Could not load anomaly checkpoint {ckpt_path}: {e}") from e
+            else:
+                detector = PaDiMDetector(backbone_name="resnet18", device=self.device, pretrained=True)
             self._model_cache[cache_key] = (detector, is_trained)
             return detector, is_trained
 
         elif task_clean == "segmentation":
-            model = build_segmentation_model(model_name="unet", num_classes=2, preset=preset, pretrained=False)
             if ckpt_path:
                 try:
-                    ckpt = torch.load(str(ckpt_path), map_location=self.device)
-                    state = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
-                    model.load_state_dict(state, strict=False)
+                    ckpt = torch.load(str(ckpt_path), map_location=self.device, weights_only=False)
+                    model = build_segmentation_model(
+                        model_name=ckpt.get("model_name", "unet"),
+                        num_classes=max(2, len(ckpt.get("classes", []))),
+                        preset=ckpt.get("preset", preset), pretrained=False,
+                    )
+                    state = ckpt.get("model_state_dict", ckpt.get("model_state", ckpt.get("state_dict", ckpt)))
+                    model.load_state_dict(state, strict=True)
                     is_trained = True
                     logger.info("Loaded UNet segmentation checkpoint from %s", ckpt_path)
                 except Exception as e:
-                    logger.warning("Could not load segmentation checkpoint %s: %s", ckpt_path, e)
+                    raise RuntimeError(f"Could not load segmentation checkpoint {ckpt_path}: {e}") from e
+            else:
+                model = build_segmentation_model(model_name="unet", num_classes=2, preset=preset, pretrained=False)
             model = model.to(self.device)
             model.eval()
             self._model_cache[cache_key] = (model, is_trained)
             return model, is_trained
 
         elif task_clean in ("classification", "classifier"):
-            model = create_classification_model(backbone="resnet18", num_classes=2, pretrained=False)
             if ckpt_path:
                 try:
-                    ckpt = torch.load(str(ckpt_path), map_location=self.device)
-                    state = ckpt.get("model_state", ckpt.get("state_dict", ckpt))
-                    model.load_state_dict(state, strict=False)
+                    ckpt = torch.load(str(ckpt_path), map_location=self.device, weights_only=False)
+                    model = create_classification_model(
+                        backbone=ckpt.get("backbone", "resnet18"),
+                        num_classes=max(2, len(ckpt.get("classes", []))), pretrained=False,
+                    )
+                    state = ckpt.get("model_state_dict", ckpt.get("model_state", ckpt.get("state_dict", ckpt)))
+                    model.load_state_dict(state, strict=True)
                     is_trained = True
                     logger.info("Loaded classification checkpoint from %s", ckpt_path)
                 except Exception as e:
-                    logger.warning("Could not load classification checkpoint %s: %s", ckpt_path, e)
+                    raise RuntimeError(f"Could not load classification checkpoint {ckpt_path}: {e}") from e
+            else:
+                model = create_classification_model(backbone="resnet18", num_classes=2, pretrained=False)
             model = model.to(self.device)
             model.eval()
             self._model_cache[cache_key] = (model, is_trained)
@@ -537,8 +557,8 @@ class FlowchartEngine:
                 # 4. Task-Specific PyTorch Inference
                 task_clean = task.lower().strip()
                 if task_clean == "anomaly":
-                    if is_trained and hasattr(model, "mean") and model.mean is not None:
-                        # Trained PaDiM detector
+                    if is_trained:
+                        # Trained PaDiM or PatchCore detector
                         _, score = model.predict_anomaly_map(crop_tensor)
                         defect_score = float(score)
                     else:
@@ -798,8 +818,8 @@ class FlowchartEngine:
         execution_steps.append(
             FlowchartExecutionStep(
                 node_id=output_node.id if output_node else "node_output",
-                name=output_node.data.label if output_node else "Line Dispatch Triggered",
-                status="passed",
+                name=output_node.data.label if output_node else "Local Verdict Output",
+                status="skipped",
                 latency_ms=round(out_lat, 2),
             )
         )

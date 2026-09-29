@@ -75,6 +75,7 @@ interface AnnotationState {
   setCurrentLabel: (label: string) => void;
   addCategory: (name: string, color?: string) => void;
   setBrushRadius: (radius: number) => void;
+  commitBrushMask: (dataUrl: string) => void;
 
   setViewTransform: (transform: ViewTransform | ((prev: ViewTransform) => ViewTransform)) => void;
   setZoom: (zoom: number) => void;
@@ -167,6 +168,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       currentImage: activeImage,
       activeImage,
       currentImageIndex: idx >= 0 ? idx : get().currentImageIndex,
+      annotations: [],
+      maskUrl: null,
       selectedAnnotationId: null,
       history: [],
       future: [],
@@ -186,6 +189,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       currentImageIndex: index,
       currentImage: current,
       activeImage: current,
+      annotations: [],
+      maskUrl: null,
       selectedAnnotationId: null,
       history: [],
       future: [],
@@ -297,6 +302,23 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   setBrushRadius: (radius) => set({ brushRadius: Math.max(2, Math.min(64, radius)) }),
+  commitBrushMask: (dataUrl) => {
+    const { annotations, history, activeCategory, currentImage } = get();
+    if (!currentImage) return;
+    const existing = annotations.find((item) => item.type === 'brush_mask');
+    const updated: AnnotationItem = existing
+      ? { ...existing, mask_rle: dataUrl }
+      : { id: `brush_${currentImage.image_id}`, type: 'brush_mask', label: activeCategory.name,
+          category_id: activeCategory.id, color: activeCategory.color, mask_rle: dataUrl };
+    set({
+      annotations: existing
+        ? annotations.map((item) => item.id === existing.id ? updated : item)
+        : [...annotations, updated],
+      history: [...history, annotations].slice(-MAX_HISTORY),
+      future: [],
+      isDirty: true,
+    });
+  },
 
   setViewTransform: (transform) => {
     if (typeof transform === 'function') {
@@ -427,6 +449,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
           points: a.points || a.polygon,
           is_normal: a.is_normal,
           color: a.color,
+          rotated_bbox: a.rotated_bbox,
+          mask_rle: a.mask_rle,
         })),
         image_width: get().imageDimensions?.width || currentImage.width || 8192,
         image_height: get().imageDimensions?.height || currentImage.height || 5464,
@@ -650,4 +674,3 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     return convertShape(selectedAnnotationId, targetType);
   },
 }));
-

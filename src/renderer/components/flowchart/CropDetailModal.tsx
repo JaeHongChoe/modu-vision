@@ -15,7 +15,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
-import { STANDARD_19_ROIS } from './flowchartMockData';
 import type { FlowchartCrop } from '../../types';
 
 interface CropDetailModalProps {
@@ -27,10 +26,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
 
   const crops = useMemo(() => {
-    if (executionResult?.crops && executionResult.crops.length > 0) {
-      return executionResult.crops;
-    }
-    return STANDARD_19_ROIS;
+    return executionResult?.crops ?? [];
   }, [executionResult]);
 
   // Current crop index for prev/next paging

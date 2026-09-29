@@ -1,47 +1,44 @@
 /**
  * src/renderer/components/evaluation/PhysicalScaleOverlay.tsx
- * Optical Calibration Scale Bar (Example Sensor CMOS Standard: 3.45 μm/px).
- * Dynamically selects 1-2-5 engineering step sizes based on zoom scale.
+ * Image pixel scale bar. Physical units require measured calibration metadata.
  */
 
 import React, { useMemo } from 'react';
 
 interface PhysicalScaleOverlayProps {
   scale: number; // Viewport zoom scale
-  pixelPitchUm?: number; // Default: 3.45 um/px
 }
 
-const STEPS_UM = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+const STEPS_PX = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
 
 export const PhysicalScaleOverlay: React.FC<PhysicalScaleOverlayProps> = ({
   scale,
-  pixelPitchUm = 3.45,
 }) => {
   const { barWidthPx, labelText, resolutionText } = useMemo(() => {
     const targetBarPx = 90; // Preferred screen width of scale bar
-    const idealUm = (targetBarPx * pixelPitchUm) / Math.max(0.01, scale);
+    const idealPx = targetBarPx / Math.max(0.01, scale);
 
     // Pick closest step in STEPS_UM
-    let chosenUm = STEPS_UM[0];
+    let chosenPx = STEPS_PX[0];
     let minDiff = Infinity;
-    for (const step of STEPS_UM) {
-      const diff = Math.abs(Math.log10(step) - Math.log10(idealUm));
+    for (const step of STEPS_PX) {
+      const diff = Math.abs(Math.log10(step) - Math.log10(idealPx));
       if (diff < minDiff) {
         minDiff = diff;
-        chosenUm = step;
+        chosenPx = step;
       }
     }
 
-    const calculatedPx = (chosenUm / pixelPitchUm) * scale;
-    const label = chosenUm >= 1000 ? `${(chosenUm / 1000).toFixed(1)} mm` : `${chosenUm} μm`;
-    const res = `${pixelPitchUm.toFixed(2)} μm/px (${(scale * 100).toFixed(0)}%)`;
+    const calculatedPx = chosenPx * scale;
+    const label = `${chosenPx} image px`;
+    const res = `Physical scale uncalibrated (${(scale * 100).toFixed(0)}%)`;
 
     return {
       barWidthPx: Math.max(30, Math.min(220, calculatedPx)),
       labelText: label,
       resolutionText: res,
     };
-  }, [scale, pixelPitchUm]);
+  }, [scale]);
 
   return (
     <div className="absolute bottom-3 left-3 z-20 pointer-events-none select-none bg-[#0B0E14]/90 border border-[#2B3547] px-2 py-1 rounded-[3px]">

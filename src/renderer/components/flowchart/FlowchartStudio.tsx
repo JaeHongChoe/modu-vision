@@ -106,8 +106,8 @@ export const FlowchartStudio: React.FC = () => {
             </h2>
             <p className="text-[10px] font-mono text-[#94A3B8]">
               {language === 'ko'
-                ? 'INSPECTION INSPECTION RUNTIME FLOW BUILDER & INDUSTRIAL DEVICE SERIES HARDWARE STANDARD'
-                : 'Inspection Inspection Runtime Flow Builder & Industrial DEVICE SERIES Hardware Standard'}
+                ? '선택한 모델과 이미지로 로컬 검사 흐름 확인'
+                : 'Local pipeline check with selected models and image'}
             </p>
           </div>
         </div>
@@ -140,7 +140,7 @@ export const FlowchartStudio: React.FC = () => {
                   : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
-              <span>{language === 'ko' ? '검사 결과 (19 ROI)' : 'Live Inspection'}</span>
+              <span>{language === 'ko' ? `검사 결과${executionResult ? ` (${executionResult.roi_count} ROI)` : ''}` : 'Inspection Results'}</span>
               {executionResult && (
                 <div
                   className={`w-2 h-2 rounded-full ${
@@ -199,7 +199,7 @@ export const FlowchartStudio: React.FC = () => {
               </span>
             </div>
           ) : (
-            <span className="text-[#94A3B8] italic">기본 PCB 결함 마스터 이미지 (Default Target)</span>
+            <span className="text-[#94A3B8] italic">검사 이미지가 선택되지 않았습니다.</span>
           )}
         </div>
 
@@ -326,7 +326,7 @@ export const FlowchartStudio: React.FC = () => {
           <div className="w-80 bg-[#131822] border-l border-[#2B3547] p-4 flex flex-col space-y-4">
             <h3 className="text-xs font-bold text-[#F8FAFC] uppercase tracking-wider flex items-center space-x-2 border-b border-[#2B3547] pb-2">
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{language === 'ko' ? '노드 하드웨어 속성 (INSPECTOR)' : 'Node Properties'}</span>
+              <span>{language === 'ko' ? '노드 속성 (INSPECTOR)' : 'Node Properties'}</span>
             </h3>
 
             {selectedNode ? (
@@ -340,6 +340,31 @@ export const FlowchartStudio: React.FC = () => {
                     className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] focus:border-cyan-400 outline-none"
                   />
                 </div>
+
+                {(selectedNode.data.node_type === 'detection_crop' || selectedNode.data.node_type === 'inspection') && (
+                  <div className="space-y-2">
+                    <label className="text-[#94A3B8] block">학습 모델 작업 ID 또는 best_model.pt 경로</label>
+                    <input
+                      type="text"
+                      value={selectedNode.data.model_job_id || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { model_job_id: e.target.value })}
+                      placeholder="학습 완료 모델 지정"
+                      className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] focus:border-cyan-400 outline-none"
+                    />
+                    {selectedNode.data.node_type === 'inspection' && (
+                      <select
+                        value={selectedNode.data.task || 'anomaly'}
+                        onChange={(e) => updateNodeData(selectedNode.id, { task: e.target.value })}
+                        className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]"
+                      >
+                        <option value="anomaly">Anomaly</option>
+                        <option value="segmentation">Segmentation</option>
+                        <option value="classification">Classification</option>
+                      </select>
+                    )}
+                    <p className="text-amber-400 text-[10px]">두 단계 모두 호환 모델이 필요하며 출력 노드는 PLC로 전송하지 않습니다.</p>
+                  </div>
+                )}
 
                 {selectedNode.data.threshold !== undefined && (
                   <div>

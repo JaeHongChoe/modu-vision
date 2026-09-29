@@ -228,6 +228,7 @@ export class BackendSupervisor extends EventEmitter {
     const env = {
       ...process.env,
       PYTHONUNBUFFERED: '1',
+      PYTHONDONTWRITEBYTECODE: '1',
       PYTHONPATH: appRoot,
     };
 
