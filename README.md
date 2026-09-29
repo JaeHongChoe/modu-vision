@@ -251,7 +251,7 @@ npm run package:win
 
 ```bash
 # 1. 백엔드 PyTorch / FastAPI E2E 검증 (89 / 89 Passed)
-python -m pytest tests/
+python -m pytest -c backend/pytest.ini
 
 # 2. 프론트엔드 아키텍처 및 캔버스 정합성 검증 (100 / 100 Passed)
 node scripts/verify-m5.js
@@ -269,18 +269,21 @@ node scripts/verify-packaging.js
 ```
 modu-vision/
 ├── 📂 assets/                     # 고해상도 로고 및 6단계 스튜디오 스크린샷
-├── 📂 backend/                    # Python 3 / FastAPI 백엔드 데몬
+├── 📂 backend/                    # Python 3 / FastAPI 백엔드 데몬 및 PyTorch 엔진
 │   ├── 📂 api/                    # REST 엔드포인트 및 WebSocket 원격 측정
 │   ├── 📂 engine/                 # PyTorch 모델 (PatchCore, YOLO, U-Net) 및 합성기
-│   └── 📂 utils/                  # 2개 국어 에러 카탈로그 및 공통 유틸리티
-├── 📂 src/                        # 프론트엔드 및 Electron 소스
+│   ├── 📂 utils/                  # 2개 국어 에러 카탈로그 및 공통 유틸리티
+│   └── 📄 pytest.ini              # 백엔드 테스트 명세서
+├── 📂 src/                        # 프론트엔드 UI 및 Electron 소스
 │   ├── 📂 main/                   # Electron 메인 프로세스 & 프로세스 감시자(Supervisor)
 │   ├── 📂 preload/                # 보안 Context Bridge IPC 프리로드
 │   └── 📂 renderer/               # React 18 / TailwindCSS 산업용 UI 컴포넌트
-├── 📂 build/                      # 윈도우/맥 고해상도 아이콘 (ico, icns) 및 인스톨러 스크립트
+├── 📂 build/                      # 윈도우/맥 패키징 명세, 아이콘 및 인스톨러 스크립트
+│   ├── 📄 electron-builder.yml    # macOS DMG 및 Windows NSIS 크로스 패키징 스펙
+│   ├── 📄 tsconfig.node.json      # Electron 메인 프로세스 빌드 설정
+│   └── 📄 installer.nsh           # 윈도우 무인 자동 설치 스크립트
 ├── 📂 scripts/                    # 자동화 부트스트랩, 바이너리 컴파일러, 검증 스크립트
 ├── 📂 tests/                      # E2E 적대적 테스트 및 단위 테스트 스위트
-├── 📄 electron-builder.yml        # macOS DMG 및 Windows NSIS 크로스 패키징 스펙
 ├── 📄 requirements.txt            # 파이썬 의존성 명세서
 └── 📄 package.json                # Node.js 프로젝트 명세서
 ```

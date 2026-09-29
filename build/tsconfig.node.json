@@ -4,8 +4,8 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "outDir": "./dist-electron",
-    "rootDir": "./src",
+    "outDir": "../dist-electron",
+    "rootDir": "../src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,8 +13,8 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "src/main/**/*",
-    "src/preload/**/*",
-    "src/types/**/*"
+    "../src/main/**/*",
+    "../src/preload/**/*",
+    "../src/types/**/*"
   ]
 }
