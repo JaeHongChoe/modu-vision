@@ -4,6 +4,7 @@
  */
 
 export type VisionTask = 'classification' | 'detection' | 'segmentation' | 'anomaly';
+export type FlowModelTask = VisionTask | 'patch_classification';
 export type TaskType = VisionTask;
 export type TrainingPreset = 'fast' | 'precision';
 export type Language = 'ko' | 'en';
@@ -210,7 +211,7 @@ export interface NodePort {
 
 export interface FlowNodeData {
   label: string;
-  node_type: 'input' | 'detection_crop' | 'inspection' | 'decision' | 'output';
+  node_type: 'input' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
@@ -237,7 +238,8 @@ export interface FlowEdge {
   sourcePort?: string;
   targetPort?: string;
   label?: string;
-  isBranch?: 'pass' | 'fail' | 'default';
+  isBranch?: 'pass' | 'fail' | 'review' | 'default';
+  payload_type?: 'image' | 'roi' | 'result';
 }
 
 export interface FlowchartPipeline {
@@ -250,6 +252,7 @@ export interface FlowchartPipeline {
 
 export interface FlowchartCrop {
   roi_id: string;
+  source_node_id?: string;
   label: string;
   bbox: [number, number, number, number] | number[];
   defect_score: number;
@@ -258,18 +261,27 @@ export interface FlowchartCrop {
   flaw_type: string;
   confidence?: number;
   defect_area_px?: number;
+  blob_count?: number;
+  largest_blob_area_px?: number;
 }
 
 export interface FlowchartExecutionStep {
   node_id: string;
   name: string;
-  status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'warning_untrained';
+  status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'review_required' | 'warning_untrained';
   latency_ms: number;
+  input_payload_type?: 'image' | 'roi' | 'result' | null;
+  output_payload_type?: 'image' | 'roi' | 'result' | null;
+  input_count?: number | null;
+  output_count?: number | null;
+  branch_verdict?: 'OK' | 'NG' | 'REVIEW' | null;
+  selected_edge_ids?: string[];
+  skip_reason?: string | null;
 }
 
 export interface FlowchartExecutionResult {
   status: string;
-  final_verdict: 'OK' | 'NG';
+  final_verdict: 'OK' | 'NG' | 'REVIEW';
   is_ok: boolean;
   rejection_reason: string;
   roi_count: number;
@@ -278,8 +290,12 @@ export interface FlowchartExecutionResult {
   annotated_image?: string;
   execution_steps: FlowchartExecutionStep[];
   total_latency_ms: number;
+  inspected_image_size?: number[];
+  tiles_processed?: number;
+  preview_max_dim_px?: number;
   image_path?: string;
   image_id?: string;
+  routed_output_node_id?: string;
   error_message?: string;
 }
 

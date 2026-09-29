@@ -10,10 +10,9 @@
  * - Zero gradients, zero diffuse glows, high-contrast dark steel styling
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Activity,
-  Check,
   ChevronDown,
   Cpu,
   Disc,
@@ -22,14 +21,21 @@ import {
   Globe,
   Rocket,
   Scan,
+  Server,
   ShieldAlert,
   Tag,
   Wand2,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useComputeStore } from '../../stores/useComputeStore';
+import { useTrainingStore } from '../../stores/useTrainingStore';
+import { ComputeServerPanel } from '../compute/ComputeServerPanel';
+import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
 import type { VisionTask } from '../../types';
 
 export const WizardHeader: React.FC = () => {
+  const [showComputePanel, setShowComputePanel] = useState(false);
+  const [showProjectPanel, setShowProjectPanel] = useState(false);
   const {
     activeStep,
     setStep,
@@ -39,7 +45,39 @@ export const WizardHeader: React.FC = () => {
     setLanguage,
     backendStatus,
     projectName,
+    projectError,
   } = useProjectStore();
+  const {
+    profiles, selectedProfileId, isLoaded, isLoading, loadError, error,
+    probeResults, load, selectTarget,
+  } = useComputeStore();
+  const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
+
+  useEffect(() => {
+    if (!backendStatus.healthy) return;
+    let cancelled = false;
+    let retry: number | undefined;
+    let failures = 0;
+    const loadWhenReady = () => {
+      void load().catch(() => {
+        failures += 1;
+        if (!cancelled && failures < 5) {
+          retry = window.setTimeout(loadWhenReady, failures * 500);
+        }
+      });
+    };
+    loadWhenReady();
+    return () => {
+      cancelled = true;
+      if (retry !== undefined) window.clearTimeout(retry);
+    };
+  }, [load, backendStatus.healthy, backendStatus.port]);
+
+  const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId);
+  const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
+  const resultLocation = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
+    ? profiles.find((profile) => profile.id === jobComputeProfileId)?.name || jobComputeLabel
+    : jobComputeLabel;
 
   const steps = [
     { num: 1, nameKo: '데이터 관리', nameEn: 'Data Studio', icon: FolderKanban },
@@ -47,7 +85,7 @@ export const WizardHeader: React.FC = () => {
     { num: 3, nameKo: '오토딥러닝', nameEn: 'AutoML Trainer', icon: Wand2 },
     { num: 4, nameKo: '평가 & 과검/미검', nameEn: 'Evaluation & Overkill', icon: Activity },
     { num: 5, nameKo: '플로우차트', nameEn: 'Flowchart Studio', icon: GitFork },
-    { num: 6, nameKo: '인퍼런스 & 배포', nameEn: 'Inference & Export', icon: Rocket },
+    { num: 6, nameKo: '추론 & 모델 내보내기', nameEn: 'Inference & Export', icon: Rocket },
   ];
 
   const tasks: Array<{
@@ -126,7 +164,7 @@ export const WizardHeader: React.FC = () => {
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
       {/* Top Application Bar (Draggable Electron Region) */}
       <div
-        className="h-10 px-4 flex items-center justify-between border-b border-[#2B3547] bg-[#0E121A]"
+        className={`h-10 flex items-center justify-between border-b border-[#2B3547] bg-[#0E121A] ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         {/* Left: Branding & Active Project Moniker */}
@@ -141,9 +179,12 @@ export const WizardHeader: React.FC = () => {
             VISION AI STUDIO
           </span>
           <span className="text-xs text-slate-500">|</span>
-          <span className="text-xs text-slate-400 font-mono tracking-tight truncate max-w-xs">
-            {projectName}
-          </span>
+          <button type="button" onClick={() => setShowProjectPanel(true)} title="프로젝트 관리" className="group flex max-w-xs items-center gap-1.5 rounded border border-transparent px-2 py-1 text-xs text-slate-300 hover:border-[#3B536B] hover:bg-[#1B2B3F] hover:text-white">
+            <FolderKanban className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+            <span className="truncate font-semibold tracking-tight">{projectName}</span>
+            <ChevronDown className="h-3 w-3 shrink-0 text-slate-500 group-hover:text-cyan-300" />
+          </button>
+          {projectError && <button type="button" onClick={() => setShowProjectPanel(true)} title={projectError} className="max-w-[180px] truncate rounded border border-red-700/50 bg-red-950/30 px-2 py-1 text-[10px] text-red-300">프로젝트 오류 · 자세히</button>}
         </div>
 
         {/* Right: Hardware Annunciator LED, Daemon Port & Controls */}
@@ -201,6 +242,38 @@ export const WizardHeader: React.FC = () => {
         </div>
       </div>
 
+      {/* New jobs use this saved target; running jobs retain their own location. */}
+      <div className="flex min-h-9 items-center gap-2 border-b border-[#2B3547] bg-[#101722] px-4 text-[11px] font-mono">
+        <Server className="h-3.5 w-3.5 text-blue-400" />
+        <span className="font-bold text-slate-400">Compute:</span>
+        <select
+          aria-label="Compute location"
+          value={selectedProfileId || ''}
+          disabled={!isLoaded || isLoading}
+          onChange={(event) => void selectTarget(event.target.value || null).catch(() => {})}
+          className="max-w-[210px] rounded border border-[#364357] bg-[#0B0E14] px-2 py-1 text-[11px] text-slate-200 disabled:opacity-50"
+        >
+          <option value="">This computer</option>
+          {selectedProfileId && !selectedProfile && <option value={selectedProfileId}>Missing server: {selectedProfileId}</option>}
+          {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+        </select>
+        <button type="button" onClick={() => setShowComputePanel(true)} className="rounded border border-[#364357] px-2 py-1 text-slate-300 hover:bg-[#263246]">
+          서버 관리
+        </button>
+        {isLoading && <span className="text-slate-500">설정 확인 중...</span>}
+        {(loadError || error) && <span role="alert" className="max-w-[340px] truncate text-red-300" title={loadError || error || undefined}>{loadError || error}</span>}
+        {selectedProfileId && !loadError && (
+          <span className={selectedProbe?.ready ? 'text-emerald-400' : 'text-amber-300'}>
+            {selectedProbe?.ready ? `준비 완료 · ${selectedProbe.device_name || '장치 확인됨'}` : '연결 검사 필요'}
+          </span>
+        )}
+        {activeStep >= 4 && jobId && (
+          <span className="ml-auto rounded border border-[#364357] px-2 py-1 text-slate-300">
+            현재 모델 위치: <strong className="text-white">{resultLocation}</strong>
+          </span>
+        )}
+      </div>
+
       {/* Main Navigation Row: Recipe Selector & Contiguous Segmented Process Bar */}
       <div className="px-4 py-2 flex items-center justify-between bg-[#131822]">
         {/* Left: Industrial Task Recipe Selector */}
@@ -235,7 +308,7 @@ export const WizardHeader: React.FC = () => {
           {steps.map((s) => {
             const Icon = s.icon;
             const isActive = activeStep === s.num;
-            const isCompleted = activeStep > s.num;
+            const isPrevious = activeStep > s.num;
 
             return (
               <button
@@ -245,7 +318,7 @@ export const WizardHeader: React.FC = () => {
                 className={`relative flex items-center space-x-2 px-3.5 py-1.5 text-xs transition-colors duration-75 cursor-pointer border-r border-[#2B3547] last:border-r-0 ${
                   isActive
                     ? 'bg-[#1A212E] text-white font-bold shadow-[inset_0_2px_0_0_#10B981]'
-                    : isCompleted
+                    : isPrevious
                     ? 'bg-[#131822] hover:bg-[#1A212E] text-slate-200'
                     : 'bg-[#0E121A] hover:bg-[#151C27] text-slate-400'
                 }`}
@@ -255,8 +328,8 @@ export const WizardHeader: React.FC = () => {
                   className={`font-mono tabular-nums text-[11px] font-bold ${
                     isActive
                       ? 'text-[#10B981]'
-                      : isCompleted
-                      ? 'text-emerald-500'
+                      : isPrevious
+                      ? 'text-slate-300'
                       : 'text-slate-500'
                   }`}
                 >
@@ -268,7 +341,7 @@ export const WizardHeader: React.FC = () => {
                   className={`w-3.5 h-3.5 ${
                     isActive
                       ? 'text-[#10B981]'
-                      : isCompleted
+                      : isPrevious
                       ? 'text-slate-300'
                       : 'text-slate-500'
                   }`}
@@ -279,15 +352,13 @@ export const WizardHeader: React.FC = () => {
                   {language === 'ko' ? s.nameKo : s.nameEn}
                 </span>
 
-                {/* Subtle Emerald Completed Checkmark */}
-                {isCompleted && (
-                  <Check className="w-3 h-3 text-emerald-400 ml-0.5 shrink-0" />
-                )}
               </button>
             );
           })}
         </nav>
       </div>
+      {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
+      {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
     </header>
   );
 };

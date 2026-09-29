@@ -8,8 +8,11 @@ Comprehensive unit tests for:
 """
 
 import math
+import base64
+import io
 import numpy as np
 import pytest
+from PIL import Image
 from fastapi.testclient import TestClient
 
 from backend.main import create_app
@@ -34,7 +37,9 @@ from backend.engine.labeling_ai import (
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
+    return client
 
 
 # --------------------------------------------------------------------------
@@ -292,6 +297,40 @@ def test_api_shape_converter_mask_to_bbox(client):
     assert res["status"] == "success"
     assert res["target_type"] == "bbox"
     assert res["converted_data"]["bbox"] == [15.0, 10.0, 35.0, 30.0]
+
+
+def test_api_shape_converter_polygon_to_mask_returns_compact_rgba_png(client):
+    resp = client.post("/api/annotations/shape-converter", json={
+        "source_type": "polygon", "target_type": "mask",
+        "data": [[10, 10], [30, 10], [30, 25], [10, 25]],
+        "image_dimensions": {"width": 64, "height": 48},
+        "mask_color": "#ef4444",
+    })
+    assert resp.status_code == 200
+    result = resp.json()["converted_data"]
+    assert "mask" not in result
+    assert result["shape"] == [48, 64]
+    data_url = result["mask_rle"]
+    assert data_url.startswith("data:image/png;base64,")
+    assert len(data_url) < 4000
+    image = Image.open(io.BytesIO(base64.b64decode(data_url.split(",", 1)[1]))).convert("RGBA")
+    assert image.size == (64, 48)
+    assert image.getpixel((20, 15)) == (239, 68, 68, 255)
+    assert image.getpixel((0, 0))[3] == 0
+
+
+def test_api_shape_converter_decodes_brush_png_for_bbox(client):
+    rgba = np.zeros((40, 50, 4), dtype=np.uint8)
+    rgba[9:21, 12:29, :3] = (255, 0, 0)
+    rgba[9:21, 12:29, 3] = 255
+    buffer = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(buffer, format="PNG")
+    data_url = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+    resp = client.post("/api/annotations/shape-converter", json={
+        "source_type": "mask", "target_type": "bbox", "data": data_url,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["converted_data"]["bbox"] == [12.0, 9.0, 29.0, 21.0]
 
 
 def test_api_shape_converter_invalid_requests(client):

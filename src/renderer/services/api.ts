@@ -7,9 +7,379 @@ import type {
   AnnotationItem,
   ErrorCatalogItem,
   EvaluationResults,
+  FlowchartExecutionResult,
+  FlowchartPipeline,
+  FlowModelTask,
   ImageMeta,
   VisionTask,
 } from '../types';
+import type { BatchInspectionRow, BatchInspectionReport, InspectionHistoryRun, InspectionRunSummary } from '../components/inference/batchInspection';
+
+export interface ComputeProfile {
+  id: string;
+  name: string;
+  ssh_target: string;
+  ssh_port: number;
+  remote_root: string;
+  runtime_kind: 'python' | 'docker';
+  runtime_value: string;
+  gpu_selector?: string | null;
+}
+
+export type ComputeProfileInput = Omit<ComputeProfile, 'id'> & { id?: string };
+
+export interface FlowModelCatalogItem {
+  job_id: string;
+  task: FlowModelTask;
+  label: string;
+  preset: string | null;
+  created_at: string | null;
+  best_metric: number | null;
+  source_dataset_path: string;
+}
+
+export interface SavedFlowVersion {
+  version_id: string;
+  pipeline_id: string;
+  name: string;
+  recipe_task: FlowModelTask | 'mixed';
+  source_dataset_path: string;
+  created_at: string;
+  saved_at: string;
+  node_count: number;
+  model_count: number;
+  is_latest: boolean;
+  is_active: boolean;
+}
+
+export interface ComputeProbeResult {
+  ready: boolean;
+  device_name?: string | null;
+  device_type?: string | null;
+  checks?: Record<string, unknown> | Array<unknown>;
+  message?: string | null;
+  protocol_version?: string | number | null;
+  free_space_bytes?: number | null;
+}
+
+export interface ProjectConfig {
+  id: string;
+  name: string;
+  task: VisionTask;
+  project_dir: string;
+  dataset_dir: string;
+  models_dir: string;
+  reports_dir: string;
+  annotations_dir: string;
+  active_labelset_id: string;
+  source_dataset_dir: string | null;
+  description: string;
+  active_preset: 'fast' | 'precision';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectLabelSet {
+  id: string;
+  name: string;
+  source_id: string | null;
+  created_at: string;
+}
+
+export interface ProjectBackupResult {
+  archive_path: string;
+  source_included: boolean;
+  file_count: number;
+  total_bytes: number;
+  source_bytes: number;
+}
+
+export type RecentProject = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'project_dir' | 'updated_at'>;
+
+export interface DatasetVersionSummary {
+  id: string;
+  name: string;
+  note: string;
+  kind: 'manual' | 'auto_backup';
+  created_at: string;
+  source_dataset_dir: string;
+  image_count: number;
+  label_file_count: number;
+  total_image_bytes: number;
+  copied_label_bytes: number;
+  dataset_fingerprint: string;
+  status: 'verified' | 'changed' | 'not_checked' | 'corrupt';
+}
+
+export interface DatasetVersionVerification {
+  id: string;
+  status: 'verified' | 'changed';
+  changed_files: string[];
+  editable_changed_files: string[];
+  checked_file_count: number;
+  checked_at: string;
+}
+
+export interface LabelSuggestionModel {
+  job_id: string;
+  task: VisionTask;
+  classes: string[];
+  created_at: string | null;
+  checkpoint_path: string;
+  source_dataset_path: string;
+}
+
+export interface OCRLabelRow {
+  image: string;
+  text: string;
+  split: 'train' | 'val' | 'test';
+  source_sha256?: string;
+}
+
+export interface OCRModelSummary {
+  job_id: string;
+  model_sha256: string;
+  metadata: { best_epoch?: number; training_samples?: number; validation_samples?: number };
+}
+
+export interface OCREvaluation {
+  sample_count: number;
+  exact_match_accuracy: number;
+  character_error_rate: number;
+  samples: Array<{ image: string; reference_text: string; predicted_text: string }>;
+}
+
+export interface RotatedBox {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  angle_deg: number;
+}
+
+export interface RotatedSampleRow {
+  image: string;
+  split: 'train' | 'val' | 'test';
+  label: string;
+  box: RotatedBox;
+  source_sha256?: string;
+}
+
+export interface RotatedModelSummary {
+  job_id: string;
+  model_sha256: string;
+  dataset_sha256: string;
+  class_name: string;
+  validation: { mean_oriented_iou: number; mean_angle_error_deg: number; sample_count: number };
+}
+
+export interface RotatedJob {
+  job_id: string;
+  status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
+  epochs_completed: number;
+  total_epochs: number;
+  result: { checkpoint_sha256: string; dataset_sha256: string } | null;
+  error: string | null;
+}
+
+export interface RotatedEvaluation {
+  sample_count: number;
+  mean_oriented_iou: number;
+  mean_angle_error_deg: number;
+  dataset_sha256: string;
+  model_sha256: string;
+}
+
+export interface RotatedPrediction {
+  label: string;
+  box: RotatedBox;
+  polygon: Array<[number, number]>;
+  image_size: [number, number];
+  source_sha256: string;
+  model_sha256: string;
+  preview_data_url: string;
+  preview_size: [number, number];
+}
+
+export interface DefectGANCropRow {
+  image: string;
+  bbox: [number, number, number, number];
+  split: 'train' | 'val' | 'test';
+  source_sha256?: string;
+}
+
+export interface DefectGANModelSummary {
+  job_id: string;
+  checkpoint_sha256: string;
+  sample_count: number;
+  epochs: number;
+  quality_status: 'unvalidated';
+}
+
+export interface DefectGANCandidate {
+  id: string;
+  path: string;
+  sha256: string;
+  status: 'synthetic_unreviewed';
+  preview_data_url: string;
+}
+
+export interface LabelSuggestionCandidate {
+  id: string;
+  confidence: number;
+  annotation: AnnotationItem;
+}
+
+export interface LabelSuggestion {
+  id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  reviewed_at?: string;
+  image_path: string;
+  image_id: string;
+  image_width: number;
+  image_height: number;
+  job_id: string;
+  task: VisionTask;
+  threshold: number;
+  confidence: number;
+  latency_ms: number;
+  candidates: LabelSuggestionCandidate[];
+  accepted_candidate_ids: string[];
+  backup_version_id: string | null;
+  batch_id?: string;
+}
+
+export interface LabelSuggestionBatchEntry {
+  image_path: string;
+  image_id: string;
+  status: 'queued' | 'generated' | 'zero_candidates' | 'failed';
+  proposal_id?: string;
+  candidate_count?: number;
+  error?: string;
+}
+
+export interface LabelSuggestionBatch {
+  id: string;
+  status: 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed' | 'interrupted';
+  created_at: string;
+  finished_at?: string | null;
+  source_dataset_dir: string;
+  job_id: string;
+  task: VisionTask;
+  threshold: number;
+  total: number;
+  processed: number;
+  generated: number;
+  zero_candidates: number;
+  failed: number;
+  entries: LabelSuggestionBatchEntry[];
+  error?: string;
+}
+
+export interface ModelComparisonModel {
+  job_id: string;
+  task: FlowModelTask;
+  training_dataset_fingerprint: string;
+  created_at: string | null;
+  preset: string | null;
+}
+
+export interface ModelComparisonSummary {
+  selected_images: number;
+  comparable_images: number;
+  error_images: number;
+  disagreements: number;
+  incumbent_verdicts: Record<'OK' | 'NG' | 'REVIEW', number>;
+  candidate_verdicts: Record<'OK' | 'NG' | 'REVIEW', number>;
+  ng_to_ok: number;
+  ok_to_ng: number;
+  new_missed_ng: number;
+  new_overkill_ok: number;
+  known_ok_images: number;
+  known_ng_images: number;
+  unknown_truth_images: number;
+}
+
+export interface ModelComparisonOutcome {
+  verdict: 'OK' | 'NG' | 'REVIEW' | null;
+  defective_roi_count: number | null;
+  max_defect_score: number | null;
+  reason: string;
+  error: string | null;
+}
+
+export interface ModelComparisonRow {
+  image_id: string;
+  file_name: string;
+  file_path: string;
+  image_sha256: string;
+  ground_truth_label: string | null;
+  ground_truth_verdict: 'OK' | 'NG' | null;
+  incumbent: ModelComparisonOutcome;
+  candidate: ModelComparisonOutcome;
+  disagrees: boolean;
+}
+
+export interface ModelComparisonRecord {
+  comparison_id: string;
+  created_at: string;
+  project_id: string;
+  source_dataset_path: string;
+  task: FlowModelTask;
+  incumbent_job_id: string;
+  candidate_job_id: string;
+  status: 'completed' | 'completed_with_errors';
+  summary: ModelComparisonSummary;
+  dataset_fingerprint: string;
+  selected_image_count: number;
+  total_test_images: number;
+}
+
+export interface ModelComparisonReport extends ModelComparisonRecord {
+  schema_version: number;
+  incumbent_training_dataset_fingerprint: string;
+  candidate_training_dataset_fingerprint: string;
+  model_sha256: { incumbent: string; candidate: string };
+  image_selection: string;
+  limitations: string[];
+  images: ModelComparisonRow[];
+}
+
+export interface ModelDeploymentAssessment {
+  status: 'ready' | 'needs_review';
+  reasons: string[];
+  comparison_id: string;
+  comparison_sha256: string;
+  candidate_job_id: string;
+  candidate_checkpoint_sha256: string;
+  dataset_fingerprint: string;
+  known_ok_images: number;
+  known_ng_images: number;
+  minimum_each_class: number;
+  current_revision_id: string | null;
+  training_dataset_fingerprint: string | null;
+}
+
+export interface ModelDeploymentRevision {
+  revision_id: string;
+  source_dataset_path: string;
+  task: FlowModelTask;
+  job_id: string;
+  checkpoint_sha256: string;
+  training_dataset_fingerprint: string;
+  evaluation_dataset_fingerprint: string;
+  comparison_id: string;
+  comparison_sha256: string;
+  parent_revision_id: string | null;
+  restored_from_revision_id: string | null;
+  action: 'approve' | 'rollback';
+  reviewer: string;
+  reason: string;
+  created_at: string;
+  valid?: boolean;
+  is_active?: boolean;
+}
 
 let cachedPort: number | null = null;
 
@@ -82,9 +452,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         throw e;
       }
     }
-    throw new Error(errorDetail);
+    throw Object.assign(new Error(errorDetail), { status: response.status });
   }
 
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
@@ -93,12 +464,133 @@ export const api = {
     check: () => request<{ status: string; version: string; device: string; device_name: string }>('/health'),
   },
 
+  compute: {
+    listProfiles: () => request<{ profiles: ComputeProfile[] }>('/api/compute/profiles'),
+    saveProfile: (profile: ComputeProfileInput) =>
+      request<{ profile: ComputeProfile }>('/api/compute/profiles', {
+        method: 'POST', body: JSON.stringify(profile),
+      }),
+    deleteProfile: (id: string) =>
+      request<void>(`/api/compute/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    getSelection: () => request<{ compute_profile_id: string | null }>('/api/compute/selection'),
+    selectProfile: (computeProfileId: string | null) =>
+      request<{ compute_profile_id: string | null }>('/api/compute/selection', {
+        method: 'PUT', body: JSON.stringify({ compute_profile_id: computeProfileId }),
+      }),
+    probeProfile: (id: string) =>
+      request<ComputeProbeResult>(`/api/compute/profiles/${encodeURIComponent(id)}/probe`, { method: 'POST' }),
+  },
+
   project: {
-    getCurrent: () => request<any>('/api/project/current'),
-    create: (data: { name: string; task: VisionTask; project_dir?: string }) =>
-      request<any>('/api/project/create', { method: 'POST', body: JSON.stringify(data) }),
-    update: (data: Partial<{ name: string; task: VisionTask; active_preset: string }>) =>
-      request<any>('/api/project/update', { method: 'PUT', body: JSON.stringify(data) }),
+    getCurrent: () => request<ProjectConfig>('/api/project/current'),
+    list: () => request<{ projects: RecentProject[] }>('/api/project/list'),
+    create: (data: { name: string; task: VisionTask; project_dir?: string; description?: string }) =>
+      request<ProjectConfig>('/api/project/create', { method: 'POST', body: JSON.stringify(data) }),
+    open: (projectDir: string) =>
+      request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) }),
+    update: (data: Partial<Pick<ProjectConfig, 'name' | 'task' | 'active_preset' | 'description' | 'source_dataset_dir'>>) =>
+      request<ProjectConfig>('/api/project/update', { method: 'PUT', body: JSON.stringify(data) }),
+    listLabelsets: () => request<{ active_id: string; labelsets: ProjectLabelSet[] }>('/api/project/labelsets'),
+    createLabelset: (name: string) => request<ProjectLabelSet>('/api/project/labelsets', {
+      method: 'POST', body: JSON.stringify({ name }),
+    }),
+    activateLabelset: (id: string) => request<ProjectConfig>(`/api/project/labelsets/${encodeURIComponent(id)}/activate`, {
+      method: 'PUT',
+    }),
+    backup: (destinationDir: string) => request<ProjectBackupResult>('/api/project/backup', {
+      method: 'POST', body: JSON.stringify({ destination_dir: destinationDir }),
+    }),
+    restore: (archivePath: string, targetDir: string) => request<ProjectConfig>('/api/project/restore', {
+      method: 'POST', body: JSON.stringify({ archive_path: archivePath, target_dir: targetDir }),
+    }),
+  },
+
+  datasetVersions: {
+    create: (data: { name: string; note?: string; dataset_path?: string }) =>
+      request<DatasetVersionSummary>('/api/dataset/versions', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
+    list: () => request<{ versions: DatasetVersionSummary[] }>('/api/dataset/versions'),
+    verify: (id: string) =>
+      request<DatasetVersionVerification>(`/api/dataset/versions/${encodeURIComponent(id)}/verify`),
+    restore: (id: string) =>
+      request<{ restored_version_id: string; backup_version_id: string; source_dataset_dir: string; dataset_fingerprint: string }>(
+        `/api/dataset/versions/${encodeURIComponent(id)}/restore`, { method: 'POST' },
+      ),
+  },
+
+  labelSuggestions: {
+    models: () => request<{ models: LabelSuggestionModel[] }>('/api/label-suggestions/models'),
+    list: (imagePath?: string) => request<{ suggestions: LabelSuggestion[] }>(
+      `/api/label-suggestions${imagePath ? `?image_path=${encodeURIComponent(imagePath)}` : ''}`,
+    ),
+    generate: (data: { job_id: string; image_path: string; threshold: number }) =>
+      request<LabelSuggestion>('/api/label-suggestions/generate', { method: 'POST', body: JSON.stringify(data) }),
+    startBatch: (data: { job_id: string; threshold: number; image_paths?: string[] }) =>
+      request<LabelSuggestionBatch>('/api/label-suggestions/batches', { method: 'POST', body: JSON.stringify(data) }),
+    listBatches: () => request<{ batches: LabelSuggestionBatch[] }>('/api/label-suggestions/batches'),
+    getBatch: (id: string) => request<LabelSuggestionBatch>(`/api/label-suggestions/batches/${encodeURIComponent(id)}`),
+    cancelBatch: (id: string) => request<LabelSuggestionBatch>(`/api/label-suggestions/batches/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+    review: (id: string, decision: 'accept' | 'reject', candidateIds: string[] = []) =>
+      request<LabelSuggestion>(`/api/label-suggestions/${encodeURIComponent(id)}/review`, {
+        method: 'POST', body: JSON.stringify({ decision, candidate_ids: candidateIds }),
+      }),
+  },
+
+  ocr: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; alphabet: string; samples: OCRLabelRow[] }>(
+      `/api/ocr/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: OCRLabelRow[]) => request<{ sample_count: number; alphabet: string; samples: OCRLabelRow[] }>(
+      '/api/ocr/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: OCRModelSummary[] }>('/api/ocr/models'),
+    train: (datasetPath: string, epochs: number) => request<{ job_id: string; model_sha256: string; result: Record<string, unknown> }>(
+      '/api/ocr/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    evaluate: (jobId: string, datasetPath: string) => request<OCREvaluation>(
+      '/api/ocr/evaluate', { method: 'POST', body: JSON.stringify({ job_id: jobId, dataset_path: datasetPath, split: 'test' }) },
+    ),
+    predict: (jobId: string, imagePath: string) => request<{ text: string; confidence: number; model_sha256: string }>(
+      '/api/ocr/predict', { method: 'POST', body: JSON.stringify({ job_id: jobId, image_path: imagePath }) },
+    ),
+  },
+
+  rotated: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; class_name: string; split_counts: Record<string, number>; dataset_sha256: string; samples: RotatedSampleRow[] }>(
+      `/api/rotated-detection/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: RotatedSampleRow[]) => request<{ sample_count: number; class_name: string; split_counts: Record<string, number>; dataset_sha256: string; samples: RotatedSampleRow[] }>(
+      '/api/rotated-detection/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: RotatedModelSummary[] }>('/api/rotated-detection/models'),
+    train: (datasetPath: string, epochs: number) => request<RotatedJob>(
+      '/api/rotated-detection/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    job: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}`),
+    cancel: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' }),
+    evaluate: (jobId: string, datasetPath: string) => request<RotatedEvaluation>(
+      '/api/rotated-detection/evaluate', { method: 'POST', body: JSON.stringify({ job_id: jobId, dataset_path: datasetPath, split: 'test' }) },
+    ),
+    predict: (jobId: string, imagePath: string) => request<RotatedPrediction>(
+      '/api/rotated-detection/predict', { method: 'POST', body: JSON.stringify({ job_id: jobId, image_path: imagePath }) },
+    ),
+  },
+
+  defectGAN: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; samples: DefectGANCropRow[]; split_counts: Record<string, number> }>(
+      `/api/defect-gan/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: DefectGANCropRow[]) => request<{ sample_count: number; samples: DefectGANCropRow[]; split_counts: Record<string, number> }>(
+      '/api/defect-gan/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: DefectGANModelSummary[] }>('/api/defect-gan/models'),
+    train: (datasetPath: string, epochs: number) => request<{ job_id: string; result: { status: string; checkpoint_sha256: string } }>(
+      '/api/defect-gan/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    generate: (jobId: string, count: number, seed: number) => request<{ job_id: string; review_dir: string; quality_status: string; candidates: DefectGANCandidate[] }>(
+      '/api/defect-gan/generate', { method: 'POST', body: JSON.stringify({ job_id: jobId, count, seed }) },
+    ),
   },
 
   dataset: {
@@ -108,6 +600,8 @@ export const api = {
         total_images: number;
         source_images?: number;
         unlabeled_images?: number;
+        split_supported?: boolean;
+        split_unavailable_reason?: string | null;
         classes: Record<string, number>;
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
@@ -131,19 +625,21 @@ export const api = {
         val_count?: number;
       }>('/api/dataset/generate', { method: 'POST', body: JSON.stringify(data) }),
 
-    split: (data: { folder_path?: string; train_ratio: number; val_ratio?: number; test_ratio?: number; seed?: number }) =>
+    split: (data: { folder_path?: string; task?: VisionTask; train_ratio: number; val_ratio?: number; test_ratio?: number; seed?: number }) =>
       request<{ status: string; split: { train: number; val: number; test: number } }>('/api/dataset/split', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    getImages: (params: { folder_path?: string; limit?: number; offset?: number; split?: string; class_name?: string }) => {
+    getImages: (params: { folder_path?: string; task?: VisionTask; limit?: number; offset?: number; split?: string; class_name?: string; label_status?: 'labeled' | 'unlabeled' }) => {
       const q = new URLSearchParams();
       if (params.folder_path) q.set('folder_path', params.folder_path);
+      if (params.task) q.set('task', params.task);
       if (params.limit !== undefined) q.set('limit', String(params.limit));
       if (params.offset !== undefined) q.set('offset', String(params.offset));
       if (params.split) q.set('split', params.split);
       if (params.class_name) q.set('class_name', params.class_name);
+      if (params.label_status) q.set('label_status', params.label_status);
       return request<{ total: number; limit: number; offset: number; items: ImageMeta[] }>(
         `/api/dataset/images?${q.toString()}`
       );
@@ -164,7 +660,7 @@ export const api = {
         mask_file?: string;
       }>(`/api/annotations/${encodeURIComponent(imageId)}${queryStr}`);
     },
-    save: (data: { image_id: string; annotations: AnnotationItem[]; image_width?: number; image_height?: number; output_dir?: string }) =>
+    save: (data: { image_id: string; image_path?: string; annotations: AnnotationItem[]; image_width?: number; image_height?: number; output_dir?: string }) =>
       request<{ status: string; count: number; mask_generated: boolean }>('/api/annotations/save', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -197,13 +693,22 @@ export const api = {
   },
 
   training: {
+    warmStartParents: (datasetPath: string, task: VisionTask, preset: 'fast' | 'precision') => {
+      const query = new URLSearchParams({ dataset_path: datasetPath, task, preset });
+      return request<{ parents: Array<{
+        job_id: string; classes: string[]; architecture: string;
+        checkpoint_sha256: string; dataset_fingerprint: string;
+      }>; total: number }>(`/api/training/warm-start-parents?${query.toString()}`);
+    },
     start: (data: {
       task: VisionTask;
       preset: 'fast' | 'precision';
       dataset_path: string;
       output_dir?: string;
       config_overrides?: any;
-    }) => request<{ job_id: string; status: string; preset: string; task: string }>('/api/training/start', {
+      compute_profile_id?: string;
+      warm_start_job_id?: string;
+    }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -212,20 +717,96 @@ export const api = {
       request<{ status: string; job_id: string | null }>('/api/training/stop', {
         method: 'POST',
         body: JSON.stringify({ job_id: jobId }),
+        signal: AbortSignal.timeout(10000),
+      }),
+
+    reconnect: (jobId: string) =>
+      request<{ job_id: string; status: string; compute_profile_id: string | null }>('/api/training/reconnect', {
+        method: 'POST',
+        body: JSON.stringify({ job_id: jobId }),
+        signal: AbortSignal.timeout(10000),
       }),
 
     getStatus: (jobId?: string) => {
       const q = jobId ? `?job_id=${encodeURIComponent(jobId)}` : '';
-      return request<any>(`/api/training/status${q}`);
+      return request<any>(`/api/training/status${q}`, {
+        signal: AbortSignal.timeout(5000),
+      });
     },
   },
 
+  modelDeployments: {
+    assess: (comparisonId: string, sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<ModelDeploymentAssessment>(
+        `/api/model-deployments/assess/${encodeURIComponent(comparisonId)}?${q.toString()}`
+      );
+    },
+    active: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ active: ModelDeploymentRevision | null; field_runtime_applied: boolean }>(
+        `/api/model-deployments/active?${q.toString()}`
+      );
+    },
+    history: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ revisions: ModelDeploymentRevision[] }>(
+        `/api/model-deployments/history?${q.toString()}`
+      );
+    },
+    approve: (data: { source_dataset_path: string; task: FlowModelTask; comparison_id: string;
+      reviewer: string; reason: string; holdout_reviewed: true }) =>
+      request<{ revision: ModelDeploymentRevision; field_runtime_applied: boolean }>(
+        '/api/model-deployments/approve', { method: 'POST', body: JSON.stringify(data) }
+      ),
+    rollback: (data: { source_dataset_path: string; task: FlowModelTask; target_revision_id: string;
+      reviewer: string; reason: string }) =>
+      request<{ revision: ModelDeploymentRevision; field_runtime_applied: boolean }>(
+        '/api/model-deployments/rollback', { method: 'POST', body: JSON.stringify(data) }
+      ),
+  },
+
   evaluation: {
-    getResults: (jobId?: string, datasetPath?: string, forceRecompute?: boolean) => {
+    comparisonModels: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ models: ModelComparisonModel[]; total: number }>(
+        `/api/evaluation/model-comparisons/models?${q.toString()}`
+      );
+    },
+    listComparisons: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ comparisons: ModelComparisonRecord[]; total: number }>(
+        `/api/evaluation/model-comparisons?${q.toString()}`
+      );
+    },
+    getComparison: (comparisonId: string, sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<ModelComparisonReport>(
+        `/api/evaluation/model-comparisons/${encodeURIComponent(comparisonId)}?${q.toString()}`
+      );
+    },
+    createComparison: (data: {
+      source_dataset_path: string;
+      task: FlowModelTask;
+      incumbent_job_id: string;
+      candidate_job_id: string;
+      max_images: number;
+    }) => request<ModelComparisonReport>('/api/evaluation/model-comparisons', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    getResults: (jobId?: string, options?: {
+      datasetPath?: string;
+      forceRecompute?: boolean;
+      sourceDatasetPath?: string;
+      sourceTask?: VisionTask;
+    }) => {
       const q = new URLSearchParams();
       if (jobId) q.set('job_id', jobId);
-      if (datasetPath) q.set('dataset_path', datasetPath);
-      if (forceRecompute) q.set('force_recompute', 'true');
+      if (options?.datasetPath) q.set('dataset_path', options.datasetPath);
+      if (options?.forceRecompute) q.set('force_recompute', 'true');
+      if (options?.sourceDatasetPath) q.set('source_dataset_path', options.sourceDatasetPath);
+      if (options?.sourceTask) q.set('source_task', options.sourceTask);
       return request<EvaluationResults>(`/api/evaluation/results?${q.toString()}`);
     },
 
@@ -269,12 +850,61 @@ export const api = {
   },
 
   flowchart: {
-    getPipeline: () => request<any>('/api/flowchart/pipeline'),
-    savePipeline: (data: any) =>
-      request<{ status: string; pipeline_id: string; node_count: number }>('/api/flowchart/pipeline', {
+    modelCatalog: (sourceDatasetPath: string) =>
+      request<{ models: FlowModelCatalogItem[]; total: number }>(
+        `/api/flowchart/models/catalog?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`
+      ),
+    listPipelines: (sourceDatasetPath: string) =>
+      request<{ pipelines: SavedFlowVersion[]; total: number }>(
+        `/api/flowchart/pipelines?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`
+      ),
+    getPipelineVersion: (versionId: string) =>
+      request<FlowchartPipeline>(`/api/flowchart/pipelines/${encodeURIComponent(versionId)}`),
+    activatePipelineVersion: (versionId: string, sourceDatasetPath: string) =>
+      request<{ status: 'active'; version_id: string; pipeline: FlowchartPipeline }>(
+        `/api/flowchart/pipelines/${encodeURIComponent(versionId)}/activate?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`,
+        { method: 'PUT' },
+      ),
+    getPipeline: (inspectionTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
+      const query = new URLSearchParams();
+      if (inspectionTask) query.set('inspection_task', inspectionTask);
+      if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
+      return request<any>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`);
+    },
+    getActivePipeline: (sourceDatasetPath: string) =>
+      request<FlowchartPipeline>(`/api/flowchart/pipeline/active?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`),
+    getSingleDetectionTemplate: (jobId?: string) =>
+      request<any>(`/api/flowchart/templates/single-detection${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
+    getSingleSegmentationTemplate: (jobId?: string, inspectionTask?: Exclude<FlowModelTask, 'detection'>) => {
+      const query = new URLSearchParams();
+      if (jobId) query.set('job_id', jobId);
+      if (inspectionTask) query.set('inspection_task', inspectionTask);
+      return request<any>(`/api/flowchart/templates/single-segmentation${query.size ? `?${query.toString()}` : ''}`);
+    },
+    getDetectorRoiTemplate: (inspectionTask: Exclude<FlowModelTask, 'detection'>) =>
+      request<any>(`/api/flowchart/templates/detector-roi?inspection_task=${encodeURIComponent(inspectionTask)}`),
+    getFixedRoiTemplate: (inspectionTask: Exclude<FlowModelTask, 'detection'>, jobId?: string) => {
+      const query = new URLSearchParams({ inspection_task: inspectionTask });
+      if (jobId) query.set('job_id', jobId);
+      return request<FlowchartPipeline>(`/api/flowchart/templates/fixed-roi?${query.toString()}`);
+    },
+    getFiveModelChainTemplate: () =>
+      request<FlowchartPipeline>('/api/flowchart/templates/five-model-chain'),
+    getConditionalInspectionTemplate: () =>
+      request<FlowchartPipeline>('/api/flowchart/templates/conditional-inspection'),
+    verifyModels: (data: { source_dataset_path: string; models: Array<{ job_id: string; task: FlowModelTask }> }) =>
+      request<{ verified_job_ids: string[] }>('/api/flowchart/models/verify', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
+    savePipeline: (data: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
+      const query = new URLSearchParams();
+      if (recipeTask) query.set('recipe_task', recipeTask);
+      if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
+      return request<{ status: string; pipeline_id: string; node_count: number; version_id: string }>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`, {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+    },
     run: (data: { image_path?: string; image_id?: string; pipeline?: any }) =>
       request<any>('/api/flowchart/run', {
         method: 'POST',
@@ -282,7 +912,82 @@ export const api = {
       }),
   },
 
+  inspections: {
+    reviewQueue: (sourceFolder: string, task: VisionTask) => {
+      const q = new URLSearchParams({ source_folder: sourceFolder, task });
+      return request<{ items: Array<{
+        run_id: string; image: ImageMeta; model_verdict: 'REVIEW' | null;
+        operator_verdict: 'OK' | 'NG' | 'REVIEW' | null;
+        status: 'unreviewed' | 'still_review' | 'error'; can_review: boolean;
+        error: string | null; created_at: string; pipeline_name: string; saved_version_id: string | null;
+      }>; total: number; review_required: number; diagnostic_errors: number }>(
+        `/api/inspections/review-queue?${q.toString()}`
+      );
+    },
+    createRun: (report: BatchInspectionReport, pipeline: FlowchartPipeline) =>
+      request<{
+        run_id: string; status: string; saved_version_id: string | null;
+        pipeline_hash: string; model_sha256: Record<string, string>;
+      }>('/api/inspections/runs', {
+        method: 'POST', body: JSON.stringify({
+          source_folder: report.source_folder, task: report.task, scope: report.scope,
+          pipeline, images: report.rows.map((row) => row.image),
+        }),
+      }),
+    executeRow: (runId: string, imagePath: string) =>
+      request<FlowchartExecutionResult>(`/api/inspections/runs/${encodeURIComponent(runId)}/execute`, {
+        method: 'POST', body: JSON.stringify({ image_path: imagePath }),
+      }),
+    recordRow: (runId: string, row: BatchInspectionRow) =>
+      request<{ status: string }>(`/api/inspections/runs/${encodeURIComponent(runId)}/rows`, {
+        method: 'PUT', body: JSON.stringify({
+          image_path: row.image.file_path, state: row.state, result: row.result, error: row.error,
+        }),
+      }),
+    finishRun: (runId: string, status: 'completed' | 'stopped') =>
+      request<{ status: string }>(`/api/inspections/runs/${encodeURIComponent(runId)}/finish`, {
+        method: 'PUT', body: JSON.stringify({ status }),
+      }),
+    listRuns: (sourceFolder: string, task: VisionTask) => {
+      const query = new URLSearchParams({ source_folder: sourceFolder, task });
+      return request<{ runs: InspectionRunSummary[] }>(`/api/inspections/runs?${query}`);
+    },
+    getRun: (runId: string) =>
+      request<InspectionHistoryRun>(`/api/inspections/runs/${encodeURIComponent(runId)}`),
+    reviewRow: (runId: string, data: {
+      image_path: string; final_verdict: 'OK' | 'NG' | 'REVIEW'; reason: string; reviewer: string;
+    }) => request<{ review_id: string }>(`/api/inspections/runs/${encodeURIComponent(runId)}/reviews`, {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+    exportRun: (runId: string, format: 'csv' | 'json') =>
+      request<{ format: string; filename: string; content: string }>(
+        `/api/inspections/runs/${encodeURIComponent(runId)}/export?format=${format}`
+      ),
+  },
+
   export: {
+    flow: (data: {
+      source_dataset_path: string;
+      recipe_task: FlowModelTask | 'mixed';
+      package_name: string;
+      version_id?: string;
+      verification_image_path?: string;
+      verification_image_id?: string;
+    }) => request<{
+      status: string;
+      package_path: string;
+      package_name: string;
+      pipeline_id: string;
+      model_job_ids: string[];
+      total_files: number;
+      parity: {
+        status: 'not_run' | 'passed';
+        image_path?: string;
+        final_verdict?: string;
+        roi_count?: number;
+        compared_fields?: string[];
+      };
+    }>('/api/export/flow', { method: 'POST', body: JSON.stringify(data) }),
     runtime: (data: {
       job_id?: string;
       export_format?: string;

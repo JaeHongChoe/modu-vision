@@ -7,6 +7,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Layers,
@@ -18,7 +19,7 @@ import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import type { FlowchartCrop } from '../../types';
 
 export const IntermediateCropDrawer: React.FC = () => {
-  const { executionResult, setInspectedCrop } = useFlowchartStore();
+  const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
 
   const [filter, setFilter] = useState<'all' | 'ng' | 'ok'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +30,10 @@ export const IntermediateCropDrawer: React.FC = () => {
   const executionSteps = executionResult?.execution_steps ?? [];
   const totalLatencyMs = executionResult?.total_latency_ms ?? 0;
   const isOk = executionResult?.is_ok;
+  const isReview = executionResult?.final_verdict === 'REVIEW';
+  const isSegmentation = pipeline?.nodes.some((node) =>
+    node.data.node_type === 'inspection' && node.data.task === 'segmentation'
+  );
   const defectiveCount = crops.filter((c) => c.verdict === 'NG').length;
   const normalCount = crops.length - defectiveCount;
 
@@ -83,28 +88,32 @@ export const IntermediateCropDrawer: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
               <h3 className="text-xs font-bold font-mono tracking-wider text-slate-100 uppercase">
-                다중 모델 회로 검사 합성 결과 (Master Annotated View)
+                로컬 검사 결과 (Master Annotated View)
               </h3>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              실행된 모델의 이미지와 검출 영역
+              {isSegmentation
+                ? `${executionResult.inspected_image_size?.join('×') || '원본'} px · ${executionResult.tiles_processed || 0}개 타일 검사 · 결과 이미지는 최대 ${executionResult.preview_max_dim_px || 1600}px 미리보기`
+                : '검사 이미지와 실제 검사 영역'}
             </p>
           </div>
 
           {/* Annunciator LED Status Badge */}
           <div
             className={`px-3 py-1.5 rounded text-xs font-mono font-bold flex items-center space-x-2 border shadow-sm ${
-              isOk
+              isReview
+                ? 'bg-amber-950 text-amber-300 border-amber-500/60'
+                : isOk
                 ? 'bg-[#0E2A20] text-[#10B981] border-[#10B981]/50'
                 : 'bg-[#2D1216] text-[#EF4444] border-[#EF4444]/60'
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                isOk ? 'bg-[#10B981]' : 'bg-[#EF4444] animate-pulse'
+                isReview ? 'bg-amber-400' : isOk ? 'bg-[#10B981]' : 'bg-[#EF4444]'
               }`}
             />
-            <span>최종 판정: {isOk ? 'OK' : 'NG'}</span>
+            <span>최종 판정: {executionResult.final_verdict}</span>
           </div>
         </div>
 
@@ -116,20 +125,24 @@ export const IntermediateCropDrawer: React.FC = () => {
             <span className="text-slate-400 text-xs">결과 이미지가 없습니다.</span>
           )}
           <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] px-2 py-1 rounded text-[10px] font-mono text-slate-300">
-            {executionResult.roi_count} ROI 검사 결과
+            {executionResult.roi_count}개 영역 검사 결과
           </div>
         </div>
 
         {/* Rejection / Warning Strip */}
         <div
           className={`mt-2.5 px-3 py-2 rounded border text-xs font-mono flex items-center justify-between ${
-            isOk
+            isReview
+              ? 'bg-amber-950/70 border-amber-500/50 text-amber-200'
+              : isOk
               ? 'bg-[#0E201B] border-[#10B981]/40 text-[#6EE7B7]'
               : 'bg-[#1F1317] border-[#EF4444]/50 text-[#FCA5A5]'
           }`}
         >
           <div className="flex items-center space-x-2">
-            {isOk ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> : <XCircle className="w-4 h-4 text-[#EF4444]" />}
+            {isReview ? <AlertTriangle className="w-4 h-4 text-amber-400" /> :
+              isOk ? <CheckCircle2 className="w-4 h-4 text-[#10B981]" /> :
+                <XCircle className="w-4 h-4 text-[#EF4444]" />}
             <span>
               판정 사유:{' '}
               <strong className="text-white">
@@ -172,6 +185,7 @@ export const IntermediateCropDrawer: React.FC = () => {
                 const stepLat = step.latency_ms ?? 0;
                 const ratio = totalLatencyMs > 0 ? Math.min(100, (stepLat / totalLatencyMs) * 100) : 0;
                 const isStepNg = step.status === 'flagged_ng';
+                const isStepPassed = step.status === 'passed';
 
                 return (
                   <tr key={step.node_id} className="hover:bg-[#131822] transition-colors">
@@ -182,14 +196,18 @@ export const IntermediateCropDrawer: React.FC = () => {
                     <td className="py-1 px-2">
                       <span
                         className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                          isStepNg
+                          isStepNg || step.status === 'error'
                             ? 'bg-[#2D1216] text-[#EF4444] border border-[#EF4444]/40'
-                            : 'bg-[#0E2A20] text-[#10B981] border border-[#10B981]/40'
+                            : isStepPassed
+                              ? 'bg-[#0E2A20] text-[#10B981] border border-[#10B981]/40'
+                              : 'bg-amber-950 text-amber-300 border border-amber-500/40'
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${isStepNg ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`} />
-                        <span>{step.status}</span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isStepNg || step.status === 'error' ? 'bg-[#EF4444]' : isStepPassed ? 'bg-[#10B981]' : 'bg-amber-400'}`} />
+                        <span>{step.status}{step.branch_verdict ? ` · ${step.branch_verdict}` : ''}</span>
                       </span>
+                      {step.input_count !== undefined && step.output_count !== undefined &&
+                        <span className="ml-1 text-[9px] text-slate-400 tabular-nums">{step.input_count}→{step.output_count}</span>}
                     </td>
                     <td className="py-1 px-2 text-right font-bold text-slate-100 tabular-nums">
                       {stepLat.toFixed(1)} <span className="text-slate-400 text-[9px]">ms</span>
@@ -224,7 +242,7 @@ export const IntermediateCropDrawer: React.FC = () => {
           <div className="flex items-center space-x-2">
             <Layers className="w-4 h-4 text-[#3B82F6]" />
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-100">
-              추출 부품별 정밀 검사 ({crops.length}개 ROI)
+              검사 영역별 결과 ({crops.length}개)
             </h3>
           </div>
 
@@ -288,7 +306,9 @@ export const IntermediateCropDrawer: React.FC = () => {
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
           {processedCrops.length === 0 ? (
             <div className="text-center py-20 text-slate-400 text-xs font-mono">
-              일치하는 ROI 크롭이 없습니다.
+              {isReview && crops.length === 0
+                ? '검출된 영역이 없어 검사 모델을 실행하지 않았습니다.'
+                : '일치하는 검사 영역이 없습니다.'}
             </div>
           ) : (
             processedCrops.map((crop) => {
@@ -340,7 +360,11 @@ export const IntermediateCropDrawer: React.FC = () => {
 
                     {/* Defect Score Readout & Mini-Gauge */}
                     <div className="mt-1 flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-slate-400">결함 점수:</span>
+                      <span className="text-slate-400">
+                        {crop.roi_id === 'full_image' && crop.defect_area_px !== undefined
+                          ? '최고 결함 픽셀 확률:'
+                          : '결함 점수:'}
+                      </span>
                       <div className="flex items-center space-x-1.5">
                         <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
                           {(crop.defect_score * 100).toFixed(1)}%
@@ -355,6 +379,16 @@ export const IntermediateCropDrawer: React.FC = () => {
                     <div className="text-[10px] text-slate-300 truncate mt-0.5">
                       {crop.flaw_type}
                     </div>
+                    {crop.defect_area_px !== undefined && (
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        임계값 초과 픽셀: {crop.defect_area_px} px
+                      </div>
+                    )}
+                    {crop.blob_count !== undefined && (
+                      <div className="text-[10px] text-teal-300 mt-0.5 tabular-nums">
+                        Blob {crop.blob_count}개 · 최대 면적 {crop.largest_blob_area_px ?? 0} px²
+                      </div>
+                    )}
 
                     {/* Coordinates & Expand Action */}
                     <div className="mt-1 flex items-center justify-between text-[9px] font-mono text-slate-400 border-t border-[#2B3547]/60 pt-1">

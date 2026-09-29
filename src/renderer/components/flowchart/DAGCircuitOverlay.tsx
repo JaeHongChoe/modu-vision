@@ -6,17 +6,22 @@
  *  - Dual-layer trace rendering (Substrate Copper + Signal Carrier Trace).
  *  - Copper via test pads at connection endpoints and bend junctions.
  *  - Live execution signal packets animation.
- *  - High-visibility visual branching for PASS Route (Emerald) vs NG Diverter (Crimson).
+ *  - Saved model fan-out and verdict output branches remain selectable.
  */
 
 import React from 'react';
-import type { FlowEdge, FlowNode } from '../../types';
+import type { FlowEdge, FlowNode, FlowchartExecutionStep } from '../../types';
+import { FLOW_NODE_WIDTH } from './flowchartViewport';
 
 interface DAGCircuitOverlayProps {
   nodes: FlowNode[];
   edges: FlowEdge[];
   activeRunningNodeId: string | null;
-  finalVerdict?: 'OK' | 'NG';
+  finalVerdict?: 'OK' | 'NG' | 'REVIEW';
+  routedOutputNodeId?: string;
+  selectedEdgeId?: string | null;
+  executionSteps?: FlowchartExecutionStep[];
+  onSelectEdge?: (edgeId: string) => void;
 }
 
 export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
@@ -24,12 +29,16 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   edges,
   activeRunningNodeId,
   finalVerdict,
+  routedOutputNodeId,
+  selectedEdgeId,
+  executionSteps,
+  onSelectEdge,
 }) => {
-  const NODE_WIDTH = 272;
-
   // Map nodes by ID for O(1) coordinate lookup
   const nodeMap = new Map<string, FlowNode>();
   nodes.forEach((n) => nodeMap.set(n.id, n));
+  const selectedByRun = new Set(executionSteps?.flatMap((step) => step.selected_edge_ids || []) || []);
+  const hasExecutionTrace = Boolean(executionSteps?.some((step) => step.selected_edge_ids && step.selected_edge_ids.length > 0));
 
   // Calculates exact terminal pin coordinates
   const getPortCoord = (nodeId: string, direction: 'out' | 'in', portIndex = 0, totalPorts = 1) => {
@@ -44,7 +53,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
     const yOffset = headerHeight + 84 + ((portIndex + 0.5) / Math.max(1, totalPorts)) * terminalArea;
 
     return {
-      x: direction === 'out' ? posX + NODE_WIDTH : posX,
+      x: direction === 'out' ? posX + FLOW_NODE_WIDTH : posX,
       y: posY + yOffset,
     };
   };
@@ -94,32 +103,30 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const targetNode = nodeMap.get(edge.target);
         if (!sourceNode || !targetNode) return null;
 
-        const isBranchPass = edge.isBranch === 'pass' || edge.id.includes('pass') || edge.target.includes('pass');
-        const isBranchFail = edge.isBranch === 'fail' || edge.id.includes('fail') || edge.target.includes('ng') || edge.target.includes('reject');
-
         // Calculate discrete pin index
         const sourcePortCount = sourceNode.data.ports?.outputs?.length || 1;
         const targetPortCount = targetNode.data.ports?.inputs?.length || 1;
 
-        const portIndexOut = isBranchFail ? Math.min(1, sourcePortCount - 1) : 0;
-        const portIndexIn = 0;
-
-        const p1 = getPortCoord(edge.source, 'out', portIndexOut, sourcePortCount);
-        const p2 = getPortCoord(edge.target, 'in', portIndexIn, targetPortCount);
+        const p1 = getPortCoord(edge.source, 'out', 0, sourcePortCount);
+        const p2 = getPortCoord(edge.target, 'in', 0, targetPortCount);
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
+        const isVerdictBranch = sourceNode.data.node_type === 'decision';
+        const wasRouted = isVerdictBranch && routedOutputNodeId === edge.target;
 
         // Trace Color Determination
-        let traceColor = '#334155'; // Standby Dark Steel Copper
+        let traceColor = edge.isBranch === 'pass' ? '#16A34A' : edge.isBranch === 'fail' ? '#DC2626'
+          : edge.isBranch === 'review' ? '#D97706' : '#475569';
         if (isActive) {
           traceColor = '#06B6D4'; // Electric Cyan Active
-        } else if (isBranchPass) {
-          traceColor = finalVerdict === 'OK' ? '#10B981' : '#1E293B';
-        } else if (isBranchFail) {
-          traceColor = finalVerdict === 'NG' ? '#EF4444' : '#1E293B';
-        } else if (finalVerdict) {
-          traceColor = '#3B82F6'; // Completed Signal Bus
+        } else if (hasExecutionTrace) {
+          traceColor = selectedByRun.has(edge.id) ? '#38BDF8' : '#334155';
+        } else if (finalVerdict && (!isVerdictBranch || wasRouted)) {
+          traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
+        }
+        if (isVerdictBranch && wasRouted && finalVerdict) {
+          traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
         }
 
         const midX = (p1.x + p2.x) / 2;
@@ -148,8 +155,27 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               d={pathD}
               fill="none"
               stroke={traceColor}
-              strokeWidth="2"
+              strokeWidth={selectedEdgeId === edge.id ? 3 : 2}
+              strokeDasharray={edge.isBranch && !isVerdictBranch ? '6 3' : undefined}
               strokeLinecap="round"
+            />
+
+            <path
+              d={pathD}
+              fill="none"
+              stroke="transparent"
+              strokeWidth="16"
+              style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select connection ${edge.source} to ${edge.target}${edge.isBranch ? ` when ${edge.isBranch}` : ''}`}
+              onClick={() => onSelectEdge?.(edge.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectEdge?.(edge.id);
+                }
+              }}
             />
 
             {/* Layer 3: High-Frequency Electron Packet Pulse (Running State) */}
@@ -172,7 +198,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
             <circle cx={p2.x} cy={p2.y} r="1.5" fill="#F8FAFC" />
 
             {/* Discrete Wire Label Badge */}
-            {edge.label && (
+            {(edge.label || edge.isBranch) && (
               <g transform={`translate(${midX}, ${midY - 10})`}>
                 <rect
                   x="-60"
@@ -188,13 +214,13 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
                   x="0"
                   y="3.5"
                   textAnchor="middle"
-                  fill={isBranchFail ? '#F87171' : isBranchPass ? '#34D399' : '#94A3B8'}
+                  fill="#94A3B8"
                   fontSize="8.5"
                   fontWeight="bold"
                   fontFamily="monospace"
                   letterSpacing="0.05em"
                 >
-                  {edge.label}
+                  {edge.isBranch === 'pass' ? 'OK' : edge.isBranch === 'fail' ? 'NG' : edge.isBranch === 'review' ? 'REVIEW' : edge.label}
                 </text>
               </g>
             )}

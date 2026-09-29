@@ -3,46 +3,29 @@
  * Steel Instrument Inspection Image Selection Dialog.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Check,
   Database,
   FileSearch,
   FolderOpen,
   Image as ImageIcon,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
-import { resolveApiUrl } from '../../services/api';
-import type { SelectedInspectionImage } from '../../types';
+import { useProjectStore } from '../../stores/useProjectStore';
+import { api, resolveApiUrl } from '../../services/api';
+import type { ImageMeta, SelectedInspectionImage } from '../../types';
 
 export interface ImagePickerModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const SAMPLE_PRESETS: Array<{ name: string; path: string; desc: string }> = [
-  {
-    name: '웨이퍼 챔버 원본 결함 (039)',
-    path: '/Users/kai/Downloads/운영서버/visual_inspection/chamber_039_orig.jpg',
-    desc: '45MP 웨이퍼 챔버 고해상도 결함 이미지',
-  },
-  {
-    name: '반도체 블랙 부품 Top View (L1-07)',
-    path: '/Users/kai/Downloads/운영서버/test_crop_output/black_product_Top_View__C_Photo-L1-07.png',
-    desc: '운영서버 실제 반도체 칩 탑뷰 검사 이미지',
-  },
-  {
-    name: '하든드 검사 이미지 (L1-01)',
-    path: '/Users/kai/Downloads/운영서버/test_crop_output/hardened_Top_View_M1-c_Photo-L1-01.png',
-    desc: '표면 스크래치 및 보이드 검출 대상',
-  },
-];
-
 export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onClose }) => {
-  const { images, activeSplitFilter, setSplitFilter } = useDatasetStore();
+  const folderPath = useDatasetStore((state) => state.folderPath);
+  const task = useProjectStore((state) => state.task);
   const { selectedImage, setSelectedImage } = useFlowchartStore();
 
   const [activeTab, setActiveTab] = useState<'dataset' | 'local'>('dataset');
@@ -50,10 +33,56 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     selectedImage?.source === 'file' ? selectedImage.imagePath : ''
   );
   const [tempSelected, setTempSelected] = useState<SelectedInspectionImage | null>(selectedImage);
+  const [datasetImages, setDatasetImages] = useState<ImageMeta[]>([]);
+  const [datasetTotal, setDatasetTotal] = useState(0);
+  const [datasetPage, setDatasetPage] = useState(1);
+  const [datasetSplit, setDatasetSplit] = useState<'all' | 'train' | 'val' | 'test'>('all');
+  const [datasetLoading, setDatasetLoading] = useState(false);
+  const [datasetError, setDatasetError] = useState<string | null>(null);
+  const pageSize = 48;
+  const pageCount = Math.max(1, Math.ceil(datasetTotal / pageSize));
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTempSelected(selectedImage);
+    setLocalPathInput(selectedImage?.source === 'file' ? selectedImage.imagePath : '');
+    setDatasetPage(1);
+    setDatasetSplit('all');
+  }, [isOpen]);
+
+  useEffect(() => {
+    setDatasetPage(1);
+  }, [folderPath]);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'dataset') return;
+    let cancelled = false;
+    setDatasetLoading(true);
+    setDatasetError(null);
+    api.dataset.getImages({
+      folder_path: folderPath,
+      task,
+      limit: pageSize,
+      offset: (datasetPage - 1) * pageSize,
+      split: datasetSplit === 'all' ? undefined : datasetSplit,
+    }).then((response) => {
+      if (cancelled) return;
+      setDatasetImages(response.items || []);
+      setDatasetTotal(response.total || 0);
+    }).catch((error) => {
+      if (cancelled) return;
+      setDatasetImages([]);
+      setDatasetTotal(0);
+      setDatasetError(error instanceof Error ? error.message : '이미지 목록을 불러오지 못했습니다.');
+    }).finally(() => {
+      if (!cancelled) setDatasetLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit]);
 
   if (!isOpen) return null;
 
-  const handleSelectFromDataset = (img: (typeof images)[0]) => {
+  const handleSelectFromDataset = (img: ImageMeta) => {
     setTempSelected({
       source: 'dataset',
       imagePath: img.file_path,
@@ -79,16 +108,6 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
         });
       }
     }
-  };
-
-  const handleApplyPreset = (preset: (typeof SAMPLE_PRESETS)[0]) => {
-    setLocalPathInput(preset.path);
-    setTempSelected({
-      source: 'preset',
-      imagePath: preset.path,
-      fileName: preset.path.split('/').pop() || 'preset_image.png',
-      thumbnailUrl: `/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(preset.path)}`,
-    });
   };
 
   const handleConfirm = () => {
@@ -136,7 +155,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
             }`}
           >
             <Database className="w-3.5 h-3.5" />
-            <span>임포트 데이터셋 ({images.length})</span>
+            <span>임포트 데이터셋 ({datasetTotal})</span>
           </button>
 
           <button
@@ -148,7 +167,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
             }`}
           >
             <FileSearch className="w-3.5 h-3.5" />
-            <span>로컬 파일 / 운영서버 샘플</span>
+            <span>로컬 파일</span>
           </button>
         </div>
 
@@ -159,11 +178,11 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
               {/* Split Filters */}
               <div className="flex items-center space-x-1.5 mb-3.5">
                 {(['all', 'train', 'val', 'test'] as const).map((split) => {
-                  const isActive = activeSplitFilter === split;
+                  const isActive = datasetSplit === split;
                   return (
                     <button
                       key={split}
-                      onClick={() => setSplitFilter(split)}
+                      onClick={() => { setDatasetSplit(split); setDatasetPage(1); }}
                       className={`px-2.5 py-1 rounded text-[11px] font-mono uppercase cursor-pointer transition-colors ${
                         isActive
                           ? 'bg-[#2B3547] text-white border border-[#3B4860] font-bold'
@@ -176,21 +195,50 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                 })}
               </div>
 
-              {images.length === 0 ? (
+              <div className="flex items-center justify-between mb-3 text-[11px] font-mono text-slate-400">
+                <span>
+                  {datasetTotal > 0
+                    ? `${(datasetPage - 1) * pageSize + 1}–${Math.min(datasetPage * pageSize, datasetTotal)} / ${datasetTotal}장`
+                    : '0장'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDatasetPage((page) => Math.max(1, page - 1))}
+                    disabled={datasetLoading || datasetPage <= 1}
+                    className="px-2 py-1 bg-[#1A212E] border border-[#2B3547] rounded disabled:opacity-40"
+                  >
+                    이전
+                  </button>
+                  <span className="text-slate-200 tabular-nums">{datasetPage} / {pageCount}</span>
+                  <button
+                    onClick={() => setDatasetPage((page) => Math.min(pageCount, page + 1))}
+                    disabled={datasetLoading || datasetPage >= pageCount}
+                    className="px-2 py-1 bg-[#1A212E] border border-[#2B3547] rounded disabled:opacity-40"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+
+              {datasetLoading ? (
+                <div className="text-center py-12 text-slate-400 text-xs font-mono">이미지 목록을 불러오는 중...</div>
+              ) : datasetError ? (
+                <div className="text-center py-12 text-rose-300 text-xs font-mono">{datasetError}</div>
+              ) : datasetImages.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 text-xs font-mono">
                   <Database className="w-8 h-8 mx-auto mb-2 text-slate-500" />
                   <p>현재 임포트된 데이터셋 이미지가 없습니다.</p>
                   <p className="mt-1 text-slate-500">
-                    '로컬 파일 / 운영서버 샘플' 탭에서 이미지를 선택하거나 Step 1에서 데이터셋을 불러오세요.
+                    '로컬 파일' 탭에서 이미지를 선택하거나 Step 1에서 데이터셋을 불러오세요.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2.5">
-                  {images.map((img) => {
+                  {datasetImages.map((img) => {
                     const isSelected = tempSelected?.imagePath === img.file_path;
                     return (
                       <div
-                        key={img.image_id}
+                        key={img.file_path}
                         onClick={() => handleSelectFromDataset(img)}
                         className={`relative rounded border p-2 cursor-pointer transition-colors bg-[#1A212E] ${
                           isSelected
@@ -235,14 +283,14 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                     value={localPathInput}
                     onChange={(e) => {
                       setLocalPathInput(e.target.value);
-                      setTempSelected({
+                      setTempSelected(e.target.value.trim() ? {
                         source: 'file',
                         imagePath: e.target.value,
                         fileName: e.target.value.split('/').pop() || 'image.png',
                         thumbnailUrl: `/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(e.target.value)}`,
-                      });
+                      } : null);
                     }}
-                    placeholder="/Users/kai/Downloads/운영서버/..."
+                    placeholder="예: /path/to/inspection-image.png"
                     className="flex-1 bg-[#0B0E14] border border-[#2B3547] rounded px-3 py-1.5 text-xs font-mono text-slate-100 focus:outline-none focus:border-slate-400"
                   />
                   <button
@@ -252,39 +300,6 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                     <FolderOpen className="w-3.5 h-3.5 text-slate-300" />
                     <span>파일 찾기...</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Sample Presets */}
-              <div>
-                <label className="text-xs font-mono uppercase tracking-wider text-slate-300 block mb-2 flex items-center space-x-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>운영서버 반도체 제조 결함 샘플 프리셋 (1-Click Presets)</span>
-                </label>
-                <div className="space-y-1.5">
-                  {SAMPLE_PRESETS.map((preset) => {
-                    const isSelected = tempSelected?.imagePath === preset.path;
-                    return (
-                      <div
-                        key={preset.path}
-                        onClick={() => handleApplyPreset(preset)}
-                        className={`p-2.5 rounded border cursor-pointer transition-colors flex items-center justify-between ${
-                          isSelected
-                            ? 'border-[#10B981] bg-[#142320]'
-                            : 'border-[#2B3547] bg-[#1A212E] hover:border-slate-500'
-                        }`}
-                      >
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-200">{preset.name}</h4>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{preset.desc}</p>
-                          <p className="text-[9px] font-mono text-slate-500 truncate mt-0.5">{preset.path}</p>
-                        </div>
-                        <span className="text-[11px] font-mono font-bold text-slate-300 px-2.5 py-1 bg-[#131822] rounded border border-[#2B3547]">
-                          선택
-                        </span>
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             </div>
@@ -311,7 +326,8 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
             </button>
             <button
               onClick={handleConfirm}
-              className="px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded text-xs border border-[#10B981] cursor-pointer transition-colors"
+              disabled={!tempSelected && !localPathInput.trim()}
+              className="px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded text-xs border border-[#10B981] cursor-pointer transition-colors disabled:opacity-40"
             >
               선택 확정
             </button>

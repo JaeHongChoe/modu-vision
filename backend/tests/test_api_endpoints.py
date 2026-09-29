@@ -41,16 +41,20 @@ def app_and_client():
     temp_dir = tempfile.mkdtemp(prefix="test_vision_studio_")
     app = create_app(project_dir=temp_dir)
     client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
     yield app, client, Path(temp_dir)
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
-def trained_eval_job(tmp_path_factory):
+def trained_eval_job(tmp_path_factory, request):
     """Trains a fast 1-epoch classification model on a synthetic dataset for authentic API evaluation."""
     tmp_dir = tmp_path_factory.mktemp("eval_job_suite")
     data_dir = tmp_dir / "dataset"
-    out_dir = tmp_dir / "model_job"
+    out_dir = tmp_dir / "models" / "job_eval_authentic"
+    original_cwd = Path.cwd()
+    request.addfinalizer(lambda: os.chdir(original_cwd))
+    os.chdir(tmp_dir)
 
     # Generate 20 synthetic samples for robust train/val split
     generate_synthetic_dataset(output_dir=data_dir, num_samples=20, modality="pcb", task="classification")
@@ -262,9 +266,10 @@ class TestDatasetRoutes:
 class TestAnnotationRoutes:
     """Validates BBox sanitization, mask generation, and annotation persistence."""
 
-    def test_annotation_save_bbox_sanitization_and_mask_generation(self, app_and_client):
+    def test_annotation_save_bbox_sanitization_and_mask_generation(self, app_and_client, monkeypatch):
         _, client, temp_dir = app_and_client
         annot_dir = temp_dir / "annotations_test"
+        monkeypatch.setenv("VISION_AI_STUDIO_ANNOTATION_ROOTS", str(annot_dir))
         payload = {
             "image_id": "test_img_001",
             "output_dir": str(annot_dir),
@@ -305,6 +310,25 @@ class TestAnnotationRoutes:
         # Verify raster mask PNG was generated
         mask_file = annot_dir / "masks" / "test_img_001.png"
         assert mask_file.is_file()
+        mask_res = client.get("/api/annotations/test_img_001/mask", params={"dir_path": str(annot_dir)})
+        assert mask_res.status_code == 200
+        assert mask_res.headers["content-type"] == "image/png"
+        import cv2
+        import numpy as np
+        overlay = cv2.imdecode(np.frombuffer(mask_res.content, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        assert overlay.shape == (256, 256, 4)
+        assert overlay[200, 200, 3] == 0
+        assert overlay[20, 20, 3] > 0
+        assert overlay[20, 20, :3].max() > 1
+        assert client.get("/api/annotations/other_image/mask", params={"dir_path": str(annot_dir)}).status_code == 404
+        assert client.get("/api/annotations/%2E%2E/mask", params={"dir_path": str(annot_dir)}).status_code in (404, 422)
+
+        cleared = client.post("/api/annotations/save", json={**payload, "annotations": []})
+        assert cleared.status_code == 200
+        assert cleared.json()["mask_generated"] is False
+        assert client.get("/api/annotations/test_img_001", params={"dir_path": str(annot_dir)}).json()["mask_file"] is None
+        assert client.get("/api/annotations/test_img_001/mask", params={"dir_path": str(annot_dir)}).status_code == 404
+        assert not mask_file.exists()
 
         # Delete annotation
         del_res = client.delete(f"/api/annotations/test_img_001?dir_path={annot_dir}")

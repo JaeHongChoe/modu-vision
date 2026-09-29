@@ -2,8 +2,8 @@
 backend/engine/industrial_adapters.py
 
 Production-Grade Industrial Dataset Ingestion Adapters & Preprocessing Safeguards.
-Designed specifically for real semiconductor manufacturing inspection datasets
-(such as /Users/kai/Downloads/운영서버, Reference QC, and Reference production archives).
+Designed for real semiconductor manufacturing inspection datasets with
+hierarchical classes, LabelMe annotations, and high-resolution source images.
 
 Features:
   1. Standardized defect taxonomy mapping (Korean/English manufacturing categories).
@@ -29,6 +29,8 @@ import numpy as np
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
+
+from backend.engine.anomaly_split import partition_evaluation_images, partition_normal_images
 
 logger = logging.getLogger("vision_ai_studio.industrial_adapters")
 
@@ -99,11 +101,6 @@ IGNORED_JSON_NAMES = {
     "fail_records.json",
     "week_audit_report.json",
 }
-
-LABELME_FALLBACK_CANDIDATES = [
-    Path("/Volumes/backup/Reference_QC_데이터/NG_labelme"),
-]
-
 
 def find_matching_image(json_path: Union[str, Path]) -> Optional[Path]:
     """
@@ -196,14 +193,13 @@ def find_labelme_folder(folder: Path) -> Optional[Path]:
       1. folder itself
       2. folder / "NG_labelme"
       3. folder.parent / "NG_labelme"
-      4. Known backup candidates (e.g. /Volumes/backup/Reference_QC_데이터/NG_labelme)
     Returns None if no valid LabelMe annotations are found.
     """
     candidates = [
         folder,
         folder / "NG_labelme",
         folder.parent / "NG_labelme",
-    ] + LABELME_FALLBACK_CANDIDATES
+    ]
 
     for cand in candidates:
         if cand.is_dir():
@@ -348,7 +344,7 @@ class HierarchicalClassificationAdapter:
                     if not extracted and p.name in fail_records_map:
                         extracted = fail_records_map[p.name]
 
-                    # Filename fallback: e.g. ng_0011__AI Mount Scratch___B_Photo...
+                    # Filename fallback for imported images with an NG-prefixed label.
                     if not extracted:
                         fn_match = re.search(r"ng_\d+__([^_]+)___", p.name)
                         if fn_match:
@@ -882,32 +878,38 @@ class FlexibleAnomalyDataset(Dataset):
             elif (self.root_dir / "scan_anomalies").is_dir():
                 anom_dir = self.root_dir / "scan_anomalies"
 
-        if self.split == "train":
-            if norm_dir and norm_dir.is_dir():
-                for p in sorted(norm_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 0, None))
-            elif self.root_dir:
-                for p in sorted(self.root_dir.glob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 0, None))
-
-        elif self.split in ("test", "val"):
-            # Include normals
-            if norm_dir and norm_dir.is_dir():
-                all_normals = [p for p in sorted(norm_dir.rglob("*")) if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
-                # Take up to 20% for val/test
-                val_normals = all_normals[:max(1, len(all_normals) // 5)] if len(all_normals) > 1 else all_normals
-                for p in val_normals:
-                    self.samples.append((p, 0, None))
-
-            # Include anomalies
-            if anom_dir and anom_dir.is_dir():
-                for p in sorted(anom_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 1, None))
-        else:
+        if self.split not in ("train", "val", "test"):
             raise ValueError(f"Unknown anomaly split: {split}")
+
+        # Reference supplies a separate train/good directory. Reuse its explicit
+        # layout handling so held-out test images and masks stay associated.
+        if (self.root_dir is not None and self.normal_dir is None and self.anomaly_dir is None
+                and (self.root_dir / "train" / "good").is_dir()
+                and ((self.root_dir / "test").is_dir() or (self.root_dir / "val").is_dir())):
+            from backend.engine.dataset_loaders import AnomalyDataset
+            self.samples = AnomalyDataset(root_dir=self.root_dir, split=self.split).samples
+            return
+
+        if norm_dir and norm_dir.is_dir():
+            all_normals = [
+                p for p in norm_dir.rglob("*")
+                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+            ]
+        elif self.root_dir:
+            all_normals = [
+                p for p in self.root_dir.glob("*")
+                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+            ]
+        else:
+            all_normals = []
+        self.samples.extend((p, 0, None) for p in partition_normal_images(all_normals)[self.split])
+
+        if self.split in ("val", "test") and anom_dir and anom_dir.is_dir():
+            all_anomalies = [
+                p for p in anom_dir.rglob("*")
+                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+            ]
+            self.samples.extend((p, 1, None) for p in partition_evaluation_images(all_anomalies)[self.split])
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -1053,17 +1055,29 @@ def inspect_industrial_dataset(
         adapter_used = "FlexibleIndustrialAnomalyAdapter"
         norm_dir = opts.get("normal_dir")
         anom_dir = opts.get("anomaly_dir")
+        flat_ng_images = any(
+            p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and p.name.lower().startswith("ng_")
+            for p in folder.iterdir()
+        )
+        paired_labelme = any(is_valid_labelme_file(p, require_image=True) for p in folder.glob("*.json"))
+        root_is_normal = norm_dir is None or Path(norm_dir).resolve() == folder
+        if root_is_normal and (flat_ng_images or paired_labelme):
+            raise ValueError("NG-only images cannot be used as normal (OK) anomaly training data. Select a separate normal image folder.")
         ds_train = FlexibleAnomalyDataset(root_dir=folder, split="train", normal_dir=norm_dir, anomaly_dir=anom_dir)
         ds_val = FlexibleAnomalyDataset(root_dir=folder, split="val", normal_dir=norm_dir, anomaly_dir=anom_dir)
+        ds_test = FlexibleAnomalyDataset(root_dir=folder, split="test", normal_dir=norm_dir, anomaly_dir=anom_dir)
 
         classes = {"good": len(ds_train)}
-        for _, lbl, _ in ds_val.samples:
+        for _, lbl, _ in ds_val.samples + ds_test.samples:
             name = "defect" if lbl == 1 else "good"
             classes[name] = classes.get(name, 0) + 1
 
-        total_images = len(ds_train) + len(ds_val)
-        split = {"train": len(ds_train), "val": len(ds_val)}
-        sample_thumbnails = [f"/api/dataset/thumbnail/{p.name}?file_path={p.resolve()}" for p, _, _ in (ds_train.samples[:4] + ds_val.samples[:4])]
+        total_images = len(ds_train) + len(ds_val) + len(ds_test)
+        split = {"train": len(ds_train), "val": len(ds_val), "test": len(ds_test)}
+        sample_thumbnails = [
+            f"/api/dataset/thumbnail/{p.name}?file_path={p.resolve()}"
+            for p, _, _ in (ds_train.samples[:4] + ds_val.samples[:2] + ds_test.samples[:2])
+        ]
 
     return {
         "status": "success",

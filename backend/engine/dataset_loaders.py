@@ -14,11 +14,14 @@ Supports:
 from __future__ import annotations
 
 import glob
+import hashlib
 import json
 import logging
 import os
 import random
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
@@ -33,6 +36,57 @@ import torchvision.transforms.functional as TF
 logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
+SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+_REQUEST_SPLIT_ROOT: ContextVar[Optional[Path]] = ContextVar("project_split_root", default=None)
+
+
+def set_request_split_root(path: Path) -> Token:
+    return _REQUEST_SPLIT_ROOT.set(Path(path).resolve())
+
+
+def reset_request_split_root(token: Token) -> None:
+    _REQUEST_SPLIT_ROOT.reset(token)
+
+
+def scoped_split_root(default: Path) -> Path:
+    return _REQUEST_SPLIT_ROOT.get() or Path(default)
+
+
+@contextmanager
+def split_root_scope(path: Optional[str | Path]):
+    token = set_request_split_root(Path(path)) if path is not None else None
+    try:
+        yield
+    finally:
+        if token is not None:
+            reset_request_split_root(token)
+
+
+def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
+    """Read the split selected in Step 1, if one was saved for this folder."""
+    root = root.resolve()
+    # Generated datasets place task data in selected/classification while the
+    # source folder selected in Step 1 owns the saved split manifest.
+    candidate_roots = (root, root.parent) if root.name == "classification" else (root,)
+    for selected_root in candidate_roots:
+        key = hashlib.sha256(str(selected_root).encode("utf-8")).hexdigest()
+        manifest = scoped_split_root(SPLIT_MANIFEST_DIR) / f"{key}.json"
+        if not manifest.is_file():
+            continue
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            if data.get("folder_path") != str(selected_root) or not isinstance(data.get("assignments"), dict):
+                raise ValueError("folder path or assignments are invalid")
+            assignments = {}
+            for relative, partition in data["assignments"].items():
+                path = Path(relative)
+                if path.is_absolute() or ".." in path.parts or partition not in {"train", "val", "test"}:
+                    raise ValueError("an image path or partition is invalid")
+                assignments[str(selected_root / path)] = partition
+            return assignments
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            raise ValueError(f"Saved split is invalid for {selected_root}; apply the split again: {exc}") from exc
+    return None
 
 
 # ============================================================================
@@ -316,6 +370,7 @@ class ClassificationDataset(Dataset):
         transform: Optional[Callable] = None,
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
+        ignore_saved_split: bool = False,
     ):
         self.root_dir = Path(root_dir)
         self.split = split
@@ -329,9 +384,45 @@ class ClassificationDataset(Dataset):
         val_dir = self.root_dir / "val"
         test_dir = self.root_dir / "test"
 
+        assignments = None if ignore_saved_split else _classification_split_assignments(self.root_dir)
+        if assignments is not None:
+            source_dirs = [d for d in (train_dir, val_dir, test_dir) if d.is_dir()] or [self.root_dir]
+            folder_samples = [self._load_from_folder(source_dir) for source_dir in source_dirs]
+            class_names = {name for _, names, _ in folder_samples for name in names}
+            self.classes = sorted(
+                class_names,
+                key=lambda name: (0 if name.lower() in ("ok", "good", "normal", "pass", "정상_ok", "정상") else 1,
+                                  name.lower()),
+            )
+            self.class_to_idx = {name: idx for idx, name in enumerate(self.classes)}
+            all_samples = [
+                (path, self.class_to_idx[names[label_idx]])
+                for samples, names, _ in folder_samples for path, label_idx in samples
+            ]
+            image_paths = {str(path) for path, _ in all_samples}
+            if image_paths != set(assignments):
+                raise ValueError("Saved split no longer matches classification images; apply the split again")
+            self.samples = [
+                sample for sample in all_samples
+                if split is None or assignments[str(sample[0])] == split
+            ]
+            return
+
         if split and (train_dir.is_dir() or val_dir.is_dir()):
-            target_dir = train_dir if split == "train" else (val_dir if val_dir.is_dir() else test_dir)
-            self.samples, self.classes, self.class_to_idx = self._load_from_folder(target_dir)
+            available = [directory for directory in (train_dir, val_dir, test_dir) if directory.is_dir()]
+            names = {name for directory in available for name in self._load_from_folder(directory)[1]}
+            self.classes = sorted(
+                names,
+                key=lambda name: (0 if name.lower() in ("ok", "good", "normal", "pass", "정상_ok", "정상") else 1,
+                                  name.lower()),
+            )
+            self.class_to_idx = {name: idx for idx, name in enumerate(self.classes)}
+            target_dir = train_dir if split == "train" else (val_dir if split == "val" else test_dir)
+            if target_dir.is_dir():
+                local_samples, local_classes, _ = self._load_from_folder(target_dir)
+                self.samples = [(path, self.class_to_idx[local_classes[label_idx]]) for path, label_idx in local_samples]
+            else:
+                self.samples = []
         else:
             self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir)
             if split and split in ["train", "val"]:
@@ -433,6 +524,7 @@ class DetectionDataset(Dataset):
         transform: Optional[Callable] = None,
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
+        class_names: Optional[Sequence[str]] = None,
     ):
         self.transform = transform
         self.image_size = image_size
@@ -464,7 +556,31 @@ class DetectionDataset(Dataset):
         with open(self.annotation_file, "r", encoding="utf-8") as f:
             coco_data = json.load(f)
 
-        self.categories = {c["id"]: c["name"] for c in coco_data.get("categories", [])}
+        raw_categories = coco_data.get("categories", [])
+        if not isinstance(raw_categories, list) or not raw_categories:
+            raise ValueError("COCO detection annotations require at least one category")
+        original_categories = {int(c["id"]): str(c["name"]) for c in raw_categories}
+        if len(original_categories) != len(raw_categories):
+            raise ValueError("COCO detection category IDs must be unique")
+        # Torchvision reserves model class 0 for background. COCO IDs need
+        # not be contiguous or start at 1. Reuse the training class order for
+        # validation and evaluation, even if their COCO files omit a class.
+        names = list(class_names) if class_names is not None else [
+            original_categories[original_id] for original_id in sorted(original_categories)
+        ]
+        if len(set(names)) != len(names):
+            raise ValueError("COCO detection category names must be unique")
+        name_to_dense = {name: index for index, name in enumerate(names, start=1)}
+        unknown_names = set(original_categories.values()) - name_to_dense.keys()
+        if unknown_names:
+            raise ValueError(f"COCO detection has categories absent from the training class mapping: {sorted(unknown_names)}")
+        self.original_to_dense = {
+            original_id: name_to_dense[name]
+            for original_id, name in original_categories.items()
+        }
+        self.categories = {
+            dense_id: name for name, dense_id in name_to_dense.items()
+        }
         self.images = {img["id"]: img for img in coco_data.get("images", [])}
 
         self.img_to_annos: Dict[int, List[Dict[str, Any]]] = {img_id: [] for img_id in self.images}
@@ -537,7 +653,10 @@ class DetectionDataset(Dataset):
                 y2 = min(float(target_h), y1 + 1.0)
 
             valid_boxes.append([x1, y1, x2, y2])
-            valid_labels.append(int(a["category_id"]))
+            original_category = int(a["category_id"])
+            if original_category not in self.original_to_dense:
+                raise ValueError(f"COCO annotation references unknown category ID: {original_category}")
+            valid_labels.append(self.original_to_dense[original_category])
             valid_areas.append(float((x2 - x1) * (y2 - y1)))
             valid_norms.append([x1 / target_w, y1 / target_h, x2 / target_w, y2 / target_h])
 
@@ -697,91 +816,125 @@ class AnomalyDataset(Dataset):
         self.anomaly_dir = Path(anomaly_dir) if anomaly_dir is not None else None
         self.samples: List[Tuple[Path, int, Optional[Path]]] = []
 
+        from backend.engine.anomaly_split import partition_evaluation_images, partition_normal_images
+
+        def image_paths(directory: Path, recursive: bool = True) -> List[Path]:
+            paths = directory.rglob("*") if recursive else directory.glob("*")
+            return [
+                p for p in paths
+                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                and not (directory.name == "test_crop_output" and p.name.startswith("mask_"))
+            ]
+
+        def train_normal_paths(directory: Path) -> List[Path]:
+            """Use every normal alias as one source for disjoint train/val/test partitions."""
+            aliases = {"good", "ok", "normal", "pass"}
+            folders = [p for p in directory.iterdir() if p.is_dir() and not p.name.startswith(".")]
+            for folder in folders:
+                if folder.name.lower() not in aliases:
+                    raise ValueError(
+                        f"Anomaly training split must contain exclusively normal (good) images, found: {folder.name}"
+                    )
+            if folders:
+                return sorted(p for folder in folders for p in image_paths(folder, recursive=False))
+            return sorted(image_paths(directory, recursive=False))
+
         if self.split == "train":
             if self.normal_dir and self.normal_dir.is_dir():
-                for p in sorted(self.normal_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 0, None))
+                self.samples.extend(
+                    (p, 0, None) for p in partition_normal_images(image_paths(self.normal_dir))["train"]
+                )
             elif self.root_dir is not None:
                 train_dir = self.root_dir / "train"
                 if train_dir.exists():
-                    # Strict security validation: no defect folders in train
-                    for sub in train_dir.iterdir():
-                        if sub.is_dir() and not sub.name.startswith("."):
-                            if sub.name.lower() not in ["good", "ok", "normal", "pass"]:
-                                raise ValueError(
-                                    f"Anomaly training split must contain exclusively normal (good) images, found: {sub.name}"
-                                )
-
-                    found_normal_folder = False
-                    for candidate_name in ["good", "ok", "normal", "pass"]:
-                        cand_path = train_dir / candidate_name
-                        if cand_path.exists() and cand_path.is_dir():
-                            found_normal_folder = True
-                            for p in sorted(cand_path.glob("*")):
-                                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                    self.samples.append((p, 0, None))
-
-                    if not found_normal_folder:
-                        for p in sorted(train_dir.glob("*")):
-                            if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                self.samples.append((p, 0, None))
+                    self.samples.extend((p, 0, None) for p in train_normal_paths(train_dir))
+                    if not (self.root_dir / "test").is_dir() and not (self.root_dir / "val").is_dir():
+                        self.samples = [
+                            (p, 0, None)
+                            for p in partition_normal_images(p for p, _, _ in self.samples)["train"]
+                        ]
                 elif (self.root_dir / "OK").is_dir():
-                    for p in sorted((self.root_dir / "OK").rglob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                            self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(image_paths(self.root_dir / "OK"))["train"]
+                    )
                 elif (self.root_dir / "test_crop_output").is_dir():
-                    for p in sorted((self.root_dir / "test_crop_output").glob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and not p.name.startswith("mask_"):
-                            self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(
+                            image_paths(self.root_dir / "test_crop_output", recursive=False)
+                        )["train"]
+                    )
                 else:
                     raise FileNotFoundError(f"Anomaly train directory does not exist at {train_dir}")
             else:
                 raise FileNotFoundError("Neither root_dir nor normal_dir was provided for AnomalyDataset")
 
         elif self.split in ["test", "val"]:
-            if self.anomaly_dir and self.anomaly_dir.is_dir():
-                for p in sorted(self.anomaly_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 1, None))
+            if self.normal_dir or self.anomaly_dir:
                 if self.normal_dir and self.normal_dir.is_dir():
-                    norm_imgs = [p for p in sorted(self.normal_dir.rglob("*")) if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
-                    val_normals = norm_imgs[:max(1, len(norm_imgs) // 5)] if len(norm_imgs) > 1 else norm_imgs
-                    for p in val_normals:
-                        self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(image_paths(self.normal_dir))[self.split]
+                    )
+                if self.anomaly_dir and self.anomaly_dir.is_dir():
+                    self.samples.extend(
+                        (p, 1, None) for p in partition_evaluation_images(image_paths(self.anomaly_dir))[self.split]
+                    )
             elif self.root_dir is not None:
                 test_dir = self.root_dir / "test"
-                if not test_dir.exists():
-                    test_dir = self.root_dir / "val"
+                val_dir = self.root_dir / "val"
                 gt_dir = self.root_dir / "ground_truth"
 
-                if test_dir.exists():
-                    for sub in sorted(test_dir.iterdir()):
-                        if sub.is_dir() and not sub.name.startswith("."):
-                            is_good = (sub.name.lower() in ["good", "ok", "normal", "pass"])
-                            label = 0 if is_good else 1
-                            for p in sorted(sub.glob("*")):
-                                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                    mask_p = None
-                                    if not is_good and gt_dir.exists():
-                                        candidate = gt_dir / sub.name / f"{p.stem}_mask.png"
-                                        if not candidate.exists():
-                                            candidate = gt_dir / sub.name / f"{p.name}"
-                                        if candidate.exists():
-                                            mask_p = candidate
-                                    self.samples.append((p, label, mask_p))
-                elif (self.root_dir / "fail").is_dir() or (self.root_dir / "NG").is_dir():
+                if test_dir.is_dir() or val_dir.is_dir():
+                    has_named_splits = test_dir.is_dir() and val_dir.is_dir()
+                    source_dir = (val_dir if self.split == "val" else test_dir) if has_named_splits else (
+                        test_dir if test_dir.is_dir() else val_dir
+                    )
+                    normal_samples: List[Tuple[Path, int, Optional[Path]]] = []
+                    defect_samples: List[Tuple[Path, int, Optional[Path]]] = []
+                    for sub in sorted(source_dir.iterdir()):
+                        if not sub.is_dir() or sub.name.startswith("."):
+                            continue
+                        is_good = sub.name.lower() in ("good", "ok", "normal", "pass")
+                        for p in sorted(image_paths(sub, recursive=False)):
+                            mask_p = None
+                            if not is_good and gt_dir.exists():
+                                candidate = gt_dir / sub.name / f"{p.stem}_mask.png"
+                                if not candidate.exists():
+                                    candidate = gt_dir / sub.name / p.name
+                                if candidate.exists():
+                                    mask_p = candidate
+                            sample = (p, 0 if is_good else 1, mask_p)
+                            (normal_samples if is_good else defect_samples).append(sample)
+
+                    if has_named_splits:
+                        self.samples.extend(normal_samples + defect_samples)
+                    else:
+                        selected = set(partition_evaluation_images(
+                            p for p, _, _ in normal_samples
+                        )[self.split]) | set(partition_evaluation_images(
+                            p for p, _, _ in defect_samples
+                        )[self.split])
+                        self.samples.extend(
+                            sample for sample in normal_samples + defect_samples if sample[0] in selected
+                        )
+                else:
+                    norm_dir = next((directory for directory in (
+                        self.root_dir / "test_crop_output",
+                        self.root_dir / "OK",
+                        self.root_dir / "train",
+                    ) if directory.is_dir()), self.root_dir / "OK")
                     anom_dir = (self.root_dir / "fail") if (self.root_dir / "fail").is_dir() else (self.root_dir / "NG")
-                    for p in sorted(anom_dir.rglob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                            self.samples.append((p, 1, None))
-                    # Add normal samples from test_crop_output or OK
-                    norm_dir = (self.root_dir / "test_crop_output") if (self.root_dir / "test_crop_output").is_dir() else (self.root_dir / "OK")
                     if norm_dir.is_dir():
-                        norm_imgs = [p for p in sorted(norm_dir.glob("*")) if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and not p.name.startswith("mask_")]
-                        val_normals = norm_imgs[:max(1, len(norm_imgs) // 5)] if len(norm_imgs) > 1 else norm_imgs
-                        for p in val_normals:
-                            self.samples.append((p, 0, None))
+                        normal_paths = (
+                            train_normal_paths(norm_dir)
+                            if norm_dir == self.root_dir / "train" else image_paths(norm_dir)
+                        )
+                        self.samples.extend(
+                            (p, 0, None) for p in partition_normal_images(normal_paths)[self.split]
+                        )
+                    if anom_dir.is_dir():
+                        self.samples.extend(
+                            (p, 1, None) for p in partition_evaluation_images(image_paths(anom_dir))[self.split]
+                        )
         else:
             raise ValueError(f"Unknown anomaly split: {split}")
 
@@ -898,7 +1051,7 @@ class CocoJsonParser:
 # Universal Dataset Factory & Inspection
 # ============================================================================
 
-def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
+def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: bool = False) -> DatasetSummary:
     """
     Fast, metadata-only dataset scanner for Electron GUI project import.
     Returns counts matching REST API contract without loading full images.
@@ -907,6 +1060,20 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
     task_clean = task.lower().strip()
 
     if task_clean == "classification":
+        if not ignore_saved_split and _classification_split_assignments(root) is not None:
+            all_dataset = ClassificationDataset(root_dir=root)
+            counts: Dict[str, int] = {}
+            for _, label_idx in all_dataset.samples:
+                name = all_dataset.classes[label_idx]
+                counts[name] = counts.get(name, 0) + 1
+            split_counts = {
+                partition: len(ClassificationDataset(root_dir=root, split=partition))
+                for partition in ("train", "val", "test")
+            }
+            return DatasetSummary(
+                task="classification", total_images=len(all_dataset),
+                classes=counts, split_counts=split_counts,
+            )
         if (root / "train").is_dir():
             split_counts: Dict[str, int] = {}
             counts: Dict[str, int] = {}
@@ -935,7 +1102,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
                 split_counts=split_counts,
             )
         else:
-            ds = ClassificationDataset(root_dir=root)
+            ds = ClassificationDataset(root_dir=root, ignore_saved_split=ignore_saved_split)
             counts = {}
             for _, lbl in ds.samples:
                 cname = ds.classes[lbl]
@@ -1000,42 +1167,40 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
             counts = {c: 0 for c in ds.categories.values() if c != "__background__"}
             for item_annos in ds.img_to_annos.values():
                 for ann in item_annos:
-                    cname = ds.categories.get(ann["category_id"], "defect")
+                    dense_id = ds.original_to_dense.get(int(ann["category_id"]))
+                    if dense_id is None:
+                        raise ValueError(f"COCO annotation references unknown category ID: {ann['category_id']}")
+                    cname = ds.categories[dense_id]
                     counts[cname] = counts.get(cname, 0) + 1
             total = len(ds)
-            train_count = int(total * 0.8)
             return DatasetSummary(
                 task="detection",
                 total_images=total,
                 classes=counts,
-                split_counts={"train": train_count, "val": total - train_count},
+                split_counts={"train": total, "val": 0},
             )
 
     elif task_clean == "segmentation":
-        train_img_dir = None
-        val_img_dir = None
+        split_image_dirs = None
         if (root / "images" / "train").is_dir():
-            train_img_dir = root / "images" / "train"
-            val_img_dir = root / "images" / "val" if (root / "images" / "val").is_dir() else None
+            split_image_dirs = {name: root / "images" / name for name in ("train", "val", "test")}
         elif (root / "train" / "images").is_dir():
-            train_img_dir = root / "train" / "images"
-            val_img_dir = root / "val" / "images" if (root / "val" / "images").is_dir() else None
+            split_image_dirs = {name: root / name / "images" for name in ("train", "val", "test")}
 
-        if train_img_dir is not None:
-            train_count = sum(
-                1 for p in train_img_dir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            )
-            val_count = (
-                sum(1 for p in val_img_dir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
-                if val_img_dir
-                else 0
-            )
-            total = train_count + val_count
+        if split_image_dirs is not None:
+            split_counts = {
+                name: sum(
+                    1 for p in image_dir.glob("*")
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                ) if image_dir.is_dir() else 0
+                for name, image_dir in split_image_dirs.items()
+            }
+            total = sum(split_counts.values())
             return DatasetSummary(
                 task="segmentation",
                 total_images=total,
                 classes={"defect_mask": total},
-                split_counts={"train": train_count, "val": val_count},
+                split_counts=split_counts,
             )
         else:
             ds = SegmentationDataset(root_dir=root)
@@ -1050,17 +1215,18 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
 
     elif task_clean in ("anomaly", "anomaly_detection"):
         ds_train = AnomalyDataset(root_dir=root, split="train")
+        ds_val = AnomalyDataset(root_dir=root, split="val")
         ds_test = AnomalyDataset(root_dir=root, split="test")
         counts = {"good": len(ds_train)}
-        for _, label, _ in ds_test.samples:
+        for _, label, _ in ds_val.samples + ds_test.samples:
             name = "defect" if label == 1 else "good"
             counts[name] = counts.get(name, 0) + 1
-        total = len(ds_train) + len(ds_test)
+        total = len(ds_train) + len(ds_val) + len(ds_test)
         return DatasetSummary(
             task="anomaly",
             total_images=total,
             classes=counts,
-            split_counts={"train": len(ds_train), "val": len(ds_test)},
+            split_counts={"train": len(ds_train), "val": len(ds_val), "test": len(ds_test)},
         )
 
     else:
@@ -1110,5 +1276,3 @@ from backend.engine.industrial_adapters import (
     normalize_defect_category,
     read_image_safely_rgb,
 )
-
-

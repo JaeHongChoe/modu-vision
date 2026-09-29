@@ -7,11 +7,27 @@ Supports Fast Prototype (MobileNetV3 Large FPN) and High Precision (ResNet50 FPN
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Mapping, Optional, Sequence
 import torch
 import torch.nn as nn
 import torchvision.models.detection as detection
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+
+
+def checkpoint_detection_num_classes(state_dict: Mapping[str, torch.Tensor], classes: Sequence[str]) -> int:
+    """Use the trained predictor head, including older background-named metadata."""
+    predictor = state_dict.get("roi_heads.box_predictor.cls_score.weight")
+    if predictor is not None:
+        return int(predictor.shape[0])
+    foreground = foreground_class_names(classes)
+    return max(2, len(foreground) + 1)
+
+
+def foreground_class_names(classes: Sequence[str]) -> list[str]:
+    names = [str(name) for name in classes]
+    if names and names[0].lower() in {"background", "__background__"}:
+        return names[1:]
+    return names
 
 
 def create_detection_model(
@@ -36,14 +52,18 @@ def create_detection_model(
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_mobilenet_v3_large_fpn(weights=weights)
+        model = detection.fasterrcnn_mobilenet_v3_large_fpn(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
     elif preset_clean in ("precision", "resnet50", "fasterrcnn_resnet50_fpn_v2"):
         weights = (
             detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_resnet50_fpn_v2(weights=weights)
+        model = detection.fasterrcnn_resnet50_fpn_v2(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
     else:
         # Default fallback to MobileNetV3 FPN
         weights = (
@@ -51,7 +71,9 @@ def create_detection_model(
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_mobilenet_v3_large_fpn(weights=weights)
+        model = detection.fasterrcnn_mobilenet_v3_large_fpn(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
 
     # Replace box predictor head with target num_classes
     in_features = model.roi_heads.box_predictor.cls_score.in_features

@@ -25,8 +25,8 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 export const WizardFooter: React.FC = () => {
   const { activeStep, setStep, language } = useProjectStore();
   const { totalImages, split } = useDatasetStore();
-  const { status } = useTrainingStore();
-  const { jobId, testPredictions } = useEvaluationStore();
+  const { status, jobId: trainingJobId, isCurrentData } = useTrainingStore();
+  const { jobId, testPredictions, isLoading: isEvaluationLoading } = useEvaluationStore();
 
   const handlePrev = () => {
     if (activeStep > 1) {
@@ -84,18 +84,18 @@ export const WizardFooter: React.FC = () => {
     '',
     'AI 오토라벨링 (2단계)',
     '오토딥러닝 학습 (3단계)',
-    '검증 & 과검/미검 제로화 (4단계)',
+    '품질 평가 & 과검/미검 분석 (4단계)',
     '플로우차트 체이닝 (5단계)',
-    '런타임 배포 (6단계)',
+    '추론 & 모델 내보내기 (6단계)',
   ];
 
   const stepTargetNamesEn = [
     '',
     'AI Auto-Labeling (Step 2)',
     'AutoML Training (Step 3)',
-    'Evaluation & Zero-Escape (Step 4)',
+    'Evaluation & Error Analysis (Step 4)',
     'Flowchart Chaining (Step 5)',
-    'Runtime Export (Step 6)',
+    'Inference & Model Export (Step 6)',
   ];
 
   const currentStepNamesKo = [
@@ -104,7 +104,7 @@ export const WizardFooter: React.FC = () => {
     '오토딥러닝',
     '평가 & 과검/미검',
     '플로우차트',
-    '인퍼런스 & 배포',
+    '추론 & 모델 내보내기',
   ];
 
   const currentStepNamesEn = [
@@ -133,6 +133,9 @@ export const WizardFooter: React.FC = () => {
         ? 'AutoML 학습이 백그라운드에서 진행 중입니다...'
         : 'AutoML training in progress in background...';
     }
+    if (activeStep === 4 && isEvaluationLoading) {
+      return language === 'ko' ? '평가 결과를 불러오는 중...' : 'Loading evaluation results...';
+    }
     if (activeStep === 4 && !jobId && testPredictions.length === 0) {
       return language === 'ko'
         ? '평가할 모델이 없습니다 (3단계에서 모델을 학습하세요)'
@@ -142,6 +145,11 @@ export const WizardFooter: React.FC = () => {
   };
 
   const warningHint = getStepWarningHint();
+  const hasCurrentModel = Boolean((status === 'completed' && isCurrentData && trainingJobId) || jobId);
+  const isPreviewOnly = (activeStep === 1 && totalImages === 0)
+    || (activeStep === 3 && !hasCurrentModel)
+    || (activeStep === 4 && !jobId)
+    || (activeStep === 5 && !hasCurrentModel);
 
   return (
     <footer className="h-14 bg-[#0B0E14] border-t border-[#2B3547] px-6 flex items-center justify-between text-xs select-none text-slate-300">
@@ -203,12 +211,12 @@ export const WizardFooter: React.FC = () => {
             onClick={handleNext}
             disabled={!canGoNext}
             className="flex items-center space-x-2 px-4 py-2 rounded font-semibold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white border border-blue-400/30 transition-colors duration-75 cursor-pointer"
-            title="Advance to next stage (Alt+→ or ])"
+            title={isPreviewOnly ? 'Preview the next stage; its actions may require data or a completed model' : 'Advance to next stage (Alt+→ or ])'}
           >
             <span>
               {language === 'ko'
-                ? `다음: ${stepTargetNamesKo[activeStep]}`
-                : `Next: ${stepTargetNamesEn[activeStep]}`}
+                ? `${isPreviewOnly ? '다음 단계 보기' : '다음'}: ${stepTargetNamesKo[activeStep]}`
+                : `${isPreviewOnly ? 'Preview next' : 'Next'}: ${stepTargetNamesEn[activeStep]}`}
             </span>
             <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-blue-700/80 border border-blue-400/40 rounded text-blue-100">
               Alt+→

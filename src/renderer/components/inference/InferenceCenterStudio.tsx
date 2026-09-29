@@ -1,17 +1,17 @@
 /**
  * src/renderer/components/inference/InferenceCenterStudio.tsx
- * Stage 6: Inference Center & Production Runtime Export (Runtime Style).
+ * Stage 6: Inference Center & Standalone Runtime Export.
  * Adheres to Industrial & Inspection Industrial Deployment Standards:
  * - Industrial Digital Instrument Bay: High-contrast tabular-nums digital readouts
  * - Real-time FPS gauge & PPM throughput
  * - Cycle Time Limit Gauge Bar with line-speed threshold marker (25.0 ms)
  * - Jitter indicator (±1-sigma) & P95 tail latency gauge
  * - Physical LED Line Readiness Annunciator
- * - Standalone Runtime Package Manifest & tabbed C#/C++/Python SDK Code Inspector
+ * - Standalone Python package manifest and usage example
  * - Zero diffuse glows, zero optical blurs, zero gradients, 1px precision borders
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -25,18 +25,43 @@ import {
 } from 'lucide-react';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
+import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { api } from '../../services/api';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { LedAnnunciator } from '../common/LedAnnunciator';
 import type { RuntimeExportResult } from '../../types';
+import { selectInferenceJobId } from './selectInferenceJob';
+import { BatchInspectionPanel } from './BatchInspectionPanel';
+import { FlowPackagePanel } from './FlowPackagePanel';
+import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
-  const { language, backendStatus } = useProjectStore();
-  const { benchmarkResult, isBenchmarking, runBenchmark } = useEvaluationStore();
-  const jobId = useTrainingStore((state) => state.jobId);
+  const { language, backendStatus, task } = useProjectStore();
+  const { benchmarkResult, isBenchmarking, isLoading: isFindingModel, loadEvaluation, runBenchmark } = useEvaluationStore();
+  const trainingJobId = useTrainingStore((state) => state.jobId);
+  const trainingStatus = useTrainingStore((state) => state.status);
+  const trainingIsCurrentData = useTrainingStore((state) => state.isCurrentData);
+  const evaluationJobId = useEvaluationStore((state) => state.jobId);
+  const allowLatestRecovery = useEvaluationStore((state) => state.allowLatestRecovery);
+  const folderPath = useDatasetStore((state) => state.folderPath);
+  const datasetKey = useDatasetStore((state) => state.datasetKey);
+  const datasetIsLoading = useDatasetStore((state) => state.isLoading);
+  const importError = useDatasetStore((state) => state.importError);
+  const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
+  const jobId = selectInferenceJobId(
+    { jobId: trainingJobId, status: trainingStatus, isCurrentData: trainingIsCurrentData },
+    { jobId: evaluationJobId, allowLatestRecovery },
+  );
 
-  const [activeCodeTab, setActiveCodeTab] = useState<'csharp' | 'cpp' | 'python'>('python');
+  const currentJobId = () => selectInferenceJobId(useTrainingStore.getState(), useEvaluationStore.getState());
+
+  useEffect(() => {
+    if (!jobId && !trainingIsCurrentData && !trainingJobId && sourceFolder && allowLatestRecovery) {
+      loadEvaluation(undefined, { folderPath: sourceFolder, task }).catch(() => {});
+    }
+  }, [jobId, trainingIsCurrentData, trainingJobId, sourceFolder, allowLatestRecovery, task, loadEvaluation]);
+
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<RuntimeExportResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -45,12 +70,28 @@ export const InferenceCenterStudio: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<'onnx' | 'torchscript'>('onnx');
   const quantizeFp16 = false;
   const [resolution, setResolution] = useState<number>(256);
+  const flowPackageRef = useRef<HTMLDivElement>(null);
+
+  const showFlowPackage = () => {
+    const panel = flowPackageRef.current;
+    if (!panel) return;
+    panel.focus({ preventScroll: true });
+    panel.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
+
+  useEffect(() => {
+    setExportResult(null);
+    setActionError(null);
+  }, [jobId, sourceFolder]);
 
   const isKo = language === 'ko';
 
   const handleBenchmark = async () => {
     setActionError(null);
-    if (!jobId) {
+    if (!currentJobId()) {
       setActionError('학습을 완료한 모델을 먼저 선택하세요.');
       return;
     }
@@ -59,20 +100,21 @@ export const InferenceCenterStudio: React.FC = () => {
 
   const handleExport = async () => {
     setActionError(null);
-    if (!jobId) {
+    const activeJobId = currentJobId();
+    if (!activeJobId) {
       setActionError('학습을 완료한 모델을 먼저 선택하세요.');
       return;
     }
     setIsExporting(true);
     try {
       const res = await api.export.runtime({
-        job_id: jobId,
-        package_name: `modu_vision_${jobId}`,
+        job_id: activeJobId,
+        package_name: `modu_vision_${activeJobId}_${exportFormat}_${resolution}_${Date.now()}`,
         export_format: exportFormat,
         resolution,
         quantize_fp16: quantizeFp16,
       });
-      setExportResult(res);
+      if (currentJobId() === activeJobId) setExportResult(res);
       setIsExporting(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : '내보내기 실패');
@@ -89,8 +131,8 @@ export const InferenceCenterStudio: React.FC = () => {
   const stdLatency = benchmarkResult?.std_latency_ms ?? 0;
   const ppm = Math.round(fps * 60);
 
-  // Line Readiness Status Calculation
-  const isLineReady = Boolean(benchmarkResult) && meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
+  // Synthetic single-forward timing against a user-defined target.
+  const isForwardWithinTarget = Boolean(benchmarkResult) && meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
   const headroomPct = benchmarkResult ? Number((((maxTaktLimit - meanLatency) / maxTaktLimit) * 100).toFixed(1)) : 0;
 
   // Gauge bar scaling (0 to max(60, maxTaktLimit * 1.6))
@@ -98,15 +140,11 @@ export const InferenceCenterStudio: React.FC = () => {
   const actualFillPct = Math.min(100, Math.max(0, (meanLatency / gaugeMaxMs) * 100));
   const thresholdMarkerPct = Math.min(100, Math.max(0, (maxTaktLimit / gaugeMaxMs) * 100));
 
-  // Only the generated infer.py is a supported client. Native SDKs need parity tests.
-  const activeSnippet = activeCodeTab === 'python'
-    ? `# Run the infer.py shipped in the exported package.
+  // Only the generated infer.py is included in the exported package.
+  const activeSnippet = `# Run the infer.py shipped in the exported package.
 # It reads config.json and loads model.onnx or model.pt.
 python infer.py --image /path/to/inspection_image.jpg
-python infer.py --self-test`
-    : `# Native ${activeCodeTab === 'csharp' ? 'C#' : 'C++'} client is unavailable.
-# Use the verified infer.py in the package, or integrate the model
-# after preprocessing and output parity tests against it.`;
+python infer.py --self-test`;
 
   const codeLines = activeSnippet.split('\n');
 
@@ -122,12 +160,12 @@ python infer.py --self-test`
       <OperatorGuidanceBanner step={6} />
 
       {/* Title & Action Strip */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 border-t-0">
-        <div>
+      <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center space-x-2.5">
             <Server className="w-5 h-5 text-slate-300" />
             <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              {isKo ? '인퍼런스 센터 및 모델 내보내기' : 'Inference Center & Model Export'}
+              {isKo ? '검사 결과 및 플로우 배포' : 'Inspection Results & Flow Deployment'}
             </h2>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A212E] text-slate-300 border border-[#2B3547]">
               STAGE 6
@@ -135,17 +173,27 @@ python infer.py --self-test`
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {isKo
-              ? '합성 입력으로 모델 추론 속도를 측정하고 Python 독립 실행 패키지를 내보냅니다. 생산 라인과 PLC 연동은 별도 검증이 필요합니다.'
-              : 'Benchmark model inference with synthetic input and export a standalone Python package.'}
+              ? '5단계에서 저장한 검사 플로우를 실제 이미지로 확인하고, 결과 이력과 전체 플로우 패키지를 관리하세요.'
+              : 'Inspect real images with the saved Stage 5 flow, review results, and export the complete flow.'}
           </p>
         </div>
 
-        {/* Global Trigger Actions */}
-        <div className="flex items-center space-x-3">
+        {/* The complete saved flow is the primary Stage 6 delivery. */}
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <button
+            type="button"
+            onClick={showFlowPackage}
+            aria-controls="whole-flow-package-panel"
+            className="flex items-center gap-2 rounded border border-sky-500 bg-sky-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
+          >
+            <Package className="h-4 w-4" />
+            <span>{isKo ? '전체 검사 플로우 내보내기' : 'Export Complete Inspection Flow'}</span>
+          </button>
+          <button
+            type="button"
             onClick={handleBenchmark}
-            disabled={isBenchmarking}
-            className="flex items-center space-x-2 px-3.5 py-2 bg-[#1A212E] hover:bg-[#2B3547] active:bg-[#0B0E14] border border-[#2B3547] rounded text-xs font-semibold cursor-pointer transition-colors text-slate-200"
+            disabled={isBenchmarking || isFindingModel || !jobId}
+            className="flex items-center gap-2 rounded border border-[#2B3547] bg-[#1A212E] px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-[#2B3547] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Gauge className={`w-4 h-4 text-slate-300 ${isBenchmarking ? 'animate-spin' : ''}`} />
             <span>
@@ -160,25 +208,43 @@ python infer.py --self-test`
           </button>
 
           <button
+            type="button"
             onClick={handleExport}
-            disabled={isExporting}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded border border-[#10B981] transition-colors cursor-pointer text-xs"
+            disabled={isExporting || isFindingModel || !jobId || task === 'anomaly'}
+            className="flex items-center gap-2 rounded border border-[#3C5268] bg-[#1A212E] px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-[#2B3547] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Package className="w-4 h-4" />
             <span>
               {isExporting
                 ? isKo
-                  ? '패키징 생성 중...'
+                  ? '단일 모델 내보내는 중...'
                   : 'Exporting...'
                 : isKo
-                ? 'Python 런타임 패키지 내보내기'
-                : 'Export Runtime Package'}
+                ? '단일 모델 Python 패키지'
+                : 'Export Single Model Package'}
             </span>
           </button>
         </div>
       </div>
 
       {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
+      <div role="note" className="rounded border border-[#364357] bg-[#131822] p-2 text-xs text-slate-300">
+        {isKo
+          ? '전체 플로우 패키지는 5단계의 모델 연결·ROI 전달·판정 분기를 함께 담습니다. 단일 모델 Python 패키지는 아래의 별도 도구이며, 저장된 검사 플로우를 포함하지 않습니다.'
+          : 'The complete flow package includes Stage 5 model connections, ROI routing, and verdict branches. The single model Python package below is a separate tool.'}
+      </div>
+      {task === 'anomaly' && (
+        <div role="status" className="rounded border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-200">
+          이상탐지 모델의 단독 패키지 내보내기는 학습 통계와 메모리 뱅크를 적용하는 추론기가 준비될 때까지 사용할 수 없습니다. 앱 안의 검사 플로우에서 모델을 확인하세요.
+        </div>
+      )}
+
+      <BatchInspectionPanel />
+
+      <div id="whole-flow-package-panel" ref={flowPackageRef} tabIndex={-1}
+        className="scroll-mt-4 rounded-lg focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400">
+        <FlowPackagePanel sourceFolder={sourceFolder} task={task} />
+      </div>
 
       {/* Main Grid: 2 Column Bay */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -187,7 +253,7 @@ python infer.py --self-test`
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
               <Zap className="w-4 h-4 text-amber-400" />
-              <span>{isKo ? '실시간 하드웨어 가속 계측 패널' : 'Hardware Telemetry Instruments'}</span>
+              <span>{isKo ? '단일 모델 계산 속도 계측' : 'Single Model Forward Benchmark'}</span>
             </h3>
             <span className="text-[11px] text-slate-300 font-mono bg-[#1A212E] px-2.5 py-0.5 rounded border border-[#2B3547]">
               {benchmarkResult?.device_name || backendStatus.deviceName || 'Unknown device'}
@@ -199,7 +265,7 @@ python infer.py --self-test`
             {/* METER 1: FPS */}
             <div className="p-3 bg-[#0B0E14] border border-[#1F2737] rounded flex flex-col justify-between">
               <div className="text-[10px] text-slate-400 uppercase font-mono font-semibold">
-                검사 속도 (FPS)
+                모델 계산 속도 (FPS)
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-emerald-400 my-1">
                 {benchmarkResult ? fps : '—'} <span className="text-xs font-normal text-slate-500">FPS</span>
@@ -212,7 +278,7 @@ python infer.py --self-test`
             {/* METER 2: Mean Takt Time */}
             <div className="p-3 bg-[#0B0E14] border border-[#1F2737] rounded flex flex-col justify-between">
               <div className="text-[10px] text-slate-400 uppercase font-mono font-semibold">
-                평균 택트 타임
+                평균 모델 계산 시간
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-slate-100 my-1">
                 {benchmarkResult ? meanLatency : '—'} <span className="text-xs font-normal text-slate-500">ms</span>
@@ -241,7 +307,7 @@ python infer.py --self-test`
             <div className="flex items-center justify-between text-xs font-mono">
               <div className="flex items-center space-x-2">
                 <Sliders className="w-3.5 h-3.5 text-slate-400" />
-                <span className="font-bold text-slate-200">공정 허용 사이클 타임 한계 (Line Takt Limit)</span>
+                <span className="font-bold text-slate-200">모델 계산 목표 시간</span>
               </div>
               <div className="flex items-center space-x-1.5">
                 {[15.0, 25.0, 50.0].map((limit) => (
@@ -298,7 +364,7 @@ python infer.py --self-test`
             {/* Headroom / Buffer status */}
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-0.5">
               <span>
-                공정 여유 마진 (Safety Headroom):{' '}
+                평균 계산 여유:{' '}
                 <span className={`font-bold tabular-nums ${headroomPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {benchmarkResult ? (headroomPct >= 0 ? `+${headroomPct}%` : `${headroomPct}% (초과)`) : '미측정'}
                 </span>
@@ -309,41 +375,43 @@ python infer.py --self-test`
             </div>
           </div>
 
-          {/* PASS / FAIL Line Readiness Annunciator */}
+          {/* Synthetic model forward timing only; this is not the full inspection takt. */}
           <div
             className={`p-3 rounded border transition-colors flex items-start space-x-3 ${
-              isLineReady
+              isForwardWithinTarget
                 ? 'bg-[#0D1C16] border-[#10B981]/60 text-emerald-200'
                 : 'bg-[#1A0E11] border-[#EF4444]/60 text-rose-200'
             }`}
           >
-            <LedAnnunciator state={!benchmarkResult ? 'standby' : isLineReady ? 'pass' : 'fail'} size="md" />
+            <LedAnnunciator state={!benchmarkResult ? 'standby' : isForwardWithinTarget ? 'pass' : 'fail'} size="md" />
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold font-mono tracking-tight text-slate-100">
-                  {!benchmarkResult ? '모델 속도 미측정' : isLineReady
-                    ? '모델 추론 속도 목표 충족'
-                    : '모델 추론 속도 목표 미달'}
+                  {!benchmarkResult ? '모델 속도 미측정' : isForwardWithinTarget
+                    ? '모델 계산 속도 목표 충족'
+                    : '모델 계산 속도 목표 미달'}
                 </h4>
                 <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border bg-[#0B0E14] text-slate-300 border-[#2B3547]">
-                  {!benchmarkResult ? 'UNTESTED' : isLineReady ? 'BENCHMARK PASS' : 'BENCHMARK FAIL'}
+                  {!benchmarkResult ? 'UNTESTED' : isForwardWithinTarget ? 'MODEL FORWARD PASS' : 'MODEL TIMING OVER TARGET'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isLineReady
-                  ? `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms를 측정했습니다. 실제 카메라·PLC 통합 검사는 별도 필요합니다.`
-                  : `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`}
+                {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isForwardWithinTarget
+                  ? `합성 입력에서 모델 전방 계산 ${meanLatency}ms를 측정했습니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.`
+                  : meanLatency > maxTaktLimit
+                    ? `합성 입력에서 평균 모델 계산 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`
+                    : `합성 입력에서 P95 모델 계산 ${p95Latency}ms가 허용치 ${(maxTaktLimit * 1.25).toFixed(1)}ms를 초과했습니다. 평균은 ${meanLatency}ms입니다.`}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Runtime Standalone Package Manifest */}
+        {/* Right Column: Standalone Package Manifest */}
         <div className="bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col space-y-4">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
               <Package className="w-4 h-4 text-emerald-400" />
-              <span>{isKo ? '독립 실행 패키지 아티팩트' : 'Standalone Package Manifest'}</span>
+              <span>{isKo ? '단일 모델 패키지 아티팩트' : 'Single Model Package Manifest'}</span>
             </h3>
             <span className="text-[10px] font-mono text-slate-400 tabular-nums">
               {exportResult?.total_files ?? 0} FILES INDEXED
@@ -390,6 +458,10 @@ python infer.py --self-test`
             </div>
           </div>
 
+          <p className="text-[11px] leading-relaxed text-amber-200/90 bg-amber-950/20 border border-amber-700/30 rounded px-3 py-2">
+            {exportPackageGuidance(task, isKo)}
+          </p>
+
           {/* File Manifest List */}
           <div className="flex-1 bg-[#0B0E14] border border-[#1F2737] rounded p-3 overflow-y-auto space-y-1.5">
             {!exportResult && <p className="text-xs text-slate-400">내보낸 패키지가 없습니다.</p>}
@@ -419,7 +491,7 @@ python infer.py --self-test`
         </div>
       </div>
 
-      {/* Bottom Section: Client SDK Code Inspector */}
+      {/* Bottom Section: Package Usage Example */}
       <div className="bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#2B3547]">
           <div className="flex items-center space-x-2">
@@ -432,39 +504,9 @@ python infer.py --self-test`
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Language Tabs */}
-            <div className="flex bg-[#0B0E14] p-0.5 rounded border border-[#2B3547] text-xs font-mono">
-              <button
-                onClick={() => setActiveCodeTab('csharp')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'csharp'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                C# (.NET 8 / WPF)
-              </button>
-              <button
-                onClick={() => setActiveCodeTab('cpp')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'cpp'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                C++ (OpenCV DNN)
-              </button>
-              <button
-                onClick={() => setActiveCodeTab('python')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'python'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Python (ONNXRuntime)
-              </button>
-            </div>
+            <span className="px-3 py-1 rounded bg-[#1A212E] text-slate-100 border border-[#2B3547] text-xs font-mono font-semibold">
+              Python (infer.py)
+            </span>
 
             {/* Copy Button */}
             <button
@@ -485,6 +527,11 @@ python infer.py --self-test`
             </button>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400">
+          {isKo
+            ? '내보내는 패키지에는 Python 실행기와 설치 목록이 포함됩니다. 대상 PC에 Python과 패키지를 설치해야 하며, C#·C++ 클라이언트는 제공되지 않습니다.'
+            : 'The package includes a Python runner and requirements file. Install Python and those packages on the target PC. C# and C++ clients are not included.'}
+        </p>
 
         {/* IDE-Grade Numbered Code Gutter Block */}
         <div className="flex bg-[#05070A] rounded border border-[#1F2737] overflow-hidden">

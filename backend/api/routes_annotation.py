@@ -10,15 +10,18 @@ import json
 import logging
 import base64
 import binascii
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox
+from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.labeling_ai import (
     auto_select_contour,
     bbox_to_mask,
@@ -46,6 +49,27 @@ ANNOTATIONS_DIR = Path("./annotations")
 ANNOTATIONS_DIR.mkdir(parents=True, exist_ok=True)
 MASKS_DIR = Path("./annotations/masks")
 MASKS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _validate_image_id(image_id: str) -> None:
+    if (not image_id.strip() or image_id in {".", ".."}
+            or Path(image_id).name != image_id or "/" in image_id or "\\" in image_id
+            or any(ord(character) < 32 for character in image_id)):
+        raise HTTPException(status_code=422, detail="image_id must be a single image filename stem")
+
+
+def _trusted_annotation_directory(requested: str) -> Path:
+    """Allow explicit output folders only below the app root or configured roots."""
+    target = Path(requested).expanduser().resolve()
+    roots = [scoped_annotation_root(ANNOTATIONS_DIR).resolve()]
+    roots.extend(
+        Path(value).expanduser().resolve()
+        for value in os.environ.get("VISION_AI_STUDIO_ANNOTATION_ROOTS", "").split(os.pathsep)
+        if value.strip()
+    )
+    if not any(target == root or root in target.parents for root in roots):
+        raise HTTPException(status_code=403, detail="Annotation folder is outside approved roots")
+    return target
 
 
 class AnnotationItem(BaseModel):
@@ -83,6 +107,7 @@ class AnnotationItem(BaseModel):
 class AnnotationSaveRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     image_id: str = Field(..., min_length=1)
+    image_path: Optional[str] = None
     annotations: List[AnnotationItem] = Field(default_factory=list)
     image_width: Optional[int] = 256
     image_height: Optional[int] = 256
@@ -102,7 +127,12 @@ def save_annotations(req: AnnotationSaveRequest):
       1. Sanitizes bounding box coordinates with coordinate swapping and boundary clamping.
       2. Rasterizes vector polygon contours to binary/multiclass mask PNG for segmentation.
     """
-    target_dir = Path(req.output_dir).resolve() if req.output_dir else ANNOTATIONS_DIR
+    _validate_image_id(req.image_id)
+    if req.image_path and Path(req.image_path).stem != req.image_id:
+        raise HTTPException(status_code=422, detail="image_id must match image_path filename")
+    target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
+                  dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
+                  if req.image_path else scoped_annotation_root(ANNOTATIONS_DIR))
     target_dir.mkdir(parents=True, exist_ok=True)
     masks_dir = target_dir / "masks"
     masks_dir.mkdir(parents=True, exist_ok=True)
@@ -187,10 +217,12 @@ def save_annotations(req: AnnotationSaveRequest):
             for brush_pixels, category_id in brush_masks:
                 mask_arr[brush_pixels] = category_id
             mask_file = masks_dir / f"{req.image_id}.png"
-            cv2.imwrite(str(mask_file), mask_arr)
+            if not cv2.imwrite(str(mask_file), mask_arr):
+                raise OSError(f"Could not write annotation mask: {mask_file}")
             mask_file_path = str(mask_file)
         except Exception as e:
             logger.exception("Failed to rasterize polygon mask: %s", e)
+            raise HTTPException(status_code=500, detail=f"Failed to save annotation mask: {e}") from e
 
     # Persist JSON file
     json_path = target_dir / f"{req.image_id}.json"
@@ -205,6 +237,8 @@ def save_annotations(req: AnnotationSaveRequest):
     try:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+        if mask_file_path is None:
+            (masks_dir / f"{req.image_id}.png").unlink(missing_ok=True)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -240,7 +274,10 @@ def get_annotations(
     file_path: Optional[str] = Query(None),
 ):
     """Retrieves stored annotations for the requested image_id, with seamless LabelMe format conversion."""
-    target_dir = Path(dir_path).resolve() if dir_path and isinstance(dir_path, (str, Path)) else ANNOTATIONS_DIR
+    _validate_image_id(image_id)
+    target_dir = (_trusted_annotation_directory(str(dir_path)) if dir_path and isinstance(dir_path, (str, Path)) else
+                  dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
+                  if file_path else scoped_annotation_root(ANNOTATIONS_DIR))
     json_path = target_dir / f"{image_id}.json"
 
     # 1. If Studio-saved annotation JSON exists, return it directly
@@ -257,9 +294,9 @@ def get_annotations(
         cand = Path(file_path).with_suffix(".json")
         if cand.exists():
             candidate_json = cand
-    if not candidate_json:
+    if not candidate_json and not file_path:
         # Check in project / dataset directories
-        for root in [Path("./datasets"), Path("/Volumes/backup/Reference_QC_데이터/NG_labelme"), Path.cwd()]:
+        for root in [Path("./datasets"), Path.cwd()]:
             if root.exists():
                 matches = list(root.rglob(f"{image_id}.json"))
                 if matches:
@@ -270,6 +307,8 @@ def get_annotations(
         try:
             with open(candidate_json, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, dict) or not isinstance(data.get("shapes"), list):
+                raise ValueError("LabelMe JSON must contain a shapes list")
             # If standard LabelMe schema with "shapes"
             if "shapes" in data:
                 img_w = data.get("imageWidth", 8192)
@@ -287,9 +326,13 @@ def get_annotations(
                     "Mount Guide 볼트 1EA 체결상태 불량": "#f97316",
                 }
                 for idx, shape in enumerate(data.get("shapes", [])):
+                    if not isinstance(shape, dict):
+                        raise ValueError(f"Shape {idx + 1} must be an object")
                     lbl = shape.get("label", "Defect")
                     stype = shape.get("shape_type", "polygon")
                     pts = shape.get("points", [])
+                    if not isinstance(pts, list):
+                        raise ValueError(f"Shape {idx + 1} points must be a list")
                     color = class_colors.get(lbl, "#3b82f6")
 
                     if stype == "polygon" and len(pts) >= 3:
@@ -319,6 +362,8 @@ def get_annotations(
                             "bbox": [xmin, ymin, xmax, ymax],
                             "color": color,
                         })
+                    else:
+                        raise ValueError(f"Shape {idx + 1} has unsupported type or invalid points: {stype}")
                 return {
                     "image_id": image_id,
                     "annotations": converted_annotations,
@@ -326,8 +371,12 @@ def get_annotations(
                     "image_height": img_h,
                     "mask_file": None,
                 }
+        except (OSError, UnicodeError) as e:
+            logger.warning("Failed to read LabelMe JSON %s: %s", candidate_json, e)
+            raise HTTPException(status_code=500, detail=f"Cannot read LabelMe annotations: {candidate_json.name}: {e}") from e
         except Exception as e:
             logger.warning("Failed to parse LabelMe JSON %s: %s", candidate_json, e)
+            raise HTTPException(status_code=422, detail=f"Invalid LabelMe annotations: {candidate_json.name}: {e}") from e
 
     # Return empty list for unannotated images
     return {
@@ -339,10 +388,66 @@ def get_annotations(
     }
 
 
+@router.get("/{image_id}/mask")
+def get_annotation_mask(
+    image_id: str,
+    dir_path: Optional[str] = Query(None),
+    file_path: Optional[str] = Query(None),
+):
+    """Serve only this image's saved mask from its dataset-scoped annotation folder."""
+    _validate_image_id(image_id)
+    if file_path and Path(file_path).stem != image_id:
+        raise HTTPException(status_code=422, detail="image_id must match file_path filename")
+    target_dir = (_trusted_annotation_directory(dir_path) if dir_path else
+                  dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
+                  if file_path else scoped_annotation_root(ANNOTATIONS_DIR))
+    mask_path = target_dir / "masks" / f"{image_id}.png"
+    json_path = target_dir / f"{image_id}.json"
+    if not json_path.is_file() or not mask_path.is_file():
+        raise HTTPException(status_code=404, detail="Annotation mask not found")
+    try:
+        saved = json.loads(json_path.read_text(encoding="utf-8"))
+        if not saved.get("mask_file"):
+            raise HTTPException(status_code=404, detail="Annotation mask not found")
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_UNCHANGED)
+        if mask is None or mask.ndim != 2:
+            raise ValueError("Saved annotation mask is unreadable")
+        overlay = np.zeros((*mask.shape, 4), dtype=np.uint8)
+        category_colors: dict[int, str] = {}
+        for item in saved.get("annotations", []):
+            if isinstance(item, dict):
+                color = item.get("color")
+                if isinstance(color, str) and len(color) == 7 and color.startswith("#"):
+                    try:
+                        int(color[1:], 16)
+                        category_colors[int(item.get("category_id") or 1)] = color
+                    except (TypeError, ValueError):
+                        continue
+        for category_id in np.unique(mask):
+            if category_id == 0:
+                continue
+            color = category_colors.get(int(category_id), "#3b82f6")
+            pixels = mask == category_id
+            overlay[pixels, 0] = int(color[5:7], 16)
+            overlay[pixels, 1] = int(color[3:5], 16)
+            overlay[pixels, 2] = int(color[1:3], 16)
+            overlay[pixels, 3] = 255
+        ok, encoded = cv2.imencode(".png", overlay)
+        if not ok:
+            raise ValueError("Could not encode annotation mask")
+        return Response(content=encoded.tobytes(), media_type="image/png")
+    except HTTPException:
+        raise
+    except (OSError, UnicodeError, ValueError, cv2.error) as exc:
+        raise HTTPException(status_code=500, detail=f"Cannot read annotation mask: {exc}") from exc
+
+
 @router.delete("/{image_id}")
 def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None)):
     """Deletes stored annotations for the requested image_id."""
-    target_dir = Path(dir_path).resolve() if dir_path else ANNOTATIONS_DIR
+    _validate_image_id(image_id)
+    target_dir = (_trusted_annotation_directory(str(dir_path))
+                  if dir_path and isinstance(dir_path, (str, Path)) else scoped_annotation_root(ANNOTATIONS_DIR))
     json_path = target_dir / f"{image_id}.json"
     mask_path = target_dir / "masks" / f"{image_id}.png"
 
@@ -392,6 +497,7 @@ class ShapeConverterRequest(BaseModel):
     target_type: Optional[Literal["bbox", "polygon", "mask", "rotated_bbox"]] = None
     data: Optional[Any] = None
     image_dimensions: Optional[Dict[str, int]] = None
+    mask_color: str = Field(default="#3b82f6", pattern=r"^#[0-9a-fA-F]{6}$")
 
     # Legacy fields
     image_path: Optional[str] = None
@@ -445,12 +551,42 @@ def _extract_rotated_bbox_from_data(data: Any) -> Tuple[List[float], List[float]
 
 
 def _extract_mask_from_data(data: Any) -> np.ndarray:
-    if isinstance(data, dict) and "mask" in data:
-        data = data["mask"]
+    if isinstance(data, dict):
+        data = data.get("mask_rle", data.get("mask", data))
+    if isinstance(data, str):
+        prefix, separator, encoded = data.partition(",")
+        if prefix != "data:image/png;base64" or not separator or len(encoded) > 32_000_000:
+            raise ValueError("Mask must be a PNG data URL under 24 MB")
+        decoded = base64.b64decode(encoded, validate=True)
+        image = cv2.imdecode(np.frombuffer(decoded, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        if image is None:
+            raise ValueError("Mask PNG could not be decoded")
+        if image.ndim == 3:
+            data = image[:, :, 3] if image.shape[2] == 4 else np.any(image > 0, axis=2)
+        else:
+            data = image
     m = np.asarray(data, dtype=np.uint8)
     if m.ndim > 2:
-        m = m[:, :, 0]
+        m = m[:, :, 3] if m.shape[2] == 4 else m[:, :, 0]
+    if m.ndim != 2:
+        raise ValueError("Mask must have two image dimensions")
     return (m > 0).astype(np.uint8) * 255
+
+
+def _encode_mask_result(mask: np.ndarray, color: str) -> Dict[str, Any]:
+    red, green, blue = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+    bgra = np.empty((*mask.shape, 4), dtype=np.uint8)
+    bgra[:, :, 0] = blue
+    bgra[:, :, 1] = green
+    bgra[:, :, 2] = red
+    bgra[:, :, 3] = mask
+    encoded_ok, encoded_png = cv2.imencode(".png", bgra, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+    if not encoded_ok:
+        raise ValueError("Mask PNG encoding failed")
+    return {
+        "mask_rle": "data:image/png;base64," + base64.b64encode(encoded_png.tobytes()).decode("ascii"),
+        "shape": [int(mask.shape[0]), int(mask.shape[1])],
+    }
 
 
 @router.post("/auto-select")
@@ -548,7 +684,7 @@ def api_shape_converter(req: ShapeConverterRequest):
                     converted = {"polygon": poly}
             elif tgt == "mask":
                 m = bbox_to_mask(bbox, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "rotated_bbox":
                 rbox = bbox_to_rotated_bbox(bbox)
                 converted = {
@@ -565,7 +701,7 @@ def api_shape_converter(req: ShapeConverterRequest):
                 converted = {"bbox": bb}
             elif tgt == "mask":
                 m = polygon_to_mask(poly, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "rotated_bbox":
                 rbox = polygon_to_rotated_bbox(poly)
                 converted = {
@@ -576,7 +712,7 @@ def api_shape_converter(req: ShapeConverterRequest):
         elif src == "mask":
             m = _extract_mask_from_data(data)
             if tgt == "mask":
-                converted = {"mask": m.tolist(), "shape": list(m.shape)}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "bbox":
                 bb = mask_to_bbox(m)
                 converted = {"bbox": bb}
@@ -608,7 +744,7 @@ def api_shape_converter(req: ShapeConverterRequest):
             elif tgt == "mask":
                 poly = rotated_bbox_to_polygon(center, size, angle)
                 m = polygon_to_mask(poly, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
 
         return {
             "status": "success",

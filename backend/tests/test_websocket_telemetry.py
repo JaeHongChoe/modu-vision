@@ -144,7 +144,9 @@ class TestLiveWebSocketEndpoints:
     def test_ws_telemetry_connection_and_ping(self):
         app = create_app()
         with TestClient(app) as client:
-            with client.websocket_connect("/ws/telemetry") as ws:
+            with client.websocket_connect(
+                "/ws/telemetry", headers={"X-Vision-Token": app.state.api_token},
+            ) as ws:
                 # First frame is initial hardware stats snapshot
                 initial_frame = ws.receive_json()
                 assert initial_frame["type"] == "hardware_stats"
@@ -158,7 +160,9 @@ class TestLiveWebSocketEndpoints:
     def test_ws_training_alias_endpoint(self):
         app = create_app()
         with TestClient(app) as client:
-            with client.websocket_connect("/ws/training") as ws:
+            with client.websocket_connect(
+                "/ws/training", headers={"X-Vision-Token": app.state.api_token},
+            ) as ws:
                 initial_frame = ws.receive_json()
                 assert initial_frame["type"] == "hardware_stats"
                 ws.send_text("ping")

@@ -57,7 +57,15 @@ def _render_standalone_html(
     cm = eval_data.get("confusion_matrix", {})
     classes = cm.get("classes") or cm.get("class_names") or ["OK", "Defect"]
     matrix = cm.get("matrix", [])
-    task = eval_data.get("task", "classification").capitalize()
+    task_name = str(eval_data.get("task", "classification")).lower()
+    is_detection = task_name == "detection"
+    task = task_name.capitalize()
+    matrix_title = "Top box class table" if is_detection else "Confusion Matrix"
+    matrix_explanation = (
+        "<p>The highest-scoring box class per image is compared without a score threshold or IoU match. "
+        "This class match is separate from mAP@IoU 0.5 object localization and from image-level OK/NG at a chosen threshold.</p>"
+        if is_detection else ""
+    )
     test_preds = eval_data.get("test_predictions", [])
 
     # Generate metric rows
@@ -137,15 +145,18 @@ def _render_standalone_html(
             gt_class = sample.get("ground_truth", "Unknown")
             conf = float(sample.get("confidence", 0.0))
             is_correct = bool(sample.get("is_correct", True))
-            status_text = "PASS" if is_correct else "MISMATCH"
+            status_text = (
+                "TOP CLASS MATCH" if is_correct else "TOP CLASS MISMATCH"
+            ) if is_detection else ("PASS" if is_correct else "MISMATCH")
             status_class = "status-ok" if is_correct else "status-err"
+            score_label = "Highest box score" if is_detection else "Confidence"
 
             sample_cards.append(f"""
             <div class="sample-card">
                 <img src="{overlay_b64}" alt="Inspection Sample: {pred_class}" />
                 <div class="sample-caption">
                     <div><strong>{pred_class}</strong> (GT: {gt_class})</div>
-                    <div class="sample-sub">Confidence: {conf:.1%} <span class="badge {status_class}">{status_text}</span></div>
+                    <div class="sample-sub">{score_label}: {conf:.1%} <span class="badge {status_class}">{status_text}</span></div>
                 </div>
             </div>
             """)
@@ -376,7 +387,8 @@ def _render_standalone_html(
         </div>
 
         <div class="section">
-            <h2>Confusion Matrix</h2>
+            <h2>{matrix_title}</h2>
+            {matrix_explanation}
             <table>
                 <thead>
                     <tr>
@@ -409,8 +421,9 @@ def export_report(req: ReportExportRequest):
     Exports quality evaluation summary as standalone HTML or JSON report.
     Returns { file_path: str, content?: str }.
     """
-    job_id = req.job_id or "job_latest"
-    eval_data = run_or_load_evaluation(job_id=job_id)
+    requested_job_id = req.job_id or "latest"
+    eval_data = run_or_load_evaluation(job_id=requested_job_id)
+    job_id = str(eval_data.get("job_id") or requested_job_id)
 
     now_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     now_iso = time.strftime("%Y%m%d_%H%M%S", time.gmtime())

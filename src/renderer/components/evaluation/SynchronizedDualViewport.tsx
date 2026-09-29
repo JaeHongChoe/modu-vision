@@ -14,12 +14,13 @@ import {
   Sliders,
   Crosshair,
 } from 'lucide-react';
-import type { TestPredictionItem, ViewTransform, Point } from '../../types';
+import type { TestPredictionItem, ViewTransform, Point, VisionTask } from '../../types';
 import { calculateZoomAtPoint, calculateFitToScreen, viewportToImage } from '../../utils/coordinateMath';
 import { PhysicalScaleOverlay } from './PhysicalScaleOverlay';
 import { resolveApiUrl } from '../../services/api';
 
 export interface SynchronizedDualViewportProps {
+  task: VisionTask;
   prediction: TestPredictionItem | null;
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
@@ -31,6 +32,7 @@ export interface SynchronizedDualViewportProps {
 }
 
 export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> = ({
+  task,
   prediction,
   heatmapOverlayBase64,
   heatmapLoading,
@@ -233,7 +235,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
             <span>GT: <strong className="text-slate-200">{prediction ? groundTruth || '—' : '—'}</strong></span>
-            <span>PRED: <strong className="text-slate-200">{prediction ? predictedClass || '—' : '—'}</strong></span>
+            <span>{task === 'detection' ? 'TOP BOX (no τ/IoU)' : 'PRED'}: <strong className="text-slate-200">{prediction ? predictedClass || '—' : '—'}</strong></span>
           </div>
         </div>
 
@@ -248,7 +250,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           {/* Header Tag */}
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-            <span className="font-bold text-[#EF4444]">DEFECT HEATMAP OVERLAY</span>
+            <span className="font-bold text-[#EF4444]">{task === 'detection' ? 'DETECTION BOX OVERLAY' : 'DEFECT HEATMAP OVERLAY'}</span>
             {heatmapLoading && <span className="text-[#3B82F6] text-[9px] animate-pulse ml-1">[UPDATING...]</span>}
           </div>
 
@@ -274,7 +276,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 {heatmapOverlayBase64 && (
                   <img
                     src={heatmapOverlayBase64}
-                    alt="Heatmap"
+                    alt={task === 'detection' ? 'Detection boxes' : 'Heatmap'}
                     style={{
                       opacity: overlayOpacity,
                       imageRendering: transform.scale >= 3.0 ? 'pixelated' : 'auto',
@@ -293,9 +295,9 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
-            <span>DEFECT SCORE: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
-            <span>VERDICT: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
-              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'REJECT (NG)' : 'PASS (OK)') : '—'}
+            <span>{task === 'detection' ? 'MAX BOX SCORE' : 'DEFECT SCORE'}: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
+            <span>{task === 'detection' ? `IMAGE τ=${confidenceThreshold.toFixed(2)}` : 'VERDICT'}: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
+              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? (task === 'detection' ? 'NG' : 'REJECT (NG)') : (task === 'detection' ? 'OK' : 'PASS (OK)')) : '—'}
             </strong></span>
           </div>
         </div>

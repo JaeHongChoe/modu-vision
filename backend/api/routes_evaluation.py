@@ -13,6 +13,7 @@ Evaluation Results, Interactive Clickable Confusion Matrix & Heatmap Overlays.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -26,6 +27,7 @@ import numpy as np
 import torch
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
+from PIL import Image
 
 from backend.api.routes_training import training_job_manager
 from backend.engine.classification import (
@@ -35,6 +37,8 @@ from backend.engine.classification import (
 from backend.engine.detection import (
     create_detection_model,
     evaluate_detections_map,
+    checkpoint_detection_num_classes,
+    foreground_class_names,
 )
 from backend.engine.segmentation import (
     build_segmentation_model,
@@ -54,6 +58,15 @@ from backend.engine.dataset_loaders import (
     _read_image_rgb,
 )
 from backend.engine.device import get_device
+from backend.engine.checkpoint_paths import (
+    active_project_models_dir,
+    completed_job_receipt,
+    is_job_id,
+    trusted_checkpoint,
+)
+from backend.engine.dataset_fingerprint import fingerprint_dataset
+from backend.engine.patch_classification import load_patch_manifest
+from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.trainer import infer
 from backend.utils.error_catalog import format_error_response
 
@@ -122,71 +135,209 @@ def _find_image_file(image_id: str, file_path: Optional[str] = None) -> Optional
 
 def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
     """Locates only the explicitly selected training job's checkpoint."""
-    if job_id:
-        rec = training_job_manager.get_job(job_id)
-        if rec and rec.output_dir:
-            cand = Path(rec.output_dir) / "best_model.pt"
-            if cand.is_file():
-                return cand
-        cand2 = Path(f"./models/{job_id}/best_model.pt")
-        if cand2.is_file():
-            return cand2
-        cand3 = Path(f"./projects/{job_id}/models/best_model.pt")
-        if cand3.is_file():
-            return cand3
-        if Path(job_id).is_dir():
-            cand4 = Path(job_id) / "best_model.pt"
-            if cand4.is_file():
-                return cand4
+    if not job_id:
+        return None
+    rec = training_job_manager.get_job(job_id)
+    if rec and rec.status != "completed":
+        return None
+    return trusted_checkpoint(job_id, rec.output_dir if rec else None)
 
-    return None
+
+def _same_label_tree(first: Path, second: Path) -> bool:
+    """Compare migrated labels by path and bytes; copy changes ctime in v1 hashes."""
+    def inventory(root: Path) -> Optional[Dict[str, str]]:
+        if not root.exists():
+            return {}
+        if root.is_symlink() or not root.is_dir():
+            return None
+        files: Dict[str, str] = {}
+        for path in root.rglob("*"):
+            if path.is_symlink():
+                return None
+            if path.is_file():
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for block in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(block)
+                files[path.relative_to(root).as_posix()] = digest.hexdigest()
+        return files
+
+    first_files = inventory(first)
+    second_files = inventory(second)
+    return first_files is not None and second_files is not None and first_files == second_files
+
+
+def _same_optional_file(first: Path, second: Path) -> bool:
+    if first.is_symlink() or second.is_symlink():
+        return False
+    if not first.exists() and not second.exists():
+        return True
+    if not first.is_file() or not second.is_file():
+        return False
+    return hashlib.sha256(first.read_bytes()).digest() == hashlib.sha256(second.read_bytes()).digest()
+
+
+def _matches_source_dataset(
+    output_dir: Path,
+    source_dataset_path: Optional[str],
+    source_task: Optional[str],
+    dataset_hint: Optional[str] = None,
+    recorded_source: Optional[str] = None,
+    recorded_fingerprint: Optional[str] = None,
+) -> bool:
+    """Match the original import folder, never the prepared evaluation dataset."""
+    if not source_dataset_path and not source_task:
+        return True
+    receipt = completed_job_receipt(output_dir) or {}
+    meta_path = output_dir / "model_meta.json"
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {}
+    except (OSError, ValueError):
+        meta = {}
+    if source_task and (receipt.get("task") or meta.get("task")) != source_task:
+        return False
+    if not source_dataset_path:
+        return True
+
+    selected = Path(source_dataset_path).expanduser().resolve()
+    original = receipt.get("source_dataset_path") or recorded_source
+    expected_fingerprint = receipt.get("dataset_fingerprint") or recorded_fingerprint
+    # Legacy receipts can identify a folder, but cannot prove it is unchanged.
+    if not original or not isinstance(expected_fingerprint, str) or not expected_fingerprint.startswith("v1:"):
+        return False
+    original_path = Path(original).expanduser().resolve()
+    if original_path != selected or original_path.is_relative_to(output_dir.resolve()):
+        return False
+    from backend.api import routes_dataset
+    from backend.engine.annotation_storage import LEGACY_ANNOTATIONS_ROOT
+
+    try:
+        current_fingerprint = fingerprint_dataset(
+            selected, studio_root=routes_dataset.STUDIO_ANNOTATIONS_DIR,
+            split_manifest=routes_dataset._split_manifest_file(selected),
+        )
+    except OSError:
+        return False
+    if current_fingerprint == expected_fingerprint:
+        return True
+
+    # A pre-project v1 receipt records the old overlay's ctime. Copying the
+    # unchanged overlay into a project changes ctime, so compare its content
+    # with the original only when the old fingerprint still matches exactly.
+    project_root = scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR)
+    if project_root.resolve() == LEGACY_ANNOTATIONS_ROOT.resolve():
+        return False
+    legacy_split = routes_dataset.SPLIT_MANIFEST_DIR / (
+        hashlib.sha256(str(selected).encode("utf-8")).hexdigest() + ".json"
+    )
+    try:
+        legacy_fingerprint = fingerprint_dataset(
+            selected, studio_root=LEGACY_ANNOTATIONS_ROOT,
+            split_manifest=legacy_split, use_scope=False,
+        )
+        if legacy_fingerprint != expected_fingerprint:
+            return False
+        return _same_label_tree(
+            dataset_annotation_dir(selected, LEGACY_ANNOTATIONS_ROOT, use_scope=False),
+            dataset_annotation_dir(selected, project_root, use_scope=False),
+        ) and _same_optional_file(legacy_split, routes_dataset._split_manifest_file(selected))
+    except OSError:
+        return False
 
 
 def _resolve_job_artifacts(
     job_id: Optional[str] = None,
     dataset_path_override: Optional[str] = None,
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ) -> Tuple[Path, Path, Dict[str, Any], str, str, Path]:
     """
     Resolves (output_dir, model_pt, meta, task, resolved_job_id, dataset_path).
     Raises HTTPException 400 or 404 if job or artifacts are invalid.
     """
     if job_id and job_id not in ("latest", "current", "default"):
+        if not is_job_id(job_id):
+            raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
         rec = training_job_manager.get_job(job_id)
         if rec:
-            if rec.status == "running":
+            if rec.status in ("running", "stopping", "disconnected"):
                 raise HTTPException(status_code=400, detail=f"Training job '{job_id}' is still in progress")
             if rec.status in ("failed", "aborted"):
                 raise HTTPException(
                     status_code=400,
                     detail=f"Training job '{job_id}' did not complete successfully (status: {rec.status})",
                 )
-            out_dir = Path(rec.output_dir)
+            model_pt = trusted_checkpoint(job_id, rec.output_dir)
+            if model_pt is None:
+                raise HTTPException(status_code=404, detail=f"Evaluation model checkpoint not found for job: {job_id}")
+            out_dir = model_pt.parent
+            if not _matches_source_dataset(
+                out_dir, source_dataset_path, source_task, rec.dataset_path,
+                getattr(rec, "source_dataset_path", None), getattr(rec, "dataset_fingerprint", None),
+            ):
+                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
             task_hint = rec.task
             dataset_hint = Path(rec.dataset_path)
             resolved_job_id = rec.job_id
         else:
-            candidates = [
-                Path(f"./models/{job_id}"),
-                Path(f"./projects/{job_id}/models"),
-                Path(job_id) if Path(job_id).is_dir() else None,
-            ]
-            out_dir = next((c for c in candidates if c and (c / "best_model.pt").is_file()), None)
-            if not out_dir:
+            model_pt = trusted_checkpoint(job_id)
+            if model_pt is None:
                 raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
-            task_hint = None
-            dataset_hint = None
+            out_dir = model_pt.parent
+            if not _matches_source_dataset(out_dir, source_dataset_path, source_task):
+                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
+            receipt = completed_job_receipt(out_dir) or {}
+            task_hint = receipt.get("task")
+            dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None
             resolved_job_id = job_id
     else:
         # Search for latest completed job
-        completed_jobs = [r for r in training_job_manager._jobs.values() if r.status == "completed"]
-        if completed_jobs:
-            latest_rec = sorted(completed_jobs, key=lambda r: getattr(r, "start_time", 0), reverse=True)[0]
-            out_dir = Path(latest_rec.output_dir)
+        completed_jobs = sorted(
+            (r for r in training_job_manager._jobs.values() if r.status == "completed"),
+            key=lambda r: getattr(r, "start_time", 0), reverse=True,
+        )
+        latest_rec = next(
+            (r for r in completed_jobs
+             if trusted_checkpoint(r.job_id, r.output_dir) is not None
+             and _matches_source_dataset(
+                 Path(r.output_dir), source_dataset_path, source_task, r.dataset_path,
+                 getattr(r, "source_dataset_path", None), getattr(r, "dataset_fingerprint", None),
+             )),
+            None,
+        )
+        if latest_rec:
+            out_dir = trusted_checkpoint(latest_rec.job_id, latest_rec.output_dir).parent
             task_hint = latest_rec.task
             dataset_hint = Path(latest_rec.dataset_path)
             resolved_job_id = latest_rec.job_id
         else:
-            raise HTTPException(status_code=404, detail="No completed training job has been selected")
+            # Desktop renderer and backend processes can restart independently.
+            # Reopen the newest usable job checkpoint when in-memory records
+            # are gone. A model metadata file is required to identify its task.
+            project_models = active_project_models_dir()
+            candidates = [
+                p for p in (
+                    *Path("./models").glob("job_*/best_model.pt"),
+                    *Path("./projects").glob("job_*/models/best_model.pt"),
+                    *(project_models.glob("job_*/best_model.pt") if project_models else ()),
+                )
+                if (p.parent / "model_meta.json").is_file()
+                and trusted_checkpoint(
+                    p.parent.name if p.parent.parent.name == "models" else p.parent.parent.name
+                ) == p.resolve()
+                and _matches_source_dataset(p.parent, source_dataset_path, source_task)
+            ]
+            active = training_job_manager.get_active_job()
+            if active and active.status in ("running", "stopping", "disconnected"):
+                candidates = [p for p in candidates if p.parent.name != active.job_id]
+            if not candidates:
+                raise HTTPException(status_code=404, detail="No completed training job has been selected")
+            newest = max(candidates, key=lambda p: p.stat().st_mtime)
+            out_dir = newest.parent.resolve()
+            receipt = completed_job_receipt(out_dir) or {}
+            task_hint = receipt.get("task")
+            dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None
+            resolved_job_id = out_dir.name if out_dir.parent.name == "models" else out_dir.parent.name
 
     model_pt = out_dir / "best_model.pt"
     if not model_pt.is_file():
@@ -207,6 +358,8 @@ def _resolve_job_artifacts(
         resolved_dataset = Path(dataset_path_override).resolve()
     elif dataset_hint:
         resolved_dataset = dataset_hint.resolve()
+    elif (out_dir / "dataset").is_dir():
+        resolved_dataset = (out_dir / "dataset").resolve()
     elif "dataset_path" in meta and Path(meta["dataset_path"]).exists():
         resolved_dataset = Path(meta["dataset_path"]).resolve()
     else:
@@ -236,15 +389,32 @@ def _resolve_dataset_dir(dataset_path: Path, task: str) -> Path:
     return dataset_path
 
 
+def _paired_evaluation_paths(dataset_dir: Path, task: str) -> Tuple[Path, Path, str]:
+    """Use an independent test split when present and refuse incomplete pairs."""
+    if task not in ("detection", "segmentation"):
+        raise ValueError(f"Unsupported paired evaluation task: {task}")
+    image_root = dataset_dir / "images"
+    for split in ("test", "val"):
+        images = image_root / split
+        if not images.is_dir():
+            continue
+        labels = (dataset_dir / f"annotations_{split}.json") if task == "detection" else (dataset_dir / "masks" / split)
+        if not (labels.is_file() if task == "detection" else labels.is_dir()):
+            raise HTTPException(status_code=422, detail=f"{task} {split} images exist without matching labels: {labels}")
+        return images, labels, split
+    labels = (dataset_dir / "annotations.json") if task == "detection" else (dataset_dir / "masks")
+    return image_root, labels, "all"
+
+
 def _evaluate_classification(
     model_pt: Path,
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_ds = ClassificationDataset(root_dir=dataset_dir, split="val")
+    val_ds = ClassificationDataset(root_dir=dataset_dir, split="test")
     if len(val_ds.samples) == 0:
-        val_ds = ClassificationDataset(root_dir=dataset_dir, split="test")
+        val_ds = ClassificationDataset(root_dir=dataset_dir, split="val")
     if len(val_ds.samples) == 0:
         val_ds = ClassificationDataset(root_dir=dataset_dir)
     if len(val_ds.samples) == 0:
@@ -338,30 +508,136 @@ def _evaluate_classification(
     }
 
 
+def _patch_manifest_for_checkpoint(dataset_dir: Path, meta: Dict[str, Any]):
+    """Refuse evaluation when labeled pixels changed after this model was trained."""
+    expected = meta.get("patch_provenance")
+    if not isinstance(expected, dict) or not expected.get("dataset_sha256"):
+        raise HTTPException(status_code=409, detail="Patch model has no dataset provenance")
+    try:
+        manifest = load_patch_manifest(dataset_dir)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=f"Patch source or labels changed: {exc}") from exc
+    if manifest.provenance["dataset_sha256"] != expected["dataset_sha256"]:
+        raise HTTPException(status_code=409, detail="Patch source or labels changed after training")
+    return manifest
+
+
+def _evaluate_patch_classification(
+    model_pt: Path,
+    meta: Dict[str, Any],
+    dataset_dir: Path,
+    device: torch.device,
+) -> Dict[str, Any]:
+    """Evaluate only held-out annotated patches, retaining original pixel boxes."""
+    manifest = _patch_manifest_for_checkpoint(dataset_dir, meta)
+    selected_split = "test" if manifest.provenance["split_counts"]["test"] else "val"
+    samples = [item for item in manifest.patches if item.split == selected_split]
+    classes = manifest.classes
+    if meta.get("classes") != classes or meta.get("normal_class") != manifest.normal_class:
+        raise HTTPException(status_code=409, detail="Patch class mapping changed after training")
+    checkpoint = torch.load(model_pt, map_location=device, weights_only=True)
+    state_dict = checkpoint.get("model_state_dict", checkpoint)
+    model = create_classification_model(
+        backbone=meta.get("backbone", "resnet18"), num_classes=len(classes), pretrained=False,
+    ).to(device)
+    model.load_state_dict(state_dict)
+    model.eval()
+    image_size = tuple(meta.get("image_size", [256, 256]))
+    normal_index = classes.index(manifest.normal_class)
+    model_sha = hashlib.sha256(model_pt.read_bytes()).hexdigest()
+    preds: List[int] = []
+    targets: List[int] = []
+    test_predictions: List[Dict[str, Any]] = []
+    cell_samples: Dict[str, List[str]] = {
+        f"{actual}:{predicted}": [] for actual in classes for predicted in classes
+    }
+    with torch.inference_mode():
+        for record in samples:
+            with Image.open(record.image_path) as opened:
+                crop = np.asarray(opened.convert("RGB").crop(record.box), dtype=np.uint8)
+            crop = cv2.resize(crop, image_size, interpolation=cv2.INTER_LINEAR)
+            tensor = torch.from_numpy(np.ascontiguousarray(crop.transpose(2, 0, 1))).float().unsqueeze(0).to(device) / 255.0
+            scores = torch.softmax(model(tensor), dim=1)[0].cpu().tolist()
+            pred_index = int(np.argmax(scores))
+            confidence = float(scores[pred_index])
+            defect_score = float(1.0 - scores[normal_index])
+            preds.append(pred_index)
+            targets.append(record.label_index)
+            source_path = str(record.image_path)
+            cell_samples[f"{record.label}:{classes[pred_index]}"].append(source_path)
+            x1, y1, x2, y2 = record.box
+            test_predictions.append({
+                "image_id": f"{record.image_path.stem}_{x1}_{y1}_{x2}_{y2}",
+                "file_name": record.image_path.name,
+                "file_path": source_path,
+                "box": [x1, y1, x2, y2],
+                "source_sha256": record.source_sha256,
+                "dataset_sha256": manifest.provenance["dataset_sha256"],
+                "model_sha256": model_sha,
+                "ground_truth": record.label,
+                "predicted_class": classes[pred_index],
+                "confidence": round(confidence, 6),
+                "class_scores": {name: round(float(scores[index]), 6) for index, name in enumerate(classes)},
+                "defect_score": round(defect_score, 6),
+                "is_correct": record.label_index == pred_index,
+                "thumbnail_url": f"/api/dataset/thumbnail/{record.image_path.name}?file_path={record.image_path}",
+            })
+    metrics = compute_classification_metrics(preds, targets, num_classes=len(classes), class_names=classes)
+    confusion = metrics["confusion_matrix"]
+    confusion["classes"] = classes
+    confusion["class_names"] = classes
+    confusion["cell_samples"] = cell_samples
+    return {
+        "metrics": {
+            "accuracy": metrics["accuracy"],
+            "macro_precision": metrics["macro_precision"],
+            "macro_recall": metrics["macro_recall"],
+            "macro_f1": metrics["macro_f1"],
+            "best_metric": meta.get("best_metric"),
+            "per_class": metrics.get("per_class", {}),
+            "evaluated_split": selected_split,
+        },
+        "confusion_matrix": confusion,
+        "test_predictions": test_predictions,
+        "dataset_provenance": manifest.provenance,
+    }
+
+
 def _evaluate_detection(
     model_pt: Path,
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img = (dataset_dir / "images" / "val") if (dataset_dir / "images" / "val").is_dir() else (dataset_dir / "images")
-    val_anno = (dataset_dir / "annotations_val.json") if (dataset_dir / "annotations_val.json").is_file() else (dataset_dir / "annotations.json")
-    if not val_anno.is_file():
-        annos = list(dataset_dir.glob("*.json"))
-        val_anno = annos[0] if annos else val_anno
+    val_img, val_anno, _ = _paired_evaluation_paths(dataset_dir, "detection")
 
     img_size = tuple(meta.get("image_size", [256, 256]))
-    val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=img_size)
+    ckpt = torch.load(model_pt, map_location=device, weights_only=False)
+    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    metadata_classes = meta.get("classes")
+    checkpoint_classes = ckpt.get("classes")
+    metadata_names = foreground_class_names(metadata_classes) if isinstance(metadata_classes, (list, tuple)) and metadata_classes else None
+    checkpoint_names = foreground_class_names(checkpoint_classes) if isinstance(checkpoint_classes, (list, tuple)) and checkpoint_classes else None
+    if checkpoint_names and metadata_names and checkpoint_names != metadata_names:
+        raise HTTPException(status_code=422, detail="Detection checkpoint and model metadata have different class order")
+    classes = checkpoint_names or metadata_names
+    if classes is None:
+        train_anno = dataset_dir / "annotations_train.json"
+        if train_anno.is_file():
+            train_categories = json.loads(train_anno.read_text(encoding="utf-8")).get("categories", [])
+            classes = [str(category["name"]) for category in sorted(train_categories, key=lambda category: int(category["id"]))]
+    try:
+        val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno,
+                                  image_size=img_size, class_names=classes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Detection evaluation class mapping is incompatible: {exc}") from exc
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for detection")
 
     classes = list(val_ds.categories.values())
-    if not classes:
-        classes = meta.get("classes", ["defect"])
-    num_classes = max(2, len(classes))
-
-    ckpt = torch.load(model_pt, map_location=device, weights_only=False)
-    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    num_classes = checkpoint_detection_num_classes(state_dict, classes)
+    if num_classes != len(classes) + 1:
+        raise HTTPException(status_code=422, detail="Detection checkpoint class count does not match saved class mapping")
     det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
     model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False).to(device)
     model.load_state_dict(state_dict)
@@ -453,8 +729,7 @@ def _evaluate_segmentation(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img = (dataset_dir / "images" / "val") if (dataset_dir / "images" / "val").is_dir() else (dataset_dir / "images")
-    val_mask = (dataset_dir / "masks" / "val") if (dataset_dir / "masks" / "val").is_dir() else (dataset_dir / "masks")
+    val_img, val_mask, _ = _paired_evaluation_paths(dataset_dir, "segmentation")
 
     img_size = tuple(meta.get("image_size", [256, 256]))
     val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=img_size)
@@ -654,16 +929,34 @@ def run_or_load_evaluation(
     job_id: Optional[str] = None,
     dataset_path: Optional[str] = None,
     force_recompute: bool = False,
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ) -> Dict[str, Any]:
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
 
     out_dir, model_pt, meta, task, resolved_job_id, resolved_dataset = _resolve_job_artifacts(
-        job_id=job_id_clean, dataset_path_override=ds_path_clean
+        job_id=job_id_clean, dataset_path_override=ds_path_clean,
+        source_dataset_path=source_dataset_path, source_task=source_task,
     )
 
+    from backend.remote.operations import remote_job_context, run_remote_evaluation
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+    try:
+        remote_context = remote_job_context(out_dir, resolved_job_id)
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
+    if remote_context is not None and ds_path_clean and resolved_dataset.resolve() != remote_context.dataset_path:
+        raise HTTPException(
+            status_code=422,
+            detail="Remote evaluation currently uses its original training snapshot; a different dataset path is unsupported",
+        )
+
     eval_json = out_dir / "eval_results.json"
+    if task.lower().strip() == "patch_classification":
+        _patch_manifest_for_checkpoint(_resolve_dataset_dir(resolved_dataset, task), meta)
     if not force_clean and eval_json.is_file():
         try:
             with _eval_file_lock:
@@ -691,12 +984,22 @@ def run_or_load_evaluation(
         except Exception:
             pass
 
+    try:
+        if remote_context is not None:
+            return run_remote_evaluation(remote_context, force_recompute=force_clean)
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote evaluation connection lost; retry the same job: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
+
     dev = get_device()
     effective_data = _resolve_dataset_dir(resolved_dataset, task)
 
     task_clean = task.lower().strip()
     if task_clean == "classification":
         res = _evaluate_classification(model_pt, meta, effective_data, dev)
+    elif task_clean == "patch_classification":
+        res = _evaluate_patch_classification(model_pt, meta, effective_data, dev)
     elif task_clean == "detection":
         res = _evaluate_detection(model_pt, meta, effective_data, dev)
     elif task_clean == "segmentation":
@@ -719,6 +1022,8 @@ def run_or_load_evaluation(
         "test_predictions": res["test_predictions"],
         "evaluated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if "dataset_provenance" in res:
+        payload["dataset_provenance"] = res["dataset_provenance"]
 
     try:
         with _eval_file_lock:
@@ -734,6 +1039,8 @@ def get_evaluation_results(
     job_id: Optional[str] = Query(None),
     dataset_path: Optional[str] = Query(None),
     force_recompute: bool = Query(False),
+    source_dataset_path: Optional[str] = Query(None),
+    source_task: Optional[str] = Query(None),
 ):
     """
     Returns genuine metrics, clickable Confusion Matrix (with real cell_samples on disk),
@@ -742,7 +1049,10 @@ def get_evaluation_results(
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
-    return run_or_load_evaluation(job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean)
+    return run_or_load_evaluation(
+        job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean,
+        source_dataset_path=source_dataset_path, source_task=source_task,
+    )
 
 
 @router.get("/heatmap/{image_id:path}")
@@ -770,6 +1080,21 @@ def get_defect_heatmap(
             status_code=404,
             detail=f"Model checkpoint not found for job: {job_id}",
         )
+
+    from backend.remote.operations import remote_job_context, run_remote_inference
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+    try:
+        remote_context = remote_job_context(model_file.parent, model_file.parent.name)
+        if remote_context is not None:
+            payload, png_bytes = run_remote_inference(remote_context, img_file, threshold, image_id)
+            if format.lower() in ("image", "png"):
+                return Response(content=png_bytes, media_type="image/png")
+            return payload
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote inspection connection lost; retry the same image: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote inspection result could not be verified: {exc}") from exc
 
     task = "classification"
     meta_path = model_file.parent / "model_meta.json"
@@ -1005,46 +1330,62 @@ class BenchmarkRequest(BaseModel):
 @router.post("/benchmark")
 def run_inference_benchmark(req: BenchmarkRequest):
     """
-    Inference Center: Benchmarks model inference FPS, latency (ms), and P95
-    on the active accelerator device (Apple Silicon MPS / CUDA / CPU).
+    Benchmark the already loaded model's forward pass on synthetic input.
+
+    Checkpoint loading, preprocessing, overlays, and I/O are outside the timed
+    region, so the reported FPS does not confuse startup cost with inference.
     """
-    device = get_device()
-    dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
+    from backend.engine.exporter import load_checkpoint_and_reconstruct_model
 
     iters = max(5, min(req.iterations or 25, 100))
     res = req.resolution or 256
-
-    # Create dummy batch tensor matching resolution
-    dummy_input = np.random.randint(0, 256, (res, res, 3), dtype=np.uint8)
+    if res < 32 or res > 2048:
+        raise HTTPException(status_code=422, detail="Benchmark resolution must be between 32 and 2048 pixels")
 
     model_file = _find_model_file(req.job_id) if req.job_id else None
     if not model_file or not model_file.is_file():
         raise HTTPException(status_code=404, detail="A trained model checkpoint is required for benchmarking.")
+    from backend.remote.operations import remote_job_context, run_remote_benchmark
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
     try:
-        checkpoint = torch.load(model_file, map_location="cpu", weights_only=False)
-        task = str(checkpoint.get("task", "classification"))
+        remote_context = remote_job_context(model_file.parent, model_file.parent.name)
+        if remote_context is not None:
+            return run_remote_benchmark(remote_context, iters, res)
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote benchmark connection lost; retry the same run: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote benchmark result could not be verified: {exc}") from exc
+
+    device = get_device()
+    dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
+    try:
+        model, meta, _ = load_checkpoint_and_reconstruct_model(model_file)
+        model = model.to(device).eval()
+        task = str(meta.get("task", "classification"))
+        dummy_input = torch.rand((1, 3, res, res), dtype=torch.float32, device=device)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Cannot read model task: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"Cannot load model for benchmark: {exc}") from exc
 
-    def run_model() -> None:
-        try:
-            infer(task, model_file, dummy_input, device=device)
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
+    def synchronize() -> None:
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        elif device.type == "mps":
+            torch.mps.synchronize()
 
-    # Measure warmup
     latencies = []
-    for _ in range(3):
-        t0 = time.perf_counter()
-        run_model()
-        _ = (time.perf_counter() - t0) * 1000.0
-
-    # Timed runs
-    for _ in range(iters):
-        t0 = time.perf_counter()
-        run_model()
-        ms = (time.perf_counter() - t0) * 1000.0
-        latencies.append(ms)
+    try:
+        with torch.inference_mode():
+            for _ in range(3):
+                model(dummy_input)
+                synchronize()
+            for _ in range(iters):
+                t0 = time.perf_counter()
+                model(dummy_input)
+                synchronize()
+                latencies.append((time.perf_counter() - t0) * 1000.0)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
 
     latencies_arr = np.array(latencies)
     mean_ms = float(np.mean(latencies_arr))
@@ -1059,6 +1400,7 @@ def run_inference_benchmark(req: BenchmarkRequest):
         "model_path": str(model_file.resolve()),
         "task": task,
         "input_kind": "synthetic_random_tensor",
+        "measurement_scope": "model_forward_only",
         "device": device.type,
         "device_name": dev_name,
         "iterations": iters,
@@ -1071,3 +1413,9 @@ def run_inference_benchmark(req: BenchmarkRequest):
         "resolution": f"{res}x{res}",
         "batch_size": 1,
     }
+
+
+# Keep candidate-versus-incumbent evidence under the Stage 4 evaluation API.
+from backend.api.routes_model_comparisons import router as model_comparisons_router
+
+router.include_router(model_comparisons_router)

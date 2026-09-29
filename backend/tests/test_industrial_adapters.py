@@ -60,8 +60,16 @@ from backend.engine.classification.model import create_classification_model
 from backend.engine.classification.metrics import compute_classification_metrics
 
 
-REAL_OPERATIONAL_SERVER = Path("/Users/kai/Downloads/운영서버")
-REAL_BACKUP_QC = Path("/Volumes/backup/Reference_QC_데이터")
+@pytest.fixture
+def real_dataset_dir() -> Path:
+    """Run local real-data checks only when a dataset is explicitly supplied."""
+    configured = os.environ.get("VISION_AI_STUDIO_REAL_DATASET_DIR")
+    if not configured:
+        pytest.skip("Set VISION_AI_STUDIO_REAL_DATASET_DIR to opt in to real-data tests")
+    path = Path(configured).expanduser()
+    if not path.is_dir():
+        pytest.skip("Configured real-data directory is unavailable")
+    return path
 
 
 class TestWebPAndFormatValidation:
@@ -90,7 +98,7 @@ class TestWebPAndFormatValidation:
 
     def test_double_extension_sanitization(self):
         """Removes duplicate extension artifacts (.jpg.jpg) returning clean stems."""
-        assert sanitize_file_stem("diag_00_G107_M1-c_Photo-L1-11.jpg.jpg") == "diag_00_G107_M1-c_Photo-L1-11"
+        assert sanitize_file_stem("inspection_001.jpg.jpg") == "inspection_001"
         assert sanitize_file_stem("sample_part.png.png") == "sample_part"
         assert sanitize_file_stem("normal_image.jpg") == "normal_image"
         assert sanitize_file_stem(Path("/some/dir/inspect_123.jpg.jpg")) == "inspect_123"
@@ -222,11 +230,11 @@ class TestHierarchicalClassificationAdapter:
         Image.new("RGB", (32, 32), (0, 255, 0)).save(ok_folder / "img_ok2.jpg")
 
         # Create NG folders with defect names in parentheses
-        ng_scratch = root / "NG" / "ZJ13" / "G3834(Mount Guide Scratch)"
+        ng_scratch = root / "NG" / "SamplePart" / "Part(Scratch)"
         ng_scratch.mkdir(parents=True)
         Image.new("RGB", (32, 32), (255, 0, 0)).save(ng_scratch / "img_ng1.jpg")
 
-        ng_white_spot = root / "NG" / "YP29" / "G3898(접합면 White Spot)"
+        ng_white_spot = root / "NG" / "OtherPart" / "Part(White Spot)"
         ng_white_spot.mkdir(parents=True)
         Image.new("RGB", (32, 32), (255, 255, 0)).save(ng_white_spot / "img_ng2.jpg")
 
@@ -251,10 +259,9 @@ class TestHierarchicalClassificationAdapter:
         tensor, label_idx = ds[0]
         assert tensor.shape == (3, 64, 64)
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_real_operational_server_hierarchical_classification(self):
-        """Verifies ingestion of real /Users/kai/Downloads/운영서버."""
-        res = HierarchicalClassificationAdapter.parse_directory(REAL_OPERATIONAL_SERVER, mode="binary")
+    def test_real_operational_server_hierarchical_classification(self, real_dataset_dir: Path):
+        """Verifies ingestion of an explicitly configured real dataset."""
+        res = HierarchicalClassificationAdapter.parse_directory(real_dataset_dir, mode="binary")
         assert res["total_images"] >= 80
         assert "OK" in res["classes"]
         assert "NG" in res["classes"]
@@ -266,8 +273,8 @@ class TestLabelMeAdapters:
 
     def test_labelme_parsing_and_microscopic_flaw_preservation(self, tmp_path: Path):
         """Parses LabelMe JSON with sub-pixel micro-flaw, retaining >= 1px dimension."""
-        json_file = tmp_path / "ng_0001__Mount Guide Scratch___B_Photo-L1-03.json"
-        img_file = tmp_path / "ng_0001__Mount Guide Scratch___B_Photo-L1-03.jpg"
+        json_file = tmp_path / "defect_sample_001.json"
+        img_file = tmp_path / "defect_sample_001.jpg"
         Image.new("RGB", (100, 100), color=(100, 100, 100)).save(img_file)
 
         # Polygon with tiny 0.4 x 0.4 px flaw
@@ -376,9 +383,9 @@ class TestFlexibleAnomalyDataset:
         for i in range(2):
             Image.new("RGB", (32, 32), (255, 50, 50)).save(anom_dir / f"ng_{i}.png")
 
-        # Train split uses normal_dir exclusively
+        # Two held-out normals are needed for separate validation and test sets.
         ds_tr = FlexibleAnomalyDataset(normal_dir=norm_dir, split="train", image_size=(32, 32))
-        assert len(ds_tr) == 5
+        assert len(ds_tr) == 3
         for idx in range(len(ds_tr)):
             img_t, lbl, mask_t = ds_tr[idx]
             assert lbl == 0
@@ -386,12 +393,68 @@ class TestFlexibleAnomalyDataset:
 
         # Val split includes both normal and anomaly
         ds_val = FlexibleAnomalyDataset(normal_dir=norm_dir, anomaly_dir=anom_dir, split="val", image_size=(32, 32))
-        assert len(ds_val) >= 3  # anomalies + val normals
+        assert len(ds_val) == 2  # one normal and one anomaly
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_real_operational_server_anomaly_inspection(self):
-        """Loads real /Users/kai/Downloads/운영서버 without train/good crashing."""
-        summary = inspect_industrial_dataset(REAL_OPERATIONAL_SERVER, task="anomaly")
+    def test_normal_paths_are_disjoint_across_train_and_validation(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        for index in range(10):
+            Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index:02d}.png")
+        for index in range(2):
+            Image.new("RGB", (8, 8), "red").save(anomaly_dir / f"ng_{index:02d}.png")
+
+        train = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="train")
+        val = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="val")
+        test = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="test")
+        train_paths = {sample[0].resolve() for sample in train.samples}
+        val_normal_paths = {sample[0].resolve() for sample in val.samples if sample[1] == 0}
+        test_normal_paths = {sample[0].resolve() for sample in test.samples if sample[1] == 0}
+
+        assert len(train_paths) == 8
+        assert len(val_normal_paths) == 1
+        assert len(test_normal_paths) == 1
+        assert train_paths.isdisjoint(val_normal_paths)
+        assert train_paths.isdisjoint(test_normal_paths)
+        assert val_normal_paths.isdisjoint(test_normal_paths)
+        assert train_paths | val_normal_paths | test_normal_paths == {p.resolve() for p in normal_dir.glob("*.png")}
+        assert len([sample for sample in val.samples if sample[1] == 1]) == 1
+        assert len([sample for sample in test.samples if sample[1] == 1]) == 1
+
+    def test_single_normal_is_not_reused_for_validation(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        Image.new("RGB", (8, 8), "white").save(normal_dir / "only_ok.png")
+        Image.new("RGB", (8, 8), "red").save(anomaly_dir / "ng.png")
+
+        train = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="train")
+        val = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="val")
+
+        assert len(train.samples) == 1
+        assert all(label == 1 for _, label, _ in val.samples)
+
+    def test_inspection_summary_counts_each_split_once(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        for index in range(10):
+            Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index:02d}.png")
+        for index in range(4):
+            Image.new("RGB", (8, 8), "red").save(anomaly_dir / f"ng_{index:02d}.png")
+
+        summary = inspect_industrial_dataset(tmp_path, task="anomaly")
+
+        assert summary["total_images"] == 14
+        assert summary["split"] == {"train": 8, "val": 3, "test": 3}
+        assert summary["classes"] == {"good": 10, "defect": 4}
+
+    def test_real_operational_server_anomaly_inspection(self, real_dataset_dir: Path):
+        """Loads configured real data without train/good crashing."""
+        summary = inspect_industrial_dataset(real_dataset_dir, task="anomaly")
         assert summary["status"] == "success"
         assert summary["total_images"] > 0
         assert "good" in summary["classes"]
@@ -427,7 +490,9 @@ class TestImportIndustrialEndpoint:
     @pytest.fixture
     def client(self, tmp_path: Path):
         test_app = create_app(project_dir=str(tmp_path / "projects"))
-        return TestClient(test_app)
+        client = TestClient(test_app)
+        client.headers["X-Vision-Token"] = test_app.state.api_token
+        return client
 
     def test_import_industrial_endpoint_synthetic(self, client: TestClient, tmp_path: Path):
         """Calls POST /api/dataset/import-industrial on a created folder."""
@@ -457,11 +522,10 @@ class TestImportIndustrialEndpoint:
         assert "adapter_used" in data
         assert "HierarchicalClassificationAdapter" in data["adapter_used"]
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_import_industrial_endpoint_real_server(self, client: TestClient):
-        """Calls POST /api/dataset/import-industrial on real /Users/kai/Downloads/운영서버."""
+    def test_import_industrial_endpoint_real_server(self, client: TestClient, real_dataset_dir: Path):
+        """Calls POST /api/dataset/import-industrial on configured real data."""
         payload = {
-            "folder_path": str(REAL_OPERATIONAL_SERVER),
+            "folder_path": str(real_dataset_dir),
             "task": "classification",
             "options": {"mode": "binary"},
         }
@@ -542,9 +606,12 @@ class TestM7RemediationSafeguards:
         # Two different aspect ratios: 120x80 vs 80x160
         Image.new("RGB", (120, 80), (128, 128, 128)).save(norm_dir / "norm1.png")
         Image.new("RGB", (80, 160), (100, 100, 100)).save(norm_dir / "norm2.png")
+        for index in range(3, 11):
+            size = (120, 80) if index % 2 else (80, 160)
+            Image.new("RGB", size, (110, 110, 110)).save(norm_dir / f"norm{index}.png")
 
         ds = FlexibleAnomalyDataset(normal_dir=norm_dir, split="train", image_size=None, max_dim=256)
-        assert len(ds) == 2
+        assert len(ds) == 8
 
         loader = DataLoader(ds, batch_size=2, shuffle=False)
         for imgs, lbls, masks in loader:

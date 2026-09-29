@@ -14,6 +14,7 @@ import React from 'react';
 import {
   AlertTriangle,
   Camera,
+  Crop,
   Cpu,
   Layers,
   Microscope,
@@ -21,6 +22,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import type { FlowNode, NodePort, PortType } from '../../types';
+import { FLOW_NODE_WIDTH } from './flowchartViewport';
 
 interface CustomNodeProps {
   node: FlowNode;
@@ -28,9 +30,14 @@ interface CustomNodeProps {
   isActive: boolean;
   isPassed: boolean;
   isFlaggedNg: boolean;
+  isSkipped?: boolean;
+  isReviewRequired?: boolean;
   latencyMs?: number;
+  isDetectorOnly?: boolean;
   onSelect: () => void;
-  onPortHover?: (port: NodePort, nodeId: string) => void;
+  onConnectStart?: () => void;
+  onConnectFinish?: () => void;
+  isConnectionSource?: boolean;
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({
@@ -39,8 +46,14 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   isActive,
   isPassed,
   isFlaggedNg,
+  isSkipped,
+  isReviewRequired,
   latencyMs,
+  isDetectorOnly = false,
   onSelect,
+  onConnectStart,
+  onConnectFinish,
+  isConnectionSource = false,
 }) => {
   const nodeType = node.data.node_type;
 
@@ -73,8 +86,14 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return <Camera className="w-3.5 h-3.5 text-cyan-400" />;
       case 'detection_crop':
         return <Scan className="w-3.5 h-3.5 text-amber-400" />;
+      case 'fixed_roi':
+        return <Crop className="w-3.5 h-3.5 text-sky-400" />;
       case 'inspection':
         return <Microscope className="w-3.5 h-3.5 text-purple-400" />;
+      case 'blob_measure':
+        return <Scan className="w-3.5 h-3.5 text-teal-400" />;
+      case 'aggregate':
+        return <Layers className="w-3.5 h-3.5 text-indigo-400" />;
       case 'decision':
         return <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />;
       case 'output':
@@ -92,32 +111,26 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   const getDefaultInputs = (): NodePort[] => {
     switch (nodeType) {
       case 'input':
-        return [
-          { id: 'in_trig', name: 'Trigger In', type: 'trigger', direction: 'in', label: 'TRIG IN', pinNumber: 1 },
-        ];
+        return [];
       case 'detection_crop':
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 },
-          { id: 'in_trig', name: 'Trigger In', type: 'trigger', direction: 'in', label: 'TRIG IN', pinNumber: 2 },
         ];
+      case 'fixed_roi':
+        return [{ id: 'in_img', name: 'Original image', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 }];
       case 'inspection':
         return [
-          { id: 'in_img', name: 'Crops In', type: 'image', direction: 'in', label: 'CROPS IN', pinNumber: 1 },
-          { id: 'in_data', name: 'BBox In', type: 'data', direction: 'in', label: 'BBOX IN', pinNumber: 2 },
+          { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
         ];
+      case 'blob_measure':
+      case 'aggregate':
+        return [{ id: 'in_result', name: 'Result In', type: 'data', direction: 'in', label: 'RESULT IN', pinNumber: 1 }];
       case 'decision':
         return [
-          { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: 'SCORES IN', pinNumber: 1 },
-          { id: 'in_trig', name: 'Strobe In', type: 'trigger', direction: 'in', label: 'STROBE', pinNumber: 2 },
+          { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: isDetectorOnly ? 'DETECTIONS' : 'SCORES IN', pinNumber: 1 },
         ];
       case 'output':
-        return node.id.includes('ng') || node.id.includes('reject')
-          ? [
-              { id: 'in_fail', name: 'NG Verdict', type: 'fail', direction: 'in', label: 'NG RESULT', pinNumber: 1 },
-            ]
-          : [
-              { id: 'in_pass', name: 'OK Verdict', type: 'pass', direction: 'in', label: 'OK RESULT', pinNumber: 1 },
-            ];
+        return [{ id: 'in_result', name: 'Verdict In', type: 'data', direction: 'in', label: 'VERDICT IN', pinNumber: 1 }];
       default:
         return [{ id: 'in_def', name: 'Input', type: 'data', direction: 'in', label: 'IN 1', pinNumber: 1 }];
     }
@@ -128,31 +141,26 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       case 'input':
         return [
           { id: 'out_img', name: 'Image Out', type: 'image', direction: 'out', label: 'IMG OUT', pinNumber: 1 },
-          { id: 'out_data', name: 'Data Bus Out', type: 'data', direction: 'out', label: 'DATA BUS', pinNumber: 2 },
         ];
       case 'detection_crop':
         return [
-          { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: 'ROI CROPS', pinNumber: 1 },
-          { id: 'out_data', name: 'BBox Data Out', type: 'data', direction: 'out', label: 'BBOX BUS', pinNumber: 2 },
+          { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: isDetectorOnly ? 'DEFECT BOXES' : 'ROI CROPS', pinNumber: 1 },
         ];
+      case 'fixed_roi':
+        return [{ id: 'out_roi', name: 'Fixed ROI', type: 'image', direction: 'out', label: 'ROI OUT', pinNumber: 1 }];
       case 'inspection':
         return [
-          { id: 'out_img', name: 'Heatmap Out', type: 'image', direction: 'out', label: 'HEATMAP', pinNumber: 1 },
-          { id: 'out_data', name: 'Scores Out', type: 'data', direction: 'out', label: 'SCORES BUS', pinNumber: 2 },
+          { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
         ];
+      case 'blob_measure':
+      case 'aggregate':
+        return [{ id: 'out_result', name: 'Result Out', type: 'data', direction: 'out', label: 'RESULT OUT', pinNumber: 1 }];
       case 'decision':
         return [
-          { id: 'out_pass', name: 'Pass Out', type: 'pass', direction: 'out', label: 'PASS (OK)', pinNumber: 1 },
-          { id: 'out_fail', name: 'Fail Out', type: 'fail', direction: 'out', label: 'FAIL (NG)', pinNumber: 2 },
+          { id: 'out_verdict', name: 'Verdict Out', type: 'data', direction: 'out', label: 'VERDICT', pinNumber: 1 },
         ];
       case 'output':
-        return node.id.includes('ng') || node.id.includes('reject')
-          ? [
-              { id: 'out_result', name: 'NG Result', type: 'fail', direction: 'out', label: 'NG', pinNumber: 1 },
-            ]
-          : [
-              { id: 'out_result', name: 'Result', type: 'data', direction: 'out', label: 'RESULT', pinNumber: 1 },
-            ];
+        return [];
       default:
         return [{ id: 'out_def', name: 'Output', type: 'data', direction: 'out', label: 'OUT 1', pinNumber: 1 }];
     }
@@ -165,6 +173,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   const getAnnunciatorState = () => {
     if (isActive) return { color: '#06B6D4', pulse: true, label: 'BUSY' };
     if (isFlaggedNg) return { color: '#EF4444', pulse: false, label: 'FAIL' };
+    if (isReviewRequired) return { color: '#F59E0B', pulse: false, label: 'REVIEW' };
+    if (isSkipped) return { color: '#F59E0B', pulse: false, label: 'SKIP' };
     if (isPassed) return { color: '#10B981', pulse: false, label: 'PASS' };
     return { color: '#F59E0B', pulse: false, label: 'STBY' };
   };
@@ -175,10 +185,12 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
     <div
       onClick={onSelect}
       style={{
-        width: 272,
+        width: FLOW_NODE_WIDTH,
       }}
       className={`relative select-none rounded-[4px] border transition-colors cursor-pointer bg-[#1A212E] ${
-        isSelected
+        isConnectionSource
+          ? 'border-cyan-300 ring-2 ring-cyan-400 z-20'
+          : isSelected
           ? 'border-cyan-400 ring-1 ring-cyan-400 z-20'
           : isFlaggedNg
           ? 'border-rose-500 hover:border-rose-400 z-10'
@@ -194,8 +206,10 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       <div className="h-8 bg-[#131822] border-b border-[#2B3547] px-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           {getNodeIcon()}
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300 font-bold truncate max-w-[110px]">
-            {node.data.node_type}
+          <span className="text-[11px] font-mono uppercase tracking-wide text-slate-200 font-bold truncate max-w-[120px]">
+            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
+              : nodeType === 'fixed_roi' ? 'FIXED ROI'
+                : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
           </span>
         </div>
 
@@ -229,33 +243,58 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
       {/* Node Label & Primary Specs */}
       <div className="p-3 bg-[#1A212E]">
-        <h4 className="text-xs font-bold text-[#F8FAFC] truncate mb-2">{node.data.label}</h4>
+        <h4 className="text-[13px] font-bold text-[#F8FAFC] truncate mb-2" title={node.data.label}>{node.data.label}</h4>
 
         {/* Specs Table */}
         <div className="space-y-1 text-[11px] font-mono bg-[#131822] p-2 rounded border border-[#2B3547]">
-          {node.data.task && (
+          {(nodeType === 'inspection' || nodeType === 'detection_crop') && node.data.task && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">TASK:</span>
+              <span className="text-slate-400">TASK:</span>
               <span className="text-slate-300 font-semibold">{node.data.task.toUpperCase()}</span>
             </div>
           )}
-          {node.data.threshold !== undefined && (
+          {(nodeType === 'inspection' || nodeType === 'detection_crop' ||
+            (nodeType === 'decision' && node.data.rule === 'score_gt_threshold')) && node.data.threshold !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">THRESHOLD:</span>
+              <span className="text-slate-400">THRESHOLD:</span>
               <span className="text-cyan-400 font-bold tabular-nums">
                 τ = {node.data.threshold.toFixed(2)}
               </span>
             </div>
           )}
-          {node.data.crop_padding !== undefined && (
+          {nodeType === 'detection_crop' && node.data.crop_padding !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">ROI PADDING:</span>
+              <span className="text-slate-400">ROI PADDING:</span>
               <span className="text-slate-300 tabular-nums">{node.data.crop_padding} px</span>
             </div>
           )}
-          {node.data.rule && (
+          {nodeType === 'fixed_roi' && Array.isArray(node.data.params?.roi_bbox) && (
+            <div className="space-y-0.5">
+              <span className="text-slate-400">SOURCE PIXELS:</span>
+              <div className="text-sky-300 tabular-nums">
+                {node.data.params?.roi_bbox?.[0]}, {node.data.params?.roi_bbox?.[1]} → {node.data.params?.roi_bbox?.[2]}, {node.data.params?.roi_bbox?.[3]}
+              </div>
+            </div>
+          )}
+          {nodeType === 'blob_measure' && <>
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">RULE:</span>
+              <span className="text-slate-400">MIN AREA:</span>
+              <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_area_px ?? 1} px</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">NG COUNT:</span>
+              <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_count_for_ng ?? 1}</span>
+            </div>
+          </>}
+          {nodeType === 'aggregate' && node.data.rule && (
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">RULE:</span>
+              <span className="text-indigo-300 font-semibold">{node.data.rule.replace('_', ' ').toUpperCase()}</span>
+            </div>
+          )}
+          {nodeType === 'decision' && node.data.rule && (
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">RULE:</span>
               <span className="text-amber-400 font-semibold">{node.data.rule}</span>
             </div>
           )}
@@ -268,15 +307,19 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="space-y-1.5 flex-1 pr-2">
           {inputs.map((port) => (
             <div key={port.id} className="flex items-center space-x-1.5">
-              <div
+              <button
+                type="button"
+                aria-label={`Connect to ${node.data.label}`}
+                title="이 노드의 입력에 연결"
+                onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
                 style={{ borderColor: getPortColor(port.type) }}
-                className="w-2.5 h-2.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0"
+                className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
                   style={{ backgroundColor: getPortColor(port.type) }}
                   className="w-1 h-1 rounded-full"
                 />
-              </div>
+              </button>
               <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
             </div>
           ))}
@@ -287,15 +330,19 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           {outputs.map((port) => (
             <div key={port.id} className="flex items-center justify-end space-x-1.5">
               <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
-              <div
+              <button
+                type="button"
+                aria-label={`Start connection from ${node.data.label}`}
+                title="여기서 연결 시작"
+                onClick={(event) => { event.stopPropagation(); onConnectStart?.(); }}
                 style={{ borderColor: getPortColor(port.type) }}
-                className="w-2.5 h-2.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0"
+                className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
                   style={{ backgroundColor: getPortColor(port.type) }}
                   className="w-1 h-1 rounded-full"
                 />
-              </div>
+              </button>
             </div>
           ))}
         </div>

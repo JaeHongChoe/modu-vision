@@ -21,7 +21,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -54,6 +54,8 @@ from backend.engine.classification import (
 from backend.engine.detection import (
     create_detection_model,
     draw_detection_overlays,
+    checkpoint_detection_num_classes,
+    foreground_class_names,
 )
 from backend.engine.segmentation import (
     build_segmentation_model,
@@ -65,8 +67,17 @@ from backend.engine.anomaly import (
     PatchCoreDetector,
     compute_anomaly_metrics,
 )
+from backend.engine.anomaly.cancellation import AnomalyFitCancelled
+from backend.engine.patch_classification import (
+    PatchClassificationDataset,
+    load_patch_manifest,
+    predict_patch_classification,
+)
 
 logger = logging.getLogger("vision_ai_studio.trainer")
+
+if TYPE_CHECKING:
+    from backend.engine.warm_start import WarmStartParent
 
 
 # ============================================================================
@@ -235,6 +246,22 @@ class InferenceResult:
 # Unified AutoML Trainer Controller
 # ============================================================================
 
+def _build_detection_datasets(
+    dataset_path: Path, train_transform: Optional[Callable], image_size: Tuple[int, int],
+) -> Tuple[DetectionDataset, DetectionDataset]:
+    """Build both COCO partitions with one foreground class index."""
+    train_img = (dataset_path / "images" / "train") if (dataset_path / "images" / "train").exists() else (dataset_path / "images")
+    val_img = (dataset_path / "images" / "val") if (dataset_path / "images" / "val").exists() else train_img
+    train_anno = (dataset_path / "annotations_train.json") if (dataset_path / "annotations_train.json").exists() else (dataset_path / "annotations.json")
+    val_anno = (dataset_path / "annotations_val.json") if (dataset_path / "annotations_val.json").exists() else train_anno
+
+    train_ds = DetectionDataset(images_dir=train_img, annotation_file=train_anno,
+                                transform=train_transform, image_size=image_size)
+    val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno,
+                              image_size=image_size, class_names=list(train_ds.categories.values()))
+    return train_ds, val_ds
+
+
 class UnifiedAutoMLTrainer:
     """
     Unified AutoML Vision Training Controller.
@@ -251,6 +278,7 @@ class UnifiedAutoMLTrainer:
         device: Optional[Union[str, torch.device]] = None,
         callback: Optional[TrainingCallback] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
+        warm_start: Optional[WarmStartParent] = None,
     ):
         self.task = task.lower().strip()
         self.dataset_path = Path(dataset_path)
@@ -264,6 +292,7 @@ class UnifiedAutoMLTrainer:
         self.preset_key = preset_key
         self.config = PRESET_CONFIGS.get(preset_key, PRESET_CONFIGS["fast"])
         self.overrides = config_overrides or {}
+        self.warm_start = warm_start
 
     def abort(self) -> None:
         """Signal trainer to immediately halt execution."""
@@ -275,6 +304,11 @@ class UnifiedAutoMLTrainer:
         start_time = time.time()
         epochs = self.overrides.get("epochs", self.config.target_epochs)
         target_size = self.overrides.get("image_size", self.config.image_size)
+        batch_size = int(self.overrides.get("batch_size", self.config.batch_size))
+        learning_rate = float(self.overrides.get("learning_rate", self.config.learning_rate))
+        patience = int(self.overrides.get("patience", self.config.patience))
+        if batch_size < 1 or learning_rate <= 0 or patience < 1:
+            raise ValueError("Training batch size, learning rate, and patience must be positive")
         optimal_size = calculate_optimal_image_size((target_size, target_size), target_max=target_size)
 
         self.callback.on_training_start({
@@ -288,7 +322,7 @@ class UnifiedAutoMLTrainer:
 
         try:
             # 1. Setup Data Augmentation & Datasets
-            aug = create_industrial_transforms(task=self.task, preset="fast", is_training=True)
+            aug = create_industrial_transforms(task=self.task, preset=self.preset_key, is_training=True)
 
             if self.task == "classification":
                 train_ds = ClassificationDataset(
@@ -300,7 +334,10 @@ class UnifiedAutoMLTrainer:
                 classes = train_ds.classes
                 num_classes = max(2, len(classes))
                 backbone = self.config.backbone_classification
-                model = create_classification_model(backbone=backbone, num_classes=num_classes).to(self.device)
+                model = create_classification_model(
+                    backbone=backbone, num_classes=num_classes,
+                    pretrained=self.warm_start is None,
+                ).to(self.device)
                 if not hasattr(train_ds, "class_counts"):
                     counts = [0] * num_classes
                     for _, cidx in getattr(train_ds, "samples", []):
@@ -310,16 +347,31 @@ class UnifiedAutoMLTrainer:
                 class_weights = compute_class_weights(train_ds.class_counts, num_classes=num_classes).to(self.device)
                 criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
 
-            elif self.task == "detection":
-                train_img = (self.dataset_path / "images" / "train") if (self.dataset_path / "images" / "train").exists() else (self.dataset_path / "images")
-                val_img = (self.dataset_path / "images" / "val") if (self.dataset_path / "images" / "val").exists() else train_img
-                train_anno = (self.dataset_path / "annotations_train.json") if (self.dataset_path / "annotations_train.json").exists() else (self.dataset_path / "annotations.json")
-                val_anno = (self.dataset_path / "annotations_val.json") if (self.dataset_path / "annotations_val.json").exists() else train_anno
+            elif self.task == "patch_classification":
+                patch_manifest = load_patch_manifest(self.dataset_path)
+                self._patch_manifest = patch_manifest
+                train_ds = PatchClassificationDataset(
+                    self.dataset_path, split="train", image_size=optimal_size,
+                    transform=aug, manifest=patch_manifest,
+                )
+                val_ds = PatchClassificationDataset(
+                    self.dataset_path, split="val", image_size=optimal_size,
+                    manifest=patch_manifest,
+                )
+                classes = patch_manifest.classes
+                backbone = str(self.overrides.get("backbone", self.config.backbone_classification))
+                self._patch_backbone = backbone
+                model = create_classification_model(
+                    backbone=backbone, num_classes=len(classes),
+                    pretrained=bool(self.overrides.get("pretrained", False)),
+                ).to(self.device)
+                class_weights = compute_class_weights(train_ds.class_counts, num_classes=len(classes)).to(self.device)
+                criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
 
-                train_ds = DetectionDataset(images_dir=train_img, annotation_file=train_anno, transform=aug, image_size=optimal_size)
-                val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=optimal_size)
+            elif self.task == "detection":
+                train_ds, val_ds = _build_detection_datasets(self.dataset_path, aug, optimal_size)
                 classes = list(train_ds.categories.values())
-                num_classes = max(2, len(classes))
+                num_classes = max(2, len(classes) + 1)
                 model = create_detection_model(preset=self.preset_key, num_classes=num_classes).to(self.device)
                 criterion = None
 
@@ -337,15 +389,25 @@ class UnifiedAutoMLTrainer:
 
             elif self.task in ("anomaly", "anomaly_detection"):
                 train_ds = AnomalyDataset(root_dir=self.dataset_path, split="train", transform=aug, image_size=optimal_size)
-                val_ds = AnomalyDataset(root_dir=self.dataset_path, split="test", image_size=optimal_size)
+                val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
                 classes = ["good", "anomaly"]
                 if "patchcore" in self.config.backbone_anomaly:
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device)
                 else:
                     model = PaDiMDetector(backbone_name="resnet18", device=self.device)
 
-            train_loader = create_dataloader(train_ds, batch_size=self.config.batch_size, shuffle=True, task=self.task)
-            val_loader = create_dataloader(val_ds, batch_size=self.config.batch_size, shuffle=False, task=self.task)
+            if self.warm_start is not None:
+                from backend.engine.warm_start import architecture_for, load_parent_weights
+
+                if self.task != self.warm_start.task:
+                    raise ValueError("Warm-start parent task differs from current training task")
+                architecture = architecture_for(self.task, self.preset_key, self.overrides)
+                if architecture != self.warm_start.architecture:
+                    raise ValueError("Warm-start parent architecture differs from current training model")
+                load_parent_weights(model, self.warm_start, classes)
+
+            train_loader = create_dataloader(train_ds, batch_size=batch_size, shuffle=True, task=self.task)
+            val_loader = create_dataloader(val_ds, batch_size=batch_size, shuffle=False, task=self.task)
 
             # 2. Task 4 Anomaly Workflow (OK-Only Embedding Fit)
             if self.task in ("anomaly", "anomaly_detection"):
@@ -354,7 +416,12 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_training_aborted(0, "Training aborted by user request")
                     return {"status": "aborted", "epoch": 0}
 
-                model.fit(train_loader)
+                try:
+                    model.fit(train_loader, cancellation_requested=self._abort_flag.is_set)
+                except AnomalyFitCancelled:
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
 
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)
@@ -385,7 +452,15 @@ class UnifiedAutoMLTrainer:
                     lr=0.0,
                     metrics={"image_auroc": auroc, "f1_score": float(anom_metrics.get("f1_score", 1.0))},
                 )
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
                 self._save_checkpoint(0, model, val_metric, classes, optimal_size, time.time() - start_time)
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
                 elapsed = time.time() - start_time
                 best_model_path = str(self.output_dir / "best_model.pt")
                 self.callback.on_training_completed(job_id, elapsed, val_metric, best_model_path)
@@ -394,11 +469,11 @@ class UnifiedAutoMLTrainer:
             # 3. Supervised Tasks Optimization Loop
             optimizer, scheduler = create_optimizer_and_scheduler(
                 model=model,
-                lr=self.config.learning_rate,
+                lr=learning_rate,
                 total_epochs=epochs,
                 warmup_epochs=min(3, max(1, epochs // 4)),
             )
-            early_stopping = EarlyStopping(patience=self.config.patience, mode="min")
+            early_stopping = EarlyStopping(patience=patience, mode="min")
             total_steps = epochs * len(train_loader)
             global_step = 0
 
@@ -418,7 +493,7 @@ class UnifiedAutoMLTrainer:
                         return {"status": "aborted", "epoch": epoch}
 
                     optimizer.zero_grad()
-                    if self.task == "classification":
+                    if self.task in ("classification", "patch_classification"):
                         imgs, targets = batch
                         imgs, targets = imgs.to(self.device), targets.to(self.device)
                         outputs = model(imgs)
@@ -446,12 +521,21 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_step_end(global_step, total_steps, loss_val, epoch)
                     global_step += 1
 
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": epoch}
+
                 # Validation Evaluation
                 model.eval()
                 val_losses = []
                 with torch.no_grad():
                     for batch in val_loader:
-                        if self.task == "classification":
+                        if self._abort_flag.is_set():
+                            clear_device_cache(self.device)
+                            self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                            return {"status": "aborted", "epoch": epoch}
+                        if self.task in ("classification", "patch_classification"):
                             imgs, targets = batch
                             imgs, targets = imgs.to(self.device), targets.to(self.device)
                             loss = criterion(model(imgs), targets)
@@ -471,6 +555,11 @@ class UnifiedAutoMLTrainer:
                             else:
                                 loss = criterion(model(imgs), masks)
                         val_losses.append(float(loss.item()))
+
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": epoch}
 
                 mean_train_loss = float(np.mean(train_losses)) if train_losses else 0.0
                 mean_val_loss = float(np.mean(val_losses)) if val_losses else 0.0
@@ -505,10 +594,18 @@ class UnifiedAutoMLTrainer:
                     break
 
             elapsed = time.time() - start_time
+            if self._abort_flag.is_set():
+                clear_device_cache(self.device)
+                self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                return {"status": "aborted", "epoch": epoch}
             best_model_path = str(self.output_dir / "best_model.pt")
             if not (self.output_dir / "best_model.pt").exists():
                 fallback_loss = mean_val_loss if (val_losses and not np.isnan(mean_val_loss)) else 0.0
                 self._save_checkpoint(epochs - 1, model, fallback_loss, classes, optimal_size, elapsed)
+            if self._abort_flag.is_set():
+                clear_device_cache(self.device)
+                self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                return {"status": "aborted", "epoch": epoch}
             self.callback.on_training_completed(job_id, elapsed, early_stopping.best_score, best_model_path)
             return {"status": "completed", "best_metric": early_stopping.best_score, "model_path": best_model_path}
 
@@ -538,6 +635,15 @@ class UnifiedAutoMLTrainer:
 
         if self.task == "classification":
             meta["backbone"] = self.config.backbone_classification
+        elif self.task == "patch_classification":
+            patch_manifest = self._patch_manifest
+            meta.update({
+                "backbone": self._patch_backbone,
+                "normal_class": patch_manifest.normal_class,
+                "patch_size": patch_manifest.patch_size,
+                "stride": patch_manifest.stride,
+                "patch_provenance": patch_manifest.provenance,
+            })
         elif self.task == "detection":
             meta["detector_preset"] = self.preset_key
         elif self.task == "segmentation":
@@ -545,6 +651,9 @@ class UnifiedAutoMLTrainer:
             meta["features"] = [64, 128, 256, 512] if self.preset_key == "precision" else [32, 64, 128, 256]
         elif self.task in ("anomaly", "anomaly_detection"):
             meta["detector_type"] = "patchcore" if "patchcore" in self.config.backbone_anomaly else "padim"
+
+        if self.warm_start is not None:
+            meta["warm_start"] = self.warm_start.lineage()
 
         ckpt_payload = {
             "epoch": epoch,
@@ -607,6 +716,23 @@ def infer(
 
     orig_h, orig_w = img_np.shape[:2]
 
+    if task.lower().strip() == "patch_classification":
+        patch_result = predict_patch_classification(
+            m_path, image_input, threshold=threshold, device=dev,
+        )
+        overlay = img_np.copy()
+        for patch in patch_result["patches"]:
+            x1, y1, x2, y2 = patch["box"]
+            color = (220, 40, 40) if patch["decision"] == "FAIL" else (40, 200, 40)
+            cv2.rectangle(overlay, (x1, y1), (x2 - 1, y2 - 1), color, 2)
+        return InferenceResult(
+            task="patch_classification", predictions=patch_result,
+            confidence_score=patch_result["max_defect_score"],
+            visual_overlay=overlay,
+            latency_ms=round((time.time() - start_time) * 1000.0, 2),
+            metadata=meta,
+        )
+
     ckpt = torch.load(m_path, map_location=dev, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
     ckpt_meta = {k: v for k, v in ckpt.items() if k != "model_state_dict"}
@@ -665,7 +791,9 @@ def infer(
 
     elif task_clean == "detection":
         det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
-        model = create_detection_model(preset=det_preset, num_classes=max(2, len(classes)), pretrained=False).to(dev)
+        model = create_detection_model(preset=det_preset,
+                                       num_classes=checkpoint_detection_num_classes(state_dict, classes),
+                                       pretrained=False).to(dev)
         model.load_state_dict(state_dict)
         model.eval()
 
@@ -681,7 +809,8 @@ def infer(
                 scale_x = orig_w / img_size[0]
                 scale_y = orig_h / img_size[1]
                 x1, y1, x2, y2 = b[0] * scale_x, b[1] * scale_y, b[2] * scale_x, b[3] * scale_y
-                lbl = classes[l] if l < len(classes) else f"defect_{l}"
+                defect_classes = foreground_class_names(classes)
+                lbl = defect_classes[l - 1] if 1 <= l <= len(defect_classes) else f"defect_{l}"
                 filtered.append({"bbox": [float(x1), float(y1), float(x2), float(y2)], "score": float(s), "label": lbl})
                 cv2.rectangle(overlay, (int(x1), int(y1)), (int(x2), int(y2)), (255, 50, 50), 2)
                 cv2.putText(overlay, f"{lbl} {s:.2f}", (int(x1), max(15, int(y1) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 50, 50), 1)

@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.api import routes_flowchart
 from backend.main import create_app
 from backend.engine.labeling_ai import (
     auto_select_contour,
@@ -28,7 +29,9 @@ from backend.engine.labeling_ai import (
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
+    return client
 
 
 @pytest.fixture
@@ -73,8 +76,9 @@ def test_rotated_bbox_to_corners():
         assert len(pt) == 2
 
 
-def test_annotation_rotated_bbox_save(client, test_image, tmp_path):
+def test_annotation_rotated_bbox_save(client, test_image, tmp_path, monkeypatch):
     """Verifies API can persist and rasterize rotated_bbox."""
+    monkeypatch.setenv("VISION_AI_STUDIO_ANNOTATION_ROOTS", str(tmp_path / "annotations"))
     payload = {
         "image_id": "test_pcb",
         "image_width": 256,
@@ -129,8 +133,9 @@ def test_inference_benchmark(client):
     assert resp.status_code == 404
 
 
-def test_flowchart_pipeline_lifecycle(client):
+def test_flowchart_pipeline_lifecycle(client, monkeypatch, tmp_path, test_image):
     """Verifies getting, saving, and executing flowchart multi-model pipeline."""
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
     # 1. Get default pipeline
     resp = client.get("/api/flowchart/pipeline")
     assert resp.status_code == 200
@@ -144,7 +149,7 @@ def test_flowchart_pipeline_lifecycle(client):
     assert save_resp.status_code == 200
 
     # 3. Run flowchart
-    run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline})
+    run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline, "image_path": str(test_image)})
     assert run_resp.status_code == 409
 
 

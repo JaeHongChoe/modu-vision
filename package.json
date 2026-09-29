@@ -18,6 +18,7 @@
     "build:backend": "python3 scripts/build_backend_binary.py",
     "test:m4": "node scripts/verify-m4.js",
     "test:m5": "node scripts/verify-m5.js",
+    "test:training-cancel": "node scripts/verify-training-cancel.js",
     "test:packaging": "node scripts/verify-packaging.js"
   },
   "dependencies": {

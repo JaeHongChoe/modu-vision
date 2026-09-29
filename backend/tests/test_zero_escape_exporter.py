@@ -47,15 +47,37 @@ from backend.engine.zero_escape_analyzer import (
 )
 from backend.engine.exporter import (
     export_runtime_package,
+    generate_standalone_infer_py,
     load_checkpoint_and_reconstruct_model,
     locate_checkpoint,
 )
+from backend.engine.flowchart_engine import FlowchartEngine
+
+
+@pytest.fixture
+def allow_export_test_checkpoint(monkeypatch):
+    """Export tests exercise serialization; checkpoint lookup has separate security tests."""
+    from backend.engine import exporter
+
+    secure_lookup = exporter.locate_checkpoint
+    temporary_root = Path(tempfile.gettempdir()).resolve()
+
+    def locate_fixture(job_id=None):
+        candidate = Path(job_id) if job_id else None
+        if (candidate and candidate.is_absolute() and candidate.is_file()
+                and temporary_root in candidate.resolve().parents):
+            return candidate
+        return secure_lookup(job_id)
+
+    monkeypatch.setattr(exporter, "locate_checkpoint", locate_fixture)
 
 
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
+    return client
 
 
 
@@ -290,6 +312,7 @@ def test_no_random_beta_fallback(client):
 # 4. Authentic Model Export Tests (Weights match checkpoint)
 # ============================================================================
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_authentic_model_export_classification():
     """
     Creates a real checkpoint with deterministic non-random weights,
@@ -330,6 +353,12 @@ def test_authentic_model_export_classification():
         assert res_onnx["status"] == "success"
         onnx_file = Path(res_onnx["package_path"]) / "model.onnx"
         assert onnx_file.is_file()
+        onnx_requirements = (onnx_file.parent / "requirements.txt").read_text(encoding="utf-8")
+        assert "onnxruntime" in onnx_requirements
+        assert "opencv-python-headless" in onnx_requirements
+        assert "torch" not in onnx_requirements
+        assert any(item["name"] == "requirements.txt" for item in res_onnx["manifest"])
+        assert "pip install -r requirements.txt" in (onnx_file.parent / "README_DEPLOY.md").read_text(encoding="utf-8")
 
         # 3. Export to TorchScript
         pkg_ts_dir = temp_dir / "pkg_ts"
@@ -343,6 +372,10 @@ def test_authentic_model_export_classification():
         assert res_ts["status"] == "success"
         ts_file = Path(res_ts["package_path"]) / "model.pt"
         assert ts_file.is_file()
+        torchscript_requirements = (ts_file.parent / "requirements.txt").read_text(encoding="utf-8")
+        assert "torch" in torchscript_requirements
+        assert "torchvision" in torchscript_requirements
+        assert "onnxruntime" not in torchscript_requirements
 
         # 4. Compare outputs on the same test input tensor
         test_input = torch.randn(1, 3, 128, 128)
@@ -372,6 +405,7 @@ def test_authentic_model_export_classification():
 # 5. Standalone infer.py Execution Test via Subprocess
 # ============================================================================
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_standalone_infer_script_execution():
     """
     Executes the generated infer.py script via a standalone Python subprocess
@@ -430,7 +464,7 @@ def test_standalone_infer_script_execution():
         # 2. Execute infer.py in self-test mode
         proc_self = subprocess.run(
             [sys.executable, str(infer_script), "--self-test"],
-            cwd=str(pkg_dir),
+            cwd=str(temp_dir),
             capture_output=True,
             text=True,
         )
@@ -438,6 +472,8 @@ def test_standalone_infer_script_execution():
         self_json = json.loads(proc_self.stdout.strip())
         assert self_json["status"] == "success"
         assert self_json["verdict"] in ("OK", "NG")
+        assert not (temp_dir / "dummy_test.png").exists()
+        assert not (pkg_dir / "dummy_test.png").exists()
 
     finally:
         import shutil
@@ -445,13 +481,63 @@ def test_standalone_infer_script_execution():
             shutil.rmtree(temp_dir)
 
 
+@pytest.mark.parametrize("runtime_format", ["onnx", "torchscript"])
+def test_standalone_segmentation_tiles_match_flowchart_probability_and_area(runtime_format):
+    """The exported CLI's full-image decision uses Step 5's tile geometry."""
+    namespace = {"__name__": "standalone_segmentation_test", "__file__": "infer.py"}
+    exec(generate_standalone_infer_py(), namespace)
+
+    class TinySegmentation(torch.nn.Module):
+        def forward(self, batch):
+            foreground = (batch[:, 0] - 0.5) * 2
+            return torch.stack((torch.zeros_like(foreground), foreground), dim=1)
+
+    model = TinySegmentation().eval()
+    rng = np.random.default_rng(234)
+    rgb = rng.integers(0, 256, (35, 50, 3), dtype=np.uint8)
+    expected_map, expected_tiles = FlowchartEngine(device="cpu")._predict_tiled_segmentation(
+        model, rgb, (32, 32)
+    )
+
+    class FakeSession:
+        def run(self, _, inputs):
+            with torch.no_grad():
+                return [model(torch.from_numpy(inputs["input"])).numpy()]
+
+    inspector = namespace["StandaloneInspector"].__new__(namespace["StandaloneInspector"])
+    inspector.model_format = runtime_format
+    inspector.task = "segmentation"
+    inspector.classes = ["background", "defect"]
+    inspector.resolution = (32, 32)
+    inspector.threshold = 0.5
+    inspector.mean = [0, 0, 0]
+    inspector.std = [1, 1, 1]
+    inspector.session = FakeSession()
+    inspector.input_name = "input"
+    inspector.torch_model = model
+    inspector.min_defect_area_px = 8
+    inspector.max_segmentation_tiles = 1024
+    inspector.segmentation_tile_batch_size = 4
+    inspector.segmentation_mode = "tiled_full_image"
+
+    result = inspector.inspect(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+    expected_area = int((expected_map > 0.5).sum())
+
+    assert result["image_dimensions"] == [50, 35]
+    assert result["tiles_processed"] == expected_tiles
+    assert result["defect_area_px"] == expected_area
+    assert result["verdict"] == ("NG" if expected_area >= 8 else "OK")
+    assert result["defect_score"] == round(float(expected_map.max()), 4)
+
+
 # ============================================================================
 # 6. Multi-Task Export Tests (Segmentation & Anomaly)
 # ============================================================================
 
-def test_authentic_model_export_segmentation_and_anomaly():
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
+def test_authentic_model_export_segmentation_and_anomaly_guard():
     """
-    Verifies authentic export for Segmentation (UNet) and Anomaly Detection (PaDiM).
+    Segmentation exports; anomaly cannot ship an extractor-only verdict package.
     """
     temp_dir = Path(tempfile.mkdtemp(prefix="multitask_export_"))
     try:
@@ -475,7 +561,25 @@ def test_authentic_model_export_segmentation_and_anomaly():
             output_base_dir=temp_dir,
         )
         assert seg_res["status"] == "success"
-        assert (Path(seg_res["package_path"]) / "model.onnx").is_file()
+        seg_pkg = Path(seg_res["package_path"])
+        assert (seg_pkg / "model.onnx").is_file()
+        seg_cfg = json.loads((seg_pkg / "config.json").read_text(encoding="utf-8"))
+        assert seg_cfg["segmentation_mode"] == "tiled_full_image"
+        assert seg_cfg["min_defect_area_px"] == 8
+        assert seg_cfg["exported_from_checkpoint"] == seg_ckpt.name
+        assert "does not execute other Step 5 flowchart nodes" in (seg_pkg / "README_DEPLOY.md").read_text(encoding="utf-8")
+
+        full_image = temp_dir / "larger_than_model.png"
+        cv2.imwrite(str(full_image), np.full((150, 140, 3), 180, dtype=np.uint8))
+        inspected = subprocess.run(
+            [sys.executable, str(seg_pkg / "infer.py"), "--image", str(full_image)],
+            cwd=str(temp_dir), capture_output=True, text=True,
+        )
+        assert inspected.returncode == 0, inspected.stderr
+        inspected_result = json.loads(inspected.stdout)
+        assert inspected_result["image_dimensions"] == [140, 150]
+        assert inspected_result["tiles_processed"] > 1
+        assert 0 <= inspected_result["defect_area_px"] <= 140 * 150
 
         # B. Anomaly (PaDiM)
         anom_detector = PaDiMDetector(backbone_name="resnet18", device="cpu", pretrained=False)
@@ -493,17 +597,15 @@ def test_authentic_model_export_segmentation_and_anomaly():
             "image_size": [128, 128],
         }, anom_ckpt)
 
-        anom_res = export_runtime_package(
-            job_id=str(anom_ckpt),
-            export_format="onnx",
-            resolution=128,
-            package_name="anom_pkg",
-            output_base_dir=temp_dir,
-        )
-        assert anom_res["status"] == "success"
-        pkg_path = Path(anom_res["package_path"])
-        assert (pkg_path / "model.onnx").is_file()
-        assert (pkg_path / "anomaly_stats.pt").is_file()
+        with pytest.raises(ValueError, match="PaDiM/PatchCore statistics"):
+            export_runtime_package(
+                job_id=str(anom_ckpt),
+                export_format="onnx",
+                resolution=128,
+                package_name="anom_pkg",
+                output_base_dir=temp_dir,
+            )
+        assert not (temp_dir / "anom_pkg").exists()
 
     finally:
         import shutil
@@ -515,6 +617,7 @@ def test_authentic_model_export_segmentation_and_anomaly():
 # 7. Detection Model Export & Dynamic Batching & CLI Override Tests
 # ============================================================================
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_authentic_model_export_detection():
     """
     Verifies authentic export for Object Detection (Faster R-CNN) to both ONNX and TorchScript.
@@ -588,6 +691,7 @@ def test_authentic_model_export_detection():
             shutil.rmtree(temp_dir)
 
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_onnx_dynamic_batching_multi_batch():
     """
     Verifies that ONNX export with dynamo=False preserves dynamic batching
@@ -633,6 +737,7 @@ def test_onnx_dynamic_batching_multi_batch():
             shutil.rmtree(temp_dir)
 
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_standalone_infer_threshold_override_and_detection():
     """
     Verifies that infer.py CLI supports --threshold-override,
@@ -741,6 +846,7 @@ def test_standalone_infer_threshold_override_and_detection():
             shutil.rmtree(temp_dir)
 
 
+@pytest.mark.usefixtures("allow_export_test_checkpoint")
 def test_standalone_infer_torchscript_detection_subprocess():
     """
     Verifies standalone infer.py execution via subprocess on an exported
