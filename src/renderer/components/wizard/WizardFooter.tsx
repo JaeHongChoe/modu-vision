@@ -120,13 +120,13 @@ export const WizardFooter: React.FC = () => {
   const getStepWarningHint = () => {
     if (activeStep === 1 && totalImages === 0) {
       return language === 'ko'
-        ? '등록된 이미지가 없습니다 (가드레일에서 샘플을 로드하세요)'
-        : 'No images loaded (load synthetic samples from guardrail)';
+        ? '등록된 이미지가 없습니다 (검사 폴더를 선택하세요)'
+        : 'No images loaded (select an inspection folder)';
     }
     if (activeStep === 3 && totalImages > 0 && (split.val === 0 || split.train === 0)) {
       return language === 'ko'
-        ? '검증 데이터 분할이 필요합니다 (80:20 자동 분할 실행)'
-        : 'Validation split missing (run 80:20 automatic split)';
+        ? '검증 데이터 분할이 필요합니다 (학습·검증·시험 분할 적용)'
+        : 'Validation split missing (apply train/validation/test split)';
     }
     if (activeStep === 3 && status === 'running') {
       return language === 'ko'
@@ -216,12 +216,12 @@ export const WizardFooter: React.FC = () => {
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         ) : (
-          <div className="flex items-center space-x-2 px-3.5 py-2 rounded bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-mono font-semibold text-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center space-x-2 px-3.5 py-2 rounded bg-slate-900 border border-slate-600 text-slate-300 font-mono font-semibold text-xs">
+            <CheckCircle2 className="w-4 h-4 text-slate-400" />
             <span>
               {language === 'ko'
-                ? '최종 배포 단계 (READY)'
-                : 'PRODUCTION EXPORT (READY)'}
+                ? '모델 내보내기 단계'
+                : 'MODEL EXPORT STAGE'}
             </span>
           </div>
         )}

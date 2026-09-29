@@ -57,6 +57,7 @@ export const LabelingCanvas: React.FC = () => {
     heatmapUrl,
     setViewTransform,
     addAnnotation,
+    commitBrushMask,
     updateAnnotation,
     setSelectedAnnotationId,
     deleteSelected,
@@ -522,7 +523,8 @@ export const LabelingCanvas: React.FC = () => {
     };
 
     img.src = rawUrl;
-  }, [currentImage, backendPort, setViewTransform, redrawAllLayers]);
+  // Redraw callbacks change on every pan/zoom; reloading here would reset the view to Fit.
+  }, [currentImage, backendPort, setViewTransform]);
 
   // -------------------------------------------------------------
   // Load Mask / Heatmap Image
@@ -542,6 +544,28 @@ export const LabelingCanvas: React.FC = () => {
       redrawLayer2();
     };
   }, [maskUrl, heatmapUrl, redrawLayer2]);
+
+  const storedBrushMask = annotations.find((item) => item.type === 'brush_mask')?.mask_rle;
+  useEffect(() => {
+    const canvas = offscreenBrushCanvasRef.current;
+    if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (!storedBrushMask) {
+      redrawLayer2();
+      return;
+    }
+    let active = true;
+    const storedImage = new Image();
+    storedImage.onload = () => {
+      if (!active) return;
+      context.drawImage(storedImage, 0, 0);
+      redrawLayer2();
+    };
+    storedImage.src = storedBrushMask;
+    return () => { active = false; };
+  }, [storedBrushMask, currentImage?.image_id, imgDimensions.width, imgDimensions.height, redrawLayer2]);
 
   useEffect(() => {
     resizeCanvases();
@@ -1144,6 +1168,9 @@ export const LabelingCanvas: React.FC = () => {
 
   const handlePointerUp = () => {
     const mode = dragModeRef.current;
+    if (mode === 'brush' && offscreenBrushCanvasRef.current) {
+      commitBrushMask(offscreenBrushCanvasRef.current.toDataURL('image/png'));
+    }
     dragModeRef.current = null;
     activeHandleRef.current = null;
     activeBBoxSnapshotRef.current = null;
@@ -1319,7 +1346,7 @@ export const LabelingCanvas: React.FC = () => {
           <span className="text-slate-400">scale</span>
           <span className="tabular-nums text-slate-200">{scalePercent}</span>
           <span className="text-slate-500 text-[10px]">%</span>
-          <span className="text-[#3B82F6] text-[10px] ml-1">(3.45 μm/px)</span>
+          <span className="text-[#3B82F6] text-[10px] ml-1">(pixel pitch uncalibrated)</span>
         </div>
       </div>
     </div>

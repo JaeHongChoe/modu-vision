@@ -1,0 +1,231 @@
+"""Regressions observed with the NG_labelme inspection data."""
+
+import threading
+import base64
+import io
+
+import pytest
+from fastapi import HTTPException
+from PIL import Image
+import json
+import numpy as np
+
+from backend.api import routes_dataset, routes_evaluation, routes_flowchart, routes_training
+from backend.api import routes_annotation
+from backend.engine.flowchart_engine import FlowchartRunRequest, get_default_flowchart
+from backend.engine import exporter
+from backend.engine.industrial_adapters import HierarchicalClassificationAdapter
+
+
+def test_training_manager_starts_without_locking_itself(monkeypatch, tmp_path):
+    class FastTrainer:
+        def __init__(self, **kwargs):
+            pass
+
+        def train(self, job_id):
+            return {"status": "completed", "model_path": str(tmp_path / "best_model.pt")}
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", FastTrainer)
+    manager = routes_training.TrainingJobManager()
+    result = []
+
+    caller = threading.Thread(
+        target=lambda: result.append(manager.start_job(
+            job_id="qa_job", task="segmentation", dataset_path=str(tmp_path),
+            output_dir=str(tmp_path),
+        )),
+        daemon=True,
+    )
+    caller.start()
+    caller.join(timeout=1)
+    assert not caller.is_alive(), "start_job deadlocked before creating a job"
+    assert result[0].job_id == "qa_job"
+    result[0].thread.join(timeout=2)
+    assert result[0].status == "completed"
+
+
+def test_three_way_split_counts_and_filters_match_real_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "split_manifests", raising=False)
+    for index in range(20):
+        Image.new("RGB", (8, 8), color=(index, 0, 0)).save(tmp_path / f"sample_{index:02d}.jpg")
+
+    response = routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
+        folder_path=str(tmp_path), train_ratio=0.7, val_ratio=0.2, test_ratio=0.1, seed=42,
+    ))
+    assert response["split"] == {"train": 14, "val": 4, "test": 2}
+
+    seen = []
+    for partition, expected in (("train", 14), ("val", 4), ("test", 2)):
+        gallery = routes_dataset.list_dataset_images(
+            folder_path=str(tmp_path), limit=50, offset=0, split=partition, class_name=None,
+        )
+        assert gallery["total"] == expected
+        assert {row["split"] for row in gallery["items"]} == {partition}
+        seen.extend(row["file_path"] for row in gallery["items"])
+    assert len(set(seen)) == 20
+
+
+def test_labelme_split_excludes_unlabeled_images(tmp_path, monkeypatch):
+    monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "split_manifests", raising=False)
+    for index in range(10):
+        image = tmp_path / f"ng_{index:02d}.jpg"
+        Image.new("RGB", (32, 32)).save(image)
+        if index < 8:
+            (tmp_path / f"ng_{index:02d}.json").write_text(json.dumps({
+                "imagePath": image.name, "imageWidth": 32, "imageHeight": 32,
+                "shapes": [{"label": "Bow", "points": [[2, 2], [8, 2], [8, 8]]}],
+            }))
+    imported = routes_dataset.import_dataset(routes_dataset.DatasetImportRequest(
+        folder_path=str(tmp_path), task="segmentation", validate_images=False,
+    ))
+    assert imported["source_images"] == 10
+    assert imported["unlabeled_images"] == 2
+    split = routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
+        folder_path=str(tmp_path), train_ratio=0.5, val_ratio=0.25, test_ratio=0.25,
+    ))
+    assert sum(split["split"].values()) == 8
+    gallery = routes_dataset.list_dataset_images(folder_path=str(tmp_path), offset=0, limit=20,
+                                                 split=None, class_name=None)
+    assert gallery["total"] == 10
+    assert sum(item["split"] == "unlabeled" for item in gallery["items"]) == 2
+
+
+def test_zero_escape_rejects_missing_real_predictions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(routes_evaluation, "run_or_load_evaluation", lambda **kwargs: (_ for _ in ()).throw(ValueError("no model")))
+    with pytest.raises(HTTPException) as error:
+        routes_evaluation.get_overkill_underkill_analysis(
+            job_id="qa_missing", target_max_underkill=0, cost_escape=500.0,
+            cost_scrap=25.0, current_threshold=0.5,
+        )
+    assert error.value.status_code == 422
+
+
+def test_benchmark_rejects_missing_model(monkeypatch):
+    monkeypatch.setattr(routes_evaluation, "_find_model_file", lambda job_id: None)
+    with pytest.raises(HTTPException) as error:
+        routes_evaluation.run_inference_benchmark(routes_evaluation.BenchmarkRequest(job_id="missing"))
+    assert error.value.status_code == 404
+
+
+def test_flowchart_rejects_pipeline_without_trained_models(monkeypatch):
+    monkeypatch.setattr(routes_flowchart._ENGINE, "execute", lambda **kwargs: {"status": "success"})
+    with pytest.raises(HTTPException) as error:
+        routes_flowchart.run_flowchart(FlowchartRunRequest(pipeline=get_default_flowchart()))
+    assert error.value.status_code == 409
+
+
+def test_flowchart_loads_trained_segmentation_checkpoint(tmp_path):
+    import torch
+    from backend.engine.flowchart_engine import FlowchartEngine
+    from backend.engine.segmentation.model import build_segmentation_model
+
+    model = build_segmentation_model(num_classes=2, preset="fast", pretrained=False)
+    checkpoint = tmp_path / "best_model.pt"
+    torch.save({"model_state_dict": model.state_dict(), "task": "segmentation",
+                "classes": ["background", "defect"], "preset": "fast"}, checkpoint)
+    engine = FlowchartEngine(device="cpu")
+    loaded, is_trained = engine._get_inspection_model(task="segmentation", job_id=str(checkpoint))
+    assert is_trained
+    assert torch.equal(next(model.parameters()), next(loaded.parameters()))
+
+
+def test_flowchart_rejects_wrong_model_task(tmp_path, monkeypatch):
+    import torch
+
+    checkpoint = tmp_path / "best_model.pt"
+    torch.save({"task": "classification", "model_state_dict": {}}, checkpoint)
+    monkeypatch.setattr(routes_flowchart._ENGINE, "_resolve_checkpoint", lambda job, task: checkpoint)
+    pipeline = get_default_flowchart()
+    pipeline.nodes[1].data.model_job_id = str(checkpoint)
+    pipeline.nodes[2].data.model_job_id = str(checkpoint)
+    with pytest.raises(HTTPException) as error:
+        routes_flowchart.run_flowchart(FlowchartRunRequest(pipeline=pipeline, image_path=str(checkpoint)))
+    assert error.value.status_code == 409
+
+
+def test_labelme_preparation_preserves_source_and_defect_masks(tmp_path):
+    from backend.engine.labelme_preparation import prepare_labelme_segmentation
+
+    source = tmp_path / "source"
+    source.mkdir()
+    for index in range(4):
+        image = source / f"ng_{index:04d}.jpg"
+        Image.new("RGB", (512, 384), color=(90, 90, 90)).save(image)
+        annotation = source / f"ng_{index:04d}.json"
+        annotation.write_text(json.dumps({
+            "imagePath": image.name, "imageWidth": 512, "imageHeight": 384,
+            "shapes": [{"label": "Bow", "points": [[240, 190], [250, 190], [245, 200]]}],
+        }), encoding="utf-8")
+    Image.new("RGB", (512, 384)).save(source / "unlabelled.jpg")
+    original_json = (source / "ng_0000.json").read_bytes()
+
+    result = prepare_labelme_segmentation(source, tmp_path / "prepared", image_size=64)
+    assert result["train"] == 3
+    assert result["val"] == 1
+    assert result["unlabelled"] == 1
+    assert (source / "ng_0000.json").read_bytes() == original_json
+    masks = list((tmp_path / "prepared" / "masks").glob("*/*.png"))
+    assert len(masks) == 4
+    assert all(np.asarray(Image.open(mask)).sum() > 0 for mask in masks)
+
+
+def test_training_start_uses_prepared_labelme_dataset(tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    source.mkdir()
+    for index in range(3):
+        image = source / f"ng_{index}.jpg"
+        Image.new("RGB", (128, 128), color=(60, 60, 60)).save(image)
+        (source / f"ng_{index}.json").write_text(json.dumps({
+            "imagePath": image.name, "imageWidth": 128, "imageHeight": 128,
+            "shapes": [{"label": "Bow", "points": [[50, 50], [60, 50], [55, 60]]}],
+        }), encoding="utf-8")
+    captured = {}
+
+    def capture_start(**kwargs):
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(routes_training.training_job_manager, "start_job", capture_start)
+    response = routes_training.start_training(routes_training.TrainingStartRequest(
+        task="segmentation", dataset_path=str(source), output_dir=str(tmp_path / "models"),
+        config_overrides={"epochs": 1, "image_size": 64},
+    ))
+    assert response["status"] == "started"
+    assert captured["dataset_path"] != str(source)
+    assert len(list((tmp_path / "models").glob("*/dataset/images/train/*.png"))) == 2
+    assert len(list((tmp_path / "models").glob("*/dataset/masks/val/*.png"))) == 1
+
+
+def test_export_never_creates_a_fake_default_checkpoint(tmp_path, monkeypatch):
+    monkeypatch.setattr(exporter, "locate_checkpoint", lambda job_id: None)
+    with pytest.raises(FileNotFoundError):
+        exporter.export_runtime_package(job_id="missing_job", output_base_dir=tmp_path)
+    assert not list(tmp_path.rglob("*.pt"))
+
+
+def test_flat_ng_filenames_are_not_imported_as_ok(tmp_path):
+    image = tmp_path / "ng_0001__Scratch___test.jpg"
+    Image.new("RGB", (16, 16)).save(image)
+    result = HierarchicalClassificationAdapter.parse_directory(tmp_path)
+    assert result["classes"] == {"NG": 1}
+
+
+def test_brush_mask_is_saved_as_real_mask_pixels(tmp_path):
+    mask = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for x in range(4, 8):
+        for y in range(5, 9):
+            mask.putpixel((x, y), (255, 0, 0, 255))
+    encoded = io.BytesIO()
+    mask.save(encoded, format="PNG")
+    data_url = "data:image/png;base64," + base64.b64encode(encoded.getvalue()).decode("ascii")
+    result = routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(
+        image_id="brush_example", image_width=16, image_height=16, output_dir=str(tmp_path),
+        annotations=[routes_annotation.AnnotationItem(
+            type="brush_mask", label="Scratch", category_id=1, mask_rle=data_url,
+        )],
+    ))
+    assert result["status"] == "saved"
+    saved = np.asarray(Image.open(tmp_path / "masks" / "brush_example.png"))
+    assert saved[6, 5] == 1
+    assert saved[0, 0] == 0

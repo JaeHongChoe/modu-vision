@@ -11,6 +11,7 @@ import io
 import json
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -25,7 +26,7 @@ from backend.engine.dataset_loaders import (
     split_dataset,
     validate_image_file,
 )
-from backend.engine.industrial_adapters import inspect_industrial_dataset
+from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
 from backend.engine.synthetic_generator import generate_synthetic_dataset
 from backend.utils.error_catalog import format_error_response
 
@@ -35,6 +36,7 @@ router = APIRouter(prefix="/api/dataset", tags=["dataset"])
 
 THUMBNAIL_CACHE_DIR = Path.home() / ".vision_ai_studio_thumbnails"
 THUMBNAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
 
 
 class DatasetGenerateRequest(BaseModel):
@@ -76,6 +78,8 @@ class DatasetSplitRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     folder_path: Optional[str] = None
     train_ratio: float = Field(0.8, gt=0.0, lt=1.0)
+    val_ratio: Optional[float] = Field(None, ge=0.0, lt=1.0)
+    test_ratio: float = Field(0.0, ge=0.0, lt=1.0)
     seed: Optional[int] = 42
 
 
@@ -89,6 +93,35 @@ class ImageMeta(BaseModel):
     split: str = "train"
     label: Optional[str] = None
     thumbnail_url: str
+
+
+def _split_manifest_file(folder: Path) -> Path:
+    key = hashlib.sha256(str(folder.resolve()).encode("utf-8")).hexdigest()
+    return SPLIT_MANIFEST_DIR / f"{key}.json"
+
+
+def _read_split_manifest(folder: Path) -> Dict[str, str]:
+    path = _split_manifest_file(folder)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("folder_path") != str(folder.resolve()):
+            return {}
+        return {str(folder / relative): partition for relative, partition in data["assignments"].items()}
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.warning("Invalid split manifest at %s", path)
+        return {}
+
+
+def _write_split_manifest(folder: Path, assignments: Dict[str, str], seed: int) -> None:
+    path = _split_manifest_file(folder)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"folder_path": str(folder.resolve()), "seed": seed, "assignments": assignments}
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
 
 
 @router.post("/generate")
@@ -189,6 +222,12 @@ def import_dataset(req: DatasetImportRequest):
     split_counts = summary.split_counts
     train_count = split_counts.get("train", 0)
     val_count = split_counts.get("val", 0)
+    image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
+                   and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
+    paired_images = {match.resolve() for annotation in folder.glob("*.json")
+                     if is_valid_labelme_file(annotation, require_image=True)
+                     for match in [find_matching_image(annotation)] if match is not None}
+    unlabeled_images = len(image_files - paired_images) if paired_images else 0
 
     # Optional image validation scanning
     corrupted_images = []
@@ -210,6 +249,8 @@ def import_dataset(req: DatasetImportRequest):
     return {
         "status": "success",
         "total_images": summary.total_images,
+        "source_images": len(image_files) if paired_images else summary.total_images,
+        "unlabeled_images": unlabeled_images,
         "classes": summary.classes,
         "split": {
             "train": train_count,
@@ -251,6 +292,11 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     """Performs stratified partitioning of items in the dataset directory."""
     target_dir = req.folder_path or "./datasets/synthetic"
     folder = Path(target_dir).resolve()
+    if not folder.is_dir():
+        raise HTTPException(status_code=404, detail=f"Dataset folder not found: {folder}")
+    val_ratio = req.val_ratio if req.val_ratio is not None else 1.0 - req.train_ratio - req.test_ratio
+    if val_ratio < 0 or abs(req.train_ratio + val_ratio + req.test_ratio - 1.0) > 1e-6:
+        raise HTTPException(status_code=422, detail="Train, validation and test ratios must sum to 1.")
     # Check for nested task directory
     effective_folder = folder
     if not (folder / "train").is_dir():
@@ -268,26 +314,49 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
                 if cdir.is_dir():
                     cname = cdir.name
                     for f in cdir.glob("*"):
-                        if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                            items.append({"image_path": str(f), "class_name": cname})
+                        if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                            items.append({"image_path": str(f), "label": cname})
 
     if not items:
         # Check flat or recursive directories
         for f in effective_folder.rglob("*"):
-            if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                items.append({"image_path": str(f), "class_name": f.parent.name})
+            if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                items.append({"image_path": str(f), "label": f.parent.name})
+
+    paired_images = {match.resolve() for annotation in effective_folder.glob("*.json")
+                     if is_valid_labelme_file(annotation, require_image=True)
+                     for match in [find_matching_image(annotation)] if match is not None}
+    if paired_images:
+        items = [item for item in items if Path(item["image_path"]).resolve() in paired_images]
 
     if not items:
         raise HTTPException(status_code=422, detail="No valid images found to split.")
 
-    val_ratio = round(1.0 - req.train_ratio, 3)
-    train_items, val_items = split_dataset(items, train_ratio=req.train_ratio, val_ratio=val_ratio, seed=req.seed or 42)
+    seed = req.seed if req.seed is not None else 42
+    primary = split_dataset(items, train_ratio=req.train_ratio, val_ratio=val_ratio + req.test_ratio, seed=seed)
+    train_items = primary["train"]
+    remaining = primary["val"]
+    if req.test_ratio > 0 and remaining:
+        secondary = split_dataset(
+            remaining, train_ratio=val_ratio, val_ratio=req.test_ratio, seed=seed + 1,
+        )
+        val_items, test_items = secondary["train"], secondary["val"]
+    else:
+        val_items, test_items = remaining, []
+
+    assignments = {}
+    for partition, partition_items in (("train", train_items), ("val", val_items), ("test", test_items)):
+        for item in partition_items:
+            relative = str(Path(item["image_path"]).relative_to(folder))
+            assignments[relative] = partition
+    _write_split_manifest(folder, assignments, seed)
 
     return {
         "status": "success",
         "split": {
             "train": len(train_items),
             "val": len(val_items),
+            "test": len(test_items),
         },
     }
 
@@ -321,7 +390,7 @@ def list_dataset_images(
                 if sub.is_dir() and (not class_name or sub.name == class_name):
                     c_label = sub.name
                     for f in sorted(sub.iterdir()):
-                        if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                        if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                             all_images.append(
                                 ImageMeta(
                                     image_id=f.stem,
@@ -332,7 +401,7 @@ def list_dataset_images(
                                     thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                                 )
                             )
-                elif sub.is_file() and sub.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                elif sub.is_file() and not sub.name.startswith("._") and sub.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                     all_images.append(
                         ImageMeta(
                             image_id=sub.stem,
@@ -345,10 +414,15 @@ def list_dataset_images(
                     )
 
     # Fallback to direct recursive glob if no splits
-    if not all_images:
+    if not all_images and not any((effective_dir / name).is_dir() for name in ("train", "val", "test")):
+        assignments = _read_split_manifest(target_dir)
+        has_labelme = any(is_valid_labelme_file(path, require_image=True) for path in target_dir.glob("*.json"))
         for f in sorted(target_dir.rglob("*")):
-            if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                c_label = f.parent.name
+            if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                assigned_split = assignments.get(str(f))
+                if split and assigned_split != split:
+                    continue
+                c_label = None if has_labelme else f.parent.name
                 img_w = None
                 img_h = None
                 json_candidate = f.with_suffix(".json")
@@ -363,6 +437,8 @@ def list_dataset_images(
                                 c_label = shapes[0]["label"]
                     except Exception:
                         pass
+                if class_name and c_label != class_name:
+                    continue
                 all_images.append(
                     ImageMeta(
                         image_id=f.stem,
@@ -370,7 +446,7 @@ def list_dataset_images(
                         file_path=str(f),
                         width=img_w,
                         height=img_h,
-                        split="all",
+                        split=assigned_split or ("unlabeled" if has_labelme and not json_candidate.exists() else "all"),
                         label=c_label,
                         thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                     )
@@ -378,6 +454,13 @@ def list_dataset_images(
 
     total = len(all_images)
     paged = all_images[offset : offset + limit]
+    for item in paged:
+        if item.width is None or item.height is None:
+            try:
+                with Image.open(item.file_path) as source_image:
+                    item.width, item.height = source_image.size
+            except (OSError, ValueError):
+                pass
     return {
         "total": total,
         "limit": limit,

@@ -26,7 +26,7 @@ import { RecipePresetSelector } from './RecipePresetSelector';
 
 export const TrainingController: React.FC = () => {
   const { task, language, setStep } = useProjectStore();
-  const { folderPath, totalImages, split, applySplit, importFolder } = useDatasetStore();
+  const { folderPath, totalImages, split, applySplit } = useDatasetStore();
   const {
     status,
     isTraining,
@@ -85,17 +85,10 @@ export const TrainingController: React.FC = () => {
             description="데이터셋이 비어 있어 딥러닝 모델 학습을 시작할 수 없습니다. 1단계에서 데이터를 먼저 불러오세요."
             actions={[
               {
-                label: '운영서버 반도체 샘플 데이터 즉시 불러오기',
+                label: '1단계에서 검사 데이터 폴더 선택',
                 icon: Sparkles,
                 variant: 'primary',
-                loadingText: '데이터 로딩 중...',
-                onClick: async () => {
-                  try {
-                    await importFolder('/Users/kai/Downloads/운영서버', task);
-                  } catch {
-                    await importFolder('./datasets/synthetic_pcb', task);
-                  }
-                },
+                onClick: () => setStep(1),
               },
               {
                 label: '1단계(데이터 관리)로 이동',

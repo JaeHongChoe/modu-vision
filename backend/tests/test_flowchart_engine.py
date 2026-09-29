@@ -304,13 +304,8 @@ def test_api_flowchart_endpoints(client):
 
     # 4. POST /run
     r_run = client.post("/api/flowchart/run", json={"pipeline": pipe_data})
-    assert r_run.status_code == 200
-    run_res = r_run.json()
-    assert run_res["status"] == "success"
-    assert run_res["final_verdict"] in ("OK", "NG")
-    assert "crops" in run_res
-    assert "execution_steps" in run_res
-    assert run_res["total_latency_ms"] > 0
+    assert r_run.status_code == 409
+    assert "Model job is missing" in r_run.json()["detail"]
 
 
 def test_real_manufacturing_images(engine):

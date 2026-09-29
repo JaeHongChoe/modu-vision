@@ -88,7 +88,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const imagePath = customImagePath || selectedImage?.imagePath;
     const imageId = customImageId || selectedImage?.imageId;
 
-    set({ isRunning: true, errorMessage: null, activeRunningNodeId: 'node_input' });
+    set({ isRunning: true, errorMessage: null, executionResult: null, activeRunningNodeId: 'node_input' });
 
     // Step-by-step progress animation timers
     const timer1 = setTimeout(() => set({ activeRunningNodeId: 'node_crop' }), 200);

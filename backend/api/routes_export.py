@@ -46,10 +46,8 @@ def export_runtime_package(req: ExportRuntimeRequest):
     Exports trained vision model into a deployable Neuro-R style runtime package.
     Produces:
       - model.onnx or model.pt (TorchScript)
-      - config.json (including calibrated zero-underkill threshold)
+      - config.json (including calibration status)
       - infer.py (standalone runnable Python CLI client)
-      - Program.cs (C# snippet)
-      - main.cpp (C++ snippet)
       - README_DEPLOY.md
     """
     try:
@@ -60,6 +58,10 @@ def export_runtime_package(req: ExportRuntimeRequest):
             quantize_fp16=bool(req.quantize_fp16),
             package_name=req.package_name,
         )
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except Exception as e:
         logger.exception("Export runtime package failed: %s", e)
         raise HTTPException(

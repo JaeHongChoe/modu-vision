@@ -121,7 +121,7 @@ def _find_image_file(image_id: str, file_path: Optional[str] = None) -> Optional
 
 
 def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
-    """Locates model checkpoint for the given job or defaults to ./models/best_model.pt."""
+    """Locates only the explicitly selected training job's checkpoint."""
     if job_id:
         rec = training_job_manager.get_job(job_id)
         if rec and rec.output_dir:
@@ -139,13 +139,6 @@ def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
             if cand4.is_file():
                 return cand4
 
-    candidates = [
-        Path("./models/best_model.pt"),
-        Path("./projects/default_project/models/best_model.pt"),
-    ]
-    for c in candidates:
-        if c.is_file():
-            return c
     return None
 
 
@@ -192,13 +185,8 @@ def _resolve_job_artifacts(
             task_hint = latest_rec.task
             dataset_hint = Path(latest_rec.dataset_path)
             resolved_job_id = latest_rec.job_id
-        elif Path("./models/best_model.pt").is_file():
-            out_dir = Path("./models")
-            task_hint = None
-            dataset_hint = None
-            resolved_job_id = "job_default"
         else:
-            raise HTTPException(status_code=404, detail="No completed training jobs or evaluated models found")
+            raise HTTPException(status_code=404, detail="No completed training job has been selected")
 
     model_pt = out_dir / "best_model.pt"
     if not model_pt.is_file():
@@ -520,6 +508,7 @@ def _evaluate_segmentation(
 
             probs = torch.softmax(logits, dim=1)[0]
             conf = float(probs[1].max().item()) if pred_has_defect else float(probs[0].mean().item())
+            defect_score = float(probs[1].max().item())
 
             test_predictions.append({
                 "image_id": img_p.stem,
@@ -528,6 +517,7 @@ def _evaluate_segmentation(
                 "ground_truth": gt_label,
                 "predicted_class": pred_label,
                 "confidence": round(conf, 4),
+                "defect_score": defect_score,
                 "is_correct": bool(gt_label == pred_label),
                 "thumbnail_url": f"/api/dataset/thumbnail/{img_p.name}?file_path={img_p.resolve()}",
             })
@@ -848,6 +838,8 @@ def get_overkill_underkill_analysis(
     from backend.engine.zero_escape_analyzer import analyze_zero_escape
 
     target_job = job_id or (training_job_manager.active_job_id if hasattr(training_job_manager, "active_job_id") else None)
+    if not target_job:
+        raise HTTPException(status_code=422, detail="A completed training job is required for calibration analysis.")
     predictions = []
     task = "classification"
 
@@ -865,11 +857,6 @@ def get_overkill_underkill_analysis(
         rec = training_job_manager.get_job(target_job)
         if rec and rec.output_dir:
             eval_candidates.insert(0, Path(rec.output_dir) / "eval_results.json")
-
-    eval_candidates.extend([
-        Path("./models/eval_results.json"),
-        Path("./models/default_eval/eval_results.json"),
-    ])
 
     for cand in eval_candidates:
         if cand and cand.is_file():
@@ -893,32 +880,8 @@ def get_overkill_underkill_analysis(
         except Exception as eval_err:
             logger.info("Could not execute live evaluation for job %s: %s", target_job, eval_err)
 
-    # 3. If no checkpoint/training job exists on disk at all, construct an authentic deterministic pool
-    # (Completely eliminate random beta distribution fallback)
     if not predictions:
-        predictions = []
-        for i in range(25):
-            conf = 0.70 + (i % 6) * 0.05
-            pred_cls = "NG_defect" if i > 0 else "OK"  # 1 escape sample where true defect was misclassified as OK
-            predictions.append({
-                "image_id": f"defect_{i:03d}",
-                "file_name": f"defect_{i:03d}.png",
-                "ground_truth": "NG_defect",
-                "predicted_class": pred_cls,
-                "confidence": round(conf if pred_cls == "NG_defect" else 0.85, 4),
-                "is_correct": bool(pred_cls == "NG_defect"),
-            })
-        for i in range(75):
-            conf = 0.85 + (i % 4) * 0.03
-            pred_cls = "OK" if i > 1 else "NG_defect"  # 2 overkill samples where true OK was misclassified as NG
-            predictions.append({
-                "image_id": f"normal_{i:03d}",
-                "file_name": f"normal_{i:03d}.png",
-                "ground_truth": "OK",
-                "predicted_class": pred_cls,
-                "confidence": round(conf if pred_cls == "OK" else 0.65, 4),
-                "is_correct": bool(pred_cls == "OK"),
-            })
+        raise HTTPException(status_code=422, detail=f"No real evaluation predictions for job: {target_job}")
 
     result = analyze_zero_escape(
         predictions=predictions,
@@ -959,6 +922,8 @@ def run_zero_escape_calibration(
         cost_scrap=cost_scrap,
         current_threshold=current_threshold,
     )
+    if result.get("total_defects", 0) == 0 or result.get("total_normals", 0) == 0:
+        raise HTTPException(status_code=422, detail="Calibration requires both NG and OK validation samples.")
 
     optimal_th = float(result.get("optimal_threshold", current_threshold))
     target_job = result.get("job_id") or job_id
@@ -1053,30 +1018,31 @@ def run_inference_benchmark(req: BenchmarkRequest):
     dummy_input = np.random.randint(0, 256, (res, res, 3), dtype=np.uint8)
 
     model_file = _find_model_file(req.job_id) if req.job_id else None
+    if not model_file or not model_file.is_file():
+        raise HTTPException(status_code=404, detail="A trained model checkpoint is required for benchmarking.")
+    try:
+        checkpoint = torch.load(model_file, map_location="cpu", weights_only=False)
+        task = str(checkpoint.get("task", "classification"))
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Cannot read model task: {exc}") from exc
+
+    def run_model() -> None:
+        try:
+            infer(task, model_file, dummy_input, device=device)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
 
     # Measure warmup
     latencies = []
     for _ in range(3):
         t0 = time.perf_counter()
-        if model_file and model_file.is_file():
-            try:
-                infer("classification", model_file, dummy_input, device=device)
-            except Exception:
-                time.sleep(0.005)
-        else:
-            time.sleep(0.008)
+        run_model()
         _ = (time.perf_counter() - t0) * 1000.0
 
     # Timed runs
     for _ in range(iters):
         t0 = time.perf_counter()
-        if model_file and model_file.is_file():
-            try:
-                infer("classification", model_file, dummy_input, device=device)
-            except Exception:
-                time.sleep(0.005)
-        else:
-            time.sleep(0.008)
+        run_model()
         ms = (time.perf_counter() - t0) * 1000.0
         latencies.append(ms)
 
@@ -1090,6 +1056,9 @@ def run_inference_benchmark(req: BenchmarkRequest):
 
     return {
         "status": "success",
+        "model_path": str(model_file.resolve()),
+        "task": task,
+        "input_kind": "synthetic_random_tensor",
         "device": device.type,
         "device_name": dev_name,
         "iterations": iters,

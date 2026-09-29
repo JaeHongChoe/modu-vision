@@ -71,10 +71,7 @@ export const LabelingToolbar: React.FC = () => {
   );
 
   const handleFit = () => {
-    const parent =
-      document.querySelector('.relative.w-full.h-full.bg-[#0B0E14]') ||
-      document.querySelector('.relative.w-full.h-full.bg-slate-900') ||
-      document.querySelector('[data-canvas-container="true"]');
+    const parent = document.querySelector('[data-canvas-container="true"]');
     if (parent) {
       const rect = parent.getBoundingClientRect();
       const imgW = imageDimensions?.width || currentImage?.width || 8192;
@@ -85,10 +82,7 @@ export const LabelingToolbar: React.FC = () => {
   };
 
   const handle100 = () => {
-    const parent =
-      document.querySelector('.relative.w-full.h-full.bg-[#0B0E14]') ||
-      document.querySelector('.relative.w-full.h-full.bg-slate-900') ||
-      document.querySelector('[data-canvas-container="true"]');
+    const parent = document.querySelector('[data-canvas-container="true"]');
     if (parent) {
       const rect = parent.getBoundingClientRect();
       const imgW = imageDimensions?.width || currentImage?.width || 8192;
@@ -99,9 +93,7 @@ export const LabelingToolbar: React.FC = () => {
   };
 
   const handleZoom = (factor: number) => {
-    const parent =
-      document.querySelector('.relative.w-full.h-full.bg-[#0B0E14]') ||
-      document.querySelector('[data-canvas-container="true"]');
+    const parent = document.querySelector('[data-canvas-container="true"]');
     const rect = parent ? parent.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
     setViewTransform((prev) => calculateCenterZoom(prev, factor, rect.width, rect.height, 0.01, 40.0));
   };

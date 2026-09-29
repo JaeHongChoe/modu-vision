@@ -118,29 +118,15 @@ def test_api_auto_select_and_shape_converter(client, test_image):
 
 
 def test_overkill_underkill_optimization(client):
-    """Verifies calculation of Overkill vs Underkill trade-off curve and zero-underkill threshold."""
+    """A zero-escape curve requires actual evaluation predictions."""
     resp = client.get("/api/evaluation/overkill-underkill?target_max_underkill=0&cost_escape=1000&cost_scrap=20")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "success"
-    assert "optimal_threshold" in data
-    assert "tradeoff_curve" in data
-    assert len(data["tradeoff_curve"]) > 5
-    # Verify that optimal threshold achieves target underkill
-    opt_stats = data["optimal_stats"]
-    assert opt_stats["underkill_count"] <= 0
+    assert resp.status_code == 422
 
 
 def test_inference_benchmark(client):
-    """Verifies inference center speed benchmark API."""
+    """Inference timing requires a real trained checkpoint."""
     resp = client.post("/api/evaluation/benchmark", json={"iterations": 10, "resolution": 128})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "success"
-    assert "fps" in data
-    assert data["fps"] > 0
-    assert "mean_latency_ms" in data
-    assert data["mean_latency_ms"] > 0
+    assert resp.status_code == 404
 
 
 def test_flowchart_pipeline_lifecycle(client):
@@ -159,26 +145,10 @@ def test_flowchart_pipeline_lifecycle(client):
 
     # 3. Run flowchart
     run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline})
-    assert run_resp.status_code == 200
-    run_data = run_resp.json()
-    assert run_data["status"] == "success"
-    assert "final_verdict" in run_data
-    assert run_data["final_verdict"] in ("OK", "NG")
-    assert "crops" in run_data
-    assert "execution_steps" in run_data
+    assert run_resp.status_code == 409
 
 
 def test_export_runtime_package(client):
-    """Verifies Neuro-R style production model runtime export with ONNX and wrappers."""
+    """Export must not manufacture a default trained checkpoint."""
     resp = client.post("/api/export/runtime", json={"resolution": 128, "package_name": "test_pkg"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "success"
-    assert "package_path" in data
-    pkg_dir = Path(data["package_path"])
-    assert (pkg_dir / "model.onnx").is_file()
-    assert (pkg_dir / "config.json").is_file()
-    assert (pkg_dir / "infer.py").is_file()
-    assert (pkg_dir / "Program.cs").is_file()
-    assert (pkg_dir / "main.cpp").is_file()
-    assert (pkg_dir / "README_DEPLOY.md").is_file()
+    assert resp.status_code == 404

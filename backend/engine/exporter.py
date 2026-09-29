@@ -60,6 +60,7 @@ def locate_checkpoint(job_id: Optional[str] = None) -> Optional[Path]:
         for c in candidates:
             if c and c.is_file():
                 return c
+        return None
 
     # 3. Check active job or latest completed job
     if hasattr(training_job_manager, "active_job_id") and training_job_manager.active_job_id:
@@ -90,41 +91,6 @@ def locate_checkpoint(job_id: Optional[str] = None) -> Optional[Path]:
                 return p
 
     return None
-
-
-def get_or_create_default_checkpoint(default_dir: Path) -> Path:
-    """Creates a deterministic reference checkpoint if no trained model exists."""
-    default_dir.mkdir(parents=True, exist_ok=True)
-    ckpt_path = default_dir / "best_model.pt"
-    if ckpt_path.is_file():
-        return ckpt_path
-
-    model = create_classification_model("resnet18", num_classes=2, pretrained=False)
-    state_dict = model.state_dict()
-    payload = {
-        "epoch": 1,
-        "model_state_dict": state_dict,
-        "best_metric": 0.05,
-        "task": "classification",
-        "classes": ["OK", "Defect"],
-        "preset": "fast",
-        "backbone": "resnet18",
-        "image_size": [256, 256],
-        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }
-    torch.save(payload, ckpt_path)
-    with open(default_dir / "model_meta.json", "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "task": "classification",
-                "classes": ["OK", "Defect"],
-                "backbone": "resnet18",
-                "image_size": [256, 256],
-            },
-            f,
-            indent=2,
-        )
-    return ckpt_path
 
 
 def load_checkpoint_and_reconstruct_model(
@@ -202,23 +168,25 @@ def load_checkpoint_and_reconstruct_model(
 
 
 def resolve_calibrated_threshold(checkpoint_path: Path, meta: Dict[str, Any]) -> float:
-    """Finds or computes calibrated zero-underkill threshold for the model."""
+    """Use only an explicitly applied calibration from a two-class validation set."""
     eval_file = checkpoint_path.parent / "eval_results.json"
     if eval_file.is_file():
         try:
             with open(eval_file, "r", encoding="utf-8") as f:
                 eval_data = json.load(f)
-            preds = eval_data.get("test_predictions", [])
-            if preds:
-                analysis = analyze_zero_escape(preds, task=meta.get("task", "classification"))
-                return float(analysis.get("optimal_threshold", 0.50))
-            metrics = eval_data.get("metrics", {})
-            if "optimal_threshold" in metrics:
-                return float(metrics["optimal_threshold"])
+            if eval_data.get("zero_underkill_calibrated") and _has_both_validation_classes(eval_data):
+                return float(eval_data["optimal_threshold"])
         except Exception as e:
             logger.warning("Could not read evaluation file for threshold: %s", e)
 
     return float(meta.get("optimal_threshold", 0.50))
+
+
+def _has_both_validation_classes(eval_data: Dict[str, Any]) -> bool:
+    from backend.engine.zero_escape_analyzer import is_defect_label
+
+    labels = [is_defect_label(p.get("ground_truth")) for p in eval_data.get("test_predictions", [])]
+    return any(labels) and not all(labels)
 
 
 class DetectionExportAdapter(nn.Module):
@@ -358,6 +326,16 @@ def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None):
     return batch, orig_w, orig_h
 
 
+def is_defect_class(name):
+    clean = str(name).strip().lower().replace("-", "_")
+    tokens = clean.split("_")
+    if "ng" in tokens or "defect" in tokens or "fail" in tokens:
+        return True
+    return not (clean in ("ok", "normal", "pass", "good", "0", "background", "bg")
+                or clean.startswith(("ok_", "normal_", "good_"))
+                or clean.endswith(("_ok", "_normal", "_good")))
+
+
 class StandaloneInspector:
     def __init__(self, model_path: str = None, config_path: str = "config.json"):
         base_dir = Path(__file__).parent
@@ -438,13 +416,13 @@ class StandaloneInspector:
             confidence = float(probs[pred_idx])
             pred_name = self.classes[pred_idx] if pred_idx < len(self.classes) else f"class_{pred_idx}"
 
-            is_defect = pred_name.lower() not in ("ok", "normal", "pass", "good", "0", "background")
+            is_defect = is_defect_class(pred_name)
             defect_score = confidence if is_defect else (1.0 - confidence)
 
         elif self.task == "detection":
             defect_indices = []
             for idx, cname in enumerate(self.classes):
-                if str(cname).lower() not in ("background", "bg", "ok", "normal", "pass", "good"):
+                if is_defect_class(cname):
                     defect_indices.append(idx)
             if not defect_indices:
                 defect_indices = list(range(1, max(2, len(self.classes))))
@@ -555,98 +533,6 @@ if __name__ == "__main__":
 '''
 
 
-def generate_csharp_template(package_name: str, optimal_threshold: float) -> str:
-    return f"""// ============================================================================
-// Neuro-R Compatible Industrial C# Vision Client (.NET 8 / WPF / Windows Forms)
-// Package Name: {package_name}
-// Nuget: Install-Package Microsoft.ML.OnnxRuntime
-// ============================================================================
-
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
-
-namespace IndustrialVisionApp
-{{
-    public class ProductionInspector
-    {{
-        private readonly InferenceSession _session;
-        private readonly float _optimalThreshold = {optimal_threshold:.4f}f;
-
-        public ProductionInspector(string onnxModelPath = "model.onnx")
-        {{
-            var options = new SessionOptions();
-            options.AppendExecutionProvider_CPU(0); // or AppendExecutionProvider_CUDA(0)
-            _session = new InferenceSession(onnxModelPath, options);
-            Console.WriteLine("[Neuro-R C# Engine] Model initialized successfully.");
-        }}
-
-        public (string Verdict, float DefectScore) InspectImage(byte[] rawBgrImage, int width, int height)
-        {{
-            int inputDim = 256;
-            var tensor = new DenseTensor<float>(new[] {{ 1, 3, inputDim, inputDim }});
-            // Preprocessing: resize, normalize with mean/std
-            var inputs = new List<NamedOnnxValue> {{ NamedOnnxValue.CreateFromTensor("input", tensor) }};
-
-            using var results = _session.Run(inputs);
-            var output = results.First().AsEnumerable<float>().ToArray();
-
-            float defectScore = output.Max();
-            string verdict = (defectScore >= _optimalThreshold) ? "NG" : "OK";
-            return (verdict, defectScore);
-        }}
-    }}
-}}
-"""
-
-
-def generate_cpp_template(package_name: str, optimal_threshold: float) -> str:
-    return f"""// ============================================================================
-// Neuro-R Compatible Ultra-Low-Latency C++ Inspection Client
-// Package Name: {package_name}
-// Requires: OpenCV 4.x (cv::dnn) OR ONNXRuntime C++ API
-// ============================================================================
-
-#include <iostream>
-#include <vector>
-#include <opencv2/opencv.hpp>
-#include <opencv2/dnn.hpp>
-
-int main(int argc, char** argv) {{
-    std::string modelPath = "model.onnx";
-    const double optimalThreshold = {optimal_threshold:.4f};
-    std::cout << "[Neuro-R C++ Engine] Loading: " << modelPath << std::endl;
-
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelPath);
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU); // or DNN_TARGET_CUDA
-
-    cv::Mat frame = cv::imread("sample_test.png");
-    if (frame.empty()) {{
-        frame = cv::Mat::zeros(256, 256, CV_8UC3);
-    }}
-
-    cv::Mat blob = cv::dnn::blobFromImage(frame, 1.0 / 255.0, cv::Size(256, 256),
-                                          cv::Scalar(0.485*255, 0.456*255, 0.406*255),
-                                          true, false);
-    net.setInput(blob);
-    cv::Mat prob = net.forward();
-
-    double minVal, maxVal;
-    cv::Point minLoc, maxLoc;
-    cv::minMaxLoc(prob, &minVal, &maxVal, &minLoc, &maxLoc);
-
-    std::cout << "[Result] Defect Score: " << maxVal << " -> Verdict: "
-              << (maxVal >= optimalThreshold ? "NG (Reject)" : "OK (Pass)") << std::endl;
-
-    return 0;
-}}
-"""
-
-
 def export_runtime_package(
     job_id: Optional[str] = None,
     export_format: str = "onnx",
@@ -658,16 +544,19 @@ def export_runtime_package(
     """
     Main export engine: loads genuine trained weights and packages a self-contained runtime.
     """
-    pkg_name = package_name or f"neuro_r_export_{job_id or 'production'}"
+    # 1. Locate Checkpoint
+    if not job_id:
+        raise FileNotFoundError("A completed model job ID is required for export.")
+    if quantize_fp16:
+        raise ValueError("FP16 conversion is not implemented or verified for this export format.")
+    ckpt_path = locate_checkpoint(job_id)
+    if not ckpt_path:
+        raise FileNotFoundError(f"No trained model checkpoint found for job: {job_id}")
+
+    pkg_name = package_name or f"modu_vision_export_{Path(job_id).name}"
     base_dir = output_base_dir or EXPORTS_DIR
     pkg_dir = base_dir / pkg_name
     pkg_dir.mkdir(parents=True, exist_ok=True)
-
-    # 1. Locate Checkpoint
-    ckpt_path = locate_checkpoint(job_id)
-    if not ckpt_path:
-        default_dir = Path("./models/default")
-        ckpt_path = get_or_create_default_checkpoint(default_dir)
 
     # 2. Reconstruct authentic model architecture
     model, meta, anomaly_obj = load_checkpoint_and_reconstruct_model(ckpt_path)
@@ -747,6 +636,14 @@ def export_runtime_package(
 
     # 4. Resolve Zero-Escape Calibrated Threshold
     optimal_th = resolve_calibrated_threshold(ckpt_path, meta)
+    eval_file = ckpt_path.parent / "eval_results.json"
+    calibration_applied = False
+    if eval_file.is_file():
+        try:
+            eval_data = json.loads(eval_file.read_text(encoding="utf-8"))
+            calibration_applied = bool(eval_data.get("zero_underkill_calibrated")) and _has_both_validation_classes(eval_data)
+        except (OSError, ValueError):
+            pass
 
     # 5. Write config.json
     config_data = {
@@ -756,11 +653,11 @@ def export_runtime_package(
         "image_size": img_size,
         "input_channels": 3,
         "normalization": {
-            "mean": [0.485, 0.456, 0.406],
-            "std": [0.229, 0.224, 0.225],
+            "mean": [0.0, 0.0, 0.0],
+            "std": [1.0, 1.0, 1.0],
         },
         "optimal_threshold": round(optimal_th, 4),
-        "zero_underkill_calibrated": True,
+        "zero_underkill_calibrated": calibration_applied,
         "exported_from_checkpoint": str(ckpt_path.resolve()),
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -771,26 +668,21 @@ def export_runtime_package(
     with open(pkg_dir / "infer.py", "w", encoding="utf-8") as f:
         f.write(generate_standalone_infer_py())
 
-    with open(pkg_dir / "Program.cs", "w", encoding="utf-8") as f:
-        f.write(generate_csharp_template(pkg_name, optimal_th))
-
-    with open(pkg_dir / "main.cpp", "w", encoding="utf-8") as f:
-        f.write(generate_cpp_template(pkg_name, optimal_th))
+    native_clients = False  # No task-specific native client has been validated.
 
     readme_content = f"""# Neuro-R Industrial Runtime Package
 
 **Package Name**: `{pkg_name}`
 **Export Date**: {config_data['exported_at']}
-**Format**: {format_clean.upper()} + Standalone Python / C# / C++ Client SDKs
+**Format**: {format_clean.upper()} + standalone Python client
 **Task**: {task.upper()}
-**Calibrated Zero-Escape Threshold**: {optimal_th:.4f}
+**Decision Threshold**: {optimal_th:.4f} ({'validated calibration' if calibration_applied else 'uncalibrated default/checkpoint value'})
 
 ## Included Files
 - `{model_filename}`: Authentic trained model weights ({format_clean})
 - `config.json`: Preprocessing coefficients & shop-floor zero-escape threshold
 - `infer.py`: Standalone Python inference script (CLI runner)
-- `Program.cs`: C# .NET 8 / WPF inspection station integration code
-- `main.cpp`: C++ OpenCV DNN ultra-low-latency integration code
+- Native C#/C++ clients: {'included for ONNX classification/segmentation; validate against Python before use' if native_clients else 'not available for this model format/task'}
 - `README_DEPLOY.md`: Quickstart deployment guide
 
 ## Standalone Quickstart

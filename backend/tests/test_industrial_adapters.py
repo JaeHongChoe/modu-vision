@@ -290,8 +290,8 @@ class TestLabelMeAdapters:
         parsed = LabelMeParser.parse_file(json_file)
         assert len(parsed["boxes"]) == 1
         box = parsed["boxes"][0]
-        # Defect category extracted from filename: "Scratch"
-        assert box["category_name"] == "Scratch"
+        # Annotation labels are authoritative; filenames are descriptive only.
+        assert box["category_name"] == "Bow"
         # Bbox width and height must be clamped to at least 1.0 px
         assert box["bbox"][2] >= 1.0
         assert box["bbox"][3] >= 1.0
@@ -568,4 +568,3 @@ class TestM7RemediationSafeguards:
         assert summary["status"] == "success"
         assert summary["total_images"] == 3
         assert summary["adapter_used"] == "AlphaMaskAndPairedSegmentationAdapter"
-

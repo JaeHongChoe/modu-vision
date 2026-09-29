@@ -113,10 +113,10 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       case 'output':
         return node.id.includes('ng') || node.id.includes('reject')
           ? [
-              { id: 'in_fail', name: 'Reject Strobe', type: 'fail', direction: 'in', label: 'REJECT STROBE', pinNumber: 1 },
+              { id: 'in_fail', name: 'NG Verdict', type: 'fail', direction: 'in', label: 'NG RESULT', pinNumber: 1 },
             ]
           : [
-              { id: 'in_pass', name: 'Pass Strobe', type: 'pass', direction: 'in', label: 'PASS STROBE', pinNumber: 1 },
+              { id: 'in_pass', name: 'OK Verdict', type: 'pass', direction: 'in', label: 'OK RESULT', pinNumber: 1 },
             ];
       default:
         return [{ id: 'in_def', name: 'Input', type: 'data', direction: 'in', label: 'IN 1', pinNumber: 1 }];
@@ -148,10 +148,10 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       case 'output':
         return node.id.includes('ng') || node.id.includes('reject')
           ? [
-              { id: 'out_actuator', name: 'Actuator Out', type: 'fail', direction: 'out', label: 'CYLINDER SOL', pinNumber: 1 },
+              { id: 'out_result', name: 'NG Result', type: 'fail', direction: 'out', label: 'NG', pinNumber: 1 },
             ]
           : [
-              { id: 'out_plc', name: 'PLC Line Out', type: 'plc', direction: 'out', label: '24V LINE OUT', pinNumber: 1 },
+              { id: 'out_result', name: 'Result', type: 'data', direction: 'out', label: 'RESULT', pinNumber: 1 },
             ];
       default:
         return [{ id: 'out_def', name: 'Output', type: 'data', direction: 'out', label: 'OUT 1', pinNumber: 1 }];

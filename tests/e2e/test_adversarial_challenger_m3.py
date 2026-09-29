@@ -253,16 +253,8 @@ def test_zero_escape_calibrate_api_endpoints(client):
         "apply_to_eval_results": False,
     }
     resp_post = client.post("/api/evaluation/zero-escape-calibrate", json=payload)
-    assert resp_post.status_code == 200
-    data_post = resp_post.json()
-    assert data_post["status"] == "success"
-    assert "optimal_threshold" in data_post
-    assert data_post["calibrated"] is True
-    assert "optimal_stats" in data_post
+    assert resp_post.status_code == 422
 
     # Test GET
     resp_get = client.get("/api/evaluation/zero-escape-calibrate?target_max_underkill=0&current_threshold=0.50")
-    assert resp_get.status_code == 200
-    data_get = resp_get.json()
-    assert data_get["status"] == "success"
-    assert "optimal_threshold" in data_get
+    assert resp_get.status_code == 422

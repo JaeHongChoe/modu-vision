@@ -71,6 +71,7 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 export const EvaluationStudio: React.FC = () => {
   const { language, setStep } = useProjectStore();
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
+  const [reportError, setReportError] = useState<string | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{
     i: number;
     j: number;
@@ -93,6 +94,7 @@ export const EvaluationStudio: React.FC = () => {
     heatmapOverlayBase64,
     heatmapLoading,
     isExportingReport,
+    errorMessage,
     overkillAnalysis,
     sampleFilter,
     setSampleFilter,
@@ -115,14 +117,24 @@ export const EvaluationStudio: React.FC = () => {
   }, [loadEvaluation, loadOverkillUnderkill]);
 
   const handleExportHtml = async () => {
-    const filePath = await exportReport('html');
-    if (typeof window !== 'undefined' && window.api?.openExternal) {
-      await window.api.openExternal(filePath);
+    setReportError(null);
+    try {
+      const filePath = await exportReport('html');
+      if (typeof window !== 'undefined' && window.api?.openExternal) {
+        await window.api.openExternal(filePath);
+      }
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : 'HTML 보고서 내보내기 실패');
     }
   };
 
   const handleExportJson = async () => {
-    await exportReport('json');
+    setReportError(null);
+    try {
+      await exportReport('json');
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : 'JSON 보고서 내보내기 실패');
+    }
   };
 
   const classes = confusionMatrix?.classes || confusionMatrix?.class_names || [];
@@ -163,6 +175,9 @@ export const EvaluationStudio: React.FC = () => {
       defect: correctNgs,
     };
   }, [testPredictions, confidenceThreshold, overkillAnalysis]);
+  const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth));
+  const hasNormalSamples = testPredictions.some((p) => !isDefectLabel(p.ground_truth));
+  const hasCalibrationEvidence = Boolean(jobId && hasDefectSamples && hasNormalSamples);
 
   // Compute marginal row metrics (Support & Recall)
   const rowMetrics = useMemo(() => {
@@ -324,6 +339,12 @@ export const EvaluationStudio: React.FC = () => {
         </div>
       </div>
 
+      {(errorMessage || reportError) && (
+        <div role="alert" className="mx-6 mt-3 rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">
+          {reportError || errorMessage}
+        </div>
+      )}
+
       {/* In-Page Guardrail if no evaluation results */}
       {!jobId && testPredictions.length === 0 && (
         <div className="p-6 pb-0">
@@ -331,8 +352,8 @@ export const EvaluationStudio: React.FC = () => {
             type="warning"
             stepContext="4단계 품질 분석 안내"
             title="평가할 학습 완료 모델이 없습니다"
-            description="혼동 행렬(Confusion Matrix)과 과검/미검 제로화 분석을 수행하려면 먼저 3단계에서 딥러닝 모델을 학습시켜야 합니다."
-            shopFloorTip="⚡ 빠른 프로토타입 프리셋을 선택하면 1~2분 만에 초기 모델 학습과 검증 결과를 확인할 수 있습니다."
+            description="혼동 행렬과 과검/미검 분석을 수행하려면 먼저 모델을 학습하고 평가해야 합니다."
+            shopFloorTip="빠른 프로토타입은 기능 연결을 확인하는 용도입니다. 모델 품질은 별도 검증이 필요합니다."
             actions={[
               {
                 label: '3단계(오토딥러닝) 이동하여 빠른 학습 시작',
@@ -364,14 +385,16 @@ export const EvaluationStudio: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Target className="w-4 h-4 text-[#38BDF8] shrink-0" />
                 <span className="font-bold text-xs text-slate-100">
-                  {language === 'ko' ? '미검 제로화 자동 튜닝 (Zero-Escape)' : '1-Click Zero-Escape Calibration'}
+                  {language === 'ko' ? '검증 데이터 기준 임계값 분석' : 'Validation Threshold Analysis'}
                 </span>
                 <JargonTooltip termKey="optimal_threshold" />
               </div>
-              {sampleCounts.escape === 0 ? (
+              {sampleCounts.all === 0 ? (
+                <span className="px-2 py-0.5 rounded text-[10px] border border-slate-600 text-slate-300">검증 예측 없음</span>
+              ) : sampleCounts.escape === 0 ? (
                 <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#064E3B] text-[#6EE7B7] border border-[#10B981] flex items-center space-x-1 font-mono">
                   <CheckCircle2 className="w-3 h-3" />
-                  <span>미검 0건 달성</span>
+                  <span>검증 표본 내 미검 0건</span>
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#450A0A] text-[#FCA5A5] border border-[#EF4444] animate-pulse flex items-center space-x-1 font-mono">
@@ -387,9 +410,11 @@ export const EvaluationStudio: React.FC = () => {
                   현재 임계값: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
                 </div>
                 <div className="text-[10px] text-[#38BDF8] font-mono">
-                  권장 최적 임계값:{' '}
+                  검증 집합 권장 임계값:{' '}
                   <span className="font-bold font-mono tabular-nums text-white">
-                    τ* = {overkillAnalysis?.optimal_threshold?.toFixed(4) ?? '0.5000'}
+                    {hasCalibrationEvidence && overkillAnalysis?.optimal_threshold !== undefined
+                      ? `τ* = ${overkillAnalysis.optimal_threshold.toFixed(4)}`
+                      : 'NG·OK 검증 데이터 필요'}
                   </span>
                 </div>
               </div>
@@ -397,7 +422,7 @@ export const EvaluationStudio: React.FC = () => {
               <button
                 type="button"
                 onClick={() => calibrateZeroEscape()}
-                disabled={isCalibrating}
+                disabled={isCalibrating || !hasCalibrationEvidence}
                 className="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] text-white font-bold text-xs rounded-[4px] border border-[#38BDF8]/40 transition-all flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
               >
                 {isCalibrating ? (
@@ -405,7 +430,7 @@ export const EvaluationStudio: React.FC = () => {
                 ) : (
                   <Zap className="w-3.5 h-3.5 fill-current" />
                 )}
-                <span>{isCalibrating ? '튜닝 중...' : '1-클릭 미검 제로화'}</span>
+                <span>{isCalibrating ? '계산 중...' : '검증 임계값 적용'}</span>
               </button>
             </div>
 
@@ -640,13 +665,19 @@ export const EvaluationStudio: React.FC = () => {
           ) : (
             /* TAB 2: Zero-Escape Tradeoff Chart & Optimizer */
             <div className="flex-1 flex flex-col space-y-3">
-              <ZeroEscapeTradeoffChart
-                tradeoffCurve={overkillAnalysis?.tradeoff_curve || []}
-                currentThreshold={confidenceThreshold}
-                optimalThreshold={overkillAnalysis?.optimal_threshold ?? 0.5}
-                onThresholdChange={setConfidenceThreshold}
-                onApplyOptimal={applyOptimalThreshold}
-              />
+              {hasCalibrationEvidence && overkillAnalysis ? (
+                <ZeroEscapeTradeoffChart
+                  tradeoffCurve={overkillAnalysis.tradeoff_curve || []}
+                  currentThreshold={confidenceThreshold}
+                  optimalThreshold={overkillAnalysis.optimal_threshold}
+                  onThresholdChange={setConfidenceThreshold}
+                  onApplyOptimal={applyOptimalThreshold}
+                />
+              ) : (
+                <div className="p-3 rounded border border-amber-500/40 bg-amber-950/30 text-xs text-amber-200">
+                  NG와 OK 검증 예측이 모두 있어야 과검·미검 최적 임계값을 계산하고 적용할 수 있습니다.
+                </div>
+              )}
 
               {/* Status Breakdown KPI Cards */}
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -796,20 +827,22 @@ export const EvaluationStudio: React.FC = () => {
             {/* Empty State for Filter Tabs */}
             {filteredPredictions.length === 0 && (
               <div className="p-4 text-center text-xs text-slate-400 space-y-2 my-auto bg-[#0B0E14] rounded-[4px] border border-[#2B3547]">
-                {sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? (
+                {sampleCounts.all === 0 ? (
+                  <div>검증 예측이 없습니다.</div>
+                ) : sampleFilter === 'escape' || sampleFilter === 'fn_escape' ? (
                   <>
                     <div className="text-xl">🛡️</div>
-                    <div className="font-bold text-[#10B981]">고객 유출 미검(Escape) 0건!</div>
+                    <div className="font-bold text-slate-200">{hasDefectSamples ? '현재 검증 표본에서 미검 0건' : 'NG 검증 표본 없음'}</div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      현재 임계값({confidenceThreshold.toFixed(2)})에서 모든 결함 제품이 100% 차단되었습니다.
+                      표본 밖의 결함 검출 성능이나 현장 유출률은 검증되지 않았습니다.
                     </p>
                   </>
                 ) : sampleFilter === 'overkill' || sampleFilter === 'fp_overkill' ? (
                   <>
                     <div className="text-xl">✨</div>
-                    <div className="font-bold text-slate-200">정상 제품 오경보(과검) 0건!</div>
+                    <div className="font-bold text-slate-200">{hasNormalSamples ? '현재 검증 표본에서 과검 0건' : 'OK 검증 표본 없음'}</div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      수율 손실 없이 모든 양품이 정상 통과되었습니다.
+                      실제 정상 제품의 과검률을 판단하려면 OK 검증 표본이 필요합니다.
                     </p>
                   </>
                 ) : (
@@ -882,16 +915,16 @@ export const EvaluationStudio: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="w-4 h-4 text-[#EF4444] shrink-0" />
                   <span>
-                    🚨 <strong>치명적 미검 (고객사 유출 위험)</strong>: 이 제품은 실제 결함이나 현재 임계값(
-                    {confidenceThreshold.toFixed(2)})에서 정상으로 판정되어 유출됩니다!
+                    <strong>검증 샘플 미검</strong>: 현재 임계값({confidenceThreshold.toFixed(2)})에서 NG 샘플이 OK로 판정되었습니다.
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => calibrateZeroEscape()}
-                  className="px-3 py-1 bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold rounded-[3px] text-xs cursor-pointer shrink-0 transition-all"
+                  disabled={!hasCalibrationEvidence || isCalibrating}
+                  className="px-3 py-1 bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold rounded-[3px] text-xs cursor-pointer shrink-0 transition-all disabled:opacity-50"
                 >
-                  미검 제로화 튜닝 즉시 실행
+                  검증 임계값 적용
                 </button>
               </div>
             )}
@@ -903,13 +936,9 @@ export const EvaluationStudio: React.FC = () => {
               heatmapLoading={heatmapLoading}
               confidenceThreshold={confidenceThreshold}
               onThresholdChange={setConfidenceThreshold}
-              defectScore={
-                selectedPrediction
-                  ? ((selectedPrediction as any).defect_score ?? selectedPrediction.confidence)
-                  : 0.5
-              }
-              groundTruth={selectedPrediction?.ground_truth || 'OK'}
-              predictedClass={selectedPrediction?.predicted_class || 'OK'}
+              defectScore={selectedPrediction?.defect_score}
+              groundTruth={selectedPrediction?.ground_truth}
+              predictedClass={selectedPrediction?.predicted_class}
             />
           </div>
         </div>

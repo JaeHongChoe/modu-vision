@@ -106,6 +106,8 @@ export const api = {
       request<{
         status: string;
         total_images: number;
+        source_images?: number;
+        unlabeled_images?: number;
         classes: Record<string, number>;
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
@@ -129,8 +131,8 @@ export const api = {
         val_count?: number;
       }>('/api/dataset/generate', { method: 'POST', body: JSON.stringify(data) }),
 
-    split: (data: { folder_path?: string; train_ratio: number; seed?: number }) =>
-      request<{ status: string; split: { train: number; val: number } }>('/api/dataset/split', {
+    split: (data: { folder_path?: string; train_ratio: number; val_ratio?: number; test_ratio?: number; seed?: number }) =>
+      request<{ status: string; split: { train: number; val: number; test: number } }>('/api/dataset/split', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
@@ -285,6 +287,7 @@ export const api = {
       job_id?: string;
       export_format?: string;
       resolution?: number;
+      quantize_fp16?: boolean;
       package_name?: string;
     }) =>
       request<{

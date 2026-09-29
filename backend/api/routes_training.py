@@ -22,6 +22,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.api.websocket_telemetry import WebSocketTelemetryCallback, broadcaster
 from backend.engine.device import clear_device_cache, get_device
 from backend.engine.trainer import UnifiedAutoMLTrainer
+from backend.engine.industrial_adapters import is_valid_labelme_file
+from backend.engine.labelme_preparation import prepare_labelme_segmentation
 from backend.utils.error_catalog import classify_exception, format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_training")
@@ -89,7 +91,8 @@ class TrainingJobManager:
         config_overrides: Optional[Dict[str, Any]] = None,
     ) -> JobRecord:
         with self._lock:
-            if self.is_training:
+            active_record = self._jobs.get(self._active_job_id) if self._active_job_id else None
+            if active_record is not None and active_record.status == "running":
                 active = self._active_job_id
                 raise HTTPException(
                     status_code=409,
@@ -252,16 +255,38 @@ def start_training(req: TrainingStartRequest):
             detail=format_error_response("ERR_NO_DATA", details=f"Dataset path not found: {req.dataset_path}"),
         )
 
+    local_labelme = any(is_valid_labelme_file(path, require_image=True) for path in d_path.glob("*.json"))
+    if local_labelme and req.task != "segmentation":
+        raise HTTPException(
+            status_code=422,
+            detail="Flat LabelMe folders currently support segmentation training only; other tasks need task-specific OK/NG data.",
+        )
+
     out_dir = Path(req.output_dir or "./models").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
-
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
+    job_dir = out_dir / job_id
+    job_dir.mkdir(parents=True, exist_ok=False)
+    dataset_for_training = d_path
+
+    if local_labelme:
+        from backend.api.routes_dataset import _read_split_manifest
+
+        dataset_for_training = job_dir / "dataset"
+        try:
+            prepare_labelme_segmentation(
+                d_path, dataset_for_training,
+                image_size=int((req.config_overrides or {}).get("image_size", 256)),
+                assignments=_read_split_manifest(d_path),
+            )
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=f"Could not prepare LabelMe training data: {exc}") from exc
 
     record = training_job_manager.start_job(
         job_id=job_id,
         task=req.task,
-        dataset_path=str(d_path),
-        output_dir=str(out_dir),
+        dataset_path=str(dataset_for_training),
+        output_dir=str(job_dir),
         preset=req.preset,
         device=req.device,
         config_overrides=req.config_overrides,
@@ -272,7 +297,7 @@ def start_training(req: TrainingStartRequest):
         "status": "started",
         "preset": req.preset,
         "task": req.task,
-        "output_dir": str(out_dir),
+        "output_dir": str(job_dir),
     }
 
 

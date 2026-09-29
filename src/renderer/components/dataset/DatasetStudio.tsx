@@ -3,7 +3,7 @@
  * Step 1: Industrial Dataset Studio with folder import, synthetic generator, split controls, and distribution charts.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FolderOpen,
   Sparkles,
@@ -26,6 +26,8 @@ export const DatasetStudio: React.FC = () => {
   const {
     folderPath,
     totalImages,
+    sourceImages,
+    unlabeledImages,
     classes,
     split,
     images,
@@ -53,12 +55,14 @@ export const DatasetStudio: React.FC = () => {
 
   // Natural resolution dimension cache for image cards
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({});
+  const initialImportAttempt = useRef<string | null>(null);
 
   // Precision 3-Way Split Calibrator Ratios (Train / Val / Test)
-  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number }>({
-    train: Math.round(trainRatio * 100) || 70,
-    val: 20,
-    test: 10,
+  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number }>(() => {
+    const train = Math.round(trainRatio * 100) || 70;
+    const remaining = 100 - train;
+    const val = Math.round(remaining / 2);
+    return { train, val, test: remaining - val };
   });
 
   const handleImageLoad = (id: string, naturalWidth: number, naturalHeight: number) => {
@@ -82,11 +86,12 @@ export const DatasetStudio: React.FC = () => {
   };
 
   useEffect(() => {
-    // Initial fetch if folder exists
-    if (folderPath && totalImages === 0) {
+    const key = `${folderPath}|${task}`;
+    if (folderPath && totalImages === 0 && !isLoading && initialImportAttempt.current !== key) {
+      initialImportAttempt.current = key;
       importFolder(folderPath, task).catch(() => {});
     }
-  }, [folderPath, totalImages, importFolder, task]);
+  }, [folderPath, totalImages, isLoading, importFolder, task]);
 
   const handleSelectFolder = async () => {
     if (typeof window !== 'undefined' && window.api?.selectFolder) {
@@ -174,7 +179,7 @@ export const DatasetStudio: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
-                {language === 'ko' ? '총 이미지 수' : 'Total Images'}
+                {language === 'ko' ? '학습 가능 이미지' : 'Trainable Images'}
               </span>
               <span className="text-lg font-bold font-mono tabular-nums text-slate-100">{totalImages}</span>
             </div>
@@ -211,6 +216,16 @@ export const DatasetStudio: React.FC = () => {
           </div>
 
           {/* Corrupted Images Alert if any */}
+          {unlabeledImages > 0 && (
+            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
+              원본 {sourceImages}장 중 주석 없는 {unlabeledImages}장은 갤러리에서만 보이며 학습 분할에서 제외됩니다.
+            </div>
+          )}
+          {task === 'segmentation' && classes.defect_mask && !classes.OK && !classes.good && (
+            <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
+              결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
+            </div>
+          )}
           {corruptedImages.length > 0 && (
             <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/40 rounded-[4px] text-xs text-red-200">
               <div className="flex items-center space-x-1.5 font-semibold text-[#EF4444] mb-1">
@@ -344,7 +359,7 @@ export const DatasetStudio: React.FC = () => {
             {/* Apply Split Button */}
             <button
               type="button"
-              onClick={() => applySplit(splitRatios.train / 100)}
+              onClick={() => applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100)}
               disabled={isSplitting || totalImages === 0}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"
             >
@@ -474,20 +489,14 @@ export const DatasetStudio: React.FC = () => {
                 stepContext="1단계 데이터 안내"
                 title="검사 대상 데이터셋이 등록되지 않았습니다"
                 description="AI 딥러닝 모델 학습 및 불량 영역 라벨링을 시작하려면 반도체/부품 검사 이미지를 먼저 등록해야 합니다."
-                shopFloorTip="실제 공정 결함 이미지(웨이퍼/패키징/PCB)가 없더라도 1-클릭으로 운영서버 샘플을 즉시 불러올 수 있습니다."
+                shopFloorTip="실제 검사 이미지 폴더를 선택하거나 기능 확인용 합성 데이터를 생성할 수 있습니다."
                 actions={[
                   {
-                    label: '운영서버 반도체 샘플 데이터셋 즉시 불러오기',
+                    label: '검사 이미지 폴더 선택',
                     icon: FolderOpen,
                     variant: 'primary',
-                    loadingText: '반도체 데이터 불러오는 중...',
-                    onClick: async () => {
-                      try {
-                        await importFolder('/Users/kai/Downloads/운영서버', task);
-                      } catch {
-                        await importFolder('./datasets/synthetic_pcb', task);
-                      }
-                    },
+                    loadingText: '폴더 선택 중...',
+                    onClick: handleSelectFolder,
                   },
                   {
                     label: '합성 결함 데이터 100장 즉시 생성',
@@ -511,7 +520,7 @@ export const DatasetStudio: React.FC = () => {
           <div className="px-4 py-2 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2">
               {[
-                { id: 'all', labelKo: `전체 (${totalImages})`, labelEn: `All (${totalImages})` },
+                { id: 'all', labelKo: `전체 (${sourceImages})`, labelEn: `All (${sourceImages})` },
                 { id: 'train', labelKo: `학습용 (${split.train || trainCount})`, labelEn: `Train (${split.train || trainCount})` },
                 { id: 'val', labelKo: `검증용 (${split.val || valCount})`, labelEn: `Val (${split.val || valCount})` },
                 { id: 'test', labelKo: `테스트용 (${split.test || testCount})`, labelEn: `Test (${split.test || testCount})` },
@@ -544,7 +553,7 @@ export const DatasetStudio: React.FC = () => {
               {/* Defect Physical Scale Indicator (μm unit) */}
               <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]">
                 <span className="text-slate-400">Pixel Pitch:</span>
-                <span className="text-slate-200 tabular-nums font-semibold">3.45 μm/px</span>
+                <span className="text-slate-200 tabular-nums font-semibold">Not calibrated</span>
               </div>
 
               {/* Cognex-style Density Toggle (S: 96px, M: 144px, L: 200px) */}
@@ -614,8 +623,8 @@ export const DatasetStudio: React.FC = () => {
                   const thumbUrl = resolveApiUrl(img.thumbnail_url);
                   const isNormal = img.label?.toLowerCase() === 'ok' || img.label?.toLowerCase() === 'good';
                   const dim = imgDimensions[img.image_id];
-                  const w = dim?.w || img.width || 1024;
-                  const h = dim?.h || img.height || 1024;
+                  const w = img.width || dim?.w || 0;
+                  const h = img.height || dim?.h || 0;
                   const resBadge = `${w}×${h} px`;
 
                   return (
@@ -641,7 +650,9 @@ export const DatasetStudio: React.FC = () => {
                               ? 'bg-[#3B82F6] text-white'
                               : img.split === 'val'
                               ? 'bg-[#F59E0B] text-slate-950 font-black'
-                              : 'bg-[#10B981] text-slate-950 font-black'
+                              : img.split === 'test'
+                              ? 'bg-[#10B981] text-slate-950 font-black'
+                              : 'bg-slate-600 text-white'
                           }`}
                         >
                           {img.split}
@@ -654,7 +665,7 @@ export const DatasetStudio: React.FC = () => {
                         {density === 'L' && (
                           <div className="absolute inset-x-0 top-0 p-1.5 bg-[#0B0E14]/80 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center text-[9px] font-mono text-slate-300">
                             <span>{img.file_name.split('.').pop()?.toUpperCase()}</span>
-                            <span className="tabular-nums">3.45 μm/px</span>
+                            <span className="tabular-nums">Pixel pitch not calibrated</span>
                           </div>
                         )}
                       </div>

@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
+import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { api } from '../../services/api';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
@@ -33,27 +34,40 @@ import type { RuntimeExportResult } from '../../types';
 export const InferenceCenterStudio: React.FC = () => {
   const { language, backendStatus } = useProjectStore();
   const { benchmarkResult, isBenchmarking, runBenchmark } = useEvaluationStore();
+  const jobId = useTrainingStore((state) => state.jobId);
 
-  const [activeCodeTab, setActiveCodeTab] = useState<'csharp' | 'cpp' | 'python'>('csharp');
+  const [activeCodeTab, setActiveCodeTab] = useState<'csharp' | 'cpp' | 'python'>('python');
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<RuntimeExportResult | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [maxTaktLimit, setMaxTaktLimit] = useState<number>(25.0); // Line speed threshold limit in ms
   const [exportFormat, setExportFormat] = useState<'onnx' | 'torchscript'>('onnx');
-  const [quantizeFp16, setQuantizeFp16] = useState<boolean>(false);
+  const quantizeFp16 = false;
   const [resolution, setResolution] = useState<number>(256);
 
   const isKo = language === 'ko';
 
   const handleBenchmark = async () => {
+    setActionError(null);
+    if (!jobId) {
+      setActionError('학습을 완료한 모델을 먼저 선택하세요.');
+      return;
+    }
     await runBenchmark(25, resolution);
   };
 
   const handleExport = async () => {
+    setActionError(null);
+    if (!jobId) {
+      setActionError('학습을 완료한 모델을 먼저 선택하세요.');
+      return;
+    }
     setIsExporting(true);
     try {
-      const res = await (api.export.runtime as any)({
-        package_name: 'neuro_r_production_package',
+      const res = await api.export.runtime({
+        job_id: jobId,
+        package_name: `modu_vision_${jobId}`,
         export_format: exportFormat,
         resolution,
         quantize_fp16: quantizeFp16,
@@ -61,195 +75,38 @@ export const InferenceCenterStudio: React.FC = () => {
       setExportResult(res);
       setIsExporting(false);
     } catch (e) {
-      console.error('Runtime export failed:', e);
+      setActionError(e instanceof Error ? e.message : '내보내기 실패');
       setIsExporting(false);
     }
   };
 
   // Telemetry Metrics
-  const fps = benchmarkResult?.fps ?? 78.4;
-  const meanLatency = benchmarkResult?.mean_latency_ms ?? 12.80;
-  const p95Latency = benchmarkResult?.p95_latency_ms ?? 15.60;
-  const minLatency = benchmarkResult?.min_latency_ms ?? 10.20;
-  const maxLatency = benchmarkResult?.max_latency_ms ?? Number((meanLatency + 3.2).toFixed(2));
-  const stdLatency = benchmarkResult?.std_latency_ms ?? Number(((p95Latency - meanLatency) / 1.645).toFixed(2));
+  const fps = benchmarkResult?.fps ?? 0;
+  const meanLatency = benchmarkResult?.mean_latency_ms ?? 0;
+  const p95Latency = benchmarkResult?.p95_latency_ms ?? 0;
+  const minLatency = benchmarkResult?.min_latency_ms ?? 0;
+  const maxLatency = benchmarkResult?.max_latency_ms ?? 0;
+  const stdLatency = benchmarkResult?.std_latency_ms ?? 0;
   const ppm = Math.round(fps * 60);
 
   // Line Readiness Status Calculation
-  const isLineReady = meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
-  const headroomPct = Number((((maxTaktLimit - meanLatency) / maxTaktLimit) * 100).toFixed(1));
+  const isLineReady = Boolean(benchmarkResult) && meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
+  const headroomPct = benchmarkResult ? Number((((maxTaktLimit - meanLatency) / maxTaktLimit) * 100).toFixed(1)) : 0;
 
   // Gauge bar scaling (0 to max(60, maxTaktLimit * 1.6))
   const gaugeMaxMs = Math.max(60.0, maxTaktLimit * 1.6);
   const actualFillPct = Math.min(100, Math.max(0, (meanLatency / gaugeMaxMs) * 100));
   const thresholdMarkerPct = Math.min(100, Math.max(0, (maxTaktLimit / gaugeMaxMs) * 100));
 
-  // Code Snippets
-  const csharpCode = `// ============================================================================
-// Vision AI Studio — Neuro-R Standalone C# .NET 8 Inspection Station Client
-// Nuget: Install-Package Microsoft.ML.OnnxRuntime
-// Compatible with: WPF, WinForms, Avalonia, Windows Console (.NET 8.0)
-// ============================================================================
-
-using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
-
-namespace IndustrialVisionInspection
-{
-    public class VisionStationInspector : IDisposable
-    {
-        private readonly InferenceSession _session;
-        private readonly float _optimalThreshold = 0.3800f; // Calibrated Zero-Underkill Threshold
-        private readonly int _inputDim = ${resolution};
-
-        public VisionStationInspector(string onnxModelPath = "model.onnx")
-        {
-            var options = new SessionOptions();
-            try {
-                options.AppendExecutionProvider_CUDA(0);
-            } catch {
-                options.AppendExecutionProvider_CPU(0);
-            }
-            _session = new InferenceSession(onnxModelPath, options);
-            Console.WriteLine("[VisionStation] Industrial ONNX Engine Loaded.");
-        }
-
-        public (string Verdict, float DefectScore, double LatencyMs) InspectFrame(byte[] bgrPixels, int width, int height)
-        {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
-            // Prepare normalized CHW tensor [1, 3, ${resolution}, ${resolution}]
-            var tensor = new DenseTensor<float>(new[] { 1, 3, _inputDim, _inputDim });
-            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("input", tensor) };
-            
-            using var results = _session.Run(inputs);
-            var outputArray = results.First().AsEnumerable<float>().ToArray();
-
-            float defectScore = outputArray.Max();
-            string verdict = (defectScore >= _optimalThreshold) ? "NG (Reject)" : "OK (Pass)";
-
-            stopwatch.Stop();
-            return (verdict, defectScore, stopwatch.Elapsed.TotalMilliseconds);
-        }
-
-        public void Dispose() => _session?.Dispose();
-    }
-}`;
-
-  const cppCode = `// ============================================================================
-// Vision AI Studio — Neuro-R Ultra-Low-Latency C++ Engine
-// Requires: OpenCV 4.8+ with cv::dnn OR ONNXRuntime C++ API
-// Latency: < 12.0 ms per frame on standard industrial IPC
-// ============================================================================
-
-#include <iostream>
-#include <vector>
-#include <chrono>
-#include <opencv2/opencv.hpp>
-#include <opencv2/dnn.hpp>
-
-int main(int argc, char** argv) {
-    const std::string modelPath = "model.onnx";
-    const double optimalThreshold = 0.3800; // Calibrated Zero-Underkill Threshold
-    const int inputDim = ${resolution};
-
-    std::cout << "[Neuro-R C++] Loading Inspection Graph: " << modelPath << std::endl;
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelPath);
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU); // Or cv::dnn::DNN_TARGET_CUDA
-
-    cv::Mat frame = cv::imread("sample_test.png");
-    if (frame.empty()) {
-        frame = cv::Mat::zeros(inputDim, inputDim, CV_8UC3);
-    }
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    cv::Mat blob = cv::dnn::blobFromImage(
-        frame, 
-        1.0 / 255.0, 
-        cv::Size(inputDim, inputDim),
-        cv::Scalar(0.485 * 255, 0.456 * 255, 0.406 * 255), 
-        true, 
-        false
-    );
-
-    net.setInput(blob);
-    cv::Mat prob = net.forward();
-
-    double minVal, maxVal;
-    cv::minMaxLoc(prob, &minVal, &maxVal);
-    std::string verdict = (maxVal >= optimalThreshold) ? "NG (Reject)" : "OK (Pass)";
-
-    auto end = std::chrono::high_resolution_clock::now();
-    double latencyMs = std::chrono::duration<double, std::milli>(end - start).count();
-
-    std::cout << "[Result] Score: " << maxVal << " | Verdict: " << verdict 
-              << " | Latency: " << latencyMs << " ms" << std::endl;
-    return (verdict == "NG (Reject)") ? 1 : 0;
-}`;
-
-  const pythonCode = `# ============================================================================
-# Vision AI Studio — Neuro-R Standalone Python Automation Client
-# Zero-dependency runner: requires only onnxruntime and opencv-python
-# Usage: python infer.py --image path/to/sample.png
-# ============================================================================
-
-from __future__ import annotations
-import argparse, json, time
-from pathlib import Path
-import cv2, numpy as np
-import onnxruntime as ort
-
-class StandaloneInspector:
-    def __init__(self, model_path: str = "model.onnx", config_path: str = "config.json"):
-        with open(config_path, "r", encoding="utf-8") as f:
-            self.cfg = json.load(f)
-        
-        self.threshold = float(self.cfg.get("optimal_threshold", 0.3800))
-        self.resolution = tuple(self.cfg.get("image_size", [${resolution}, ${resolution}]))
-        self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
-        self.input_name = self.session.get_inputs()[0].name
-
-    def inspect(self, image_path: str) -> dict:
-        t0 = time.perf_counter()
-        img = cv2.imread(image_path)
-        if img is None:
-            raise FileNotFoundError(f"Cannot load image: {image_path}")
-
-        resized = cv2.resize(img, self.resolution)
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-        normalized = (rgb - mean) / std
-        tensor = np.expand_dims(np.transpose(normalized, (2, 0, 1)), axis=0)
-
-        outputs = self.session.run(None, {self.input_name: tensor})
-        defect_score = float(np.max(outputs[0]))
-        verdict = "NG" if defect_score >= self.threshold else "OK"
-        latency_ms = (time.perf_counter() - t0) * 1000.0
-
-        return {
-            "verdict": verdict,
-            "defect_score": round(defect_score, 4),
-            "threshold": self.threshold,
-            "latency_ms": round(latency_ms, 2)
-        }
-
-if __name__ == "__main__":
-    inspector = StandaloneInspector()
-    print(inspector.inspect("sample.png"))`;
-
-  const activeSnippet =
-    activeCodeTab === 'csharp'
-      ? csharpCode
-      : activeCodeTab === 'cpp'
-      ? cppCode
-      : pythonCode;
+  // Only the generated infer.py is a supported client. Native SDKs need parity tests.
+  const activeSnippet = activeCodeTab === 'python'
+    ? `# Run the infer.py shipped in the exported package.
+# It reads config.json and loads model.onnx or model.pt.
+python infer.py --image /path/to/inspection_image.jpg
+python infer.py --self-test`
+    : `# Native ${activeCodeTab === 'csharp' ? 'C#' : 'C++'} client is unavailable.
+# Use the verified infer.py in the package, or integrate the model
+# after preprocessing and output parity tests against it.`;
 
   const codeLines = activeSnippet.split('\n');
 
@@ -270,7 +127,7 @@ if __name__ == "__main__":
           <div className="flex items-center space-x-2.5">
             <Server className="w-5 h-5 text-slate-300" />
             <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              {isKo ? '인퍼런스 센터 및 Neuro-R 배포 패키징 스튜디오' : 'Inference Center & Neuro-R Export Studio'}
+              {isKo ? '인퍼런스 센터 및 모델 내보내기' : 'Inference Center & Model Export'}
             </h2>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A212E] text-slate-300 border border-[#2B3547]">
               STAGE 6
@@ -278,8 +135,8 @@ if __name__ == "__main__":
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {isKo
-              ? '생산 라인 투입 전 하드웨어 가속 추론 속도(FPS/ms)와 지터를 실측하고, 공정 PC/PLC 검사기용 독립형 패키지를 내보냅니다.'
-              : 'Benchmark in-line FPS, latency, and jitter, and export production-ready standalone packages.'}
+              ? '합성 입력으로 모델 추론 속도를 측정하고 Python 독립 실행 패키지를 내보냅니다. 생산 라인과 PLC 연동은 별도 검증이 필요합니다.'
+              : 'Benchmark model inference with synthetic input and export a standalone Python package.'}
           </p>
         </div>
 
@@ -314,12 +171,14 @@ if __name__ == "__main__":
                   ? '패키징 생성 중...'
                   : 'Exporting...'
                 : isKo
-                ? 'Neuro-R 런타임 패키지 내보내기'
+                ? 'Python 런타임 패키지 내보내기'
                 : 'Export Runtime Package'}
             </span>
           </button>
         </div>
       </div>
+
+      {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
 
       {/* Main Grid: 2 Column Bay */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -331,7 +190,7 @@ if __name__ == "__main__":
               <span>{isKo ? '실시간 하드웨어 가속 계측 패널' : 'Hardware Telemetry Instruments'}</span>
             </h3>
             <span className="text-[11px] text-slate-300 font-mono bg-[#1A212E] px-2.5 py-0.5 rounded border border-[#2B3547]">
-              {benchmarkResult?.device_name || backendStatus.deviceName || 'Apple Silicon MPS'}
+              {benchmarkResult?.device_name || backendStatus.deviceName || 'Unknown device'}
             </span>
           </div>
 
@@ -343,10 +202,10 @@ if __name__ == "__main__":
                 검사 속도 (FPS)
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-emerald-400 my-1">
-                {fps} <span className="text-xs font-normal text-slate-500">FPS</span>
+                {benchmarkResult ? fps : '—'} <span className="text-xs font-normal text-slate-500">FPS</span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono tabular-nums">
-                {ppm.toLocaleString()} <span className="text-[9px] text-slate-500">PPM (Part/min)</span>
+                {benchmarkResult ? ppm.toLocaleString() : '—'} <span className="text-[9px] text-slate-500">inference/min estimate</span>
               </div>
             </div>
 
@@ -356,10 +215,10 @@ if __name__ == "__main__":
                 평균 택트 타임
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-slate-100 my-1">
-                {meanLatency} <span className="text-xs font-normal text-slate-500">ms</span>
+                {benchmarkResult ? meanLatency : '—'} <span className="text-xs font-normal text-slate-500">ms</span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono tabular-nums">
-                Min: {minLatency}ms | Max: {maxLatency}ms
+                Min: {benchmarkResult ? minLatency : '—'}ms | Max: {benchmarkResult ? maxLatency : '—'}ms
               </div>
             </div>
 
@@ -369,10 +228,10 @@ if __name__ == "__main__":
                 P95 지연 및 지터
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-slate-100 my-1">
-                {p95Latency} <span className="text-xs font-normal text-slate-500">ms</span>
+                {benchmarkResult ? p95Latency : '—'} <span className="text-xs font-normal text-slate-500">ms</span>
               </div>
               <div className="text-[10px] text-cyan-400 font-mono font-semibold tabular-nums">
-                지터: ±{stdLatency} ms (1σ)
+                지터: ±{benchmarkResult ? stdLatency : '—'} ms (1σ)
               </div>
             </div>
           </div>
@@ -428,7 +287,7 @@ if __name__ == "__main__":
               {/* In-bar text readouts */}
               <div className="absolute inset-0 flex items-center justify-between px-2 text-[10px] font-mono font-bold select-none pointer-events-none">
                 <span className="text-slate-950 mix-blend-difference tabular-nums">
-                  실측: {meanLatency} ms
+                  실측: {benchmarkResult ? meanLatency : '—'} ms
                 </span>
                 <span className="text-slate-400 tabular-nums">
                   한계: {maxTaktLimit.toFixed(1)} ms
@@ -441,7 +300,7 @@ if __name__ == "__main__":
               <span>
                 공정 여유 마진 (Safety Headroom):{' '}
                 <span className={`font-bold tabular-nums ${headroomPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {headroomPct >= 0 ? `+${headroomPct}%` : `${headroomPct}% (초과)`}
+                  {benchmarkResult ? (headroomPct >= 0 ? `+${headroomPct}%` : `${headroomPct}% (초과)`) : '미측정'}
                 </span>
               </span>
               <span className="tabular-nums">
@@ -458,22 +317,22 @@ if __name__ == "__main__":
                 : 'bg-[#1A0E11] border-[#EF4444]/60 text-rose-200'
             }`}
           >
-            <LedAnnunciator state={isLineReady ? 'pass' : 'fail'} size="md" />
+            <LedAnnunciator state={!benchmarkResult ? 'standby' : isLineReady ? 'pass' : 'fail'} size="md" />
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold font-mono tracking-tight text-slate-100">
-                  {isLineReady
-                    ? '생산 라인 투입 적합 (LINE READINESS: PASS)'
-                    : '생산 라인 투입 부적합 (LINE READINESS: FAIL)'}
+                  {!benchmarkResult ? '모델 속도 미측정' : isLineReady
+                    ? '모델 추론 속도 목표 충족'
+                    : '모델 추론 속도 목표 미달'}
                 </h4>
                 <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border bg-[#0B0E14] text-slate-300 border-[#2B3547]">
-                  {isLineReady ? 'COMPLIANT' : 'VIOLATION'}
+                  {!benchmarkResult ? 'UNTESTED' : isLineReady ? 'BENCHMARK PASS' : 'BENCHMARK FAIL'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                {isLineReady
-                  ? `실측 택트 타임(${meanLatency}ms)이 허용 기준(${maxTaktLimit}ms) 내에 안정적으로 유지되며, 지터(±${stdLatency}ms) 변동이 공차 범위 내에 있어 라인 정지 위험이 없습니다.`
-                  : `실측 지연시간(${meanLatency}ms)이 목표 기준(${maxTaktLimit}ms)을 초과하거나 지터 변동이 심합니다. 추론 해상도 축소 또는 GPU 가속 전환이 권장됩니다.`}
+                {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isLineReady
+                  ? `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms를 측정했습니다. 실제 카메라·PLC 통합 검사는 별도 필요합니다.`
+                  : `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`}
               </p>
             </div>
           </div>
@@ -484,10 +343,10 @@ if __name__ == "__main__":
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
               <Package className="w-4 h-4 text-emerald-400" />
-              <span>{isKo ? 'Neuro-R 배포 패키지 아티팩트' : 'Production Package Manifest'}</span>
+              <span>{isKo ? '독립 실행 패키지 아티팩트' : 'Standalone Package Manifest'}</span>
             </h3>
             <span className="text-[10px] font-mono text-slate-400 tabular-nums">
-              {exportResult?.total_files ?? 6} FILES INDEXED
+              {exportResult?.total_files ?? 0} FILES INDEXED
             </span>
           </div>
 
@@ -523,24 +382,18 @@ if __name__ == "__main__":
                 <input
                   type="checkbox"
                   checked={quantizeFp16}
-                  onChange={(e) => setQuantizeFp16(e.target.checked)}
+                  disabled
                   className="rounded border-[#2B3547] bg-[#0B0E14] text-emerald-500 focus:ring-0"
                 />
-                <span className="text-slate-400 text-xs">FP16 가속</span>
+                <span className="text-slate-400 text-xs">FP16 변환 미지원</span>
               </label>
             </div>
           </div>
 
           {/* File Manifest List */}
           <div className="flex-1 bg-[#0B0E14] border border-[#1F2737] rounded p-3 overflow-y-auto space-y-1.5">
-            {(exportResult?.manifest || [
-              { name: 'model.onnx', size_kb: 44800.0 },
-              { name: 'config.json', size_kb: 1.2 },
-              { name: 'infer.py', size_kb: 2.1 },
-              { name: 'Program.cs', size_kb: 2.4 },
-              { name: 'main.cpp', size_kb: 1.9 },
-              { name: 'README_DEPLOY.md', size_kb: 1.0 },
-            ]).map((file) => (
+            {!exportResult && <p className="text-xs text-slate-400">내보낸 패키지가 없습니다.</p>}
+            {(exportResult?.manifest || []).map((file) => (
               <div
                 key={file.name}
                 className="flex items-center justify-between p-2 bg-[#131822] hover:bg-[#1A212E] rounded border border-[#2B3547] text-xs font-mono transition-colors"
@@ -552,7 +405,7 @@ if __name__ == "__main__":
                 <div className="flex items-center space-x-3">
                   <span className="text-slate-400 tabular-nums">{file.size_kb.toFixed(1)} KB</span>
                   <span className="text-[10px] text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-[#0D1C16] border border-[#10B981]/40">
-                    VERIFIED
+                    CREATED
                   </span>
                 </div>
               </div>
@@ -561,7 +414,7 @@ if __name__ == "__main__":
 
           {/* Package Storage Path */}
           <div className="text-[11px] text-slate-400 bg-[#0B0E14] p-2.5 rounded border border-[#1F2737] truncate font-mono">
-            저장 경로: <span className="text-slate-200 font-bold">{exportResult?.package_path || './release/runtime_packages/neuro_r_production_package'}</span>
+            저장 경로: <span className="text-slate-200 font-bold">{exportResult?.package_path || '—'}</span>
           </div>
         </div>
       </div>
@@ -573,8 +426,8 @@ if __name__ == "__main__":
             <Code2 className="w-4 h-4 text-slate-300" />
             <h3 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">
               {isKo
-                ? '생산 설비 연동 클라이언트 코드 인스펙터 (Neuro-R SDK Code Inspector)'
-                : 'Production Client SDK Code Inspector'}
+                ? '패키지 사용 예시 및 지원 범위'
+                : 'Package Usage and Supported Clients'}
             </h3>
           </div>
 
