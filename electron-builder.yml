@@ -1,0 +1,94 @@
+# electron-builder.yml
+# Vision AI Studio Desktop Packaging Specification (macOS arm64 + Windows NSIS)
+
+appId: com.visionaistudio.app
+productName: Vision AI Studio
+copyright: Copyright © 2026 Vision AI Studio Team
+
+directories:
+  output: release
+  buildResources: build
+
+# Exclude unnecessary test caches, markdown files, and unpackaged dev files
+files:
+  - "dist/**/*"
+  - "dist-electron/**/*"
+  - "package.json"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}"
+  - "!**/node_modules/*.d.ts"
+  - "!**/node_modules/.bin"
+
+# Extract Python backend into resourcesPath (unpacked from ASAR so Python interpreter can read it)
+extraResources:
+  - from: "backend"
+    to: "backend"
+    filter:
+      - "**/*"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
+      - "!**/*.pyo"
+      - "!**/*.pyd"
+      - "!**/tests/**"
+      - "!**/.pytest_cache/**"
+
+asar: true
+asarUnpack:
+  - "**/*.node"
+
+# -----------------------------------------------------------------------------
+# macOS Configuration (arm64 Apple Silicon)
+# -----------------------------------------------------------------------------
+mac:
+  appId: com.visionaistudio.app
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  icon: build/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  darkModeSupport: true
+  minimumSystemVersion: "12.0.0"
+
+dmg:
+  title: "${productName} ${version}"
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+# -----------------------------------------------------------------------------
+# Windows Configuration (x64 NSIS Installer)
+# -----------------------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  legalTrademarks: Vision AI Studio Team
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Vision AI Studio
+  uninstallDisplayName: Vision AI Studio
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
