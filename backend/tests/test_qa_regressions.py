@@ -3,6 +3,7 @@
 import threading
 import base64
 import io
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -245,6 +246,20 @@ def test_labelme_split_excludes_unlabeled_images(tmp_path, monkeypatch):
                                                  split=None, class_name=None)
     assert gallery["total"] == 10
     assert sum(item["split"] == "unlabeled" for item in gallery["items"]) == 2
+    assignments = routes_dataset._read_split_manifest(tmp_path)
+    removed = next(path for path in assignments if Path(path).with_suffix(".json").exists())
+    previous_partition = assignments[removed]
+    Path(removed).with_suffix(".json").unlink()
+    filtered = routes_dataset.list_dataset_images(
+        folder_path=str(tmp_path), offset=0, limit=20,
+        split=previous_partition, class_name=None, label_status="labeled",
+    )
+    assert removed not in {item["file_path"] for item in filtered["items"]}
+    stale_split = routes_dataset.list_dataset_images(
+        folder_path=str(tmp_path), offset=0, limit=20,
+        split=previous_partition, class_name=None,
+    )
+    assert removed not in {item["file_path"] for item in stale_split["items"]}
 
 
 def test_zero_escape_rejects_missing_real_predictions(tmp_path, monkeypatch):

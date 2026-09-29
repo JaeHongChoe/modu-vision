@@ -21,7 +21,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox
-from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.labeling_ai import (
     auto_select_contour,
     bbox_to_mask,
@@ -61,7 +61,7 @@ def _validate_image_id(image_id: str) -> None:
 def _trusted_annotation_directory(requested: str) -> Path:
     """Allow explicit output folders only below the app root or configured roots."""
     target = Path(requested).expanduser().resolve()
-    roots = [ANNOTATIONS_DIR.resolve()]
+    roots = [scoped_annotation_root(ANNOTATIONS_DIR).resolve()]
     roots.extend(
         Path(value).expanduser().resolve()
         for value in os.environ.get("VISION_AI_STUDIO_ANNOTATION_ROOTS", "").split(os.pathsep)
@@ -132,7 +132,7 @@ def save_annotations(req: AnnotationSaveRequest):
         raise HTTPException(status_code=422, detail="image_id must match image_path filename")
     target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
                   dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
-                  if req.image_path else ANNOTATIONS_DIR)
+                  if req.image_path else scoped_annotation_root(ANNOTATIONS_DIR))
     target_dir.mkdir(parents=True, exist_ok=True)
     masks_dir = target_dir / "masks"
     masks_dir.mkdir(parents=True, exist_ok=True)
@@ -277,7 +277,7 @@ def get_annotations(
     _validate_image_id(image_id)
     target_dir = (_trusted_annotation_directory(str(dir_path)) if dir_path and isinstance(dir_path, (str, Path)) else
                   dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
-                  if file_path else ANNOTATIONS_DIR)
+                  if file_path else scoped_annotation_root(ANNOTATIONS_DIR))
     json_path = target_dir / f"{image_id}.json"
 
     # 1. If Studio-saved annotation JSON exists, return it directly
@@ -400,7 +400,7 @@ def get_annotation_mask(
         raise HTTPException(status_code=422, detail="image_id must match file_path filename")
     target_dir = (_trusted_annotation_directory(dir_path) if dir_path else
                   dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
-                  if file_path else ANNOTATIONS_DIR)
+                  if file_path else scoped_annotation_root(ANNOTATIONS_DIR))
     mask_path = target_dir / "masks" / f"{image_id}.png"
     json_path = target_dir / f"{image_id}.json"
     if not json_path.is_file() or not mask_path.is_file():
@@ -447,7 +447,7 @@ def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None)):
     """Deletes stored annotations for the requested image_id."""
     _validate_image_id(image_id)
     target_dir = (_trusted_annotation_directory(str(dir_path))
-                  if dir_path and isinstance(dir_path, (str, Path)) else ANNOTATIONS_DIR)
+                  if dir_path and isinstance(dir_path, (str, Path)) else scoped_annotation_root(ANNOTATIONS_DIR))
     json_path = target_dir / f"{image_id}.json"
     mask_path = target_dir / "masks" / f"{image_id}.png"
 

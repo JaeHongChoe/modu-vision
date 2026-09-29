@@ -210,7 +210,7 @@ export interface NodePort {
 
 export interface FlowNodeData {
   label: string;
-  node_type: 'input' | 'detection_crop' | 'inspection' | 'decision' | 'output';
+  node_type: 'input' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
@@ -238,6 +238,7 @@ export interface FlowEdge {
   targetPort?: string;
   label?: string;
   isBranch?: 'pass' | 'fail' | 'review' | 'default';
+  payload_type?: 'image' | 'roi' | 'result';
 }
 
 export interface FlowchartPipeline {
@@ -265,6 +266,13 @@ export interface FlowchartExecutionStep {
   name: string;
   status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'review_required' | 'warning_untrained';
   latency_ms: number;
+  input_payload_type?: 'image' | 'roi' | 'result' | null;
+  output_payload_type?: 'image' | 'roi' | 'result' | null;
+  input_count?: number | null;
+  output_count?: number | null;
+  branch_verdict?: 'OK' | 'NG' | 'REVIEW' | null;
+  selected_edge_ids?: string[];
+  skip_reason?: string | null;
 }
 
 export interface FlowchartExecutionResult {

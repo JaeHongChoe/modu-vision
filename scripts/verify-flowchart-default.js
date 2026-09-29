@@ -33,6 +33,11 @@ const blankSegmentation = {
 };
 const api = {
   flowchart: {
+    getActivePipeline: async () => {
+      const error = new Error('No active saved flow in this fixture');
+      error.status = 404;
+      throw error;
+    },
     getPipeline: async (task, source) => {
       savedLoads += 1;
       requestedPipelineTasks.push(task);
@@ -301,14 +306,29 @@ test('an invalidated old RUN cannot clear a newer run', async () => {
   delayRun = false;
 });
 
-test('Step 5 verifies the source before reopening a saved flow and disables RUN until ready', () => {
+test('Step 5 result keeps its draft or saved-version origin after later saving', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  assert.equal(await flow.getState().runPipeline(undefined, undefined, { savedVersionId: null }), true);
+  assert.deepEqual(flow.getState().lastRunSource, { kind: 'draft', versionId: null });
+  await flow.getState().savePipeline();
+  assert.deepEqual(flow.getState().lastRunSource, { kind: 'draft', versionId: null });
+
+  await flow.getState().loadPipeline(true);
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  assert.equal(await flow.getState().runPipeline(undefined, undefined, { savedVersionId: 'active_revision' }), true);
+  assert.deepEqual(flow.getState().lastRunSource, { kind: 'saved', versionId: 'active_revision' });
+});
+
+test('Step 5 verifies the source before reopening a saved flow and gates RUN on graph readiness', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/flowchart/FlowchartStudio.tsx'), 'utf8');
   assert.match(source, /recoverThenLoadFlowchart\(/);
-  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel \|\| !!graphError\}/);
-  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel \|\| !!graphError\}/);
+  assert.match(source, /const canVerifyGraph = modelCheck\.status !== 'checking'/);
+  assert.match(source, /disabled=\{!canVerifyGraph \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel \|\| !!graphError\}/);
+  assert.match(source, /disabled=\{!canVerifyGraph \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel \|\| !!graphError\}/);
   assert.match(source, /if \(modelNodes\.length === 0 \|\| models\.length !== modelNodes\.length\)/);
   assert.match(source, /loadDetectorRoiTemplate\(/);
-  assert.match(source, /검출 ROI 검사 플로우/);
+  assert.match(source, /검출 ROI 검사/);
   assert.match(source, /verifyModels:/);
   assert.match(source, /모델 다시 확인/);
 });

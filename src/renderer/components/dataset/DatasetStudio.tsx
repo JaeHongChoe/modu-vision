@@ -12,12 +12,14 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  FolderArchive,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
+import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
@@ -25,10 +27,12 @@ import { classDistributionStats } from './classDistribution';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 
 export const DatasetStudio: React.FC = () => {
-  const { task, language, openImageForLabeling } = useProjectStore();
+  const { task, language, projectDir, openImageForLabeling } = useProjectStore();
   const {
     folderPath,
+    hasSelectedFolder,
     importError,
+    sourceSaveError,
     splitError,
     splitSupported,
     splitUnavailableReason,
@@ -43,12 +47,14 @@ export const DatasetStudio: React.FC = () => {
     pageSize,
     activeSplitFilter,
     activeClassFilter,
+    activeLabelFilter,
     trainRatio,
     isLoading,
     isSplitting,
     corruptedImages,
     setSplitFilter,
     setClassFilter,
+    setLabelFilter,
     setTrainRatio,
     importFolder,
     ensureImported,
@@ -61,6 +67,7 @@ export const DatasetStudio: React.FC = () => {
   // Cognex Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
   const [imageOpenError, setImageOpenError] = useState<string | null>(null);
   const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);
   const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
@@ -161,6 +168,11 @@ export const DatasetStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
+      {sourceSaveError && (
+        <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
+          {sourceSaveError}
+        </div>
+      )}
       {/* Top Action Toolbar (Cognex Deep Steel Panel #131822) */}
       <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -179,6 +191,17 @@ export const DatasetStudio: React.FC = () => {
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
             <span>{language === 'ko' ? '합성 데이터 생성기' : 'Procedural Generator'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowVersions(true)}
+            disabled={!hasSelectedFolder || !projectDir || isLoading}
+            title={hasSelectedFolder ? '데이터와 라벨 버전 저장·검증·복원' : '데이터셋을 먼저 불러오세요'}
+            className="flex items-center gap-2 rounded-[4px] border border-sky-700/60 bg-sky-950/30 px-3 py-1.5 text-xs font-semibold text-sky-200 hover:bg-sky-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FolderArchive className="h-4 w-4" />
+            <span>데이터 버전</span>
           </button>
 
           <span className="text-xs text-slate-400 font-mono truncate max-w-sm" title={folderPath}>
@@ -613,8 +636,8 @@ export const DatasetStudio: React.FC = () => {
             </div>
           )}
           {/* Gallery Filter & Grid Density Toolbar */}
-          <div className="px-4 py-2 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-2">
+          <div className="px-4 py-2 bg-[#131822] border-b border-[#2B3547] flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', labelKo: `전체 (${sourceImages})`, labelEn: `All (${sourceImages})` },
                 { id: 'train', labelKo: `학습용 (${split.train})`, labelEn: `Train (${split.train})` },
@@ -633,6 +656,30 @@ export const DatasetStudio: React.FC = () => {
                   {language === 'ko' ? tab.labelKo : tab.labelEn}
                 </button>
               ))}
+
+              {(task === 'detection' || task === 'segmentation') && (unlabeledImages > 0 || activeLabelFilter !== 'all') && (
+                <div className="flex items-center gap-1 border-l border-[#2B3547] pl-2 ml-1" aria-label={language === 'ko' ? '라벨 상태 필터' : 'Label status filter'}>
+                  {([
+                    { id: 'all', ko: '라벨 전체', en: 'All labels' },
+                    { id: 'labeled', ko: `라벨 완료 ${sourceImages - unlabeledImages}`, en: `Labeled ${sourceImages - unlabeledImages}` },
+                    { id: 'unlabeled', ko: `미라벨 ${unlabeledImages}`, en: `Unlabeled ${unlabeledImages}` },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setLabelFilter(option.id)}
+                      aria-pressed={activeLabelFilter === option.id}
+                      className={`px-2.5 py-1 rounded-[4px] border font-medium transition-tactile cursor-pointer ${
+                        activeLabelFilter === option.id
+                          ? 'bg-[#153A5E] border-[#38BDF8] text-[#E0F2FE]'
+                          : 'bg-[#1A212E] border-[#2B3547] text-slate-300 hover:bg-[#222B3D] hover:text-white'
+                      }`}
+                    >
+                      {language === 'ko' ? option.ko : option.en}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {activeClassFilter && (
                 <div className="flex items-center space-x-1 px-2 py-0.5 bg-[#1E293B] border border-[#3B82F6] rounded-[4px] text-blue-300 font-medium text-xs">
@@ -708,9 +755,9 @@ export const DatasetStudio: React.FC = () => {
               <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
                 <FolderOpen className="w-12 h-12 mb-3 text-slate-500" />
                 <p className="text-sm font-medium">
-                  {language === 'ko'
-                    ? '가져온 이미지가 없습니다. 상단에서 폴더를 열거나 합성 데이터를 생성하세요.'
-                    : 'No images available. Open a folder or generate synthetic data.'}
+                  {sourceImages > 0
+                    ? (language === 'ko' ? '현재 필터에 맞는 이미지가 없습니다. 라벨 상태나 분할 조건을 바꿔보세요.' : 'No images match these filters. Change the label status or split.')
+                    : (language === 'ko' ? '가져온 이미지가 없습니다. 상단에서 폴더를 열거나 합성 데이터를 생성하세요.' : 'No images available. Open a folder or generate synthetic data.')}
                 </p>
               </div>
             ) : (
@@ -802,6 +849,9 @@ export const DatasetStudio: React.FC = () => {
       </div>
 
       <ProceduralGeneratorModal />
+      {showVersions && <DatasetVersionPanel datasetPath={folderPath} onClose={() => setShowVersions(false)} onRestored={async () => {
+        await importFolder(folderPath, task, false);
+      }} />}
     </div>
   );
 };

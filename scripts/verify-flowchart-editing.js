@@ -58,6 +58,45 @@ test('legacy linear graph validates and new model branch can join decision', () 
   assert.equal(original.nodes.length, 4);
 });
 
+test('inspection models can form a five-stage chain with an explicit ROI payload', () => {
+  let graph = linear();
+  graph = { ...graph, edges: graph.edges.filter((edge) => edge.id !== 'b'),
+    nodes: [...graph.nodes, node('inspect2', 'inspection')] };
+  graph = connectFlowNodes(graph, 'inspect', 'inspect2');
+  graph = connectFlowNodes(graph, 'inspect2', 'decision');
+  assert.equal(validateFlowchartGraph(graph), null);
+  assert.equal(graph.edges.find((edge) => edge.target === 'inspect2').payload_type, 'roi');
+});
+
+test('fixed source-pixel ROI connects input to inspection and rejects invalid rectangles', () => {
+  const original = linear();
+  const roi = { id: 'fixed', position: { x: 100, y: 0 },
+    data: { label: '고정 ROI', node_type: 'fixed_roi', params: { roi_bbox: [1700, 800, 2000, 1100] } } };
+  let graph = { ...original, nodes: [...original.nodes, roi],
+    edges: original.edges.filter((edge) => edge.id !== 'a') };
+  graph = connectFlowNodes(graph, 'input', 'fixed');
+  graph = connectFlowNodes(graph, 'fixed', 'inspect');
+  assert.equal(validateFlowchartGraph(graph), null);
+  assert.equal(graph.edges.find((edge) => edge.source === 'fixed').payload_type, 'roi');
+  assert.throws(() => connectFlowNodes(graph, 'fixed', 'decision'), /지원|연결/);
+  const invalid = { ...graph, nodes: graph.nodes.map((item) => item.id === 'fixed'
+    ? { ...item, data: { ...item.data, params: { roi_bbox: [1700, 800, 1705, 1100] } } } : item) };
+  assert.match(validateFlowchartGraph(invalid), /고정 ROI|16/);
+});
+
+test('model branches can gate downstream execution while invalid payloads are rejected', () => {
+  let graph = linear();
+  graph = { ...graph, nodes: [...graph.nodes, node('inspect2', 'inspection')],
+    edges: graph.edges.filter((edge) => edge.id !== 'b') };
+  graph = connectFlowNodes(graph, 'inspect', 'inspect2');
+  graph = connectFlowNodes(graph, 'inspect2', 'decision');
+  graph = updateFlowEdgeBranch(graph, graph.edges.find((edge) => edge.target === 'inspect2').id, 'fail');
+  assert.equal(validateFlowchartGraph(graph), null);
+  assert.equal(graph.edges.find((edge) => edge.target === 'inspect2').isBranch, 'fail');
+  const wrongPayload = { ...graph, edges: graph.edges.map((edge) => edge.target === 'decision' ? { ...edge, payload_type: 'image' } : edge) };
+  assert.match(validateFlowchartGraph(wrongPayload), /데이터|payload|형식/i);
+});
+
 test('adding verdict outputs produces pass fail review branches and supports branch swap', () => {
   let graph = linear();
   graph = { ...graph, nodes: [...graph.nodes, node('ng', 'output')] };
@@ -112,6 +151,22 @@ test('node ports render as accessible connection controls', () => {
   assert.doesNotMatch(outputHtml, /Start connection from result/);
 });
 
+test('fixed ROI node renders its source-pixel bounds and ROI ports', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const { CustomNode } = loadComponent('../src/renderer/components/flowchart/CustomNode.tsx');
+  const html = renderToStaticMarkup(React.createElement(CustomNode, {
+    node: { id: 'fixed', position: { x: 0, y: 0 }, data: {
+      label: '고정 ROI', node_type: 'fixed_roi', params: { roi_bbox: [10, 20, 210, 220] },
+    } },
+    isSelected: false, isActive: false, isPassed: false, isFlaggedNg: false,
+    onSelect: () => {}, onConnectStart: () => {}, onConnectFinish: () => {},
+  }));
+  assert.match(html, /FIXED ROI/);
+  assert.match(html, /10, 20 → 210, 220/);
+  assert.match(html, /ROI OUT/);
+});
+
 test('saved edges render as selectable controls with their verdict branches', () => {
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
@@ -122,8 +177,22 @@ test('saved edges render as selectable controls with their verdict branches', ()
     nodes: graph.nodes, edges: graph.edges, activeRunningNodeId: null,
     selectedEdgeId: 'c', onSelectEdge: () => {}, routedOutputNodeId: 'output', finalVerdict: 'OK',
   }));
-  assert.match(html, /aria-label="Select connection decision to output"/);
+  assert.match(html, /aria-label="Select connection decision to output when pass"/);
   assert.match(html, /OK/);
+});
+
+test('execution trace highlights only selected model branches', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const { DAGCircuitOverlay } = loadComponent('../src/renderer/components/flowchart/DAGCircuitOverlay.tsx');
+  const graph = linear();
+  const html = renderToStaticMarkup(React.createElement(DAGCircuitOverlay, {
+    nodes: graph.nodes, edges: graph.edges,
+    activeRunningNodeId: null, finalVerdict: 'NG',
+    executionSteps: [{ node_id: 'inspect', name: 'inspect', status: 'flagged_ng', latency_ms: 3, selected_edge_ids: ['a', 'b'] }],
+  }));
+  assert.match(html, /stroke="#38BDF8"/);
+  assert.match(html, /stroke="#334155"/);
 });
 
 test('score decision rule creates an editable threshold when a legacy node lacks one', () => {

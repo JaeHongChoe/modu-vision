@@ -1,6 +1,7 @@
 """Saved multi-model flows keep only source-matched completed model references."""
 
 import json
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -90,3 +91,46 @@ def test_detector_roi_flow_saves_and_reopens_both_verified_model_links(monkeypat
             {"job_id": reopened["nodes"][2]["data"]["model_job_id"], "task": "segmentation"},
         ],
     }).status_code == 200
+
+
+def test_model_catalog_only_lists_completed_models_for_current_source(monkeypatch, tmp_path):
+    client, source = _client_with_models(monkeypatch, tmp_path)
+    incomplete = tmp_path / "models" / "job_999_unfinished"
+    incomplete.mkdir(parents=True)
+    (incomplete / "best_model.pt").write_bytes(b"incomplete")
+    (incomplete / "job_receipt.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+
+    response = client.get("/api/flowchart/models/catalog", params={"source_dataset_path": str(source)})
+
+    assert response.status_code == 200
+    models = response.json()["models"]
+    assert {(model["job_id"], model["task"]) for model in models} == {
+        ("job_123_detector", "detection"),
+        ("job_456_inspector", "segmentation"),
+    }
+    assert all(model["label"] and model["created_at"] for model in models)
+    (source / "image.jpg").write_bytes(b"changed inspection image")
+    assert client.get("/api/flowchart/models/catalog", params={"source_dataset_path": str(source)}).json()["models"] == []
+
+
+def test_project_model_wins_when_legacy_global_job_has_same_id(monkeypatch, tmp_path):
+    client, source = _client_with_models(monkeypatch, tmp_path)
+    project = client.get("/api/project/current").json()
+    job_id = "job_123_detector"
+    local = tmp_path / "models" / job_id
+    target = Path(project["models_dir"]) / job_id
+    target.mkdir(parents=True)
+    for name in ("best_model.pt", "model_meta.json", "job_receipt.json"):
+        (target / name).write_bytes((local / name).read_bytes())
+    stale = json.loads((local / "job_receipt.json").read_text(encoding="utf-8"))
+    stale["source_dataset_path"] = str(tmp_path / "another_source")
+    (local / "job_receipt.json").write_text(json.dumps(stale), encoding="utf-8")
+
+    verified = client.post("/api/flowchart/models/verify", json={
+        "source_dataset_path": str(source),
+        "models": [{"job_id": job_id, "task": "detection"}],
+    })
+    assert verified.status_code == 200, verified.text
+    catalog = client.get("/api/flowchart/models/catalog", params={"source_dataset_path": str(source)})
+    assert catalog.status_code == 200, catalog.text
+    assert job_id in {item["job_id"] for item in catalog.json()["models"]}

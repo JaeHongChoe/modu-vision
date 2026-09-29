@@ -35,10 +35,12 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   const decisions = pipeline.nodes.filter((node) => node.data.node_type === 'decision');
   const outputs = pipeline.nodes.filter((node) => node.data.node_type === 'output');
   const models = pipeline.nodes.filter((node) => modelTypes.includes(node.data.node_type));
+  const fixedRois = pipeline.nodes.filter((node) => node.data.node_type === 'fixed_roi');
   if (inputs.length !== 1) return '입력 노드는 하나여야 합니다.';
   if (decisions.length !== 1) return '판정 노드는 하나여야 합니다.';
   if (outputs.length < 1 || outputs.length > 3) return '출력 노드는 1~3개가 필요합니다.';
   if (models.length < 1 || models.length > 8) return '모델 노드는 1~8개가 필요합니다.';
+  if (fixedRois.length > 8) return '고정 ROI 노드는 최대 8개입니다.';
   const edgeIds = new Set<string>();
   const connections = new Set<string>();
   for (const edge of pipeline.edges) {
@@ -48,10 +50,34 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     const pair = `${edge.source}\0${edge.target}`;
     if (connections.has(pair)) return '같은 노드 사이의 연결선이 중복되었습니다.';
     connections.add(pair);
+    const from = nodes.get(edge.source)?.data.node_type;
+    const to = nodes.get(edge.target)?.data.node_type;
+    const allowedPayloads = from === 'input' && (modelTypes.includes(to as FlowNodeType) || to === 'fixed_roi') ? ['image']
+      : from === 'fixed_roi' && modelTypes.includes(to as FlowNodeType) ? ['roi']
+      : modelTypes.includes(from as FlowNodeType) && modelTypes.includes(to as FlowNodeType) ? ['image', 'roi']
+      : modelTypes.includes(from as FlowNodeType) && to === 'decision' ? ['result']
+      : from === 'decision' && to === 'output' ? ['result'] : [];
+    if (allowedPayloads.length === 0) return '노드 사이의 연결 형식이 올바르지 않습니다.';
+    if (edge.payload_type && !allowedPayloads.includes(edge.payload_type)) return '연결선의 데이터 형식(payload)이 노드와 맞지 않습니다.';
+    if ((from === 'input' || from === 'fixed_roi') && edge.isBranch && edge.isBranch !== 'default') {
+      return '입력과 고정 ROI 연결에는 조건 분기를 지정할 수 없습니다.';
+    }
   }
   const inputId = inputs[0].id;
   const decisionId = decisions[0].id;
   if (incoming.get(inputId)?.length || !outgoing.get(inputId)?.length) return '입력 노드에서 모델 노드로 연결하세요.';
+  for (const fixedRoi of fixedRois) {
+    const rectangle = fixedRoi.data.params?.roi_bbox;
+    if (!Array.isArray(rectangle) || rectangle.length !== 4 ||
+      rectangle.some((value) => !Number.isInteger(value)) ||
+      rectangle[0] < 0 || rectangle[1] < 0 ||
+      rectangle[2] - rectangle[0] < 16 || rectangle[3] - rectangle[1] < 16) {
+      return `${fixedRoi.data.label}: 고정 ROI 원본 픽셀 좌표는 16×16 이상인 [x1, y1, x2, y2] 정수여야 합니다.`;
+    }
+    const parents = incoming.get(fixedRoi.id) || [];
+    if (parents.length !== 1 || parents[0].source !== inputId) return `${fixedRoi.data.label}: 원본 이미지 입력 연결선 하나가 필요합니다.`;
+    if (!(outgoing.get(fixedRoi.id) || []).length) return `${fixedRoi.data.label}: 검사 모델로 연결하세요.`;
+  }
   for (const node of models) {
     const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
     if (!Number.isFinite(modelThreshold) || modelThreshold < 0 || modelThreshold > 1) {
@@ -63,18 +89,15 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     const parent = incoming.get(node.id) || [];
     if (parent.length !== 1) return `${node.data.label}: 모델 입력 연결선이 정확히 하나 필요합니다.`;
     const parentType = nodes.get(parent[0].source)?.data.node_type;
-    if (node.data.node_type === 'detection_crop' ? parentType !== 'input' : parentType !== 'input' && parentType !== 'detection_crop') {
+    if (parentType !== 'input' && parentType !== 'fixed_roi' && !modelTypes.includes(parentType as FlowNodeType)) {
       return `${node.data.label}: 지원하지 않는 상류 연결입니다.`;
     }
     if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly'].includes(node.data.task || '')) {
       return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
     }
     const targets = outgoing.get(node.id) || [];
-    if (node.data.node_type === 'inspection') {
-      if (targets.length !== 1 || targets[0].target !== decisionId) return `${node.data.label}: 판정 노드로 연결하세요.`;
-    } else if (!targets.length || targets.some((edge) => !['inspection', 'decision'].includes(nodes.get(edge.target)?.data.node_type || '')) ||
-      new Set(targets.map((edge) => nodes.get(edge.target)?.data.node_type)).size > 1) {
-      return `${node.data.label}: 검출 노드는 검사 노드 또는 판정 노드 한 종류로만 연결하세요.`;
+    if (!targets.length || targets.some((edge) => ![...modelTypes, 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
+      return `${node.data.label}: 다음 모델 또는 판정 노드로 연결하세요.`;
     }
   }
   const evidence = incoming.get(decisionId) || [];
@@ -139,15 +162,12 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
   if (pipeline.edges.some((edge) => edge.source === sourceId && edge.target === targetId)) throw new Error('이미 연결된 노드입니다.');
   const from = source.data.node_type;
   const to = target.data.node_type;
-  const allowed = (from === 'input' && (to === 'detection_crop' || to === 'inspection')) ||
-    (from === 'detection_crop' && (to === 'inspection' || to === 'decision')) ||
-    (from === 'inspection' && to === 'decision') || (from === 'decision' && to === 'output');
+  const allowed = (from === 'input' && (to === 'fixed_roi' || to === 'detection_crop' || to === 'inspection')) ||
+    (from === 'fixed_roi' && modelTypes.includes(to)) ||
+    (modelTypes.includes(from) && (modelTypes.includes(to) || to === 'decision')) ||
+    (from === 'decision' && to === 'output');
   if (!allowed) throw new Error('이 노드 사이의 연결은 지원하지 않습니다.');
   if (to !== 'decision' && (incoming.get(targetId)?.length || 0) > 0) throw new Error('대상 노드에는 이미 입력 연결이 있습니다.');
-  if (from === 'inspection' && (outgoing.get(sourceId)?.length || 0) > 0) throw new Error('검사 노드는 판정 연결을 하나만 가질 수 있습니다.');
-  if (from === 'detection_crop' && (outgoing.get(sourceId) || []).some((edge) => nodes.get(edge.target)?.data.node_type !== to)) {
-    throw new Error('검출 노드는 검사 또는 판정 중 한 종류로만 연결할 수 있습니다.');
-  }
   if (from === 'decision' && (outgoing.get(sourceId)?.length || 0) >= 3) throw new Error('판정 출력은 최대 세 개입니다.');
 
   const edgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -162,7 +182,9 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
     isBranch = (['pass', 'fail', 'review'] as Branch[]).find((branch) => !assigned.has(branch));
     if (existing.length === 0) isBranch = undefined;
   }
-  return { ...pipeline, edges: [...edges, { id: edgeId, source: sourceId, target: targetId, isBranch }] };
+  const payload_type: FlowEdge['payload_type'] = from === 'input' ? 'image'
+    : to === 'decision' || to === 'output' ? 'result' : 'roi';
+  return { ...pipeline, edges: [...edges, { id: edgeId, source: sourceId, target: targetId, isBranch, payload_type }] };
 }
 
 export function removeFlowNode(pipeline: FlowchartPipeline, nodeId: string): FlowchartPipeline {
@@ -181,9 +203,11 @@ export function removeFlowNode(pipeline: FlowchartPipeline, nodeId: string): Flo
 
 export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, edgeId: string, branch: Branch): FlowchartPipeline {
   const edge = pipeline.edges.find((item) => item.id === edgeId);
-  if (!edge || pipeline.nodes.find((node) => node.id === edge.source)?.data.node_type !== 'decision') {
-    throw new Error('판정 출력 연결선만 분기를 바꿀 수 있습니다.');
-  }
+  const sourceType = pipeline.nodes.find((node) => node.id === edge?.source)?.data.node_type;
+  if (!edge || (!modelTypes.includes(sourceType as FlowNodeType) && sourceType !== 'decision')) throw new Error('모델 또는 판정 연결선만 분기를 바꿀 수 있습니다.');
+  if (sourceType !== 'decision') return {
+    ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, isBranch: branch } : item),
+  };
   const previous = edge.isBranch;
   return {
     ...pipeline,
@@ -193,4 +217,17 @@ export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, edgeId: string
       return item;
     }),
   };
+}
+
+export function updateFlowEdgePayload(pipeline: FlowchartPipeline, edgeId: string, payload: NonNullable<FlowEdge['payload_type']>): FlowchartPipeline {
+  const edge = pipeline.edges.find((item) => item.id === edgeId);
+  if (!edge) throw new Error('연결선을 찾을 수 없습니다.');
+  const sourceType = pipeline.nodes.find((node) => node.id === edge.source)?.data.node_type;
+  const targetType = pipeline.nodes.find((node) => node.id === edge.target)?.data.node_type;
+  const allowed = sourceType === 'input' ? payload === 'image'
+    : sourceType === 'fixed_roi' ? payload === 'roi'
+    : targetType === 'decision' || targetType === 'output' ? payload === 'result'
+    : payload === 'image' || payload === 'roi';
+  if (!allowed) throw new Error('이 노드 연결에서 지원하지 않는 데이터 형식입니다.');
+  return { ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, payload_type: payload } : item) };
 }

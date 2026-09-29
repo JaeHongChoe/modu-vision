@@ -17,6 +17,7 @@ interface DatasetState {
   lastImportedKey: string | null;
   staleDatasetKeys: string[];
   importError: string | null;
+  sourceSaveError: string | null;
   splitError: string | null;
   splitSupported: boolean | null;
   splitUnavailableReason: string | null;
@@ -31,6 +32,7 @@ interface DatasetState {
   pageSize: number;
   activeSplitFilter: 'all' | 'train' | 'val' | 'test';
   activeClassFilter: string | null;
+  activeLabelFilter: 'all' | 'labeled' | 'unlabeled';
   trainRatio: number;
   isLoading: boolean;
   isGenerating: boolean;
@@ -42,6 +44,7 @@ interface DatasetState {
   setShowGeneratorModal: (show: boolean) => void;
   setSplitFilter: (split: 'all' | 'train' | 'val' | 'test') => void;
   setClassFilter: (className: string | null) => void;
+  setLabelFilter: (status: 'all' | 'labeled' | 'unlabeled') => void;
   setTrainRatio: (ratio: number) => void;
   importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean) => Promise<void>;
   ensureImported: (task: VisionTask) => Promise<void>;
@@ -90,6 +93,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   lastImportedKey: null,
   staleDatasetKeys: [],
   importError: null,
+  sourceSaveError: null,
   splitError: null,
   splitSupported: null,
   splitUnavailableReason: null,
@@ -104,6 +108,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   pageSize: 48,
   activeSplitFilter: 'all',
   activeClassFilter: null,
+  activeLabelFilter: 'all',
   trainRatio: 0.8,
   isLoading: false,
   isGenerating: false,
@@ -118,12 +123,12 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     latestImageRequest += 1;
     latestSplitRequest += 1;
     set({
-      folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null, splitError: null,
+      folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, split: { train: 0, val: 0, test: 0 },
       images: [], totalImagesCount: 0, corruptedImages: [],
-      activeSplitFilter: 'all', activeClassFilter: null, page: 1, isLoading: false, isSplitting: false,
+      activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
     });
   },
   setShowGeneratorModal: (showGeneratorModal) => set({ showGeneratorModal }),
@@ -133,6 +138,10 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
   setClassFilter: (activeClassFilter) => {
     set({ activeClassFilter, page: 1 });
+    get().loadImages(1);
+  },
+  setLabelFilter: (activeLabelFilter) => {
+    set({ activeLabelFilter, page: 1 });
     get().loadImages(1);
   },
   setTrainRatio: (trainRatio) => set({ trainRatio }),
@@ -155,12 +164,12 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     latestImageRequest += 1;
     latestSplitRequest += 1;
     set({
-      folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, splitError: null,
+      folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
       sourceImages: 0, unlabeledImages: 0, classes: {}, corruptedImages: [],
       split: { train: 0, val: 0, test: 0 },
-      activeSplitFilter: 'all', activeClassFilter: null, page: 1, isLoading: true, isSplitting: false,
+      activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
     try {
       const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
@@ -179,9 +188,25 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         },
         corruptedImages: res.corrupted_images || [],
         lastImportedKey: key,
-        isLoading: false,
         page: 1,
       });
+      try {
+        const project = await api.project.update({ source_dataset_dir: folder });
+        if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+        // The project API is the authority for the canonical source path. Keep
+        // the renderer's project state aligned before allowing a switch.
+        const { useProjectStore } = await import('./useProjectStore');
+        useProjectStore.setState((state) => state.project?.id === project.id
+          ? { project, projectName: project.name, projectDir: project.project_dir }
+          : {});
+      } catch (error) {
+        // The in-memory dataset remains usable, but a restart cannot restore its source.
+        if (requestId === latestImportRequest && get().datasetKey === key) {
+          set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
+        }
+      }
+      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+      set({ isLoading: false });
       await get().loadImages(1);
     } catch (err) {
       if (requestId === latestImportRequest && get().datasetKey === key) {
@@ -277,7 +302,9 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         classes: res.classes || {},
         split: { train: res.split.train, val: res.split.val, test: res.split.test || 0 },
         importError: null,
+        page: 1,
       });
+      await get().loadImages(1);
     } catch (error) {
       if (requestId === latestImportRequest && get().datasetKey === datasetKey) {
         set({ importError: importErrorMessage(error) });
@@ -288,7 +315,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   loadImages: async (pageArg) => {
     if (get().isLoading || get().importError) return;
     const requestId = ++latestImageRequest;
-    const { folderPath, datasetKey, pageSize, activeSplitFilter, activeClassFilter } = get();
+    const { folderPath, datasetKey, pageSize, activeSplitFilter, activeClassFilter, activeLabelFilter } = get();
     const task = datasetKey?.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask | undefined;
     const p = pageArg || get().page;
     const offset = (p - 1) * pageSize;
@@ -300,6 +327,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         offset,
         split: activeSplitFilter === 'all' ? undefined : activeSplitFilter,
         class_name: activeClassFilter || undefined,
+        label_status: activeLabelFilter === 'all' ? undefined : activeLabelFilter,
       });
       if (requestId !== latestImageRequest || get().folderPath !== folderPath || get().datasetKey !== datasetKey) return;
       set({

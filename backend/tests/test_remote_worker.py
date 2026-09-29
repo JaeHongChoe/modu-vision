@@ -510,6 +510,79 @@ def test_flowchart_runs_actual_cpu_segmentation_checkpoint_on_selected_image(tmp
     assert (op_run / "outputs" / "preview.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
+@pytest.mark.parametrize("conditioned", [False, True])
+def test_remote_worker_runs_two_verified_models_in_sequential_graph(tmp_path, conditioned):
+    train_run, op_run, spec, _ = _infer_spec(tmp_path)
+    model = build_segmentation_model(num_classes=2, preset="fast", pretrained=False)
+    checkpoint = train_run / "outputs" / "best_model.pt"
+    torch.save({
+        "model_state_dict": model.state_dict(), "task": "segmentation",
+        "classes": ["background", "defect"], "preset": "fast", "image_size": [64, 64],
+    }, checkpoint)
+    metadata = train_run / "outputs" / "model_meta.json"
+    metadata.write_text(json.dumps({
+        "task": "segmentation", "classes": ["background", "defect"],
+        "preset": "fast", "image_size": [64, 64],
+    }), encoding="utf-8")
+    first_manifest = json.loads((train_run / "artifacts.json").read_text())
+    for row in first_manifest["artifacts"]:
+        path = train_run / row["path"]
+        row["size"] = path.stat().st_size
+        row["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (train_run / "artifacts.json").write_text(json.dumps(first_manifest))
+
+    second_id = "job_seg_second"
+    second_run = train_run.parent / second_id
+    shutil.copytree(train_run, second_run)
+    second_status = json.loads((second_run / "status.json").read_text())
+    second_status["job_id"] = second_id
+    (second_run / "status.json").write_text(json.dumps(second_status))
+    second_manifest = json.loads((second_run / "artifacts.json").read_text())
+    second_manifest["job_id"] = second_id
+    (second_run / "artifacts.json").write_text(json.dumps(second_manifest))
+
+    pipeline = get_single_segmentation_flowchart(job_id="job_eval_123")
+    second_node = pipeline.nodes[1].model_copy(deep=True)
+    second_node.id = "inspect_second"
+    second_node.data.label = "Second segmentation"
+    second_node.data.model_job_id = second_id
+    pipeline.nodes.insert(2, second_node)
+    pipeline.edges[1].source = second_node.id
+    pipeline.edges.insert(1, pipeline.edges[1].model_copy(update={
+        "id": "first-to-second", "source": "node_inspect", "target": second_node.id,
+        "payload_type": "roi",
+    }))
+    if conditioned:
+        pipeline.nodes[1].data.params["min_defect_area_px"] = 0
+        pipeline.edges[1].isBranch = "fail"
+    request = json.loads(spec.read_text())
+    request.update({
+        "operation": "flowchart_run", "pipeline": pipeline.model_dump(),
+        "models": [
+            {"job_id": job_id, "task": "segmentation",
+             "input_manifest_sha256": request["input_manifest_sha256"]}
+            for job_id in ("job_eval_123", second_id)
+        ],
+    })
+    spec.write_text(json.dumps(request), encoding="utf-8")
+
+    result = run_flowchart(spec)
+
+    assert result["status"] == "completed", result.get("error")
+    payload = json.loads((op_run / "outputs" / "flowchart_result.json").read_text())
+    assert payload["model_job_ids"] == ["job_eval_123", second_id]
+    assert [step["node_id"] for step in payload["execution_steps"]] == [
+        "node_input", "node_inspect", "inspect_second", "node_decision", "node_output",
+    ]
+    assert payload["execution_steps"][2]["input_count"] == 1
+    if conditioned:
+        assert payload["execution_steps"][1]["branch_verdict"] == "NG"
+        assert payload["execution_steps"][1]["selected_edge_ids"] == ["first-to-second"]
+    assert payload["roi_count"] == 1
+    assert payload["crops"][0]["crop_thumbnail"].startswith("outputs/crops/")
+    assert (op_run / "artifacts.json").is_file()
+
+
 def _benchmark_spec(tmp_path, *, real_checkpoint=False):
     train_run, op_run, spec = _evaluation_run(tmp_path, real_checkpoint=real_checkpoint)
     request = json.loads(spec.read_text())

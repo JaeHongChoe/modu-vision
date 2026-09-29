@@ -21,13 +21,13 @@ from backend.remote.ssh_transport import SSHTransferCancelled, SSHTransport
 
 def profile_data(**overrides):
     data = {
-        "id": "server-42",
-        "name": "Server 42",
+        "id": "server-example",
+        "name": "Example GPU",
         "ssh_target": "operator@gpu.example.test",
         "ssh_port": 22,
-        "remote_root": "/data/home/kai/modu-vision",
+        "remote_root": "/srv/example/vision",
         "runtime_kind": "python",
-        "runtime_value": "/data/home/kai/venvs/modu/bin/python",
+        "runtime_value": "/opt/example-venv/bin/python",
         "gpu_selector": None,
     }
     data.update(overrides)
@@ -59,7 +59,7 @@ def test_profile_store_persists_selection_and_clears_deleted_selection(tmp_path)
     "override",
     [
         {"ssh_target": "-oProxyCommand=bad"},
-        {"ssh_target": "kai@host; touch /tmp/owned"},
+        {"ssh_target": "user@host; touch /tmp/owned"},
         {"ssh_port": 0},
         {"remote_root": "relative/root"},
         {"remote_root": "/data/../tmp"},
@@ -90,7 +90,7 @@ def test_api_crud_selection_and_desktop_auth(monkeypatch, tmp_path):
     created = client.post("/api/compute/profiles", json={k: v for k, v in profile_data().items() if k != "id"}, headers=headers)
     assert created.status_code == 201
     profile = created.json()["profile"]
-    assert profile["name"] == "Server 42"
+    assert profile["name"] == "Example GPU"
     assert profile["id"]
     assert client.get("/api/compute/profiles", headers=headers).json() == {"profiles": [profile]}
 
@@ -386,7 +386,7 @@ def test_launch_and_cancel_confine_run_id_and_use_quoted_commands(monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     profile = ComputeProfile(**profile_data())
     transport = SSHTransport()
-    assert transport.launch(profile, ["/data/home/kai/modu-vision/runs/run-1/worker.py", "train"], "run-1") == "12345"
+    assert transport.launch(profile, ["/srv/example/vision/runs/run-1/worker.py", "train"], "run-1") == "12345"
     transport.touch_cancel(profile, "run-1")
     launch_command = next(command[-1] for command in calls if "nohup" in command[-1])
     assert "nohup" in launch_command
@@ -454,8 +454,8 @@ def test_docker_is_running_distinguishes_job_exit_from_disconnect(monkeypatch, r
 @pytest.mark.parametrize(
     ("returncode", "stdout", "stderr", "expected"),
     [
-        (0, "S python -m backend.remote.worker train --spec /data/home/kai/modu-vision/runs/job-1/spec.json\n", "", True),
-        (0, "Z python -m backend.remote.worker train --spec /data/home/kai/modu-vision/runs/job-1/spec.json\n", "", False),
+        (0, "S python -m backend.remote.worker train --spec /srv/example/vision/runs/job-1/spec.json\n", "", True),
+        (0, "Z python -m backend.remote.worker train --spec /srv/example/vision/runs/job-1/spec.json\n", "", False),
         (1, "", "", False),
         (0, "S unrelated-process\n", "", False),
         (255, "", "ssh: disconnected", None),

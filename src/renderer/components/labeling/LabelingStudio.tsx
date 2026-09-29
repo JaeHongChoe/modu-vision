@@ -19,6 +19,7 @@ import { LabelingCanvas } from './LabelingCanvas';
 import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
+import { ModelAssistPanel } from './ModelAssistPanel';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -67,6 +68,7 @@ export const LabelingStudio: React.FC = () => {
 
       {/* Class Tag Bar */}
       <CategorySelector />
+      <ModelAssistPanel />
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
       <div className="flex-1 flex overflow-hidden relative">

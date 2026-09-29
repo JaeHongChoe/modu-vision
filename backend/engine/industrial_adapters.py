@@ -2,8 +2,8 @@
 backend/engine/industrial_adapters.py
 
 Production-Grade Industrial Dataset Ingestion Adapters & Preprocessing Safeguards.
-Designed specifically for real semiconductor manufacturing inspection datasets
-(such as /Users/kai/Downloads/운영서버, MicoCeramics QC, and TaMiCo production archives).
+Designed for real semiconductor manufacturing inspection datasets with
+hierarchical classes, LabelMe annotations, and high-resolution source images.
 
 Features:
   1. Standardized defect taxonomy mapping (Korean/English manufacturing categories).
@@ -344,7 +344,7 @@ class HierarchicalClassificationAdapter:
                     if not extracted and p.name in fail_records_map:
                         extracted = fail_records_map[p.name]
 
-                    # Filename fallback: e.g. ng_0011__AI Mount Scratch___B_Photo...
+                    # Filename fallback for imported images with an NG-prefixed label.
                     if not extracted:
                         fn_match = re.search(r"ng_\d+__([^_]+)___", p.name)
                         if fn_match:

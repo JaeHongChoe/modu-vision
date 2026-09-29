@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import type { FlowEdge, FlowNode } from '../../types';
+import type { FlowEdge, FlowNode, FlowchartExecutionStep } from '../../types';
 import { FLOW_NODE_WIDTH } from './flowchartViewport';
 
 interface DAGCircuitOverlayProps {
@@ -20,6 +20,7 @@ interface DAGCircuitOverlayProps {
   finalVerdict?: 'OK' | 'NG' | 'REVIEW';
   routedOutputNodeId?: string;
   selectedEdgeId?: string | null;
+  executionSteps?: FlowchartExecutionStep[];
   onSelectEdge?: (edgeId: string) => void;
 }
 
@@ -30,11 +31,14 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   finalVerdict,
   routedOutputNodeId,
   selectedEdgeId,
+  executionSteps,
   onSelectEdge,
 }) => {
   // Map nodes by ID for O(1) coordinate lookup
   const nodeMap = new Map<string, FlowNode>();
   nodes.forEach((n) => nodeMap.set(n.id, n));
+  const selectedByRun = new Set(executionSteps?.flatMap((step) => step.selected_edge_ids || []) || []);
+  const hasExecutionTrace = Boolean(executionSteps?.some((step) => step.selected_edge_ids && step.selected_edge_ids.length > 0));
 
   // Calculates exact terminal pin coordinates
   const getPortCoord = (nodeId: string, direction: 'out' | 'in', portIndex = 0, totalPorts = 1) => {
@@ -112,10 +116,16 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const wasRouted = isVerdictBranch && routedOutputNodeId === edge.target;
 
         // Trace Color Determination
-        let traceColor = '#334155'; // Standby Dark Steel Copper
+        let traceColor = edge.isBranch === 'pass' ? '#16A34A' : edge.isBranch === 'fail' ? '#DC2626'
+          : edge.isBranch === 'review' ? '#D97706' : '#475569';
         if (isActive) {
           traceColor = '#06B6D4'; // Electric Cyan Active
+        } else if (hasExecutionTrace) {
+          traceColor = selectedByRun.has(edge.id) ? '#38BDF8' : '#334155';
         } else if (finalVerdict && (!isVerdictBranch || wasRouted)) {
+          traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
+        }
+        if (isVerdictBranch && wasRouted && finalVerdict) {
           traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
         }
 
@@ -146,6 +156,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               fill="none"
               stroke={traceColor}
               strokeWidth={selectedEdgeId === edge.id ? 3 : 2}
+              strokeDasharray={edge.isBranch && !isVerdictBranch ? '6 3' : undefined}
               strokeLinecap="round"
             />
 
@@ -157,7 +168,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
               role="button"
               tabIndex={0}
-              aria-label={`Select connection ${edge.source} to ${edge.target}`}
+              aria-label={`Select connection ${edge.source} to ${edge.target}${edge.isBranch ? ` when ${edge.isBranch}` : ''}`}
               onClick={() => onSelectEdge?.(edge.id)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {

@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -27,6 +28,7 @@ from backend.engine.dataset_loaders import (
     DatasetSummary,
     SUPPORTED_IMAGE_EXTENSIONS,
     inspect_dataset,
+    scoped_split_root,
     split_dataset,
     validate_image_file,
 )
@@ -104,7 +106,52 @@ class ImageMeta(BaseModel):
 
 def _split_manifest_file(folder: Path) -> Path:
     key = hashlib.sha256(str(folder.resolve()).encode("utf-8")).hexdigest()
-    return SPLIT_MANIFEST_DIR / f"{key}.json"
+    return scoped_split_root(SPLIT_MANIFEST_DIR) / f"{key}.json"
+
+
+def migrate_legacy_split_manifest(project: Dict[str, Any]) -> Optional[Path]:
+    """Copy a global split once; later absence in the project is intentional."""
+    source = project.get("source_dataset_dir")
+    if not source:
+        return None
+    source_path = Path(source).expanduser().resolve()
+    key = hashlib.sha256(str(source_path).encode("utf-8")).hexdigest()
+    legacy = SPLIT_MANIFEST_DIR / f"{key}.json"
+    target = Path(project["dataset_dir"]) / "splits" / f"{key}.json"
+    marker = target.parent / f".legacy-split-migration-{key}.json"
+    if marker.exists():
+        return None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    copied = False
+    if not target.exists() and legacy.is_file() and not legacy.is_symlink():
+        try:
+            payload = json.loads(legacy.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            payload = None
+        if isinstance(payload, dict) and payload.get("folder_path") == str(source_path):
+            with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".legacy-split-", delete=False) as handle:
+                temporary = Path(handle.name)
+                with legacy.open("rb") as reader:
+                    shutil.copyfileobj(reader, handle)
+                handle.flush()
+                os.fsync(handle.fileno())
+            try:
+                if not target.exists():
+                    os.replace(temporary, target)
+                    copied = True
+            finally:
+                temporary.unlink(missing_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent,
+                                     prefix=".legacy-split-marker-", delete=False) as handle:
+        json.dump({"source_dataset_dir": str(source_path), "copied": copied}, handle)
+        temporary_marker = Path(handle.name)
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        os.replace(temporary_marker, marker)
+    finally:
+        temporary_marker.unlink(missing_ok=True)
+    return target if copied else None
 
 
 def _read_split_manifest(folder: Path) -> Dict[str, str]:
@@ -164,6 +211,8 @@ def _paired_labelme_images(folder: Path) -> set[Path]:
                 len(item.get("polygon") or item.get("points") or []) >= 3
                 or len(item.get("bbox") or []) == 4
                 or item.get("is_normal") or item.get("label") == "OK"
+                or (item.get("type") == "tag" and isinstance(item.get("label"), str)
+                    and bool(item["label"].strip()))
             )
             for item in annotations
         )
@@ -642,6 +691,7 @@ def list_dataset_images(
     offset: int = Query(0, ge=0),
     split: Optional[str] = Query(None, description="Filter by train, val, or test"),
     class_name: Optional[str] = Query(None, description="Filter by category"),
+    label_status: Optional[Literal["labeled", "unlabeled"]] = Query(None, description="Filter by active project annotation status"),
 ):
     """Returns paginated image metadata with thumbnail URLs."""
     target_dir = Path(folder_path).resolve() if folder_path else Path("./datasets/synthetic").resolve()
@@ -669,6 +719,8 @@ def list_dataset_images(
     anomaly_mode = requested_task == "anomaly"
 
     all_images: List[ImageMeta] = []
+    paired_images: set[Path] = set()
+    has_labelme = False
     assignments = _read_split_manifest(target_dir)
     # Search structured splits
     split_names = ["train", "val", "test"] if not split else [split]
@@ -737,26 +789,31 @@ def list_dataset_images(
     if not anomaly_mode and not task_image_mode and not all_images and (assignments or not any((effective_dir / name).is_dir() for name in ("train", "val", "test"))):
         paired_images = _paired_labelme_images(target_dir)
         has_labelme = _has_flat_labelme_annotations(target_dir)
+        studio_dir = dataset_annotation_dir(target_dir, STUDIO_ANNOTATIONS_DIR)
         for f in sorted(effective_dir.rglob("*")):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 assigned_split = assignments.get(str(f))
-                if split and assigned_split != split:
+                if split and (assigned_split != split or (has_labelme and f.resolve() not in paired_images)):
                     continue
                 c_label = None if has_labelme else f.parent.name
                 img_w = None
                 img_h = None
-                json_candidate = f.with_suffix(".json")
+                studio_json = studio_dir / f"{f.stem}.json"
+                json_candidate = studio_json if studio_json.is_file() else f.with_suffix(".json")
                 if json_candidate.exists():
                     try:
                         with open(json_candidate, "r", encoding="utf-8") as jf:
                             jd = json.load(jf)
-                            img_w = jd.get("imageWidth")
-                            img_h = jd.get("imageHeight")
-                            shapes = jd.get("shapes", [])
-                            if shapes and "label" in shapes[0]:
+                            img_w = jd.get("image_width", jd.get("imageWidth"))
+                            img_h = jd.get("image_height", jd.get("imageHeight"))
+                            shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
+                            if shapes and isinstance(shapes[0], dict) and "label" in shapes[0]:
                                 c_label = shapes[0]["label"]
                     except Exception:
                         pass
+                if has_labelme and f.resolve() not in paired_images:
+                    # A project edit can intentionally clear source LabelMe.
+                    c_label = None
                 if class_name and c_label != class_name:
                     continue
                 all_images.append(
@@ -766,7 +823,7 @@ def list_dataset_images(
                         file_path=str(f),
                         width=img_w,
                         height=img_h,
-                        split=assigned_split or ("unlabeled" if has_labelme and f.resolve() not in paired_images else "all"),
+                        split=("unlabeled" if has_labelme and f.resolve() not in paired_images else assigned_split or "all"),
                         label=c_label,
                         thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                     )
@@ -785,6 +842,15 @@ def list_dataset_images(
                     label=None,
                     thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                 ))
+
+    if label_status in ("labeled", "unlabeled"):
+        all_images = [
+            item for item in all_images
+            if (
+                Path(item.file_path).resolve() in paired_images if has_labelme
+                else item.label is not None
+            ) == (label_status == "labeled")
+        ]
 
     total = len(all_images)
     paged = all_images[offset : offset + limit]

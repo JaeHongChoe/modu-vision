@@ -2,13 +2,13 @@
 backend/tests/test_m12_e2e_integration.py
 
 Milestone M12 End-to-End Real Manufacturing Pipeline Integration Test Suite.
-Authentically validates all 6 major industrial workflow stages using real
-semiconductor manufacturing defect inspection data from /Users/kai/Downloads/운영서버:
+Optional real-data checks run only when their environment variables point to
+local inspection data; synthetic checks run on every host:
 
 Stage 1: Industrial Data Ingestion & Adapters
-  - Ingests /Users/kai/Downloads/운영서버 via HierarchicalClassificationAdapter (77 OK, 5 NG).
+  - Ingests a configured dataset via HierarchicalClassificationAdapter.
   - Ingests LabelMe JSONs via LabelMeParser and LabelMeDetectionDataset with 1px micro-flaw preservation and boundary clamping.
-  - Verifies memory safety of read_image_safely_rgb on 44.8MP image (mask_top_view_m1c.png, 8192x5464) with dynamic downscaling.
+  - Verifies memory safety of read_image_safely_rgb on an optional 44.8MP image with dynamic downscaling.
 
 Stage 2: AI Auto-Labeler & Precision Canvas
   - Validates auto_select_contour floodfill + Otsu contour extraction on real defect image.
@@ -30,7 +30,7 @@ Stage 5: Multi-Model Flowchart Chaining
   - Validates safe_crop_roi invariants: boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 bicubic resizing.
 
 Stage 6: Standalone Runtime Exporter
-  - Subprocess execution of exported infer.py on real defect image (fail/inspect_AM02-4_G107_Top_View_M1-c__038.jpg).
+  - Subprocess execution of an optional exported infer.py on a configured defect image.
   - Validates --threshold-override flag altering verdict from NG to OK.
 """
 
@@ -95,8 +95,15 @@ from backend.engine.flowchart_engine import (
 )
 
 
-REAL_SERVER_DIR = Path("/Users/kai/Downloads/운영서버")
-BACKUP_QC_DIR = Path("/Volumes/backup/MicoCeramics_QC_데이터")
+def configured_real_path(variable: str, *, directory: bool = False) -> Path:
+    """Keep customer data opt-in and out of test source and CI defaults."""
+    configured = os.environ.get(variable)
+    if not configured:
+        pytest.skip(f"Set {variable} to opt in to this real-data check")
+    path = Path(configured).expanduser()
+    if not (path.is_dir() if directory else path.is_file()):
+        pytest.skip(f"Configured {variable} path is unavailable")
+    return path
 
 
 def convert_shape(
@@ -179,23 +186,21 @@ def convert_shape(
 # ==============================================================================
 
 class TestM12Stage1DataIngestion:
-    """Verifies ingestion adapters on real manufacturing data from /Users/kai/Downloads/운영서버."""
+    """Verifies ingestion adapters on opt-in real manufacturing data."""
 
     def test_stage1_hierarchical_classification_ingestion(self):
         """Ingests operational images and keeps NG-prefixed files as defects."""
-        if not REAL_SERVER_DIR.exists():
-            pytest.skip(f"Operational directory {REAL_SERVER_DIR} not found on this machine")
-
-        res = HierarchicalClassificationAdapter.parse_directory(REAL_SERVER_DIR, mode="binary")
-        assert res["total_images"] == 82
+        dataset_dir = configured_real_path("VISION_AI_STUDIO_REAL_DATASET_DIR", directory=True)
+        res = HierarchicalClassificationAdapter.parse_directory(dataset_dir, mode="binary")
+        assert res["total_images"] > 0
         assert "OK" in res["classes"]
         assert "NG" in res["classes"]
-        assert res["classes"]["OK"] + res["classes"]["NG"] == 82
-        assert res["classes"]["NG"] >= 5
+        assert res["classes"]["OK"] + res["classes"]["NG"] == res["total_images"]
+        assert res["classes"]["NG"] > 0
 
         # Verify dataset loader instantiation and tensor extraction with adaptive cap
-        ds = HierarchicalClassificationDataset(root_dir=REAL_SERVER_DIR, mode="binary", max_dim=800)
-        assert len(ds) == 82
+        ds = HierarchicalClassificationDataset(root_dir=dataset_dir, mode="binary", max_dim=800)
+        assert len(ds) == res["total_images"]
         tensor, label_idx = ds[0]
         assert tensor.ndim == 3
         assert tensor.shape[0] == 3
@@ -205,11 +210,12 @@ class TestM12Stage1DataIngestion:
     def test_stage1_labelme_parser_microscopic_flaw_preservation(self, tmp_path: Path):
         """Tests LabelMeParser and LabelMeDetectionDataset, enforcing >= 1px micro-flaws with boundary clamping."""
         labelme_dir = None
-        if BACKUP_QC_DIR.exists():
-            labelme_dir = find_labelme_folder(BACKUP_QC_DIR)
+        real_qc_root = os.environ.get("VISION_AI_STUDIO_REAL_QC_DIR")
+        if real_qc_root and Path(real_qc_root).expanduser().is_dir():
+            labelme_dir = find_labelme_folder(Path(real_qc_root).expanduser())
 
         if not labelme_dir or not labelme_dir.exists():
-            # Build synthetic micro-flaw LabelMe directory if backup drive unmounted
+            # Build synthetic micro-flaw LabelMe data when no real folder is configured.
             labelme_dir = tmp_path / "labelme_data"
             labelme_dir.mkdir()
             img_p = labelme_dir / "wafer_sample.jpg"
@@ -254,9 +260,7 @@ class TestM12Stage1DataIngestion:
 
     def test_stage1_memory_safe_image_reading_45mp(self):
         """Tests memory safety of read_image_safely_rgb on 44.8MP image with dynamic downscaling."""
-        mask_path = REAL_SERVER_DIR / "test_crop_output" / "mask_top_view_m1c.png"
-        if not mask_path.exists():
-            pytest.skip(f"44.8MP image {mask_path} not found")
+        mask_path = configured_real_path("VISION_AI_STUDIO_REAL_LARGE_IMAGE")
 
         # Original resolution: 8192 x 5464 = 44,761,088 pixels (44.8 MP)
         # Dynamic downscaling must cap max_dim to 1600 without OOM
@@ -280,9 +284,7 @@ class TestM12Stage2AutoLabeler:
 
     def test_stage2_auto_select_contour_floodfill_otsu(self):
         """Tests auto_select_contour floodfill + Otsu contour extraction on real defect image."""
-        real_defect_img = REAL_SERVER_DIR / "fail" / "inspect_AM02-4_G107_Top_View_M1-c__038.jpg"
-        if not real_defect_img.exists():
-            pytest.skip(f"Real defect image {real_defect_img} not found")
+        real_defect_img = configured_real_path("VISION_AI_STUDIO_REAL_DEFECT_IMAGE")
 
         raw_bgr = cv2.imread(str(real_defect_img))
         assert raw_bgr is not None
@@ -401,11 +403,8 @@ class TestM12Stage3MultiTaskModels:
 
     def test_stage3_anomaly_padim_real_normals_and_defect_scoring(self):
         """Fits PaDiM on real normal images and scores normal vs defect image."""
-        crop_dir = REAL_SERVER_DIR / "test_crop_output"
-        defect_img_path = REAL_SERVER_DIR / "fail" / "inspect_AM02-4_G107_Top_View_M1-c__038.jpg"
-
-        if not crop_dir.exists() or not defect_img_path.exists():
-            pytest.skip("Operational crop output or defect image not available")
+        crop_dir = configured_real_path("VISION_AI_STUDIO_REAL_CROP_DIR", directory=True)
+        defect_img_path = configured_real_path("VISION_AI_STUDIO_REAL_DEFECT_IMAGE")
 
         # Load 6 real normal images from test_crop_output
         normal_files = sorted([p for p in crop_dir.glob("*.png") if "mask" not in p.name])[:6]
@@ -566,28 +565,24 @@ class TestM12Stage5FlowchartChaining:
 
     def test_stage5_multi_model_pipeline_real_manufacturing_images(self):
         """Executes Stage 1 Detection -> Safe ROI Crop -> Stage 2 Anomaly -> Stage 3 Decision on real images."""
-        if not REAL_SERVER_DIR.exists():
-            pytest.skip("Operational directory not found")
+        image_paths = [
+            Path(value).expanduser() for variable in (
+                "VISION_AI_STUDIO_REAL_DIAGNOSTIC_IMAGE",
+                "VISION_AI_STUDIO_REAL_DEFECT_IMAGE",
+            ) if (value := os.environ.get(variable)) and Path(value).expanduser().is_file()
+        ]
+        if not image_paths:
+            pytest.skip("Set a real diagnostic or defect image path to opt in")
 
         engine = FlowchartEngine(device="cpu")
         pipe = get_default_flowchart()
 
-        # Image 1: Double extension sanitation image
-        img_path1 = REAL_SERVER_DIR / "detailed_diagnosis" / "diag_00_G107_M1-c_Photo-L1-11.jpg.jpg"
-        if img_path1.exists():
-            res1 = engine.execute(pipeline=pipe, image_path=str(img_path1))
-            assert res1["status"] == "success"
-            assert res1["final_verdict"] in ("OK", "NG")
-            assert res1["total_latency_ms"] > 0
-            assert len(res1["execution_steps"]) >= 4
-
-        # Image 2: Real failure image
-        img_path2 = REAL_SERVER_DIR / "fail" / "inspect_AM02-4_G107_Top_View_M1-c__038.jpg"
-        if img_path2.exists():
-            res2 = engine.execute(pipeline=pipe, image_path=str(img_path2))
-            assert res2["status"] == "success"
-            assert res2["final_verdict"] in ("OK", "NG")
-            assert res2["total_latency_ms"] > 0
+        for image_path in image_paths:
+            result = engine.execute(pipeline=pipe, image_path=str(image_path))
+            assert result["status"] == "success"
+            assert result["final_verdict"] in ("OK", "NG")
+            assert result["total_latency_ms"] > 0
+            assert len(result["execution_steps"]) >= 4
 
     def test_stage5_safe_roi_cropping_invariants(self):
         """Verifies boundary clamping, context padding, >= 16px dimension guarantee, and 224x224 bicubic resizing."""
@@ -633,14 +628,12 @@ class TestM12Stage6RuntimeExporter:
 
     def test_stage6_standalone_infer_real_defect_execution(self):
         """Verifies exported infer.py execution via subprocess on real defect image."""
-        pkg_dir = Path("release/runtime_packages/neuro_r_production_package").resolve()
+        pkg_dir = configured_real_path("VISION_AI_STUDIO_REAL_RUNTIME_PACKAGE_DIR", directory=True)
         infer_script = pkg_dir / "infer.py"
-        real_defect_img = REAL_SERVER_DIR / "fail" / "inspect_AM02-4_G107_Top_View_M1-c__038.jpg"
+        real_defect_img = configured_real_path("VISION_AI_STUDIO_REAL_DEFECT_IMAGE")
 
         if not infer_script.exists():
-            pytest.skip(f"Runtime package script {infer_script} not found")
-        if not real_defect_img.exists():
-            pytest.skip(f"Real defect image {real_defect_img} not found")
+            pytest.skip("Configured runtime package has no infer.py")
 
         # Execute standalone CLI
         cmd = [
@@ -662,12 +655,12 @@ class TestM12Stage6RuntimeExporter:
 
     def test_stage6_threshold_override_flag_alters_verdict(self):
         """Verifies --threshold-override flag correctly alters verdict from NG to OK."""
-        pkg_dir = Path("release/runtime_packages/neuro_r_production_package").resolve()
+        pkg_dir = configured_real_path("VISION_AI_STUDIO_REAL_RUNTIME_PACKAGE_DIR", directory=True)
         infer_script = pkg_dir / "infer.py"
-        real_defect_img = REAL_SERVER_DIR / "fail" / "inspect_AM02-4_G107_Top_View_M1-c__038.jpg"
+        real_defect_img = configured_real_path("VISION_AI_STUDIO_REAL_DEFECT_IMAGE")
 
-        if not infer_script.exists() or not real_defect_img.exists():
-            pytest.skip("infer.py or real defect image not found")
+        if not infer_script.exists():
+            pytest.skip("Configured runtime package has no infer.py")
 
         # Normal run produces NG (defect_score ~0.8086 > 0.5)
         # Override threshold to 0.95 -> must alter verdict to OK

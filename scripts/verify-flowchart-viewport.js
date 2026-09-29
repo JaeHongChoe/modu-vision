@@ -36,15 +36,24 @@ test('single segmentation graph fits beside inspector without horizontal scroll'
   assert.equal(layout.contentHeight, 540);
   assert.ok(visible.left >= 32 && visible.right <= 918, JSON.stringify(visible));
   assert.ok(visible.top >= 32 && visible.bottom <= 508, JSON.stringify(visible));
-  assert.ok(visible.top <= 120, `graph starts too low: ${visible.top}`);
+  assert.ok(Math.abs(visible.top - (540 - visible.bottom)) <= 1, `graph is not vertically centered: ${JSON.stringify(visible)}`);
 });
 
-test('five node detector flow also starts inside the canvas and fits by default', () => {
+test('five node detector flow remains inside the canvas and fits by default', () => {
   const layout = computeFlowchartViewport(detectorNodes, { width: 1100, height: 600 }, 1);
   const visible = visibleBounds(layout, detectorNodes);
   assert.equal(layout.contentWidth, 1100);
   assert.ok(visible.left >= 32 && visible.right <= 1068, JSON.stringify(visible));
   assert.ok(visible.top >= 32 && visible.bottom <= 568, JSON.stringify(visible));
+});
+
+test('wide desktop canvas presents the graph near its center at a readable scale', () => {
+  const layout = computeFlowchartViewport(singleModelNodes, { width: 2200, height: 950 }, 1);
+  const visible = visibleBounds(layout, singleModelNodes);
+  assert.ok(layout.scale > 1 && layout.scale <= 1.25, `unexpected scale: ${layout.scale}`);
+  assert.ok(Math.abs(visible.top - (950 - visible.bottom)) <= 1, `graph is not vertically centered: ${JSON.stringify(visible)}`);
+  assert.equal(layout.contentHeight, 950);
+  assert.equal(layout.contentWidth, 2200);
 });
 
 test('zooming in expands scrollable content while reset fits again', () => {

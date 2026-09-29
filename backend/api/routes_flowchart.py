@@ -13,16 +13,20 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import re
 import tempfile
+import time
+import uuid
 from typing import Any, Dict, List, Literal, Optional
 import urllib.parse
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 import torch
 
-from backend.api.routes_evaluation import _resolve_job_artifacts
+from backend.api.routes_evaluation import _matches_source_dataset, _resolve_job_artifacts
 from backend.api.routes_training import training_job_manager
+from backend.api.routes_project import get_current_project
 from backend.engine.flowchart_engine import (
     CropInspectionResult,
     FlowEdge,
@@ -33,14 +37,18 @@ from backend.engine.flowchart_engine import (
     FlowchartExecutionStep,
     FlowchartPipeline,
     FlowchartRunRequest,
+    get_conditional_inspection_flowchart,
     get_default_flowchart,
+    get_five_model_chain_flowchart,
+    get_fixed_roi_flowchart,
     get_single_detection_flowchart,
     get_single_segmentation_flowchart,
     ordered_linear_nodes,
     safe_crop_roi,
+    verified_checkpoint_scope,
 )
 from backend.utils.error_catalog import format_error_response
-from backend.engine.checkpoint_paths import is_job_id
+from backend.engine.checkpoint_paths import is_job_id, trusted_checkpoint
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -55,22 +63,105 @@ _ENGINE = FlowchartEngine()
 
 
 InspectionTask = Literal["anomaly", "segmentation", "classification"]
-PipelineTask = Literal["detection", "anomaly", "segmentation", "classification"]
+PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "mixed"]
 
 
-def _recipe_file(task: PipelineTask, source_dataset_path: Optional[str] = None) -> Path:
+def _recipe_file(
+    task: PipelineTask, source_dataset_path: Optional[str] = None,
+    project_dir: Optional[Path] = None,
+) -> Path:
+    base = (project_dir / "flowcharts" / "pipeline.json") if project_dir else DEFAULT_PIPELINE_FILE
     if not source_dataset_path:
-        return DEFAULT_PIPELINE_FILE.with_name(f"pipeline_{task}.json")
+        return base.with_name(f"pipeline_{task}.json")
     source = Path(source_dataset_path).expanduser().resolve()
     if not source.is_dir():
         raise HTTPException(status_code=422, detail="Select an existing dataset folder before saving or loading its flowchart.")
     source_key = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:16]
-    return DEFAULT_PIPELINE_FILE.with_name(f"pipeline_{task}_{source_key}.json")
+    return base.with_name(f"pipeline_{task}_{source_key}.json")
+
+
+def _project_dir(request: Optional[Request]) -> Optional[Path]:
+    if request is None:
+        return None
+    project = get_current_project(request)
+    return Path(project["project_dir"]).resolve()
+
+
+def _legacy_owner(project_dir: Path) -> bool:
+    """Give old global flow files to one active project on first migration."""
+    claim = DEFAULT_PIPELINE_FILE.parent / ".legacy_flowchart_owner.json"
+    if not claim.is_file():
+        if not any(DEFAULT_PIPELINE_FILE.parent.glob("pipeline*.json")):
+            return False
+        claim.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            fd = os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            pass
+        else:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                json.dump({"project_dir": str(project_dir)}, handle)
+    try:
+        owner = json.loads(claim.read_text(encoding="utf-8"))
+        return owner.get("project_dir") == str(project_dir)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def _write_json(path: Path, value: Dict[str, Any]) -> None:
+    temporary_path: Optional[Path] = None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as handle:
+            temporary_path = Path(handle.name)
+            json.dump(value, handle, indent=2, ensure_ascii=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def _write_pipeline(path: Path, pipeline: FlowchartPipeline) -> None:
+    _write_json(path, pipeline.model_dump())
+
+
+def _version_dir(project_dir: Optional[Path]) -> Path:
+    base = (project_dir / "flowcharts") if project_dir else DEFAULT_PIPELINE_FILE.parent
+    return base / "versions"
+
+
+def _active_flow_file(project_dir: Path) -> Path:
+    return project_dir / "flowcharts" / "active.json"
+
+
+def _save_version(
+    pipeline: FlowchartPipeline, task: PipelineTask,
+    source_dataset_path: Optional[str], project_dir: Optional[Path],
+) -> str:
+    version_id = uuid.uuid4().hex
+    source = str(Path(source_dataset_path).expanduser().resolve()) if source_dataset_path else None
+    _write_json(_version_dir(project_dir) / f"{version_id}.json", {
+        "version_id": version_id,
+        "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "saved_at_ns": time.time_ns(),
+        "recipe_task": task,
+        "source_dataset_path": source,
+        "pipeline": pipeline.model_dump(),
+    })
+    return version_id
 
 
 def _pipeline_matches_recipe(pipeline: FlowchartPipeline, task: PipelineTask) -> bool:
     detectors = [node for node in pipeline.nodes if node.data.node_type == "detection_crop"]
     inspections = [node for node in pipeline.nodes if node.data.node_type == "inspection"]
+    inspection_tasks = {node.data.task for node in inspections}
+    if task == "mixed":
+        return len(inspection_tasks) > 1 or bool(detectors and inspections)
     if task == "detection":
         return bool(detectors)
     return bool(inspections) and all(node.data.task == task for node in inspections)
@@ -78,6 +169,8 @@ def _pipeline_matches_recipe(pipeline: FlowchartPipeline, task: PipelineTask) ->
 
 def _inferred_recipe(pipeline: FlowchartPipeline) -> PipelineTask:
     inspections = [node for node in pipeline.nodes if node.data.node_type == "inspection"]
+    if len({node.data.task for node in inspections}) > 1:
+        return "mixed"
     if inspections:
         task = inspections[0].data.task
         if task in ("anomaly", "segmentation", "classification"):
@@ -108,13 +201,21 @@ def _single_inspection_template(inspection_task: InspectionTask, job_id: Optiona
 @router.get("/pipeline")
 def get_pipeline(
     inspection_task: PipelineTask = "segmentation", source_dataset_path: Optional[str] = None,
+    request: Request = None,
 ) -> FlowchartPipeline:
-    """Retrieves the saved pipeline or a runnable single-model template."""
-    recipe_files = [_recipe_file(inspection_task, source_dataset_path)]
+    """Load this project's saved flow, importing a legacy global file once."""
+    project_dir = _project_dir(request)
+    scoped_files = [_recipe_file(inspection_task, source_dataset_path, project_dir)]
+    legacy_files = [_recipe_file(inspection_task, source_dataset_path)]
     if source_dataset_path:
-        recipe_files.append(_recipe_file(inspection_task))
-    recipe_files.append(DEFAULT_PIPELINE_FILE)
-    for path in recipe_files:
+        scoped_files.append(_recipe_file(inspection_task, project_dir=project_dir))
+        legacy_files.append(_recipe_file(inspection_task))
+    scoped_files.append((project_dir / "flowcharts" / "pipeline.json") if project_dir else DEFAULT_PIPELINE_FILE)
+    legacy_files.append(DEFAULT_PIPELINE_FILE)
+    candidates = list(zip(scoped_files, scoped_files))
+    if project_dir and _legacy_owner(project_dir):
+        candidates.extend(zip(legacy_files, scoped_files))
+    for path, migration_target in candidates:
         if not path.is_file():
             continue
         try:
@@ -122,19 +223,67 @@ def get_pipeline(
                 data = json.load(f)
             pipeline = FlowchartPipeline.model_validate(data)
             ordered_linear_nodes(pipeline)
-            if path == DEFAULT_PIPELINE_FILE and inspection_task == "detection" and any(
+            if path.name == "pipeline.json" and inspection_task == "detection" and any(
                 node.data.node_type == "inspection" for node in pipeline.nodes
             ):
                 # An old shared ROI graph is not the new detector-only default.
                 continue
             if _pipeline_matches_recipe(pipeline, inspection_task):
+                if path != migration_target:
+                    _write_pipeline(migration_target, pipeline)
+                    project = get_current_project(request) if project_dir is not None else None
+                    source = (
+                        str(Path(source_dataset_path).expanduser().resolve())
+                        if source_dataset_path else project.get("source_dataset_dir") if project else None
+                    )
+                    version_id = _save_version(pipeline, inspection_task, source, project_dir)
+                    if project_dir is not None:
+                        if source == project.get("source_dataset_dir"):
+                            _write_json(_active_flow_file(project_dir), {
+                                "version_id": version_id,
+                                "project_id": project["id"],
+                                "recipe_task": inspection_task,
+                                "source_dataset_path": source,
+                            })
                 return pipeline
-            if path != DEFAULT_PIPELINE_FILE:
+            if path.name != "pipeline.json":
                 raise ValueError("Saved flowchart task does not match its recipe file.")
         except Exception as e:
             logger.exception("Could not read saved pipeline: %s", e)
             raise HTTPException(status_code=409, detail=f"Saved flowchart is invalid: {e}") from e
-    return get_single_detection_flowchart() if inspection_task == "detection" else _single_inspection_template(inspection_task)
+    if inspection_task == "detection":
+        return get_single_detection_flowchart()
+    if inspection_task == "mixed":
+        return get_default_flowchart()
+    return _single_inspection_template(inspection_task)
+
+
+@router.get("/pipeline/active", response_model=FlowchartPipeline)
+def get_active_pipeline(source_dataset_path: Optional[str] = None, request: Request = None) -> FlowchartPipeline:
+    """Reopen the active saved graph only for its owning project and source."""
+    if request is None:
+        raise HTTPException(status_code=404, detail="No active project flowchart.")
+    project = get_current_project(request)
+    project_dir = Path(project["project_dir"])
+    active_file = _active_flow_file(project_dir)
+    if not active_file.is_file():
+        raise HTTPException(status_code=404, detail="No active project flowchart.")
+    try:
+        active = json.loads(active_file.read_text(encoding="utf-8"))
+        selected_source = project.get("source_dataset_dir")
+        requested_source = (
+            str(Path(source_dataset_path).expanduser().resolve())
+            if source_dataset_path is not None else selected_source
+        )
+        if (active.get("project_id") != project["id"]
+                or active.get("source_dataset_path") != selected_source
+                or requested_source != selected_source):
+            raise HTTPException(status_code=404, detail="No active flowchart for this project and dataset.")
+        return get_saved_pipeline_version(active["version_id"], request=request)
+    except HTTPException:
+        raise
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=409, detail=f"Active flowchart pointer is invalid: {exc}") from exc
 
 
 @router.get("/templates/single-detection")
@@ -170,6 +319,24 @@ def get_detector_roi_template(
     return pipeline
 
 
+@router.get("/templates/fixed-roi")
+def get_fixed_roi_template(
+    inspection_task: InspectionTask = "segmentation", job_id: Optional[str] = None,
+) -> FlowchartPipeline:
+    """Start an editable source-pixel ROI → inspection graph."""
+    return get_fixed_roi_flowchart(inspection_task=inspection_task, job_id=job_id)
+
+
+@router.get("/templates/five-model-chain")
+def get_five_model_chain_template() -> FlowchartPipeline:
+    return get_five_model_chain_flowchart()
+
+
+@router.get("/templates/conditional-inspection")
+def get_conditional_inspection_template() -> FlowchartPipeline:
+    return get_conditional_inspection_flowchart()
+
+
 class FlowchartModelReference(BaseModel):
     job_id: str
     task: Literal["detection", "anomaly", "segmentation", "classification"]
@@ -202,12 +369,61 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest):
     return {"verified_job_ids": verified}
 
 
+@router.get("/models/catalog")
+def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
+    """List completed checkpoints whose dataset fingerprint still matches."""
+    source = Path(source_dataset_path).expanduser().resolve()
+    if not source.is_dir():
+        raise HTTPException(status_code=422, detail="Select an existing dataset folder.")
+    roots = []
+    project = get_current_project(request) if request is not None else None
+    if project:
+        roots.append(Path(project["models_dir"]))
+    roots.append(Path.cwd() / "models")
+    candidate_dirs = [path for root in roots if root.is_dir() for path in root.glob("job_*") if path.is_dir()]
+    candidate_dirs.extend(path for path in (Path.cwd() / "projects").glob("job_*/models") if path.is_dir())
+    models: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for directory in candidate_dirs:
+        job_id = directory.parent.name if directory.name == "models" else directory.name
+        if job_id in seen or not is_job_id(job_id):
+            continue
+        try:
+            output_dir, checkpoint, meta, task, _, _ = _resolve_job_artifacts(
+                job_id, source_dataset_path=str(source),
+            )
+        except (HTTPException, OSError, ValueError):
+            continue
+        if output_dir.resolve() != directory.resolve() or task not in (
+            "detection", "anomaly", "segmentation", "classification",
+        ):
+            continue
+        seen.add(job_id)
+        model_name = str(meta.get("model_name") or meta.get("backbone") or task)
+        record = training_job_manager.get_job(job_id)
+        best_metric = meta.get("best_metric")
+        if not isinstance(best_metric, (int, float)):
+            best_metric = record.best_metric if record else None
+        models.append({
+            "job_id": job_id,
+            "task": task,
+            "label": f"{model_name} · {job_id}",
+            "preset": meta.get("preset") or (record.preset if record else None),
+            "best_metric": best_metric,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(checkpoint.stat().st_mtime)),
+            "source_dataset_path": str(source),
+        })
+    models.sort(key=lambda item: item["created_at"], reverse=True)
+    return {"models": models, "total": len(models)}
+
+
 @router.post("/pipeline")
 def save_pipeline(
     pipeline: FlowchartPipeline, recipe_task: Optional[PipelineTask] = None,
     source_dataset_path: Optional[str] = None,
+    request: Request = None,
 ):
-    """Saves a supported linear flow without corrupting the previous file."""
+    """Save a flow inside the active project without corrupting the prior file."""
     try:
         ordered_linear_nodes(pipeline)
         task = recipe_task or _inferred_recipe(pipeline)
@@ -216,31 +432,153 @@ def save_pipeline(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    target_path = _recipe_file(task, source_dataset_path)
-    temporary_path: Optional[Path] = None
+    project = get_current_project(request) if request is not None else None
+    project_dir = Path(project["project_dir"]).resolve() if project else None
+    project_source = project.get("source_dataset_dir") if project else None
+    if source_dataset_path and project_source and str(Path(source_dataset_path).expanduser().resolve()) != project_source:
+        raise HTTPException(status_code=409, detail="Flowchart source differs from the active project dataset.")
+    effective_source = source_dataset_path or project_source
+    target_path = _recipe_file(task, effective_source, project_dir)
     try:
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=target_path.parent,
-            prefix=f".{target_path.name}.", suffix=".tmp", delete=False,
-        ) as f:
-            temporary_path = Path(f.name)
-            json.dump(pipeline.model_dump(), f, indent=2, ensure_ascii=False)
-        os.replace(temporary_path, target_path)
-        return {"status": "saved", "pipeline_id": pipeline.id, "node_count": len(pipeline.nodes), "recipe_task": task}
+        version_id = _save_version(pipeline, task, effective_source, project_dir)
+        _write_pipeline(target_path, pipeline)
+        if project_dir is not None:
+            _write_json(_active_flow_file(project_dir), {
+                "version_id": version_id,
+                "project_id": project["id"],
+                "recipe_task": task,
+                "source_dataset_path": (
+                    str(Path(effective_source).expanduser().resolve()) if effective_source else None
+                ),
+            })
+        return {
+            "status": "saved", "pipeline_id": pipeline.id,
+            "node_count": len(pipeline.nodes), "recipe_task": task,
+            "version_id": version_id,
+        }
     except Exception as e:
         logger.exception("Failed to save pipeline: %s", e)
         raise HTTPException(
             status_code=500,
             detail=format_error_response("ERR_UNKNOWN", details=f"Failed to save flowchart: {e}"),
         )
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+
+
+@router.get("/pipelines")
+def list_saved_pipelines(source_dataset_path: Optional[str] = None, request: Request = None):
+    """List immutable saved flow revisions from the active project."""
+    if source_dataset_path:
+        source = Path(source_dataset_path).expanduser().resolve()
+        if not source.is_dir():
+            raise HTTPException(status_code=422, detail="Select an existing dataset folder.")
+        source_filter = str(source)
+    else:
+        source_filter = None
+    project = get_current_project(request) if request is not None else None
+    project_dir = Path(project["project_dir"]).resolve() if project else None
+    active_id: Optional[str] = None
+    if project_dir is not None:
+        active_file = _active_flow_file(project_dir)
+        try:
+            active = json.loads(active_file.read_text(encoding="utf-8"))
+            if (active.get("project_id") == project["id"]
+                    and active.get("source_dataset_path") == project.get("source_dataset_dir")):
+                active_id = active.get("version_id")
+        except (OSError, ValueError, AttributeError):
+            pass
+    rows: List[Dict[str, Any]] = []
+    for path in _version_dir(project_dir).glob("*.json"):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(record, dict) or not isinstance(record.get("pipeline"), dict):
+                continue
+            if source_filter is not None and record.get("source_dataset_path") != source_filter:
+                continue
+            pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+            rows.append({
+                "version_id": record["version_id"],
+                "pipeline_id": pipeline.id,
+                "name": pipeline.name,
+                "recipe_task": record["recipe_task"],
+                "source_dataset_path": record.get("source_dataset_path"),
+                "saved_at": record["saved_at"],
+                "created_at": record["saved_at"],
+                "saved_at_ns": record.get("saved_at_ns", path.stat().st_mtime_ns),
+                "node_count": len(pipeline.nodes),
+                "model_count": sum(
+                    node.data.node_type in ("detection_crop", "inspection") for node in pipeline.nodes
+                ),
+                "is_active": record["version_id"] == active_id,
+            })
+        except (OSError, ValueError, KeyError) as exc:
+            logger.warning("Skipping invalid saved flow version %s: %s", path, exc)
+    rows.sort(key=lambda row: row["saved_at_ns"], reverse=True)
+    latest: set[tuple[str, Optional[str]]] = set()
+    for row in rows:
+        key = (row["recipe_task"], row["source_dataset_path"])
+        row["is_latest"] = key not in latest
+        latest.add(key)
+        del row["saved_at_ns"]
+    return {"pipelines": rows, "total": len(rows)}
+
+
+@router.put("/pipelines/{version_id}/activate")
+def activate_saved_pipeline_version(
+    version_id: str, source_dataset_path: str, request: Request,
+):
+    """Make a saved revision the active flow for this project and dataset."""
+    if not re.fullmatch(r"[0-9a-f]{32}", version_id):
+        raise HTTPException(status_code=404, detail="Flow version not found.")
+    project = get_current_project(request)
+    project_dir = Path(project["project_dir"]).resolve()
+    path = _version_dir(project_dir) / f"{version_id}.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Flow version not found.")
+    requested_source = str(Path(source_dataset_path).expanduser().resolve())
+    if requested_source != project.get("source_dataset_dir"):
+        raise HTTPException(status_code=409, detail="Selected flow source differs from the active project dataset.")
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if (record.get("version_id") != version_id
+                or record.get("source_dataset_path") != requested_source):
+            raise ValueError("Saved flow version belongs to another dataset.")
+        task = record.get("recipe_task")
+        if task not in ("detection", "anomaly", "segmentation", "classification", "mixed"):
+            raise ValueError("Saved flow recipe is invalid.")
+        pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+        ordered_linear_nodes(pipeline)
+        if not _pipeline_matches_recipe(pipeline, task):
+            raise ValueError("Saved flow model tasks do not match its recipe.")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
+    _write_json(_active_flow_file(project_dir), {
+        "version_id": version_id,
+        "project_id": project["id"],
+        "recipe_task": task,
+        "source_dataset_path": requested_source,
+    })
+    return {"status": "active", "version_id": version_id, "pipeline": pipeline}
+
+
+@router.get("/pipelines/{version_id}", response_model=FlowchartPipeline)
+def get_saved_pipeline_version(version_id: str, request: Request = None) -> FlowchartPipeline:
+    """Open one saved revision without changing the current recipe."""
+    if not re.fullmatch(r"[0-9a-f]{32}", version_id):
+        raise HTTPException(status_code=404, detail="Flow version not found.")
+    path = _version_dir(_project_dir(request)) / f"{version_id}.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Flow version not found.")
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+        ordered_linear_nodes(pipeline)
+        return pipeline
+    except (OSError, ValueError, KeyError) as exc:
+        raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
 
 
 @router.get("/sample-images")
-def get_sample_images():
+def get_sample_images(request: Request = None):
     """
     Returns candidate inspection images from operational folders and datasets
     for the Flowchart Studio UI Image Picker (Feature F30).
@@ -248,13 +586,14 @@ def get_sample_images():
     candidates: List[Dict[str, Any]] = []
     seen_paths = set()
 
-    search_dirs = [
-        Path("/Users/kai/Downloads/운영서버/test_crop_output"),
-        Path("/Users/kai/Downloads/운영서버/visual_inspection"),
-        Path("/Users/kai/Downloads/운영서버/detailed_diagnosis"),
-        Path("./datasets"),
-        Path("./projects"),
-    ]
+    if request is None:
+        search_dirs = [Path("./datasets"), Path("./projects")]
+    else:
+        project = get_current_project(request)
+        search_dirs = [
+            Path(path) for path in (project.get("source_dataset_dir"), project.get("dataset_dir"))
+            if path
+        ]
 
     for sdir in search_dirs:
         if not sdir.exists():
@@ -275,7 +614,7 @@ def get_sample_images():
                         "name": f.name,
                         "file_path": p_str,
                         "thumbnail_url": f"/api/dataset/thumbnail/preview?file_path={urllib.parse.quote(p_str)}",
-                        "source": "operational" if "운영서버" in p_str else "dataset",
+                        "source": "dataset",
                         "size_bytes": stat.st_size,
                     })
                 except Exception:
@@ -291,14 +630,32 @@ def get_sample_images():
 
 
 @router.post("/run")
-def run_flowchart(req: FlowchartRunRequest):
+def run_flowchart(req: FlowchartRunRequest, request: Request = None):
     """
     Runs either original-resolution tiled segmentation or detector ROI inspection.
     A local result image is returned as a bounded preview; excessive tile counts
     yield REVIEW without pretending that the source image was inspected.
     """
     try:
-        pipeline = req.pipeline or get_pipeline()
+        project = get_current_project(request) if request is not None else None
+        if req.pipeline is not None:
+            pipeline = req.pipeline
+        elif request is not None:
+            active_file = _active_flow_file(Path(project["project_dir"]))
+            if active_file.is_file():
+                active = json.loads(active_file.read_text(encoding="utf-8"))
+                source = project.get("source_dataset_dir")
+                if active.get("project_id") != project["id"] or active.get("source_dataset_path") != source:
+                    raise HTTPException(status_code=409, detail="Active flow belongs to a different source dataset.")
+                pipeline = get_saved_pipeline_version(active["version_id"], request=request)
+            else:
+                pipeline = get_pipeline(
+                    inspection_task=project["task"],
+                    source_dataset_path=project.get("source_dataset_dir"),
+                    request=request,
+                )
+        else:
+            pipeline = get_pipeline()
         try:
             ordered_nodes = ordered_linear_nodes(pipeline)
         except ValueError as exc:
@@ -307,6 +664,7 @@ def run_flowchart(req: FlowchartRunRequest):
             raise HTTPException(status_code=422, detail="Select an existing inspection image before running the flowchart.")
         model_contexts: Dict[str, Any] = {}
         local_model_jobs: set[str] = set()
+        verified_checkpoints: Dict[tuple[str, str], Path] = {}
         for node in ordered_nodes:
             if node.data.node_type not in ("detection_crop", "inspection"):
                 continue
@@ -319,19 +677,28 @@ def run_flowchart(req: FlowchartRunRequest):
                     status_code=409,
                     detail=f"Model training is {known_job.status} for {node.data.label}; wait for a completed job.",
                 )
-            checkpoint = _ENGINE._resolve_checkpoint(job_id, node.data.task or "")
+            expected_task = "detection" if node.data.node_type == "detection_crop" else (node.data.task or "").lower()
+            checkpoint = (
+                trusted_checkpoint(job_id, project_models_dir=project["models_dir"])
+                if project is not None else _ENGINE._resolve_checkpoint(job_id, expected_task)
+            )
             if checkpoint is None:
                 raise HTTPException(status_code=409, detail=f"Trained model is unavailable for {node.data.label}.")
+            if project is not None and not _matches_source_dataset(
+                checkpoint.parent, project.get("source_dataset_dir"), expected_task,
+            ):
+                raise HTTPException(status_code=409, detail=f"Model source is incompatible with {node.data.label}.")
             try:
                 metadata = torch.load(checkpoint, map_location="cpu", weights_only=True)
                 actual_task = str(metadata.get("task", "")).lower()
-                expected_task = "detection" if node.data.node_type == "detection_crop" else (node.data.task or "").lower()
                 if actual_task != expected_task or "model_state_dict" not in metadata:
                     raise ValueError(f"Expected {expected_task}, found {actual_task or 'unknown'}")
             except Exception as exc:
                 raise HTTPException(status_code=409, detail=f"Model is incompatible with {node.data.label}: {exc}") from exc
             from backend.remote.operations import remote_job_context
             from backend.remote.coordinator import ArtifactValidationError
+
+            verified_checkpoints[(job_id, expected_task)] = checkpoint.resolve()
 
             try:
                 context = remote_job_context(checkpoint.parent, job_id)
@@ -355,11 +722,12 @@ def run_flowchart(req: FlowchartRunRequest):
                 raise HTTPException(status_code=503, detail=f"Remote flowchart connection lost; retry the same run: {exc}") from exc
             except ArtifactValidationError as exc:
                 raise HTTPException(status_code=502, detail=f"Remote flowchart result could not be verified: {exc}") from exc
-        result = _ENGINE.execute(
-            pipeline=pipeline,
-            image_path=req.image_path,
-            image_id=req.image_id,
-        )
+        with verified_checkpoint_scope(verified_checkpoints):
+            result = _ENGINE.execute(
+                pipeline=pipeline,
+                image_path=req.image_path,
+                image_id=req.image_id,
+            )
         return result
     except HTTPException:
         raise
