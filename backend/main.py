@@ -17,6 +17,7 @@ import argparse
 import asyncio
 import logging
 import os
+import secrets
 import signal
 import socket
 import sys
@@ -33,6 +34,9 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
+from starlette.datastructures import Headers
+from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Compatibility patch for Starlette TestClient with httpx >= 0.28.0
 _orig_httpx_init = httpx.Client.__init__
@@ -61,6 +65,33 @@ from backend.utils.error_catalog import (
 logger = logging.getLogger("vision_ai_studio.daemon")
 
 VERSION = "0.1.0"
+
+
+class DesktopApiAuthMiddleware:
+    """Require the Electron process capability for HTTP and WebSocket API access."""
+
+    def __init__(self, app: ASGIApp, api_token: str):
+        self.app = app
+        self.api_token = api_token
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        scope_type = scope["type"]
+        if scope_type not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+        if scope_type == "http" and (scope.get("method") == "OPTIONS" or scope.get("path") == "/health"):
+            await self.app(scope, receive, send)
+            return
+        provided_token = Headers(scope=scope).get("x-vision-token", "")
+        if not secrets.compare_digest(provided_token, self.api_token):
+            if scope_type == "websocket":
+                await send({"type": "websocket.close", "code": 1008})
+            else:
+                await JSONResponse({"detail": "Desktop session authorization required"}, status_code=401)(
+                    scope, receive, send,
+                )
+            return
+        await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -92,14 +123,20 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     p_dir.mkdir(parents=True, exist_ok=True)
     app.state.project_dir = p_dir
 
-    # CORS Middleware allowing Electron renderer origins
+    # The Electron supervisor provides a fresh capability for each daemon process.
+    # Standalone invocations generate one too, so a missing environment variable
+    # never silently disables API authorization.
+    app.state.api_token = os.environ.get("VISION_AI_STUDIO_API_TOKEN") or secrets.token_urlsafe(32)
+    app.add_middleware(DesktopApiAuthMiddleware, api_token=app.state.api_token)
+
+    # CORS is outermost so permitted renderers can read authentication errors.
+    # "null" is needed by packaged file://, but the process token still gates it.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
-        allow_credentials=True,
+        allow_origins=["http://127.0.0.1:5173", "http://localhost:5173", "null"],
+        allow_credentials=False,
         allow_methods=["*"],
-        allow_headers=["*"],
+        allow_headers=["Content-Type", "X-Vision-Token"],
     )
 
     # Health check endpoint strictly conforming to PROJECT.md line 144

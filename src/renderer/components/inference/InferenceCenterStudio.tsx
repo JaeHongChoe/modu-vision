@@ -11,7 +11,7 @@
  * - Zero diffuse glows, zero optical blurs, zero gradients, 1px precision borders
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -25,16 +25,39 @@ import {
 } from 'lucide-react';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
+import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { api } from '../../services/api';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { LedAnnunciator } from '../common/LedAnnunciator';
 import type { RuntimeExportResult } from '../../types';
+import { selectInferenceJobId } from './selectInferenceJob';
 
 export const InferenceCenterStudio: React.FC = () => {
-  const { language, backendStatus } = useProjectStore();
-  const { benchmarkResult, isBenchmarking, runBenchmark } = useEvaluationStore();
-  const jobId = useTrainingStore((state) => state.jobId);
+  const { language, backendStatus, task } = useProjectStore();
+  const { benchmarkResult, isBenchmarking, isLoading: isFindingModel, loadEvaluation, runBenchmark } = useEvaluationStore();
+  const trainingJobId = useTrainingStore((state) => state.jobId);
+  const trainingStatus = useTrainingStore((state) => state.status);
+  const trainingIsCurrentData = useTrainingStore((state) => state.isCurrentData);
+  const evaluationJobId = useEvaluationStore((state) => state.jobId);
+  const allowLatestRecovery = useEvaluationStore((state) => state.allowLatestRecovery);
+  const folderPath = useDatasetStore((state) => state.folderPath);
+  const datasetKey = useDatasetStore((state) => state.datasetKey);
+  const datasetIsLoading = useDatasetStore((state) => state.isLoading);
+  const importError = useDatasetStore((state) => state.importError);
+  const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
+  const jobId = selectInferenceJobId(
+    { jobId: trainingJobId, status: trainingStatus, isCurrentData: trainingIsCurrentData },
+    { jobId: evaluationJobId, allowLatestRecovery },
+  );
+
+  const currentJobId = () => selectInferenceJobId(useTrainingStore.getState(), useEvaluationStore.getState());
+
+  useEffect(() => {
+    if (!jobId && !trainingIsCurrentData && !trainingJobId && sourceFolder && allowLatestRecovery) {
+      loadEvaluation(undefined, { folderPath: sourceFolder, task }).catch(() => {});
+    }
+  }, [jobId, trainingIsCurrentData, trainingJobId, sourceFolder, allowLatestRecovery, task, loadEvaluation]);
 
   const [activeCodeTab, setActiveCodeTab] = useState<'csharp' | 'cpp' | 'python'>('python');
   const [isExporting, setIsExporting] = useState(false);
@@ -46,11 +69,16 @@ export const InferenceCenterStudio: React.FC = () => {
   const quantizeFp16 = false;
   const [resolution, setResolution] = useState<number>(256);
 
+  useEffect(() => {
+    setExportResult(null);
+    setActionError(null);
+  }, [jobId, sourceFolder]);
+
   const isKo = language === 'ko';
 
   const handleBenchmark = async () => {
     setActionError(null);
-    if (!jobId) {
+    if (!currentJobId()) {
       setActionError('학습을 완료한 모델을 먼저 선택하세요.');
       return;
     }
@@ -59,20 +87,21 @@ export const InferenceCenterStudio: React.FC = () => {
 
   const handleExport = async () => {
     setActionError(null);
-    if (!jobId) {
+    const activeJobId = currentJobId();
+    if (!activeJobId) {
       setActionError('학습을 완료한 모델을 먼저 선택하세요.');
       return;
     }
     setIsExporting(true);
     try {
       const res = await api.export.runtime({
-        job_id: jobId,
-        package_name: `modu_vision_${jobId}`,
+        job_id: activeJobId,
+        package_name: `modu_vision_${activeJobId}_${exportFormat}_${resolution}_${Date.now()}`,
         export_format: exportFormat,
         resolution,
         quantize_fp16: quantizeFp16,
       });
-      setExportResult(res);
+      if (currentJobId() === activeJobId) setExportResult(res);
       setIsExporting(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : '내보내기 실패');
@@ -89,8 +118,8 @@ export const InferenceCenterStudio: React.FC = () => {
   const stdLatency = benchmarkResult?.std_latency_ms ?? 0;
   const ppm = Math.round(fps * 60);
 
-  // Line Readiness Status Calculation
-  const isLineReady = Boolean(benchmarkResult) && meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
+  // Synthetic single-forward timing against a user-defined target.
+  const isForwardWithinTarget = Boolean(benchmarkResult) && meanLatency <= maxTaktLimit && p95Latency <= maxTaktLimit * 1.25;
   const headroomPct = benchmarkResult ? Number((((maxTaktLimit - meanLatency) / maxTaktLimit) * 100).toFixed(1)) : 0;
 
   // Gauge bar scaling (0 to max(60, maxTaktLimit * 1.6))
@@ -135,8 +164,8 @@ python infer.py --self-test`
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {isKo
-              ? '합성 입력으로 모델 추론 속도를 측정하고 Python 독립 실행 패키지를 내보냅니다. 생산 라인과 PLC 연동은 별도 검증이 필요합니다.'
-              : 'Benchmark model inference with synthetic input and export a standalone Python package.'}
+              ? '합성 입력으로 로드된 모델의 계산 시간만 측정하고 Python 독립 실행 패키지를 내보냅니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.'
+              : 'Benchmark the loaded model forward pass with synthetic input and export a standalone Python package.'}
           </p>
         </div>
 
@@ -144,7 +173,7 @@ python infer.py --self-test`
         <div className="flex items-center space-x-3">
           <button
             onClick={handleBenchmark}
-            disabled={isBenchmarking}
+            disabled={isBenchmarking || isFindingModel || !jobId}
             className="flex items-center space-x-2 px-3.5 py-2 bg-[#1A212E] hover:bg-[#2B3547] active:bg-[#0B0E14] border border-[#2B3547] rounded text-xs font-semibold cursor-pointer transition-colors text-slate-200"
           >
             <Gauge className={`w-4 h-4 text-slate-300 ${isBenchmarking ? 'animate-spin' : ''}`} />
@@ -161,7 +190,7 @@ python infer.py --self-test`
 
           <button
             onClick={handleExport}
-            disabled={isExporting}
+            disabled={isExporting || isFindingModel || !jobId}
             className="flex items-center space-x-2 px-4 py-2 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded border border-[#10B981] transition-colors cursor-pointer text-xs"
           >
             <Package className="w-4 h-4" />
@@ -199,7 +228,7 @@ python infer.py --self-test`
             {/* METER 1: FPS */}
             <div className="p-3 bg-[#0B0E14] border border-[#1F2737] rounded flex flex-col justify-between">
               <div className="text-[10px] text-slate-400 uppercase font-mono font-semibold">
-                검사 속도 (FPS)
+                모델 계산 속도 (FPS)
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-emerald-400 my-1">
                 {benchmarkResult ? fps : '—'} <span className="text-xs font-normal text-slate-500">FPS</span>
@@ -212,7 +241,7 @@ python infer.py --self-test`
             {/* METER 2: Mean Takt Time */}
             <div className="p-3 bg-[#0B0E14] border border-[#1F2737] rounded flex flex-col justify-between">
               <div className="text-[10px] text-slate-400 uppercase font-mono font-semibold">
-                평균 택트 타임
+                평균 모델 계산 시간
               </div>
               <div className="text-2xl lg:text-3xl font-bold font-mono tabular-nums text-slate-100 my-1">
                 {benchmarkResult ? meanLatency : '—'} <span className="text-xs font-normal text-slate-500">ms</span>
@@ -241,7 +270,7 @@ python infer.py --self-test`
             <div className="flex items-center justify-between text-xs font-mono">
               <div className="flex items-center space-x-2">
                 <Sliders className="w-3.5 h-3.5 text-slate-400" />
-                <span className="font-bold text-slate-200">공정 허용 사이클 타임 한계 (Line Takt Limit)</span>
+                <span className="font-bold text-slate-200">모델 계산 목표 시간</span>
               </div>
               <div className="flex items-center space-x-1.5">
                 {[15.0, 25.0, 50.0].map((limit) => (
@@ -298,7 +327,7 @@ python infer.py --self-test`
             {/* Headroom / Buffer status */}
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-0.5">
               <span>
-                공정 여유 마진 (Safety Headroom):{' '}
+                모델 계산 여유:{' '}
                 <span className={`font-bold tabular-nums ${headroomPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {benchmarkResult ? (headroomPct >= 0 ? `+${headroomPct}%` : `${headroomPct}% (초과)`) : '미측정'}
                 </span>
@@ -309,30 +338,30 @@ python infer.py --self-test`
             </div>
           </div>
 
-          {/* PASS / FAIL Line Readiness Annunciator */}
+          {/* Synthetic model forward timing only; this is not the full inspection takt. */}
           <div
             className={`p-3 rounded border transition-colors flex items-start space-x-3 ${
-              isLineReady
+              isForwardWithinTarget
                 ? 'bg-[#0D1C16] border-[#10B981]/60 text-emerald-200'
                 : 'bg-[#1A0E11] border-[#EF4444]/60 text-rose-200'
             }`}
           >
-            <LedAnnunciator state={!benchmarkResult ? 'standby' : isLineReady ? 'pass' : 'fail'} size="md" />
+            <LedAnnunciator state={!benchmarkResult ? 'standby' : isForwardWithinTarget ? 'pass' : 'fail'} size="md" />
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold font-mono tracking-tight text-slate-100">
-                  {!benchmarkResult ? '모델 속도 미측정' : isLineReady
-                    ? '모델 추론 속도 목표 충족'
-                    : '모델 추론 속도 목표 미달'}
+                  {!benchmarkResult ? '모델 속도 미측정' : isForwardWithinTarget
+                    ? '모델 계산 속도 목표 충족'
+                    : '모델 계산 속도 목표 미달'}
                 </h4>
                 <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border bg-[#0B0E14] text-slate-300 border-[#2B3547]">
-                  {!benchmarkResult ? 'UNTESTED' : isLineReady ? 'BENCHMARK PASS' : 'BENCHMARK FAIL'}
+                  {!benchmarkResult ? 'UNTESTED' : isForwardWithinTarget ? 'MODEL FORWARD PASS' : 'MODEL FORWARD OVER TARGET'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isLineReady
-                  ? `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms를 측정했습니다. 실제 카메라·PLC 통합 검사는 별도 필요합니다.`
-                  : `합성 입력에서 모델 추론 지연시간 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`}
+                {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isForwardWithinTarget
+                  ? `합성 입력에서 모델 전방 계산 ${meanLatency}ms를 측정했습니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.`
+                  : `합성 입력에서 모델 전방 계산 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`}
               </p>
             </div>
           </div>
@@ -389,6 +418,12 @@ python infer.py --self-test`
               </label>
             </div>
           </div>
+
+          <p className="text-[11px] leading-relaxed text-amber-200/90 bg-amber-950/20 border border-amber-700/30 rounded px-3 py-2">
+            {isKo
+              ? '분할 모델의 infer.py는 원본 이미지를 겹치는 타일로 검사하고 결함 면적으로 판정합니다. 5단계 플로우차트의 탐지 ROI·크롭·필터·최종 판정 노드는 패키지에 포함되지 않습니다. 타일 해상도·임계값·최소 결함 면적을 5단계와 맞춰 비교하세요.'
+              : 'For segmentation, infer.py inspects the original image with overlapping tiles and decides from defect area. The package does not run the Step 5 detector ROI, crop, filter, or final decision nodes. Match tile resolution, threshold, and minimum defect area to Step 5 before comparing results.'}
+          </p>
 
           {/* File Manifest List */}
           <div className="flex-1 bg-[#0B0E14] border border-[#1F2737] rounded p-3 overflow-y-auto space-y-1.5">
@@ -462,7 +497,7 @@ python infer.py --self-test`
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Python (ONNXRuntime)
+                Python (infer.py)
               </button>
             </div>
 

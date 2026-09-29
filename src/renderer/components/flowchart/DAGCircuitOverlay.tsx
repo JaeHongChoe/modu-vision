@@ -6,17 +6,18 @@
  *  - Dual-layer trace rendering (Substrate Copper + Signal Carrier Trace).
  *  - Copper via test pads at connection endpoints and bend junctions.
  *  - Live execution signal packets animation.
- *  - High-visibility visual branching for PASS Route (Emerald) vs NG Diverter (Crimson).
+ *  - Actual saved edges form one supported linear inspection path.
  */
 
 import React from 'react';
 import type { FlowEdge, FlowNode } from '../../types';
+import { FLOW_NODE_WIDTH } from './flowchartViewport';
 
 interface DAGCircuitOverlayProps {
   nodes: FlowNode[];
   edges: FlowEdge[];
   activeRunningNodeId: string | null;
-  finalVerdict?: 'OK' | 'NG';
+  finalVerdict?: 'OK' | 'NG' | 'REVIEW';
 }
 
 export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
@@ -25,8 +26,6 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   activeRunningNodeId,
   finalVerdict,
 }) => {
-  const NODE_WIDTH = 272;
-
   // Map nodes by ID for O(1) coordinate lookup
   const nodeMap = new Map<string, FlowNode>();
   nodes.forEach((n) => nodeMap.set(n.id, n));
@@ -44,7 +43,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
     const yOffset = headerHeight + 84 + ((portIndex + 0.5) / Math.max(1, totalPorts)) * terminalArea;
 
     return {
-      x: direction === 'out' ? posX + NODE_WIDTH : posX,
+      x: direction === 'out' ? posX + FLOW_NODE_WIDTH : posX,
       y: posY + yOffset,
     };
   };
@@ -94,18 +93,12 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const targetNode = nodeMap.get(edge.target);
         if (!sourceNode || !targetNode) return null;
 
-        const isBranchPass = edge.isBranch === 'pass' || edge.id.includes('pass') || edge.target.includes('pass');
-        const isBranchFail = edge.isBranch === 'fail' || edge.id.includes('fail') || edge.target.includes('ng') || edge.target.includes('reject');
-
         // Calculate discrete pin index
         const sourcePortCount = sourceNode.data.ports?.outputs?.length || 1;
         const targetPortCount = targetNode.data.ports?.inputs?.length || 1;
 
-        const portIndexOut = isBranchFail ? Math.min(1, sourcePortCount - 1) : 0;
-        const portIndexIn = 0;
-
-        const p1 = getPortCoord(edge.source, 'out', portIndexOut, sourcePortCount);
-        const p2 = getPortCoord(edge.target, 'in', portIndexIn, targetPortCount);
+        const p1 = getPortCoord(edge.source, 'out', 0, sourcePortCount);
+        const p2 = getPortCoord(edge.target, 'in', 0, targetPortCount);
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
@@ -114,12 +107,8 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         let traceColor = '#334155'; // Standby Dark Steel Copper
         if (isActive) {
           traceColor = '#06B6D4'; // Electric Cyan Active
-        } else if (isBranchPass) {
-          traceColor = finalVerdict === 'OK' ? '#10B981' : '#1E293B';
-        } else if (isBranchFail) {
-          traceColor = finalVerdict === 'NG' ? '#EF4444' : '#1E293B';
         } else if (finalVerdict) {
-          traceColor = '#3B82F6'; // Completed Signal Bus
+          traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
         }
 
         const midX = (p1.x + p2.x) / 2;
@@ -188,7 +177,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
                   x="0"
                   y="3.5"
                   textAnchor="middle"
-                  fill={isBranchFail ? '#F87171' : isBranchPass ? '#34D399' : '#94A3B8'}
+                  fill="#94A3B8"
                   fontSize="8.5"
                   fontWeight="bold"
                   fontFamily="monospace"

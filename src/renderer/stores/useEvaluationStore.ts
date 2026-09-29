@@ -10,6 +10,7 @@ import type {
   ConfusionMatrixData,
   OverkillUnderkillAnalysis,
   TestPredictionItem,
+  VisionTask,
 } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
 import { useTrainingStore } from './useTrainingStore';
@@ -28,6 +29,7 @@ export type SampleFilter =
 
 let heatmapDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentHeatmapRequestId = 0;
+let evaluationGeneration = 0;
 
 export function isDefectLabel(label?: string | number): boolean {
   if (label === undefined || label === null) return false;
@@ -85,6 +87,7 @@ export function computeSampleVerdict(
 
 interface EvaluationState {
   jobId: string | null;
+  allowLatestRecovery: boolean;
   isLoading: boolean;
   metrics: Record<string, any>;
   confusionMatrix: ConfusionMatrixData | null;
@@ -120,7 +123,8 @@ interface EvaluationState {
   benchmarkResult: BenchmarkResult | null;
   isBenchmarking: boolean;
 
-  loadEvaluation: (jobId?: string) => Promise<void>;
+  loadEvaluation: (jobId?: string, source?: { folderPath: string; task: VisionTask }) => Promise<void>;
+  invalidateForDataChange: (allowSourceRecovery?: boolean) => void;
   selectCell: (trueClass: string, predClass: string) => void;
   clearCellSelection: () => void;
   selectPrediction: (item: TestPredictionItem) => Promise<void>;
@@ -135,6 +139,7 @@ interface EvaluationState {
 
 export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   jobId: null,
+  allowLatestRecovery: true,
   isLoading: false,
   metrics: {},
   confusionMatrix: null,
@@ -219,16 +224,26 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     }
   },
 
-  loadEvaluation: async (jobId) => {
-    const requestedJob = jobId || useTrainingStore.getState().jobId || get().jobId;
-    if (!requestedJob) {
-      set({ jobId: null, metrics: {}, confusionMatrix: null, testPredictions: [],
-        filteredPredictions: [], overkillAnalysis: null, errorMessage: '완료된 학습 모델이 없습니다.' });
+  loadEvaluation: async (jobId, source) => {
+    const training = useTrainingStore.getState();
+    const completedCurrentJob = training.isCurrentData && training.status === 'completed' ? training.jobId : null;
+    const requestedJob = jobId || completedCurrentJob || get().jobId;
+    if ((training.isCurrentData && !completedCurrentJob)
+        || (!get().allowLatestRecovery && requestedJob !== completedCurrentJob)
+        || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath))) {
+      set({ isLoading: false, errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
       return;
     }
-    set({ isLoading: true });
+    const generation = ++evaluationGeneration;
+    // The renderer store is transient. Let the backend resolve its latest
+    // completed checkpoint when this window has lost the training job ID.
+    set({ isLoading: true, errorMessage: null });
     try {
-      const res = await api.evaluation.getResults(requestedJob);
+      const res = await api.evaluation.getResults(requestedJob || undefined, source?.folderPath ? {
+        sourceDatasetPath: source.folderPath,
+        sourceTask: source.task,
+      } : undefined);
+      if (generation !== evaluationGeneration) return;
       set({
         jobId: res.job_id,
         metrics: res.metrics || {},
@@ -248,11 +263,29 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         get().updateHeatmap();
       }
     } catch (e) {
-      set({ isLoading: false, metrics: {}, confusionMatrix: null, testPredictions: [],
+      if (generation !== evaluationGeneration) return;
+      set({ isLoading: false, jobId: null, metrics: {}, confusionMatrix: null, testPredictions: [],
         filteredPredictions: [], overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
     }
+  },
+
+  invalidateForDataChange: (allowSourceRecovery = false) => {
+    evaluationGeneration += 1;
+    currentHeatmapRequestId += 1;
+    if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
+    heatmapDebounceTimer = null;
+    set({
+      jobId: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
+      metrics: {}, confusionMatrix: null, selectedCell: null,
+      testPredictions: [], filteredPredictions: [], selectedPrediction: null,
+      heatmapOverlayBase64: null, heatmapLoading: false,
+      isExportingReport: false, exportedReportPath: null, errorMessage: null,
+      sampleFilter: 'all', overkillAnalysis: null, isAnalyzingTradeoff: false,
+      isCalibrating: false, calibrationMessage: null, calibrationSuccess: false,
+      benchmarkResult: null, isBenchmarking: false,
+    });
   },
 
   selectCell: (trueClass, predClass) => {
@@ -322,6 +355,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   loadOverkillUnderkill: async (targetUnderkill, escapeCost, scrapCost) => {
+    const generation = evaluationGeneration;
     const { jobId, confidenceThreshold } = get();
     if (!jobId) {
       set({ overkillAnalysis: null, isAnalyzingTradeoff: false });
@@ -340,9 +374,11 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         cost_scrap: cs,
         current_threshold: confidenceThreshold,
       });
+      if (generation !== evaluationGeneration) return;
       set({ overkillAnalysis: res, isAnalyzingTradeoff: false });
       get().computeFilteredList();
     } catch (e) {
+      if (generation !== evaluationGeneration) return;
       console.error('Failed to load overkill/underkill analysis:', e);
       set({ isAnalyzingTradeoff: false, overkillAnalysis: null });
     }
@@ -358,6 +394,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   calibrateZeroEscape: async (jobIdOverride) => {
+    const generation = evaluationGeneration;
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions } = get();
     const activeJob = jobIdOverride || jobId;
     if (!activeJob || !testPredictions.some((p) => isDefectLabel(p.ground_truth))
@@ -386,6 +423,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       }
 
       const data: OverkillUnderkillAnalysis = await res.json();
+      if (generation !== evaluationGeneration) return;
       const optimalTh = data.optimal_threshold ?? 0.50;
 
       set({
@@ -399,6 +437,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       get().computeFilteredList();
       await get().updateHeatmap();
     } catch (err: any) {
+      if (generation !== evaluationGeneration) return;
       console.error('Zero-escape calibration API failed, falling back:', err);
       set({ isCalibrating: false, calibrationSuccess: false,
         calibrationMessage: err?.message || '미검 제로화 요청 실패' });
@@ -406,7 +445,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   runBenchmark: async (iterations = 25, resolution = 256) => {
-    const jobId = useTrainingStore.getState().jobId || get().jobId;
+    const generation = evaluationGeneration;
+    const training = useTrainingStore.getState();
+    const jobId = (training.isCurrentData ? training.jobId : null) || get().jobId;
     if (!jobId) {
       set({ benchmarkResult: null, errorMessage: '학습 모델이 없어 속도를 측정할 수 없습니다.' });
       return;
@@ -418,8 +459,10 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         iterations,
         resolution,
       });
+      if (generation !== evaluationGeneration) return;
       set({ benchmarkResult: res, isBenchmarking: false });
     } catch (e) {
+      if (generation !== evaluationGeneration) return;
       console.error('Benchmark failed:', e);
       set({ isBenchmarking: false, benchmarkResult: null,
         errorMessage: e instanceof Error ? e.message : '속도 측정 실패' });

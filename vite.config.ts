@@ -33,5 +33,17 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: '127.0.0.1',
+    // Backend output files are written below the project root. Exporting a
+    // report must not reload the renderer and discard the operator's session.
+    watch: {
+      ignored: [
+        '**/annotations/**',
+        '**/datasets/**',
+        '**/models/**',
+        '**/projects/**',
+        '**/release/**',
+        '**/reports/**',
+      ],
+    },
   },
 });

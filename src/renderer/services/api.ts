@@ -164,7 +164,7 @@ export const api = {
         mask_file?: string;
       }>(`/api/annotations/${encodeURIComponent(imageId)}${queryStr}`);
     },
-    save: (data: { image_id: string; annotations: AnnotationItem[]; image_width?: number; image_height?: number; output_dir?: string }) =>
+    save: (data: { image_id: string; image_path?: string; annotations: AnnotationItem[]; image_width?: number; image_height?: number; output_dir?: string }) =>
       request<{ status: string; count: number; mask_generated: boolean }>('/api/annotations/save', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -224,11 +224,18 @@ export const api = {
   },
 
   evaluation: {
-    getResults: (jobId?: string, datasetPath?: string, forceRecompute?: boolean) => {
+    getResults: (jobId?: string, options?: {
+      datasetPath?: string;
+      forceRecompute?: boolean;
+      sourceDatasetPath?: string;
+      sourceTask?: VisionTask;
+    }) => {
       const q = new URLSearchParams();
       if (jobId) q.set('job_id', jobId);
-      if (datasetPath) q.set('dataset_path', datasetPath);
-      if (forceRecompute) q.set('force_recompute', 'true');
+      if (options?.datasetPath) q.set('dataset_path', options.datasetPath);
+      if (options?.forceRecompute) q.set('force_recompute', 'true');
+      if (options?.sourceDatasetPath) q.set('source_dataset_path', options.sourceDatasetPath);
+      if (options?.sourceTask) q.set('source_task', options.sourceTask);
       return request<EvaluationResults>(`/api/evaluation/results?${q.toString()}`);
     },
 
@@ -273,6 +280,8 @@ export const api = {
 
   flowchart: {
     getPipeline: () => request<any>('/api/flowchart/pipeline'),
+    getSingleSegmentationTemplate: (jobId?: string) =>
+      request<any>(`/api/flowchart/templates/single-segmentation${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
     savePipeline: (data: any) =>
       request<{ status: string; pipeline_id: string; node_count: number }>('/api/flowchart/pipeline', {
         method: 'POST',

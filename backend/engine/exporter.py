@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -26,6 +27,7 @@ import torch
 import torch.nn as nn
 
 from backend.api.routes_training import training_job_manager
+from backend.engine.checkpoint_paths import trusted_checkpoint
 from backend.engine.classification import create_classification_model
 from backend.engine.detection import create_detection_model
 from backend.engine.segmentation import build_segmentation_model
@@ -39,58 +41,13 @@ EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def locate_checkpoint(job_id: Optional[str] = None) -> Optional[Path]:
-    """Locates the trained PyTorch checkpoint file on disk."""
-    if job_id:
-        # 1. Check training job manager
-        rec = training_job_manager.get_job(job_id)
-        if rec and rec.output_dir:
-            cand = Path(rec.output_dir) / "best_model.pt"
-            if cand.is_file():
-                return cand
-
-        # 2. Check direct model directory paths
-        candidates = [
-            Path(f"./models/{job_id}/best_model.pt"),
-            Path(f"./models/{job_id}/model_best.pt"),
-            Path(f"./models/{job_id}/checkpoint_best.pt"),
-            Path(f"./projects/{job_id}/models/best_model.pt"),
-            Path(job_id) / "best_model.pt" if Path(job_id).is_dir() else None,
-            Path(job_id) if Path(job_id).is_file() else None,
-        ]
-        for c in candidates:
-            if c and c.is_file():
-                return c
+    """Accept a completed local job ID, never an arbitrary checkpoint path."""
+    if not job_id:
         return None
-
-    # 3. Check active job or latest completed job
-    if hasattr(training_job_manager, "active_job_id") and training_job_manager.active_job_id:
-        active_rec = training_job_manager.get_job(training_job_manager.active_job_id)
-        if active_rec and active_rec.output_dir:
-            cand = Path(active_rec.output_dir) / "best_model.pt"
-            if cand.is_file():
-                return cand
-
-    completed = [r for r in training_job_manager._jobs.values() if getattr(r, "status", "") == "completed"]
-    if completed:
-        latest = sorted(completed, key=lambda r: getattr(r, "start_time", 0), reverse=True)[0]
-        if latest.output_dir:
-            cand = Path(latest.output_dir) / "best_model.pt"
-            if cand.is_file():
-                return cand
-
-    # 4. Global fallback paths
-    for p in [Path("./models/best_model.pt"), Path("./projects/default_project/models/best_model.pt")]:
-        if p.is_file():
-            return p
-
-    # 5. Search any subdirectories under ./models/
-    models_root = Path("./models")
-    if models_root.is_dir():
-        for p in models_root.glob("**/best_model.pt"):
-            if p.is_file():
-                return p
-
-    return None
+    rec = training_job_manager.get_job(job_id)
+    if rec and rec.status != "completed":
+        return None
+    return trusted_checkpoint(job_id, rec.output_dir if rec else None)
 
 
 def load_checkpoint_and_reconstruct_model(
@@ -271,6 +228,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -353,6 +311,10 @@ class StandaloneInspector:
         self.classes = self.cfg.get("classes", ["OK", "Defect"])
         self.resolution = tuple(self.cfg.get("image_size", [256, 256]))
         self.threshold = float(self.cfg.get("optimal_threshold", 0.50))
+        self.segmentation_mode = self.cfg.get("segmentation_mode", "resize_single")
+        self.min_defect_area_px = int(self.cfg.get("min_defect_area_px", 8))
+        self.max_segmentation_tiles = int(self.cfg.get("max_segmentation_tiles", 1024))
+        self.segmentation_tile_batch_size = int(self.cfg.get("segmentation_tile_batch_size", 4))
         norm_cfg = self.cfg.get("normalization", {})
         self.mean = norm_cfg.get("mean", [0.485, 0.456, 0.406])
         self.std = norm_cfg.get("std", [0.229, 0.224, 0.225])
@@ -373,8 +335,97 @@ class StandaloneInspector:
             self.torch_model = torch.jit.load(self.model_path, map_location="cpu")
             self.torch_model.eval()
 
+    def _inspect_tiled_segmentation(self, image_input, started_at) -> dict:
+        if isinstance(image_input, (str, Path)):
+            bgr = cv2.imread(str(image_input))
+            if bgr is None:
+                raise FileNotFoundError(f"Could not read image: {image_input}")
+        elif isinstance(image_input, np.ndarray):
+            bgr = image_input.copy()
+        else:
+            raise ValueError(f"Unsupported image input type: {type(image_input)}")
+        if bgr.ndim == 2:
+            bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+        elif bgr.ndim == 3 and bgr.shape[2] == 4:
+            bgr = cv2.cvtColor(bgr, cv2.COLOR_BGRA2BGR)
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        height, width = rgb.shape[:2]
+        tile_w, tile_h = self.resolution
+
+        def starts(length, tile):
+            if length <= tile:
+                return [0]
+            stride = max(1, tile - max(16, tile // 8))
+            positions = list(range(0, length - tile + 1, stride))
+            if positions[-1] != length - tile:
+                positions.append(length - tile)
+            return positions
+
+        coordinates = [(x, y) for y in starts(height, tile_h) for x in starts(width, tile_w)]
+        count = len(coordinates)
+        if count > self.max_segmentation_tiles:
+            raise ValueError(f"Image requires {count} tiles; limit is {self.max_segmentation_tiles}")
+
+        probability_sum = np.zeros((height, width), dtype=np.float32)
+        coverage = np.zeros((height, width), dtype=np.uint16)
+        mean = np.asarray(self.mean, dtype=np.float32).reshape(3, 1, 1)
+        std = np.asarray(self.std, dtype=np.float32).reshape(3, 1, 1)
+        for offset in range(0, count, self.segmentation_tile_batch_size):
+            bounds = []
+            tiles = []
+            for x, y in coordinates[offset:offset + self.segmentation_tile_batch_size]:
+                x2, y2 = min(width, x + tile_w), min(height, y + tile_h)
+                patch = rgb[y:y2, x:x2]
+                if patch.shape[:2] != (tile_h, tile_w):
+                    patch = cv2.resize(patch, (tile_w, tile_h), interpolation=cv2.INTER_LINEAR)
+                chw = patch.transpose(2, 0, 1).astype(np.float32) / 255.0
+                tiles.append((chw - mean) / std)
+                bounds.append((x, y, x2, y2))
+            batch = np.stack(tiles)
+            if self.model_format == "onnx":
+                logits = self.session.run(None, {self.input_name: batch})[0]
+            else:
+                import torch
+                with torch.no_grad():
+                    raw = self.torch_model(torch.from_numpy(batch))
+                logits = (raw[0] if isinstance(raw, (tuple, list)) else raw).cpu().numpy()
+            if logits.ndim != 4 or logits.shape[0] != len(bounds) or logits.shape[1] < 2:
+                raise RuntimeError("Segmentation model returned an unexpected tile shape")
+            shifted = logits - np.max(logits, axis=1, keepdims=True)
+            exponentials = np.exp(shifted)
+            probabilities = (exponentials / exponentials.sum(axis=1, keepdims=True))[:, 1]
+            for probability, (x, y, x2, y2) in zip(probabilities, bounds):
+                if probability.shape != (y2 - y, x2 - x):
+                    probability = cv2.resize(probability, (x2 - x, y2 - y), interpolation=cv2.INTER_LINEAR)
+                probability_sum[y:y2, x:x2] += probability
+                coverage[y:y2, x:x2] += 1
+
+        if np.any(coverage == 0):
+            raise RuntimeError("Segmentation tiling left pixels uncovered")
+        probability_sum /= coverage
+        defect_score = float(probability_sum.max())
+        defect_area_px = int(np.count_nonzero(probability_sum > self.threshold))
+        verdict = "NG" if defect_area_px >= self.min_defect_area_px else "OK"
+        return {
+            "status": "success",
+            "verdict": verdict,
+            "defect_score": round(defect_score, 4),
+            "confidence": round(defect_score, 4),
+            "threshold": round(self.threshold, 4),
+            "optimal_threshold": round(self.threshold, 4),
+            "task": self.task,
+            "predicted_class": "Defect" if verdict == "NG" else "OK",
+            "latency_ms": round((time.perf_counter() - started_at) * 1000.0, 2),
+            "image_dimensions": [width, height],
+            "tiles_processed": count,
+            "defect_area_px": defect_area_px,
+            "min_defect_area_px": self.min_defect_area_px,
+        }
+
     def inspect(self, image_input) -> dict:
         t0 = time.perf_counter()
+        if self.task == "segmentation" and self.segmentation_mode == "tiled_full_image":
+            return self._inspect_tiled_segmentation(image_input, t0)
         batch, orig_w, orig_h = preprocess_image(
             image_input, target_size=self.resolution, mean=self.mean, std=self.std
         )
@@ -497,16 +548,19 @@ def main():
     if args.threshold_override is not None:
         inspector.threshold = float(args.threshold_override)
 
-    target_image = args.image
-    if not target_image or args.self_test:
-        dummy_path = "dummy_test.png"
-        res_w, res_h = inspector.resolution
-        dummy = np.zeros((res_h, res_w, 3), dtype=np.uint8)
-        cv2.rectangle(dummy, (30, 30), (res_w - 30, res_h - 30), (128, 128, 128), -1)
-        cv2.imwrite(dummy_path, dummy)
-        target_image = dummy_path
-
+    temporary_dir = None
     try:
+        target_image = args.image
+        if not target_image or args.self_test:
+            temporary_dir = tempfile.TemporaryDirectory(prefix="modu_vision_selftest_")
+            dummy_path = Path(temporary_dir.name) / "dummy_test.png"
+            res_w, res_h = inspector.resolution
+            dummy = np.zeros((res_h, res_w, 3), dtype=np.uint8)
+            cv2.rectangle(dummy, (30, 30), (res_w - 30, res_h - 30), (128, 128, 128), -1)
+            if not cv2.imwrite(str(dummy_path), dummy):
+                raise OSError("Could not write temporary self-test image")
+            target_image = str(dummy_path)
+
         result = inspector.inspect(target_image)
         json_output = json.dumps(result, indent=2)
         print(json_output)
@@ -526,6 +580,9 @@ def main():
             with open(args.output, "w", encoding="utf-8") as f:
                 f.write(json_output)
         sys.exit(1)
+    finally:
+        if temporary_dir is not None:
+            temporary_dir.cleanup()
 
 
 if __name__ == "__main__":
@@ -554,9 +611,24 @@ def export_runtime_package(
         raise FileNotFoundError(f"No trained model checkpoint found for job: {job_id}")
 
     pkg_name = package_name or f"modu_vision_export_{Path(job_id).name}"
-    base_dir = output_base_dir or EXPORTS_DIR
-    pkg_dir = base_dir / pkg_name
-    pkg_dir.mkdir(parents=True, exist_ok=True)
+    if not isinstance(pkg_name, str) or not re.fullmatch(r"[\w][\w.-]{0,95}", pkg_name, flags=re.UNICODE):
+        raise ValueError("Invalid package name: use letters, numbers, underscores, dots, or hyphens only.")
+    base_dir = (output_base_dir or EXPORTS_DIR).resolve()
+    base_dir.mkdir(parents=True, exist_ok=True)
+    requested_name = pkg_name
+    for attempt in range(5):
+        candidate_name = requested_name if attempt == 0 else f"{requested_name}_{time.time_ns()}"
+        pkg_dir = base_dir / candidate_name
+        if pkg_dir.is_symlink():
+            raise ValueError("Invalid package name: target path is a symbolic link.")
+        try:
+            pkg_dir.mkdir(exist_ok=False)
+            pkg_name = candidate_name
+            break
+        except FileExistsError:
+            continue
+    else:
+        raise RuntimeError("Could not reserve a unique runtime package directory")
 
     # 2. Reconstruct authentic model architecture
     model, meta, anomaly_obj = load_checkpoint_and_reconstruct_model(ckpt_path)
@@ -658,9 +730,16 @@ def export_runtime_package(
         },
         "optimal_threshold": round(optimal_th, 4),
         "zero_underkill_calibrated": calibration_applied,
-        "exported_from_checkpoint": str(ckpt_path.resolve()),
+        "exported_from_checkpoint": ckpt_path.name,
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if task == "segmentation":
+        config_data.update({
+            "segmentation_mode": "tiled_full_image",
+            "min_defect_area_px": 8,
+            "max_segmentation_tiles": 1024,
+            "segmentation_tile_batch_size": 4,
+        })
     with open(pkg_dir / "config.json", "w", encoding="utf-8") as f:
         json.dump(config_data, f, indent=2)
 
@@ -669,6 +748,20 @@ def export_runtime_package(
         f.write(generate_standalone_infer_py())
 
     native_clients = False  # No task-specific native client has been validated.
+    if task == "segmentation":
+        inspection_scope = f"""## Inspection Scope
+- `infer.py` inspects the original image with overlapping {res}×{res} tiles (batch size 4, at most 1024 tiles).
+- It averages overlapping foreground probabilities, then returns NG when more than `optimal_threshold` covers at least `min_defect_area_px` pixels (default 8). These rules match the single full-image segmentation node in Step 5.
+- Export at the Step 5 model input resolution, then set `optimal_threshold` and `min_defect_area_px` in `config.json` to the same values used by that node before comparing results.
+- The standalone package does not execute other Step 5 flowchart nodes such as detector ROIs, crops, filters, or final review rules. The Step 6 single-forward benchmark does not include full-image tiling, image I/O, camera, or PLC time.
+
+"""
+    else:
+        inspection_scope = """## Inspection Scope
+- `infer.py` resizes one image to the configured model input size and runs that model once. It does not execute the Step 5 flowchart's ROI, crop, filter, or final review nodes.
+- The Step 6 single-forward benchmark does not include image I/O, camera, or PLC time.
+
+"""
 
     readme_content = f"""# Neuro-R Industrial Runtime Package
 
@@ -685,6 +778,7 @@ def export_runtime_package(
 - Native C#/C++ clients: {'included for ONNX classification/segmentation; validate against Python before use' if native_clients else 'not available for this model format/task'}
 - `README_DEPLOY.md`: Quickstart deployment guide
 
+{inspection_scope}
 ## Standalone Quickstart
 ```bash
 python infer.py --image test_sample.png

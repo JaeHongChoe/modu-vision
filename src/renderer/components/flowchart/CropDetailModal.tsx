@@ -62,6 +62,9 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   // Inspection Threshold
   const inspectNode = pipeline?.nodes.find((n) => n.data.node_type === 'inspection');
   const threshold = inspectNode?.data.threshold ?? 0.45;
+  const isSegmentation = inspectNode?.data.task === 'segmentation';
+  const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
+  const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
   const scorePercent = crop.defect_score * 100;
   const thresholdPercent = threshold * 100;
   const deltaScore = crop.defect_score - threshold;
@@ -76,7 +79,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
           <div className="flex items-center space-x-2.5">
             <Maximize2 className="w-4 h-4 text-[#3B82F6]" />
             <h3 className="font-bold text-xs font-mono uppercase tracking-wider text-slate-100">
-              추출 ROI 정밀 진단 — {crop.label} ({crop.roi_id})
+              검사 영역 상세 결과 — {crop.label} ({crop.roi_id})
             </h3>
           </div>
           <button
@@ -106,7 +109,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
             </div>
 
             <div className="w-full mt-3 pt-2.5 border-t border-[#2B3547] flex items-center justify-between text-[11px] font-mono text-slate-300">
-              <span>크롭 해상도: <strong className="text-white tabular-nums">{width} × {height} px</strong></span>
+              <span>검사 이미지 영역: <strong className="text-white tabular-nums">{width} × {height} px</strong></span>
               <span>면적: <strong className="text-white tabular-nums">{areaPx.toLocaleString()} px²</strong></span>
             </div>
           </div>
@@ -125,18 +128,18 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 <div className="flex items-center space-x-2">
                   {isNg ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span className="font-mono font-bold text-xs uppercase">
-                    공정 판정: {crop.verdict} ({isNg ? '불량 REJECT' : '정상 PASS'})
+                    로컬 모델 판정: {crop.verdict}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0E14]/60 border border-current">
-                  {isNg ? '공정 이탈' : '기준 충족'}
+                  {isNg ? '결함 기준 초과' : '설정 기준 이내'}
                 </span>
               </div>
 
               {/* Defect Score Precision Gauge */}
               <div className="mt-3 bg-[#0B0E14] p-3 rounded border border-[#2B3547]">
                 <div className="flex justify-between text-[11px] font-mono mb-1.5">
-                  <span className="text-slate-400">결함 / 이상 점수 (Score):</span>
+                  <span className="text-slate-400">{isSegmentation ? '최고 결함 픽셀 확률:' : '결함 / 이상 점수:'}</span>
                   <div className="flex items-center space-x-2">
                     <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
                       {scorePercent.toFixed(1)}%
@@ -182,7 +185,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
               {/* Geometric Coordinate Breakdown Table */}
               <div className="mt-3 bg-[#0B0E14] p-3 rounded border border-[#2B3547] text-[11px] font-mono space-y-1.5">
                 <div className="flex justify-between border-b border-[#2B3547]/60 pb-1">
-                  <span className="text-slate-400">결함 분류 (Flaw Type):</span>
+                  <span className="text-slate-400">{isSegmentation ? '분할 모델 결과:' : '검출 정보:'}</span>
                   <span className="text-white font-bold">{crop.flaw_type}</span>
                 </div>
                 <div className="flex justify-between">
@@ -197,13 +200,15 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                   <span className="text-slate-400">바운딩 박스 (BBox):</span>
                   <span className="text-[#3B82F6] font-bold tabular-nums">[{x1}, {y1}, {x2}, {y2}]</span>
                 </div>
-                {crop.defect_area_px !== undefined && (
+                {isSegmentation && (
                   <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
-                    <span className="text-slate-400">결함 픽셀 면적 (Defect Area):</span>
-                    <span className="text-[#EF4444] font-bold tabular-nums">{crop.defect_area_px} px²</span>
+                    <span className="text-slate-400">
+                      임계값 초과 픽셀 / NG 최소 면적 ({isFullImageSegmentation ? '검사 이미지' : '모델 입력'}):
+                    </span>
+                    <span className="text-slate-100 font-bold tabular-nums">{crop.defect_area_px ?? 0} / {minimumDefectArea} px</span>
                   </div>
                 )}
-                {crop.confidence !== undefined && (
+                {!isFullImageSegmentation && crop.confidence !== undefined && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">검출 신뢰도 (Confidence):</span>
                     <span className="text-[#10B981] font-bold tabular-nums">{(crop.confidence * 100).toFixed(1)}%</span>

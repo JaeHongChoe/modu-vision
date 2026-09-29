@@ -34,7 +34,9 @@ from backend.engine.labeling_ai import (
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
+    return client
 
 
 # --------------------------------------------------------------------------

@@ -54,6 +54,12 @@ from backend.engine.dataset_loaders import (
     _read_image_rgb,
 )
 from backend.engine.device import get_device
+from backend.engine.checkpoint_paths import (
+    completed_job_receipt,
+    is_job_id,
+    trusted_checkpoint,
+)
+from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.engine.trainer import infer
 from backend.utils.error_catalog import format_error_response
 
@@ -122,71 +128,147 @@ def _find_image_file(image_id: str, file_path: Optional[str] = None) -> Optional
 
 def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
     """Locates only the explicitly selected training job's checkpoint."""
-    if job_id:
-        rec = training_job_manager.get_job(job_id)
-        if rec and rec.output_dir:
-            cand = Path(rec.output_dir) / "best_model.pt"
-            if cand.is_file():
-                return cand
-        cand2 = Path(f"./models/{job_id}/best_model.pt")
-        if cand2.is_file():
-            return cand2
-        cand3 = Path(f"./projects/{job_id}/models/best_model.pt")
-        if cand3.is_file():
-            return cand3
-        if Path(job_id).is_dir():
-            cand4 = Path(job_id) / "best_model.pt"
-            if cand4.is_file():
-                return cand4
+    if not job_id:
+        return None
+    rec = training_job_manager.get_job(job_id)
+    if rec and rec.status != "completed":
+        return None
+    return trusted_checkpoint(job_id, rec.output_dir if rec else None)
 
-    return None
+
+def _matches_source_dataset(
+    output_dir: Path,
+    source_dataset_path: Optional[str],
+    source_task: Optional[str],
+    dataset_hint: Optional[str] = None,
+    recorded_source: Optional[str] = None,
+    recorded_fingerprint: Optional[str] = None,
+) -> bool:
+    """Match the original import folder, never the prepared evaluation dataset."""
+    if not source_dataset_path and not source_task:
+        return True
+    receipt = completed_job_receipt(output_dir) or {}
+    meta_path = output_dir / "model_meta.json"
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {}
+    except (OSError, ValueError):
+        meta = {}
+    if source_task and (receipt.get("task") or meta.get("task")) != source_task:
+        return False
+    if not source_dataset_path:
+        return True
+
+    selected = Path(source_dataset_path).expanduser().resolve()
+    original = receipt.get("source_dataset_path") or recorded_source
+    expected_fingerprint = receipt.get("dataset_fingerprint") or recorded_fingerprint
+    # Legacy receipts can identify a folder, but cannot prove it is unchanged.
+    if not original or not isinstance(expected_fingerprint, str) or not expected_fingerprint.startswith("v1:"):
+        return False
+    original_path = Path(original).expanduser().resolve()
+    if original_path != selected or original_path.is_relative_to(output_dir.resolve()):
+        return False
+    from backend.api.routes_dataset import STUDIO_ANNOTATIONS_DIR, _split_manifest_file
+
+    try:
+        current_fingerprint = fingerprint_dataset(
+            selected, studio_root=STUDIO_ANNOTATIONS_DIR, split_manifest=_split_manifest_file(selected),
+        )
+    except OSError:
+        return False
+    return current_fingerprint == expected_fingerprint
 
 
 def _resolve_job_artifacts(
     job_id: Optional[str] = None,
     dataset_path_override: Optional[str] = None,
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ) -> Tuple[Path, Path, Dict[str, Any], str, str, Path]:
     """
     Resolves (output_dir, model_pt, meta, task, resolved_job_id, dataset_path).
     Raises HTTPException 400 or 404 if job or artifacts are invalid.
     """
     if job_id and job_id not in ("latest", "current", "default"):
+        if not is_job_id(job_id):
+            raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
         rec = training_job_manager.get_job(job_id)
         if rec:
-            if rec.status == "running":
+            if rec.status in ("running", "stopping"):
                 raise HTTPException(status_code=400, detail=f"Training job '{job_id}' is still in progress")
             if rec.status in ("failed", "aborted"):
                 raise HTTPException(
                     status_code=400,
                     detail=f"Training job '{job_id}' did not complete successfully (status: {rec.status})",
                 )
-            out_dir = Path(rec.output_dir)
+            model_pt = trusted_checkpoint(job_id, rec.output_dir)
+            if model_pt is None:
+                raise HTTPException(status_code=404, detail=f"Evaluation model checkpoint not found for job: {job_id}")
+            out_dir = model_pt.parent
+            if not _matches_source_dataset(
+                out_dir, source_dataset_path, source_task, rec.dataset_path,
+                getattr(rec, "source_dataset_path", None), getattr(rec, "dataset_fingerprint", None),
+            ):
+                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
             task_hint = rec.task
             dataset_hint = Path(rec.dataset_path)
             resolved_job_id = rec.job_id
         else:
-            candidates = [
-                Path(f"./models/{job_id}"),
-                Path(f"./projects/{job_id}/models"),
-                Path(job_id) if Path(job_id).is_dir() else None,
-            ]
-            out_dir = next((c for c in candidates if c and (c / "best_model.pt").is_file()), None)
-            if not out_dir:
+            model_pt = trusted_checkpoint(job_id)
+            if model_pt is None:
                 raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
-            task_hint = None
-            dataset_hint = None
+            out_dir = model_pt.parent
+            if not _matches_source_dataset(out_dir, source_dataset_path, source_task):
+                raise HTTPException(status_code=404, detail=f"No completed model matches the selected dataset for job: {job_id}")
+            receipt = completed_job_receipt(out_dir) or {}
+            task_hint = receipt.get("task")
+            dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None
             resolved_job_id = job_id
     else:
         # Search for latest completed job
-        completed_jobs = [r for r in training_job_manager._jobs.values() if r.status == "completed"]
-        if completed_jobs:
-            latest_rec = sorted(completed_jobs, key=lambda r: getattr(r, "start_time", 0), reverse=True)[0]
-            out_dir = Path(latest_rec.output_dir)
+        completed_jobs = sorted(
+            (r for r in training_job_manager._jobs.values() if r.status == "completed"),
+            key=lambda r: getattr(r, "start_time", 0), reverse=True,
+        )
+        latest_rec = next(
+            (r for r in completed_jobs
+             if trusted_checkpoint(r.job_id, r.output_dir) is not None
+             and _matches_source_dataset(
+                 Path(r.output_dir), source_dataset_path, source_task, r.dataset_path,
+                 getattr(r, "source_dataset_path", None), getattr(r, "dataset_fingerprint", None),
+             )),
+            None,
+        )
+        if latest_rec:
+            out_dir = trusted_checkpoint(latest_rec.job_id, latest_rec.output_dir).parent
             task_hint = latest_rec.task
             dataset_hint = Path(latest_rec.dataset_path)
             resolved_job_id = latest_rec.job_id
         else:
-            raise HTTPException(status_code=404, detail="No completed training job has been selected")
+            # Desktop renderer and backend processes can restart independently.
+            # Reopen the newest usable job checkpoint when in-memory records
+            # are gone. A model metadata file is required to identify its task.
+            candidates = [
+                p for p in (
+                    *Path("./models").glob("job_*/best_model.pt"),
+                    *Path("./projects").glob("job_*/models/best_model.pt"),
+                )
+                if (p.parent / "model_meta.json").is_file()
+                and trusted_checkpoint(
+                    p.parent.name if p.parent.parent.name == "models" else p.parent.parent.name
+                ) == p.absolute()
+                and _matches_source_dataset(p.parent, source_dataset_path, source_task)
+            ]
+            active = training_job_manager.get_active_job()
+            if active and active.status in ("running", "stopping"):
+                candidates = [p for p in candidates if p.parent.name != active.job_id]
+            if not candidates:
+                raise HTTPException(status_code=404, detail="No completed training job has been selected")
+            newest = max(candidates, key=lambda p: p.stat().st_mtime)
+            out_dir = newest.parent.resolve()
+            receipt = completed_job_receipt(out_dir) or {}
+            task_hint = receipt.get("task")
+            dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None
+            resolved_job_id = out_dir.name if out_dir.parent.name == "models" else out_dir.parent.name
 
     model_pt = out_dir / "best_model.pt"
     if not model_pt.is_file():
@@ -207,6 +289,8 @@ def _resolve_job_artifacts(
         resolved_dataset = Path(dataset_path_override).resolve()
     elif dataset_hint:
         resolved_dataset = dataset_hint.resolve()
+    elif (out_dir / "dataset").is_dir():
+        resolved_dataset = (out_dir / "dataset").resolve()
     elif "dataset_path" in meta and Path(meta["dataset_path"]).exists():
         resolved_dataset = Path(meta["dataset_path"]).resolve()
     else:
@@ -654,13 +738,16 @@ def run_or_load_evaluation(
     job_id: Optional[str] = None,
     dataset_path: Optional[str] = None,
     force_recompute: bool = False,
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ) -> Dict[str, Any]:
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
 
     out_dir, model_pt, meta, task, resolved_job_id, resolved_dataset = _resolve_job_artifacts(
-        job_id=job_id_clean, dataset_path_override=ds_path_clean
+        job_id=job_id_clean, dataset_path_override=ds_path_clean,
+        source_dataset_path=source_dataset_path, source_task=source_task,
     )
 
     eval_json = out_dir / "eval_results.json"
@@ -734,6 +821,8 @@ def get_evaluation_results(
     job_id: Optional[str] = Query(None),
     dataset_path: Optional[str] = Query(None),
     force_recompute: bool = Query(False),
+    source_dataset_path: Optional[str] = Query(None),
+    source_task: Optional[str] = Query(None),
 ):
     """
     Returns genuine metrics, clickable Confusion Matrix (with real cell_samples on disk),
@@ -742,7 +831,10 @@ def get_evaluation_results(
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
-    return run_or_load_evaluation(job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean)
+    return run_or_load_evaluation(
+        job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean,
+        source_dataset_path=source_dataset_path, source_task=source_task,
+    )
 
 
 @router.get("/heatmap/{image_id:path}")
@@ -1005,46 +1097,51 @@ class BenchmarkRequest(BaseModel):
 @router.post("/benchmark")
 def run_inference_benchmark(req: BenchmarkRequest):
     """
-    Inference Center: Benchmarks model inference FPS, latency (ms), and P95
-    on the active accelerator device (Apple Silicon MPS / CUDA / CPU).
+    Benchmark the already loaded model's forward pass on synthetic input.
+
+    Checkpoint loading, preprocessing, overlays, and I/O are outside the timed
+    region, so the reported FPS does not confuse startup cost with inference.
     """
+    from backend.engine.exporter import load_checkpoint_and_reconstruct_model
+
     device = get_device()
     dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
 
     iters = max(5, min(req.iterations or 25, 100))
     res = req.resolution or 256
-
-    # Create dummy batch tensor matching resolution
-    dummy_input = np.random.randint(0, 256, (res, res, 3), dtype=np.uint8)
+    if res < 32 or res > 2048:
+        raise HTTPException(status_code=422, detail="Benchmark resolution must be between 32 and 2048 pixels")
 
     model_file = _find_model_file(req.job_id) if req.job_id else None
     if not model_file or not model_file.is_file():
         raise HTTPException(status_code=404, detail="A trained model checkpoint is required for benchmarking.")
     try:
-        checkpoint = torch.load(model_file, map_location="cpu", weights_only=False)
-        task = str(checkpoint.get("task", "classification"))
+        model, meta, _ = load_checkpoint_and_reconstruct_model(model_file)
+        model = model.to(device).eval()
+        task = str(meta.get("task", "classification"))
+        dummy_input = torch.rand((1, 3, res, res), dtype=torch.float32, device=device)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Cannot read model task: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"Cannot load model for benchmark: {exc}") from exc
 
-    def run_model() -> None:
-        try:
-            infer(task, model_file, dummy_input, device=device)
-        except Exception as exc:
-            raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
+    def synchronize() -> None:
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        elif device.type == "mps":
+            torch.mps.synchronize()
 
-    # Measure warmup
     latencies = []
-    for _ in range(3):
-        t0 = time.perf_counter()
-        run_model()
-        _ = (time.perf_counter() - t0) * 1000.0
-
-    # Timed runs
-    for _ in range(iters):
-        t0 = time.perf_counter()
-        run_model()
-        ms = (time.perf_counter() - t0) * 1000.0
-        latencies.append(ms)
+    try:
+        with torch.inference_mode():
+            for _ in range(3):
+                model(dummy_input)
+                synchronize()
+            for _ in range(iters):
+                t0 = time.perf_counter()
+                model(dummy_input)
+                synchronize()
+                latencies.append((time.perf_counter() - t0) * 1000.0)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Model inference failed: {exc}") from exc
 
     latencies_arr = np.array(latencies)
     mean_ms = float(np.mean(latencies_arr))
@@ -1059,6 +1156,7 @@ def run_inference_benchmark(req: BenchmarkRequest):
         "model_path": str(model_file.resolve()),
         "task": task,
         "input_kind": "synthetic_random_tensor",
+        "measurement_scope": "model_forward_only",
         "device": device.type,
         "device_name": dev_name,
         "iterations": iters,

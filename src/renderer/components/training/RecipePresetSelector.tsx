@@ -57,8 +57,18 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
       <div className="grid grid-cols-2 gap-4">
         {/* Recipe A: Fast Prototype Card */}
         <div
+          role="button"
+          tabIndex={isTraining ? -1 : 0}
           onClick={() => !isTraining && setPreset('fast')}
-          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative ${
+          onKeyDown={(event) => {
+            if (!isTraining && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              setPreset('fast');
+            }
+          }}
+          aria-disabled={isTraining}
+          aria-pressed={preset === 'fast'}
+          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
             preset === 'fast'
               ? 'border-[#3B82F6] bg-[#1A212E] ring-1 ring-[#3B82F6]'
               : 'border-[#2B3547] bg-[#131822] hover:bg-[#1A212E] hover:border-[#475569] text-slate-400'
@@ -72,7 +82,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
               </span>
             </div>
             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[2px] bg-[#0B0E14] border border-[#2B3547] text-blue-300 tabular-nums">
-              5 Epochs • 1-2 min
+              12 Epochs max • Early stop
             </span>
           </div>
 
@@ -90,7 +100,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
               <JargonTooltip termKey="batch_size">Batch: 16</JargonTooltip>
             </span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">Light Aug</span>
-            <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">Inline Feasibility</span>
+            <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">Feasibility Check</span>
           </div>
 
           {preset === 'fast' && (
@@ -102,8 +112,18 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
 
         {/* Recipe B: High Precision Card */}
         <div
+          role="button"
+          tabIndex={isTraining ? -1 : 0}
           onClick={() => !isTraining && setPreset('precision')}
-          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative ${
+          onKeyDown={(event) => {
+            if (!isTraining && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              setPreset('precision');
+            }
+          }}
+          aria-disabled={isTraining}
+          aria-pressed={preset === 'precision'}
+          className={`p-4 rounded-[4px] border transition-all cursor-pointer relative text-left ${
             preset === 'precision'
               ? 'border-[#3B82F6] bg-[#1A212E] ring-1 ring-[#3B82F6]'
               : 'border-[#2B3547] bg-[#131822] hover:bg-[#1A212E] hover:border-[#475569] text-slate-400'
@@ -113,18 +133,18 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="font-bold text-xs text-slate-100 uppercase tracking-wide">
-                {language === 'ko' ? '🎯 고정밀 프로덕션 (Recipe B)' : '🎯 High Precision (Recipe B)'}
+                {language === 'ko' ? '🎯 고정밀 후보 학습 (Recipe B)' : '🎯 Precision Candidate (Recipe B)'}
               </span>
             </div>
             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-[2px] bg-[#0B0E14] border border-[#2B3547] text-emerald-300 tabular-nums">
-              20 Epochs • Early Stop
+              30 Epochs max • Early stop
             </span>
           </div>
 
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
-              ? '양산 라인 배포를 위한 최고 정밀도 레시피. 코사인 학습률 감쇄 및 산업용 고강도 데이터 증강을 적용합니다.'
-              : 'Production-grade precision training with cosine annealing learning rate schedule and heavy industrial augmentations.'}
+              ? '더 큰 모델과 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
+              : 'Train a larger candidate with stronger augmentation. Validate on separate test data and the production line before use.'}
           </p>
 
           <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
@@ -133,9 +153,9 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             </span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">Heavy Aug</span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">
-              <JargonTooltip termKey="early_stopping">Patience: 5</JargonTooltip>
+              <JargonTooltip termKey="early_stopping">Patience: 8</JargonTooltip>
             </span>
-            <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">Zero Escape</span>
+            <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">Candidate</span>
           </div>
 
           {preset === 'precision' && (
@@ -160,43 +180,43 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             <tbody className="divide-y divide-[#1E293B] text-slate-300">
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Target Line Process (적합 공정)</td>
-                <td className="py-1.5 px-3">고속 인라인 스크리닝 / 불량 타진</td>
-                <td className="py-1.5 px-3">양산 출하 전수검사 (Zero Escape)</td>
+                <td className="py-1.5 px-3">가능성 확인용 모델 후보</td>
+                <td className="py-1.5 px-3">추가 검증용 모델 후보</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Max Epochs & Patience (학습 주기)</td>
-                <td className="py-1.5 px-3 tabular-nums">5 Epochs (Fixed)</td>
-                <td className="py-1.5 px-3 tabular-nums">20 Epochs (Early Stopping, Patience=5)</td>
+                <td className="py-1.5 px-3 tabular-nums">12 Epochs max (Patience=4)</td>
+                <td className="py-1.5 px-3 tabular-nums">30 Epochs max (Patience=8)</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Learning Rate Policy (학습률 정책)</td>
-                <td className="py-1.5 px-3 tabular-nums">1.0e-3 (Linear Warmup)</td>
-                <td className="py-1.5 px-3 tabular-nums">5.0e-4 (Cosine Annealing Decay)</td>
+                <td className="py-1.5 px-3 tabular-nums">1.0e-3 (Warmup + Cosine)</td>
+                <td className="py-1.5 px-3 tabular-nums">5.0e-4 (Warmup + Cosine)</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Batch Size & Accumulation (배치 규격)</td>
-                <td className="py-1.5 px-3 tabular-nums">16 (AdamW, Weight Decay 1e-4)</td>
-                <td className="py-1.5 px-3 tabular-nums">16 + Grad Accum (Weight Decay 1e-2)</td>
+                <td className="py-1.5 px-3 tabular-nums">16 (AdamW)</td>
+                <td className="py-1.5 px-3 tabular-nums">8 (AdamW)</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Data Augmentation (데이터 증강)</td>
-                <td className="py-1.5 px-3">Light (Flip, ±5° Rotate)</td>
-                <td className="py-1.5 px-3">Heavy (Lighting Jitter, Cutout, ±15° OBB)</td>
+                <td className="py-1.5 px-3">Flip, ±5° Rotate, 20% Cutout</td>
+                <td className="py-1.5 px-3">Flip, ±10° Rotate, 35% Cutout</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Defect Resolution Limit (검출 한계)</td>
-                <td className="py-1.5 px-3 tabular-nums">≥ 15 px (일반 결함)</td>
-                <td className="py-1.5 px-3 tabular-nums">≥ 2 px (초미세 크랙/핀홀/이물)</td>
+                <td className="py-1.5 px-3">데이터별 측정 필요</td>
+                <td className="py-1.5 px-3">데이터별 측정 필요</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Tact Time Estimate (소요 시간)</td>
-                <td className="py-1.5 px-3 tabular-nums">1 ~ 2 분 (Apple Silicon / CUDA)</td>
-                <td className="py-1.5 px-3 tabular-nums">5 ~ 15 분 (수렴 보장)</td>
+                <td className="py-1.5 px-3">데이터 크기·장치에 따라 달라짐</td>
+                <td className="py-1.5 px-3">데이터 크기·장치에 따라 달라짐</td>
               </tr>
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-400">Inspection Standard (검사 규격)</td>
-                <td className="py-1.5 px-3">타입 B 프로토타입 기준</td>
-                <td className="py-1.5 px-3 font-bold text-emerald-400">타입 C 상용 머신비전 무결점</td>
+                <td className="py-1.5 px-3">별도 시험·현장 검증 필요</td>
+                <td className="py-1.5 px-3">별도 시험·현장 검증 필요</td>
               </tr>
             </tbody>
           </table>

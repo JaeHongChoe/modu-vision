@@ -10,6 +10,7 @@ import json
 import logging
 import base64
 import binascii
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -19,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox
+from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.labeling_ai import (
     auto_select_contour,
     bbox_to_mask,
@@ -46,6 +48,27 @@ ANNOTATIONS_DIR = Path("./annotations")
 ANNOTATIONS_DIR.mkdir(parents=True, exist_ok=True)
 MASKS_DIR = Path("./annotations/masks")
 MASKS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _validate_image_id(image_id: str) -> None:
+    if (not image_id.strip() or image_id in {".", ".."}
+            or Path(image_id).name != image_id or "/" in image_id or "\\" in image_id
+            or any(ord(character) < 32 for character in image_id)):
+        raise HTTPException(status_code=422, detail="image_id must be a single image filename stem")
+
+
+def _trusted_annotation_directory(requested: str) -> Path:
+    """Allow explicit output folders only below the app root or configured roots."""
+    target = Path(requested).expanduser().resolve()
+    roots = [ANNOTATIONS_DIR.resolve()]
+    roots.extend(
+        Path(value).expanduser().resolve()
+        for value in os.environ.get("VISION_AI_STUDIO_ANNOTATION_ROOTS", "").split(os.pathsep)
+        if value.strip()
+    )
+    if not any(target == root or root in target.parents for root in roots):
+        raise HTTPException(status_code=403, detail="Annotation folder is outside approved roots")
+    return target
 
 
 class AnnotationItem(BaseModel):
@@ -83,6 +106,7 @@ class AnnotationItem(BaseModel):
 class AnnotationSaveRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     image_id: str = Field(..., min_length=1)
+    image_path: Optional[str] = None
     annotations: List[AnnotationItem] = Field(default_factory=list)
     image_width: Optional[int] = 256
     image_height: Optional[int] = 256
@@ -102,7 +126,12 @@ def save_annotations(req: AnnotationSaveRequest):
       1. Sanitizes bounding box coordinates with coordinate swapping and boundary clamping.
       2. Rasterizes vector polygon contours to binary/multiclass mask PNG for segmentation.
     """
-    target_dir = Path(req.output_dir).resolve() if req.output_dir else ANNOTATIONS_DIR
+    _validate_image_id(req.image_id)
+    if req.image_path and Path(req.image_path).stem != req.image_id:
+        raise HTTPException(status_code=422, detail="image_id must match image_path filename")
+    target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
+                  dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
+                  if req.image_path else ANNOTATIONS_DIR)
     target_dir.mkdir(parents=True, exist_ok=True)
     masks_dir = target_dir / "masks"
     masks_dir.mkdir(parents=True, exist_ok=True)
@@ -187,10 +216,12 @@ def save_annotations(req: AnnotationSaveRequest):
             for brush_pixels, category_id in brush_masks:
                 mask_arr[brush_pixels] = category_id
             mask_file = masks_dir / f"{req.image_id}.png"
-            cv2.imwrite(str(mask_file), mask_arr)
+            if not cv2.imwrite(str(mask_file), mask_arr):
+                raise OSError(f"Could not write annotation mask: {mask_file}")
             mask_file_path = str(mask_file)
         except Exception as e:
             logger.exception("Failed to rasterize polygon mask: %s", e)
+            raise HTTPException(status_code=500, detail=f"Failed to save annotation mask: {e}") from e
 
     # Persist JSON file
     json_path = target_dir / f"{req.image_id}.json"
@@ -240,7 +271,10 @@ def get_annotations(
     file_path: Optional[str] = Query(None),
 ):
     """Retrieves stored annotations for the requested image_id, with seamless LabelMe format conversion."""
-    target_dir = Path(dir_path).resolve() if dir_path and isinstance(dir_path, (str, Path)) else ANNOTATIONS_DIR
+    _validate_image_id(image_id)
+    target_dir = (_trusted_annotation_directory(str(dir_path)) if dir_path and isinstance(dir_path, (str, Path)) else
+                  dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
+                  if file_path else ANNOTATIONS_DIR)
     json_path = target_dir / f"{image_id}.json"
 
     # 1. If Studio-saved annotation JSON exists, return it directly
@@ -257,9 +291,9 @@ def get_annotations(
         cand = Path(file_path).with_suffix(".json")
         if cand.exists():
             candidate_json = cand
-    if not candidate_json:
+    if not candidate_json and not file_path:
         # Check in project / dataset directories
-        for root in [Path("./datasets"), Path("/Volumes/backup/MicoCeramics_QC_데이터/NG_labelme"), Path.cwd()]:
+        for root in [Path("./datasets"), Path.cwd()]:
             if root.exists():
                 matches = list(root.rglob(f"{image_id}.json"))
                 if matches:
@@ -342,7 +376,9 @@ def get_annotations(
 @router.delete("/{image_id}")
 def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None)):
     """Deletes stored annotations for the requested image_id."""
-    target_dir = Path(dir_path).resolve() if dir_path else ANNOTATIONS_DIR
+    _validate_image_id(image_id)
+    target_dir = (_trusted_annotation_directory(str(dir_path))
+                  if dir_path and isinstance(dir_path, (str, Path)) else ANNOTATIONS_DIR)
     json_path = target_dir / f"{image_id}.json"
     mask_path = target_dir / "masks" / f"{image_id}.png"
 

@@ -13,7 +13,6 @@
 import React from 'react';
 import {
   Activity,
-  Check,
   ChevronDown,
   Cpu,
   Disc,
@@ -47,7 +46,7 @@ export const WizardHeader: React.FC = () => {
     { num: 3, nameKo: '오토딥러닝', nameEn: 'AutoML Trainer', icon: Wand2 },
     { num: 4, nameKo: '평가 & 과검/미검', nameEn: 'Evaluation & Overkill', icon: Activity },
     { num: 5, nameKo: '플로우차트', nameEn: 'Flowchart Studio', icon: GitFork },
-    { num: 6, nameKo: '인퍼런스 & 배포', nameEn: 'Inference & Export', icon: Rocket },
+    { num: 6, nameKo: '추론 & 모델 내보내기', nameEn: 'Inference & Export', icon: Rocket },
   ];
 
   const tasks: Array<{
@@ -235,7 +234,7 @@ export const WizardHeader: React.FC = () => {
           {steps.map((s) => {
             const Icon = s.icon;
             const isActive = activeStep === s.num;
-            const isCompleted = activeStep > s.num;
+            const isPrevious = activeStep > s.num;
 
             return (
               <button
@@ -245,7 +244,7 @@ export const WizardHeader: React.FC = () => {
                 className={`relative flex items-center space-x-2 px-3.5 py-1.5 text-xs transition-colors duration-75 cursor-pointer border-r border-[#2B3547] last:border-r-0 ${
                   isActive
                     ? 'bg-[#1A212E] text-white font-bold shadow-[inset_0_2px_0_0_#10B981]'
-                    : isCompleted
+                    : isPrevious
                     ? 'bg-[#131822] hover:bg-[#1A212E] text-slate-200'
                     : 'bg-[#0E121A] hover:bg-[#151C27] text-slate-400'
                 }`}
@@ -255,8 +254,8 @@ export const WizardHeader: React.FC = () => {
                   className={`font-mono tabular-nums text-[11px] font-bold ${
                     isActive
                       ? 'text-[#10B981]'
-                      : isCompleted
-                      ? 'text-emerald-500'
+                      : isPrevious
+                      ? 'text-slate-300'
                       : 'text-slate-500'
                   }`}
                 >
@@ -268,7 +267,7 @@ export const WizardHeader: React.FC = () => {
                   className={`w-3.5 h-3.5 ${
                     isActive
                       ? 'text-[#10B981]'
-                      : isCompleted
+                      : isPrevious
                       ? 'text-slate-300'
                       : 'text-slate-500'
                   }`}
@@ -279,10 +278,6 @@ export const WizardHeader: React.FC = () => {
                   {language === 'ko' ? s.nameKo : s.nameEn}
                 </span>
 
-                {/* Subtle Emerald Completed Checkmark */}
-                {isCompleted && (
-                  <Check className="w-3 h-3 text-emerald-400 ml-0.5 shrink-0" />
-                )}
               </button>
             );
           })}

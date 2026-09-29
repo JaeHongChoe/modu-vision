@@ -21,8 +21,10 @@ export interface StepLossPoint {
 
 interface TrainingState {
   jobId: string | null;
+  isCurrentData: boolean;
   status: 'idle' | 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
   isTraining: boolean;
+  isRecoveringTraining: boolean;
   isStopRequestPending: boolean;
   stopError: string | null;
   preset: TrainingPreset;
@@ -43,11 +45,14 @@ interface TrainingState {
   setPreset: (preset: TrainingPreset) => void;
   startTraining: (datasetPath: string, task: VisionTask) => Promise<void>;
   stopTraining: () => Promise<void>;
+  recoverActiveJob: () => Promise<void>;
   updateFromTelemetry: (event: string, data: any) => void;
+  invalidateForDataChange: () => void;
   resetTraining: () => void;
 }
 
 let startRequest: ReturnType<typeof api.training.start> | null = null;
+let pendingStartEvents: Array<{ event: string; data: any }> = [];
 
 async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted' | 'failed'> {
   const deadline = Date.now() + 60000;
@@ -63,8 +68,10 @@ async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted'
 
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobId: null,
+  isCurrentData: false,
   status: 'idle',
   isTraining: false,
+  isRecoveringTraining: false,
   isStopRequestPending: false,
   stopError: null,
   preset: 'fast',
@@ -91,8 +98,10 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   setPreset: (preset) => set({ preset }),
 
   startTraining: async (datasetPath, task) => {
+    pendingStartEvents = [];
     set({
       jobId: null,
+      isCurrentData: true,
       status: 'running',
       isTraining: true,
       isStopRequestPending: false,
@@ -114,7 +123,13 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       });
       const res = await startRequest;
       set({ jobId: res.job_id });
+      const queued = pendingStartEvents;
+      pendingStartEvents = [];
+      for (const item of queued) {
+        if (item.data.job_id === res.job_id) get().updateFromTelemetry(item.event, item.data);
+      }
     } catch (e) {
+      pendingStartEvents = [];
       set({ status: 'failed', isTraining: false, isStopRequestPending: false });
       throw e;
     } finally {
@@ -137,7 +152,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       }
       stopAccepted = true;
       const status = await waitForStoppedJob(jobId);
-      set({ status, isTraining: false, stopError: null });
+      if (get().isCurrentData) set({ status, isTraining: false, stopError: null });
+      else get().resetTraining();
     } catch (error) {
       const message = error instanceof Error ? error.message : '학습 중단 상태를 확인할 수 없습니다.';
       set((state) => ({
@@ -147,6 +163,37 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       }));
     } finally {
       set({ isStopRequestPending: false });
+    }
+  },
+
+  recoverActiveJob: async () => {
+    if (get().isTraining || get().isRecoveringTraining || startRequest) return;
+    set({ isRecoveringTraining: true });
+    try {
+      const active = await api.training.getStatus();
+      if (!get().isTraining && !startRequest && active?.job_id
+          && (active.status === 'running' || active.status === 'stopping')) {
+        // A recovered job remains cancellable even if its source data changed.
+        // Step 4 recovers its result separately only after provenance checks.
+        set({
+          jobId: active.job_id,
+          isCurrentData: false,
+          status: active.status,
+          isTraining: true,
+          isStopRequestPending: false,
+          stopError: null,
+          currentEpoch: active.current_epoch || 0,
+          totalEpochs: active.total_epochs || 0,
+          currentStep: active.current_step || 0,
+          totalSteps: active.total_steps || 0,
+          trainLoss: active.current_train_loss ?? null,
+          valLoss: active.current_val_loss ?? null,
+        });
+      }
+    } catch {
+      // The backend may still be starting; normal start/stop errors remain visible.
+    } finally {
+      set({ isRecoveringTraining: false });
     }
   },
 
@@ -161,7 +208,17 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
           device_type: data.device_type || 'cpu',
         },
       });
-    } else if (event === 'step_progress') {
+      return;
+    }
+    if (!data?.job_id) return;
+    if (!get().jobId) {
+      if (startRequest && ['training_completed', 'training_aborted', 'training_error'].includes(event)) {
+        pendingStartEvents.push({ event, data });
+      }
+      return;
+    }
+    if (data.job_id !== get().jobId) return;
+    if (event === 'step_progress') {
       const step = data.step || 0;
       const loss = typeof data.current_loss === 'number' ? data.current_loss : 0;
       set((s) => ({
@@ -189,6 +246,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       }));
     } else if (event === 'training_completed') {
       if (get().status === 'stopping') return;
+      if (!get().isCurrentData) { get().resetTraining(); return; }
       set({
         status: 'completed',
         isTraining: false,
@@ -196,18 +254,33 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       });
     } else if (event === 'training_aborted') {
       if (get().status === 'stopping') return;
+      if (!get().isCurrentData) { get().resetTraining(); return; }
       set({ status: 'aborted', isTraining: false });
     } else if (event === 'training_error') {
       if (get().status === 'stopping') return;
+      if (!get().isCurrentData) { get().resetTraining(); return; }
       set({ status: 'failed', isTraining: false });
     }
   },
 
-  resetTraining: () =>
+  invalidateForDataChange: () => {
+    const state = get();
+    if (state.isTraining || state.status === 'running' || state.status === 'stopping') {
+      // Keep the active job ID so its Stop button can still cancel the old run.
+      set({ isCurrentData: false });
+    } else {
+      get().resetTraining();
+    }
+  },
+
+  resetTraining: () => {
+    pendingStartEvents = [];
     set({
       jobId: null,
+      isCurrentData: false,
       status: 'idle',
       isTraining: false,
+      isRecoveringTraining: false,
       isStopRequestPending: false,
       stopError: null,
       currentEpoch: 0,
@@ -216,7 +289,10 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       totalSteps: 0,
       trainLoss: null,
       valLoss: null,
+      bestMetric: null,
+      metrics: {},
       lossHistory: [],
       stepHistory: [],
-    }),
+    });
+  },
 }));

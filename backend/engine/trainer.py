@@ -288,7 +288,7 @@ class UnifiedAutoMLTrainer:
 
         try:
             # 1. Setup Data Augmentation & Datasets
-            aug = create_industrial_transforms(task=self.task, preset="fast", is_training=True)
+            aug = create_industrial_transforms(task=self.task, preset=self.preset_key, is_training=True)
 
             if self.task == "classification":
                 train_ds = ClassificationDataset(
@@ -337,7 +337,7 @@ class UnifiedAutoMLTrainer:
 
             elif self.task in ("anomaly", "anomaly_detection"):
                 train_ds = AnomalyDataset(root_dir=self.dataset_path, split="train", transform=aug, image_size=optimal_size)
-                val_ds = AnomalyDataset(root_dir=self.dataset_path, split="test", image_size=optimal_size)
+                val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
                 classes = ["good", "anomaly"]
                 if "patchcore" in self.config.backbone_anomaly:
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device)

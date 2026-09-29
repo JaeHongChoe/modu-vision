@@ -19,6 +19,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useDatasetStore } from '../../stores/useDatasetStore';
 import {
   useEvaluationStore,
   computeSampleVerdict,
@@ -69,7 +70,12 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 };
 
 export const EvaluationStudio: React.FC = () => {
-  const { language, setStep } = useProjectStore();
+  const { language, setStep, task } = useProjectStore();
+  const folderPath = useDatasetStore((state) => state.folderPath);
+  const datasetKey = useDatasetStore((state) => state.datasetKey);
+  const datasetIsLoading = useDatasetStore((state) => state.isLoading);
+  const importError = useDatasetStore((state) => state.importError);
+  const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
   const [reportError, setReportError] = useState<string | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{
@@ -112,9 +118,9 @@ export const EvaluationStudio: React.FC = () => {
   } = useEvaluationStore();
 
   useEffect(() => {
-    loadEvaluation().catch(() => {});
+    loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
     loadOverkillUnderkill().catch(() => {});
-  }, [loadEvaluation, loadOverkillUnderkill]);
+  }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task]);
 
   const handleExportHtml = async () => {
     setReportError(null);
@@ -308,7 +314,7 @@ export const EvaluationStudio: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={() => loadEvaluation()}
+            onClick={() => loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined)}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all"
           >
@@ -346,7 +352,7 @@ export const EvaluationStudio: React.FC = () => {
       )}
 
       {/* In-Page Guardrail if no evaluation results */}
-      {!jobId && testPredictions.length === 0 && (
+      {!isLoading && !jobId && testPredictions.length === 0 && (
         <div className="p-6 pb-0">
           <GuardrailBanner
             type="warning"
@@ -367,7 +373,7 @@ export const EvaluationStudio: React.FC = () => {
                 variant: 'secondary',
                 loadingText: '평가 결과 확인 중...',
                 onClick: async () => {
-                  await loadEvaluation();
+                  await loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined);
                 },
               },
             ]}

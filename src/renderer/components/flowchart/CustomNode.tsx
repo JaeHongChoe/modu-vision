@@ -21,6 +21,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import type { FlowNode, NodePort, PortType } from '../../types';
+import { FLOW_NODE_WIDTH } from './flowchartViewport';
 
 interface CustomNodeProps {
   node: FlowNode;
@@ -28,6 +29,8 @@ interface CustomNodeProps {
   isActive: boolean;
   isPassed: boolean;
   isFlaggedNg: boolean;
+  isSkipped?: boolean;
+  isReviewRequired?: boolean;
   latencyMs?: number;
   onSelect: () => void;
   onPortHover?: (port: NodePort, nodeId: string) => void;
@@ -39,6 +42,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   isActive,
   isPassed,
   isFlaggedNg,
+  isSkipped,
+  isReviewRequired,
   latencyMs,
   onSelect,
 }) => {
@@ -92,32 +97,21 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   const getDefaultInputs = (): NodePort[] => {
     switch (nodeType) {
       case 'input':
-        return [
-          { id: 'in_trig', name: 'Trigger In', type: 'trigger', direction: 'in', label: 'TRIG IN', pinNumber: 1 },
-        ];
+        return [];
       case 'detection_crop':
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 },
-          { id: 'in_trig', name: 'Trigger In', type: 'trigger', direction: 'in', label: 'TRIG IN', pinNumber: 2 },
         ];
       case 'inspection':
         return [
-          { id: 'in_img', name: 'Crops In', type: 'image', direction: 'in', label: 'CROPS IN', pinNumber: 1 },
-          { id: 'in_data', name: 'BBox In', type: 'data', direction: 'in', label: 'BBOX IN', pinNumber: 2 },
+          { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
         ];
       case 'decision':
         return [
           { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: 'SCORES IN', pinNumber: 1 },
-          { id: 'in_trig', name: 'Strobe In', type: 'trigger', direction: 'in', label: 'STROBE', pinNumber: 2 },
         ];
       case 'output':
-        return node.id.includes('ng') || node.id.includes('reject')
-          ? [
-              { id: 'in_fail', name: 'NG Verdict', type: 'fail', direction: 'in', label: 'NG RESULT', pinNumber: 1 },
-            ]
-          : [
-              { id: 'in_pass', name: 'OK Verdict', type: 'pass', direction: 'in', label: 'OK RESULT', pinNumber: 1 },
-            ];
+        return [{ id: 'in_result', name: 'Verdict In', type: 'data', direction: 'in', label: 'VERDICT IN', pinNumber: 1 }];
       default:
         return [{ id: 'in_def', name: 'Input', type: 'data', direction: 'in', label: 'IN 1', pinNumber: 1 }];
     }
@@ -128,31 +122,21 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       case 'input':
         return [
           { id: 'out_img', name: 'Image Out', type: 'image', direction: 'out', label: 'IMG OUT', pinNumber: 1 },
-          { id: 'out_data', name: 'Data Bus Out', type: 'data', direction: 'out', label: 'DATA BUS', pinNumber: 2 },
         ];
       case 'detection_crop':
         return [
           { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: 'ROI CROPS', pinNumber: 1 },
-          { id: 'out_data', name: 'BBox Data Out', type: 'data', direction: 'out', label: 'BBOX BUS', pinNumber: 2 },
         ];
       case 'inspection':
         return [
-          { id: 'out_img', name: 'Heatmap Out', type: 'image', direction: 'out', label: 'HEATMAP', pinNumber: 1 },
-          { id: 'out_data', name: 'Scores Out', type: 'data', direction: 'out', label: 'SCORES BUS', pinNumber: 2 },
+          { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
         ];
       case 'decision':
         return [
-          { id: 'out_pass', name: 'Pass Out', type: 'pass', direction: 'out', label: 'PASS (OK)', pinNumber: 1 },
-          { id: 'out_fail', name: 'Fail Out', type: 'fail', direction: 'out', label: 'FAIL (NG)', pinNumber: 2 },
+          { id: 'out_verdict', name: 'Verdict Out', type: 'data', direction: 'out', label: 'VERDICT', pinNumber: 1 },
         ];
       case 'output':
-        return node.id.includes('ng') || node.id.includes('reject')
-          ? [
-              { id: 'out_result', name: 'NG Result', type: 'fail', direction: 'out', label: 'NG', pinNumber: 1 },
-            ]
-          : [
-              { id: 'out_result', name: 'Result', type: 'data', direction: 'out', label: 'RESULT', pinNumber: 1 },
-            ];
+        return [{ id: 'out_result', name: 'Local Result', type: 'data', direction: 'out', label: 'LOCAL VIEW', pinNumber: 1 }];
       default:
         return [{ id: 'out_def', name: 'Output', type: 'data', direction: 'out', label: 'OUT 1', pinNumber: 1 }];
     }
@@ -165,6 +149,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   const getAnnunciatorState = () => {
     if (isActive) return { color: '#06B6D4', pulse: true, label: 'BUSY' };
     if (isFlaggedNg) return { color: '#EF4444', pulse: false, label: 'FAIL' };
+    if (isReviewRequired) return { color: '#F59E0B', pulse: false, label: 'REVIEW' };
+    if (isSkipped) return { color: '#F59E0B', pulse: false, label: 'SKIP' };
     if (isPassed) return { color: '#10B981', pulse: false, label: 'PASS' };
     return { color: '#F59E0B', pulse: false, label: 'STBY' };
   };
@@ -175,7 +161,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
     <div
       onClick={onSelect}
       style={{
-        width: 272,
+        width: FLOW_NODE_WIDTH,
       }}
       className={`relative select-none rounded-[4px] border transition-colors cursor-pointer bg-[#1A212E] ${
         isSelected
@@ -233,13 +219,14 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
         {/* Specs Table */}
         <div className="space-y-1 text-[11px] font-mono bg-[#131822] p-2 rounded border border-[#2B3547]">
-          {node.data.task && (
+          {(nodeType === 'inspection' || nodeType === 'detection_crop') && node.data.task && (
             <div className="flex justify-between items-center">
               <span className="text-[#64748B]">TASK:</span>
               <span className="text-slate-300 font-semibold">{node.data.task.toUpperCase()}</span>
             </div>
           )}
-          {node.data.threshold !== undefined && (
+          {(nodeType === 'inspection' || nodeType === 'detection_crop' ||
+            (nodeType === 'decision' && node.data.rule === 'score_gt_threshold')) && node.data.threshold !== undefined && (
             <div className="flex justify-between items-center">
               <span className="text-[#64748B]">THRESHOLD:</span>
               <span className="text-cyan-400 font-bold tabular-nums">
@@ -247,13 +234,13 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
               </span>
             </div>
           )}
-          {node.data.crop_padding !== undefined && (
+          {nodeType === 'detection_crop' && node.data.crop_padding !== undefined && (
             <div className="flex justify-between items-center">
               <span className="text-[#64748B]">ROI PADDING:</span>
               <span className="text-slate-300 tabular-nums">{node.data.crop_padding} px</span>
             </div>
           )}
-          {node.data.rule && (
+          {nodeType === 'decision' && node.data.rule && (
             <div className="flex justify-between items-center">
               <span className="text-[#64748B]">RULE:</span>
               <span className="text-amber-400 font-semibold">{node.data.rule}</span>

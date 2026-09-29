@@ -25,6 +25,7 @@ import torch
 from fastapi.testclient import TestClient
 
 from backend.main import create_app
+from backend.api import routes_flowchart
 from backend.engine.flowchart_engine import (
     FlowchartEngine,
     FlowNode,
@@ -41,7 +42,9 @@ from backend.engine.industrial_adapters import read_image_safely_rgb
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
+    return client
 
 
 @pytest.fixture
@@ -86,8 +89,7 @@ def test_crop_roi_bounds_clipping_and_min_dim():
 def test_zero_detection_bypass(engine):
     """
     EC-01: Zero detection scenario where an image produces 0 candidate boxes.
-    Must cleanly bypass Stage 2, output final_verdict = 'OK', is_ok = True,
-    and rejection_reason = 'No defect candidates detected. Inspection OK.'
+    Must skip inspection and request review because the image was not inspected.
     """
     # Create clean blank image
     img = np.full((256, 256, 3), 128, dtype=np.uint8)
@@ -99,13 +101,13 @@ def test_zero_detection_bypass(engine):
             node.data.threshold = 0.999
 
     res = engine.execute(pipeline=pipe, image=img)
-    assert res["status"] == "success"
+    assert res["status"] == "review"
     assert res["roi_count"] == 0
     assert res["defective_roi_count"] == 0
     assert len(res["crops"]) == 0
-    assert res["final_verdict"] == "OK"
-    assert res["is_ok"] is True
-    assert "No defect candidates detected" in res["rejection_reason"]
+    assert res["final_verdict"] == "REVIEW"
+    assert res["is_ok"] is False
+    assert "not inspected" in res["rejection_reason"]
 
 
 def test_multiple_detections_compression(engine):
@@ -258,19 +260,19 @@ def test_non_standard_formats_and_45mp(engine, tmp_path):
     # 1. Single channel Grayscale
     gray = np.full((128, 128), 100, dtype=np.uint8)
     res_gray = engine.execute(pipeline=pipe, image=gray)
-    assert res_gray["status"] == "success"
+    assert res_gray["execution_steps"][0]["status"] == "passed"
 
     # 2. 4-channel RGBA
     rgba = np.full((128, 128, 4), 150, dtype=np.uint8)
     res_rgba = engine.execute(pipeline=pipe, image=rgba)
-    assert res_rgba["status"] == "success"
+    assert res_rgba["execution_steps"][0]["status"] == "passed"
 
     # 3. 16-bit TIFF simulation
     tiff_16 = np.full((128, 128), 40000, dtype=np.uint16)
     tiff_path = tmp_path / "test_16bit.tiff"
     cv2.imwrite(str(tiff_path), tiff_16)
     res_tiff = engine.execute(pipeline=pipe, image_path=str(tiff_path))
-    assert res_tiff["status"] == "success"
+    assert res_tiff["execution_steps"][0]["status"] == "passed"
 
     # 4. Ultra-high-resolution image (3000x2000) capped to max_dim=1600
     huge_img = np.full((2000, 3000, 3), 80, dtype=np.uint8)
@@ -280,8 +282,9 @@ def test_non_standard_formats_and_45mp(engine, tmp_path):
     assert max(read_img.shape[:2]) <= 1600
 
 
-def test_api_flowchart_endpoints(client):
+def test_api_flowchart_endpoints(client, monkeypatch, tmp_path):
     """Validates FastAPI routes: /pipeline, /sample-images, /run."""
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
     # 1. GET /pipeline
     r_get = client.get("/api/flowchart/pipeline")
     assert r_get.status_code == 200
@@ -304,6 +307,11 @@ def test_api_flowchart_endpoints(client):
 
     # 4. POST /run
     r_run = client.post("/api/flowchart/run", json={"pipeline": pipe_data})
+    assert r_run.status_code == 422
+    assert "image" in r_run.json()["detail"].lower()
+    image = tmp_path / "inspection.png"
+    cv2.imwrite(str(image), np.zeros((32, 32, 3), dtype=np.uint8))
+    r_run = client.post("/api/flowchart/run", json={"pipeline": pipe_data, "image_path": str(image)})
     assert r_run.status_code == 409
     assert "Model job is missing" in r_run.json()["detail"]
 

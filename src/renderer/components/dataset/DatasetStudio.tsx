@@ -3,7 +3,7 @@
  * Step 1: Industrial Dataset Studio with folder import, synthetic generator, split controls, and distribution charts.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FolderOpen,
   Sparkles,
@@ -25,6 +25,7 @@ export const DatasetStudio: React.FC = () => {
   const { task, language } = useProjectStore();
   const {
     folderPath,
+    importError,
     totalImages,
     sourceImages,
     unlabeledImages,
@@ -44,6 +45,7 @@ export const DatasetStudio: React.FC = () => {
     setClassFilter,
     setTrainRatio,
     importFolder,
+    ensureImported,
     applySplit,
     loadImages,
     setShowGeneratorModal,
@@ -55,7 +57,6 @@ export const DatasetStudio: React.FC = () => {
 
   // Natural resolution dimension cache for image cards
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({});
-  const initialImportAttempt = useRef<string | null>(null);
 
   // Precision 3-Way Split Calibrator Ratios (Train / Val / Test)
   const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number }>(() => {
@@ -86,18 +87,14 @@ export const DatasetStudio: React.FC = () => {
   };
 
   useEffect(() => {
-    const key = `${folderPath}|${task}`;
-    if (folderPath && totalImages === 0 && !isLoading && initialImportAttempt.current !== key) {
-      initialImportAttempt.current = key;
-      importFolder(folderPath, task).catch(() => {});
-    }
-  }, [folderPath, totalImages, isLoading, importFolder, task]);
+    if (folderPath) ensureImported(task).catch(() => {});
+  }, [folderPath, task, ensureImported]);
 
   const handleSelectFolder = async () => {
     if (typeof window !== 'undefined' && window.api?.selectFolder) {
       const folder = await window.api.selectFolder({ title: 'Select Industrial Dataset' });
       if (folder) {
-        await importFolder(folder, task);
+        await importFolder(folder, task).catch(() => {});
       }
     }
   };
@@ -110,10 +107,10 @@ export const DatasetStudio: React.FC = () => {
   const minClassCount = Math.min(...Object.values(classes), 1);
   const isImbalanced = classEntries.length > 1 && maxClassCount / minClassCount > 20;
 
-  // Real-time sample partition counts
-  const trainCount = totalImages > 0 ? Math.round(totalImages * (splitRatios.train / 100)) : split.train;
-  const valCount = totalImages > 0 ? Math.round(totalImages * (splitRatios.val / 100)) : split.val;
-  const testCount = totalImages > 0 ? Math.max(0, totalImages - trainCount - valCount) : (split.test || 0);
+  // Calibrator estimates; status cards and gallery tabs use the saved split instead.
+  const trainCount = Math.round(totalImages * (splitRatios.train / 100));
+  const valCount = Math.round(totalImages * (splitRatios.val / 100));
+  const testCount = Math.max(0, totalImages - trainCount - valCount);
 
   const gridClassByDensity = {
     S: 'grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2',
@@ -154,19 +151,19 @@ export const DatasetStudio: React.FC = () => {
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
             <span className="text-slate-400">Train:</span>
-            <span className="font-bold text-blue-400">{split.train || trainCount}</span>
+            <span className="font-bold text-blue-400">{split.train}</span>
           </div>
           <span className="w-[1px] h-3 bg-[#2B3547]" />
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
             <span className="text-slate-400">Val:</span>
-            <span className="font-bold text-amber-400">{split.val || valCount}</span>
+            <span className="font-bold text-amber-400">{split.val}</span>
           </div>
           <span className="w-[1px] h-3 bg-[#2B3547]" />
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#10B981]" />
             <span className="text-slate-400">Test:</span>
-            <span className="font-bold text-emerald-400">{split.test || testCount}</span>
+            <span className="font-bold text-emerald-400">{split.test}</span>
           </div>
         </div>
       </div>
@@ -194,26 +191,32 @@ export const DatasetStudio: React.FC = () => {
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
-                  Train ({splitRatios.train}%)
+                  {language === 'ko' ? '적용된 학습 분할' : 'Applied Train Split'}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
               </div>
               <span className="text-base font-bold font-mono tabular-nums text-blue-300">
-                {split.train || trainCount}
+                {split.train}
               </span>
             </div>
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
-                  Val / Test ({splitRatios.val + splitRatios.test}%)
+                  {language === 'ko' ? '적용된 검증 / 테스트 분할' : 'Applied Val / Test Split'}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
               </div>
               <span className="text-base font-bold font-mono tabular-nums text-amber-300">
-                {(split.val || valCount) + (split.test || testCount)}
+                {split.val + split.test}
               </span>
             </div>
           </div>
+
+          {split.train + split.val + split.test === 0 && totalImages > 0 && (
+            <div className="text-[11px] text-amber-300">
+              {language === 'ko' ? '분할을 아직 적용하지 않았습니다. 아래 비율은 적용 전 예상치입니다.' : 'Split not applied yet. Ratios below are estimates.'}
+            </div>
+          )}
 
           {/* Corrupted Images Alert if any */}
           {unlabeledImages > 0 && (
@@ -482,7 +485,13 @@ export const DatasetStudio: React.FC = () => {
 
         {/* Right Gallery Container */}
         <main className="flex-1 flex flex-col bg-[#0B0E14] overflow-hidden">
-          {totalImages === 0 && (
+          {importError && (
+            <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
+              <div className="font-semibold mb-1">{language === 'ko' ? '데이터셋을 불러오지 못했습니다' : 'Could not import dataset'}</div>
+              <div>{importError}</div>
+            </div>
+          )}
+          {totalImages === 0 && !importError && (
             <div className="p-4 pb-0">
               <GuardrailBanner
                 type="warning"
@@ -521,9 +530,9 @@ export const DatasetStudio: React.FC = () => {
             <div className="flex items-center space-x-2">
               {[
                 { id: 'all', labelKo: `전체 (${sourceImages})`, labelEn: `All (${sourceImages})` },
-                { id: 'train', labelKo: `학습용 (${split.train || trainCount})`, labelEn: `Train (${split.train || trainCount})` },
-                { id: 'val', labelKo: `검증용 (${split.val || valCount})`, labelEn: `Val (${split.val || valCount})` },
-                { id: 'test', labelKo: `테스트용 (${split.test || testCount})`, labelEn: `Test (${split.test || testCount})` },
+                { id: 'train', labelKo: `학습용 (${split.train})`, labelEn: `Train (${split.train})` },
+                { id: 'val', labelKo: `검증용 (${split.val})`, labelEn: `Val (${split.val})` },
+                { id: 'test', labelKo: `테스트용 (${split.test})`, labelEn: `Test (${split.test})` },
               ].map((tab) => (
                 <button
                   key={tab.id}
