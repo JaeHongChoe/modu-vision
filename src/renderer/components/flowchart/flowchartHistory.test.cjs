@@ -106,3 +106,19 @@ test('saving a graph makes redo back to that graph clean', async () => {
   store.getState().redo();
   assert.equal(store.getState().pipelineDirty, false);
 });
+
+test('incomplete save recovery keeps edits dirty and explains how to reopen the saved flow', async () => {
+  const previousSave = api.flowchart.savePipeline;
+  const previousError = console.error;
+  api.flowchart.savePipeline = async () => { throw { recovery_incomplete: true }; };
+  console.error = () => {};
+  try {
+    store.getState().updateNodeData('inspect', { threshold: 0.7 });
+    await store.getState().savePipeline();
+    assert.equal(store.getState().pipelineDirty, true);
+    assert.match(store.getState().errorMessage, /활성 플로우와 저장 버전/);
+  } finally {
+    api.flowchart.savePipeline = previousSave;
+    console.error = previousError;
+  }
+});

@@ -230,7 +230,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     } catch (e: any) {
       if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
       console.error('Failed to save flowchart pipeline:', e);
-      set({ errorMessage: e?.message || '파이프라인 저장 실패' });
+      set({ errorMessage: e?.recovery_incomplete
+        ? '저장 복구가 완료되지 않았습니다. 현재 활성 플로우와 저장 버전을 다시 확인하세요.'
+        : e?.message || '파이프라인 저장 실패' });
     } finally {
       if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
     }

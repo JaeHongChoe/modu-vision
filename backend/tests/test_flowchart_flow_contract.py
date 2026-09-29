@@ -427,6 +427,310 @@ def test_flow_save_keeps_openable_versions_per_project(monkeypatch, tmp_path):
     assert client.get(f"/api/flowchart/pipelines/{first_version}").status_code == 404
 
 
+@pytest.mark.parametrize("failed_write", ["recipe", "active"])
+def test_failed_flow_save_keeps_prior_recipe_active_version_and_history(monkeypatch, tmp_path, failed_write):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    source = tmp_path / "source"
+    source.mkdir()
+    project_dir = tmp_path / "project"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "Prior committed flow"
+    params = {"recipe_task": "segmentation", "source_dataset_path": str(source)}
+    first = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert first.status_code == 200
+    first_id = first.json()["version_id"]
+
+    original_write = routes_flowchart._write_json
+    original_pipeline_write = routes_flowchart._write_pipeline
+    def fail_active(path, value):
+        if failed_write == "active" and path.name == "active.json":
+            raise OSError("simulated active pointer write failure")
+        return original_write(path, value)
+    def fail_recipe(path, value):
+        if failed_write == "recipe":
+            raise OSError("simulated recipe write failure")
+        return original_pipeline_write(path, value)
+    monkeypatch.setattr(routes_flowchart, "_write_json", fail_active)
+    monkeypatch.setattr(routes_flowchart, "_write_pipeline", fail_recipe)
+    flow.name = "Uncommitted flow"
+    failed = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert failed.status_code == 500
+
+    monkeypatch.setattr(routes_flowchart, "_write_json", original_write)
+    monkeypatch.setattr(routes_flowchart, "_write_pipeline", original_pipeline_write)
+    versions = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)}).json()["pipelines"]
+    assert [(item["version_id"], item["name"], item["is_active"]) for item in versions] == [
+        (first_id, "Prior committed flow", True),
+    ]
+    assert client.get("/api/flowchart/pipeline", params={"inspection_task": "segmentation", "source_dataset_path": str(source)}).json()["name"] == "Prior committed flow"
+    assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["name"] == "Prior committed flow"
+
+
+def test_failed_pointer_rollback_keeps_the_version_referenced_by_active_flow(monkeypatch, tmp_path):
+    import json
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    source = tmp_path / "source"
+    source.mkdir()
+    project_dir = tmp_path / "project"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "Committed"
+    params = {"recipe_task": "segmentation", "source_dataset_path": str(source)}
+    assert client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump()).status_code == 200
+
+    original_write = routes_flowchart._write_json
+    original_restore = routes_flowchart._restore_flow_file
+
+    def fail_after_pointer_replacement(path, value):
+        original_write(path, value)
+        if path.name == "active.json":
+            raise OSError("simulated pointer write failure after replacement")
+
+    def fail_pointer_rollback(path, previous):
+        if path.name == "active.json":
+            raise OSError("simulated storage failure during pointer rollback")
+        return original_restore(path, previous)
+
+    monkeypatch.setattr(routes_flowchart, "_write_json", fail_after_pointer_replacement)
+    monkeypatch.setattr(routes_flowchart, "_restore_flow_file", fail_pointer_rollback)
+    flow.name = "New graph still referenced by active pointer"
+    failed = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert failed.status_code == 500
+    assert "recovery incomplete" in failed.json()["detail"]["details"]
+    assert failed.json()["detail"]["recovery_incomplete"] is True
+
+    active = client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)})
+    recipe = client.get("/api/flowchart/pipeline", params=params | {"inspection_task": "segmentation"})
+    versions = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)}).json()["pipelines"]
+    assert active.status_code == 200
+    assert active.json()["name"] == "New graph still referenced by active pointer"
+    assert recipe.status_code == 200
+    assert recipe.json()["name"] == active.json()["name"]
+    assert len(versions) == 2
+    assert versions[0]["is_active"] is True
+    assert versions[0]["version_id"] == json.loads((project_dir / "flowcharts" / "active.json").read_text())["version_id"]
+
+
+def test_failed_recipe_rollback_keeps_the_new_version_available_for_recovery(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    source = tmp_path / "source"
+    source.mkdir()
+    project_dir = tmp_path / "project"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "Committed"
+    params = {"recipe_task": "segmentation", "source_dataset_path": str(source)}
+    first = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert first.status_code == 200
+    first_id = first.json()["version_id"]
+
+    original_write = routes_flowchart._write_json
+    original_restore = routes_flowchart._restore_flow_file
+
+    def fail_active_before_replacement(path, value):
+        if path.name == "active.json":
+            raise OSError("simulated active pointer write failure")
+        return original_write(path, value)
+
+    def fail_recipe_rollback(path, previous):
+        if path.name != "active.json":
+            raise OSError("simulated storage failure during recipe rollback")
+        return original_restore(path, previous)
+
+    monkeypatch.setattr(routes_flowchart, "_write_json", fail_active_before_replacement)
+    monkeypatch.setattr(routes_flowchart, "_restore_flow_file", fail_recipe_rollback)
+    flow.name = "Recoverable failed version"
+    failed = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert failed.status_code == 500
+    assert "recovery incomplete" in failed.json()["detail"]["details"]
+    assert failed.json()["detail"]["recovery_incomplete"] is True
+
+    versions = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)}).json()["pipelines"]
+    assert len(versions) == 2
+    assert versions[0]["name"] == "Recoverable failed version"
+    assert versions[0]["is_active"] is False
+    assert versions[1]["version_id"] == first_id
+    assert versions[1]["is_active"] is True
+    assert client.get(f"/api/flowchart/pipelines/{versions[0]['version_id']}").json()["name"] == flow.name
+    assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["name"] == "Committed"
+
+
+def test_failed_save_cannot_activate_a_version_removed_by_rollback(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    import inspect
+    import threading
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+    from backend.api import routes_export
+
+    source = tmp_path / "source"
+    source.mkdir()
+    project_dir = tmp_path / "project"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "Committed"
+    params = {"recipe_task": "segmentation", "source_dataset_path": str(source)}
+    first = client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump())
+    assert first.status_code == 200
+    first_id = first.json()["version_id"]
+
+    save_paused = threading.Event()
+    allow_failure = threading.Event()
+    activation_lock_attempt = threading.Event()
+    list_lock_attempt = threading.Event()
+    export_lock_attempt = threading.Event()
+    original_pipeline_write = routes_flowchart._write_pipeline
+    original_lock = routes_flowchart._FLOW_SAVE_LOCK
+
+    def fail_after_pending_version(path, pipeline):
+        if pipeline.name == "Will fail":
+            save_paused.set()
+            assert allow_failure.wait(10)
+            raise OSError("simulated recipe write failure")
+        return original_pipeline_write(path, pipeline)
+
+    class ObservedLock:
+        def __enter__(self):
+            caller = inspect.currentframe().f_back.f_code.co_name
+            if caller == "activate_saved_pipeline_version":
+                activation_lock_attempt.set()
+            elif caller == "list_saved_pipelines":
+                list_lock_attempt.set()
+            elif caller == "export_saved_flow":
+                export_lock_attempt.set()
+            return original_lock.__enter__()
+
+        def __exit__(self, *args):
+            return original_lock.__exit__(*args)
+
+    monkeypatch.setattr(routes_flowchart, "_write_pipeline", fail_after_pending_version)
+    observed_lock = ObservedLock()
+    monkeypatch.setattr(routes_flowchart, "_FLOW_SAVE_LOCK", observed_lock)
+    monkeypatch.setattr(routes_export, "_FLOW_SAVE_LOCK", observed_lock)
+    flow.name = "Will fail"
+
+    def activate_pending(version_id):
+        return client.put(f"/api/flowchart/pipelines/{version_id}/activate",
+                          params={"source_dataset_path": str(source)})
+
+    def list_pending():
+        return client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)})
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        failed_save = pool.submit(client.post, "/api/flowchart/pipeline", params=params, json=flow.model_dump())
+        assert save_paused.wait(5)
+        pending_ids = {path.stem for path in (project_dir / "flowcharts" / "versions").glob("*.json")} - {first_id}
+        assert len(pending_ids) == 1
+        pending_id = pending_ids.pop()
+        activation = pool.submit(activate_pending, pending_id)
+        listing = pool.submit(list_pending)
+        exporting = pool.submit(client.post, "/api/export/flow", json={
+            "source_dataset_path": str(source), "recipe_task": "segmentation",
+            "version_id": pending_id, "package_name": "pending_rejected",
+        })
+        try:
+            assert activation_lock_attempt.wait(5)
+            assert list_lock_attempt.wait(5)
+            assert export_lock_attempt.wait(5)
+        finally:
+            allow_failure.set()
+        assert failed_save.result(timeout=5).status_code == 500
+        assert activation.result(timeout=5).status_code == 404
+        assert [item["version_id"] for item in listing.result(timeout=5).json()["pipelines"]] == [first_id]
+        exported = exporting.result(timeout=5)
+        assert exported.status_code == 409
+        assert "Save this flow" in exported.json()["detail"]
+
+    assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["name"] == "Committed"
+    assert client.get(f"/api/flowchart/pipelines/{pending_id}").status_code == 404
+
+
+def test_recipe_reader_does_not_observe_a_flow_before_active_write_commits(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    import time
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    source = tmp_path / "source"
+    source.mkdir()
+    project_dir = tmp_path / "project"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "Committed"
+    params = {"recipe_task": "segmentation", "source_dataset_path": str(source)}
+    assert client.post("/api/flowchart/pipeline", params=params, json=flow.model_dump()).status_code == 200
+
+    pointer_paused = threading.Event()
+    allow_failure = threading.Event()
+    reader_started = threading.Event()
+    active_reader_started = threading.Event()
+    original_write = routes_flowchart._write_json
+
+    def fail_active_after_recipe(path, value):
+        if path.name == "active.json" and value.get("version_id") != first_id:
+            original_write(path, value)
+            pointer_paused.set()
+            assert allow_failure.wait(10)
+            raise OSError("simulated active write failure")
+        return original_write(path, value)
+
+    first_id = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)}).json()["pipelines"][0]["version_id"]
+    monkeypatch.setattr(routes_flowchart, "_write_json", fail_active_after_recipe)
+    flow.name = "Will fail"
+
+    def read_recipe():
+        reader_started.set()
+        return client.get("/api/flowchart/pipeline", params={
+            "inspection_task": "segmentation", "source_dataset_path": str(source),
+        })
+
+    def read_active():
+        active_reader_started.set()
+        return client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)})
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        failed_save = pool.submit(client.post, "/api/flowchart/pipeline", params=params, json=flow.model_dump())
+        assert pointer_paused.wait(5)
+        recipe_read = pool.submit(read_recipe)
+        active_read = pool.submit(read_active)
+        try:
+            assert reader_started.wait(5)
+            assert active_reader_started.wait(5)
+            time.sleep(0.15)
+        finally:
+            allow_failure.set()
+        assert failed_save.result(timeout=5).status_code == 500
+        result = recipe_read.result(timeout=5)
+        assert result.status_code == 200
+        assert result.json()["name"] == "Committed"
+        active_result = active_read.result(timeout=5)
+        assert active_result.status_code == 200
+        assert active_result.json()["name"] == "Committed"
+
+
 def test_activating_saved_revision_changes_active_flow_without_creating_another_version(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
     from backend.main import create_app

@@ -39,6 +39,52 @@ function graphParts(pipeline: FlowchartPipeline) {
   return { nodes, incoming, outgoing };
 }
 
+function firstUnvisitedNode(
+  pipeline: FlowchartPipeline,
+  incoming: Map<string, FlowEdge[]>,
+  outgoing: Map<string, FlowEdge[]>,
+  inputId: string,
+): string | null {
+  const pending = new Map(pipeline.nodes.map((node) => [node.id, incoming.get(node.id)?.length || 0]));
+  const ready = [inputId];
+  const visited = new Set<string>();
+  while (ready.length) {
+    const nodeId = ready.shift() as string;
+    if (visited.has(nodeId)) continue;
+    visited.add(nodeId);
+    for (const edge of outgoing.get(nodeId) || []) {
+      const remaining = (pending.get(edge.target) || 0) - 1;
+      pending.set(edge.target, remaining);
+      if (remaining === 0) ready.push(edge.target);
+    }
+  }
+  const unresolved = pipeline.nodes.filter((node) => !visited.has(node.id));
+  if (!unresolved.length) return null;
+  const unresolvedIds = new Set(unresolved.map((node) => node.id));
+  const visiting = new Set<string>();
+  const checked = new Set<string>();
+  const findCycle = (nodeId: string): string | null => {
+    if (visiting.has(nodeId)) return nodeId;
+    if (checked.has(nodeId)) return null;
+    visiting.add(nodeId);
+    for (const edge of outgoing.get(nodeId) || []) {
+      if (!unresolvedIds.has(edge.target)) continue;
+      const cycle = findCycle(edge.target);
+      if (cycle) return cycle;
+    }
+    visiting.delete(nodeId);
+    checked.add(nodeId);
+    return null;
+  };
+  for (const node of unresolved) {
+    const cycle = findCycle(node.id);
+    if (cycle) return cycle;
+  }
+  return unresolved.find((node) =>
+    !(incoming.get(node.id) || []).some((edge) => unresolvedIds.has(edge.source))
+  )?.id || unresolved[0].id;
+}
+
 /** Mirrors the backend's supported executable graph, including saved linear flows. */
 export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | null {
   const { nodes, incoming, outgoing } = graphParts(pipeline);
@@ -181,19 +227,8 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
       return '출력 분기는 OK(pass), NG(fail), 필요하면 REVIEW(review)를 각각 지정하세요.';
     }
   }
-  const pending = new Map(pipeline.nodes.map((node) => [node.id, incoming.get(node.id)?.length || 0]));
-  const ready = [inputId];
-  let visited = 0;
-  while (ready.length) {
-    const nodeId = ready.shift() as string;
-    visited += 1;
-    for (const edge of outgoing.get(nodeId) || []) {
-      const remaining = (pending.get(edge.target) || 0) - 1;
-      pending.set(edge.target, remaining);
-      if (remaining === 0) ready.push(edge.target);
-    }
-  }
-  return visited === nodes.size ? null : '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.';
+  return firstUnvisitedNode(pipeline, incoming, outgoing, inputId)
+    ? '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.' : null;
 }
 
 /** Point an editor validation message at the node or connection the user can fix. */
@@ -204,6 +239,14 @@ export function locateFlowIssue(
   if (!message) return null;
   const named = pipeline.nodes.find((node) => message.startsWith(`${node.data.label}:`));
   if (named) return { kind: 'node', id: named.id };
+  if (message === '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.') {
+    const input = pipeline.nodes.find((node) => node.data.node_type === 'input');
+    if (input) {
+      const { incoming, outgoing } = graphParts(pipeline);
+      const unresolved = firstUnvisitedNode(pipeline, incoming, outgoing, input.id);
+      if (unresolved) return { kind: 'node', id: unresolved };
+    }
+  }
   if (message.includes('데이터 형식(payload)') || message.includes('노드 사이의 연결 형식')) {
     const nodes = new Map(pipeline.nodes.map((node) => [node.id, node]));
     const edge = pipeline.edges.find((item) => {
