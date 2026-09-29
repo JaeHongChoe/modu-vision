@@ -385,7 +385,15 @@ class UnifiedAutoMLTrainer:
                     lr=0.0,
                     metrics={"image_auroc": auroc, "f1_score": float(anom_metrics.get("f1_score", 1.0))},
                 )
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
                 self._save_checkpoint(0, model, val_metric, classes, optimal_size, time.time() - start_time)
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
                 elapsed = time.time() - start_time
                 best_model_path = str(self.output_dir / "best_model.pt")
                 self.callback.on_training_completed(job_id, elapsed, val_metric, best_model_path)
@@ -446,11 +454,20 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_step_end(global_step, total_steps, loss_val, epoch)
                     global_step += 1
 
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": epoch}
+
                 # Validation Evaluation
                 model.eval()
                 val_losses = []
                 with torch.no_grad():
                     for batch in val_loader:
+                        if self._abort_flag.is_set():
+                            clear_device_cache(self.device)
+                            self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                            return {"status": "aborted", "epoch": epoch}
                         if self.task == "classification":
                             imgs, targets = batch
                             imgs, targets = imgs.to(self.device), targets.to(self.device)
@@ -471,6 +488,11 @@ class UnifiedAutoMLTrainer:
                             else:
                                 loss = criterion(model(imgs), masks)
                         val_losses.append(float(loss.item()))
+
+                if self._abort_flag.is_set():
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": epoch}
 
                 mean_train_loss = float(np.mean(train_losses)) if train_losses else 0.0
                 mean_val_loss = float(np.mean(val_losses)) if val_losses else 0.0
@@ -505,10 +527,18 @@ class UnifiedAutoMLTrainer:
                     break
 
             elapsed = time.time() - start_time
+            if self._abort_flag.is_set():
+                clear_device_cache(self.device)
+                self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                return {"status": "aborted", "epoch": epoch}
             best_model_path = str(self.output_dir / "best_model.pt")
             if not (self.output_dir / "best_model.pt").exists():
                 fallback_loss = mean_val_loss if (val_losses and not np.isnan(mean_val_loss)) else 0.0
                 self._save_checkpoint(epochs - 1, model, fallback_loss, classes, optimal_size, elapsed)
+            if self._abort_flag.is_set():
+                clear_device_cache(self.device)
+                self.callback.on_training_aborted(epoch, "Training aborted by user request")
+                return {"status": "aborted", "epoch": epoch}
             self.callback.on_training_completed(job_id, elapsed, early_stopping.best_score, best_model_path)
             return {"status": "completed", "best_metric": early_stopping.best_score, "model_path": best_model_path}
 

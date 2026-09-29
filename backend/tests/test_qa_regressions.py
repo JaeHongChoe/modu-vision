@@ -44,6 +44,163 @@ def test_training_manager_starts_without_locking_itself(monkeypatch, tmp_path):
     assert result[0].status == "completed"
 
 
+def test_training_cancel_returns_immediately_and_waits_for_worker_exit(monkeypatch, tmp_path):
+    started = threading.Event()
+    release = threading.Event()
+
+    class SlowTrainer:
+        def __init__(self, **kwargs):
+            self.abort_requested = False
+
+        def train(self, job_id):
+            started.set()
+            release.wait(timeout=5)
+            return {"status": "completed"}
+
+        def abort(self):
+            self.abort_requested = True
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
+    manager = routes_training.TrainingJobManager()
+    record = manager.start_job("cancel_qa", "segmentation", str(tmp_path), str(tmp_path))
+    assert started.wait(timeout=2)
+    try:
+        import time
+
+        started_at = time.monotonic()
+        assert manager.abort_job(record.job_id)
+        assert time.monotonic() - started_at < 1.0
+        assert record.status == "stopping"
+        assert record.thread.is_alive()
+        assert manager.is_training
+        with pytest.raises(HTTPException) as error:
+            manager.start_job("overlap_qa", "segmentation", str(tmp_path), str(tmp_path))
+        assert error.value.status_code == 409
+    finally:
+        release.set()
+        record.thread.join(timeout=2)
+    assert not record.thread.is_alive()
+    assert record.status == "aborted"
+    assert manager.get_active_job() is None
+
+
+def test_cancel_keeps_slot_busy_until_device_cleanup_finishes(monkeypatch, tmp_path):
+    started = threading.Event()
+    finish_train = threading.Event()
+    cleanup_started = threading.Event()
+    finish_cleanup = threading.Event()
+
+    class SlowTrainer:
+        def __init__(self, **kwargs):
+            pass
+
+        def train(self, job_id):
+            started.set()
+            finish_train.wait(timeout=5)
+            return {"status": "completed"}
+
+        def abort(self):
+            pass
+
+    def slow_cleanup():
+        cleanup_started.set()
+        finish_cleanup.wait(timeout=5)
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
+    monkeypatch.setattr(routes_training, "clear_device_cache", slow_cleanup)
+    manager = routes_training.TrainingJobManager()
+    record = manager.start_job("cleanup_qa", "segmentation", str(tmp_path), str(tmp_path))
+    assert started.wait(timeout=2)
+    try:
+        assert manager.abort_job(record.job_id)
+        finish_train.set()
+        assert cleanup_started.wait(timeout=2)
+        assert record.status == "stopping"
+        assert manager.is_training
+        with pytest.raises(HTTPException) as error:
+            manager.start_job("too_early", "segmentation", str(tmp_path), str(tmp_path))
+        assert error.value.status_code == 409
+    finally:
+        finish_train.set()
+        finish_cleanup.set()
+        record.thread.join(timeout=2)
+    assert record.status == "aborted"
+    assert not manager.is_training
+
+
+def test_cancel_after_last_batch_skips_validation_and_checkpoint(tmp_path):
+    from backend.engine.trainer import TrainingCallback, UnifiedAutoMLTrainer
+
+    data = tmp_path / "dataset"
+    for split in ("train", "val"):
+        image_dir = data / "images" / split
+        mask_dir = data / "masks" / split
+        image_dir.mkdir(parents=True)
+        mask_dir.mkdir(parents=True)
+        Image.new("RGB", (64, 64), color=(100, 100, 100)).save(image_dir / "sample.png")
+        Image.new("L", (64, 64), color=1).save(mask_dir / "sample.png")
+
+    class AbortAfterStep(TrainingCallback):
+        def __init__(self):
+            self.trainer = None
+            self.completed = False
+            self.aborted = False
+
+        def on_step_end(self, *args):
+            self.trainer.abort()
+
+        def on_training_completed(self, *args):
+            self.completed = True
+
+        def on_training_aborted(self, *args):
+            self.aborted = True
+
+    callback = AbortAfterStep()
+    trainer = UnifiedAutoMLTrainer(
+        task="segmentation", dataset_path=data, output_dir=tmp_path / "model",
+        device="cpu", callback=callback, config_overrides={"epochs": 1, "image_size": 64},
+    )
+    callback.trainer = trainer
+    result = trainer.train(job_id="cancel_final_batch")
+    assert result["status"] == "aborted"
+    assert callback.aborted and not callback.completed
+    assert not (tmp_path / "model" / "best_model.pt").exists()
+
+
+def test_training_stop_routes_report_stopping_then_aborted(monkeypatch, tmp_path):
+    release = threading.Event()
+
+    class SlowTrainer:
+        def __init__(self, **kwargs):
+            pass
+
+        def train(self, job_id):
+            release.wait(timeout=5)
+            return {"status": "completed"}
+
+        def abort(self):
+            pass
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
+    manager = routes_training.TrainingJobManager()
+    monkeypatch.setattr(routes_training, "training_job_manager", manager)
+    started = routes_training.start_training(routes_training.TrainingStartRequest(
+        task="segmentation", dataset_path=str(tmp_path),
+        output_dir=str(tmp_path / "models"),
+    ))
+    job_id = started["job_id"]
+    try:
+        stopped = routes_training.stop_training(routes_training.TrainingStopRequest(job_id=job_id))
+        assert stopped["status"] == "stopping"
+        pending = routes_training.get_training_status(job_id=job_id)
+        assert pending["status"] == "stopping" and pending["is_training"]
+    finally:
+        release.set()
+        manager.get_job(job_id).thread.join(timeout=2)
+    finished = routes_training.get_training_status(job_id=job_id)
+    assert finished["status"] == "aborted" and not finished["is_training"]
+
+
 def test_three_way_split_counts_and_filters_match_real_files(tmp_path, monkeypatch):
     monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "split_manifests", raising=False)
     for index in range(20):
