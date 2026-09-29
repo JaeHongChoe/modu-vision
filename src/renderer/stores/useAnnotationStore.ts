@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import type { AnnotationItem, Category, ImageMeta, TaskType, ToolType, ViewTransform } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
 import { useDatasetStore } from './useDatasetStore';
+import { applyConvertedShape } from '../components/labeling/convertedAnnotation';
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 0, name: 'OK', color: '#10b981' },
@@ -20,6 +21,12 @@ export const DEFAULT_CATEGORIES: Category[] = [
 const MAX_HISTORY = 40;
 let annotationLoadSequence = 0;
 let pendingSave: Promise<boolean> | null = null;
+
+function annotationMaskUrl(image: ImageMeta): string {
+  const imageId = encodeURIComponent(image.image_id);
+  const filePath = encodeURIComponent(image.file_path);
+  return `/api/annotations/${imageId}/mask?file_path=${filePath}&v=${Date.now()}`;
+}
 
 function annotationReadErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -491,7 +498,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         annotations: items,
         categories: currentCats,
         imageDimensions: nextDimensions,
-        maskUrl: data.mask_file ? data.mask_file : null,
+        maskUrl: data.mask_file ? annotationMaskUrl(currentImage) : null,
         isDirty: false,
         annotationLoadStatus: 'ready',
         annotationLoadError: null,
@@ -540,10 +547,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         });
 
         if (res.status === 'saved' || res.status === 'ok') {
+          const sameImage = get().currentImage === currentImage;
           set({
             isDirty: get().currentImage !== currentImage || get().annotations !== annotations,
             isSaving: false,
             saveMessage: 'Saved',
+            maskUrl: sameImage ? (res.mask_generated ? annotationMaskUrl(currentImage) : null) : get().maskUrl,
           });
           setTimeout(() => {
             if (get().saveMessage === 'Saved') set({ saveMessage: null });
@@ -685,6 +694,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
           },
           image_path: currentImage.file_path,
           image_id: currentImage.image_id,
+          mask_color: target.color || '#3b82f6',
         }),
       });
 
@@ -697,66 +707,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       if (get().currentImage !== currentImage || get().annotationLoadStatus !== 'ready') return false;
       const converted = json.converted_data || json.result;
       if (!converted) return false;
-
-      const updated = annotations.map((a) => {
-        if (a.id !== annId) return a;
-
-        if (targetType === 'polygon' && converted.polygon) {
-          const poly: [number, number][] = converted.polygon;
-          const xs = poly.map((p) => p[0]);
-          const ys = poly.map((p) => p[1]);
-          return {
-            ...a,
-            type: 'polygon' as const,
-            polygon: poly,
-            points: poly,
-            bbox: (converted.bbox as [number, number, number, number]) || [
-              Math.min(...xs),
-              Math.min(...ys),
-              Math.max(...xs),
-              Math.max(...ys),
-            ],
-            rotated_bbox: undefined,
-          };
-        } else if (targetType === 'bbox' && converted.bbox) {
-          return {
-            ...a,
-            type: 'bbox' as const,
-            bbox: converted.bbox as [number, number, number, number],
-            polygon: undefined,
-            points: undefined,
-            rotated_bbox: undefined,
-          };
-        } else if (targetType === 'rotated_bbox') {
-          const rbox: [number, number, number, number, number] =
-            converted.rotated_bbox || [
-              converted.center[0],
-              converted.center[1],
-              converted.size[0],
-              converted.size[1],
-              converted.angle || 0,
-            ];
-          return {
-            ...a,
-            type: 'rotated_bbox' as const,
-            rotated_bbox: rbox,
-            bbox: (converted.bbox as [number, number, number, number]) || [
-              rbox[0] - rbox[2] / 2,
-              rbox[1] - rbox[3] / 2,
-              rbox[0] + rbox[2] / 2,
-              rbox[1] + rbox[3] / 2,
-            ],
-            polygon: undefined,
-            points: undefined,
-          };
-        } else if (targetType === 'mask') {
-          return {
-            ...a,
-            type: 'brush_mask' as const,
-          };
-        }
-        return a;
-      });
+      const replacement = applyConvertedShape(target, targetType, converted);
+      if (!replacement) return false;
+      const updated = annotations.map((a) => a.id === annId ? replacement : a);
 
       set({
         annotations: updated,

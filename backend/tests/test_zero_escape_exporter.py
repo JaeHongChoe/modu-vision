@@ -535,9 +535,9 @@ def test_standalone_segmentation_tiles_match_flowchart_probability_and_area(runt
 # ============================================================================
 
 @pytest.mark.usefixtures("allow_export_test_checkpoint")
-def test_authentic_model_export_segmentation_and_anomaly():
+def test_authentic_model_export_segmentation_and_anomaly_guard():
     """
-    Verifies authentic export for Segmentation (UNet) and Anomaly Detection (PaDiM).
+    Segmentation exports; anomaly cannot ship an extractor-only verdict package.
     """
     temp_dir = Path(tempfile.mkdtemp(prefix="multitask_export_"))
     try:
@@ -597,17 +597,15 @@ def test_authentic_model_export_segmentation_and_anomaly():
             "image_size": [128, 128],
         }, anom_ckpt)
 
-        anom_res = export_runtime_package(
-            job_id=str(anom_ckpt),
-            export_format="onnx",
-            resolution=128,
-            package_name="anom_pkg",
-            output_base_dir=temp_dir,
-        )
-        assert anom_res["status"] == "success"
-        pkg_path = Path(anom_res["package_path"])
-        assert (pkg_path / "model.onnx").is_file()
-        assert (pkg_path / "anomaly_stats.pt").is_file()
+        with pytest.raises(ValueError, match="PaDiM/PatchCore statistics"):
+            export_runtime_package(
+                job_id=str(anom_ckpt),
+                export_format="onnx",
+                resolution=128,
+                package_name="anom_pkg",
+                output_base_dir=temp_dir,
+            )
+        assert not (temp_dir / "anom_pkg").exists()
 
     finally:
         import shutil

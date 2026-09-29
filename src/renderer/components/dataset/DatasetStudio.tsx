@@ -21,6 +21,8 @@ import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
+import { classDistributionStats } from './classDistribution';
+import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 
 export const DatasetStudio: React.FC = () => {
   const { task, language, openImageForLabeling } = useProjectStore();
@@ -60,7 +62,7 @@ export const DatasetStudio: React.FC = () => {
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [imageOpenError, setImageOpenError] = useState<string | null>(null);
-  const splitUnavailableForTask = splitSupported === false || task === 'detection' || task === 'anomaly';
+  const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);
   const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
     ? '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 사용하세요.'
     : 'This task does not support re-splitting here. Use the source train/val/test folders.');
@@ -130,6 +132,7 @@ export const DatasetStudio: React.FC = () => {
 
   // Class distribution calculation
   const classEntries = Object.entries(classes);
+  const distribution = classDistributionStats(task, classes, totalImages);
   const maxClassCount = Math.max(...Object.values(classes), 1);
   const minClassCount = Math.min(...Object.values(classes), 1);
   const isImbalanced = classEntries.length > 1 && maxClassCount / minClassCount > 20;
@@ -439,6 +442,8 @@ export const DatasetStudio: React.FC = () => {
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
                   {task === 'segmentation' && splitUnavailableForTask
                     ? (language === 'ko' ? '마스크 채널별 이미지 수' : 'Images per Mask Channel')
+                    : task === 'detection'
+                    ? (language === 'ko' ? '클래스별 객체 주석 분포' : 'Annotated Objects by Class')
                     : (language === 'ko' ? '클래스별 계측 분포' : 'Class Digital Gauges')}
                 </span>
               </div>
@@ -456,6 +461,13 @@ export const DatasetStudio: React.FC = () => {
                   : 'Counts images per mask channel, not normal versus defect images.'}
               </p>
             )}
+            {task === 'detection' && classEntries.length > 0 && (
+              <p className="mb-2 text-[10px] text-slate-400">
+                {language === 'ko'
+                  ? `라벨된 이미지 ${distribution.imageCount}장 · 객체 주석 ${distribution.objectCount}개. 비율은 전체 객체 주석 수 기준입니다.`
+                  : `${distribution.imageCount} labeled images · ${distribution.objectCount} object annotations. Percentages use the object total.`}
+              </p>
+            )}
 
             <div className="space-y-2 flex-1 overflow-y-auto pr-1">
               {classEntries.length === 0 ? (
@@ -465,7 +477,7 @@ export const DatasetStudio: React.FC = () => {
               ) : (
                 classEntries.map(([cName, count]) => {
                   const pct = Math.round((count / maxClassCount) * 100);
-                  const pctOfTotal = totalImages > 0 ? Math.round((count / totalImages) * 100) : 0;
+                  const pctOfTotal = distribution.sharePercent(count);
                   const isNormal = cName.toLowerCase() === 'ok' || cName.toLowerCase() === 'good';
                   const isSelected = activeClassFilter === cName;
 
@@ -503,7 +515,9 @@ export const DatasetStudio: React.FC = () => {
                             {pctOfTotal}%
                           </span>
                           <span className="font-mono tabular-nums text-[11px] font-bold text-slate-100 bg-[#0B0E14] px-1.5 py-0.5 rounded-[3px] border border-[#2B3547]">
-                            {count}장
+                            {language === 'ko'
+                              ? `${count}${distribution.countUnit === 'objects' ? '개 객체' : '장'}`
+                              : `${count} ${distribution.countUnit}`}
                           </span>
                         </div>
                       </div>

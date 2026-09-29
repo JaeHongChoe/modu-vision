@@ -6,7 +6,7 @@
  *  - Dual-layer trace rendering (Substrate Copper + Signal Carrier Trace).
  *  - Copper via test pads at connection endpoints and bend junctions.
  *  - Live execution signal packets animation.
- *  - Actual saved edges form one supported linear inspection path.
+ *  - Saved model fan-out and verdict output branches remain selectable.
  */
 
 import React from 'react';
@@ -18,6 +18,9 @@ interface DAGCircuitOverlayProps {
   edges: FlowEdge[];
   activeRunningNodeId: string | null;
   finalVerdict?: 'OK' | 'NG' | 'REVIEW';
+  routedOutputNodeId?: string;
+  selectedEdgeId?: string | null;
+  onSelectEdge?: (edgeId: string) => void;
 }
 
 export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
@@ -25,6 +28,9 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   edges,
   activeRunningNodeId,
   finalVerdict,
+  routedOutputNodeId,
+  selectedEdgeId,
+  onSelectEdge,
 }) => {
   // Map nodes by ID for O(1) coordinate lookup
   const nodeMap = new Map<string, FlowNode>();
@@ -102,12 +108,14 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
+        const isVerdictBranch = sourceNode.data.node_type === 'decision';
+        const wasRouted = isVerdictBranch && routedOutputNodeId === edge.target;
 
         // Trace Color Determination
         let traceColor = '#334155'; // Standby Dark Steel Copper
         if (isActive) {
           traceColor = '#06B6D4'; // Electric Cyan Active
-        } else if (finalVerdict) {
+        } else if (finalVerdict && (!isVerdictBranch || wasRouted)) {
           traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
         }
 
@@ -137,8 +145,26 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               d={pathD}
               fill="none"
               stroke={traceColor}
-              strokeWidth="2"
+              strokeWidth={selectedEdgeId === edge.id ? 3 : 2}
               strokeLinecap="round"
+            />
+
+            <path
+              d={pathD}
+              fill="none"
+              stroke="transparent"
+              strokeWidth="16"
+              style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select connection ${edge.source} to ${edge.target}`}
+              onClick={() => onSelectEdge?.(edge.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectEdge?.(edge.id);
+                }
+              }}
             />
 
             {/* Layer 3: High-Frequency Electron Packet Pulse (Running State) */}
@@ -161,7 +187,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
             <circle cx={p2.x} cy={p2.y} r="1.5" fill="#F8FAFC" />
 
             {/* Discrete Wire Label Badge */}
-            {edge.label && (
+            {(edge.label || edge.isBranch) && (
               <g transform={`translate(${midX}, ${midY - 10})`}>
                 <rect
                   x="-60"
@@ -183,7 +209,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
                   fontFamily="monospace"
                   letterSpacing="0.05em"
                 >
-                  {edge.label}
+                  {edge.isBranch === 'pass' ? 'OK' : edge.isBranch === 'fail' ? 'NG' : edge.isBranch === 'review' ? 'REVIEW' : edge.label}
                 </text>
               </g>
             )}

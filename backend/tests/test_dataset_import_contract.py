@@ -205,7 +205,22 @@ def test_grouped_split_uses_closest_feasible_image_ratios(tmp_path, monkeypatch)
     assert observed_error == pytest.approx(min(candidates))
 
 
-@pytest.mark.parametrize("task", ["classification", "detection", "anomaly"])
+def test_flat_labelme_detection_import_and_split_use_saved_partitions(tmp_path, monkeypatch):
+    folder = _flat_ng_folder(tmp_path)
+    monkeypatch.setattr(routes_dataset, "SPLIT_MANIFEST_DIR", tmp_path / "manifests")
+    request = routes_dataset.DatasetImportRequest(folder_path=str(folder), task="detection", validate_images=False)
+    initial = routes_dataset.import_dataset(request)
+    assert initial["total_images"] == 6
+    assert initial["split_supported"] is True
+    assert initial["split"] == {"train": 0, "val": 0, "test": 0}
+    applied = routes_dataset.split_dataset_endpoint(routes_dataset.DatasetSplitRequest(
+        folder_path=str(folder), task="detection", train_ratio=0.5, val_ratio=0.5,
+    ))
+    assert applied["split"] == {"train": 3, "val": 3, "test": 0}
+    assert routes_dataset.import_dataset(request)["split"] == applied["split"]
+
+
+@pytest.mark.parametrize("task", ["classification", "anomaly"])
 def test_flat_ng_labelme_import_rejects_unsupported_training_task(tmp_path, task):
     folder = _flat_ng_folder(tmp_path)
     with pytest.raises(HTTPException) as error:

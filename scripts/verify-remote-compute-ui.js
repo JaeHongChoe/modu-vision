@@ -272,6 +272,32 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
   assert.doesNotMatch(idleHtml, /HARDWARE TELEMETRY/);
 });
 
+test('Stage 3 distinguishes selected physical GPU from worker-local CUDA index', () => {
+  const React = require('react');
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const { useTrainingStore } = require(path.join(root, 'src/renderer/stores/useTrainingStore.ts'));
+  const { useComputeStore } = require(path.join(root, 'src/renderer/stores/useComputeStore.ts'));
+  const { TrainingController } = require(path.join(root, 'src/renderer/components/training/TrainingController.tsx'));
+  const previousProfiles = useComputeStore.getState().profiles;
+  useComputeStore.setState({
+    selectedProfileId: null,
+    profiles: previousProfiles.map((profile) => profile.id === server.id
+      ? { ...profile, name: '42번 서버 (L40S GPU 2)', gpu_selector: '2' } : profile),
+  });
+  useTrainingStore.setState({ status: 'running', isTraining: true, jobId: 'job-gpu2',
+    jobComputeProfileId: server.id, jobComputeLabel: server.id, jobDeviceName: 'cuda:0',
+    jobPhase: 'running', jobStatusError: null });
+  try {
+    const plainText = renderToStaticMarkup(React.createElement(TrainingController))
+      .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    assert.match(plainText, /프로필 GPU 선택자: 2/);
+    assert.match(plainText, /작업 내부 장치: cuda:0/);
+    assert.match(plainText, /CUDA_VISIBLE_DEVICES/);
+  } finally {
+    useComputeStore.setState({ profiles: previousProfiles });
+  }
+});
+
 test('deleting a saved profile handles the empty HTTP 204 response', async () => {
   const { useComputeStore } = require(path.join(root, 'src/renderer/stores/useComputeStore.ts'));
   await useComputeStore.getState().selectTarget(server.id);

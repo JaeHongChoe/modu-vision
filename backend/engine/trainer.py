@@ -54,6 +54,8 @@ from backend.engine.classification import (
 from backend.engine.detection import (
     create_detection_model,
     draw_detection_overlays,
+    checkpoint_detection_num_classes,
+    foreground_class_names,
 )
 from backend.engine.segmentation import (
     build_segmentation_model,
@@ -236,6 +238,22 @@ class InferenceResult:
 # Unified AutoML Trainer Controller
 # ============================================================================
 
+def _build_detection_datasets(
+    dataset_path: Path, train_transform: Optional[Callable], image_size: Tuple[int, int],
+) -> Tuple[DetectionDataset, DetectionDataset]:
+    """Build both COCO partitions with one foreground class index."""
+    train_img = (dataset_path / "images" / "train") if (dataset_path / "images" / "train").exists() else (dataset_path / "images")
+    val_img = (dataset_path / "images" / "val") if (dataset_path / "images" / "val").exists() else train_img
+    train_anno = (dataset_path / "annotations_train.json") if (dataset_path / "annotations_train.json").exists() else (dataset_path / "annotations.json")
+    val_anno = (dataset_path / "annotations_val.json") if (dataset_path / "annotations_val.json").exists() else train_anno
+
+    train_ds = DetectionDataset(images_dir=train_img, annotation_file=train_anno,
+                                transform=train_transform, image_size=image_size)
+    val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno,
+                              image_size=image_size, class_names=list(train_ds.categories.values()))
+    return train_ds, val_ds
+
+
 class UnifiedAutoMLTrainer:
     """
     Unified AutoML Vision Training Controller.
@@ -276,6 +294,11 @@ class UnifiedAutoMLTrainer:
         start_time = time.time()
         epochs = self.overrides.get("epochs", self.config.target_epochs)
         target_size = self.overrides.get("image_size", self.config.image_size)
+        batch_size = int(self.overrides.get("batch_size", self.config.batch_size))
+        learning_rate = float(self.overrides.get("learning_rate", self.config.learning_rate))
+        patience = int(self.overrides.get("patience", self.config.patience))
+        if batch_size < 1 or learning_rate <= 0 or patience < 1:
+            raise ValueError("Training batch size, learning rate, and patience must be positive")
         optimal_size = calculate_optimal_image_size((target_size, target_size), target_max=target_size)
 
         self.callback.on_training_start({
@@ -312,15 +335,9 @@ class UnifiedAutoMLTrainer:
                 criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
 
             elif self.task == "detection":
-                train_img = (self.dataset_path / "images" / "train") if (self.dataset_path / "images" / "train").exists() else (self.dataset_path / "images")
-                val_img = (self.dataset_path / "images" / "val") if (self.dataset_path / "images" / "val").exists() else train_img
-                train_anno = (self.dataset_path / "annotations_train.json") if (self.dataset_path / "annotations_train.json").exists() else (self.dataset_path / "annotations.json")
-                val_anno = (self.dataset_path / "annotations_val.json") if (self.dataset_path / "annotations_val.json").exists() else train_anno
-
-                train_ds = DetectionDataset(images_dir=train_img, annotation_file=train_anno, transform=aug, image_size=optimal_size)
-                val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=optimal_size)
+                train_ds, val_ds = _build_detection_datasets(self.dataset_path, aug, optimal_size)
                 classes = list(train_ds.categories.values())
-                num_classes = max(2, len(classes))
+                num_classes = max(2, len(classes) + 1)
                 model = create_detection_model(preset=self.preset_key, num_classes=num_classes).to(self.device)
                 criterion = None
 
@@ -345,8 +362,8 @@ class UnifiedAutoMLTrainer:
                 else:
                     model = PaDiMDetector(backbone_name="resnet18", device=self.device)
 
-            train_loader = create_dataloader(train_ds, batch_size=self.config.batch_size, shuffle=True, task=self.task)
-            val_loader = create_dataloader(val_ds, batch_size=self.config.batch_size, shuffle=False, task=self.task)
+            train_loader = create_dataloader(train_ds, batch_size=batch_size, shuffle=True, task=self.task)
+            val_loader = create_dataloader(val_ds, batch_size=batch_size, shuffle=False, task=self.task)
 
             # 2. Task 4 Anomaly Workflow (OK-Only Embedding Fit)
             if self.task in ("anomaly", "anomaly_detection"):
@@ -408,11 +425,11 @@ class UnifiedAutoMLTrainer:
             # 3. Supervised Tasks Optimization Loop
             optimizer, scheduler = create_optimizer_and_scheduler(
                 model=model,
-                lr=self.config.learning_rate,
+                lr=learning_rate,
                 total_epochs=epochs,
                 warmup_epochs=min(3, max(1, epochs // 4)),
             )
-            early_stopping = EarlyStopping(patience=self.config.patience, mode="min")
+            early_stopping = EarlyStopping(patience=patience, mode="min")
             total_steps = epochs * len(train_loader)
             global_step = 0
 
@@ -701,7 +718,9 @@ def infer(
 
     elif task_clean == "detection":
         det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
-        model = create_detection_model(preset=det_preset, num_classes=max(2, len(classes)), pretrained=False).to(dev)
+        model = create_detection_model(preset=det_preset,
+                                       num_classes=checkpoint_detection_num_classes(state_dict, classes),
+                                       pretrained=False).to(dev)
         model.load_state_dict(state_dict)
         model.eval()
 
@@ -717,7 +736,8 @@ def infer(
                 scale_x = orig_w / img_size[0]
                 scale_y = orig_h / img_size[1]
                 x1, y1, x2, y2 = b[0] * scale_x, b[1] * scale_y, b[2] * scale_x, b[3] * scale_y
-                lbl = classes[l] if l < len(classes) else f"defect_{l}"
+                defect_classes = foreground_class_names(classes)
+                lbl = defect_classes[l - 1] if 1 <= l <= len(defect_classes) else f"defect_{l}"
                 filtered.append({"bbox": [float(x1), float(y1), float(x2), float(y2)], "score": float(s), "label": lbl})
                 cv2.rectangle(overlay, (int(x1), int(y1)), (int(x2), int(y2)), (255, 50, 50), 2)
                 cv2.putText(overlay, f"{lbl} {s:.2f}", (int(x1), max(15, int(y1) - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 50, 50), 1)

@@ -35,6 +35,8 @@ from backend.engine.classification import (
 from backend.engine.detection import (
     create_detection_model,
     evaluate_detections_map,
+    checkpoint_detection_num_classes,
+    foreground_class_names,
 )
 from backend.engine.segmentation import (
     build_segmentation_model,
@@ -320,15 +322,32 @@ def _resolve_dataset_dir(dataset_path: Path, task: str) -> Path:
     return dataset_path
 
 
+def _paired_evaluation_paths(dataset_dir: Path, task: str) -> Tuple[Path, Path, str]:
+    """Use an independent test split when present and refuse incomplete pairs."""
+    if task not in ("detection", "segmentation"):
+        raise ValueError(f"Unsupported paired evaluation task: {task}")
+    image_root = dataset_dir / "images"
+    for split in ("test", "val"):
+        images = image_root / split
+        if not images.is_dir():
+            continue
+        labels = (dataset_dir / f"annotations_{split}.json") if task == "detection" else (dataset_dir / "masks" / split)
+        if not (labels.is_file() if task == "detection" else labels.is_dir()):
+            raise HTTPException(status_code=422, detail=f"{task} {split} images exist without matching labels: {labels}")
+        return images, labels, split
+    labels = (dataset_dir / "annotations.json") if task == "detection" else (dataset_dir / "masks")
+    return image_root, labels, "all"
+
+
 def _evaluate_classification(
     model_pt: Path,
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_ds = ClassificationDataset(root_dir=dataset_dir, split="val")
+    val_ds = ClassificationDataset(root_dir=dataset_dir, split="test")
     if len(val_ds.samples) == 0:
-        val_ds = ClassificationDataset(root_dir=dataset_dir, split="test")
+        val_ds = ClassificationDataset(root_dir=dataset_dir, split="val")
     if len(val_ds.samples) == 0:
         val_ds = ClassificationDataset(root_dir=dataset_dir)
     if len(val_ds.samples) == 0:
@@ -428,24 +447,35 @@ def _evaluate_detection(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img = (dataset_dir / "images" / "val") if (dataset_dir / "images" / "val").is_dir() else (dataset_dir / "images")
-    val_anno = (dataset_dir / "annotations_val.json") if (dataset_dir / "annotations_val.json").is_file() else (dataset_dir / "annotations.json")
-    if not val_anno.is_file():
-        annos = list(dataset_dir.glob("*.json"))
-        val_anno = annos[0] if annos else val_anno
+    val_img, val_anno, _ = _paired_evaluation_paths(dataset_dir, "detection")
 
     img_size = tuple(meta.get("image_size", [256, 256]))
-    val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=img_size)
+    ckpt = torch.load(model_pt, map_location=device, weights_only=False)
+    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    metadata_classes = meta.get("classes")
+    checkpoint_classes = ckpt.get("classes")
+    metadata_names = foreground_class_names(metadata_classes) if isinstance(metadata_classes, (list, tuple)) and metadata_classes else None
+    checkpoint_names = foreground_class_names(checkpoint_classes) if isinstance(checkpoint_classes, (list, tuple)) and checkpoint_classes else None
+    if checkpoint_names and metadata_names and checkpoint_names != metadata_names:
+        raise HTTPException(status_code=422, detail="Detection checkpoint and model metadata have different class order")
+    classes = checkpoint_names or metadata_names
+    if classes is None:
+        train_anno = dataset_dir / "annotations_train.json"
+        if train_anno.is_file():
+            train_categories = json.loads(train_anno.read_text(encoding="utf-8")).get("categories", [])
+            classes = [str(category["name"]) for category in sorted(train_categories, key=lambda category: int(category["id"]))]
+    try:
+        val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno,
+                                  image_size=img_size, class_names=classes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Detection evaluation class mapping is incompatible: {exc}") from exc
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for detection")
 
     classes = list(val_ds.categories.values())
-    if not classes:
-        classes = meta.get("classes", ["defect"])
-    num_classes = max(2, len(classes))
-
-    ckpt = torch.load(model_pt, map_location=device, weights_only=False)
-    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+    num_classes = checkpoint_detection_num_classes(state_dict, classes)
+    if num_classes != len(classes) + 1:
+        raise HTTPException(status_code=422, detail="Detection checkpoint class count does not match saved class mapping")
     det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
     model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False).to(device)
     model.load_state_dict(state_dict)
@@ -537,8 +567,7 @@ def _evaluate_segmentation(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img = (dataset_dir / "images" / "val") if (dataset_dir / "images" / "val").is_dir() else (dataset_dir / "images")
-    val_mask = (dataset_dir / "masks" / "val") if (dataset_dir / "masks" / "val").is_dir() else (dataset_dir / "masks")
+    val_img, val_mask, _ = _paired_evaluation_paths(dataset_dir, "segmentation")
 
     img_size = tuple(meta.get("image_size", [256, 256]))
     val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=img_size)
