@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.api.routes_project import _load_project, _project_root, get_current_project
 from backend.api.routes_dataset import list_dataset_images
 from backend.api.routes_evaluation import _resolve_job_artifacts
+from backend.api.routes_flowchart import _FLOW_SAVE_LOCK
 from backend.engine.flowchart_engine import (
     FlowchartExecutionResult, FlowchartPipeline, FlowchartRunRequest,
     ordered_linear_nodes, verified_checkpoint_scope,
@@ -99,30 +100,31 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any]) -> t
 
     project_dir = Path(project["project_dir"]).resolve()
     pointer = project_dir / "flowcharts" / "active.json"
-    try:
-        active = json.loads(pointer.read_text(encoding="utf-8"))
-        version_id = active["version_id"]
-        if (active.get("project_id") != project["id"]
-                or active.get("source_dataset_path") != str(source)
-                or not isinstance(version_id, str)
-                or len(version_id) != 32
-                or any(char not in "0123456789abcdef" for char in version_id)):
-            raise ValueError("Active flow belongs to another project or dataset.")
-        record = json.loads((project_dir / "flowcharts" / "versions" / f"{version_id}.json").read_text(encoding="utf-8"))
-        if record.get("version_id") != version_id or record.get("source_dataset_path") != str(source):
-            raise ValueError("Saved flow version does not match the active project and source.")
-        saved_graph = record["pipeline"]
-        if not isinstance(saved_graph, dict):
-            raise ValueError("Saved inspection graph is invalid.")
-        pipeline = FlowchartPipeline.model_validate(saved_graph)
-        submitted = FlowchartPipeline.model_validate(payload.pipeline)
-        # Browser JSON turns integral positions such as 50.0 into 50. Both
-        # graphs execute identically after schema validation.
-        if pipeline != submitted:
-            raise ValueError("Inspection graph differs from the active saved flow version.")
-        ordered_linear_nodes(pipeline)
-    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HTTPException(status_code=409, detail=f"Active saved inspection flow is unavailable or changed: {exc}") from exc
+    with _FLOW_SAVE_LOCK:
+        try:
+            active = json.loads(pointer.read_text(encoding="utf-8"))
+            version_id = active["version_id"]
+            if (active.get("project_id") != project["id"]
+                    or active.get("source_dataset_path") != str(source)
+                    or not isinstance(version_id, str)
+                    or len(version_id) != 32
+                    or any(char not in "0123456789abcdef" for char in version_id)):
+                raise ValueError("Active flow belongs to another project or dataset.")
+            record = json.loads((project_dir / "flowcharts" / "versions" / f"{version_id}.json").read_text(encoding="utf-8"))
+            if record.get("version_id") != version_id or record.get("source_dataset_path") != str(source):
+                raise ValueError("Saved flow version does not match the active project and source.")
+            saved_graph = record["pipeline"]
+            if not isinstance(saved_graph, dict):
+                raise ValueError("Saved inspection graph is invalid.")
+            pipeline = FlowchartPipeline.model_validate(saved_graph)
+            submitted = FlowchartPipeline.model_validate(payload.pipeline)
+            # Browser JSON turns integral positions such as 50.0 into 50. Both
+            # graphs execute identically after schema validation.
+            if pipeline != submitted:
+                raise ValueError("Inspection graph differs from the active saved flow version.")
+            ordered_linear_nodes(pipeline)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise HTTPException(status_code=409, detail=f"Active saved inspection flow is unavailable or changed: {exc}") from exc
 
     listed = list_dataset_images(
         folder_path=str(source), task=payload.task, limit=50000, offset=0,

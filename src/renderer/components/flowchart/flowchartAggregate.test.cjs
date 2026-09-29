@@ -103,6 +103,44 @@ test('validation issue points to the broken Blob node or incompatible edge', () 
   assert.deepEqual(locateFlowIssue(badPayload, error), { kind: 'edge', id: 'e4' });
 });
 
+test('disconnected cycle points to its unresolved model instead of the input node', () => {
+  const graph = parallelGraph();
+  graph.nodes.push(node('loop_a', 'inspection', { task: 'segmentation' }));
+  graph.nodes.push(node('loop_b', 'inspection', { task: 'segmentation' }));
+  graph.edges.push(edge('loop_ab', 'loop_a', 'loop_b', 'image'));
+  graph.edges.push(edge('loop_ba', 'loop_b', 'loop_a', 'image'));
+
+  const error = validateFlowchartGraph(graph);
+  assert.match(error, /모든 노드를 입력부터 출력까지/);
+  assert.deepEqual(locateFlowIssue(graph, error), { kind: 'node', id: 'loop_a' });
+});
+
+test('cycle feeding the decision points to the cycle rather than the blocked decision', () => {
+  const graph = {
+    id: 'cycle', name: 'Blocked decision',
+    nodes: [
+      node('input', 'input'),
+      node('main', 'inspection', { task: 'segmentation' }),
+      node('decision', 'decision', { rule: 'any_defect_is_ng' }),
+      node('output', 'output'),
+      node('loop_a', 'inspection', { task: 'segmentation' }),
+      node('loop_b', 'inspection', { task: 'segmentation' }),
+    ],
+    edges: [
+      edge('e1', 'input', 'main', 'image'),
+      edge('e2', 'main', 'decision', 'result'),
+      edge('e3', 'decision', 'output', 'result'),
+      edge('e4', 'loop_a', 'loop_b', 'image'),
+      edge('e5', 'loop_b', 'loop_a', 'image'),
+      edge('e6', 'loop_a', 'decision', 'result'),
+    ],
+  };
+
+  const error = validateFlowchartGraph(graph);
+  assert.match(error, /모든 노드를 입력부터 출력까지/);
+  assert.deepEqual(locateFlowIssue(graph, error), { kind: 'node', id: 'loop_a' });
+});
+
 test('Blob accepts only one segmentation result and positive integer limits', () => {
   const graph = parallelGraph();
   const wrongSource = { ...graph, edges: graph.edges.map((item) =>

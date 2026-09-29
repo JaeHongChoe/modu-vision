@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
+import threading
 import time
 import uuid
 from typing import Any, Dict, List, Literal, Optional
@@ -60,6 +61,7 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 
 # Persistent cached engine instance for rapid warm execution
 _ENGINE = FlowchartEngine()
+_FLOW_SAVE_LOCK = threading.RLock()
 
 
 InspectionTask = Literal["anomaly", "segmentation", "classification", "patch_classification"]
@@ -128,6 +130,25 @@ def _write_json(path: Path, value: Dict[str, Any]) -> None:
 
 def _write_pipeline(path: Path, pipeline: FlowchartPipeline) -> None:
     _write_json(path, pipeline.model_dump())
+
+
+def _restore_flow_file(path: Path, previous: Optional[bytes]) -> None:
+    """Restore an atomic JSON file after a multi-file save fails."""
+    if previous is None:
+        path.unlink(missing_ok=True)
+        return
+    temporary_path: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="wb", dir=path.parent,
+                                         prefix=f".{path.name}.", suffix=".rollback", delete=False) as handle:
+            temporary_path = Path(handle.name)
+            handle.write(previous)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _version_dir(project_dir: Optional[Path]) -> Path:
@@ -205,6 +226,13 @@ def get_pipeline(
     request: Request = None,
 ) -> FlowchartPipeline:
     """Load this project's saved flow, importing a legacy global file once."""
+    with _FLOW_SAVE_LOCK:
+        return _get_pipeline_unlocked(inspection_task, source_dataset_path, request)
+
+
+def _get_pipeline_unlocked(
+    inspection_task: PipelineTask, source_dataset_path: Optional[str], request: Request,
+) -> FlowchartPipeline:
     project_dir = _project_dir(request)
     scoped_files = [_recipe_file(inspection_task, source_dataset_path, project_dir)]
     legacy_files = [_recipe_file(inspection_task, source_dataset_path)]
@@ -262,6 +290,13 @@ def get_pipeline(
 @router.get("/pipeline/active", response_model=FlowchartPipeline)
 def get_active_pipeline(source_dataset_path: Optional[str] = None, request: Request = None) -> FlowchartPipeline:
     """Reopen the active saved graph only for its owning project and source."""
+    with _FLOW_SAVE_LOCK:
+        return _get_active_pipeline_unlocked(source_dataset_path, request)
+
+
+def _get_active_pipeline_unlocked(
+    source_dataset_path: Optional[str], request: Request,
+) -> FlowchartPipeline:
     if request is None:
         raise HTTPException(status_code=404, detail="No active project flowchart.")
     project = get_current_project(request)
@@ -440,34 +475,90 @@ def save_pipeline(
         raise HTTPException(status_code=409, detail="Flowchart source differs from the active project dataset.")
     effective_source = source_dataset_path or project_source
     target_path = _recipe_file(task, effective_source, project_dir)
-    try:
-        version_id = _save_version(pipeline, task, effective_source, project_dir)
-        _write_pipeline(target_path, pipeline)
-        if project_dir is not None:
-            _write_json(_active_flow_file(project_dir), {
+    with _FLOW_SAVE_LOCK:
+        version_id: Optional[str] = None
+        active_path = _active_flow_file(project_dir) if project_dir is not None else None
+        previous_recipe: Optional[bytes] = None
+        previous_active: Optional[bytes] = None
+        try:
+            previous_recipe = target_path.read_bytes() if target_path.exists() else None
+            previous_active = active_path.read_bytes() if active_path and active_path.exists() else None
+            version_id = _save_version(pipeline, task, effective_source, project_dir)
+            _write_pipeline(target_path, pipeline)
+            if active_path is not None:
+                _write_json(active_path, {
+                    "version_id": version_id,
+                    "project_id": project["id"],
+                    "recipe_task": task,
+                    "source_dataset_path": (
+                        str(Path(effective_source).expanduser().resolve()) if effective_source else None
+                    ),
+                })
+            return {
+                "status": "saved", "pipeline_id": pipeline.id,
+                "node_count": len(pipeline.nodes), "recipe_task": task,
                 "version_id": version_id,
-                "project_id": project["id"],
-                "recipe_task": task,
-                "source_dataset_path": (
-                    str(Path(effective_source).expanduser().resolve()) if effective_source else None
-                ),
-            })
-        return {
-            "status": "saved", "pipeline_id": pipeline.id,
-            "node_count": len(pipeline.nodes), "recipe_task": task,
-            "version_id": version_id,
-        }
-    except Exception as e:
-        logger.exception("Failed to save pipeline: %s", e)
-        raise HTTPException(
-            status_code=500,
-            detail=format_error_response("ERR_UNKNOWN", details=f"Failed to save flowchart: {e}"),
-        )
+            }
+        except Exception as e:
+            logger.exception("Failed to save pipeline: %s", e)
+            recovery_incomplete = False
+            if version_id is not None:
+                active_rollback_failed = False
+                if active_path is not None:
+                    try:
+                        _restore_flow_file(active_path, previous_active)
+                    except OSError:
+                        active_rollback_failed = True
+                        logger.exception("Could not roll back active flow file %s", active_path)
+                # A failed rollback may leave active.json pointing at the newly
+                # written version. Keep both its recipe and version in that case:
+                # deleting the version would make the active flow unreadable.
+                preserve_new_version = False
+                if active_rollback_failed and active_path is not None:
+                    try:
+                        current_active = json.loads(active_path.read_text(encoding="utf-8"))
+                        preserve_new_version = current_active.get("version_id") == version_id
+                    except (OSError, ValueError, AttributeError):
+                        preserve_new_version = True  # Unknown pointer: do not delete its possible target.
+                if preserve_new_version:
+                    recovery_incomplete = True
+                    logger.error("Kept flow version %s because the active pointer could not be rolled back", version_id)
+                else:
+                    recipe_rollback_failed = False
+                    try:
+                        _restore_flow_file(target_path, previous_recipe)
+                    except OSError:
+                        recipe_rollback_failed = True
+                        recovery_incomplete = True
+                        logger.exception("Could not roll back flow recipe %s", target_path)
+                    if recipe_rollback_failed:
+                        logger.error("Kept flow version %s so the unrecovered recipe can be reopened", version_id)
+                    else:
+                        try:
+                            (_version_dir(project_dir) / f"{version_id}.json").unlink(missing_ok=True)
+                        except OSError:
+                            recovery_incomplete = True
+                            logger.exception("Could not remove incomplete flow version %s", version_id)
+            details = f"Failed to save flowchart: {e}"
+            if recovery_incomplete:
+                details += "; recovery incomplete: reopen the active flow and inspect saved versions"
+            error_detail = format_error_response("ERR_UNKNOWN", details=details)
+            if recovery_incomplete:
+                error_detail["recovery_incomplete"] = True
+            raise HTTPException(
+                status_code=500,
+                detail=error_detail,
+            ) from e
 
 
 @router.get("/pipelines")
 def list_saved_pipelines(source_dataset_path: Optional[str] = None, request: Request = None):
     """List immutable saved flow revisions from the active project."""
+    with _FLOW_SAVE_LOCK:
+        return _list_saved_pipelines_unlocked(source_dataset_path, request)
+
+
+def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: Request):
     if source_dataset_path:
         source = Path(source_dataset_path).expanduser().resolve()
         if not source.is_dir():
@@ -532,32 +623,33 @@ def activate_saved_pipeline_version(
         raise HTTPException(status_code=404, detail="Flow version not found.")
     project = get_current_project(request)
     project_dir = Path(project["project_dir"]).resolve()
-    path = _version_dir(project_dir) / f"{version_id}.json"
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Flow version not found.")
     requested_source = str(Path(source_dataset_path).expanduser().resolve())
-    if requested_source != project.get("source_dataset_dir"):
-        raise HTTPException(status_code=409, detail="Selected flow source differs from the active project dataset.")
-    try:
-        record = json.loads(path.read_text(encoding="utf-8"))
-        if (record.get("version_id") != version_id
-                or record.get("source_dataset_path") != requested_source):
-            raise ValueError("Saved flow version belongs to another dataset.")
-        task = record.get("recipe_task")
-        if task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
-            raise ValueError("Saved flow recipe is invalid.")
-        pipeline = FlowchartPipeline.model_validate(record["pipeline"])
-        ordered_linear_nodes(pipeline)
-        if not _pipeline_matches_recipe(pipeline, task):
-            raise ValueError("Saved flow model tasks do not match its recipe.")
-    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
-    _write_json(_active_flow_file(project_dir), {
-        "version_id": version_id,
-        "project_id": project["id"],
-        "recipe_task": task,
-        "source_dataset_path": requested_source,
-    })
+    with _FLOW_SAVE_LOCK:
+        path = _version_dir(project_dir) / f"{version_id}.json"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="Flow version not found.")
+        if requested_source != project.get("source_dataset_dir"):
+            raise HTTPException(status_code=409, detail="Selected flow source differs from the active project dataset.")
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            if (record.get("version_id") != version_id
+                    or record.get("source_dataset_path") != requested_source):
+                raise ValueError("Saved flow version belongs to another dataset.")
+            task = record.get("recipe_task")
+            if task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
+                raise ValueError("Saved flow recipe is invalid.")
+            pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+            ordered_linear_nodes(pipeline)
+            if not _pipeline_matches_recipe(pipeline, task):
+                raise ValueError("Saved flow model tasks do not match its recipe.")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
+        _write_json(_active_flow_file(project_dir), {
+            "version_id": version_id,
+            "project_id": project["id"],
+            "recipe_task": task,
+            "source_dataset_path": requested_source,
+        })
     return {"status": "active", "version_id": version_id, "pipeline": pipeline}
 
 
@@ -566,16 +658,17 @@ def get_saved_pipeline_version(version_id: str, request: Request = None) -> Flow
     """Open one saved revision without changing the current recipe."""
     if not re.fullmatch(r"[0-9a-f]{32}", version_id):
         raise HTTPException(status_code=404, detail="Flow version not found.")
-    path = _version_dir(_project_dir(request)) / f"{version_id}.json"
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Flow version not found.")
-    try:
-        record = json.loads(path.read_text(encoding="utf-8"))
-        pipeline = FlowchartPipeline.model_validate(record["pipeline"])
-        ordered_linear_nodes(pipeline)
-        return pipeline
-    except (OSError, ValueError, KeyError) as exc:
-        raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
+    with _FLOW_SAVE_LOCK:
+        path = _version_dir(_project_dir(request)) / f"{version_id}.json"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="Flow version not found.")
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+            pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+            ordered_linear_nodes(pipeline)
+            return pipeline
+        except (OSError, ValueError, KeyError) as exc:
+            raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
 
 
 @router.get("/sample-images")
@@ -642,19 +735,20 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
         if req.pipeline is not None:
             pipeline = req.pipeline
         elif request is not None:
-            active_file = _active_flow_file(Path(project["project_dir"]))
-            if active_file.is_file():
-                active = json.loads(active_file.read_text(encoding="utf-8"))
-                source = project.get("source_dataset_dir")
-                if active.get("project_id") != project["id"] or active.get("source_dataset_path") != source:
-                    raise HTTPException(status_code=409, detail="Active flow belongs to a different source dataset.")
-                pipeline = get_saved_pipeline_version(active["version_id"], request=request)
-            else:
-                pipeline = get_pipeline(
-                    inspection_task=project["task"],
-                    source_dataset_path=project.get("source_dataset_dir"),
-                    request=request,
-                )
+            with _FLOW_SAVE_LOCK:
+                active_file = _active_flow_file(Path(project["project_dir"]))
+                if active_file.is_file():
+                    active = json.loads(active_file.read_text(encoding="utf-8"))
+                    source = project.get("source_dataset_dir")
+                    if active.get("project_id") != project["id"] or active.get("source_dataset_path") != source:
+                        raise HTTPException(status_code=409, detail="Active flow belongs to a different source dataset.")
+                    pipeline = get_saved_pipeline_version(active["version_id"], request=request)
+                else:
+                    pipeline = get_pipeline(
+                        inspection_task=project["task"],
+                        source_dataset_path=project.get("source_dataset_dir"),
+                        request=request,
+                    )
         else:
             pipeline = get_pipeline()
         try:

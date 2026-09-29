@@ -14,13 +14,18 @@
 | Phase 3 모델군 | [Patch Classification 테스트](../backend/tests/test_patch_classification.py)는 출처 연결 manifest, 학습·평가, 패치별 좌표·점수와 원본 변경 차단을 다룬다. 위 16개 패치로 CPU 학습 경로도 실행했다. [OCR 테스트](../backend/tests/test_ocr.py)는 명시적 문자 정답·원본 해시·학습·평가·추론을 확인했고 3단계 실험 화면을 연결했다. 주어진 결함 데이터에는 문자 정답이 없어 OCR 실데이터 학습을 진행하지 않았다. [회전 검출 테스트](../backend/tests/test_rotated_detection.py)는 다각형에서 회전 박스 추출·학습·평가·예측을 다룬다. 실제 LabelMe 원본 6장에서 크롭을 만들어 train 4/val 1/test 1로 CPU 1 epoch 학습하고 시험 예측을 실행했다. [GAN 테스트](../backend/tests/test_defect_gan.py)는 학습형 생성기와 체크포인트·검토 대기 후보를 확인했다. 실제 출처 이미지 8장에서 자른 결함 영역 4개로 CPU 1 epoch 학습하고 미검증 후보 2장을 생성했다. 3단계 화면에서 후보 미리보기를 제공하며 학습 데이터에 자동 편입하지 않는다. [warm-start 테스트](../backend/tests/test_warm_start.py)는 완료 부모 모델의 구조·클래스·해시·계보를 확인한다. | 회전 검출 시험은 단 1장이고 oriented IoU 0.0102, 각도 오차 80.15°로 품질을 승인하지 않았다. 정렬·향상 모델·Keyword/Prompt Labeler, 대표 OK/NG holdout의 성능 보존 재학습은 미검증 또는 미구현이다. 원격 warm-start·패치 학습은 지원하지 않는다. GAN 생성 품질도 승인하지 않았다. |
 | Phase 4 독립 서비스·컴퓨트 | [독립 서비스](../backend/engine/inspection_service.py)를 데스크톱 앱과 다른 프로세스로 띄워 실제 이미지 파일 입력을 수락했고, 완료 NG를 저장했다. 재시작 후 같은 완료 행을 다시 조회했으며 시도 횟수는 1이었다. [서비스 테스트](../backend/tests/test_inspection_service.py)는 인증, 큐 복구, 패키지 변조 거부, 파일 인박스, HTTP 이미지 업로드, 카메라·장치 이벤트와 결과 전송 실패를 다룬다. [원격 큐 테스트](../backend/tests/test_compute_queue.py)는 같은 서버/GPU 충돌과 재접속을 다룬다. 기존 외부 GPU 프로필의 SSH·런타임·의존성·저장 공간·선택 GPU를 읽기 전용으로 확인했고 준비 상태를 받았다. | 카메라·PLC 실장비, 현장 결과 신호, 실제 Edge/GPU 장시간 실행, 최대 택트시간, 여러 서버의 운영 자원 배분은 미검증이다. 이번 읽기 전용 검사로 새 학습 작업을 시작하지 않았다. 독립 서비스의 승인 릴리스 강제 옵션은 실제 승인 고객 모델로 시험하지 않았다. |
 
+## 이어서 수정한 5단계 플로우 오류
+
+- 저장 중 recipe 또는 활성 버전 포인터 쓰기를 실패하도록 주입했다. 이전에는 API가 500을 반환한 뒤 실패한 새 버전이 목록에 남았고, 포인터 실패 때는 recipe와 활성 그래프도 달랐다. [저장 API](../backend/api/routes_flowchart.py)에 기존 파일 복구와 실패 버전 제거를 적용해 일반적인 쓰기 실패에서는 이전 버전·recipe·활성 그래프가 유지되도록 했다. 저장 도중 목록·활성화·내보내기·읽기 요청이 실패 버전을 보지 않도록 같은 프로세스의 잠금을 적용하고 동시 요청 회귀를 통과했다. 복구 쓰기 자체가 실패하면 활성 포인터가 가리키거나 recipe에 남은 새 버전을 지우지 않고 복구 미완료를 응답에 표시한다. 강제 종료, 다중 프로세스 공동 저장 및 실제 저장장치 장애에서의 완전한 원자성은 검증하지 않았다.
+- 연결되지 않은 순환 그래프의 오류에서 `문제 노드 보기`가 잘못 입력 노드를 선택하는 경우를 재현했다. [편집기 검증](../src/renderer/components/flowchart/flowchartGraph.ts)이 방문하지 못한 실제 노드를 가리키도록 고쳤고 [Node 회귀](../src/renderer/components/flowchart/flowchartAggregate.test.cjs)가 통과했다. 이 오류의 네이티브 클릭 재검증은 아직 진행하지 않았다.
+
 ## 수용 판단
 
 
 ## 최종 검증 명령
 
-- `python -m pytest backend/tests tests -q`: **886 passed, 11 skipped, 95 warnings**. skip·경고가 있는 환경과 모든 외부 장비 구성을 통과했다고 해석하지 않는다.
-- `npm run typecheck`, `npm run build:renderer`: 통과. 배치 검사 스크립트 20개, 집계·이력·뷰포트 그래프 스크립트 17개, 원격 컴퓨트 UI 10개, 학습 취소 9개, M5 무결성 100개가 통과했다.
+- `python -m pytest backend/tests tests -q`: **892 passed, 11 skipped, 95 warnings**. 추가한 복구 미완료 응답 필드의 집중 테스트도 통과했다. skip·경고가 있는 환경과 모든 외부 장비 구성을 통과했다고 해석하지 않는다.
+- `npm run typecheck`, `npm run build:renderer`: 통과. 배치 검사 스크립트 20개, 집계·이력·뷰포트 그래프 스크립트 20개, 원격 컴퓨트 UI 10개, 학습 취소 9개, M5 무결성 100개가 통과했다. 저장 실패와 동시 요청 집중 Python 회귀도 통과했다.
 - macOS arm64 unsigned 앱 디렉터리를 재생성한 뒤 `npm run test:packaging`: **26개 통과**. 패키지 내부 구성 검사이며 다른 PC에서 설치·첫 실행한 근거는 아니다.
 
 네이티브 클릭 증거는 위 표의 동작에 한정하며 모든 세부 버튼을 눌렀다는 뜻은 아니다.

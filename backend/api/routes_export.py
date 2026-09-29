@@ -32,7 +32,7 @@ from backend.utils.error_catalog import format_error_response
 from backend.api.routes_project import get_current_project
 from backend.api.routes_model_deployments import verified_release_revision
 from backend.api.routes_evaluation import _resolve_job_artifacts
-from backend.api.routes_flowchart import _recipe_file, _version_dir
+from backend.api.routes_flowchart import _FLOW_SAVE_LOCK, _recipe_file, _version_dir
 from backend.engine.checkpoint_paths import is_job_id
 from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_nodes
 from backend.engine.flow_package import build_flow_package, verify_flow_parity
@@ -81,19 +81,20 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         saved_path = _version_dir(project_dir) / f"{req.version_id}.json"
     else:
         saved_path = _recipe_file(req.recipe_task, str(source), project_dir)
-    if saved_path.is_symlink() or not saved_path.is_file():
-        raise HTTPException(status_code=409, detail="Save this flow for the selected dataset before exporting it")
-    try:
-        saved = json.loads(saved_path.read_text(encoding="utf-8"))
-        if req.version_id:
-            if (saved.get("version_id") != req.version_id or saved.get("recipe_task") != req.recipe_task
-                    or saved.get("source_dataset_path") != str(source)):
-                raise ValueError("Saved flow version belongs to a different source or recipe")
-            saved = saved["pipeline"]
-        pipeline = FlowchartPipeline.model_validate(saved)
-        ordered_linear_nodes(pipeline)
-    except (OSError, ValueError, KeyError) as exc:
-        raise HTTPException(status_code=409, detail=f"Saved flow is invalid: {exc}") from exc
+    with _FLOW_SAVE_LOCK:
+        if saved_path.is_symlink() or not saved_path.is_file():
+            raise HTTPException(status_code=409, detail="Save this flow for the selected dataset before exporting it")
+        try:
+            saved = json.loads(saved_path.read_text(encoding="utf-8"))
+            if req.version_id:
+                if (saved.get("version_id") != req.version_id or saved.get("recipe_task") != req.recipe_task
+                        or saved.get("source_dataset_path") != str(source)):
+                    raise ValueError("Saved flow version belongs to a different source or recipe")
+                saved = saved["pipeline"]
+            pipeline = FlowchartPipeline.model_validate(saved)
+            ordered_linear_nodes(pipeline)
+        except (OSError, ValueError, KeyError) as exc:
+            raise HTTPException(status_code=409, detail=f"Saved flow is invalid: {exc}") from exc
 
     checkpoints: Dict[str, Path] = {}
     job_tasks: Dict[str, str] = {}
