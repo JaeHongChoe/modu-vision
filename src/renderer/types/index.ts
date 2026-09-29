@@ -1,0 +1,299 @@
+/**
+ * src/renderer/types/index.ts
+ * Global TypeScript contracts and data models for Vision AI Studio frontend.
+ */
+
+export type VisionTask = 'classification' | 'detection' | 'segmentation' | 'anomaly';
+export type TaskType = VisionTask;
+export type TrainingPreset = 'fast' | 'precision';
+export type Language = 'ko' | 'en';
+export type Severity = 'critical' | 'high' | 'medium' | 'low';
+export type ToolType =
+  | 'select'
+  | 'bbox'
+  | 'rotated_bbox'
+  | 'polygon'
+  | 'brush'
+  | 'eraser'
+  | 'auto_select'
+  | 'shape_converter';
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface BBox {
+  xmin: number;
+  ymin: number;
+  xmax: number;
+  ymax: number;
+}
+
+export interface RotatedBBox {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  angle: number; // in degrees
+}
+
+export interface ViewTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export type HandleType = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rot';
+
+export interface HandlePosition {
+  type: HandleType;
+  x: number; // Viewport CSS px
+  y: number; // Viewport CSS px
+  cursor: string;
+}
+
+export interface ImageMeta {
+  image_id: string;
+  file_name: string;
+  file_path: string;
+  width?: number;
+  height?: number;
+  split: string;
+  label?: string | null;
+  thumbnail_url: string;
+  has_annotation?: boolean;
+}
+
+export interface AnnotationItem {
+  id?: string;
+  type: 'tag' | 'bbox' | 'rotated_bbox' | 'polygon' | 'brush_mask';
+  label: string;
+  category_id?: number;
+  bbox?: [number, number, number, number]; // [xmin, ymin, xmax, ymax]
+  rotated_bbox?: [number, number, number, number, number]; // [cx, cy, width, height, angle_degrees]
+  polygon?: Array<[number, number]>;
+  points?: Array<[number, number]>;
+  mask_rle?: string;
+  is_normal?: boolean;
+  color?: string;
+}
+
+export interface AnnotationSavePayload {
+  image_id: string;
+  annotations: AnnotationItem[];
+  image_width: number;
+  image_height: number;
+  output_dir?: string;
+}
+
+export interface HardwareStats {
+  cpu_percent: number;
+  memory_percent: number;
+  gpu_name: string;
+  gpu_memory_used_mb: number;
+  device_type: string;
+}
+
+export interface ConfusionMatrixData {
+  classes: string[];
+  class_names?: string[];
+  matrix: number[][];
+  normalized_matrix: number[][];
+  cell_samples: Record<string, string[]>;
+}
+
+export interface TestPredictionItem {
+  image_id: string;
+  file_name: string;
+  file_path: string;
+  ground_truth: string;
+  predicted_class: string;
+  confidence: number;
+  is_correct: boolean;
+  thumbnail_url: string;
+}
+
+export interface EvaluationResults {
+  job_id: string;
+  task: VisionTask;
+  metrics: Record<string, any>;
+  confusion_matrix: ConfusionMatrixData;
+  test_predictions: TestPredictionItem[];
+  evaluated_at?: string;
+}
+
+export interface ErrorCatalogItem {
+  code: string;
+  title_en: string;
+  title_kr: string;
+  title_ko?: string;
+  description_en: string;
+  description_kr: string;
+  message_en?: string;
+  message_ko?: string;
+  remediation_en: string;
+  remediation_kr: string;
+  remediation?: string;
+  severity: Severity;
+  auto_fixable: boolean;
+  cause_en?: string;
+  cause_kr?: string;
+  action?: string;
+  details?: any;
+}
+
+export interface OverkillUnderkillPoint {
+  threshold: number;
+  underkill_count: number;
+  underkill_rate: number;
+  overkill_count: number;
+  overkill_rate: number;
+  tp: number;
+  tn: number;
+  total_cost: number;
+}
+
+export interface OverkillUnderkillAnalysis {
+  sample_count: number;
+  total_defects: number;
+  total_normals: number;
+  target_max_underkill: number;
+  optimal_threshold: number;
+  optimal_cost_threshold: number;
+  current_stats: {
+    threshold: number;
+    underkill_count: number;
+    overkill_count: number;
+    total_cost: number;
+  };
+  optimal_stats: {
+    threshold: number;
+    underkill_count: number;
+    overkill_count: number;
+    total_cost: number;
+  };
+  tradeoff_curve: OverkillUnderkillPoint[];
+}
+
+export interface BenchmarkResult {
+  device: string;
+  device_name: string;
+  iterations: number;
+  mean_latency_ms: number;
+  p95_latency_ms: number;
+  min_latency_ms: number;
+  max_latency_ms?: number;
+  std_latency_ms?: number;
+  fps: number;
+  resolution: string;
+  batch_size?: number;
+}
+
+export type PortType = 'image' | 'trigger' | 'mask' | 'data' | 'pass' | 'fail' | 'plc';
+
+export interface NodePort {
+  id: string;
+  name: string;
+  type: PortType;
+  direction: 'in' | 'out';
+  label: string;
+  pinNumber: number;
+}
+
+export interface FlowNodeData {
+  label: string;
+  node_type: 'input' | 'detection_crop' | 'inspection' | 'decision' | 'output';
+  task?: string;
+  threshold?: number;
+  crop_padding?: number;
+  rule?: string;
+  params?: Record<string, any>;
+  ports?: {
+    inputs: NodePort[];
+    outputs: NodePort[];
+  };
+}
+
+export interface FlowNode {
+  id: string;
+  type?: string;
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourcePort?: string;
+  targetPort?: string;
+  label?: string;
+  isBranch?: 'pass' | 'fail' | 'default';
+}
+
+export interface FlowchartPipeline {
+  id: string;
+  name: string;
+  description?: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+}
+
+export interface FlowchartCrop {
+  roi_id: string;
+  label: string;
+  bbox: [number, number, number, number] | number[];
+  defect_score: number;
+  verdict: 'OK' | 'NG';
+  crop_thumbnail: string;
+  flaw_type: string;
+  confidence?: number;
+  defect_area_px?: number;
+}
+
+export interface FlowchartExecutionStep {
+  node_id: string;
+  name: string;
+  status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'warning_untrained';
+  latency_ms: number;
+}
+
+export interface FlowchartExecutionResult {
+  status: string;
+  final_verdict: 'OK' | 'NG';
+  is_ok: boolean;
+  rejection_reason: string;
+  roi_count: number;
+  defective_roi_count: number;
+  crops: FlowchartCrop[];
+  annotated_image?: string;
+  execution_steps: FlowchartExecutionStep[];
+  total_latency_ms: number;
+  image_path?: string;
+  image_id?: string;
+  error_message?: string;
+}
+
+export interface SelectedInspectionImage {
+  source: 'dataset' | 'file' | 'preset' | 'operational';
+  imagePath: string;
+  imageId?: string;
+  fileName: string;
+  thumbnailUrl?: string;
+}
+
+export interface RuntimeExportResult {
+  status: string;
+  package_name: string;
+  package_path: string;
+  manifest: Array<{ name: string; size_kb: number }>;
+  total_files: number;
+}
+

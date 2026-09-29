@@ -1,0 +1,257 @@
+/**
+ * src/renderer/components/flowchart/CropDetailModal.tsx
+ * Inspection / Industrial Style Single ROI Detailed Inspection Modal.
+ * Solid dark steel chassis (#1A212E, border #2B3547), zero backdrop blur,
+ * strict tabular-nums font-mono, and operator paging controls.
+ */
+
+import React, { useEffect, useMemo } from 'react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  X,
+  XCircle,
+} from 'lucide-react';
+import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { STANDARD_19_ROIS } from './flowchartMockData';
+import type { FlowchartCrop } from '../../types';
+
+interface CropDetailModalProps {
+  crop: FlowchartCrop | null;
+  onClose: () => void;
+}
+
+export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose }) => {
+  const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
+
+  const crops = useMemo(() => {
+    if (executionResult?.crops && executionResult.crops.length > 0) {
+      return executionResult.crops;
+    }
+    return STANDARD_19_ROIS;
+  }, [executionResult]);
+
+  // Current crop index for prev/next paging
+  const currentIndex = useMemo(() => {
+    if (!crop) return -1;
+    return crops.findIndex((c) => c.roi_id === crop.roi_id);
+  }, [crop, crops]);
+
+  // Keyboard navigation listener (←, →, Esc)
+  useEffect(() => {
+    if (!crop) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        setInspectedCrop(crops[currentIndex - 1]);
+      } else if (e.key === 'ArrowRight' && currentIndex < crops.length - 1) {
+        setInspectedCrop(crops[currentIndex + 1]);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [crop, currentIndex, crops, onClose, setInspectedCrop]);
+
+  if (!crop) return null;
+
+  const [x1, y1, x2, y2] = crop.bbox;
+  const width = Math.round(x2 - x1);
+  const height = Math.round(y2 - y1);
+  const areaPx = width * height;
+  const isNg = crop.verdict === 'NG';
+
+  // Inspection Threshold
+  const inspectNode = pipeline?.nodes.find((n) => n.data.node_type === 'inspection');
+  const threshold = inspectNode?.data.threshold ?? 0.45;
+  const scorePercent = crop.defect_score * 100;
+  const thresholdPercent = threshold * 100;
+  const deltaScore = crop.defect_score - threshold;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-[#000000]/80 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
+      <div className="bg-[#1A212E] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden">
+        {/* =================================================================== */}
+        {/* Modal Header */}
+        {/* =================================================================== */}
+        <div className="h-12 px-5 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <Maximize2 className="w-4 h-4 text-[#3B82F6]" />
+            <h3 className="font-bold text-xs font-mono uppercase tracking-wider text-slate-100">
+              추출 ROI 정밀 진단 — {crop.label} ({crop.roi_id})
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-[#222B3D] border border-transparent hover:border-[#2B3547] rounded text-slate-300 hover:text-white transition-colors cursor-pointer"
+            title="닫기 (Esc)"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* =================================================================== */}
+        {/* Modal Body: 2-Column Inspection View */}
+        {/* =================================================================== */}
+        <div className="p-5 flex space-x-5 bg-[#1A212E]">
+          {/* Left Column: High-Res Crop Viewport */}
+          <div className="w-1/2 flex flex-col items-center justify-center bg-[#0B0E14] rounded border border-[#2B3547] p-4">
+            <div className="w-full flex-1 flex items-center justify-center min-h-[240px] max-h-72 overflow-hidden rounded bg-[#000000] border border-[#2B3547] relative">
+              <img
+                src={crop.crop_thumbnail}
+                alt={crop.label}
+                className="max-h-64 max-w-full object-contain"
+              />
+              <div className="absolute top-2 left-2 bg-[#0B0E14]/80 border border-[#2B3547] px-1.5 py-0.5 rounded text-[9px] font-mono text-slate-300">
+                ROI ID: {crop.roi_id}
+              </div>
+            </div>
+
+            <div className="w-full mt-3 pt-2.5 border-t border-[#2B3547] flex items-center justify-between text-[11px] font-mono text-slate-300">
+              <span>크롭 해상도: <strong className="text-white tabular-nums">{width} × {height} px</strong></span>
+              <span>면적: <strong className="text-white tabular-nums">{areaPx.toLocaleString()} px²</strong></span>
+            </div>
+          </div>
+
+          {/* Right Column: Technical Measurement & Diagnostics */}
+          <div className="w-1/2 flex flex-col justify-between text-xs space-y-3.5">
+            <div>
+              {/* Verdict Annunciator Banner */}
+              <div
+                className={`p-3 rounded border flex items-center justify-between ${
+                  isNg
+                    ? 'bg-[#2D1216] border-[#EF4444] text-[#EF4444]'
+                    : 'bg-[#0E2A20] border-[#10B981] text-[#10B981]'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  {isNg ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span className="font-mono font-bold text-xs uppercase">
+                    공정 판정: {crop.verdict} ({isNg ? '불량 REJECT' : '정상 PASS'})
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0E14]/60 border border-current">
+                  {isNg ? '공정 이탈' : '기준 충족'}
+                </span>
+              </div>
+
+              {/* Defect Score Precision Gauge */}
+              <div className="mt-3 bg-[#0B0E14] p-3 rounded border border-[#2B3547]">
+                <div className="flex justify-between text-[11px] font-mono mb-1.5">
+                  <span className="text-slate-400">결함 / 이상 점수 (Score):</span>
+                  <div className="flex items-center space-x-2">
+                    <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                      {scorePercent.toFixed(1)}%
+                    </span>
+                    <span className="text-slate-400 text-[10px] tabular-nums">
+                      ({crop.defect_score.toFixed(4)})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress Bar with Threshold Pin */}
+                <div className="w-full bg-[#1A212E] h-2 rounded border border-[#2B3547] overflow-hidden relative">
+                  <div
+                    className={`h-full transition-all ${isNg ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`}
+                    style={{ width: `${Math.min(100, Math.max(0, scorePercent))}%` }}
+                  />
+                  {/* Threshold Pin Marker */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-[#F59E0B] z-10"
+                    style={{ left: `${thresholdPercent}%` }}
+                    title={`기준 임계값: ${thresholdPercent.toFixed(1)}%`}
+                  />
+                </div>
+
+                {/* Gauge Labels */}
+                <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>0.0%</span>
+                  <span className="text-[#F59E0B]">
+                    임계 기준: {thresholdPercent.toFixed(1)}%
+                  </span>
+                  <span>100.0%</span>
+                </div>
+
+                {/* Delta Calculation */}
+                <div className="mt-2 pt-2 border-t border-[#2B3547] flex justify-between text-[10px] font-mono">
+                  <span className="text-slate-400">임계값 초과 편차 (Δ):</span>
+                  <span className={`font-bold tabular-nums ${deltaScore > 0 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                    {deltaScore > 0 ? `+${(deltaScore * 100).toFixed(1)}%` : `${(deltaScore * 100).toFixed(1)}%`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Geometric Coordinate Breakdown Table */}
+              <div className="mt-3 bg-[#0B0E14] p-3 rounded border border-[#2B3547] text-[11px] font-mono space-y-1.5">
+                <div className="flex justify-between border-b border-[#2B3547]/60 pb-1">
+                  <span className="text-slate-400">결함 분류 (Flaw Type):</span>
+                  <span className="text-white font-bold">{crop.flaw_type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">좌상단 좌표 (X₁, Y₁):</span>
+                  <span className="text-slate-200 tabular-nums">({x1} px, {y1} px)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">우하단 좌표 (X₂, Y₂):</span>
+                  <span className="text-slate-200 tabular-nums">({x2} px, {y2} px)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">바운딩 박스 (BBox):</span>
+                  <span className="text-[#3B82F6] font-bold tabular-nums">[{x1}, {y1}, {x2}, {y2}]</span>
+                </div>
+                {crop.defect_area_px !== undefined && (
+                  <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
+                    <span className="text-slate-400">결함 픽셀 면적 (Defect Area):</span>
+                    <span className="text-[#EF4444] font-bold tabular-nums">{crop.defect_area_px} px²</span>
+                  </div>
+                )}
+                {crop.confidence !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">검출 신뢰도 (Confidence):</span>
+                    <span className="text-[#10B981] font-bold tabular-nums">{(crop.confidence * 100).toFixed(1)}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Operator Quick Paging Controls & Close */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#2B3547]">
+              <div className="flex items-center space-x-1.5">
+                <button
+                  disabled={currentIndex <= 0}
+                  onClick={() => setInspectedCrop(crops[currentIndex - 1])}
+                  className="px-2.5 py-1.5 bg-[#131822] hover:bg-[#222B3D] border border-[#2B3547] rounded text-slate-300 disabled:opacity-40 cursor-pointer transition-colors flex items-center space-x-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-mono">이전 (←)</span>
+                </button>
+                <span className="text-[10px] font-mono text-slate-400 px-1 tabular-nums">
+                  {currentIndex + 1} / {crops.length}
+                </span>
+                <button
+                  disabled={currentIndex >= crops.length - 1}
+                  onClick={() => setInspectedCrop(crops[currentIndex + 1])}
+                  className="px-2.5 py-1.5 bg-[#131822] hover:bg-[#222B3D] border border-[#2B3547] rounded text-slate-300 disabled:opacity-40 cursor-pointer transition-colors flex items-center space-x-1"
+                >
+                  <span className="text-[10px] font-mono">다음 (→)</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="px-4 py-1.5 bg-[#131822] hover:bg-[#222B3D] text-slate-200 border border-[#2B3547] font-mono font-bold rounded text-xs cursor-pointer transition-colors"
+              >
+                닫기 (Esc)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CropDetailModal;

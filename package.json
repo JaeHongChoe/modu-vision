@@ -1,0 +1,44 @@
+{
+  "name": "vision-ai-studio",
+  "version": "0.1.0",
+  "description": "Industrial No-Code Vision AI Training Studio",
+  "private": true,
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "tsc -p tsconfig.node.json && concurrently -k -n \"vite,electron-build,electron\" -c \"cyan,magenta,green\" \"vite\" \"tsc -p tsconfig.node.json -w --preserveWatchOutput\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
+    "build:main": "tsc -p tsconfig.node.json",
+    "build:electron": "tsc -p tsconfig.node.json",
+    "build:renderer": "vite build",
+    "build": "tsc -p tsconfig.node.json && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "package": "npm run build && electron-builder",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "npm run build && electron-builder --win",
+    "build:backend": "python3 scripts/build_backend_binary.py",
+    "test:m4": "node scripts/verify-m4.js",
+    "test:m5": "node scripts/verify-m5.js",
+    "test:packaging": "node scripts/verify-packaging.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.47.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^33.3.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "wait-on": "^8.0.2"
+  }
+}
