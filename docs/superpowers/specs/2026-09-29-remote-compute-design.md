@@ -2,7 +2,7 @@
 
 ## Intent and scope
 
-Keep the desktop application and its dataset, labeling, and model history on the user's computer. Let the user select a saved SSH server for expensive training and inspection work. Server 42 is the first configured profile on this Mac, not a hard-coded product dependency. Other Linux hosts can be added with their own SSH address, runtime, and isolated workspace. Local computation remains available.
+Keep the desktop application and its dataset, labeling, and model history on the user's computer. Let the user select a saved SSH server for expensive training and inspection work. A configured Linux host can be the first profile; other hosts can be added with their own SSH address, runtime, and isolated workspace. Local computation remains available.
 
 The user chooses a compute location before starting a job. Every job retains its original location even if the selection changes. An interrupted network connection is reported as **status unknown / reconnect**; it never silently restarts locally, marks a remote job cancelled, or starts a duplicate job.
 
@@ -10,7 +10,7 @@ The user chooses a compute location before starting a job. Every job retains its
 
 The Electron renderer continues to call the local token-protected FastAPI daemon. A compute-profile service in that daemon validates and persists SSH profiles. An SSH transport uses the user's existing OpenSSH key/agent and known-hosts verification, without storing a password or exposing a remote HTTP API. A versioned Python worker runs under the selected server's configured Python or Docker runtime in an app-owned workspace. It writes durable status, progress, cancellation, and artifact manifests. The local daemon owns the job journal and maps remote results back to local model and dataset identities.
 
-The transport has operations `probe`, `upload`, `run`, `status`, `cancel`, and `download`. The worker protocol has a version, job ID, operation, task, configuration, portable input manifest digest, and expected artifact list. The worker can support `train`, `evaluate`, `flowchart_run`, `benchmark`, and `export`; each operation is attributable to a specific server and job. A profile may select a direct Python runtime or a Docker image. Server 42 gets an isolated runtime and workspace under `/data/home/kai`; existing 42 services, containers, and project environments are not modified.
+The transport has operations `probe`, `upload`, `run`, `status`, `cancel`, and `download`. The worker protocol has a version, job ID, operation, task, configuration, portable input manifest digest, and expected artifact list. The worker can support `train`, `evaluate`, `flowchart_run`, `benchmark`, and `export`; each operation is attributable to a specific server and job. A profile may select a direct Python runtime or a Docker image. Each host gets an isolated runtime and app-owned workspace; existing services, containers, and project environments are not modified.
 
 ## Data and result flow
 
@@ -34,4 +34,4 @@ Existing local jobs and APIs retain their behavior. New request fields are optio
 
 ## Verification
 
-Automated tests cover profile validation, SSH command construction, snapshot contents and hashes, symlink handling, transfer errors, cancellation at each stage, network disconnection and recovery, artifact integrity, local provenance, and server switching. A fake worker tests the full local protocol without a GPU. On Server 42, verify SSH/runtime and a harmless worker probe first; a real training run is a separate GPU job and must be started only after its resource use is explicitly authorized. A packaged desktop run verifies the profile panel, target selection, status, and returned local artifacts.
+Automated tests cover profile validation, SSH command construction, snapshot contents and hashes, symlink handling, transfer errors, cancellation at each stage, network disconnection and recovery, artifact integrity, local provenance, and server switching. A fake worker tests the full local protocol without a GPU. On a configured host, verify SSH/runtime and a harmless worker probe first; a real training run is a separate GPU job and must be started only after its resource use is explicitly authorized. A packaged desktop run verifies the profile panel, target selection, status, and returned local artifacts.

@@ -33,6 +33,7 @@ import { GuardrailBanner } from '../common/GuardrailBanner';
 import { ZeroEscapeTradeoffChart } from './ZeroEscapeTradeoffChart';
 import { SynchronizedDualViewport } from './SynchronizedDualViewport';
 import { DetectionEvaluationGrains, summarizeDetectionGrains } from './DetectionEvaluationGrains';
+import { ModelComparisonPanel } from './ModelComparisonPanel';
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -72,6 +73,7 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 
 export const EvaluationStudio: React.FC = () => {
   const { language, setStep, task } = useProjectStore();
+  const projectDir = useProjectStore((state) => state.projectDir);
   const folderPath = useDatasetStore((state) => state.folderPath);
   const datasetKey = useDatasetStore((state) => state.datasetKey);
   const datasetIsLoading = useDatasetStore((state) => state.isLoading);
@@ -403,6 +405,13 @@ export const EvaluationStudio: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Metrics & Clickable Confusion Matrix */}
         <div className="w-[500px] bg-[#131822] border-r border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
+          <ModelComparisonPanel
+            projectDir={projectDir}
+            sourceFolder={sourceFolder}
+            task={task}
+            preferredJobId={jobId}
+            language={language}
+          />
           {/* 1-Click Zero-Escape Calibration Prominent Card */}
           <div className="p-3.5 bg-[#1A212E] rounded-[6px] border border-[#2B3547] space-y-3">
             <div className="flex items-center justify-between">

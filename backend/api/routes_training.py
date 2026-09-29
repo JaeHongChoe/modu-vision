@@ -19,12 +19,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.websocket_telemetry import WebSocketTelemetryCallback, broadcaster
 from backend.engine.device import clear_device_cache, get_device
-from backend.engine.dataset_loaders import ClassificationDataset
+from backend.engine.dataset_loaders import ClassificationDataset, scoped_split_root, split_root_scope
 from backend.engine.trainer import UnifiedAutoMLTrainer
 from backend.engine.labelme_preparation import LabelMePreparationCancelled, prepare_labelme_segmentation
 from backend.engine.dataset_fingerprint import fingerprint_dataset
@@ -143,6 +143,7 @@ class TrainingJobManager:
         prepare_dataset: Optional[Callable[[threading.Event], Any]] = None,
         source_dataset_path: Optional[str] = None,
         dataset_fingerprint: Optional[str] = None,
+        split_manifest_root: Optional[str] = None,
     ) -> JobRecord:
         with self._lock:
             active_record = self._jobs.get(self._active_job_id) if self._active_job_id else None
@@ -220,13 +221,14 @@ class TrainingJobManager:
                 error = None
                 try:
                     logger.info("Background training thread started for job %s", job_id)
-                    if record.preparation_cancel.is_set():
-                        raise LabelMePreparationCancelled("Training preparation cancelled by user request")
-                    if prepare_dataset is not None:
-                        prepare_dataset(record.preparation_cancel)
-                    if record.preparation_cancel.is_set():
-                        raise LabelMePreparationCancelled("Training preparation cancelled by user request")
-                    result = trainer.train(job_id=job_id)
+                    with split_root_scope(split_manifest_root):
+                        if record.preparation_cancel.is_set():
+                            raise LabelMePreparationCancelled("Training preparation cancelled by user request")
+                        if prepare_dataset is not None:
+                            prepare_dataset(record.preparation_cancel)
+                        if record.preparation_cancel.is_set():
+                            raise LabelMePreparationCancelled("Training preparation cancelled by user request")
+                        result = trainer.train(job_id=job_id)
                 except LabelMePreparationCancelled:
                     result = {"status": "aborted"}
                     cb.on_training_aborted(0, "Training preparation cancelled by user request")
@@ -275,6 +277,7 @@ class TrainingJobManager:
         preset: str = "fast",
         source_dataset_path: Optional[str] = None,
         dataset_fingerprint: Optional[str] = None,
+        split_manifest_root: Optional[str] = None,
     ) -> JobRecord:
         """Track one detached remote run through the existing training contract.
 
@@ -298,7 +301,8 @@ class TrainingJobManager:
 
         def _worker() -> None:
             try:
-                result = remote_runner(record)
+                with split_root_scope(split_manifest_root):
+                    result = remote_runner(record)
                 state = result.get("status", "failed")
                 if state not in ("completed", "aborted", "failed", "disconnected"):
                     raise ValueError(f"Unexpected remote job status: {state}")
@@ -414,7 +418,7 @@ class TrainingStartRequest(BaseModel):
     task: Literal["classification", "detection", "segmentation", "anomaly"] = "classification"
     preset: Literal["fast", "precision"] = "fast"
     dataset_path: str = Field(..., min_length=1)
-    output_dir: Optional[str] = "./models"
+    output_dir: Optional[str] = None
     config_overrides: Optional[Dict[str, Any]] = None
     device: Optional[str] = None
     compute_profile_id: Optional[str] = None
@@ -426,7 +430,7 @@ class TrainingStopRequest(BaseModel):
 
 
 @router.post("/start")
-def start_training(req: TrainingStartRequest):
+def start_training(req: TrainingStartRequest, request: Request = None):
     """Initiates an asynchronous background AutoML training job."""
     # Verify dataset path exists
     d_path = Path(req.dataset_path).resolve()
@@ -448,10 +452,13 @@ def start_training(req: TrainingStartRequest):
             raise HTTPException(status_code=422, detail=f"Unknown compute server: {req.compute_profile_id}")
 
     from backend.api.routes_dataset import (
-        DETECTION_SPLIT_LAYOUT_MESSAGE, STUDIO_ANNOTATIONS_DIR,
+        DETECTION_SPLIT_LAYOUT_MESSAGE, SPLIT_MANIFEST_DIR, STUDIO_ANNOTATIONS_DIR,
         _detection_train_val_ready, _paired_labelme_images, _read_split_manifest,
         _resolve_task_folder, _split_manifest_file,
     )
+    from backend.engine.annotation_storage import scoped_annotation_root
+    annotation_root = scoped_annotation_root(STUDIO_ANNOTATIONS_DIR)
+    split_manifest_root = scoped_split_root(SPLIT_MANIFEST_DIR)
     effective_dataset_path = _resolve_task_folder(d_path, req.task)
 
     paired_images = _paired_labelme_images(d_path)
@@ -507,7 +514,7 @@ def start_training(req: TrainingStartRequest):
 
     try:
         source_fingerprint = fingerprint_dataset(
-            d_path, studio_root=STUDIO_ANNOTATIONS_DIR, split_manifest=_split_manifest_file(d_path),
+            d_path, studio_root=annotation_root, split_manifest=_split_manifest_file(d_path),
         )
     except OSError as exc:
         raise HTTPException(status_code=422, detail=f"Could not fingerprint training data: {exc}") from exc
@@ -522,7 +529,15 @@ def start_training(req: TrainingStartRequest):
                 detail=f"Compute server is not ready: {readiness.get('message') or 'connection test failed'}",
             )
 
-    out_dir = Path(req.output_dir or "./models").resolve()
+    if req.output_dir:
+        out_dir = Path(req.output_dir).resolve()
+    elif request is not None:
+        from backend.api.routes_project import get_current_project
+
+        out_dir = Path(get_current_project(request)["models_dir"])
+    else:
+        # Direct Python calls used by backend tests retain their historical default.
+        out_dir = Path("./models").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
@@ -543,6 +558,7 @@ def start_training(req: TrainingStartRequest):
                     assignments=assignments,
                     require_complete_assignments=has_split_manifest,
                     cancellation_requested=cancel_event.is_set,
+                    annotation_root=annotation_root,
                 )
             else:
                 prepare_labelme_segmentation(
@@ -551,6 +567,7 @@ def start_training(req: TrainingStartRequest):
                     assignments=assignments,
                     require_complete_assignments=has_split_manifest,
                     cancellation_requested=cancel_event.is_set,
+                    annotation_root=annotation_root,
                 )
     elif profile is not None and req.task == "classification":
         from backend.remote.preparation import prepare_remote_classification
@@ -587,6 +604,7 @@ def start_training(req: TrainingStartRequest):
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
             remote_runner=remote_runner,
+            split_manifest_root=str(split_manifest_root),
         )
     else:
         record = training_job_manager.start_job(
@@ -600,6 +618,7 @@ def start_training(req: TrainingStartRequest):
             prepare_dataset=prepare_dataset,
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
+            split_manifest_root=str(split_manifest_root),
         )
 
     return {

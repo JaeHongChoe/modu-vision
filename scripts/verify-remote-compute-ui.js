@@ -95,8 +95,8 @@ global.fetch = async (url, options = {}) => {
 };
 
 const server = {
-  id: 'server-1', name: 'Server 42', ssh_target: 'gpu.example.test', ssh_port: 22,
-  remote_root: '/data/home/kai/modu-vision', runtime_kind: 'python',
+  id: 'server-1', name: 'Example GPU', ssh_target: 'gpu.example.test', ssh_port: 22,
+  remote_root: '/srv/example/vision', runtime_kind: 'python',
   runtime_value: '/opt/modu-vision/bin/python', gpu_selector: '0',
 };
 
@@ -192,7 +192,7 @@ test('server management panel shows selected target and probe readiness', () => 
   const { ComputeServerPanel } = require(path.join(root, 'src/renderer/components/compute/ComputeServerPanel.tsx'));
   Module.prototype.require = liveRequire;
   const html = renderToStaticMarkup(React.createElement(ComputeServerPanel, { onClose: () => {} }));
-  assert.match(html, /Server 42/);
+  assert.match(html, /Example GPU/);
   assert.match(html, /NVIDIA L40S/);
   assert.match(html, /연결 검사/);
   assert.match(html, /서버 추가/);
@@ -226,9 +226,9 @@ test('header exposes current compute target and local option', () => {
   const html = renderToStaticMarkup(React.createElement(WizardHeader));
   assert.match(html, /Compute:/);
   assert.match(html, /This computer/);
-  assert.match(html, /Server 42/);
+  assert.match(html, /Example GPU/);
   assert.match(html, /서버 관리/);
-  assert.match(html, /현재 모델 위치:.*Server 42/);
+  assert.match(html, /현재 모델 위치:.*Example GPU/);
 });
 
 test('Stage 3 shows the job-bound server and reconnect state after selection changes', () => {
@@ -257,7 +257,7 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
   const { TrainingController } = require(path.join(root, 'src/renderer/components/training/TrainingController.tsx'));
   Module.prototype.require = liveRequire;
   const html = renderToStaticMarkup(React.createElement(TrainingController));
-  assert.match(html, /Server 42/);
+  assert.match(html, /Example GPU/);
   assert.match(html, /NVIDIA L40S/);
   assert.match(html, /원격 장치/);
   assert.match(html, /연결 끊김/);
@@ -268,7 +268,7 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
     jobComputeProfileId: null, jobComputeLabel: null, jobDeviceName: null });
   const idleHtml = renderToStaticMarkup(React.createElement(TrainingController));
   assert.match(idleHtml, /선택한 원격 장치/);
-  assert.match(idleHtml, /Server 42/);
+  assert.match(idleHtml, /Example GPU/);
   assert.doesNotMatch(idleHtml, /HARDWARE TELEMETRY/);
 });
 

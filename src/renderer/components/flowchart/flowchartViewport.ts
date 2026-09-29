@@ -4,7 +4,7 @@ export const FLOW_NODE_WIDTH = 272;
 export const FLOW_NODE_HEIGHT = 220;
 
 const CANVAS_PADDING = 48;
-const PREFERRED_TOP = 96;
+const MAX_AUTO_SCALE = 1.25;
 
 interface PositionedNode {
   position: { x: number; y: number };
@@ -47,13 +47,13 @@ export function computeFlowchartViewport(
   const graphWidth = maxX - minX;
   const graphHeight = maxY - minY;
   const fitScale = Math.min(
-    1,
+    MAX_AUTO_SCALE,
     Math.max(1, width - 2 * CANVAS_PADDING) / graphWidth,
     Math.max(1, height - 2 * CANVAS_PADDING) / graphHeight,
   );
   const scale = fitScale * Math.max(0.5, Math.min(2, zoomMultiplier));
   const left = Math.max(CANVAS_PADDING, (width - graphWidth * scale) / 2);
-  const top = Math.max(CANVAS_PADDING, Math.min(PREFERRED_TOP, (height - graphHeight * scale) / 3));
+  const top = Math.max(CANVAS_PADDING, (height - graphHeight * scale) / 2);
 
   return {
     scale,

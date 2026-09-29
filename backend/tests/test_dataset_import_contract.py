@@ -18,7 +18,7 @@ def _flat_ng_folder(tmp_path, count=8, paired=6):
     folder = tmp_path / "flat_ng"
     folder.mkdir()
     for index in range(count):
-        image = folder / f"ng_{index:04d}__Scratch___C_Photo-L1-01.jpg"
+        image = folder / f"ng_{index:04d}__Scratch___sample_view.jpg"
         Image.new("RGB", (32, 32), color=(index, 0, 0)).save(image)
         if index < paired:
             image.with_suffix(".json").write_text(json.dumps({

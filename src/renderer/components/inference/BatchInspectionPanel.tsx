@@ -1,14 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Image as ImageIcon, Play, Square, Layers } from 'lucide-react';
-import { api, resolveApiUrl } from '../../services/api';
+import { AlertTriangle, Download, History, Image as ImageIcon, Play, Save, Square, Layers } from 'lucide-react';
+import { api, getApiBaseUrl, resolveApiUrl, type SavedFlowVersion } from '../../services/api';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useInspectionRunStore } from '../../stores/useInspectionRunStore';
+import type { FlowchartPipeline } from '../../types';
+import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
+import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
-  runBatchInspection, summarizeBatch,
+  isInspectionHistoryContextCurrent, createInspectionRunExitGuard,
+  runBatchInspection, stopInspectionRunKeepalive, summarizeBatch,
   type BatchSourceState,
   type BatchFilter, type BatchInspectionReport, type BatchScope, type BatchStopReason,
+  type InspectionHistoryRun, type InspectionRunSummary,
 } from './batchInspection';
 
 const scopeNames: Record<BatchScope, string> = {
@@ -27,9 +33,13 @@ const stateColors: Record<string, string> = {
   REVIEW: 'text-amber-300 border-amber-600',
   error: 'text-red-300 border-red-600',
 };
+let activeBatchOperation = 0;
 
 export const BatchInspectionPanel: React.FC = () => {
   const task = useProjectStore((state) => state.task);
+  const projectDir = useProjectStore((state) => state.projectDir);
+  const setStep = useProjectStore((state) => state.setStep);
+  const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
   const { folderPath, datasetKey, hasSelectedFolder, importError, isLoading: datasetIsLoading,
     isSplitting, split, sourceImages } = useDatasetStore();
   const contextRevision = useFlowchartStore((state) => state.contextRevision);
@@ -40,11 +50,25 @@ export const BatchInspectionPanel: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<InspectionRunSummary[]>([]);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [savedFlow, setSavedFlow] = useState<{ version: SavedFlowVersion; pipeline: FlowchartPipeline; identity: SavedFlowIdentity } | null>(null);
+  const [savedFlowLoading, setSavedFlowLoading] = useState(false);
+  const [savedFlowError, setSavedFlowError] = useState<string | null>(null);
+  const [reviewer, setReviewer] = useState(() => localStorage.getItem('inspection-reviewer') || 'operator');
+  const [reviewReason, setReviewReason] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
   const stopReasonRef = useRef<BatchStopReason>(null);
+  const exitGuardRef = useRef<ReturnType<typeof createInspectionRunExitGuard> | null>(null);
+  const ownedOperationRef = useRef<number | null>(null);
+  const historyRequestRef = useRef(0);
+  const reviewRequestRef = useRef(0);
   const currentBatchSource = (): BatchSourceState => {
     const dataset = useDatasetStore.getState();
     return {
       folderPath: dataset.folderPath,
+      projectDir: useProjectStore.getState().projectDir,
       task: useProjectStore.getState().task,
       datasetKey: dataset.datasetKey,
       contextRevision: useFlowchartStore.getState().contextRevision,
@@ -55,13 +79,57 @@ export const BatchInspectionPanel: React.FC = () => {
     };
   };
   const renderedSource: BatchSourceState = {
-    folderPath, task, datasetKey, contextRevision, hasSelectedFolder,
+    folderPath, projectDir, task, datasetKey, contextRevision, hasSelectedFolder,
     importError, isLoading: datasetIsLoading, isSplitting,
   };
   const sourceReady = isBatchSourceReady(renderedSource);
   const resetKey = batchSourceResetKey(renderedSource);
+  const historyContext = { folderPath, projectDir, task };
+  const currentHistoryContext = () => {
+    const dataset = useDatasetStore.getState();
+    const project = useProjectStore.getState();
+    return { folderPath: dataset.folderPath, projectDir: project.projectDir, task: project.task };
+  };
 
   useEffect(() => {
+    const stopOwnedRun = () => {
+      stopReasonRef.current = 'source_changed';
+      exitGuardRef.current?.close();
+    };
+    window.addEventListener('pagehide', stopOwnedRun);
+    return () => {
+      window.removeEventListener('pagehide', stopOwnedRun);
+      stopOwnedRun();
+      if (ownedOperationRef.current !== null && ownedOperationRef.current === activeBatchOperation) {
+        activeBatchOperation += 1;
+        useInspectionRunStore.getState().setRunning(false);
+      }
+      ownedOperationRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSavedFlow(null);
+    setSavedFlowError(null);
+    setSavedFlowLoading(false);
+    if (!sourceReady) return;
+    let active = true;
+    setSavedFlowLoading(true);
+    api.flowchart.listPipelines(folderPath).then(async ({ pipelines }) => {
+      const version = activeSavedVersion(pipelines);
+      if (!version) throw new Error('5단계에서 현재 검사 플로우를 저장하세요.');
+      const pipeline = await api.flowchart.getPipelineVersion(version.version_id);
+      const identity = await savedFlowIdentity(version, pipeline);
+      if (active) setSavedFlow({ version, pipeline, identity });
+    }).catch((cause) => {
+      if (active) setSavedFlowError(cause instanceof Error ? cause.message : String(cause));
+    }).finally(() => { if (active) setSavedFlowLoading(false); });
+    return () => { active = false; };
+  }, [resetKey]);
+
+  useEffect(() => {
+    historyRequestRef.current += 1;
+    reviewRequestRef.current += 1;
     stopReasonRef.current = 'source_changed';
     setStopRequested(false);
     setReport(null);
@@ -69,25 +137,104 @@ export const BatchInspectionPanel: React.FC = () => {
     setFilter('all');
     setScope('test');
     setError(null);
+    setReviewSaving(false);
   }, [resetKey]);
+
+  useEffect(() => {
+    if (!folderPath) { setHistory([]); return; }
+    let active = true;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    api.inspections.listRuns(folderPath, task).then(async ({ runs }) => {
+      if (!active) return;
+      setHistory(runs);
+      if (runs.length > 0) {
+        const latest = await api.inspections.getRun(runs[0].run_id);
+        if (active && latest.source_folder === folderPath && latest.task === task) {
+          setReport(latest);
+          setScope(latest.scope);
+          setSelectedPath(latest.rows.find((row) => row.result)?.image.file_path ?? latest.rows[0]?.image.file_path ?? null);
+        }
+      }
+    }).catch((cause) => {
+      if (active) setHistoryError(cause instanceof Error ? cause.message : String(cause));
+    }).finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, [folderPath, task, projectDir]);
+
+  const openHistoryRun = async (runId: string) => {
+    const started = historyContext;
+    const requestId = ++historyRequestRef.current;
+    const isCurrent = () => requestId === historyRequestRef.current
+      && isInspectionHistoryContextCurrent(currentHistoryContext(), started);
+    try {
+      setHistoryError(null);
+      const previous = await api.inspections.getRun(runId);
+      if (!isCurrent() || previous.source_folder !== started.folderPath || previous.task !== started.task) return;
+      setReport(previous);
+      setScope(previous.scope);
+      setFilter('all');
+      setSelectedPath(previous.rows.find((row) => row.result)?.image.file_path ?? previous.rows[0]?.image.file_path ?? null);
+      setReviewReason('');
+    } catch (cause) {
+      if (isCurrent()) setHistoryError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
+  const refreshHistory = async (started: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>) => {
+    const { runs } = await api.inspections.listRuns(started.folderPath, started.task);
+    if (isInspectionHistoryContextCurrent(currentHistoryContext(), started)) {
+      setHistory(runs);
+    }
+  };
 
   const handleStart = async () => {
     const startedSource = currentBatchSource();
-    if (!isBatchSourceReady(startedSource) || isRunning) return;
+    if (!isBatchSourceReady(startedSource) || !savedFlow || isRunning) return;
     const sourceFolder = startedSource.folderPath;
     const sourceTask = startedSource.task;
     const selectedScope = scope;
     const currentSource = () => isBatchSourceCurrent(currentBatchSource(), startedSource);
+    const operation = ++activeBatchOperation;
+    ownedOperationRef.current = operation;
+    let runGuard: ReturnType<typeof createInspectionRunExitGuard> | null = null;
+    let createdRunId: string | null = null;
     stopReasonRef.current = null;
     setStopRequested(false);
     setIsRunning(true);
+    useInspectionRunStore.getState().setRunning(true);
     setReport(null);
     setSelectedPath(null);
     setFilter('all');
     setError(null);
     try {
+      const { pipelines } = await api.flowchart.listPipelines(sourceFolder);
+      const currentActive = activeSavedVersion(pipelines);
+      if (!currentSource()) return;
+      if (currentActive?.version_id !== savedFlow.version.version_id) {
+        throw new Error('활성 검사 플로우가 바뀌었습니다. 6단계를 다시 열어 저장 버전을 확인하세요.');
+      }
+      const currentPipeline = await api.flowchart.getPipelineVersion(currentActive.version_id);
+      const currentIdentity = await savedFlowIdentity(currentActive, currentPipeline);
+      if (!currentSource()) return;
+      if (currentIdentity.pipelineHash !== savedFlow.identity.pipelineHash) {
+        throw new Error('저장 버전의 그래프가 변경되었습니다. 6단계를 다시 열어 확인하세요.');
+      }
+      const baseUrl = await getApiBaseUrl();
+      if (!currentSource() || stopReasonRef.current || operation !== activeBatchOperation) return;
+      runGuard = createInspectionRunExitGuard((runId) => {
+        void stopInspectionRunKeepalive(runId, baseUrl).catch(() => {
+          // A backend restart also marks an abandoned running run as stopped.
+        });
+      });
+      exitGuardRef.current = runGuard;
       const finished = await runBatchInspection({
         sourceFolder, task: sourceTask, scope: selectedScope,
+        pipeline: savedFlow.pipeline,
+        onRunCreated: (runId) => {
+          createdRunId = runId;
+          runGuard?.created(runId);
+        },
         stopReason: () => currentSource() ? stopReasonRef.current : 'source_changed',
         onUpdate: (next) => {
           if (!currentSource()) return;
@@ -97,18 +244,40 @@ export const BatchInspectionPanel: React.FC = () => {
           )?.image.file_path || null);
         },
       }, {
+        getActivePipeline: api.flowchart.getActivePipeline,
         getPipeline: api.flowchart.getPipeline,
         verifyModels: api.flowchart.verifyModels,
         getImages: api.dataset.getImages,
         run: api.flowchart.run,
+        executeRow: api.inspections.executeRow,
+        createRun: async (pending, pipeline) => {
+          const created = await api.inspections.createRun(pending, pipeline);
+          pending.saved_version_id = created.saved_version_id;
+          pending.pipeline_hash = created.pipeline_hash;
+          pending.model_sha256 = created.model_sha256;
+          return created.run_id;
+        },
+        recordRow: (runId, row) => api.inspections.recordRow(runId, row),
+        finishRun: (runId, status) => api.inspections.finishRun(runId, status),
       });
-      if (currentSource()) setReport(finished);
+      if (currentSource()) {
+        const persisted = finished.run_id ? await api.inspections.getRun(finished.run_id) : finished;
+        if (!currentSource()) return;
+        setReport(persisted);
+        await refreshHistory(startedSource);
+      }
     } catch (cause) {
       if (currentSource() && stopReasonRef.current !== 'user_stop') {
         setError(cause instanceof Error ? cause.message : String(cause));
       }
     } finally {
-      setIsRunning(false);
+      if (createdRunId) runGuard?.release(createdRunId);
+      if (exitGuardRef.current === runGuard) exitGuardRef.current = null;
+      if (operation === activeBatchOperation) {
+        ownedOperationRef.current = null;
+        setIsRunning(false);
+        useInspectionRunStore.getState().setRunning(false);
+      }
     }
   };
 
@@ -121,6 +290,56 @@ export const BatchInspectionPanel: React.FC = () => {
     setSelectedPath(filterBatchRows(rows, next)[0]?.image.file_path ?? null);
   };
   const progress = summary.total ? summary.processed + summary.errors : 0;
+  const submitReview = async (verdict: 'OK' | 'NG' | 'REVIEW') => {
+    if (!report?.run_id || !selected || !selected.result || !reviewReason.trim() || !reviewer.trim()) return;
+    const started = historyContext;
+    const runId = report.run_id;
+    const imagePath = selected.image.file_path;
+    const requestId = ++reviewRequestRef.current;
+    const isCurrent = () => requestId === reviewRequestRef.current
+      && isInspectionHistoryContextCurrent(currentHistoryContext(), started);
+    setReviewSaving(true);
+    setError(null);
+    try {
+      await api.inspections.reviewRow(runId, {
+        image_path: imagePath,
+        final_verdict: verdict,
+        reason: reviewReason.trim(),
+        reviewer: reviewer.trim(),
+      });
+      if (!isCurrent()) return;
+      localStorage.setItem('inspection-reviewer', reviewer.trim());
+      const refreshed: InspectionHistoryRun = await api.inspections.getRun(runId);
+      if (!isCurrent() || refreshed.source_folder !== started.folderPath || refreshed.task !== started.task) return;
+      setReport(refreshed);
+      setSelectedPath(imagePath);
+      setReviewReason('');
+    } catch (cause) {
+      if (isCurrent()) setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (isCurrent()) setReviewSaving(false);
+    }
+  };
+  const exportHistory = async (format: 'csv' | 'json') => {
+    if (!report?.run_id) return;
+    const started = historyContext;
+    const runId = report.run_id;
+    try {
+      const exported = await api.inspections.exportRun(runId, format);
+      if (!isInspectionHistoryContextCurrent(currentHistoryContext(), started)) return;
+      const blob = new Blob([exported.content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = exported.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (cause) {
+      if (isInspectionHistoryContextCurrent(currentHistoryContext(), started)) {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    }
+  };
 
   return (
     <section className="border border-[#2B3547] bg-[#131822] rounded p-4 space-y-4" aria-label="실제 이미지 일괄 검사">
@@ -150,7 +369,7 @@ export const BatchInspectionPanel: React.FC = () => {
           <button
             type="button"
             onClick={handleStart}
-            disabled={!sourceReady || isRunning}
+            disabled={!sourceReady || !savedFlow || savedFlowLoading || isRunning}
             className="flex items-center gap-1.5 rounded border border-cyan-600 bg-cyan-900/50 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-800/60 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5" /> 검사 시작
@@ -167,6 +386,17 @@ export const BatchInspectionPanel: React.FC = () => {
           )}
         </div>
       </div>
+
+      {hasUnsavedDraft && <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded border border-amber-700/70 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+        <span>5단계의 미저장 초안은 일괄 검사에 반영되지 않습니다. 초안을 사용하려면 5단계에서 저장하세요.</span>
+        <button type="button" onClick={() => setStep(5)} className="rounded border border-amber-600 px-2 py-1 font-semibold hover:bg-amber-900/40">5단계에서 저장</button>
+      </div>}
+      {savedFlow && <div className="space-y-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">다음 검사에 사용할 활성 플로우</p>
+        <SavedFlowIdentityCard identity={savedFlow.identity} isActive={savedFlow.version.is_active} />
+      </div>}
+      {savedFlowLoading && <p role="status" className="text-xs text-sky-300">활성 저장 플로우를 확인하는 중입니다.</p>}
+      {savedFlowError && <p role="alert" className="text-xs text-amber-300">{savedFlowError}</p>}
 
       {!sourceReady && (
         <div role="status" className="text-xs text-amber-300">1단계에서 현재 작업 유형의 데이터 폴더를 불러오면 실제 이미지 검사를 시작할 수 있습니다.</div>
@@ -185,8 +415,55 @@ export const BatchInspectionPanel: React.FC = () => {
       )}
       {error && <div role="alert" className="flex items-start gap-2 rounded border border-red-700 bg-red-950/30 p-2 text-xs text-red-200"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
 
+      <div className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3" aria-label="검사 이력">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-100">
+            <History className="h-4 w-4 text-sky-400" /> 검사 이력
+            <span className="text-[11px] font-normal text-slate-400">모델 원판정과 작업자 판정을 따로 보관합니다.</span>
+          </div>
+          {report?.run_id && <div className="flex gap-1.5">
+            <button type="button" onClick={() => exportHistory('csv')} className="flex items-center gap-1 rounded border border-[#364357] px-2 py-1 text-[11px] text-slate-200 hover:bg-[#222B3D]"><Download className="h-3 w-3" /> CSV</button>
+            <button type="button" onClick={() => exportHistory('json')} className="flex items-center gap-1 rounded border border-[#364357] px-2 py-1 text-[11px] text-slate-200 hover:bg-[#222B3D]"><Download className="h-3 w-3" /> JSON</button>
+          </div>}
+        </div>
+        {historyLoading && <p className="text-[11px] text-slate-400">저장된 검사 기록을 읽는 중입니다.</p>}
+        {historyError && <p role="alert" className="text-[11px] text-red-300">{historyError}</p>}
+        {!historyLoading && history.length === 0 && !historyError && <p className="text-[11px] text-slate-500">이 데이터의 검사 기록이 없습니다.</p>}
+        {history.length > 0 && <div className="flex gap-2 overflow-x-auto pb-1">
+          {history.map((item) => <button
+            type="button" key={item.run_id} onClick={() => openHistoryRun(item.run_id)} disabled={isRunning}
+            aria-pressed={report?.run_id === item.run_id}
+            className={`min-w-[180px] rounded-md border px-2.5 py-2 text-left transition-colors disabled:opacity-50 ${report?.run_id === item.run_id ? 'border-sky-500 bg-sky-500/10' : 'border-[#2B3547] bg-[#131B29] hover:border-[#5B6B84]'}`}
+          >
+            <span className="block truncate text-[11px] font-semibold text-slate-100">{item.pipeline_name}</span>
+            <span className="mt-1 block truncate font-mono text-[10px] text-sky-300" title={item.saved_version_id || '이전 형식의 검사 기록'}>
+              {item.saved_version_id ? `저장 버전 ${item.saved_version_id.slice(0, 8)}` : '저장 버전 미기록'} · 그래프 {item.pipeline_hash.slice(0, 8)}
+            </span>
+            <span className="mt-1 block text-[10px] text-slate-400">{new Date(item.created_at).toLocaleString('ko-KR')} · {item.status === 'completed' ? '완료' : item.status === 'stopped' ? '중단' : '진행 중'}</span>
+            <span className="mt-1 block text-[10px] text-slate-300">{item.total}장 · NG {item.counts.NG || 0} · 검토 {item.counts.REVIEW || 0}</span>
+          </button>)}
+        </div>}
+      </div>
+
       {report && (
         <>
+          {report.run_id && <div className="rounded-lg border border-sky-700/50 bg-[#111D2D] px-3 py-3 text-[11px] text-slate-300" aria-label="선택한 검사 실행 식별자">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <strong className="text-xs text-sky-200">선택한 검사 실행의 기록</strong>
+              <span className="font-mono text-slate-400" title={report.run_id}>실행 ID {report.run_id.slice(0, 8)}</span>
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              <span className="break-all">저장 플로우 버전 <strong className="font-mono text-slate-100">{report.saved_version_id || '이전 기록 · 미기록'}</strong></span>
+              <span className="break-all">그래프 SHA-256 <strong className="font-mono text-slate-100" title={report.pipeline_hash}>{report.pipeline_hash || '이전 기록 · 미기록'}</strong></span>
+            </div>
+            {Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
+              <span className="font-semibold text-sky-200">검사 시작 시 검증한 체크포인트</span>
+              {Object.entries(report.model_sha256 || {}).map(([jobId, digest]) => <div key={jobId} className="grid gap-0.5 sm:grid-cols-[minmax(150px,0.35fr)_minmax(0,1fr)]">
+                <span className="truncate font-mono" title={jobId}>{jobId}</span>
+                <span className="break-all font-mono text-slate-100">SHA-256 {digest}</span>
+              </div>)}
+            </div> : <p className="mt-2 text-slate-500">이전 형식의 기록에는 체크포인트 해시가 없습니다.</p>}
+          </div>}
           <div className="space-y-2">
             <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-300">
               <span>플로우: <strong className="text-slate-100">{report.pipeline_name}</strong> · 범위: {scopeNames[report.scope]}</span>
@@ -234,6 +511,7 @@ export const BatchInspectionPanel: React.FC = () => {
                     <span className={`${stateColors[selected.state]}`}>{stateNames[selected.state]}</span>
                   </div>
                   <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>
+                  {selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
                   <div className="flex h-48 items-center justify-center overflow-hidden rounded border border-[#243043] bg-black">
                     {selected.result?.annotated_image || selected.image.thumbnail_url
                       ? <img src={resolveApiUrl(selected.result?.annotated_image || selected.image.thumbnail_url)} alt={`${selected.image.file_name} 검사 미리보기`} className="h-full w-full object-contain" />
@@ -273,6 +551,33 @@ export const BatchInspectionPanel: React.FC = () => {
                           </div>
                         </div>
                       )}
+                      {report.run_id && <div className="rounded-md border border-[#34465F] bg-[#121F32] p-3 text-xs" aria-label="작업자 최종 판정">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-semibold text-sky-200">작업자 재검</h4>
+                          <span className="text-[11px] text-slate-400">모델 원판정 {selected.result.final_verdict}</span>
+                        </div>
+                        {selected.review && <p className="mt-2 rounded border border-sky-600/40 bg-sky-900/20 px-2 py-1.5 text-sky-100">
+                          최종 {selected.review.final_verdict} · {selected.review.reviewer} · {selected.review.reason}
+                        </p>}
+                        <div className="mt-2 grid gap-2 sm:grid-cols-[140px_1fr]">
+                          <label className="text-[11px] text-slate-300">작업자
+                            <input value={reviewer} onChange={(event) => setReviewer(event.target.value)} maxLength={100}
+                              className="mt-1 w-full rounded border border-[#364357] bg-[#0B0E14] px-2 py-1.5 text-xs text-white" />
+                          </label>
+                          <label className="text-[11px] text-slate-300">재검 사유
+                            <input value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} maxLength={2000}
+                              placeholder="원본·현미경 재검 근거를 입력하세요" className="mt-1 w-full rounded border border-[#364357] bg-[#0B0E14] px-2 py-1.5 text-xs text-white" />
+                          </label>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {(['OK', 'NG', 'REVIEW'] as const).map((verdict) => <button type="button" key={verdict}
+                            onClick={() => submitReview(verdict)} disabled={reviewSaving || !reviewReason.trim() || !reviewer.trim()}
+                            className="flex items-center gap-1 rounded border border-[#45617D] px-2.5 py-1 text-[11px] font-semibold text-sky-100 hover:bg-[#254466] disabled:cursor-not-allowed disabled:opacity-40">
+                            <Save className="h-3 w-3" /> {verdict} 확정
+                          </button>)}
+                        </div>
+                        {selected.reviews && selected.reviews.length > 1 && <p className="mt-2 text-[10px] text-slate-400">판정 이력 {selected.reviews.length}건 · 이전 기록은 삭제되지 않습니다.</p>}
+                      </div>}
                     </>
                   )}
                 </div>

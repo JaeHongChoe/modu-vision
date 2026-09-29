@@ -19,7 +19,7 @@ import { useTrainingStore } from './stores/useTrainingStore';
 import { telemetryService } from './services/websocket';
 
 export default function App() {
-  const { activeStep, setBackendStatus, showError } = useProjectStore();
+  const { activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
   const { updateFromTelemetry } = useTrainingStore();
 
   useEffect(() => {
@@ -65,6 +65,11 @@ export default function App() {
       telemetryService.disconnect();
     };
   }, [setBackendStatus, showError, updateFromTelemetry]);
+
+  useEffect(() => {
+    if (!backendStatus.healthy) return;
+    void syncCurrentProject();
+  }, [backendStatus.healthy, backendStatus.port, syncCurrentProject]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans">

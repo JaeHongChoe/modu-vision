@@ -18,11 +18,14 @@ Features:
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
+from contextvars import ContextVar
+from hashlib import sha256
 import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import cv2
 import numpy as np
@@ -48,6 +51,23 @@ from backend.engine.segmentation.model import build_segmentation_model
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
 MAX_SEGMENTATION_TILES = 1024
 SEGMENTATION_TILE_BATCH_SIZE = 4
+_VERIFIED_CHECKPOINTS: ContextVar[Optional[Dict[Tuple[str, str], Path]]] = ContextVar(
+    "flowchart_verified_checkpoints", default=None,
+)
+
+
+@contextmanager
+def verified_checkpoint_scope(checkpoints: Mapping[Tuple[str, str], Path]) -> Iterator[None]:
+    """Bind one execution to already verified checkpoint files, even during project switches."""
+    scoped = {
+        (job_id, task.lower().strip()): Path(path).resolve(strict=True)
+        for (job_id, task), path in checkpoints.items()
+    }
+    token = _VERIFIED_CHECKPOINTS.set(scoped)
+    try:
+        yield
+    finally:
+        _VERIFIED_CHECKPOINTS.reset(token)
 
 
 class FlowchartInspectionLimitError(RuntimeError):
@@ -73,7 +93,7 @@ def _normal_class_indices(classes: Sequence[str]) -> List[int]:
 class FlowNodeData(BaseModel):
     model_config = ConfigDict(extra="ignore")
     label: str
-    node_type: Literal["input", "detection_crop", "inspection", "decision", "output"]
+    node_type: Literal["input", "fixed_roi", "detection_crop", "inspection", "decision", "output"]
     task: Optional[str] = "anomaly"  # 'detection', 'anomaly', 'segmentation', 'classification'
     model_job_id: Optional[str] = None
     threshold: Optional[float] = 0.5
@@ -97,6 +117,7 @@ class FlowEdge(BaseModel):
     target: str
     label: Optional[str] = None
     isBranch: Optional[Literal["pass", "fail", "review", "default"]] = None
+    payload_type: Optional[Literal["image", "roi", "result"]] = None
 
 
 class FlowchartPipeline(BaseModel):
@@ -129,6 +150,13 @@ class FlowchartExecutionStep(BaseModel):
     name: str
     status: Literal["pending", "running", "passed", "flagged_ng", "error", "skipped", "review_required", "warning_untrained"]
     latency_ms: float
+    input_payload_type: Optional[Literal["image", "roi", "result"]] = None
+    output_payload_type: Optional[Literal["image", "roi", "result"]] = None
+    input_count: Optional[int] = None
+    output_count: Optional[int] = None
+    branch_verdict: Optional[Literal["OK", "NG", "REVIEW"]] = None
+    selected_edge_ids: List[str] = Field(default_factory=list)
+    skip_reason: Optional[str] = None
 
 
 class FlowchartExecutionResult(BaseModel):
@@ -359,12 +387,144 @@ def get_single_detection_flowchart(job_id: Optional[str] = None) -> FlowchartPip
     )
 
 
+def get_fixed_roi_flowchart(
+    inspection_task: Literal["anomaly", "segmentation", "classification"] = "segmentation",
+    job_id: Optional[str] = None,
+) -> FlowchartPipeline:
+    """A configured source-pixel rectangle followed by one trained inspection model."""
+    return FlowchartPipeline(
+        id="fixed_roi_inspection", name="고정 ROI 결함 검사",
+        description="원본 픽셀 좌표 ROI → 검사 모델 → OK/NG/REVIEW 판정",
+        nodes=[
+            FlowNode(id="node_input", position={"x": 40, "y": 160}, data=FlowNodeData(
+                label="검사 이미지", node_type="input",
+            )),
+            FlowNode(id="node_fixed_roi", position={"x": 325, "y": 160}, data=FlowNodeData(
+                label="고정 ROI", node_type="fixed_roi", params={"roi_bbox": [0, 0, 512, 512]},
+            )),
+            FlowNode(id="node_inspect", position={"x": 610, "y": 160}, data=FlowNodeData(
+                label="ROI 결함 검사", node_type="inspection", task=inspection_task,
+                model_job_id=job_id, threshold=0.5, crop_padding=0,
+                params={"min_defect_area_px": 8},
+            )),
+            FlowNode(id="node_decision", position={"x": 895, "y": 160}, data=FlowNodeData(
+                label="최종 판정", node_type="decision", rule="any_defect_is_ng",
+            )),
+            FlowNode(id="node_output", position={"x": 1180, "y": 160}, data=FlowNodeData(
+                label="검사 결과", node_type="output",
+            )),
+        ],
+        edges=[
+            FlowEdge(id="input-fixed", source="node_input", target="node_fixed_roi", payload_type="image"),
+            FlowEdge(id="fixed-inspect", source="node_fixed_roi", target="node_inspect", payload_type="roi"),
+            FlowEdge(id="inspect-decision", source="node_inspect", target="node_decision", payload_type="result"),
+            FlowEdge(id="decision-output", source="node_decision", target="node_output", payload_type="result"),
+        ],
+    )
+
+
+def _fixed_roi_rectangle(node: FlowNode) -> List[int]:
+    """Return the configured [x1, y1, x2, y2] original-pixel rectangle."""
+    rectangle = node.data.params.get("roi_bbox")
+    if not isinstance(rectangle, list) or len(rectangle) != 4 or any(type(value) is not int for value in rectangle):
+        raise ValueError(f"Fixed ROI rectangle for {node.id} must contain four integer original-image coordinates.")
+    x1, y1, x2, y2 = rectangle
+    if x1 < 0 or y1 < 0 or x2 - x1 < 16 or y2 - y1 < 16:
+        raise ValueError(f"Fixed ROI rectangle for {node.id} must start at nonnegative coordinates and be at least 16x16 pixels.")
+    return rectangle
+
+
+def get_five_model_chain_flowchart() -> FlowchartPipeline:
+    """A reusable classification → ROI detection → classification → segmentation chain."""
+    specs = [
+        ("classify_1", "inspection", "classification", "1차 제품 분류"),
+        ("detect_roi", "detection_crop", "detection", "2차 관심 영역 검출"),
+        ("classify_2", "inspection", "classification", "3차 ROI 상태 분류"),
+        ("classify_3", "inspection", "classification", "4차 세부 유형 분류"),
+        ("segment", "inspection", "segmentation", "5차 결함 영역 분할"),
+    ]
+    nodes = [FlowNode(id="input", position={"x": 40, "y": 180}, data=FlowNodeData(
+        label="검사 이미지", node_type="input",
+    ))]
+    nodes.extend(
+        FlowNode(id=node_id, position={"x": 270 + index * 250, "y": 180}, data=FlowNodeData(
+            label=label, node_type=node_type, task=task, model_job_id=None,
+        ))
+        for index, (node_id, node_type, task, label) in enumerate(specs)
+    )
+    nodes.extend([
+        FlowNode(id="decision", position={"x": 1540, "y": 180}, data=FlowNodeData(
+            label="최종 판정", node_type="decision", rule="any_defect_is_ng",
+        )),
+        FlowNode(id="output", position={"x": 1790, "y": 180}, data=FlowNodeData(
+            label="검사 결과", node_type="output",
+        )),
+    ])
+    links = [
+        ("input", "classify_1", "image"),
+        ("classify_1", "detect_roi", "image"),
+        ("detect_roi", "classify_2", "roi"),
+        ("classify_2", "classify_3", "roi"),
+        ("classify_3", "segment", "roi"),
+        ("segment", "decision", "result"),
+        ("decision", "output", "result"),
+    ]
+    return FlowchartPipeline(
+        id="five_model_chain", name="5단계 다중 모델 체인",
+        description="분류 → 검출 ROI → 분류 → 분류 → 분할 → 판정",
+        nodes=nodes,
+        edges=[FlowEdge(id=f"e{index + 1}", source=source, target=target, payload_type=payload)
+               for index, (source, target, payload) in enumerate(links)],
+    )
+
+
+def get_conditional_inspection_flowchart() -> FlowchartPipeline:
+    """A classifier gate that runs expensive follow-up inspection only on NG."""
+    return FlowchartPipeline(
+        id="conditional_inspection", name="조건 분기 정밀 검사",
+        description="분류 결과가 NG일 때만 ROI 정밀 검사를 실행합니다.",
+        nodes=[
+            FlowNode(id="input", position={"x": 40, "y": 180}, data=FlowNodeData(
+                label="검사 이미지", node_type="input",
+            )),
+            FlowNode(id="inspect_gate", position={"x": 320, "y": 180}, data=FlowNodeData(
+                label="1차 분류", node_type="inspection", task="classification",
+            )),
+            FlowNode(id="inspect_followup", position={"x": 620, "y": 300}, data=FlowNodeData(
+                label="NG 정밀 분할", node_type="inspection", task="segmentation",
+            )),
+            FlowNode(id="decision", position={"x": 920, "y": 180}, data=FlowNodeData(
+                label="최종 판정", node_type="decision", rule="any_defect_is_ng",
+            )),
+            FlowNode(id="ok", position={"x": 1210, "y": 60}, data=FlowNodeData(
+                label="OK", node_type="output",
+            )),
+            FlowNode(id="ng", position={"x": 1210, "y": 180}, data=FlowNodeData(
+                label="NG", node_type="output",
+            )),
+            FlowNode(id="review", position={"x": 1210, "y": 300}, data=FlowNodeData(
+                label="REVIEW", node_type="output",
+            )),
+        ],
+        edges=[
+            FlowEdge(id="input-gate", source="input", target="inspect_gate", payload_type="image"),
+            FlowEdge(id="gate-pass", source="inspect_gate", target="decision", payload_type="result", isBranch="pass"),
+            FlowEdge(id="gate-fail", source="inspect_gate", target="inspect_followup", payload_type="roi", isBranch="fail"),
+            FlowEdge(id="followup-decision", source="inspect_followup", target="decision", payload_type="result"),
+            FlowEdge(id="decision-ok", source="decision", target="ok", isBranch="pass", payload_type="result"),
+            FlowEdge(id="decision-ng", source="decision", target="ng", isBranch="fail", payload_type="result"),
+            FlowEdge(id="decision-review", source="decision", target="review", isBranch="review", payload_type="result"),
+        ],
+    )
+
+
 def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     """Validate an executable inspection DAG and return its topological order.
 
     The historical name stays available to saved flows and the remote worker.
-    Model branches may split from the input or a detector and join at one
-    decision. The decision routes to one, two, or three local result nodes.
+    Model branches may split and chain before joining at one decision.
+    An edge without a condition always runs; pass/fail/review gates are
+    evaluated from the source model's result.
     """
     nodes = {node.id: node for node in pipeline.nodes}
     if len(nodes) != len(pipeline.nodes):
@@ -375,8 +535,11 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     decisions = [node for node in pipeline.nodes if node.data.node_type == "decision"]
     outputs = [node for node in pipeline.nodes if node.data.node_type == "output"]
     models = [node for node in pipeline.nodes if node.data.node_type in ("detection_crop", "inspection")]
+    fixed_rois = [node for node in pipeline.nodes if node.data.node_type == "fixed_roi"]
     if len(decisions) != 1 or not 1 <= len(outputs) <= 3 or not 1 <= len(models) <= 8:
         raise ValueError("Pipeline needs one decision, 1-3 outputs, and 1-8 model nodes.")
+    if len(fixed_rois) > 8:
+        raise ValueError("Pipeline supports at most eight fixed ROI nodes.")
 
     outgoing: Dict[str, List[FlowEdge]] = {node_id: [] for node_id in nodes}
     incoming: Dict[str, List[FlowEdge]] = {node_id: [] for node_id in nodes}
@@ -389,6 +552,31 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         edge_ids.add(edge.id)
         if any(existing.target == edge.target for existing in outgoing[edge.source]):
             raise ValueError("Pipeline cannot contain duplicate connections between nodes.")
+        source_type = nodes[edge.source].data.node_type
+        target_type = nodes[edge.target].data.node_type
+        if source_type == "input":
+            if target_type not in ("fixed_roi", "detection_crop", "inspection"):
+                raise ValueError("Input edge must feed a fixed ROI or model node.")
+            allowed_payloads = {"image"}
+        elif source_type == "fixed_roi":
+            if target_type not in ("detection_crop", "inspection"):
+                raise ValueError("Fixed ROI output must feed a model node.")
+            allowed_payloads = {"roi"}
+        elif source_type in ("detection_crop", "inspection"):
+            if target_type in ("detection_crop", "inspection"):
+                allowed_payloads = {"image", "roi"}
+            elif target_type == "decision":
+                allowed_payloads = {"result"}
+            else:
+                raise ValueError("Model outputs must feed a model or decision node.")
+        elif source_type == "decision" and target_type == "output":
+            allowed_payloads = {"result"}
+        else:
+            raise ValueError("Pipeline edge has unsupported source and target types.")
+        if edge.payload_type is not None and edge.payload_type not in allowed_payloads:
+            raise ValueError(f"Edge {edge.id} has an incompatible {edge.payload_type} payload type.")
+        if source_type in ("input", "fixed_roi") and edge.isBranch not in (None, "default"):
+            raise ValueError("Input and fixed ROI edges cannot have a conditional branch.")
         outgoing[edge.source].append(edge)
         incoming[edge.target].append(edge)
 
@@ -396,6 +584,13 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     decision_id = decisions[0].id
     if incoming[input_id] or not outgoing[input_id]:
         raise ValueError("Pipeline input must be the connected starting node.")
+    for node in fixed_rois:
+        _fixed_roi_rectangle(node)
+        parents = incoming[node.id]
+        if len(parents) != 1 or parents[0].source != input_id:
+            raise ValueError(f"Fixed ROI node {node.id} needs exactly one original-image input edge.")
+        if not outgoing[node.id]:
+            raise ValueError(f"Fixed ROI node {node.id} must connect to an inspection or detection model.")
     for node in models:
         threshold = node.data.threshold
         if threshold is None or not 0 <= threshold <= 1:
@@ -406,7 +601,7 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         if len(parents) != 1:
             raise ValueError(f"Model node {node.id} needs exactly one incoming edge.")
         parent_type = nodes[parents[0].source].data.node_type
-        allowed = ("input",) if node.data.node_type == "detection_crop" else ("input", "detection_crop")
+        allowed = ("input", "fixed_roi", "detection_crop", "inspection")
         if parent_type not in allowed:
             raise ValueError(f"Model node {node.id} has an unsupported upstream connection.")
         if node.data.node_type == "inspection" and node.data.task not in ("anomaly", "segmentation", "classification"):
@@ -415,11 +610,8 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         if not targets:
             raise ValueError(f"Model node {node.id} must connect to an inspection or decision node.")
         target_types = {nodes[edge.target].data.node_type for edge in targets}
-        if node.data.node_type == "inspection":
-            if len(targets) != 1 or target_types != {"decision"}:
-                raise ValueError(f"Inspection node {node.id} must connect to the decision.")
-        elif target_types not in ({"inspection"}, {"decision"}):
-            raise ValueError(f"Detector {node.id} must feed inspection nodes or the decision, not both.")
+        if not target_types.issubset({"inspection", "detection_crop", "decision"}):
+            raise ValueError(f"Model node {node.id} must connect to a model or decision node.")
     decision_inputs = incoming[decision_id]
     if not decision_inputs or any(nodes[edge.source].data.node_type not in ("inspection", "detection_crop") for edge in decision_inputs):
         raise ValueError("Decision needs incoming model results.")
@@ -427,6 +619,10 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     rule = decision.data.rule or "any_defect_is_ng"
     if rule not in ("any_defect_is_ng", "score_gt_threshold", "max_flaws_allowed"):
         raise ValueError(f"Decision rule {rule} is unsupported.")
+    if decision.data.params.get("incomplete_policy", "review") not in ("review", "ng"):
+        raise ValueError("Decision incomplete_policy must be review or ng.")
+    if decision.data.params.get("review_fallback") not in (None, "pass", "fail"):
+        raise ValueError("Decision review_fallback must be pass or fail when configured.")
     if rule == "score_gt_threshold" and not 0 <= (decision.data.threshold or 0) <= 1:
         raise ValueError("Decision score threshold must be between 0 and 1.")
     if rule == "max_flaws_allowed":
@@ -463,6 +659,23 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     return order
 
 
+def _edge_payload_type(edge: FlowEdge, source_type: str, target_type: str) -> Literal["image", "roi", "result"]:
+    """Resolve old untyped saved edges without changing their execution meaning."""
+    if edge.payload_type is not None:
+        return edge.payload_type
+    if source_type == "input":
+        return "image"
+    if target_type in ("decision", "output"):
+        return "result"
+    return "roi"
+
+
+def _branch_matches(edge: FlowEdge, verdict: Literal["OK", "NG", "REVIEW"]) -> bool:
+    if edge.isBranch in (None, "default"):
+        return True
+    return edge.isBranch == {"OK": "pass", "NG": "fail", "REVIEW": "review"}[verdict]
+
+
 # ============================================================================
 # Flowchart Execution Engine
 # ============================================================================
@@ -476,13 +689,17 @@ class FlowchartEngine:
       Stage 3: Decision rule evaluation
     """
 
-    def __init__(self, device: Optional[Union[torch.device, str]] = None):
+    def __init__(
+        self, device: Optional[Union[torch.device, str]] = None,
+        checkpoint_resolver: Optional[Callable[[str, str], Optional[Path]]] = None,
+    ):
         self.device = get_device(device) if device is not None else get_device()
-        self._model_cache: Dict[Tuple[str, Optional[str], str], Any] = {}
-        self._model_input_sizes: Dict[Tuple[str, Optional[str], str], Tuple[int, int]] = {}
-        self._model_classes: Dict[Tuple[str, Optional[str], str], List[str]] = {}
+        self._checkpoint_resolver = checkpoint_resolver
+        self._model_cache: Dict[Tuple[Any, ...], Any] = {}
+        self._model_input_sizes: Dict[Tuple[Any, ...], Tuple[int, int]] = {}
+        self._model_classes: Dict[Tuple[Any, ...], List[str]] = {}
 
-    def _remember_input_size(self, cache_key: Tuple[str, Optional[str], str], checkpoint: Dict[str, Any]) -> None:
+    def _remember_input_size(self, cache_key: Tuple[Any, ...], checkpoint: Dict[str, Any]) -> None:
         raw = checkpoint.get("image_size", [224, 224])
         if isinstance(raw, (list, tuple)) and len(raw) == 2:
             width, height = int(raw[0]), int(raw[1])
@@ -490,16 +707,39 @@ class FlowchartEngine:
                 self._model_input_sizes[cache_key] = (width, height)
 
     def _resolve_checkpoint(self, job_id: Optional[str], task: str) -> Optional[Path]:
-        """Locate an app-created training checkpoint by job ID only."""
-        return trusted_checkpoint(job_id) if job_id else None
+        """Locate a training checkpoint through the app or a verified export bundle."""
+        if not job_id:
+            return None
+        scoped = _VERIFIED_CHECKPOINTS.get()
+        if scoped is not None:
+            checkpoint = scoped.get((job_id, task.lower().strip()))
+            if checkpoint is None:
+                raise FlowchartInspectionConfigurationError(
+                    f"No verified {task} checkpoint was bound for model {job_id}."
+                )
+            return checkpoint
+        if self._checkpoint_resolver is not None:
+            resolved = self._checkpoint_resolver(job_id, task)
+            return Path(resolved) if resolved is not None else None
+        return trusted_checkpoint(job_id)
+
+    def _cache_key(self, task: str, job_id: Optional[str], preset: str, checkpoint: Optional[Path]) -> Tuple[Any, ...]:
+        key: Tuple[Any, ...] = (task, job_id, preset)
+        if checkpoint is None:
+            return key
+        digest = sha256()
+        with Path(checkpoint).open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return (*key, str(Path(checkpoint).resolve()), digest.hexdigest())
 
     def _get_detection_model(self, job_id: Optional[str] = None, preset: str = "fast") -> Tuple[nn.Module, bool]:
         """Loads cached or new Faster R-CNN model."""
-        cache_key = ("detection", job_id, preset)
+        ckpt_path = self._resolve_checkpoint(job_id, "detection")
+        cache_key = self._cache_key("detection", job_id, preset, ckpt_path)
         if cache_key in self._model_cache:
             return self._model_cache[cache_key]
 
-        ckpt_path = self._resolve_checkpoint(job_id, "detection")
         is_trained = False
         if ckpt_path:
             try:
@@ -530,11 +770,11 @@ class FlowchartEngine:
     ) -> Tuple[Any, bool]:
         """Loads cached or new inspection model (anomaly, segmentation, classification)."""
         task_clean = task.lower().strip()
-        cache_key = (task_clean, job_id, preset)
+        ckpt_path = self._resolve_checkpoint(job_id, task_clean)
+        cache_key = self._cache_key(task_clean, job_id, preset, ckpt_path)
         if cache_key in self._model_cache:
             return self._model_cache[cache_key]
 
-        ckpt_path = self._resolve_checkpoint(job_id, task_clean)
         is_trained = False
 
         if task_clean == "anomaly":
@@ -643,7 +883,8 @@ class FlowchartEngine:
                 f_boxes = p_boxes[mask]
                 f_scores = p_scores[mask]
                 f_labels = class_ids[mask] if class_ids is not None else None
-                known_classes = self._model_classes.get(("detection", job_id, "fast"), [])
+                key = self._cache_key("detection", job_id, "fast", self._resolve_checkpoint(job_id, "detection"))
+                known_classes = self._model_classes.get(key, [])
                 for index, (b, s) in enumerate(zip(f_boxes, f_scores)):
                     boxes_out.append([int(b[0]), int(b[1]), int(b[2]), int(b[3])])
                     scores_out.append(float(s))
@@ -776,9 +1017,10 @@ class FlowchartEngine:
         job_id = inspect_node.data.model_job_id if inspect_node else None
 
         model, is_trained = self._get_inspection_model(task=task, job_id=job_id)
-        input_size = self._model_input_sizes.get((task.lower().strip(), job_id, "fast"), (224, 224))
         task_clean = task.lower().strip()
-        class_names = self._model_classes.get((task_clean, job_id, "fast"), [])
+        key = self._cache_key(task_clean, job_id, "fast", self._resolve_checkpoint(job_id, task_clean))
+        input_size = self._model_input_sizes.get(key, (224, 224))
+        class_names = self._model_classes.get(key, [])
         normal_indices = _normal_class_indices(class_names) if is_trained else [0]
         if task_clean in ("classification", "classifier") and is_trained and not normal_indices:
             raise FlowchartInspectionConfigurationError(
@@ -1032,6 +1274,50 @@ class FlowchartEngine:
         _, buf = cv2.imencode(".png", ann_bgr)
         return f"data:image/png;base64,{base64.b64encode(buf.tobytes()).decode('utf-8')}"
 
+    def _detect_in_regions(
+        self, img_rgb: np.ndarray, regions: List[Dict[str, Any]], node: FlowNode,
+    ) -> Tuple[List[Dict[str, Any]], float, str]:
+        """Run a detector on the image or inherited ROIs and restore source coordinates."""
+        image_h, image_w = img_rgb.shape[:2]
+        detected: List[Dict[str, Any]] = []
+        latency_ms = 0.0
+        status = "passed"
+        for region in regions:
+            if region["id"] == "full_image":
+                region_image = img_rgb
+                offset_x = offset_y = 0
+            else:
+                region_image, bounds = safe_crop_roi(
+                    img_rgb, region["bbox"], padding_px=0, min_size=1, target_size=None,
+                )
+                offset_x, offset_y = bounds[:2]
+            height, width = region_image.shape[:2]
+            scale = min(1.0, 1600.0 / max(height, width))
+            model_image = region_image if scale == 1.0 else cv2.resize(
+                region_image, (max(1, round(width * scale)), max(1, round(height * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
+            rois, elapsed, region_status = self._extract_candidate_rois(model_image, node)
+            latency_ms += elapsed
+            if region_status != "passed":
+                status = region_status
+            for roi in rois:
+                x1, y1, x2, y2 = roi["bbox"]
+                mapped = [
+                    max(0, min(image_w - 1, round(x1 / scale) + offset_x)),
+                    max(0, min(image_h - 1, round(y1 / scale) + offset_y)),
+                    max(1, min(image_w, round(x2 / scale) + offset_x)),
+                    max(1, min(image_h, round(y2 / scale) + offset_y)),
+                ]
+                if mapped[2] <= mapped[0] or mapped[3] <= mapped[1]:
+                    continue
+                detected.append({
+                    **roi,
+                    "id": roi["id"] if region["id"] == "full_image" else f"{region['id']}:{roi['id']}",
+                    "bbox": mapped,
+                })
+        return detected, latency_ms, status
+
     def execute(
         self,
         pipeline: Optional[FlowchartPipeline] = None,
@@ -1056,18 +1342,32 @@ class FlowchartEngine:
         decision_node = next(node for node in ordered_nodes if node.data.node_type == "decision")
         output_nodes = [node for node in ordered_nodes if node.data.node_type == "output"]
         model_nodes = [node for node in ordered_nodes if node.data.node_type in ("detection_crop", "inspection")]
+        processing_nodes = [node for node in ordered_nodes if node.data.node_type in ("fixed_roi", "detection_crop", "inspection")]
         detector_only_ids = {
             node.id for node in model_nodes
-            if node.data.node_type == "detection_crop" and outgoing[node.id][0].target == decision_node.id
+            if node.data.node_type == "detection_crop"
+            and any(edge.target == decision_node.id for edge in outgoing[node.id])
         }
         if any(not nodes[node_id].data.model_job_id for node_id in detector_only_ids):
             raise ValueError("A trained detection model is required for a detector-only flow.")
+        full_image_input: Dict[str, bool] = {}
+        for node in processing_nodes:
+            edge = incoming[node.id][0]
+            source = nodes[edge.source]
+            payload = _edge_payload_type(edge, source.data.node_type, node.data.node_type)
+            full_image_input[node.id] = node.data.node_type != "fixed_roi" and (
+                payload == "image" or source.data.node_type == "input"
+                or (source.data.node_type == "inspection" and full_image_input[source.id])
+            )
         full_image_segmentation = any(
             node.data.node_type == "inspection" and node.data.task == "segmentation"
-            and incoming[node.id][0].source == input_node.id
-            for node in model_nodes
+            and full_image_input[node.id] for node in model_nodes
         )
-        input_max_dim = None if full_image_segmentation else 1600
+        # Fixed coordinates refer to source pixels, so never downsample input
+        # before computing their intersection with the real image bounds.
+        input_max_dim = None if full_image_segmentation or any(
+            node.data.node_type == "fixed_roi" for node in processing_nodes
+        ) else 1600
 
         execution_steps: List[FlowchartExecutionStep] = []
 
@@ -1077,7 +1377,14 @@ class FlowchartEngine:
         t_input_0 = time.time()
         img_rgb: Optional[np.ndarray] = None
 
-        if isinstance(image, np.ndarray):
+        if image_path is not None or isinstance(image, (str, Path)):
+            selected_path = Path(image_path if image_path is not None else image)
+            if not selected_path.is_file():
+                raise FileNotFoundError(f"Selected inspection image does not exist: {selected_path}")
+            img_rgb = read_image_safely_rgb(selected_path, max_dim=input_max_dim)
+        elif isinstance(image, np.ndarray):
+            if image.size == 0:
+                raise ValueError("The inspection image array is empty.")
             if image.ndim == 2:
                 img_rgb = np.stack([image, image, image], axis=-1)
             elif image.ndim == 3 and image.shape[2] == 4:
@@ -1085,37 +1392,12 @@ class FlowchartEngine:
                 img_rgb = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
             elif image.ndim == 3 and image.shape[2] == 3:
                 img_rgb = image
-        elif image_path and Path(image_path).is_file():
-            img_rgb = read_image_safely_rgb(image_path, max_dim=input_max_dim)
-        elif isinstance(image, (str, Path)) and Path(image).is_file():
-            img_rgb = read_image_safely_rgb(image, max_dim=input_max_dim)
-        elif image_id:
-            for root in [Path("./datasets"), Path("./projects"), Path("/Users/kai/Downloads/운영서버")]:
-                if root.exists():
-                    for ext in [".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"]:
-                        cand = root / f"{image_id}{ext}"
-                        if cand.is_file():
-                            img_rgb = read_image_safely_rgb(cand, max_dim=input_max_dim)
-                            break
-                    if img_rgb is not None:
-                        break
-
-        # Fallback to procedural synthetic PCB image if no image provided
-        if img_rgb is None:
-            h, w = 512, 512
-            img_rgb = np.full((h, w, 3), 40, dtype=np.uint8)
-            cv2.line(img_rgb, (50, 100), (450, 100), (0, 180, 0), 4)
-            cv2.line(img_rgb, (100, 50), (100, 450), (0, 180, 0), 4)
-            cv2.line(img_rgb, (400, 100), (400, 400), (0, 180, 0), 4)
-            # Component 1 (Normal IC)
-            cv2.rectangle(img_rgb, (80, 140), (220, 260), (70, 70, 70), -1)
-            cv2.rectangle(img_rgb, (80, 140), (220, 260), (180, 180, 180), 2)
-            cv2.putText(img_rgb, "IC-A1", (120, 205), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (220, 220, 220), 2)
-            # Component 2 (Defective IC with red scratch)
-            cv2.rectangle(img_rgb, (290, 220), (430, 360), (70, 70, 70), -1)
-            cv2.rectangle(img_rgb, (290, 220), (430, 360), (180, 180, 180), 2)
-            cv2.putText(img_rgb, "IC-B2", (330, 285), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (220, 220, 220), 2)
-            cv2.line(img_rgb, (320, 240), (370, 330), (240, 0, 0), 3)
+            else:
+                raise ValueError("The inspection image array must have grayscale, RGB, or RGBA channels.")
+        else:
+            raise ValueError("An inspection image array or path is required; image_id is metadata only.")
+        if img_rgb is None or img_rgb.size == 0:
+            raise ValueError("The inspection image could not be decoded.")
 
         input_lat = (time.time() - t_input_0) * 1000.0
         execution_steps.append(
@@ -1124,106 +1406,171 @@ class FlowchartEngine:
                 name=input_node.data.label,
                 status="passed",
                 latency_ms=round(input_lat, 2),
+                output_payload_type="image",
+                output_count=1,
+                selected_edge_ids=[edge.id for edge in outgoing[input_node.id]],
             )
         )
 
-        # Execute each model node in graph order. A detector either supplies
-        # candidate regions to one or more inspectors or directly supplies
-        # defect-box evidence to the decision; those two meanings cannot mix.
-        detector_rois: Dict[str, List[Dict[str, Any]]] = {}
-        crops: List[CropInspectionResult] = []
+        # Keep each model's region payload and result separate. Only an active
+        # edge into the decision contributes to the final verdict. A model
+        # skipped by a condition cannot accidentally contribute stale evidence.
+        active_edges = {edge.id for edge in outgoing[input_node.id]}
+        node_rois: Dict[str, List[Dict[str, Any]]] = {}
+        node_evidence: Dict[str, List[CropInspectionResult]] = {}
         incomplete_reasons: List[str] = []
-        leaf_model_count = len(incoming[decision_node.id])
         h, w = img_rgb.shape[:2]
         whole_image = [{"id": "full_image", "label": "Full image", "bbox": [0, 0, w, h]}]
-        for node in model_nodes:
-            if node.data.node_type == "detection_crop":
-                # A direct full-image segmentation path keeps original pixels;
-                # detector inference still uses a bounded view and maps boxes
-                # back into original coordinates for downstream inspection.
-                detector_image = img_rgb
-                scale = 1.0
-                if max(h, w) > 1600:
-                    scale = 1600.0 / max(h, w)
-                    detector_image = cv2.resize(img_rgb, (max(1, round(w * scale)), max(1, round(h * scale))))
-                rois, latency, status = self._extract_candidate_rois(detector_image, node)
-                if scale != 1.0:
-                    for roi in rois:
-                        x1, y1, x2, y2 = roi["bbox"]
-                        roi["bbox"] = [
-                            max(0, min(w - 1, round(x1 / scale))),
-                            max(0, min(h - 1, round(y1 / scale))),
-                            max(1, min(w, round(x2 / scale))),
-                            max(1, min(h, round(y2 / scale))),
-                        ]
-                detector_rois[node.id] = [
+        for node in processing_nodes:
+            parent_edge = incoming[node.id][0]
+            parent = nodes[parent_edge.source]
+            payload_type = _edge_payload_type(parent_edge, parent.data.node_type, node.data.node_type)
+            if parent_edge.id not in active_edges:
+                execution_steps.append(FlowchartExecutionStep(
+                    node_id=node.id, name=node.data.label, status="skipped", latency_ms=0.0,
+                    input_payload_type=payload_type, input_count=0, output_count=0,
+                    skip_reason="condition_not_met",
+                ))
+                node_rois[node.id] = []
+                node_evidence[node.id] = []
+                continue
+
+            rois = whole_image if payload_type == "image" or parent.id == input_node.id else node_rois[parent.id]
+            if not rois:
+                incomplete_reasons.append(
+                    f"Node {node.id} received no ROI from {parent.id}; the image was not inspected."
+                )
+                execution_steps.append(FlowchartExecutionStep(
+                    node_id=node.id, name=node.data.label, status="skipped", latency_ms=0.0,
+                    input_payload_type=payload_type, input_count=0, output_count=0,
+                    branch_verdict="REVIEW", skip_reason="empty_roi",
+                ))
+                node_rois[node.id] = []
+                node_evidence[node.id] = []
+                continue
+
+            if node.data.node_type == "fixed_roi":
+                started = time.time()
+                x1, y1, x2, y2 = _fixed_roi_rectangle(node)
+                clipped = [max(0, min(w, x1)), max(0, min(h, y1)),
+                           max(0, min(w, x2)), max(0, min(h, y2))]
+                if clipped[2] - clipped[0] >= 16 and clipped[3] - clipped[1] >= 16:
+                    selected_roi = [{
+                        "id": f"fixed_roi:{node.id}", "label": node.data.label,
+                        "bbox": clipped, "crop_padding": 0,
+                    }]
+                    status = "passed"
+                    branch_verdict = "OK"
+                else:
+                    selected_roi = []
+                    status = "review_required"
+                    branch_verdict = "REVIEW"
+                    incomplete_reasons.append(
+                        f"Fixed ROI {node.id} does not overlap this image by at least 16x16 pixels."
+                    )
+                node_rois[node.id] = selected_roi
+                node_evidence[node.id] = []
+                latency = (time.time() - started) * 1000.0
+                output_count = len(selected_roi)
+            elif node.data.node_type == "detection_crop":
+                detected, latency, status = self._detect_in_regions(img_rgb, rois, node)
+                node_rois[node.id] = [
                     {**roi, "crop_padding": node.data.crop_padding}
                     if node.data.crop_padding is not None else roi
-                    for roi in rois
+                    for roi in detected
                 ]
-                if node.id in detector_only_ids:
-                    evidence = self._detected_defect_crops(img_rgb, rois)
-                    if leaf_model_count > 1:
-                        for crop in evidence:
-                            crop.roi_id = f"{node.id}:{crop.roi_id}"
-                    crops.extend(evidence)
+                node_evidence[node.id] = (
+                    self._detected_defect_crops(img_rgb, detected)
+                    if node.id in detector_only_ids else []
+                )
+                branch_verdict: Literal["OK", "NG", "REVIEW"] = (
+                    "NG" if detected and node.id in detector_only_ids else
+                    "OK" if detected else "REVIEW"
+                )
+                output_count = len(detected)
             else:
-                parent_id = incoming[node.id][0].source
-                rois = whole_image if parent_id == input_node.id else detector_rois[parent_id]
-                if rois:
-                    started = time.time()
-                    try:
-                        evidence, latency, status = self._inspect_crops(img_rgb, rois, node)
-                    except (FlowchartInspectionLimitError, FlowchartInspectionConfigurationError) as exc:
-                        evidence, latency, status = [], (time.time() - started) * 1000.0, "skipped"
-                        incomplete_reasons.append(str(exc))
-                    if leaf_model_count > 1:
-                        for crop in evidence:
-                            crop.roi_id = f"{node.id}:{crop.roi_id}"
-                    crops.extend(evidence)
-                else:
-                    latency, status = 0.0, "skipped"
-                    incomplete_reasons.append(
-                        f"Detector {parent_id} found no region for inspection node {node.id}; the image was not inspected."
-                    )
+                started = time.time()
+                try:
+                    evidence, latency, status = self._inspect_crops(img_rgb, rois, node)
+                except (FlowchartInspectionLimitError, FlowchartInspectionConfigurationError) as exc:
+                    evidence, latency, status = [], (time.time() - started) * 1000.0, "skipped"
+                    incomplete_reasons.append(str(exc))
+                node_rois[node.id] = rois
+                node_evidence[node.id] = evidence
+                branch_verdict = (
+                    "NG" if any(crop.verdict == "NG" for crop in evidence) else
+                    "OK" if evidence else "REVIEW"
+                )
+                output_count = len(evidence)
+
+            selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict)]
+            active_edges.update(edge.id for edge in selected)
+            output_types = {
+                _edge_payload_type(edge, node.data.node_type, nodes[edge.target].data.node_type)
+                for edge in selected
+            }
             execution_steps.append(FlowchartExecutionStep(
                 node_id=node.id, name=node.data.label,
                 status=status, latency_ms=round(latency, 2),
+                input_payload_type=payload_type,
+                output_payload_type=next(iter(output_types)) if len(output_types) == 1 else None,
+                input_count=len(rois), output_count=output_count,
+                branch_verdict=branch_verdict,
+                selected_edge_ids=[edge.id for edge in selected],
             ))
 
-        empty_is_ok = bool(detector_only_ids) and len(detector_only_ids) == leaf_model_count
+        decision_edges = [edge for edge in incoming[decision_node.id] if edge.id in active_edges]
+        crops: List[CropInspectionResult] = []
+        for edge in decision_edges:
+            for crop in node_evidence[edge.source]:
+                crops.append(
+                    crop.model_copy(update={"roi_id": f"{edge.source}:{crop.roi_id}"})
+                    if len(decision_edges) > 1 else crop
+                )
+        if not decision_edges:
+            incomplete_reasons.append("No active route reached the decision; review required.")
+        empty_is_ok = bool(decision_edges) and all(edge.source in detector_only_ids for edge in decision_edges)
         no_inspection_reason = "; ".join(incomplete_reasons) or None
         verdict, is_ok, reason, dec_lat, dec_status = self._evaluate_decision_rules(
             crops, decision_node, no_inspection_reason=no_inspection_reason,
             empty_is_ok=empty_is_ok and not incomplete_reasons,
         )
-        if incomplete_reasons and verdict != "NG":
-            verdict, is_ok, reason, dec_status = "REVIEW", False, no_inspection_reason or "Inspection incomplete.", "review_required"
-        execution_steps.append(
-            FlowchartExecutionStep(
-                node_id=decision_node.id,
-                name=decision_node.data.label,
-                status=dec_status,
-                latency_ms=round(dec_lat, 2),
-            )
-        )
+        if incomplete_reasons:
+            incomplete_policy = decision_node.data.params.get("incomplete_policy", "review")
+            if incomplete_policy == "ng":
+                verdict, is_ok, reason, dec_status = "NG", False, no_inspection_reason or "Inspection incomplete.", "flagged_ng"
+            else:
+                verdict, is_ok, reason, dec_status = "REVIEW", False, no_inspection_reason or "Inspection incomplete.", "review_required"
 
         # ====================================================================
-        # Stage 4: Route one result branch. REVIEW uses the explicit review
-        # output when present, then the fail output as a fail-safe fallback.
+        # Stage 4: Route one result branch. A REVIEW without a review output
+        # remains unrouted unless a fallback is explicitly configured.
         # ====================================================================
         branch_edges = outgoing[decision_node.id]
         desired = "pass" if verdict == "OK" else "fail" if verdict == "NG" else "review"
         selected_edge = next((edge for edge in branch_edges if edge.isBranch == desired), None)
-        if selected_edge is None and verdict == "REVIEW":
-            selected_edge = next((edge for edge in branch_edges if edge.isBranch == "fail"), None)
-        if selected_edge is None:
+        if selected_edge is None and len(branch_edges) == 1:
             selected_edge = branch_edges[0]
+        if selected_edge is None and verdict == "REVIEW":
+            fallback = decision_node.data.params.get("review_fallback")
+            if fallback in ("pass", "fail"):
+                selected_edge = next((edge for edge in branch_edges if edge.isBranch == fallback), None)
+        execution_steps.append(FlowchartExecutionStep(
+            node_id=decision_node.id, name=decision_node.data.label,
+            status=dec_status, latency_ms=round(dec_lat, 2),
+            input_payload_type="result", output_payload_type="result",
+            input_count=len(crops), output_count=1,
+            branch_verdict=verdict,
+            selected_edge_ids=[selected_edge.id] if selected_edge else [],
+        ))
         for output_node in output_nodes:
             execution_steps.append(FlowchartExecutionStep(
                 node_id=output_node.id, name=output_node.data.label,
-                status=dec_status if output_node.id == selected_edge.target else "skipped",
+                status=dec_status if selected_edge and output_node.id == selected_edge.target else "skipped",
                 latency_ms=0.0,
+                input_payload_type="result", input_count=1 if selected_edge and output_node.id == selected_edge.target else 0,
+                output_count=1 if selected_edge and output_node.id == selected_edge.target else 0,
+                skip_reason=None if selected_edge and output_node.id == selected_edge.target else "branch_not_selected",
             ))
 
         # Master Annotated Image
@@ -1247,7 +1594,7 @@ class FlowchartEngine:
             tiles_processed=sum(c.tiles_processed or 0 for c in crops),
             image_path=str(image_path) if image_path else None,
             image_id=str(image_id) if image_id else None,
-            routed_output_node_id=selected_edge.target,
+            routed_output_node_id=selected_edge.target if selected_edge else None,
         )
 
         return result.model_dump()

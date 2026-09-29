@@ -23,6 +23,7 @@ let flowchartRunSequence = 0;
 interface FlowchartState {
   pipeline: FlowchartPipeline | null;
   executionResult: FlowchartExecutionResult | null;
+  lastRunSource: { kind: 'draft' | 'saved'; versionId: string | null } | null;
   isLoading: boolean;
   isSaving: boolean;
   isRunning: boolean;
@@ -43,10 +44,12 @@ interface FlowchartState {
 
   // Actions
   loadPipeline: (force?: boolean, inspectionTask?: VisionTask, sourceDatasetPath?: string) => Promise<FlowchartPipeline | null>;
+  loadPipelineVersion: (versionId: string, sourceDatasetPath: string) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
-  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask, sourceDatasetPath?: string) => Promise<void>;
-  runPipeline: (customImagePath?: string, customImageId?: string) => Promise<boolean>;
+  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask | 'mixed', sourceDatasetPath?: string) => Promise<void>;
+  runPipeline: (customImagePath?: string, customImageId?: string,
+    source?: { savedVersionId: string | null }) => Promise<boolean>;
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
   addNode: (node: FlowNode) => void;
@@ -63,6 +66,7 @@ interface FlowchartState {
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   pipeline: null,
   executionResult: null,
+  lastRunSource: null,
   isLoading: false,
   isSaving: false,
   isRunning: false,
@@ -83,7 +87,17 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
     try {
-      const data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
+      let data: FlowchartPipeline;
+      if (sourceDatasetPath) {
+        try {
+          data = await api.flowchart.getActivePipeline(sourceDatasetPath);
+        } catch (error) {
+          if ((error as { status?: number }).status !== 404) throw error;
+          data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
+        }
+      } else {
+        data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
+      }
       if (generation !== flowchartGeneration) return null;
       set({
         pipeline: data,
@@ -98,6 +112,25 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return null;
       console.error('Failed to load flowchart pipeline:', e);
       set({ isLoading: false, errorMessage: e?.message || '파이프라인 로드 실패' });
+      return null;
+    }
+  },
+
+  loadPipelineVersion: async (versionId, sourceDatasetPath) => {
+    const generation = ++flowchartGeneration;
+    set({ isLoading: true, errorMessage: null });
+    try {
+      const { pipeline: data } = await api.flowchart.activatePipelineVersion(versionId, sourceDatasetPath);
+      if (generation !== flowchartGeneration) return null;
+      flowchartRunInputRevision += 1;
+      set({
+        pipeline: data, pipelineDirty: false, selectedNodeId: null,
+        executionResult: null, inspectedCrop: null, isLoading: false,
+      });
+      return data;
+    } catch (error) {
+      if (generation !== flowchartGeneration) return null;
+      set({ isLoading: false, errorMessage: error instanceof Error ? error.message : '플로우 버전을 열 수 없습니다.' });
       return null;
     }
   },
@@ -171,7 +204,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
-  runPipeline: async (customImagePath, customImageId) => {
+  runPipeline: async (customImagePath, customImageId, source) => {
     const { pipeline, selectedImage } = get();
     const imagePath = customImagePath || selectedImage?.imagePath;
     const imageId = customImageId || selectedImage?.imageId;
@@ -191,6 +224,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       return false;
     }
 
+    const savedVersionId = !get().pipelineDirty && source?.savedVersionId ? source.savedVersionId : null;
     const generation = ++flowchartGeneration;
     const inputRevision = flowchartRunInputRevision;
     const runSequence = ++flowchartRunSequence;
@@ -204,7 +238,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         });
       }
     };
-    set({ isRunning: true, errorMessage: null, executionResult: null, inspectedCrop: null, activeRunningNodeId: null });
+    set({ isRunning: true, errorMessage: null, executionResult: null, lastRunSource: null,
+      inspectedCrop: null, activeRunningNodeId: null });
 
     try {
       const res = await api.flowchart.run({
@@ -219,6 +254,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
 
       set({
         executionResult: res,
+        lastRunSource: savedVersionId
+          ? { kind: 'saved', versionId: savedVersionId }
+          : { kind: 'draft', versionId: null },
         isRunning: false,
         activeRunningNodeId: null,
       });
@@ -336,7 +374,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       pipelineDirty: false,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
-      executionResult: null, isLoading: false, isSaving: false, isRunning: false,
+      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false,
       activeRunningNodeId: null, selectedNodeId: null,
       selectedImage: null, isImagePickerOpen: false, inspectedCrop: null,
       saveMessage: null, errorMessage: null,

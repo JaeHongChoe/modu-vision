@@ -27,6 +27,14 @@ test('a recipe change rejects the previous inspection draft', () => {
   };
   assert.equal(pipelineMatchesTask(detector, 'detection'), true);
   assert.equal(pipelineMatchesTask(detector, 'classification'), false);
+  const mixed = {
+    nodes: [
+      { data: { node_type: 'inspection', task: 'classification' } },
+      { data: { node_type: 'inspection', task: 'segmentation' } },
+    ],
+  };
+  assert.equal(pipelineMatchesTask(mixed, 'segmentation'), true);
+  assert.equal(pipelineMatchesTask(mixed, 'anomaly'), false);
   assert.deepEqual(singleModelAutoBinding(detector, 'detection', 'job_verified'), {
     nodeId: 'node_crop', modelJobId: 'job_verified',
   });
@@ -107,12 +115,13 @@ test('saved flow loads only after source-scoped completed model recovery', async
   assert.equal(result.pipeline.nodes[0].data.model_job_id, 'job_A');
 });
 
-test('failed model recovery never loads a saved flow with a stripped model ID', async () => {
+test('failed model recovery inspects saved flow but blocks a graph without a verified model', async () => {
   const state = setup();
   state.options.loadEvaluation = async () => { throw new Error('No completed training job'); };
   const result = await recoverThenLoadFlowchart(state.options);
   assert.equal(result.status, 'blocked');
-  assert.equal(state.loadCalls, 0);
+  assert.equal(state.loadCalls, 1);
+  assert.equal(result.reason, 'model_unavailable');
 });
 
 test('dataset and task must match the source before any saved flow load', async () => {
@@ -135,13 +144,29 @@ test('source changes during recovery prevent stale saved flow load', async () =>
   assert.equal(state.loadCalls, 0);
 });
 
-test('recovery-disabled data cannot reopen a saved model connection', async () => {
+test('recovery-disabled data inspects saved flow but blocks an unbound graph', async () => {
   const state = setup();
   state.options.allowLatestRecovery = false;
   const result = await recoverThenLoadFlowchart(state.options);
   assert.equal(result.status, 'blocked');
-  assert.equal(state.loadCalls, 0);
+  assert.equal(state.loadCalls, 1);
   assert.equal(state.evaluationCalls.length, 0);
+});
+
+test('a source-verified saved graph opens even without a current evaluation selection', async () => {
+  const state = setup();
+  state.options.allowLatestRecovery = false;
+  state.options.loadSavedPipeline = async () => ({
+    id: 'saved-chain',
+    nodes: [{ data: { node_type: 'inspection', task: 'segmentation', model_job_id: 'job_verified_saved' } }],
+    edges: [],
+  });
+  const result = await recoverThenLoadFlowchart(state.options);
+  assert.equal(result.status, 'ready');
+  assert.equal(result.verifiedJobId, '');
+  assert.deepEqual(state.modelVerificationCalls, [{ source: '/data/current', models: [
+    { job_id: 'job_verified_saved', task: 'segmentation' },
+  ] }]);
 });
 
 test('already verified current model loads the saved flow without another evaluation call', async () => {

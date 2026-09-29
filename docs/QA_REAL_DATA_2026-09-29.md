@@ -1,21 +1,15 @@
 # Real-data functional QA · 2026-09-29
 
-This records the first isolated CPU smoke pass. The later full-dataset GPU training, editable flowchart, and native batch-inspection results are in [QA_WORKFLOW_FUNCTIONAL_2026-09-29.md](QA_WORKFLOW_FUNCTIONAL_2026-09-29.md).
-
-Source: `/Users/kai/Documents/test_imgage`. Scope: workflow and remote-compute behavior, not model quality approval.
+This records an early isolated CPU workflow smoke pass. The later [full-data functional QA](QA_WORKFLOW_FUNCTIONAL_2026-09-29.md) and [current feature QA](QA_WORKFLOW_PARITY_2026-09-30.md) cover subsequent model and inspection work. Source paths, customer image names, job identifiers, and artifact digests are kept in private QA receipts.
 
 ## Desktop workflow
 
-In an isolated QA Electron session, the Stage 1 folder picker imported 88 images: 80 paired LabelMe annotations and eight unannotated images. The saved split showed 56 train, 16 validation, and eight test images. The UI warned that the data contained defect annotations only, so overkill and production OK/NG quality cannot be established. Stage 2 displayed an existing `Bow` annotation on the first image. In Stage 3, the selected Server 42 profile passed a live SSH/runtime/weight probe on NVIDIA L40S GPU 2 and enabled the training button. The idle telemetry panel now identifies that selected server instead of showing local Apple Silicon as the intended training device. No GPU training was started.
+An isolated Electron session imported 88 customer-provided inspection images: 80 paired LabelMe annotations and eight unannotated images. The saved split showed 56 train, 16 validation, and eight test images. The UI warned that only defect annotations were present, so overkill and production OK/NG quality could not be established. Stage 2 displayed an existing defect annotation. In Stage 3, a selected remote profile passed a live SSH/runtime/weight probe on an NVIDIA L40S GPU and enabled training. This first desktop pass did not submit GPU training.
 
-Stage 5 was checked by switching recipes in the desktop UI: classification changed to anomaly with a matching inspection node; detection opened a four-node detector-only flow. The saved-flow API now retains separate graphs for dataset folder and recipe. Detector ROI inspection remains an optional two-model flow.
+Stage 5 was checked while switching recipes: classification changed to an anomaly inspection node; detection opened a detector-only flow. Saved graphs were scoped by dataset and recipe. Detector ROI inspection required a second model.
 
 ## Isolated remote CPU run
 
-The 80 paired annotations were prepared into a portable full snapshot (160 files, 3,255,889-byte archive). Its local and Server 42 SHA-256 both equal `311cdd615b885fa9649eb22b974c82308ada94707e429dc4a853bb500c55807e`. An eight-pair subset of the same source data was used for a functional smoke run in Server 42's isolated Docker workspace with a QA-only 2 CPU/8 GiB cap.
+The 80 paired annotations were prepared into a portable 160-file snapshot. Local and remote SHA-256 values matched. An eight-pair subset was used in an isolated Docker workspace with a QA-only 2 CPU/8 GiB cap. One segmentation epoch completed and returned a hash-verified checkpoint. The same job completed evaluation on two test images, a single-model Stage 5 flow with preview, single-image inference, benchmark, TorchScript export, and ONNX export. A separate job was canceled after entering `running`; both receipts ended `aborted` with no checkpoint.
 
-Job `job_1790680649_remoteqa` completed one segmentation epoch and returned a hash-verified 31,460,034-byte checkpoint and local receipt. The same job completed remote evaluation on two test images, a four-step Stage 5 segmentation flow with preview, single-image inference, benchmark, and TorchScript and ONNX exports. Job `job_1790681070_cancelqa` was cancelled after its worker reported `running` at step 1; remote status and local receipt ended `aborted`, with no checkpoint. These results prove operation wiring and artifact return, not defect-detection performance.
-
-## Limits
-
-The desktop Start button was enabled after connection and data checks, but no full-dataset GPU training was submitted. The detector-only flow was exercised through backend tests and desktop template display; no real detector checkpoint was trained with this dataset. All images are NG-oriented, so a representative OK set is still needed for overkill and production acceptance testing.
+These results establish operation wiring and artifact return. They do not establish defect-detection performance. A representative OK set and separate GPU-training evidence are required for those claims.

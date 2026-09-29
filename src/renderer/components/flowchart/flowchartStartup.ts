@@ -22,7 +22,7 @@ interface FlowchartStartupOptions {
   isCurrent: () => boolean;
 }
 
-/** The runtime supports one optional detector followed by one inspection model. */
+/** Collect the model references used by an executable graph. */
 export function getFlowchartModelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: VisionTask }> {
   const models: Array<{ job_id: string; task: VisionTask }> = [];
   for (const node of pipeline.nodes) {
@@ -64,7 +64,7 @@ export function pipelineMatchesTask(pipeline: FlowchartPipeline | null, task: Vi
   if (!pipeline) return false;
   if (task === 'detection') return pipeline.nodes.some((node) => node.data.node_type === 'detection_crop');
   const inspections = pipeline.nodes.filter((node) => node.data.node_type === 'inspection');
-  return inspections.length > 0 && inspections.every((node) => node.data.task === task);
+  return inspections.some((node) => node.data.task === task);
 }
 
 /** Confirm a model belongs to the selected source before reading a saved model reference. */
@@ -78,18 +78,16 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
 
   let verifiedJobId = options.getVerifiedJobId();
   if (!verifiedJobId) {
-    if (!options.allowLatestRecovery && !options.completedCurrentJobId) {
-      return { status: 'blocked', reason: 'model_recovery_disabled' };
-    }
-    try {
-      await options.loadEvaluation(undefined, { folderPath: options.folderPath, task: options.task });
-    } catch {
+    if (options.allowLatestRecovery || options.completedCurrentJobId) {
+      try {
+        await options.loadEvaluation(undefined, { folderPath: options.folderPath, task: options.task });
+      } catch {
+        // A saved multi-model graph can be valid even if no single model is
+        // selected in the evaluation tab. Its references are verified below.
+      }
       if (!options.isCurrent()) return { status: 'cancelled' };
-      return { status: 'blocked', reason: 'model_unavailable' };
+      verifiedJobId = options.getVerifiedJobId();
     }
-    if (!options.isCurrent()) return { status: 'cancelled' };
-    verifiedJobId = options.getVerifiedJobId();
-    if (!verifiedJobId) return { status: 'blocked', reason: 'model_unavailable' };
   }
 
   const pipeline = await options.loadSavedPipeline();
@@ -99,11 +97,13 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
     const models = getFlowchartModelReferences(pipeline);
     if (models.length > 0) {
       await options.verifyModels(options.folderPath, models);
+    } else if (!verifiedJobId) {
+      return { status: 'blocked', reason: options.allowLatestRecovery ? 'model_unavailable' : 'model_recovery_disabled' };
     }
   } catch {
     if (!options.isCurrent()) return { status: 'cancelled' };
     return { status: 'blocked', reason: 'saved_model_mismatch' };
   }
   if (!options.isCurrent()) return { status: 'cancelled' };
-  return { status: 'ready', pipeline, verifiedJobId };
+  return { status: 'ready', pipeline, verifiedJobId: verifiedJobId || '' };
 }

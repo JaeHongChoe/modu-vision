@@ -30,10 +30,12 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { ComputeServerPanel } from '../compute/ComputeServerPanel';
+import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
 import type { VisionTask } from '../../types';
 
 export const WizardHeader: React.FC = () => {
   const [showComputePanel, setShowComputePanel] = useState(false);
+  const [showProjectPanel, setShowProjectPanel] = useState(false);
   const {
     activeStep,
     setStep,
@@ -43,6 +45,7 @@ export const WizardHeader: React.FC = () => {
     setLanguage,
     backendStatus,
     projectName,
+    projectError,
   } = useProjectStore();
   const {
     profiles, selectedProfileId, isLoaded, isLoading, loadError, error,
@@ -161,7 +164,7 @@ export const WizardHeader: React.FC = () => {
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
       {/* Top Application Bar (Draggable Electron Region) */}
       <div
-        className="h-10 px-4 flex items-center justify-between border-b border-[#2B3547] bg-[#0E121A]"
+        className={`h-10 flex items-center justify-between border-b border-[#2B3547] bg-[#0E121A] ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         {/* Left: Branding & Active Project Moniker */}
@@ -176,9 +179,12 @@ export const WizardHeader: React.FC = () => {
             VISION AI STUDIO
           </span>
           <span className="text-xs text-slate-500">|</span>
-          <span className="text-xs text-slate-400 font-mono tracking-tight truncate max-w-xs">
-            {projectName}
-          </span>
+          <button type="button" onClick={() => setShowProjectPanel(true)} title="프로젝트 관리" className="group flex max-w-xs items-center gap-1.5 rounded border border-transparent px-2 py-1 text-xs text-slate-300 hover:border-[#3B536B] hover:bg-[#1B2B3F] hover:text-white">
+            <FolderKanban className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+            <span className="truncate font-semibold tracking-tight">{projectName}</span>
+            <ChevronDown className="h-3 w-3 shrink-0 text-slate-500 group-hover:text-cyan-300" />
+          </button>
+          {projectError && <button type="button" onClick={() => setShowProjectPanel(true)} title={projectError} className="max-w-[180px] truncate rounded border border-red-700/50 bg-red-950/30 px-2 py-1 text-[10px] text-red-300">프로젝트 오류 · 자세히</button>}
         </div>
 
         {/* Right: Hardware Annunciator LED, Daemon Port & Controls */}
@@ -352,6 +358,7 @@ export const WizardHeader: React.FC = () => {
         </nav>
       </div>
       {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
+      {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
     </header>
   );
 };

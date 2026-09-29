@@ -60,8 +60,16 @@ from backend.engine.classification.model import create_classification_model
 from backend.engine.classification.metrics import compute_classification_metrics
 
 
-REAL_OPERATIONAL_SERVER = Path("/Users/kai/Downloads/운영서버")
-REAL_BACKUP_QC = Path("/Volumes/backup/Reference_QC_데이터")
+@pytest.fixture
+def real_dataset_dir() -> Path:
+    """Run local real-data checks only when a dataset is explicitly supplied."""
+    configured = os.environ.get("VISION_AI_STUDIO_REAL_DATASET_DIR")
+    if not configured:
+        pytest.skip("Set VISION_AI_STUDIO_REAL_DATASET_DIR to opt in to real-data tests")
+    path = Path(configured).expanduser()
+    if not path.is_dir():
+        pytest.skip("Configured real-data directory is unavailable")
+    return path
 
 
 class TestWebPAndFormatValidation:
@@ -90,7 +98,7 @@ class TestWebPAndFormatValidation:
 
     def test_double_extension_sanitization(self):
         """Removes duplicate extension artifacts (.jpg.jpg) returning clean stems."""
-        assert sanitize_file_stem("diag_00_G107_M1-c_Photo-L1-11.jpg.jpg") == "diag_00_G107_M1-c_Photo-L1-11"
+        assert sanitize_file_stem("inspection_001.jpg.jpg") == "inspection_001"
         assert sanitize_file_stem("sample_part.png.png") == "sample_part"
         assert sanitize_file_stem("normal_image.jpg") == "normal_image"
         assert sanitize_file_stem(Path("/some/dir/inspect_123.jpg.jpg")) == "inspect_123"
@@ -222,11 +230,11 @@ class TestHierarchicalClassificationAdapter:
         Image.new("RGB", (32, 32), (0, 255, 0)).save(ok_folder / "img_ok2.jpg")
 
         # Create NG folders with defect names in parentheses
-        ng_scratch = root / "NG" / "ZJ13" / "G3834(Mount Guide Scratch)"
+        ng_scratch = root / "NG" / "SamplePart" / "Part(Scratch)"
         ng_scratch.mkdir(parents=True)
         Image.new("RGB", (32, 32), (255, 0, 0)).save(ng_scratch / "img_ng1.jpg")
 
-        ng_white_spot = root / "NG" / "YP29" / "G3898(접합면 White Spot)"
+        ng_white_spot = root / "NG" / "OtherPart" / "Part(White Spot)"
         ng_white_spot.mkdir(parents=True)
         Image.new("RGB", (32, 32), (255, 255, 0)).save(ng_white_spot / "img_ng2.jpg")
 
@@ -251,10 +259,9 @@ class TestHierarchicalClassificationAdapter:
         tensor, label_idx = ds[0]
         assert tensor.shape == (3, 64, 64)
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_real_operational_server_hierarchical_classification(self):
-        """Verifies ingestion of real /Users/kai/Downloads/운영서버."""
-        res = HierarchicalClassificationAdapter.parse_directory(REAL_OPERATIONAL_SERVER, mode="binary")
+    def test_real_operational_server_hierarchical_classification(self, real_dataset_dir: Path):
+        """Verifies ingestion of an explicitly configured real dataset."""
+        res = HierarchicalClassificationAdapter.parse_directory(real_dataset_dir, mode="binary")
         assert res["total_images"] >= 80
         assert "OK" in res["classes"]
         assert "NG" in res["classes"]
@@ -266,8 +273,8 @@ class TestLabelMeAdapters:
 
     def test_labelme_parsing_and_microscopic_flaw_preservation(self, tmp_path: Path):
         """Parses LabelMe JSON with sub-pixel micro-flaw, retaining >= 1px dimension."""
-        json_file = tmp_path / "ng_0001__Mount Guide Scratch___B_Photo-L1-03.json"
-        img_file = tmp_path / "ng_0001__Mount Guide Scratch___B_Photo-L1-03.jpg"
+        json_file = tmp_path / "defect_sample_001.json"
+        img_file = tmp_path / "defect_sample_001.jpg"
         Image.new("RGB", (100, 100), color=(100, 100, 100)).save(img_file)
 
         # Polygon with tiny 0.4 x 0.4 px flaw
@@ -445,10 +452,9 @@ class TestFlexibleAnomalyDataset:
         assert summary["split"] == {"train": 8, "val": 3, "test": 3}
         assert summary["classes"] == {"good": 10, "defect": 4}
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_real_operational_server_anomaly_inspection(self):
-        """Loads real /Users/kai/Downloads/운영서버 without train/good crashing."""
-        summary = inspect_industrial_dataset(REAL_OPERATIONAL_SERVER, task="anomaly")
+    def test_real_operational_server_anomaly_inspection(self, real_dataset_dir: Path):
+        """Loads configured real data without train/good crashing."""
+        summary = inspect_industrial_dataset(real_dataset_dir, task="anomaly")
         assert summary["status"] == "success"
         assert summary["total_images"] > 0
         assert "good" in summary["classes"]
@@ -516,11 +522,10 @@ class TestImportIndustrialEndpoint:
         assert "adapter_used" in data
         assert "HierarchicalClassificationAdapter" in data["adapter_used"]
 
-    @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
-    def test_import_industrial_endpoint_real_server(self, client: TestClient):
-        """Calls POST /api/dataset/import-industrial on real /Users/kai/Downloads/운영서버."""
+    def test_import_industrial_endpoint_real_server(self, client: TestClient, real_dataset_dir: Path):
+        """Calls POST /api/dataset/import-industrial on configured real data."""
         payload = {
-            "folder_path": str(REAL_OPERATIONAL_SERVER),
+            "folder_path": str(real_dataset_dir),
             "task": "classification",
             "options": {"mode": "binary"},
         }

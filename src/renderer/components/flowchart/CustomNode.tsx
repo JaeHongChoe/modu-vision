@@ -14,6 +14,7 @@ import React from 'react';
 import {
   AlertTriangle,
   Camera,
+  Crop,
   Cpu,
   Layers,
   Microscope,
@@ -85,6 +86,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return <Camera className="w-3.5 h-3.5 text-cyan-400" />;
       case 'detection_crop':
         return <Scan className="w-3.5 h-3.5 text-amber-400" />;
+      case 'fixed_roi':
+        return <Crop className="w-3.5 h-3.5 text-sky-400" />;
       case 'inspection':
         return <Microscope className="w-3.5 h-3.5 text-purple-400" />;
       case 'decision':
@@ -109,6 +112,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 },
         ];
+      case 'fixed_roi':
+        return [{ id: 'in_img', name: 'Original image', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 }];
       case 'inspection':
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
@@ -134,6 +139,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: isDetectorOnly ? 'DEFECT BOXES' : 'ROI CROPS', pinNumber: 1 },
         ];
+      case 'fixed_roi':
+        return [{ id: 'out_roi', name: 'Fixed ROI', type: 'image', direction: 'out', label: 'ROI OUT', pinNumber: 1 }];
       case 'inspection':
         return [
           { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
@@ -189,8 +196,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       <div className="h-8 bg-[#131822] border-b border-[#2B3547] px-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           {getNodeIcon()}
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300 font-bold truncate max-w-[110px]">
-            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION') : nodeType}
+          <span className="text-[11px] font-mono uppercase tracking-wide text-slate-200 font-bold truncate max-w-[120px]">
+            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
+              : nodeType === 'fixed_roi' ? 'FIXED ROI' : nodeType}
           </span>
         </div>
 
@@ -224,20 +232,20 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
       {/* Node Label & Primary Specs */}
       <div className="p-3 bg-[#1A212E]">
-        <h4 className="text-xs font-bold text-[#F8FAFC] truncate mb-2">{node.data.label}</h4>
+        <h4 className="text-[13px] font-bold text-[#F8FAFC] truncate mb-2" title={node.data.label}>{node.data.label}</h4>
 
         {/* Specs Table */}
         <div className="space-y-1 text-[11px] font-mono bg-[#131822] p-2 rounded border border-[#2B3547]">
           {(nodeType === 'inspection' || nodeType === 'detection_crop') && node.data.task && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">TASK:</span>
+              <span className="text-slate-400">TASK:</span>
               <span className="text-slate-300 font-semibold">{node.data.task.toUpperCase()}</span>
             </div>
           )}
           {(nodeType === 'inspection' || nodeType === 'detection_crop' ||
             (nodeType === 'decision' && node.data.rule === 'score_gt_threshold')) && node.data.threshold !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">THRESHOLD:</span>
+              <span className="text-slate-400">THRESHOLD:</span>
               <span className="text-cyan-400 font-bold tabular-nums">
                 τ = {node.data.threshold.toFixed(2)}
               </span>
@@ -245,13 +253,21 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           )}
           {nodeType === 'detection_crop' && node.data.crop_padding !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">ROI PADDING:</span>
+              <span className="text-slate-400">ROI PADDING:</span>
               <span className="text-slate-300 tabular-nums">{node.data.crop_padding} px</span>
+            </div>
+          )}
+          {nodeType === 'fixed_roi' && Array.isArray(node.data.params?.roi_bbox) && (
+            <div className="space-y-0.5">
+              <span className="text-slate-400">SOURCE PIXELS:</span>
+              <div className="text-sky-300 tabular-nums">
+                {node.data.params?.roi_bbox?.[0]}, {node.data.params?.roi_bbox?.[1]} → {node.data.params?.roi_bbox?.[2]}, {node.data.params?.roi_bbox?.[3]}
+              </div>
             </div>
           )}
           {nodeType === 'decision' && node.data.rule && (
             <div className="flex justify-between items-center">
-              <span className="text-[#64748B]">RULE:</span>
+              <span className="text-slate-400">RULE:</span>
               <span className="text-amber-400 font-semibold">{node.data.rule}</span>
             </div>
           )}

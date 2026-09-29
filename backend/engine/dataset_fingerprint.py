@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Iterable, Optional
 
-from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.annotation_storage import dataset_annotation_dir, request_project_root
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 
 
@@ -20,15 +20,26 @@ _LABEL_EXTENSIONS = {".json", ".txt", ".xml", ".csv", ".yaml", ".yml"}
 _TRACKED_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS | _LABEL_EXTENSIONS
 
 
-def _files_under(root: Path) -> Iterable[Path]:
+def _files_under(root: Path, excluded_project: Optional[Path] = None) -> Iterable[Path]:
     if not root.is_dir():
         return
     for directory, names, files in os.walk(root, followlinks=False):
+        folder = Path(directory)
         names[:] = sorted(name for name in names if not name.startswith(".") and not name.startswith("__"))
+        if excluded_project is not None:
+            if folder == excluded_project:
+                names[:] = [name for name in names if name not in {
+                    "annotations", "dataset", "flowcharts", "label_suggestions",
+                    "models", "reports", "versions",
+                }]
+            else:
+                names[:] = [name for name in names if (folder / name).resolve() != excluded_project]
         for name in sorted(files):
             if name.startswith(".") or name.startswith("._"):
                 continue
             path = Path(directory) / name
+            if folder == excluded_project and name == "project.json":
+                continue
             if path.suffix.lower() in _TRACKED_EXTENSIONS and path.is_file():
                 yield path
 
@@ -51,6 +62,7 @@ def fingerprint_dataset(
     *,
     studio_root: Path = Path("./annotations"),
     split_manifest: Optional[Path] = None,
+    use_scope: bool = True,
 ) -> str:
     """Return a deterministic version for source images, labels, and split.
 
@@ -65,10 +77,13 @@ def fingerprint_dataset(
     digest.update(str(folder).encode("utf-8", "surrogateescape"))
     digest.update(b"\0")
 
-    for path in _files_under(folder):
+    project_root = request_project_root()
+    if project_root is not None and not project_root.is_relative_to(folder):
+        project_root = None
+    for path in _files_under(folder, project_root):
         _update_file(digest, path, f"source/{path.relative_to(folder).as_posix()}")
 
-    studio_dir = dataset_annotation_dir(folder, studio_root)
+    studio_dir = dataset_annotation_dir(folder, studio_root, use_scope=use_scope)
     for path in _files_under(studio_dir):
         _update_file(digest, path, f"studio/{path.relative_to(studio_dir).as_posix()}")
 

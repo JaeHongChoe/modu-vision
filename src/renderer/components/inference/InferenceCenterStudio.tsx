@@ -11,7 +11,7 @@
  * - Zero diffuse glows, zero optical blurs, zero gradients, 1px precision borders
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -33,6 +33,7 @@ import { LedAnnunciator } from '../common/LedAnnunciator';
 import type { RuntimeExportResult } from '../../types';
 import { selectInferenceJobId } from './selectInferenceJob';
 import { BatchInspectionPanel } from './BatchInspectionPanel';
+import { FlowPackagePanel } from './FlowPackagePanel';
 import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
@@ -69,6 +70,17 @@ export const InferenceCenterStudio: React.FC = () => {
   const [exportFormat, setExportFormat] = useState<'onnx' | 'torchscript'>('onnx');
   const quantizeFp16 = false;
   const [resolution, setResolution] = useState<number>(256);
+  const flowPackageRef = useRef<HTMLDivElement>(null);
+
+  const showFlowPackage = () => {
+    const panel = flowPackageRef.current;
+    if (!panel) return;
+    panel.focus({ preventScroll: true });
+    panel.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
 
   useEffect(() => {
     setExportResult(null);
@@ -148,12 +160,12 @@ python infer.py --self-test`;
       <OperatorGuidanceBanner step={6} />
 
       {/* Title & Action Strip */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 border-t-0">
-        <div>
+      <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <div className="flex items-center space-x-2.5">
             <Server className="w-5 h-5 text-slate-300" />
             <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              {isKo ? '인퍼런스 센터 및 모델 내보내기' : 'Inference Center & Model Export'}
+              {isKo ? '검사 결과 및 플로우 배포' : 'Inspection Results & Flow Deployment'}
             </h2>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A212E] text-slate-300 border border-[#2B3547]">
               STAGE 6
@@ -161,17 +173,27 @@ python infer.py --self-test`;
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {isKo
-              ? '합성 입력으로 로드된 모델의 계산 시간만 측정하고 Python 모델 패키지를 내보냅니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.'
-              : 'Benchmark the loaded model forward pass with synthetic input and export a Python model package.'}
+              ? '5단계에서 저장한 검사 플로우를 실제 이미지로 확인하고, 결과 이력과 전체 플로우 패키지를 관리하세요.'
+              : 'Inspect real images with the saved Stage 5 flow, review results, and export the complete flow.'}
           </p>
         </div>
 
-        {/* Global Trigger Actions */}
-        <div className="flex items-center space-x-3">
+        {/* The complete saved flow is the primary Stage 6 delivery. */}
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <button
+            type="button"
+            onClick={showFlowPackage}
+            aria-controls="whole-flow-package-panel"
+            className="flex items-center gap-2 rounded border border-sky-500 bg-sky-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
+          >
+            <Package className="h-4 w-4" />
+            <span>{isKo ? '전체 검사 플로우 내보내기' : 'Export Complete Inspection Flow'}</span>
+          </button>
+          <button
+            type="button"
             onClick={handleBenchmark}
             disabled={isBenchmarking || isFindingModel || !jobId}
-            className="flex items-center space-x-2 px-3.5 py-2 bg-[#1A212E] hover:bg-[#2B3547] active:bg-[#0B0E14] border border-[#2B3547] rounded text-xs font-semibold cursor-pointer transition-colors text-slate-200"
+            className="flex items-center gap-2 rounded border border-[#2B3547] bg-[#1A212E] px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-[#2B3547] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Gauge className={`w-4 h-4 text-slate-300 ${isBenchmarking ? 'animate-spin' : ''}`} />
             <span>
@@ -186,19 +208,20 @@ python infer.py --self-test`;
           </button>
 
           <button
+            type="button"
             onClick={handleExport}
             disabled={isExporting || isFindingModel || !jobId || task === 'anomaly'}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded border border-[#10B981] transition-colors cursor-pointer text-xs"
+            className="flex items-center gap-2 rounded border border-[#3C5268] bg-[#1A212E] px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-[#2B3547] disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Package className="w-4 h-4" />
             <span>
               {isExporting
                 ? isKo
-                  ? '패키징 생성 중...'
+                  ? '단일 모델 내보내는 중...'
                   : 'Exporting...'
                 : isKo
-                ? 'Python 모델 패키지 내보내기'
-                : 'Export Runtime Package'}
+                ? '단일 모델 Python 패키지'
+                : 'Export Single Model Package'}
             </span>
           </button>
         </div>
@@ -207,8 +230,8 @@ python infer.py --self-test`;
       {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
       <div role="note" className="rounded border border-[#364357] bg-[#131822] p-2 text-xs text-slate-300">
         {isKo
-          ? 'Python 내보내기는 선택한 모델 하나를 패키징합니다. 5단계의 모델 연결·ROI 크롭·판정 룰은 포함되지 않으며, 패키지 config.json의 임계값도 저장된 플로우와 비교해 확인해야 합니다.'
-          : 'Python export packages one model. It does not include Step 5 model connections, ROI crops, or decision rules; check the package threshold against the saved flow.'}
+          ? '전체 플로우 패키지는 5단계의 모델 연결·ROI 전달·판정 분기를 함께 담습니다. 단일 모델 Python 패키지는 아래의 별도 도구이며, 저장된 검사 플로우를 포함하지 않습니다.'
+          : 'The complete flow package includes Stage 5 model connections, ROI routing, and verdict branches. The single model Python package below is a separate tool.'}
       </div>
       {task === 'anomaly' && (
         <div role="status" className="rounded border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-200">
@@ -218,6 +241,11 @@ python infer.py --self-test`;
 
       <BatchInspectionPanel />
 
+      <div id="whole-flow-package-panel" ref={flowPackageRef} tabIndex={-1}
+        className="scroll-mt-4 rounded-lg focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400">
+        <FlowPackagePanel sourceFolder={sourceFolder} task={task} />
+      </div>
+
       {/* Main Grid: 2 Column Bay */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Left Column: Industrial-Style Precision Digital Instrument Panel */}
@@ -225,7 +253,7 @@ python infer.py --self-test`;
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
               <Zap className="w-4 h-4 text-amber-400" />
-              <span>{isKo ? '실시간 하드웨어 가속 계측 패널' : 'Hardware Telemetry Instruments'}</span>
+              <span>{isKo ? '단일 모델 계산 속도 계측' : 'Single Model Forward Benchmark'}</span>
             </h3>
             <span className="text-[11px] text-slate-300 font-mono bg-[#1A212E] px-2.5 py-0.5 rounded border border-[#2B3547]">
               {benchmarkResult?.device_name || backendStatus.deviceName || 'Unknown device'}
@@ -383,7 +411,7 @@ python infer.py --self-test`;
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
               <Package className="w-4 h-4 text-emerald-400" />
-              <span>{isKo ? '독립 실행 패키지 아티팩트' : 'Standalone Package Manifest'}</span>
+              <span>{isKo ? '단일 모델 패키지 아티팩트' : 'Single Model Package Manifest'}</span>
             </h3>
             <span className="text-[10px] font-mono text-slate-400 tabular-nums">
               {exportResult?.total_files ?? 0} FILES INDEXED

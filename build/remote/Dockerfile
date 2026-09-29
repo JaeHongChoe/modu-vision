@@ -1,6 +1,6 @@
 # Isolated remote worker runtime. Application code is uploaded per run, not baked in.
-# The default base digest is cached on Server 42 as
-# pytorch/pytorch:2.6.0-cuda12.6-cudnn9-devel. Override BASE_IMAGE for other hosts.
+# Pin the default PyTorch CUDA base digest for reproducible worker builds.
+# Override BASE_IMAGE when a compatible host needs a different base.
 ARG BASE_IMAGE=pytorch/pytorch@sha256:faa67ebc9c9733bf35b7dae3f8640f5b4560fd7f2e43c72984658d63625e4487
 FROM ${BASE_IMAGE}
 

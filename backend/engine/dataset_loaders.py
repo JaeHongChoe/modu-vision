@@ -20,6 +20,8 @@ import logging
 import os
 import random
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
@@ -35,6 +37,29 @@ logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
 SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+_REQUEST_SPLIT_ROOT: ContextVar[Optional[Path]] = ContextVar("project_split_root", default=None)
+
+
+def set_request_split_root(path: Path) -> Token:
+    return _REQUEST_SPLIT_ROOT.set(Path(path).resolve())
+
+
+def reset_request_split_root(token: Token) -> None:
+    _REQUEST_SPLIT_ROOT.reset(token)
+
+
+def scoped_split_root(default: Path) -> Path:
+    return _REQUEST_SPLIT_ROOT.get() or Path(default)
+
+
+@contextmanager
+def split_root_scope(path: Optional[str | Path]):
+    token = set_request_split_root(Path(path)) if path is not None else None
+    try:
+        yield
+    finally:
+        if token is not None:
+            reset_request_split_root(token)
 
 
 def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
@@ -45,7 +70,7 @@ def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
     candidate_roots = (root, root.parent) if root.name == "classification" else (root,)
     for selected_root in candidate_roots:
         key = hashlib.sha256(str(selected_root).encode("utf-8")).hexdigest()
-        manifest = SPLIT_MANIFEST_DIR / f"{key}.json"
+        manifest = scoped_split_root(SPLIT_MANIFEST_DIR) / f"{key}.json"
         if not manifest.is_file():
             continue
         try:

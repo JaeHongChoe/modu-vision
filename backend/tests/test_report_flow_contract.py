@@ -36,11 +36,12 @@ def test_detection_report_calls_top_class_match_only_and_explains_object_metric(
 def test_latest_report_uses_resolved_model_id(tmp_path, monkeypatch, report_format):
     # Evaluation is the expensive dependency; the report assembly and disk write
     # remain real. The returned job_id is what the completed model actually used.
+    example_job_id = "job_1234567890_example"
     monkeypatch.setattr(
         routes_report,
         "run_or_load_evaluation",
         lambda **_kwargs: {
-            "job_id": "job_1790668121_694c50",
+            "job_id": example_job_id,
             "task": "segmentation",
             "metrics": {"miou": 0.49},
             "confusion_matrix": {"classes": ["OK", "Defect"], "matrix": [[0, 0], [5, 11]]},
@@ -60,7 +61,7 @@ def test_latest_report_uses_resolved_model_id(tmp_path, monkeypatch, report_form
     assert result["file_path"] == str(target)
     if report_format == "json":
         payload = json.loads(target.read_text(encoding="utf-8"))
-        assert payload["job_id"] == "job_1790668121_694c50"
+        assert payload["job_id"] == example_job_id
     else:
         html = target.read_text(encoding="utf-8")
-        assert "<strong>Job ID:</strong> job_1790668121_694c50" in html
+        assert f"<strong>Job ID:</strong> {example_job_id}" in html

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` task by task. Each task has its own tests and review.
 
-**Goal:** Add configurable SSH compute servers, starting with Server 42, while preserving the local six-stage workflow and model provenance.
+**Goal:** Add configurable SSH compute servers, starting with a remote QA server, while preserving the local six-stage workflow and model provenance.
 
 **Architecture:** The local FastAPI daemon remains the renderer's only API. It stages task-ready input, launches a versioned remote worker over verified SSH, tracks durable job state, and retrieves hash-checked artifacts. Compute operations use the server associated with their model job; local mode remains the default.
 
@@ -13,10 +13,10 @@
 ## Global constraints
 
 - Do not expose a remote HTTP API or renderer credential.
-- Do not hard-code Server 42 into product logic; configure it as one SSH profile.
+- Do not hard-code the remote QA server into product logic; configure it as one SSH profile.
 - Preserve local dataset/annotation/split ownership and source fingerprint.
 - Never infer cancellation or completion from a lost SSH connection.
-- Do not start a GPU training job on Server 42 during implementation without a separate resource decision.
+- Do not start a GPU training job on the remote QA server during implementation without a separate resource decision.
 
 ## Review focus
 
@@ -35,7 +35,7 @@
 - [ ] Write API/validation tests for saved profiles, strict SSH host checking, path rejection, and no credential fields; run them red.
 - [ ] Implement profile storage with atomic JSON writes under app user data and subprocess argument vectors.
 - [ ] Add `/api/compute/profiles`, `/api/compute/selection`, and `/api/compute/profiles/{id}/probe`; run focused tests green.
-- [ ] Review error codes and verify a read-only SSH probe on 42 without starting a job.
+- [ ] Review error codes and verify a read-only SSH probe on the remote QA server without starting a job.
 
 ## Task 2: Portable snapshot and worker protocol
 
@@ -89,12 +89,12 @@
 
 - [ ] Write red tests for server-bound benchmark, remote export return path, and failed/missing artifact.
 - [ ] Implement worker operations and local result download.
-- [ ] Document Python and Docker runtimes, SSH setup, data transfer, resource selection, cleanup, and Server 42 profile fields.
+- [ ] Document Python and Docker runtimes, SSH setup, data transfer, resource selection, cleanup, and remote QA server profile fields.
 - [ ] Run backend suite, frontend suite, typecheck/build, and packaged-app checks.
 
-## Task 7: Live Server 42 connection proof
+## Task 7: Remote QA server connection proof
 
-- [ ] Configure an isolated profile under this Mac's app data and provision its worker runtime without altering existing 42 services.
-- [ ] Verify SSH host identity, worker protocol/runtime imports, L40S visibility, writable remote root, free space, and a no-GPU worker probe.
+- [ ] Configure an isolated profile under the desktop app's user data and provision its worker runtime without altering existing services.
+- [ ] Verify SSH host identity, worker protocol/runtime imports, accelerator visibility, writable remote root, free space, and a no-GPU worker probe.
 - [ ] In the packaged app, verify profile selection and clear readiness/error states. Run a GPU training smoke only after explicit resource approval; otherwise report that boundary.
 - [ ] Check source-data hashes, Git diff, full test output, and remote branch HEAD before reporting completion.

@@ -11,12 +11,13 @@ Validates:
   6. Decision rule engine: any_defect_is_ng, score_gt_threshold, max_flaws_allowed.
   7. Non-standard image formats (1-channel L, 4-channel RGBA, 16-bit TIFF) and 45MP memory safe capping.
   8. API endpoints: /pipeline, /sample-images, /run.
-  9. Real semiconductor manufacturing image execution from /Users/kai/Downloads/운영서버.
+  9. Optional real manufacturing image execution via MODU_VISION_REAL_TEST_DIR.
 """
 
 from __future__ import annotations
 
 import base64
+import os
 from pathlib import Path
 import pytest
 import numpy as np
@@ -282,6 +283,40 @@ def test_non_standard_formats_and_45mp(engine, tmp_path):
     assert max(read_img.shape[:2]) <= 1600
 
 
+def test_explicit_missing_inspection_path_never_substitutes_image_id_or_demo(tmp_path, monkeypatch):
+    from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+
+    monkeypatch.chdir(tmp_path)
+    dataset = tmp_path / "datasets"
+    dataset.mkdir()
+    cv2.imwrite(str(dataset / "different.png"), np.zeros((32, 32, 3), dtype=np.uint8))
+    engine = FlowchartEngine(device="cpu")
+    monkeypatch.setattr(engine, "_inspect_crops", lambda *_: ([], 0.0, "passed"))
+    pipeline = get_single_segmentation_flowchart("job_inspect")
+
+    with pytest.raises(FileNotFoundError, match="inspection image"):
+        engine.execute(pipeline=pipeline, image_path=str(tmp_path / "missing.png"), image_id="different")
+    with pytest.raises(FileNotFoundError, match="inspection image"):
+        engine.execute(pipeline=pipeline, image_path=str(tmp_path / "missing.png"), image=np.zeros((32, 32, 3), dtype=np.uint8))
+
+
+def test_image_id_alone_cannot_resolve_ambiguous_local_or_synthetic_input(tmp_path, monkeypatch):
+    from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+
+    monkeypatch.chdir(tmp_path)
+    dataset = tmp_path / "datasets"
+    dataset.mkdir()
+    cv2.imwrite(str(dataset / "different.png"), np.zeros((32, 32, 3), dtype=np.uint8))
+    engine = FlowchartEngine(device="cpu")
+    monkeypatch.setattr(engine, "_inspect_crops", lambda *_: ([], 0.0, "passed"))
+    pipeline = get_single_segmentation_flowchart("job_inspect")
+
+    with pytest.raises(ValueError, match="inspection image"):
+        engine.execute(pipeline=pipeline, image_id="different")
+    with pytest.raises(ValueError, match="inspection image"):
+        engine.execute(pipeline=pipeline)
+
+
 def test_api_flowchart_endpoints(client, monkeypatch, tmp_path):
     """Validates FastAPI routes: /pipeline, /sample-images, /run."""
     monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
@@ -318,25 +353,23 @@ def test_api_flowchart_endpoints(client, monkeypatch, tmp_path):
 
 def test_real_manufacturing_images(engine):
     """
-    Validates end-to-end execution on real operational images from
-    /Users/kai/Downloads/운영서버 if available on the system.
+    Validates end-to-end execution on an explicitly supplied real image folder.
     """
-    candidate_dirs = [
-        Path("/Users/kai/Downloads/운영서버/test_crop_output"),
-        Path("/Users/kai/Downloads/운영서버/visual_inspection"),
-    ]
+    configured = os.environ.get("MODU_VISION_REAL_TEST_DIR")
+    if not configured:
+        pytest.skip("Set MODU_VISION_REAL_TEST_DIR to opt in to real image QA.")
+    candidate_dir = Path(configured).expanduser()
     test_file = None
-    for d in candidate_dirs:
-        if d.is_dir():
-            for f in d.glob("*.png"):
-                if f.is_file() and f.stat().st_size > 0:
-                    test_file = f
-                    break
+    if candidate_dir.is_file():
+        test_file = candidate_dir
+    elif candidate_dir.is_dir():
+        for extension in ("*.png", "*.jpg", "*.jpeg", "*.tif", "*.tiff", "*.webp"):
+            test_file = next((f for f in candidate_dir.glob(extension) if f.is_file() and f.stat().st_size > 0), None)
             if test_file:
                 break
 
     if not test_file:
-        pytest.skip("Operational directory /Users/kai/Downloads/운영서버 not populated with sample PNGs.")
+        pytest.skip("MODU_VISION_REAL_TEST_DIR has no readable inspection image.")
 
     pipe = get_default_flowchart()
     res = engine.execute(pipeline=pipe, image_path=str(test_file))

@@ -23,7 +23,7 @@ This change addresses reproducible defects found while testing the desktop appli
 - API integration: eight read-only linked pairs yielded 6 train and 2 validation crops. One MPS epoch completed, evaluation produced two predictions, and a TorchScript package ran standalone inference. Source file SHA-256 values were unchanged. The evaluation and standalone defect scores differed by 0.000014 in the parity run.
 - Reproduce the smoke check with `PYTHONPATH=. python qa_artifacts/ng_labelme_api_smoke.py --source /path/to/NG_labelme --work-dir /tmp/modu-vision-qa`.
 - Cancellation regression checks: immediate stop acknowledgement, `stopping` until worker/device cleanup, no overlapping job, and an abort after the final training batch. The renderer checks cover pending stop, stop failure/retry, and cancellation before the start response supplies a job ID. Verification: `380 passed, 2 skipped` in the Python suite; `npm run test:training-cancel`, `npm run typecheck`, and `npm run build` passed.
-- Real-data cancellation smoke: eight linked LabelMe JPG/JSON pairs, CPU training start, immediate stop acknowledgement, `stopping` while the worker is active, then `aborted` after it exits. All 16 source SHA-256 hashes matched before and after. Reproduce with `PYTHONPATH=. python qa_artifacts/ng_labelme_cancel_smoke.py --source /Volumes/backup/Reference_QC_데이터/NG_labelme`.
+- Real-data cancellation smoke: eight linked LabelMe JPG/JSON pairs, CPU training start, immediate stop acknowledgement, `stopping` while the worker is active, then `aborted` after it exits. All 16 source SHA-256 hashes matched before and after. Reproduce with `PYTHONPATH=. python qa_artifacts/ng_labelme_cancel_smoke.py --source /path/to/NG_labelme`.
 
 ## Acceptance limits
 

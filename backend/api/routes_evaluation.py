@@ -13,6 +13,7 @@ Evaluation Results, Interactive Clickable Confusion Matrix & Heatmap Overlays.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -57,11 +58,13 @@ from backend.engine.dataset_loaders import (
 )
 from backend.engine.device import get_device
 from backend.engine.checkpoint_paths import (
+    active_project_models_dir,
     completed_job_receipt,
     is_job_id,
     trusted_checkpoint,
 )
 from backend.engine.dataset_fingerprint import fingerprint_dataset
+from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.trainer import infer
 from backend.utils.error_catalog import format_error_response
 
@@ -138,6 +141,40 @@ def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
     return trusted_checkpoint(job_id, rec.output_dir if rec else None)
 
 
+def _same_label_tree(first: Path, second: Path) -> bool:
+    """Compare migrated labels by path and bytes; copy changes ctime in v1 hashes."""
+    def inventory(root: Path) -> Optional[Dict[str, str]]:
+        if not root.exists():
+            return {}
+        if root.is_symlink() or not root.is_dir():
+            return None
+        files: Dict[str, str] = {}
+        for path in root.rglob("*"):
+            if path.is_symlink():
+                return None
+            if path.is_file():
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for block in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(block)
+                files[path.relative_to(root).as_posix()] = digest.hexdigest()
+        return files
+
+    first_files = inventory(first)
+    second_files = inventory(second)
+    return first_files is not None and second_files is not None and first_files == second_files
+
+
+def _same_optional_file(first: Path, second: Path) -> bool:
+    if first.is_symlink() or second.is_symlink():
+        return False
+    if not first.exists() and not second.exists():
+        return True
+    if not first.is_file() or not second.is_file():
+        return False
+    return hashlib.sha256(first.read_bytes()).digest() == hashlib.sha256(second.read_bytes()).digest()
+
+
 def _matches_source_dataset(
     output_dir: Path,
     source_dataset_path: Optional[str],
@@ -169,15 +206,41 @@ def _matches_source_dataset(
     original_path = Path(original).expanduser().resolve()
     if original_path != selected or original_path.is_relative_to(output_dir.resolve()):
         return False
-    from backend.api.routes_dataset import STUDIO_ANNOTATIONS_DIR, _split_manifest_file
+    from backend.api import routes_dataset
+    from backend.engine.annotation_storage import LEGACY_ANNOTATIONS_ROOT
 
     try:
         current_fingerprint = fingerprint_dataset(
-            selected, studio_root=STUDIO_ANNOTATIONS_DIR, split_manifest=_split_manifest_file(selected),
+            selected, studio_root=routes_dataset.STUDIO_ANNOTATIONS_DIR,
+            split_manifest=routes_dataset._split_manifest_file(selected),
         )
     except OSError:
         return False
-    return current_fingerprint == expected_fingerprint
+    if current_fingerprint == expected_fingerprint:
+        return True
+
+    # A pre-project v1 receipt records the old overlay's ctime. Copying the
+    # unchanged overlay into a project changes ctime, so compare its content
+    # with the original only when the old fingerprint still matches exactly.
+    project_root = scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR)
+    if project_root.resolve() == LEGACY_ANNOTATIONS_ROOT.resolve():
+        return False
+    legacy_split = routes_dataset.SPLIT_MANIFEST_DIR / (
+        hashlib.sha256(str(selected).encode("utf-8")).hexdigest() + ".json"
+    )
+    try:
+        legacy_fingerprint = fingerprint_dataset(
+            selected, studio_root=LEGACY_ANNOTATIONS_ROOT,
+            split_manifest=legacy_split, use_scope=False,
+        )
+        if legacy_fingerprint != expected_fingerprint:
+            return False
+        return _same_label_tree(
+            dataset_annotation_dir(selected, LEGACY_ANNOTATIONS_ROOT, use_scope=False),
+            dataset_annotation_dir(selected, project_root, use_scope=False),
+        ) and _same_optional_file(legacy_split, routes_dataset._split_manifest_file(selected))
+    except OSError:
+        return False
 
 
 def _resolve_job_artifacts(
@@ -249,15 +312,17 @@ def _resolve_job_artifacts(
             # Desktop renderer and backend processes can restart independently.
             # Reopen the newest usable job checkpoint when in-memory records
             # are gone. A model metadata file is required to identify its task.
+            project_models = active_project_models_dir()
             candidates = [
                 p for p in (
                     *Path("./models").glob("job_*/best_model.pt"),
                     *Path("./projects").glob("job_*/models/best_model.pt"),
+                    *(project_models.glob("job_*/best_model.pt") if project_models else ()),
                 )
                 if (p.parent / "model_meta.json").is_file()
                 and trusted_checkpoint(
                     p.parent.name if p.parent.parent.name == "models" else p.parent.parent.name
-                ) == p.absolute()
+                ) == p.resolve()
                 and _matches_source_dataset(p.parent, source_dataset_path, source_task)
             ]
             active = training_job_manager.get_active_job()
@@ -1245,3 +1310,9 @@ def run_inference_benchmark(req: BenchmarkRequest):
         "resolution": f"{res}x{res}",
         "batch_size": 1,
     }
+
+
+# Keep candidate-versus-incumbent evidence under the Stage 4 evaluation API.
+from backend.api.routes_model_comparisons import router as model_comparisons_router
+
+router.include_router(model_comparisons_router)

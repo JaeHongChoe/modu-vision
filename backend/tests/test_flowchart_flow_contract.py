@@ -19,7 +19,9 @@ from backend.engine.flowchart_engine import (
     FlowchartPipeline,
     FlowchartRunRequest,
     get_default_flowchart,
+    get_five_model_chain_flowchart,
     get_single_detection_flowchart,
+    get_single_segmentation_flowchart,
 )
 from backend.engine.segmentation.model import build_segmentation_model
 
@@ -279,6 +281,262 @@ def test_saved_flows_are_scoped_to_dataset_and_recipe(monkeypatch, tmp_path):
     assert len(list(tmp_path.glob("pipeline_classification_*.json"))) == 2
 
 
+def test_project_flowcharts_are_isolated_even_with_the_same_source(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source = tmp_path / "images"
+    source.mkdir()
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    project_a = tmp_path / "project_a"
+    project_b = tmp_path / "project_b"
+    a = client.post("/api/project/create", json={"name": "A", "project_dir": str(project_a)})
+    assert a.status_code == 200
+    flow_a = get_single_segmentation_flowchart()
+    flow_a.name = "Only in A"
+    path = f"/api/flowchart/pipeline?recipe_task=segmentation&source_dataset_path={source}"
+    assert client.post(path, json=flow_a.model_dump()).status_code == 200
+
+    b = client.post("/api/project/create", json={"name": "B", "project_dir": str(project_b)})
+    assert b.status_code == 200
+    assert client.get(f"/api/flowchart/pipeline?inspection_task=segmentation&source_dataset_path={source}").json()["name"] != "Only in A"
+    flow_b = get_single_segmentation_flowchart()
+    flow_b.name = "Only in B"
+    assert client.post(path, json=flow_b.model_dump()).status_code == 200
+
+    assert client.post("/api/project/open", json={"project_dir": str(project_a)}).status_code == 200
+    assert client.get(f"/api/flowchart/pipeline?inspection_task=segmentation&source_dataset_path={source}").json()["name"] == "Only in A"
+    assert client.post("/api/project/open", json={"project_dir": str(project_b)}).status_code == 200
+    assert client.get(f"/api/flowchart/pipeline?inspection_task=segmentation&source_dataset_path={source}").json()["name"] == "Only in B"
+
+
+def test_existing_legacy_flow_is_imported_once_into_active_project(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    legacy = get_single_segmentation_flowchart()
+    legacy.name = "Legacy inspection"
+    routes_flowchart.save_pipeline(legacy, recipe_task="segmentation")
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    project_a = tmp_path / "project_a"
+    project_b = tmp_path / "project_b"
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_a)}).status_code == 200
+    assert client.get("/api/flowchart/pipeline?inspection_task=segmentation").json()["name"] == "Legacy inspection"
+    assert list((project_a / "flowcharts").glob("pipeline_segmentation.json"))
+    assert client.get("/api/flowchart/pipeline/active").json()["name"] == "Legacy inspection"
+    assert client.post("/api/project/create", json={"name": "B", "project_dir": str(project_b)}).status_code == 200
+    assert client.get("/api/flowchart/pipeline?inspection_task=segmentation").json()["name"] != "Legacy inspection"
+
+
+def test_mixed_model_chain_can_be_saved_and_reopened(monkeypatch, tmp_path):
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
+    pipeline = get_single_segmentation_flowchart()
+    first = pipeline.nodes[1]
+    first.data.task = "classification"
+    second = FlowNode(id="segment_two", position={"x": 500, "y": 160}, data=FlowNodeData(
+        label="Second model", node_type="inspection", task="segmentation",
+    ))
+    pipeline.nodes.insert(2, second)
+    pipeline.edges[1].source = second.id
+    pipeline.edges.insert(1, FlowEdge(id="first-second", source=first.id, target=second.id, payload_type="roi"))
+
+    result = routes_flowchart.save_pipeline(pipeline)
+
+    assert result["recipe_task"] == "mixed"
+    reopened = routes_flowchart.get_pipeline(inspection_task="mixed")
+    assert [node.data.task for node in reopened.nodes if node.data.node_type == "inspection"] == [
+        "classification", "segmentation",
+    ]
+
+
+def test_sample_images_only_list_active_project_source(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source_a = tmp_path / "source_a"
+    source_b = tmp_path / "source_b"
+    source_a.mkdir()
+    source_b.mkdir()
+    cv2.imwrite(str(source_a / "a.png"), np.zeros((16, 16, 3), dtype=np.uint8))
+    cv2.imwrite(str(source_b / "b.png"), np.zeros((16, 16, 3), dtype=np.uint8))
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source_a)}).status_code == 200
+    images_a = client.get("/api/flowchart/sample-images").json()["images"]
+    assert [image["name"] for image in images_a] == ["a.png"]
+
+    assert client.post("/api/project/create", json={"name": "B", "project_dir": str(tmp_path / "project_b")}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source_b)}).status_code == 200
+    images_b = client.get("/api/flowchart/sample-images").json()["images"]
+    assert [image["name"] for image in images_b] == ["b.png"]
+
+
+def test_run_without_inline_pipeline_uses_active_project_flow(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    image = tmp_path / "inspection.png"
+    cv2.imwrite(str(image), np.zeros((16, 16, 3), dtype=np.uint8))
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    pipeline = get_single_segmentation_flowchart()
+    pipeline.nodes[1].data.label = "A only model"
+    assert client.post("/api/flowchart/pipeline", json=pipeline.model_dump()).status_code == 200
+    result = client.post("/api/flowchart/run", json={"image_path": str(image)})
+    assert result.status_code == 409
+    assert "A only model" in result.json()["detail"]
+
+
+def test_flow_save_keeps_openable_versions_per_project(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source = tmp_path / "source"
+    source.mkdir()
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    flow.name = "First revision"
+    path = f"/api/flowchart/pipeline?recipe_task=segmentation&source_dataset_path={source}"
+    first = client.post(path, json=flow.model_dump())
+    assert first.status_code == 200
+    first_version = first.json()["version_id"]
+    flow.name = "Second revision"
+    second = client.post(path, json=flow.model_dump())
+    assert second.status_code == 200
+    assert second.json()["version_id"] != first_version
+
+    versions = client.get(f"/api/flowchart/pipelines?source_dataset_path={source}")
+    assert versions.status_code == 200
+    assert [item["name"] for item in versions.json()["pipelines"]] == ["Second revision", "First revision"]
+    assert client.get(f"/api/flowchart/pipelines/{first_version}").json()["name"] == "First revision"
+    assert client.get(f"/api/flowchart/pipeline?inspection_task=segmentation&source_dataset_path={source}").json()["name"] == "Second revision"
+
+    assert client.post("/api/project/create", json={"name": "B", "project_dir": str(tmp_path / "project_b")}).status_code == 200
+    assert client.get(f"/api/flowchart/pipelines?source_dataset_path={source}").json()["pipelines"] == []
+    assert client.get(f"/api/flowchart/pipelines/{first_version}").status_code == 404
+
+
+def test_activating_saved_revision_changes_active_flow_without_creating_another_version(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source = tmp_path / "source"
+    source.mkdir()
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    save_path = "/api/flowchart/pipeline"
+    first = client.post(save_path, params={"recipe_task": "segmentation", "source_dataset_path": str(source)},
+                        json={**flow.model_dump(), "name": "Revision one"})
+    second = client.post(save_path, params={"recipe_task": "segmentation", "source_dataset_path": str(source)},
+                         json={**flow.model_dump(), "name": "Revision two"})
+    assert first.status_code == second.status_code == 200
+    first_id, second_id = first.json()["version_id"], second.json()["version_id"]
+
+    active = client.put(f"/api/flowchart/pipelines/{first_id}/activate",
+                        params={"source_dataset_path": str(source)})
+
+    assert active.status_code == 200
+    assert active.json()["version_id"] == first_id
+    assert active.json()["pipeline"]["name"] == "Revision one"
+    assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["name"] == "Revision one"
+    versions = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)}).json()["pipelines"]
+    assert len(versions) == 2
+    assert {item["version_id"]: item["is_active"] for item in versions} == {first_id: True, second_id: False}
+
+
+def test_saved_revision_cannot_be_activated_for_another_project_source(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source_a, source_b = tmp_path / "source_a", tmp_path / "source_b"
+    source_a.mkdir()
+    source_b.mkdir()
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source_a)}).status_code == 200
+    flow = get_single_segmentation_flowchart()
+    saved = client.post("/api/flowchart/pipeline", params={"source_dataset_path": str(source_a)}, json=flow.model_dump())
+    assert saved.status_code == 200
+    version_id = saved.json()["version_id"]
+
+    assert client.put(f"/api/flowchart/pipelines/{version_id}/activate",
+                      params={"source_dataset_path": str(source_b)}).status_code == 409
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source_b)}).status_code == 200
+    assert client.put(f"/api/flowchart/pipelines/{version_id}/activate",
+                      params={"source_dataset_path": str(source_b)}).status_code == 409
+    assert client.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source_b)}).status_code == 404
+    assert client.post("/api/project/create", json={"name": "B", "project_dir": str(tmp_path / "project_b")}).status_code == 200
+    assert client.put(f"/api/flowchart/pipelines/{version_id}/activate",
+                      params={"source_dataset_path": str(source_a)}).status_code == 404
+
+
+def test_run_uses_active_mixed_flow_revision_when_pipeline_omitted(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    image = tmp_path / "inspection.png"
+    cv2.imwrite(str(image), np.zeros((16, 16, 3), dtype=np.uint8))
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(tmp_path / "project_a")}).status_code == 200
+    pipeline = get_five_model_chain_flowchart()
+    pipeline.nodes[1].data.label = "Active mixed first model"
+    saved = client.post("/api/flowchart/pipeline", json=pipeline.model_dump())
+    assert saved.status_code == 200
+    assert saved.json()["recipe_task"] == "mixed"
+
+    result = client.post("/api/flowchart/run", json={"image_path": str(image)})
+
+    assert result.status_code == 409
+    assert "Active mixed first model" in result.json()["detail"]
+
+
+def test_active_mixed_flow_reopens_after_restart_only_for_same_project_and_source(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
+    source = tmp_path / "source"
+    other_source = tmp_path / "other_source"
+    source.mkdir()
+    other_source.mkdir()
+    project_dir = tmp_path / "project_a"
+    app = create_app(project_dir=str(tmp_path / "workspaces"))
+    client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
+    assert client.post("/api/project/create", json={"name": "A", "project_dir": str(project_dir)}).status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    pipeline = get_five_model_chain_flowchart()
+    assert client.post(f"/api/flowchart/pipeline?source_dataset_path={source}", json=pipeline.model_dump()).status_code == 200
+
+    restarted = create_app(project_dir=str(tmp_path / "workspaces"))
+    again = TestClient(restarted, headers={"X-Vision-Token": restarted.state.api_token})
+    assert again.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(source)}).json()["id"] == "five_model_chain"
+    assert again.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(other_source)}).status_code == 404
+    assert again.put("/api/project/update", json={"source_dataset_dir": str(other_source)}).status_code == 200
+    assert again.get("/api/flowchart/pipeline/active", params={"source_dataset_path": str(other_source)}).status_code == 404
+
+    assert again.post("/api/project/create", json={"name": "B", "project_dir": str(tmp_path / "project_b")}).status_code == 200
+    assert again.get("/api/flowchart/pipeline/active").status_code == 404
+
+
 def test_legacy_roi_flow_does_not_replace_detector_only_default(monkeypatch, tmp_path):
     legacy = tmp_path / "pipeline.json"
     monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", legacy)
@@ -361,7 +619,8 @@ def test_trained_segmentation_checkpoint_with_null_model_name_loads(tmp_path, mo
 
     assert trained
     assert loaded is not None
-    assert engine._model_input_sizes[("segmentation", job_id, "fast")] == (256, 256)
+    key = engine._cache_key("segmentation", job_id, "fast", checkpoint)
+    assert engine._model_input_sizes[key] == (256, 256)
 
 
 def test_checkpoint_accepts_only_local_job_artifacts_without_symlink_escape(tmp_path, monkeypatch):

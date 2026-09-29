@@ -8,17 +8,55 @@ export interface BatchInspectionRow {
   image: ImageMeta;
   state: BatchRowState;
   result?: FlowchartExecutionResult;
+  image_sha256?: string | null;
   error?: string;
+  review?: InspectionReview | null;
+  reviews?: InspectionReview[];
+}
+
+export interface InspectionReview {
+  review_id: string;
+  final_verdict: 'OK' | 'NG' | 'REVIEW';
+  reason: string;
+  reviewer: string;
+  created_at: string;
 }
 
 export interface BatchInspectionReport {
+  run_id?: string;
   source_folder: string;
   task: VisionTask;
   scope: BatchScope;
   pipeline_id: string;
   pipeline_name: string;
+  /** Server-verified identity of this run; absent on legacy pre-provenance runs. */
+  saved_version_id?: string | null;
+  pipeline_hash?: string;
+  model_sha256?: Record<string, string>;
   status: 'running' | 'completed' | 'stopped';
   rows: BatchInspectionRow[];
+}
+
+export interface InspectionHistoryRun extends BatchInspectionReport {
+  run_id: string;
+  pipeline_hash: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectionRunSummary {
+  run_id: string;
+  source_folder: string;
+  task: VisionTask;
+  scope: BatchScope;
+  pipeline_name: string;
+  saved_version_id: string | null;
+  pipeline_hash: string;
+  model_sha256: Record<string, string>;
+  status: 'running' | 'completed' | 'stopped';
+  created_at: string;
+  total: number;
+  counts: Record<string, number>;
 }
 
 export interface BatchInspectionSummary {
@@ -37,12 +75,15 @@ export interface BatchInspectionOptions {
   sourceFolder: string;
   task: VisionTask;
   scope: BatchScope;
+  pipeline?: FlowchartPipeline;
   stopReason?: () => BatchStopReason;
+  onRunCreated?: (runId: string) => void;
   onUpdate?: (report: BatchInspectionReport) => void;
 }
 
 export interface BatchSourceState {
   folderPath: string;
+  projectDir?: string | null;
   task: VisionTask;
   datasetKey: string | null;
   contextRevision: number;
@@ -60,18 +101,29 @@ export function isBatchSourceReady(source: BatchSourceState): boolean {
 export function isBatchSourceCurrent(current: BatchSourceState, started: BatchSourceState): boolean {
   return isBatchSourceReady(current)
     && current.folderPath === started.folderPath
+    && current.projectDir === started.projectDir
     && current.task === started.task
     && current.contextRevision === started.contextRevision;
 }
 
+export function isInspectionHistoryContextCurrent(
+  current: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>,
+  started: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>,
+): boolean {
+  return current.folderPath === started.folderPath
+    && current.projectDir === started.projectDir
+    && current.task === started.task;
+}
+
 export function batchSourceResetKey(source: BatchSourceState): string {
   return JSON.stringify([
-    source.folderPath, source.task, source.datasetKey, source.contextRevision,
+    source.folderPath, source.projectDir, source.task, source.datasetKey, source.contextRevision,
     source.isLoading, source.isSplitting, source.importError,
   ]);
 }
 
 export interface BatchInspectionApi {
+  getActivePipeline?: (sourceFolder: string) => Promise<FlowchartPipeline>;
   getPipeline: (task: VisionTask, sourceFolder: string) => Promise<FlowchartPipeline>;
   verifyModels: (request: { source_dataset_path: string; models: Array<{ job_id: string; task: VisionTask }> }) => Promise<unknown>;
   getImages: (params: {
@@ -82,6 +134,11 @@ export interface BatchInspectionApi {
     split?: string;
   }) => Promise<{ total: number; items: ImageMeta[] }>;
   run: (request: { image_path: string; image_id: string; pipeline: FlowchartPipeline }) => Promise<FlowchartExecutionResult>;
+  /** Server executes the saved run graph and writes its own result atomically. */
+  executeRow?: (runId: string, imagePath: string) => Promise<FlowchartExecutionResult>;
+  createRun?: (report: BatchInspectionReport, pipeline: FlowchartPipeline) => Promise<string>;
+  recordRow?: (runId: string, row: BatchInspectionRow) => Promise<unknown>;
+  finishRun?: (runId: string, status: 'completed' | 'stopped') => Promise<unknown>;
 }
 
 const PAGE_SIZE = 500;
@@ -172,12 +229,65 @@ export function filterBatchRows(rows: BatchInspectionRow[], filter: BatchFilter)
   return rows.filter((row) => row.state === filter);
 }
 
+/** Dispatch a small stop request while the renderer is closing or hot reloading. */
+export function stopInspectionRunKeepalive(
+  runId: string,
+  baseUrl: string,
+  send: typeof fetch = fetch,
+): Promise<Response> {
+  return send(`${baseUrl}/api/inspections/runs/${encodeURIComponent(runId)}/finish`, {
+    method: 'PUT',
+    keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'stopped' }),
+  });
+}
+
+/** Own one run ID so unmount/pagehide cannot finish another inspector's run. */
+export function createInspectionRunExitGuard(stopRun: (runId: string) => void) {
+  let ownedRunId: string | null = null;
+  let closed = false;
+  let stopSent = false;
+  const sendStop = () => {
+    if (closed && ownedRunId && !stopSent) {
+      stopSent = true;
+      stopRun(ownedRunId);
+    }
+  };
+  return {
+    created(runId: string) {
+      if (ownedRunId && ownedRunId !== runId) throw new Error('Inspection run ownership changed.');
+      ownedRunId = runId;
+      sendStop();
+    },
+    close() {
+      closed = true;
+      sendStop();
+    },
+    release(runId: string) {
+      if (ownedRunId === runId) ownedRunId = null;
+    },
+  };
+}
+
 /** Executes the saved source-scoped flow sequentially so each remote result keeps its original image identity. */
 export async function runBatchInspection(
   options: BatchInspectionOptions,
   api: BatchInspectionApi,
 ): Promise<BatchInspectionReport> {
-  const pipeline = await api.getPipeline(options.task, options.sourceFolder);
+  let pipeline: FlowchartPipeline;
+  if (options.pipeline) {
+    pipeline = options.pipeline;
+  } else if (api.getActivePipeline) {
+    try {
+      pipeline = await api.getActivePipeline(options.sourceFolder);
+    } catch (error) {
+      if ((error as { status?: number })?.status !== 404) throw error;
+      pipeline = await api.getPipeline(options.task, options.sourceFolder);
+    }
+  } else {
+    pipeline = await api.getPipeline(options.task, options.sourceFolder);
+  }
   if (options.stopReason?.()) throw new Error('검사 시작 전에 중단되었습니다.');
   const models = modelReferences(pipeline);
   await api.verifyModels({ source_dataset_path: options.sourceFolder, models });
@@ -195,35 +305,62 @@ export async function runBatchInspection(
     rows: images.map((image) => ({ image, state: 'pending' })),
   };
   const publish = () => options.onUpdate?.({ ...report, rows: [...report.rows] });
-  const stop = () => {
+  const stop = async () => {
     report.status = 'stopped';
     report.rows = report.rows.map((row) =>
       row.state === 'pending' || row.state === 'running' ? { image: row.image, state: 'skipped' } : row);
+    if (report.run_id && api.finishRun) {
+      try {
+        await api.finishRun(report.run_id, 'stopped');
+      } catch (error) {
+        // A pagehide keepalive request may already have stopped this same run.
+        if ((error as { status?: number })?.status !== 409) throw error;
+      }
+    }
     publish();
     return report;
   };
+  if (api.createRun) {
+    report.run_id = await api.createRun(report, pipeline);
+    options.onRunCreated?.(report.run_id);
+  }
+  if (options.stopReason?.()) return await stop();
   publish();
 
-  for (let index = 0; index < images.length; index += 1) {
-    if (options.stopReason?.()) return stop();
-    const item = images[index];
-    report.rows[index] = { image: item, state: 'running' };
-    publish();
-    try {
-      const value = await api.run({ image_path: item.file_path, image_id: item.image_id, pipeline });
-      if (options.stopReason?.() === 'source_changed') return stop();
-      const result = verifyResult(item, value);
-      report.rows[index] = { image: item, state: result.final_verdict, result };
-    } catch (error) {
-      if (options.stopReason?.() === 'source_changed') return stop();
-      report.rows[index] = {
-        image: item, state: 'error',
-        error: error instanceof Error ? error.message : String(error),
-      };
+  try {
+    for (let index = 0; index < images.length; index += 1) {
+      if (options.stopReason?.()) return await stop();
+      const item = images[index];
+      report.rows[index] = { image: item, state: 'running' };
+      publish();
+      try {
+        const serverIssued = Boolean(report.run_id && api.executeRow);
+        const value = serverIssued
+          ? await api.executeRow!(report.run_id!, item.file_path)
+          : await api.run({ image_path: item.file_path, image_id: item.image_id, pipeline });
+        if (options.stopReason?.() === 'source_changed') return await stop();
+        const result = verifyResult(item, value);
+        report.rows[index] = { image: item, state: result.final_verdict, result };
+      } catch (error) {
+        if (options.stopReason?.() === 'source_changed') return await stop();
+        report.rows[index] = {
+          image: item, state: 'error',
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+      if (report.run_id && api.recordRow && (!api.executeRow || report.rows[index].state === 'error')) {
+        await api.recordRow(report.run_id, report.rows[index]);
+      }
+      publish();
     }
+    report.status = 'completed';
+    if (report.run_id && api.finishRun) await api.finishRun(report.run_id, 'completed');
     publish();
+    return report;
+  } catch (error) {
+    if (report.run_id && api.finishRun && report.status === 'running') {
+      try { await api.finishRun(report.run_id, 'stopped'); } catch { /* Keep the original error. */ }
+    }
+    throw error;
   }
-  report.status = 'completed';
-  publish();
-  return report;
 }
