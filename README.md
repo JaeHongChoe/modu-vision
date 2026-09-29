@@ -21,7 +21,6 @@
 
 [✨ 핵심 기능](#-핵심-기능-key-features) •
 [📸 스튜디오 갤러리](#-스튜디오-갤러리-studio-gallery) •
-[📊 솔루션 비교](#-산업용-솔루션-비교-comparison-matrix) •
 [🏗 아키텍처](#-시스템-아키텍처-system-architecture) •
 [⚡ 빠른 시작](#-빠른-시작-quick-start) •
 [📦 독립 배포 (.exe / .app)](#-완전-독립형-배포-standalone-binary)
@@ -33,7 +32,7 @@
 ### 🖥️ Main Screen Preview
 <img src="assets/screenshots/02_canvas_labeling.png" width="95%" alt="Modu Vision Main Canvas" style="border-radius: 12px; border: 1px solid #2B3547; box-shadow: 0 16px 36px rgba(0,0,0,0.6);" />
 
-*Inspection Vision Model / Industrial Vision 벤치마크 기반의 다크 스틸 인더스트리얼 테마 & 서브픽셀 정밀 검사 캔버스*
+*직관적인 인더스트리얼 다크 테마 & 서브픽셀 정밀 검사 캔버스*
 
 ---
 
@@ -123,22 +122,6 @@
     </td>
   </tr>
 </table>
-
-<br />
-
----
-
-## 📊 산업용 솔루션 비교 (Comparison Matrix)
-
-| 비교 항목 | **Modu Vision (모두의 비전)** | Inspection Vision Model Suite | Industrial IV / XG | Annotation Suite / Annotation Workflow |
-| :--- | :---: | :---: | :---: | :---: |
-| **44.8MP 기가픽셀 RAW 렌더링** | **✅ 무손실 60fps (Frustum Blit)** | ⚠️ 대용량 시 래그 발생 | ❌ 특정 센서 제한 | ❌ 웹 브라우저 메모리 폭발 |
-| **LabelMe JSON 포맷 네이티브 연동** | **✅ 자동 파싱 및 팔레트 매핑** | ❌ 전용 포맷 변환 필요 | ❌ 전용 포맷 변환 필요 | ⚠️ 수동 플러그인 필요 |
-| **인터넷 없는 폐쇄망 완전 독립 실행** | **✅ 100% Standalone (.exe/.app)** | ⚠️ 동글키 하드웨어 락 | ⚠️ 전용 컨트롤러 종속 | ❌ 클라우드/웹 서버 필수 |
-| **불량 유출 0% (Zero-Escape) 튜닝** | **✅ 전용 트레이드오프 슬라이더** | ⚠️ 복잡한 파라미터 튜닝 | ⚠️ 이진 임계값만 지원 | ❌ 단순 mAP/F1만 표시 |
-| **절차적 인공 결함 자동 생성기** | **✅ 내장 (균열/쇼트/기포 합성)** | ❌ 미지원 | ❌ 미지원 | ⚠️ 단순 이미지 반전/노이즈 |
-| **플랫폼 하드웨어 가속** | **Apple MPS & NVIDIA CUDA** | Windows 전용 | 전용 임베디드 OS | 서버 환경 의존 |
-| **라이선스 및 도입 비용** | **오픈소스 (MIT)** | 수천만원 고가 라이선스 | 수천만원 전용 장비 구매 | 월 구독료 플랜 |
 
 <br />
 
