@@ -84,6 +84,19 @@ def test_segmentation_loader(loader_module, synthetic_data_dir):
     assert mask_t.min() >= 0
 
 
+@pytest.mark.parametrize("layout", ["images_first", "split_first"])
+def test_segmentation_inventory_counts_test_split(loader_module, tmp_path, layout):
+    for split, count in (("train", 2), ("val", 1), ("test", 1)):
+        image_dir = (tmp_path / "images" / split) if layout == "images_first" else (tmp_path / split / "images")
+        image_dir.mkdir(parents=True)
+        for index in range(count):
+            Image.new("RGB", (8, 8), "white").save(image_dir / f"{split}_{index}.png")
+
+    summary = loader_module.inspect_dataset(tmp_path, task="segmentation")
+    assert summary.total_images == 4
+    assert summary.split_counts == {"train": 2, "val": 1, "test": 1}
+
+
 def test_anomaly_loader_strict_normal_train(loader_module, synthetic_data_dir):
     """Tier 1: Verifies AnomalyDataset train split contains exclusively normal samples."""
     anom_root = os.path.join(synthetic_data_dir, "anomaly")
@@ -203,6 +216,38 @@ def test_anomaly_train_good_only_still_creates_disjoint_validation_and_test(load
     assert tuple(len(datasets[split]) for split in ("train", "val", "test")) == (8, 1, 1)
     assert len(set.union(*paths)) == 10
     assert sum(map(len, paths)) == 10
+
+
+@pytest.mark.parametrize("aliases", [
+    ("good", "ok", "normal", "pass"),
+    ("GOOD", "OK"),
+    ("normal", "pass"),
+])
+def test_anomaly_train_aliases_partition_all_sources_once(loader_module, tmp_path, aliases):
+    """Every normal alias must use one shared partition, even with no named holdout."""
+    source_paths = set()
+    for alias in aliases:
+        folder = tmp_path / "train" / alias
+        folder.mkdir(parents=True)
+        for index in range(2):
+            path = folder / f"{alias}_{index}.png"
+            Image.new("RGB", (8, 8), "white").save(path)
+            source_paths.add(path.resolve())
+
+    datasets = {
+        split: loader_module.AnomalyDataset(root_dir=tmp_path, split=split)
+        for split in ("train", "val", "test")
+    }
+    paths = {
+        split: {path.resolve() for path, _, _ in dataset.samples}
+        for split, dataset in datasets.items()
+    }
+
+    assert paths["train"].isdisjoint(paths["val"])
+    assert paths["train"].isdisjoint(paths["test"])
+    assert paths["val"].isdisjoint(paths["test"])
+    assert paths["train"] | paths["val"] | paths["test"] == source_paths
+    assert all(label == 0 for dataset in datasets.values() for _, label, _ in dataset.samples)
 
 
 def test_stratified_dataset_splitter(loader_module):

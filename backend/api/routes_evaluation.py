@@ -27,6 +27,7 @@ import numpy as np
 import torch
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
+from PIL import Image
 
 from backend.api.routes_training import training_job_manager
 from backend.engine.classification import (
@@ -64,6 +65,7 @@ from backend.engine.checkpoint_paths import (
     trusted_checkpoint,
 )
 from backend.engine.dataset_fingerprint import fingerprint_dataset
+from backend.engine.patch_classification import load_patch_manifest
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.trainer import infer
 from backend.utils.error_catalog import format_error_response
@@ -506,6 +508,101 @@ def _evaluate_classification(
     }
 
 
+def _patch_manifest_for_checkpoint(dataset_dir: Path, meta: Dict[str, Any]):
+    """Refuse evaluation when labeled pixels changed after this model was trained."""
+    expected = meta.get("patch_provenance")
+    if not isinstance(expected, dict) or not expected.get("dataset_sha256"):
+        raise HTTPException(status_code=409, detail="Patch model has no dataset provenance")
+    try:
+        manifest = load_patch_manifest(dataset_dir)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=f"Patch source or labels changed: {exc}") from exc
+    if manifest.provenance["dataset_sha256"] != expected["dataset_sha256"]:
+        raise HTTPException(status_code=409, detail="Patch source or labels changed after training")
+    return manifest
+
+
+def _evaluate_patch_classification(
+    model_pt: Path,
+    meta: Dict[str, Any],
+    dataset_dir: Path,
+    device: torch.device,
+) -> Dict[str, Any]:
+    """Evaluate only held-out annotated patches, retaining original pixel boxes."""
+    manifest = _patch_manifest_for_checkpoint(dataset_dir, meta)
+    selected_split = "test" if manifest.provenance["split_counts"]["test"] else "val"
+    samples = [item for item in manifest.patches if item.split == selected_split]
+    classes = manifest.classes
+    if meta.get("classes") != classes or meta.get("normal_class") != manifest.normal_class:
+        raise HTTPException(status_code=409, detail="Patch class mapping changed after training")
+    checkpoint = torch.load(model_pt, map_location=device, weights_only=True)
+    state_dict = checkpoint.get("model_state_dict", checkpoint)
+    model = create_classification_model(
+        backbone=meta.get("backbone", "resnet18"), num_classes=len(classes), pretrained=False,
+    ).to(device)
+    model.load_state_dict(state_dict)
+    model.eval()
+    image_size = tuple(meta.get("image_size", [256, 256]))
+    normal_index = classes.index(manifest.normal_class)
+    model_sha = hashlib.sha256(model_pt.read_bytes()).hexdigest()
+    preds: List[int] = []
+    targets: List[int] = []
+    test_predictions: List[Dict[str, Any]] = []
+    cell_samples: Dict[str, List[str]] = {
+        f"{actual}:{predicted}": [] for actual in classes for predicted in classes
+    }
+    with torch.inference_mode():
+        for record in samples:
+            with Image.open(record.image_path) as opened:
+                crop = np.asarray(opened.convert("RGB").crop(record.box), dtype=np.uint8)
+            crop = cv2.resize(crop, image_size, interpolation=cv2.INTER_LINEAR)
+            tensor = torch.from_numpy(np.ascontiguousarray(crop.transpose(2, 0, 1))).float().unsqueeze(0).to(device) / 255.0
+            scores = torch.softmax(model(tensor), dim=1)[0].cpu().tolist()
+            pred_index = int(np.argmax(scores))
+            confidence = float(scores[pred_index])
+            defect_score = float(1.0 - scores[normal_index])
+            preds.append(pred_index)
+            targets.append(record.label_index)
+            source_path = str(record.image_path)
+            cell_samples[f"{record.label}:{classes[pred_index]}"].append(source_path)
+            x1, y1, x2, y2 = record.box
+            test_predictions.append({
+                "image_id": f"{record.image_path.stem}_{x1}_{y1}_{x2}_{y2}",
+                "file_name": record.image_path.name,
+                "file_path": source_path,
+                "box": [x1, y1, x2, y2],
+                "source_sha256": record.source_sha256,
+                "dataset_sha256": manifest.provenance["dataset_sha256"],
+                "model_sha256": model_sha,
+                "ground_truth": record.label,
+                "predicted_class": classes[pred_index],
+                "confidence": round(confidence, 6),
+                "class_scores": {name: round(float(scores[index]), 6) for index, name in enumerate(classes)},
+                "defect_score": round(defect_score, 6),
+                "is_correct": record.label_index == pred_index,
+                "thumbnail_url": f"/api/dataset/thumbnail/{record.image_path.name}?file_path={record.image_path}",
+            })
+    metrics = compute_classification_metrics(preds, targets, num_classes=len(classes), class_names=classes)
+    confusion = metrics["confusion_matrix"]
+    confusion["classes"] = classes
+    confusion["class_names"] = classes
+    confusion["cell_samples"] = cell_samples
+    return {
+        "metrics": {
+            "accuracy": metrics["accuracy"],
+            "macro_precision": metrics["macro_precision"],
+            "macro_recall": metrics["macro_recall"],
+            "macro_f1": metrics["macro_f1"],
+            "best_metric": meta.get("best_metric"),
+            "per_class": metrics.get("per_class", {}),
+            "evaluated_split": selected_split,
+        },
+        "confusion_matrix": confusion,
+        "test_predictions": test_predictions,
+        "dataset_provenance": manifest.provenance,
+    }
+
+
 def _evaluate_detection(
     model_pt: Path,
     meta: Dict[str, Any],
@@ -858,6 +955,8 @@ def run_or_load_evaluation(
         )
 
     eval_json = out_dir / "eval_results.json"
+    if task.lower().strip() == "patch_classification":
+        _patch_manifest_for_checkpoint(_resolve_dataset_dir(resolved_dataset, task), meta)
     if not force_clean and eval_json.is_file():
         try:
             with _eval_file_lock:
@@ -899,6 +998,8 @@ def run_or_load_evaluation(
     task_clean = task.lower().strip()
     if task_clean == "classification":
         res = _evaluate_classification(model_pt, meta, effective_data, dev)
+    elif task_clean == "patch_classification":
+        res = _evaluate_patch_classification(model_pt, meta, effective_data, dev)
     elif task_clean == "detection":
         res = _evaluate_detection(model_pt, meta, effective_data, dev)
     elif task_clean == "segmentation":
@@ -921,6 +1022,8 @@ def run_or_load_evaluation(
         "test_predictions": res["test_predictions"],
         "evaluated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if "dataset_provenance" in res:
+        payload["dataset_provenance"] = res["dataset_provenance"]
 
     try:
         with _eval_file_lock:

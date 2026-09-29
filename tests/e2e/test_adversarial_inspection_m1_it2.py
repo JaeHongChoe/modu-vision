@@ -168,7 +168,21 @@ def test_inspect_dataset_all_four_tasks(modality):
         assert anom_summary.total_images == num_samples
         assert anom_summary.total_images > 0
         assert anom_summary.split_counts.get("train") == expected_train
-        assert anom_summary.split_counts.get("val") == expected_val
+        assert anom_summary.split_counts["val"] + anom_summary.split_counts["test"] == expected_val
+        anomaly_datasets = {
+            split: AnomalyDataset(root_dir=anom_path, split=split)
+            for split in ("train", "val", "test")
+        }
+        anomaly_paths = {
+            split: {path.resolve() for path, _, _ in dataset.samples}
+            for split, dataset in anomaly_datasets.items()
+        }
+        assert anomaly_paths["train"].isdisjoint(anomaly_paths["val"] | anomaly_paths["test"])
+        assert anomaly_paths["val"].isdisjoint(anomaly_paths["test"])
+        assert set.union(*anomaly_paths.values()) == {
+            path.resolve() for folder in (anom_path / "train", anom_path / "test")
+            for path in folder.rglob("*.png")
+        }
         assert sum(anom_summary.classes.values()) == num_samples
         assert "good" in anom_summary.classes
         assert anom_summary.classes["good"] >= expected_train  # Train is 100% good
@@ -192,7 +206,10 @@ def test_inspect_dataset_individual_task_generation():
             summary = inspect_dataset(target_path, task=t)
             assert summary.total_images == 16
             assert summary.split_counts["train"] == 12
-            assert summary.split_counts["val"] == 4
+            if t == "anomaly":
+                assert summary.split_counts["val"] + summary.split_counts["test"] == 4
+            else:
+                assert summary.split_counts["val"] == 4
             assert summary.total_images > 0
 
 
@@ -223,35 +240,47 @@ def test_anomaly_dataset_custom_folder_naming_normal_and_pass():
             img = Image.new("RGB", (64, 64), color=(80, 20 + i * 15, 40))
             img.save(dir_pass / f"sample_pass_{i:02d}.png")
 
-        # Load AnomalyDataset on train split
-        ds = AnomalyDataset(root_dir=p, split="train", image_size=(32, 32))
-        assert len(ds) == 7, f"Expected 7 combined samples (4 normal + 3 pass), got {len(ds)}"
+        datasets = {
+            split: AnomalyDataset(root_dir=p, split=split, image_size=(32, 32))
+            for split in ("train", "val", "test")
+        }
+        paths = {
+            split: {path.resolve() for path, _, _ in dataset.samples}
+            for split, dataset in datasets.items()
+        }
+        assert tuple(len(datasets[split]) for split in ("train", "val", "test")) == (5, 1, 1)
+        assert paths["train"].isdisjoint(paths["val"] | paths["test"])
+        assert paths["val"].isdisjoint(paths["test"])
+        assert set.union(*paths.values()) == {
+            path.resolve() for folder in (dir_normal, dir_pass) for path in folder.glob("*.png")
+        }
 
-        # Verify every sample loads cleanly with zero label and zero mask
-        for idx in range(len(ds)):
-            img_tensor, label, mask_tensor = ds[idx]
-            assert isinstance(img_tensor, torch.Tensor)
-            assert img_tensor.shape == (3, 32, 32)
-            assert img_tensor.dtype == torch.float32
-            assert label == 0, f"Sample {idx} must have normal label 0, got {label}"
-            assert isinstance(mask_tensor, torch.Tensor)
-            assert mask_tensor.shape == (32, 32)
-            assert (mask_tensor == 0).all(), f"Sample {idx} mask must be strictly zero"
+        # Verify every normal sample remains readable with a zero mask.
+        for dataset in datasets.values():
+            for idx in range(len(dataset)):
+                img_tensor, label, mask_tensor = dataset[idx]
+                assert isinstance(img_tensor, torch.Tensor)
+                assert img_tensor.shape == (3, 32, 32)
+                assert img_tensor.dtype == torch.float32
+                assert label == 0, f"Sample {idx} must have normal label 0, got {label}"
+                assert isinstance(mask_tensor, torch.Tensor)
+                assert mask_tensor.shape == (32, 32)
+                assert (mask_tensor == 0).all(), f"Sample {idx} mask must be strictly zero"
 
         # Verify integration with DataLoader
-        loader = create_dataloader(ds, batch_size=3, shuffle=False)
+        loader = create_dataloader(datasets["train"], batch_size=3, shuffle=False)
         total_loaded = 0
         for batch_imgs, batch_labels, batch_masks in loader:
             total_loaded += batch_imgs.shape[0]
             assert (batch_labels == 0).all()
             assert (batch_masks == 0).all()
-        assert total_loaded == 7
+        assert total_loaded == 5
 
 
 def test_anomaly_dataset_all_four_normal_aliases():
     """
     Verify all supported normal aliases ('good', 'ok', 'normal', 'pass')
-    can coexist simultaneously in train split without collision or omission.
+    can coexist in the source folder without split leakage or omission.
     """
     with tempfile.TemporaryDirectory() as tmp_dir:
         p = Path(tmp_dir)
@@ -264,15 +293,22 @@ def test_anomaly_dataset_all_four_normal_aliases():
             for i in range(samples_per_alias):
                 Image.new("RGB", (48, 48), color=(30, 60, 90)).save(a_dir / f"{alias}_{i}.png")
 
-        ds = AnomalyDataset(root_dir=p, split="train")
-        assert len(ds) == len(aliases) * samples_per_alias  # 8 samples
+        datasets = {split: AnomalyDataset(root_dir=p, split=split)
+                    for split in ("train", "val", "test")}
+        paths = {split: {path.resolve() for path, _, _ in dataset.samples}
+                 for split, dataset in datasets.items()}
+        assert tuple(len(datasets[split]) for split in ("train", "val", "test")) == (6, 1, 1)
+        assert paths["train"].isdisjoint(paths["val"] | paths["test"])
+        assert paths["val"].isdisjoint(paths["test"])
+        assert set.union(*paths.values()) == {
+            path.resolve() for alias in aliases for path in (p / "train" / alias).glob("*.png")
+        }
 
         # Also verify inspect_dataset() accurately counts all 8 normal images
         summary = inspect_dataset(p, task="anomaly")
         assert summary.total_images == 8
         assert summary.classes["good"] == 8
-        assert summary.split_counts["train"] == 8
-        assert summary.split_counts["val"] == 0
+        assert summary.split_counts == {"train": 6, "val": 1, "test": 1}
 
 
 def test_anomaly_dataset_strict_normal_invariant_enforcement():
@@ -323,7 +359,7 @@ def test_anomaly_dataset_val_split_fallback_and_test_defects():
         # Verify inspect_dataset with val fallback
         summary = inspect_dataset(p, task="anomaly")
         assert summary.total_images == 3
-        assert summary.split_counts == {"train": 1, "val": 2}
+        assert summary.split_counts == {"train": 1, "val": 2, "test": 0}
         assert summary.classes == {"good": 2, "defect": 1}
 
         # Check sample 0 (normal) vs sample 1 (defect with mask)

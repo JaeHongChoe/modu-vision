@@ -826,6 +826,19 @@ class AnomalyDataset(Dataset):
                 and not (directory.name == "test_crop_output" and p.name.startswith("mask_"))
             ]
 
+        def train_normal_paths(directory: Path) -> List[Path]:
+            """Use every normal alias as one source for disjoint train/val/test partitions."""
+            aliases = {"good", "ok", "normal", "pass"}
+            folders = [p for p in directory.iterdir() if p.is_dir() and not p.name.startswith(".")]
+            for folder in folders:
+                if folder.name.lower() not in aliases:
+                    raise ValueError(
+                        f"Anomaly training split must contain exclusively normal (good) images, found: {folder.name}"
+                    )
+            if folders:
+                return sorted(p for folder in folders for p in image_paths(folder, recursive=False))
+            return sorted(image_paths(directory, recursive=False))
+
         if self.split == "train":
             if self.normal_dir and self.normal_dir.is_dir():
                 self.samples.extend(
@@ -834,27 +847,7 @@ class AnomalyDataset(Dataset):
             elif self.root_dir is not None:
                 train_dir = self.root_dir / "train"
                 if train_dir.exists():
-                    # Strict security validation: no defect folders in train
-                    for sub in train_dir.iterdir():
-                        if sub.is_dir() and not sub.name.startswith("."):
-                            if sub.name.lower() not in ["good", "ok", "normal", "pass"]:
-                                raise ValueError(
-                                    f"Anomaly training split must contain exclusively normal (good) images, found: {sub.name}"
-                                )
-
-                    found_normal_folder = False
-                    for candidate_name in ["good", "ok", "normal", "pass"]:
-                        cand_path = train_dir / candidate_name
-                        if cand_path.exists() and cand_path.is_dir():
-                            found_normal_folder = True
-                            for p in sorted(cand_path.glob("*")):
-                                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                    self.samples.append((p, 0, None))
-
-                    if not found_normal_folder:
-                        for p in sorted(train_dir.glob("*")):
-                            if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                self.samples.append((p, 0, None))
+                    self.samples.extend((p, 0, None) for p in train_normal_paths(train_dir))
                     if not (self.root_dir / "test").is_dir() and not (self.root_dir / "val").is_dir():
                         self.samples = [
                             (p, 0, None)
@@ -927,13 +920,16 @@ class AnomalyDataset(Dataset):
                     norm_dir = next((directory for directory in (
                         self.root_dir / "test_crop_output",
                         self.root_dir / "OK",
-                        self.root_dir / "train" / "good",
                         self.root_dir / "train",
                     ) if directory.is_dir()), self.root_dir / "OK")
                     anom_dir = (self.root_dir / "fail") if (self.root_dir / "fail").is_dir() else (self.root_dir / "NG")
                     if norm_dir.is_dir():
+                        normal_paths = (
+                            train_normal_paths(norm_dir)
+                            if norm_dir == self.root_dir / "train" else image_paths(norm_dir)
+                        )
                         self.samples.extend(
-                            (p, 0, None) for p in partition_normal_images(image_paths(norm_dir))[self.split]
+                            (p, 0, None) for p in partition_normal_images(normal_paths)[self.split]
                         )
                     if anom_dir.is_dir():
                         self.samples.extend(
@@ -1185,30 +1181,26 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             )
 
     elif task_clean == "segmentation":
-        train_img_dir = None
-        val_img_dir = None
+        split_image_dirs = None
         if (root / "images" / "train").is_dir():
-            train_img_dir = root / "images" / "train"
-            val_img_dir = root / "images" / "val" if (root / "images" / "val").is_dir() else None
+            split_image_dirs = {name: root / "images" / name for name in ("train", "val", "test")}
         elif (root / "train" / "images").is_dir():
-            train_img_dir = root / "train" / "images"
-            val_img_dir = root / "val" / "images" if (root / "val" / "images").is_dir() else None
+            split_image_dirs = {name: root / name / "images" for name in ("train", "val", "test")}
 
-        if train_img_dir is not None:
-            train_count = sum(
-                1 for p in train_img_dir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            )
-            val_count = (
-                sum(1 for p in val_img_dir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
-                if val_img_dir
-                else 0
-            )
-            total = train_count + val_count
+        if split_image_dirs is not None:
+            split_counts = {
+                name: sum(
+                    1 for p in image_dir.glob("*")
+                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                ) if image_dir.is_dir() else 0
+                for name, image_dir in split_image_dirs.items()
+            }
+            total = sum(split_counts.values())
             return DatasetSummary(
                 task="segmentation",
                 total_images=total,
                 classes={"defect_mask": total},
-                split_counts={"train": train_count, "val": val_count},
+                split_counts=split_counts,
             )
         else:
             ds = SegmentationDataset(root_dir=root)

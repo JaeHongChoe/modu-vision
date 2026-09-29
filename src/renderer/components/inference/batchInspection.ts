@@ -1,4 +1,4 @@
-import type { FlowchartExecutionResult, FlowchartPipeline, ImageMeta, VisionTask } from '../../types';
+import type { FlowchartExecutionResult, FlowchartPipeline, FlowModelTask, ImageMeta, VisionTask } from '../../types';
 
 export type BatchScope = 'test' | 'val' | 'train' | 'all';
 export type BatchRowState = 'pending' | 'running' | 'OK' | 'NG' | 'REVIEW' | 'error' | 'skipped';
@@ -125,7 +125,7 @@ export function batchSourceResetKey(source: BatchSourceState): string {
 export interface BatchInspectionApi {
   getActivePipeline?: (sourceFolder: string) => Promise<FlowchartPipeline>;
   getPipeline: (task: VisionTask, sourceFolder: string) => Promise<FlowchartPipeline>;
-  verifyModels: (request: { source_dataset_path: string; models: Array<{ job_id: string; task: VisionTask }> }) => Promise<unknown>;
+  verifyModels: (request: { source_dataset_path: string; models: Array<{ job_id: string; task: FlowModelTask }> }) => Promise<unknown>;
   getImages: (params: {
     folder_path: string;
     task: VisionTask;
@@ -143,16 +143,16 @@ export interface BatchInspectionApi {
 
 const PAGE_SIZE = 500;
 
-function modelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: VisionTask }> {
-  const references: Array<{ job_id: string; task: VisionTask }> = [];
+function modelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: FlowModelTask }> {
+  const references: Array<{ job_id: string; task: FlowModelTask }> = [];
   for (const node of pipeline.nodes) {
     if (node.data.node_type !== 'detection_crop' && node.data.node_type !== 'inspection') continue;
     const jobId = node.data.model_job_id;
     const task = node.data.node_type === 'detection_crop' ? 'detection' : node.data.task;
-    if (!jobId || !task || !['classification', 'detection', 'segmentation', 'anomaly'].includes(task)) {
+    if (!jobId || !task || !['classification', 'detection', 'segmentation', 'anomaly', 'patch_classification'].includes(task)) {
       throw new Error(`검사 플로우의 '${node.data.label || node.id}' 모델 연결을 확인하세요.`);
     }
-    references.push({ job_id: jobId, task: task as VisionTask });
+    references.push({ job_id: jobId, task: task as FlowModelTask });
   }
   if (references.length === 0) throw new Error('검사 플로우에 학습 모델이 없습니다. 5단계에서 모델을 연결하고 저장하세요.');
   return references;

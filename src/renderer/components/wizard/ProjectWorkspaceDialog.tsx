@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Clock3, FolderOpen, FolderPlus, HardDrive, Layers3, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowRight, Clock3, FolderOpen, FolderPlus, HardDrive, Layers3, X } from 'lucide-react';
 import type { VisionTask } from '../../types';
 import { useProjectStore } from '../../stores/useProjectStore';
 
-type Tab = 'recent' | 'create' | 'open';
+type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore';
 
 const taskLabels: Record<VisionTask, string> = {
   classification: '분류',
@@ -20,6 +20,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
   const {
     project, recentProjects, isProjectBusy, projectError, loadRecentProjects,
     clearProjectError, createProject, openProject,
+    backupProject, restoreProject,
   } = useProjectStore();
   const [tab, setTab] = useState<Tab>('recent');
   const [name, setName] = useState('');
@@ -27,6 +28,10 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
   const [description, setDescription] = useState('');
   const [createPath, setCreatePath] = useState('');
   const [openPath, setOpenPath] = useState('');
+  const [backupFolder, setBackupFolder] = useState('');
+  const [archivePath, setArchivePath] = useState('');
+  const [restorePath, setRestorePath] = useState('');
+  const [backupMessage, setBackupMessage] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,6 +77,20 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
     setTab(next);
   };
 
+  const submitBackup = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!backupFolder.trim()) return;
+    setBackupMessage('');
+    const result = await backupProject(backupFolder.trim());
+    if (result) setBackupMessage(`백업 완료: ${result.archive_path} · ${result.file_count}개 파일 · 원본 ${(result.source_bytes / 1024 / 1024).toFixed(1)} MB`);
+  };
+
+  const submitRestore = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!archivePath.trim() || !restorePath.trim()) return;
+    if (await restoreProject(archivePath.trim(), restorePath.trim())) onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#05080E]/80 px-5 py-8 backdrop-blur-[3px]" onMouseDown={(event) => {
       if (event.target === event.currentTarget && !isProjectBusy) onClose();
@@ -100,6 +119,8 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
               ['recent', Clock3, '최근 프로젝트'],
               ['create', FolderPlus, '새 프로젝트'],
               ['open', FolderOpen, '폴더에서 열기'],
+              ['backup', Archive, '프로젝트 백업'],
+              ['restore', ArchiveRestore, '백업에서 복원'],
             ] as const).map(([id, Icon, label]) => (
               <button key={id} type="button" onClick={() => switchTab(id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs font-medium transition-colors ${tab === id ? 'bg-[#263D58] text-cyan-200' : 'text-slate-400 hover:bg-[#1C293A] hover:text-slate-200'}`}>
                 <Icon className="h-4 w-4" />{label}
@@ -145,6 +166,26 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
                 <label className="block text-xs font-medium text-slate-300">프로젝트 폴더<div className="mt-1.5 flex gap-2"><input value={openPath} onChange={(event) => setOpenPath(event.target.value)} placeholder="/path/to/project" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none placeholder:text-slate-600 focus:border-cyan-500" /><button type="button" onClick={() => void selectDirectory(false)} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
                 <div className="flex items-start gap-2 rounded-md border border-[#32465B] bg-[#152232] p-3 text-xs leading-5 text-slate-400"><HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" /><span>프로젝트 폴더를 열면 저장된 작업 유형과 연결한 원본 데이터 경로를 불러옵니다.</span></div>
                 <button type="submit" disabled={!openPath.trim() || isProjectBusy} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-40"><FolderOpen className="h-4 w-4" />{isProjectBusy ? '여는 중...' : '프로젝트 열기'}</button>
+              </form>
+            )}
+
+            {tab === 'backup' && (
+              <form onSubmit={submitBackup} className="space-y-4">
+                <div><h3 className="text-sm font-semibold text-slate-100">프로젝트 전체 백업</h3><p className="mt-1 text-xs leading-5 text-slate-400">현재 프로젝트의 라벨셋·분할·버전·모델·검사 이력과 연결된 원본 이미지 파일을 한 파일에 담습니다. 파일별 SHA-256을 기록하며 원본은 변경하지 않습니다.</p></div>
+                <label className="block text-xs font-medium text-slate-300">백업 파일 저장 폴더<div className="mt-1.5 flex gap-2"><input value={backupFolder} onChange={(event) => setBackupFolder(event.target.value)} placeholder="백업 ZIP을 저장할 폴더" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" onClick={async () => { const path = await window.api?.selectFolder({ title: '프로젝트 백업 저장 폴더' }); if (path) setBackupFolder(path); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
+                <div className="rounded-md border border-[#33465B] bg-[#142236] p-3 text-[11px] leading-5 text-slate-400">원본 데이터는 최대 2 GB, 전체 백업은 최대 4 GB입니다. 프로젝트와 원본 데이터 폴더 바깥을 저장 위치로 선택하세요. 백업 중에는 파일이 바뀌지 않아야 합니다.</div>
+                <button type="submit" disabled={!backupFolder.trim() || isProjectBusy} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"><Archive className="h-4 w-4" />{isProjectBusy ? '백업 파일 검사·작성 중...' : '프로젝트 백업 만들기'}</button>
+                {backupMessage && <p role="status" className="break-all rounded-md border border-emerald-700/50 bg-emerald-950/20 p-3 text-xs leading-5 text-emerald-200">{backupMessage}</p>}
+              </form>
+            )}
+
+            {tab === 'restore' && (
+              <form onSubmit={submitRestore} className="space-y-4">
+                <div><h3 className="text-sm font-semibold text-slate-100">백업에서 새 프로젝트 복원</h3><p className="mt-1 text-xs leading-5 text-slate-400">백업의 모든 파일을 검증한 후 새 폴더에 복원합니다. 원본 프로젝트와 기존 이미지 폴더는 덮어쓰지 않습니다.</p></div>
+                <label className="block text-xs font-medium text-slate-300">백업 파일<div className="mt-1.5 flex gap-2"><input value={archivePath} onChange={(event) => setArchivePath(event.target.value)} placeholder=".mvision.zip 파일 경로" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" onClick={async () => { const path = await window.api?.selectFile({ title: '프로젝트 백업 파일', filters: [{ name: 'Modu Vision 백업', extensions: ['zip'] }] }); if (path) setArchivePath(path); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">찾기</button></div></label>
+                <label className="block text-xs font-medium text-slate-300">새 프로젝트 폴더<div className="mt-1.5 flex gap-2"><input value={restorePath} onChange={(event) => setRestorePath(event.target.value)} placeholder="아직 존재하지 않는 새 폴더 경로" className="min-w-0 flex-1 rounded-md border border-[#40516A] bg-[#0D1420] px-3 py-2.5 font-mono text-xs text-white outline-none focus:border-cyan-500" /><button type="button" onClick={async () => { const path = await window.api?.selectFolder({ title: '복원할 새 프로젝트의 상위 폴더' }); if (path) setRestorePath(`${path.replace(/[\\/]+$/, '')}/restored-project`); }} className="rounded-md border border-[#40516A] px-3 text-xs text-slate-200 hover:bg-[#25354A]">상위 폴더</button></div></label>
+                <div className="rounded-md border border-amber-700/40 bg-amber-950/20 p-3 text-[11px] leading-5 text-amber-200">복원된 원본 이미지는 새 프로젝트의 <span className="font-mono">dataset/restored_source</span>에 연결됩니다. 예전 체크포인트는 경로가 바뀌므로 출처 검증 후 사용하고, 검증 실패 시 재학습하세요.</div>
+                <button type="submit" disabled={!archivePath.trim() || !restorePath.trim() || isProjectBusy} className="flex w-full items-center justify-center gap-2 rounded-md bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"><ArchiveRestore className="h-4 w-4" />{isProjectBusy ? '파일 검증·복원 중...' : '새 프로젝트로 복원'}</button>
               </form>
             )}
 

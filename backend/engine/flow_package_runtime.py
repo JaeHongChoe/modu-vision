@@ -107,17 +107,30 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
         "rejection_reason", "inspected_image_size",
     )
     mismatches = [field for field in fields if reference.get(field) != packaged.get(field)]
-    ref_steps = [(step.get("node_id"), step.get("status")) for step in reference.get("execution_steps", [])]
-    pkg_steps = [(step.get("node_id"), step.get("status")) for step in packaged.get("execution_steps", [])]
-    if ref_steps != pkg_steps:
-        mismatches.append("execution_steps")
+    ref_steps, pkg_steps = reference.get("execution_steps", []), packaged.get("execution_steps", [])
+    if len(ref_steps) != len(pkg_steps):
+        mismatches.append("execution_steps.length")
+    else:
+        step_fields = (
+            "node_id", "status", "input_payload_type", "output_payload_type",
+            "input_count", "output_count", "branch_verdict",
+            "selected_edge_ids", "skip_reason",
+        )
+        for index, (left, right) in enumerate(zip(ref_steps, pkg_steps)):
+            for field in step_fields:
+                if left.get(field) != right.get(field):
+                    mismatches.append(f"execution_steps[{index}].{field}")
 
     ref_crops, pkg_crops = reference.get("crops", []), packaged.get("crops", [])
     if len(ref_crops) != len(pkg_crops):
         mismatches.append("crops.length")
     else:
         for index, (left, right) in enumerate(zip(ref_crops, pkg_crops)):
-            for field in ("roi_id", "label", "bbox", "verdict", "defect_area_px"):
+            for field in (
+                "roi_id", "source_node_id", "label", "bbox", "verdict",
+                "flaw_type", "defect_area_px", "blob_count",
+                "largest_blob_area_px", "tiles_processed",
+            ):
                 if left.get(field) != right.get(field):
                     mismatches.append(f"crops[{index}].{field}")
             try:

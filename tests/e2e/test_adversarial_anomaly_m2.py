@@ -99,12 +99,21 @@ class TestStrictNormalOnlyInvariant:
             for i in range(4):
                 Image.new("RGB", (32, 32), color=(40, 80 + i * 10, 120)).save(dir_alias / f"sample_{i}.png")
 
-            ds = AnomalyDataset(root_dir=p, split="train")
-            assert len(ds) == 4
-            for idx in range(len(ds)):
-                img_t, label, mask_t = ds[idx]
-                assert label == 0
-                assert (mask_t == 0).all()
+            datasets = {split: AnomalyDataset(root_dir=p, split=split)
+                        for split in ("train", "val", "test")}
+            paths = {split: {path.resolve() for path, _, _ in ds.samples}
+                     for split, ds in datasets.items()}
+            assert tuple(len(datasets[split]) for split in ("train", "val", "test")) == (2, 1, 1)
+            assert paths["train"].isdisjoint(paths["val"] | paths["test"])
+            assert paths["val"].isdisjoint(paths["test"])
+            assert paths["train"] | paths["val"] | paths["test"] == {
+                path.resolve() for path in dir_alias.glob("*.png")
+            }
+            for ds in datasets.values():
+                for idx in range(len(ds)):
+                    img_t, label, mask_t = ds[idx]
+                    assert label == 0
+                    assert (mask_t == 0).all()
 
 
 # ============================================================================

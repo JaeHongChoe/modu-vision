@@ -21,7 +21,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -68,8 +68,16 @@ from backend.engine.anomaly import (
     compute_anomaly_metrics,
 )
 from backend.engine.anomaly.cancellation import AnomalyFitCancelled
+from backend.engine.patch_classification import (
+    PatchClassificationDataset,
+    load_patch_manifest,
+    predict_patch_classification,
+)
 
 logger = logging.getLogger("vision_ai_studio.trainer")
+
+if TYPE_CHECKING:
+    from backend.engine.warm_start import WarmStartParent
 
 
 # ============================================================================
@@ -270,6 +278,7 @@ class UnifiedAutoMLTrainer:
         device: Optional[Union[str, torch.device]] = None,
         callback: Optional[TrainingCallback] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
+        warm_start: Optional[WarmStartParent] = None,
     ):
         self.task = task.lower().strip()
         self.dataset_path = Path(dataset_path)
@@ -283,6 +292,7 @@ class UnifiedAutoMLTrainer:
         self.preset_key = preset_key
         self.config = PRESET_CONFIGS.get(preset_key, PRESET_CONFIGS["fast"])
         self.overrides = config_overrides or {}
+        self.warm_start = warm_start
 
     def abort(self) -> None:
         """Signal trainer to immediately halt execution."""
@@ -324,7 +334,10 @@ class UnifiedAutoMLTrainer:
                 classes = train_ds.classes
                 num_classes = max(2, len(classes))
                 backbone = self.config.backbone_classification
-                model = create_classification_model(backbone=backbone, num_classes=num_classes).to(self.device)
+                model = create_classification_model(
+                    backbone=backbone, num_classes=num_classes,
+                    pretrained=self.warm_start is None,
+                ).to(self.device)
                 if not hasattr(train_ds, "class_counts"):
                     counts = [0] * num_classes
                     for _, cidx in getattr(train_ds, "samples", []):
@@ -332,6 +345,27 @@ class UnifiedAutoMLTrainer:
                             counts[cidx] += 1
                     train_ds.class_counts = counts
                 class_weights = compute_class_weights(train_ds.class_counts, num_classes=num_classes).to(self.device)
+                criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
+
+            elif self.task == "patch_classification":
+                patch_manifest = load_patch_manifest(self.dataset_path)
+                self._patch_manifest = patch_manifest
+                train_ds = PatchClassificationDataset(
+                    self.dataset_path, split="train", image_size=optimal_size,
+                    transform=aug, manifest=patch_manifest,
+                )
+                val_ds = PatchClassificationDataset(
+                    self.dataset_path, split="val", image_size=optimal_size,
+                    manifest=patch_manifest,
+                )
+                classes = patch_manifest.classes
+                backbone = str(self.overrides.get("backbone", self.config.backbone_classification))
+                self._patch_backbone = backbone
+                model = create_classification_model(
+                    backbone=backbone, num_classes=len(classes),
+                    pretrained=bool(self.overrides.get("pretrained", False)),
+                ).to(self.device)
+                class_weights = compute_class_weights(train_ds.class_counts, num_classes=len(classes)).to(self.device)
                 criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
 
             elif self.task == "detection":
@@ -361,6 +395,16 @@ class UnifiedAutoMLTrainer:
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device)
                 else:
                     model = PaDiMDetector(backbone_name="resnet18", device=self.device)
+
+            if self.warm_start is not None:
+                from backend.engine.warm_start import architecture_for, load_parent_weights
+
+                if self.task != self.warm_start.task:
+                    raise ValueError("Warm-start parent task differs from current training task")
+                architecture = architecture_for(self.task, self.preset_key, self.overrides)
+                if architecture != self.warm_start.architecture:
+                    raise ValueError("Warm-start parent architecture differs from current training model")
+                load_parent_weights(model, self.warm_start, classes)
 
             train_loader = create_dataloader(train_ds, batch_size=batch_size, shuffle=True, task=self.task)
             val_loader = create_dataloader(val_ds, batch_size=batch_size, shuffle=False, task=self.task)
@@ -449,7 +493,7 @@ class UnifiedAutoMLTrainer:
                         return {"status": "aborted", "epoch": epoch}
 
                     optimizer.zero_grad()
-                    if self.task == "classification":
+                    if self.task in ("classification", "patch_classification"):
                         imgs, targets = batch
                         imgs, targets = imgs.to(self.device), targets.to(self.device)
                         outputs = model(imgs)
@@ -491,7 +535,7 @@ class UnifiedAutoMLTrainer:
                             clear_device_cache(self.device)
                             self.callback.on_training_aborted(epoch, "Training aborted by user request")
                             return {"status": "aborted", "epoch": epoch}
-                        if self.task == "classification":
+                        if self.task in ("classification", "patch_classification"):
                             imgs, targets = batch
                             imgs, targets = imgs.to(self.device), targets.to(self.device)
                             loss = criterion(model(imgs), targets)
@@ -591,6 +635,15 @@ class UnifiedAutoMLTrainer:
 
         if self.task == "classification":
             meta["backbone"] = self.config.backbone_classification
+        elif self.task == "patch_classification":
+            patch_manifest = self._patch_manifest
+            meta.update({
+                "backbone": self._patch_backbone,
+                "normal_class": patch_manifest.normal_class,
+                "patch_size": patch_manifest.patch_size,
+                "stride": patch_manifest.stride,
+                "patch_provenance": patch_manifest.provenance,
+            })
         elif self.task == "detection":
             meta["detector_preset"] = self.preset_key
         elif self.task == "segmentation":
@@ -598,6 +651,9 @@ class UnifiedAutoMLTrainer:
             meta["features"] = [64, 128, 256, 512] if self.preset_key == "precision" else [32, 64, 128, 256]
         elif self.task in ("anomaly", "anomaly_detection"):
             meta["detector_type"] = "patchcore" if "patchcore" in self.config.backbone_anomaly else "padim"
+
+        if self.warm_start is not None:
+            meta["warm_start"] = self.warm_start.lineage()
 
         ckpt_payload = {
             "epoch": epoch,
@@ -659,6 +715,23 @@ def infer(
         img_np = cv2.cvtColor(img_np, cv2.COLOR_RGBA2RGB)
 
     orig_h, orig_w = img_np.shape[:2]
+
+    if task.lower().strip() == "patch_classification":
+        patch_result = predict_patch_classification(
+            m_path, image_input, threshold=threshold, device=dev,
+        )
+        overlay = img_np.copy()
+        for patch in patch_result["patches"]:
+            x1, y1, x2, y2 = patch["box"]
+            color = (220, 40, 40) if patch["decision"] == "FAIL" else (40, 200, 40)
+            cv2.rectangle(overlay, (x1, y1), (x2 - 1, y2 - 1), color, 2)
+        return InferenceResult(
+            task="patch_classification", predictions=patch_result,
+            confidence_score=patch_result["max_defect_score"],
+            visual_overlay=overlay,
+            latency_ms=round((time.time() - start_time) * 1000.0, 2),
+            metadata=meta,
+        )
 
     ckpt = torch.load(m_path, map_location=dev, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt

@@ -36,6 +36,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [isExporting, setIsExporting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[] } | null>(null);
   const [result, setResult] = useState<FlowExportResult | null>(null);
   const [identity, setIdentity] = useState<SavedFlowIdentity | null>(null);
   const [identityError, setIdentityError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     setSelectedImagePath('');
     setResult(null);
     setError(null);
+    setFailedExport(null);
     if (!sourceFolder) return;
     let active = true;
     setIsLoading(true);
@@ -93,6 +95,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     }
     setError(null);
     setResult(null);
+    setFailedExport(null);
     setIsExporting(true);
     try {
       const exported = await api.export.flow({
@@ -110,10 +113,15 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       }
     } catch (cause) {
       if (useProjectStore.getState().projectDir === projectDir) {
-        const detail = cause && typeof cause === 'object' && 'message' in cause
-          ? String((cause as { message: unknown }).message)
-          : null;
-        setError(detail || (cause instanceof Error ? cause.message : '전체 플로우 패키지를 만들지 못했습니다.'));
+        const detail = cause && typeof cause === 'object' ? cause as Record<string, unknown> : null;
+        const parity = detail?.parity && typeof detail.parity === 'object'
+          ? detail.parity as Record<string, unknown> : null;
+        const packagePath = typeof detail?.package_path === 'string' ? detail.package_path : undefined;
+        const mismatchedFields = Array.isArray(parity?.mismatched_fields)
+          ? parity.mismatched_fields.filter((field): field is string => typeof field === 'string') : [];
+        setFailedExport(packagePath || mismatchedFields.length ? { packagePath, mismatchedFields } : null);
+        setError(typeof detail?.message === 'string' ? detail.message
+          : cause instanceof Error ? cause.message : '전체 플로우 패키지를 만들지 못했습니다.');
       }
     } finally {
       setIsExporting(false);
@@ -173,7 +181,13 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
       실제 이미지로 앱 엔진과 독립 실행 패키지 결과 비교
     </label>
-    {error && <p role="alert" className="mt-3 rounded border border-rose-700 bg-rose-950/30 p-2 text-xs text-rose-200">{error}</p>}
+    {error && <div role="alert" className="mt-3 rounded border border-rose-700 bg-rose-950/30 p-3 text-xs text-rose-200">
+      <p>{error}</p>
+      {failedExport?.mismatchedFields.length ? <p className="mt-2 break-all font-mono">불일치 항목: {failedExport.mismatchedFields.join(', ')}</p> : null}
+      {failedExport?.packagePath && <p className="mt-2 break-all font-mono">검증 실패 패키지: {failedExport.packagePath}</p>}
+      {failedExport && <button type="button" onClick={() => void exportFlow()} disabled={isExporting}
+        className="mt-2 rounded border border-rose-500 px-2 py-1 font-semibold hover:bg-rose-900/50 disabled:opacity-50">같은 이미지로 다시 생성·검증</button>}
+    </div>}
     {result && <div className="mt-4 rounded border border-[#455670] bg-[#0E1722] p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2 text-slate-100">
         <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 패키지 생성 완료 · 모델 {result.model_job_ids.length}개 · 파일 {result.total_files}개
@@ -183,6 +197,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       </div>
       {result.parity.status === 'passed' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
       <p className="mt-2 break-all font-mono text-slate-400">{result.package_path}</p>
+      <p className="mt-2 text-slate-500">이 결과는 선택한 이미지 1장의 동일성 검증입니다. 현장 서비스 적용 여부는 별도로 확인하세요.</p>
     </div>}
   </section>;
 };

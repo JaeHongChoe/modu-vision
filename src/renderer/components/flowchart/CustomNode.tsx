@@ -90,6 +90,10 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return <Crop className="w-3.5 h-3.5 text-sky-400" />;
       case 'inspection':
         return <Microscope className="w-3.5 h-3.5 text-purple-400" />;
+      case 'blob_measure':
+        return <Scan className="w-3.5 h-3.5 text-teal-400" />;
+      case 'aggregate':
+        return <Layers className="w-3.5 h-3.5 text-indigo-400" />;
       case 'decision':
         return <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />;
       case 'output':
@@ -118,6 +122,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
         ];
+      case 'blob_measure':
+      case 'aggregate':
+        return [{ id: 'in_result', name: 'Result In', type: 'data', direction: 'in', label: 'RESULT IN', pinNumber: 1 }];
       case 'decision':
         return [
           { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: isDetectorOnly ? 'DETECTIONS' : 'SCORES IN', pinNumber: 1 },
@@ -145,6 +152,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
         ];
+      case 'blob_measure':
+      case 'aggregate':
+        return [{ id: 'out_result', name: 'Result Out', type: 'data', direction: 'out', label: 'RESULT OUT', pinNumber: 1 }];
       case 'decision':
         return [
           { id: 'out_verdict', name: 'Verdict Out', type: 'data', direction: 'out', label: 'VERDICT', pinNumber: 1 },
@@ -198,7 +208,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           {getNodeIcon()}
           <span className="text-[11px] font-mono uppercase tracking-wide text-slate-200 font-bold truncate max-w-[120px]">
             {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION')
-              : nodeType === 'fixed_roi' ? 'FIXED ROI' : nodeType}
+              : nodeType === 'fixed_roi' ? 'FIXED ROI'
+                : nodeType === 'blob_measure' ? 'BLOB MEASURE' : nodeType}
           </span>
         </div>
 
@@ -263,6 +274,22 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
               <div className="text-sky-300 tabular-nums">
                 {node.data.params?.roi_bbox?.[0]}, {node.data.params?.roi_bbox?.[1]} → {node.data.params?.roi_bbox?.[2]}, {node.data.params?.roi_bbox?.[3]}
               </div>
+            </div>
+          )}
+          {nodeType === 'blob_measure' && <>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">MIN AREA:</span>
+              <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_area_px ?? 1} px</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">NG COUNT:</span>
+              <span className="text-teal-300 tabular-nums">{node.data.params?.min_blob_count_for_ng ?? 1}</span>
+            </div>
+          </>}
+          {nodeType === 'aggregate' && node.data.rule && (
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">RULE:</span>
+              <span className="text-indigo-300 font-semibold">{node.data.rule.replace('_', ' ').toUpperCase()}</span>
             </div>
           )}
           {nodeType === 'decision' && node.data.rule && (

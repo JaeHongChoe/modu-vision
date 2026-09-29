@@ -22,11 +22,18 @@ interface CropDetailModalProps {
   onClose: () => void;
 }
 
-const modelNodeForCrop = (pipeline: FlowchartPipeline | null, roiId: string): FlowNode | undefined => {
+const modelNodeForCrop = (pipeline: FlowchartPipeline | null, crop: FlowchartCrop): FlowNode | undefined => {
   if (!pipeline) return undefined;
   const modelNodes = pipeline.nodes.filter((node) =>
     node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop');
-  const taggedNode = modelNodes.find((node) => roiId.startsWith(`${node.id}:`));
+  const sourceNode = pipeline.nodes.find((node) => node.id === crop.source_node_id)
+    || pipeline.nodes.find((node) => crop.roi_id.startsWith(`${node.id}:`));
+  if (sourceNode?.data.node_type === 'blob_measure') {
+    const parent = pipeline.edges.find((edge) => edge.target === sourceNode.id);
+    const segmentation = modelNodes.find((node) => node.id === parent?.source && node.data.task === 'segmentation');
+    if (segmentation) return segmentation;
+  }
+  const taggedNode = modelNodes.find((node) => node.id === sourceNode?.id || crop.roi_id.startsWith(`${node.id}:`));
   if (taggedNode) return taggedNode;
 
   // The engine adds a node ID to ROI IDs only when multiple model leaves feed the decision.
@@ -76,9 +83,9 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const isNg = crop.verdict === 'NG';
 
   // Read the threshold from the model that produced this ROI, including detector-only flows.
-  const inspectNode = modelNodeForCrop(pipeline, crop.roi_id);
+  const inspectNode = modelNodeForCrop(pipeline, crop);
   const threshold = inspectNode?.data.threshold;
-  const isSegmentation = inspectNode?.data.task === 'segmentation';
+  const isSegmentation = inspectNode?.data.task === 'segmentation' || crop.blob_count !== undefined;
   const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
   const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
   const scorePercent = crop.defect_score * 100;
@@ -145,7 +152,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 <div className="flex items-center space-x-2">
                   {isNg ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span className="font-mono font-bold text-xs uppercase">
-                    로컬 모델 판정: {crop.verdict}
+                    {crop.blob_count !== undefined ? 'Blob 측정 판정' : '로컬 모델 판정'}: {crop.verdict}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0E14]/60 border border-current">
@@ -219,13 +226,25 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                   <span className="text-slate-400">바운딩 박스 (BBox):</span>
                   <span className="text-[#3B82F6] font-bold tabular-nums">[{x1}, {y1}, {x2}, {y2}]</span>
                 </div>
-                {isSegmentation && (
+                {isSegmentation && inspectNode && (
                   <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
                     <span className="text-slate-400">
                       임계값 초과 픽셀 / NG 최소 면적 ({isFullImageSegmentation ? '검사 이미지' : '모델 입력'}):
                     </span>
                     <span className="text-slate-100 font-bold tabular-nums">{crop.defect_area_px ?? 0} / {minimumDefectArea} px</span>
                   </div>
+                )}
+                {crop.blob_count !== undefined && (
+                  <>
+                    <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
+                      <span className="text-slate-400">측정 Blob 개수:</span>
+                      <span className="text-teal-300 font-bold tabular-nums">{crop.blob_count}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">최대 Blob 면적:</span>
+                      <span className="text-teal-300 font-bold tabular-nums">{crop.largest_blob_area_px ?? 0} px²</span>
+                    </div>
+                  </>
                 )}
                 {!isFullImageSegmentation && crop.confidence !== undefined && (
                   <div className="flex justify-between">

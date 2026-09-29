@@ -223,7 +223,15 @@ test('header exposes current compute target and local option', () => {
   const { WizardHeader } = require(path.join(root, 'src/renderer/components/wizard/WizardHeader.tsx'));
   Module.prototype.require = liveRequire;
   useComputeStore.setState({ selectedProfileId: server.id });
-  const html = renderToStaticMarkup(React.createElement(WizardHeader));
+  const previousWindow = global.window;
+  global.window = { api: { platform: 'darwin' } };
+  let html;
+  try {
+    html = renderToStaticMarkup(React.createElement(WizardHeader));
+  } finally {
+    if (previousWindow === undefined) delete global.window;
+    else global.window = previousWindow;
+  }
   assert.match(html, /Compute:/);
   assert.match(html, /This computer/);
   assert.match(html, /Example GPU/);

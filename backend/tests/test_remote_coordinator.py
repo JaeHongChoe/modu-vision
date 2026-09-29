@@ -127,6 +127,20 @@ def test_remote_training_transfers_snapshot_and_registers_verified_local_artifac
     assert journal["source_dataset_path"] == str(source)
 
 
+def test_remote_preparation_is_journaled_before_local_work_starts(tmp_path, monkeypatch):
+    monkeypatch.setenv("VISION_AI_STUDIO_USER_DATA_DIR", str(tmp_path / "user_data"))
+    _, output, profile, record = _setup(tmp_path)
+    observed = []
+
+    def prepare(_cancel):
+        observed.append(json.loads((output / "remote_job.json").read_text())["state"])
+
+    result = run_remote_training(record, profile, prepare_dataset=prepare,
+                                 transport=FakeRemote(Path(profile.remote_root)))
+    assert result["status"] == "completed"
+    assert observed == ["preparing"]
+
+
 def test_bad_remote_checkpoint_hash_is_never_published(tmp_path, monkeypatch):
     monkeypatch.setenv("VISION_AI_STUDIO_USER_DATA_DIR", str(tmp_path / "user_data"))
     _, output, profile, record = _setup(tmp_path)

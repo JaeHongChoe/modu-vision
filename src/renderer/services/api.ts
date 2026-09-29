@@ -9,6 +9,7 @@ import type {
   EvaluationResults,
   FlowchartExecutionResult,
   FlowchartPipeline,
+  FlowModelTask,
   ImageMeta,
   VisionTask,
 } from '../types';
@@ -29,7 +30,7 @@ export type ComputeProfileInput = Omit<ComputeProfile, 'id'> & { id?: string };
 
 export interface FlowModelCatalogItem {
   job_id: string;
-  task: VisionTask;
+  task: FlowModelTask;
   label: string;
   preset: string | null;
   created_at: string | null;
@@ -41,7 +42,7 @@ export interface SavedFlowVersion {
   version_id: string;
   pipeline_id: string;
   name: string;
-  recipe_task: VisionTask | 'mixed';
+  recipe_task: FlowModelTask | 'mixed';
   source_dataset_path: string;
   created_at: string;
   saved_at: string;
@@ -70,11 +71,27 @@ export interface ProjectConfig {
   models_dir: string;
   reports_dir: string;
   annotations_dir: string;
+  active_labelset_id: string;
   source_dataset_dir: string | null;
   description: string;
   active_preset: 'fast' | 'precision';
   created_at: string;
   updated_at: string;
+}
+
+export interface ProjectLabelSet {
+  id: string;
+  name: string;
+  source_id: string | null;
+  created_at: string;
+}
+
+export interface ProjectBackupResult {
+  archive_path: string;
+  source_included: boolean;
+  file_count: number;
+  total_bytes: number;
+  source_bytes: number;
 }
 
 export type RecentProject = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'project_dir' | 'updated_at'>;
@@ -110,6 +127,101 @@ export interface LabelSuggestionModel {
   created_at: string | null;
   checkpoint_path: string;
   source_dataset_path: string;
+}
+
+export interface OCRLabelRow {
+  image: string;
+  text: string;
+  split: 'train' | 'val' | 'test';
+  source_sha256?: string;
+}
+
+export interface OCRModelSummary {
+  job_id: string;
+  model_sha256: string;
+  metadata: { best_epoch?: number; training_samples?: number; validation_samples?: number };
+}
+
+export interface OCREvaluation {
+  sample_count: number;
+  exact_match_accuracy: number;
+  character_error_rate: number;
+  samples: Array<{ image: string; reference_text: string; predicted_text: string }>;
+}
+
+export interface RotatedBox {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  angle_deg: number;
+}
+
+export interface RotatedSampleRow {
+  image: string;
+  split: 'train' | 'val' | 'test';
+  label: string;
+  box: RotatedBox;
+  source_sha256?: string;
+}
+
+export interface RotatedModelSummary {
+  job_id: string;
+  model_sha256: string;
+  dataset_sha256: string;
+  class_name: string;
+  validation: { mean_oriented_iou: number; mean_angle_error_deg: number; sample_count: number };
+}
+
+export interface RotatedJob {
+  job_id: string;
+  status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
+  epochs_completed: number;
+  total_epochs: number;
+  result: { checkpoint_sha256: string; dataset_sha256: string } | null;
+  error: string | null;
+}
+
+export interface RotatedEvaluation {
+  sample_count: number;
+  mean_oriented_iou: number;
+  mean_angle_error_deg: number;
+  dataset_sha256: string;
+  model_sha256: string;
+}
+
+export interface RotatedPrediction {
+  label: string;
+  box: RotatedBox;
+  polygon: Array<[number, number]>;
+  image_size: [number, number];
+  source_sha256: string;
+  model_sha256: string;
+  preview_data_url: string;
+  preview_size: [number, number];
+}
+
+export interface DefectGANCropRow {
+  image: string;
+  bbox: [number, number, number, number];
+  split: 'train' | 'val' | 'test';
+  source_sha256?: string;
+}
+
+export interface DefectGANModelSummary {
+  job_id: string;
+  checkpoint_sha256: string;
+  sample_count: number;
+  epochs: number;
+  quality_status: 'unvalidated';
+}
+
+export interface DefectGANCandidate {
+  id: string;
+  path: string;
+  sha256: string;
+  status: 'synthetic_unreviewed';
+  preview_data_url: string;
 }
 
 export interface LabelSuggestionCandidate {
@@ -167,7 +279,7 @@ export interface LabelSuggestionBatch {
 
 export interface ModelComparisonModel {
   job_id: string;
-  task: VisionTask;
+  task: FlowModelTask;
   training_dataset_fingerprint: string;
   created_at: string | null;
   preset: string | null;
@@ -214,7 +326,7 @@ export interface ModelComparisonRecord {
   created_at: string;
   project_id: string;
   source_dataset_path: string;
-  task: VisionTask;
+  task: FlowModelTask;
   incumbent_job_id: string;
   candidate_job_id: string;
   status: 'completed' | 'completed_with_errors';
@@ -232,6 +344,41 @@ export interface ModelComparisonReport extends ModelComparisonRecord {
   image_selection: string;
   limitations: string[];
   images: ModelComparisonRow[];
+}
+
+export interface ModelDeploymentAssessment {
+  status: 'ready' | 'needs_review';
+  reasons: string[];
+  comparison_id: string;
+  comparison_sha256: string;
+  candidate_job_id: string;
+  candidate_checkpoint_sha256: string;
+  dataset_fingerprint: string;
+  known_ok_images: number;
+  known_ng_images: number;
+  minimum_each_class: number;
+  current_revision_id: string | null;
+  training_dataset_fingerprint: string | null;
+}
+
+export interface ModelDeploymentRevision {
+  revision_id: string;
+  source_dataset_path: string;
+  task: FlowModelTask;
+  job_id: string;
+  checkpoint_sha256: string;
+  training_dataset_fingerprint: string;
+  evaluation_dataset_fingerprint: string;
+  comparison_id: string;
+  comparison_sha256: string;
+  parent_revision_id: string | null;
+  restored_from_revision_id: string | null;
+  action: 'approve' | 'rollback';
+  reviewer: string;
+  reason: string;
+  created_at: string;
+  valid?: boolean;
+  is_active?: boolean;
 }
 
 let cachedPort: number | null = null;
@@ -343,6 +490,19 @@ export const api = {
       request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) }),
     update: (data: Partial<Pick<ProjectConfig, 'name' | 'task' | 'active_preset' | 'description' | 'source_dataset_dir'>>) =>
       request<ProjectConfig>('/api/project/update', { method: 'PUT', body: JSON.stringify(data) }),
+    listLabelsets: () => request<{ active_id: string; labelsets: ProjectLabelSet[] }>('/api/project/labelsets'),
+    createLabelset: (name: string) => request<ProjectLabelSet>('/api/project/labelsets', {
+      method: 'POST', body: JSON.stringify({ name }),
+    }),
+    activateLabelset: (id: string) => request<ProjectConfig>(`/api/project/labelsets/${encodeURIComponent(id)}/activate`, {
+      method: 'PUT',
+    }),
+    backup: (destinationDir: string) => request<ProjectBackupResult>('/api/project/backup', {
+      method: 'POST', body: JSON.stringify({ destination_dir: destinationDir }),
+    }),
+    restore: (archivePath: string, targetDir: string) => request<ProjectConfig>('/api/project/restore', {
+      method: 'POST', body: JSON.stringify({ archive_path: archivePath, target_dir: targetDir }),
+    }),
   },
 
   datasetVersions: {
@@ -375,6 +535,62 @@ export const api = {
       request<LabelSuggestion>(`/api/label-suggestions/${encodeURIComponent(id)}/review`, {
         method: 'POST', body: JSON.stringify({ decision, candidate_ids: candidateIds }),
       }),
+  },
+
+  ocr: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; alphabet: string; samples: OCRLabelRow[] }>(
+      `/api/ocr/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: OCRLabelRow[]) => request<{ sample_count: number; alphabet: string; samples: OCRLabelRow[] }>(
+      '/api/ocr/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: OCRModelSummary[] }>('/api/ocr/models'),
+    train: (datasetPath: string, epochs: number) => request<{ job_id: string; model_sha256: string; result: Record<string, unknown> }>(
+      '/api/ocr/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    evaluate: (jobId: string, datasetPath: string) => request<OCREvaluation>(
+      '/api/ocr/evaluate', { method: 'POST', body: JSON.stringify({ job_id: jobId, dataset_path: datasetPath, split: 'test' }) },
+    ),
+    predict: (jobId: string, imagePath: string) => request<{ text: string; confidence: number; model_sha256: string }>(
+      '/api/ocr/predict', { method: 'POST', body: JSON.stringify({ job_id: jobId, image_path: imagePath }) },
+    ),
+  },
+
+  rotated: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; class_name: string; split_counts: Record<string, number>; dataset_sha256: string; samples: RotatedSampleRow[] }>(
+      `/api/rotated-detection/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: RotatedSampleRow[]) => request<{ sample_count: number; class_name: string; split_counts: Record<string, number>; dataset_sha256: string; samples: RotatedSampleRow[] }>(
+      '/api/rotated-detection/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: RotatedModelSummary[] }>('/api/rotated-detection/models'),
+    train: (datasetPath: string, epochs: number) => request<RotatedJob>(
+      '/api/rotated-detection/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    job: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}`),
+    cancel: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' }),
+    evaluate: (jobId: string, datasetPath: string) => request<RotatedEvaluation>(
+      '/api/rotated-detection/evaluate', { method: 'POST', body: JSON.stringify({ job_id: jobId, dataset_path: datasetPath, split: 'test' }) },
+    ),
+    predict: (jobId: string, imagePath: string) => request<RotatedPrediction>(
+      '/api/rotated-detection/predict', { method: 'POST', body: JSON.stringify({ job_id: jobId, image_path: imagePath }) },
+    ),
+  },
+
+  defectGAN: {
+    manifest: (datasetPath: string) => request<{ sample_count: number; samples: DefectGANCropRow[]; split_counts: Record<string, number> }>(
+      `/api/defect-gan/manifest?dataset_path=${encodeURIComponent(datasetPath)}`,
+    ),
+    saveManifest: (datasetPath: string, samples: DefectGANCropRow[]) => request<{ sample_count: number; samples: DefectGANCropRow[]; split_counts: Record<string, number> }>(
+      '/api/defect-gan/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
+    ),
+    models: () => request<{ models: DefectGANModelSummary[] }>('/api/defect-gan/models'),
+    train: (datasetPath: string, epochs: number) => request<{ job_id: string; result: { status: string; checkpoint_sha256: string } }>(
+      '/api/defect-gan/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    ),
+    generate: (jobId: string, count: number, seed: number) => request<{ job_id: string; review_dir: string; quality_status: string; candidates: DefectGANCandidate[] }>(
+      '/api/defect-gan/generate', { method: 'POST', body: JSON.stringify({ job_id: jobId, count, seed }) },
+    ),
   },
 
   dataset: {
@@ -477,6 +693,13 @@ export const api = {
   },
 
   training: {
+    warmStartParents: (datasetPath: string, task: VisionTask, preset: 'fast' | 'precision') => {
+      const query = new URLSearchParams({ dataset_path: datasetPath, task, preset });
+      return request<{ parents: Array<{
+        job_id: string; classes: string[]; architecture: string;
+        checkpoint_sha256: string; dataset_fingerprint: string;
+      }>; total: number }>(`/api/training/warm-start-parents?${query.toString()}`);
+    },
     start: (data: {
       task: VisionTask;
       preset: 'fast' | 'precision';
@@ -484,7 +707,8 @@ export const api = {
       output_dir?: string;
       config_overrides?: any;
       compute_profile_id?: string;
-    }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string }>('/api/training/start', {
+      warm_start_job_id?: string;
+    }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -511,20 +735,51 @@ export const api = {
     },
   },
 
+  modelDeployments: {
+    assess: (comparisonId: string, sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<ModelDeploymentAssessment>(
+        `/api/model-deployments/assess/${encodeURIComponent(comparisonId)}?${q.toString()}`
+      );
+    },
+    active: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ active: ModelDeploymentRevision | null; field_runtime_applied: boolean }>(
+        `/api/model-deployments/active?${q.toString()}`
+      );
+    },
+    history: (sourceDatasetPath: string, task: FlowModelTask) => {
+      const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
+      return request<{ revisions: ModelDeploymentRevision[] }>(
+        `/api/model-deployments/history?${q.toString()}`
+      );
+    },
+    approve: (data: { source_dataset_path: string; task: FlowModelTask; comparison_id: string;
+      reviewer: string; reason: string; holdout_reviewed: true }) =>
+      request<{ revision: ModelDeploymentRevision; field_runtime_applied: boolean }>(
+        '/api/model-deployments/approve', { method: 'POST', body: JSON.stringify(data) }
+      ),
+    rollback: (data: { source_dataset_path: string; task: FlowModelTask; target_revision_id: string;
+      reviewer: string; reason: string }) =>
+      request<{ revision: ModelDeploymentRevision; field_runtime_applied: boolean }>(
+        '/api/model-deployments/rollback', { method: 'POST', body: JSON.stringify(data) }
+      ),
+  },
+
   evaluation: {
-    comparisonModels: (sourceDatasetPath: string, task: VisionTask) => {
+    comparisonModels: (sourceDatasetPath: string, task: FlowModelTask) => {
       const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
       return request<{ models: ModelComparisonModel[]; total: number }>(
         `/api/evaluation/model-comparisons/models?${q.toString()}`
       );
     },
-    listComparisons: (sourceDatasetPath: string, task: VisionTask) => {
+    listComparisons: (sourceDatasetPath: string, task: FlowModelTask) => {
       const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
       return request<{ comparisons: ModelComparisonRecord[]; total: number }>(
         `/api/evaluation/model-comparisons?${q.toString()}`
       );
     },
-    getComparison: (comparisonId: string, sourceDatasetPath: string, task: VisionTask) => {
+    getComparison: (comparisonId: string, sourceDatasetPath: string, task: FlowModelTask) => {
       const q = new URLSearchParams({ source_dataset_path: sourceDatasetPath, task });
       return request<ModelComparisonReport>(
         `/api/evaluation/model-comparisons/${encodeURIComponent(comparisonId)}?${q.toString()}`
@@ -532,7 +787,7 @@ export const api = {
     },
     createComparison: (data: {
       source_dataset_path: string;
-      task: VisionTask;
+      task: FlowModelTask;
       incumbent_job_id: string;
       candidate_job_id: string;
       max_images: number;
@@ -610,7 +865,7 @@ export const api = {
         `/api/flowchart/pipelines/${encodeURIComponent(versionId)}/activate?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`,
         { method: 'PUT' },
       ),
-    getPipeline: (inspectionTask?: VisionTask, sourceDatasetPath?: string) => {
+    getPipeline: (inspectionTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
       const query = new URLSearchParams();
       if (inspectionTask) query.set('inspection_task', inspectionTask);
       if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
@@ -620,15 +875,15 @@ export const api = {
       request<FlowchartPipeline>(`/api/flowchart/pipeline/active?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`),
     getSingleDetectionTemplate: (jobId?: string) =>
       request<any>(`/api/flowchart/templates/single-detection${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
-    getSingleSegmentationTemplate: (jobId?: string, inspectionTask?: Exclude<VisionTask, 'detection'>) => {
+    getSingleSegmentationTemplate: (jobId?: string, inspectionTask?: Exclude<FlowModelTask, 'detection'>) => {
       const query = new URLSearchParams();
       if (jobId) query.set('job_id', jobId);
       if (inspectionTask) query.set('inspection_task', inspectionTask);
       return request<any>(`/api/flowchart/templates/single-segmentation${query.size ? `?${query.toString()}` : ''}`);
     },
-    getDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) =>
+    getDetectorRoiTemplate: (inspectionTask: Exclude<FlowModelTask, 'detection'>) =>
       request<any>(`/api/flowchart/templates/detector-roi?inspection_task=${encodeURIComponent(inspectionTask)}`),
-    getFixedRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>, jobId?: string) => {
+    getFixedRoiTemplate: (inspectionTask: Exclude<FlowModelTask, 'detection'>, jobId?: string) => {
       const query = new URLSearchParams({ inspection_task: inspectionTask });
       if (jobId) query.set('job_id', jobId);
       return request<FlowchartPipeline>(`/api/flowchart/templates/fixed-roi?${query.toString()}`);
@@ -637,11 +892,11 @@ export const api = {
       request<FlowchartPipeline>('/api/flowchart/templates/five-model-chain'),
     getConditionalInspectionTemplate: () =>
       request<FlowchartPipeline>('/api/flowchart/templates/conditional-inspection'),
-    verifyModels: (data: { source_dataset_path: string; models: Array<{ job_id: string; task: VisionTask }> }) =>
+    verifyModels: (data: { source_dataset_path: string; models: Array<{ job_id: string; task: FlowModelTask }> }) =>
       request<{ verified_job_ids: string[] }>('/api/flowchart/models/verify', {
         method: 'POST', body: JSON.stringify(data),
       }),
-    savePipeline: (data: FlowchartPipeline, recipeTask?: VisionTask | 'mixed', sourceDatasetPath?: string) => {
+    savePipeline: (data: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
       const query = new URLSearchParams();
       if (recipeTask) query.set('recipe_task', recipeTask);
       if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
@@ -658,6 +913,17 @@ export const api = {
   },
 
   inspections: {
+    reviewQueue: (sourceFolder: string, task: VisionTask) => {
+      const q = new URLSearchParams({ source_folder: sourceFolder, task });
+      return request<{ items: Array<{
+        run_id: string; image: ImageMeta; model_verdict: 'REVIEW' | null;
+        operator_verdict: 'OK' | 'NG' | 'REVIEW' | null;
+        status: 'unreviewed' | 'still_review' | 'error'; can_review: boolean;
+        error: string | null; created_at: string; pipeline_name: string; saved_version_id: string | null;
+      }>; total: number; review_required: number; diagnostic_errors: number }>(
+        `/api/inspections/review-queue?${q.toString()}`
+      );
+    },
     createRun: (report: BatchInspectionReport, pipeline: FlowchartPipeline) =>
       request<{
         run_id: string; status: string; saved_version_id: string | null;
@@ -702,7 +968,7 @@ export const api = {
   export: {
     flow: (data: {
       source_dataset_path: string;
-      recipe_task: VisionTask | 'mixed';
+      recipe_task: FlowModelTask | 'mixed';
       package_name: string;
       version_id?: string;
       verification_image_path?: string;

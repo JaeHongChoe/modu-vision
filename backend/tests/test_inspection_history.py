@@ -448,3 +448,60 @@ def test_csv_export_does_not_turn_image_or_review_text_into_spreadsheet_formulas
     assert row["image_path"] == image_path
     literal = client.get(f"/api/inspections/runs/{run_id}/export", params={"format": "json"}).json()
     assert json.loads(literal["content"])["rows"][0]["image"]["image_id"] == image_id
+
+
+def test_review_queue_tracks_unresolved_reviews_and_diagnostic_errors(monkeypatch, tmp_path):
+    client, project, source, image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    created = client.post("/api/inspections/runs", json=payload)
+    assert created.status_code == 200, created.text
+    run_id = created.json()["run_id"]
+    seed_old_result(project["project_dir"], run_id, str(image), "REVIEW", {
+        "image_id": image.stem, "image_path": str(image), "final_verdict": "REVIEW",
+    })
+    assert client.put(f"/api/inspections/runs/{run_id}/finish", json={"status": "completed"}).status_code == 200
+    params = {"source_folder": str(source), "task": "segmentation"}
+    queued = client.get("/api/inspections/review-queue", params=params)
+    assert queued.status_code == 200, queued.text
+    assert queued.json()["total"] == 1
+    assert queued.json()["items"][0]["status"] == "unreviewed"
+    assert queued.json()["items"][0]["run_id"] == run_id
+    assert queued.json()["items"][0]["image"]["file_path"] == str(image)
+    assert client.post(f"/api/inspections/runs/{run_id}/reviews", json={
+        "image_path": str(image), "final_verdict": "REVIEW", "reviewer": "operator", "reason": "Need another look",
+    }).status_code == 200
+    assert client.get("/api/inspections/review-queue", params=params).json()["items"][0]["status"] == "still_review"
+    assert client.post(f"/api/inspections/runs/{run_id}/reviews", json={
+        "image_path": str(image), "final_verdict": "NG", "reviewer": "operator", "reason": "Confirmed defect",
+    }).status_code == 200
+    assert client.get("/api/inspections/review-queue", params=params).json()["total"] == 0
+
+    manually_open = client.post("/api/inspections/runs", json=payload)
+    manual_id = manually_open.json()["run_id"]
+    seed_old_result(project["project_dir"], manual_id, str(image), "NG", {
+        "image_id": image.stem, "image_path": str(image), "final_verdict": "NG",
+    })
+    assert client.put(f"/api/inspections/runs/{manual_id}/finish", json={"status": "completed"}).status_code == 200
+    assert client.post(f"/api/inspections/runs/{manual_id}/reviews", json={
+        "image_path": str(image), "final_verdict": "REVIEW", "reviewer": "operator", "reason": "Needs second observer",
+    }).status_code == 200
+    queued = client.get("/api/inspections/review-queue", params=params).json()
+    assert queued["total"] == 1
+    assert queued["items"][0]["status"] == "still_review"
+
+    failed = client.post("/api/inspections/runs", json=payload)
+    failed_id = failed.json()["run_id"]
+    assert client.put(f"/api/inspections/runs/{failed_id}/rows", json={
+        "image_path": str(image), "state": "error", "error": "Inference unavailable",
+    }).status_code == 200
+    assert client.put(f"/api/inspections/runs/{failed_id}/finish", json={"status": "completed"}).status_code == 200
+    queued = client.get("/api/inspections/review-queue", params={**params, "limit": 1}).json()
+    assert queued["total"] == 2
+    assert queued["review_required"] == 1
+    assert queued["diagnostic_errors"] == 1
+    assert queued["items"][0]["status"] == "error"
+    assert queued["items"][0]["can_review"] is False
+
+    second = client.post("/api/project/create", json={"name": "other", "task": "segmentation"})
+    assert second.status_code == 200
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    assert client.get("/api/inspections/review-queue", params=params).json()["total"] == 0

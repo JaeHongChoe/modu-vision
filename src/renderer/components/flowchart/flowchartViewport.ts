@@ -5,6 +5,12 @@ export const FLOW_NODE_HEIGHT = 220;
 
 const CANVAS_PADDING = 48;
 const MAX_AUTO_SCALE = 1.25;
+const MIN_READABLE_SCALE = 0.72;
+
+/** Initial editor scale; full-graph fit remains a separate user action. */
+export function readableFlowScale(fitScale: number): number {
+  return Math.max(MIN_READABLE_SCALE, fitScale);
+}
 
 interface PositionedNode {
   position: { x: number; y: number };
@@ -51,9 +57,11 @@ export function computeFlowchartViewport(
     Math.max(1, width - 2 * CANVAS_PADDING) / graphWidth,
     Math.max(1, height - 2 * CANVAS_PADDING) / graphHeight,
   );
-  const scale = fitScale * Math.max(0.5, Math.min(2, zoomMultiplier));
+  const scale = fitScale * Math.max(0.25, Math.min(8, zoomMultiplier));
   const left = Math.max(CANVAS_PADDING, (width - graphWidth * scale) / 2);
-  const top = Math.max(CANVAS_PADDING, (height - graphHeight * scale) / 2);
+  // A tall editor should open with the graph directly under the toolbar.
+  // Vertical centering left a large empty strip before the first node.
+  const top = Math.max(CANVAS_PADDING, Math.min(96, (height - graphHeight * scale) / 2));
 
   return {
     scale,

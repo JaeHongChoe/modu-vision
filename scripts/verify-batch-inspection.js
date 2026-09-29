@@ -103,6 +103,21 @@ test('batch runs the exact saved graph shown in its handoff card', async () => {
   assert.equal(calls.filter(([kind]) => kind === 'active-pipeline').length, 0);
 });
 
+test('batch accepts a saved flow with segmentation and patch classification models', async () => {
+  const { api, calls } = fakeApi([image('a.jpg'), image('b.jpg')]);
+  const mixed = { ...pipeline, nodes: [
+    pipeline.nodes[0],
+    { id: 'patch', data: { node_type: 'inspection', task: 'patch_classification', model_job_id: 'job_patch' } },
+  ] };
+  const report = await runBatchInspection({ ...baseOptions, pipeline: mixed }, api);
+  assert.equal(report.status, 'completed');
+  assert.equal(report.rows.length, 2);
+  assert.deepEqual(calls.find(([kind]) => kind === 'verify')[1].models, [
+    { job_id: 'job_123', task: 'segmentation' },
+    { job_id: 'job_patch', task: 'patch_classification' },
+  ]);
+});
+
 test('unmount during run creation stops only the newly created durable run', async () => {
   const { api, calls } = fakeApi([image('a.jpg'), image('b.jpg')]);
   let resolveCreation;

@@ -1,4 +1,4 @@
-import type { FlowchartPipeline, VisionTask } from '../../types';
+import type { FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
 
 export type FlowchartStartupResult =
   | { status: 'ready'; pipeline: FlowchartPipeline; verifiedJobId: string }
@@ -18,20 +18,20 @@ interface FlowchartStartupOptions {
   getVerifiedJobId: () => string | null;
   loadEvaluation: (jobId?: string, source?: { folderPath: string; task: VisionTask }) => Promise<void>;
   loadSavedPipeline: () => Promise<FlowchartPipeline | null>;
-  verifyModels: (sourceFolder: string, models: Array<{ job_id: string; task: VisionTask }>) => Promise<void>;
+  verifyModels: (sourceFolder: string, models: Array<{ job_id: string; task: FlowModelTask }>) => Promise<void>;
   isCurrent: () => boolean;
 }
 
 /** Collect the model references used by an executable graph. */
-export function getFlowchartModelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: VisionTask }> {
-  const models: Array<{ job_id: string; task: VisionTask }> = [];
+export function getFlowchartModelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: FlowModelTask }> {
+  const models: Array<{ job_id: string; task: FlowModelTask }> = [];
   for (const node of pipeline.nodes) {
     if (!node.data.model_job_id) continue;
     if (node.data.node_type === 'detection_crop') {
       models.push({ job_id: node.data.model_job_id, task: 'detection' });
     } else if (node.data.node_type === 'inspection') {
       const task = node.data.task;
-      if (task !== 'anomaly' && task !== 'segmentation' && task !== 'classification') {
+      if (task !== 'anomaly' && task !== 'segmentation' && task !== 'classification' && task !== 'patch_classification') {
         throw new Error('Unsupported inspection model task');
       }
       models.push({ job_id: node.data.model_job_id, task });

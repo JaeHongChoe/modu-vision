@@ -26,11 +26,12 @@ from backend.engine.flowchart_engine import (
     get_single_segmentation_flowchart,
 )
 from backend.engine.industrial_adapters import read_image_safely_rgb
+from backend.engine.patch_classification import load_patch_manifest
 from backend.engine.zero_escape_analyzer import is_defect_label
 
 
 router = APIRouter(prefix="/model-comparisons", tags=["evaluation"])
-Task = Literal["classification", "detection", "segmentation", "anomaly"]
+Task = Literal["classification", "detection", "segmentation", "anomaly", "patch_classification"]
 _REPORT_ID = re.compile(r"comparison_[0-9a-f]{32}\Z")
 
 
@@ -54,7 +55,7 @@ def _scope(request: Request, source_dataset_path: str, task: Task) -> tuple[dict
     project = dict(get_current_project(request))
     source = Path(source_dataset_path).expanduser().resolve()
     registered = project.get("source_dataset_dir")
-    if project.get("task") != task or not registered or source != Path(registered).expanduser().resolve():
+    if (task != "patch_classification" and project.get("task") != task) or not registered or source != Path(registered).expanduser().resolve():
         raise HTTPException(status_code=409, detail="선택한 작업 유형과 데이터 출처가 현재 프로젝트와 일치하지 않습니다.")
     if not source.is_dir():
         raise HTTPException(status_code=422, detail="현재 프로젝트의 원본 데이터 폴더를 찾을 수 없습니다.")
@@ -114,6 +115,8 @@ def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> di
         "training_dataset_fingerprint": training_fingerprint,
         "created_at": meta.get("created_at") or receipt.get("completed_at") or None,
         "preset": meta.get("preset"),
+        "warm_start": meta.get("warm_start"),
+        "receipt_warm_start": receipt.get("warm_start"),
     }
 
 
@@ -134,6 +137,8 @@ def _ground_truth_verdict(label: Any) -> str | None:
 
 
 def _test_images(source: Path, task: Task, maximum: int) -> tuple[list[dict[str, Any]], int]:
+    if task == "patch_classification":
+        return _patch_test_images(source, maximum)
     page = routes_dataset.list_dataset_images(
         folder_path=str(source), task=task, limit=maximum, offset=0, split="test", class_name=None,
     )
@@ -165,6 +170,53 @@ def _test_images(source: Path, task: Task, maximum: int) -> tuple[list[dict[str,
             "ground_truth_verdict": _ground_truth_verdict(label),
         })
     return selected, total
+
+
+def _patch_test_images(source: Path, maximum: int) -> tuple[list[dict[str, Any]], int]:
+    """Compare source images only when image-level test truth was supplied."""
+    try:
+        manifest = load_patch_manifest(source)
+        raw = json.loads((source / "patches.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid patch holdout: {exc}") from exc
+    test_sources = {record.image: record for record in manifest.patches if record.split == "test"}
+    if not test_sources:
+        raise HTTPException(status_code=422, detail="Patch comparison needs test source images in patches.json")
+    truth = raw.get("test_image_verdicts") if isinstance(raw, dict) else None
+    if (not isinstance(truth, dict) or set(truth) != set(test_sources)
+            or any(value not in ("OK", "NG") for value in truth.values())):
+        raise HTTPException(status_code=422, detail=(
+            "patches.json needs test_image_verdicts with an independently reviewed OK or NG "
+            "image-level truth for every test source image"
+        ))
+    ordered = sorted(test_sources)
+    if len(ordered) > maximum:
+        quota = maximum // 2
+        selected_paths = ([path for path in ordered if truth[path] == "OK"][:quota]
+                          + [path for path in ordered if truth[path] == "NG"][:quota])
+        selected_set = set(selected_paths)
+        selected_paths += [path for path in ordered if path not in selected_set][:maximum - len(selected_paths)]
+        ordered = sorted(selected_paths)
+    selected = []
+    for relative in ordered[:maximum]:
+        record = test_sources[relative]
+        path = record.image_path
+        try:
+            read_image_safely_rgb(path, max_dim=32)
+            digest = _sha256(path)
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=f"Patch test image is unreadable: {relative}") from exc
+        if digest != record.source_sha256:
+            raise HTTPException(status_code=409, detail=f"Patch test image changed after manifest validation: {relative}")
+        selected.append({
+            "image_id": path.stem,
+            "file_name": path.name,
+            "file_path": str(path),
+            "image_sha256": digest,
+            "ground_truth_label": truth[relative],
+            "ground_truth_verdict": truth[relative],
+        })
+    return selected, len(test_sources)
 
 
 def _pipeline(task: Task, job_id: str):
@@ -302,7 +354,11 @@ def create_comparison(payload: ComparisonRequest, request: Request):
         "candidate_training_dataset_fingerprint": candidate["training_dataset_fingerprint"],
         "dataset_fingerprint": dataset_fingerprint,
         "model_sha256": model_hashes,
-        "image_selection": "first N test images in dataset gallery order; exact paths and SHA-256 saved below",
+        "image_selection": (
+            "patch: deterministic OK/NG balanced test sources when count exceeds limit; exact paths and SHA-256 below"
+            if payload.task == "patch_classification" else
+            "first N test images in dataset gallery order; exact paths and SHA-256 saved below"
+        ),
         "selected_image_count": len(images),
         "total_test_images": total_test_images,
         "status": "completed" if summary["error_images"] == 0 else "completed_with_errors",

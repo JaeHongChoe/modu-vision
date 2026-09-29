@@ -46,6 +46,7 @@ from backend.engine.detection.model import (
 )
 from backend.engine.device import get_device
 from backend.engine.industrial_adapters import read_image_safely_rgb, sanitize_file_stem
+from backend.engine.patch_classification import predict_patch_classification
 from backend.engine.segmentation.model import build_segmentation_model
 
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
@@ -93,7 +94,7 @@ def _normal_class_indices(classes: Sequence[str]) -> List[int]:
 class FlowNodeData(BaseModel):
     model_config = ConfigDict(extra="ignore")
     label: str
-    node_type: Literal["input", "fixed_roi", "detection_crop", "inspection", "decision", "output"]
+    node_type: Literal["input", "fixed_roi", "detection_crop", "inspection", "blob_measure", "aggregate", "decision", "output"]
     task: Optional[str] = "anomaly"  # 'detection', 'anomaly', 'segmentation', 'classification'
     model_job_id: Optional[str] = None
     threshold: Optional[float] = 0.5
@@ -132,6 +133,7 @@ class FlowchartPipeline(BaseModel):
 class CropInspectionResult(BaseModel):
     model_config = ConfigDict(extra="ignore")
     roi_id: str
+    source_node_id: Optional[str] = None
     label: str
     bbox: List[int]  # [x1, y1, x2, y2]
     defect_score: float
@@ -140,6 +142,8 @@ class CropInspectionResult(BaseModel):
     flaw_type: str
     confidence: Optional[float] = None
     defect_area_px: Optional[int] = None
+    blob_count: Optional[int] = None
+    largest_blob_area_px: Optional[int] = None
     tiles_processed: Optional[int] = None
     _defect_mask: Optional[np.ndarray] = PrivateAttr(default=None)
 
@@ -536,10 +540,14 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     outputs = [node for node in pipeline.nodes if node.data.node_type == "output"]
     models = [node for node in pipeline.nodes if node.data.node_type in ("detection_crop", "inspection")]
     fixed_rois = [node for node in pipeline.nodes if node.data.node_type == "fixed_roi"]
+    blob_nodes = [node for node in pipeline.nodes if node.data.node_type == "blob_measure"]
+    aggregate_nodes = [node for node in pipeline.nodes if node.data.node_type == "aggregate"]
     if len(decisions) != 1 or not 1 <= len(outputs) <= 3 or not 1 <= len(models) <= 8:
         raise ValueError("Pipeline needs one decision, 1-3 outputs, and 1-8 model nodes.")
     if len(fixed_rois) > 8:
         raise ValueError("Pipeline supports at most eight fixed ROI nodes.")
+    if len(blob_nodes) > 8 or len(aggregate_nodes) > 4:
+        raise ValueError("Pipeline supports at most eight Blob and four aggregate nodes.")
 
     outgoing: Dict[str, List[FlowEdge]] = {node_id: [] for node_id in nodes}
     incoming: Dict[str, List[FlowEdge]] = {node_id: [] for node_id in nodes}
@@ -565,10 +573,14 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         elif source_type in ("detection_crop", "inspection"):
             if target_type in ("detection_crop", "inspection"):
                 allowed_payloads = {"image", "roi"}
-            elif target_type == "decision":
+            elif target_type in ("blob_measure", "aggregate", "decision"):
                 allowed_payloads = {"result"}
             else:
                 raise ValueError("Model outputs must feed a model or decision node.")
+        elif source_type == "blob_measure" and target_type in ("aggregate", "decision"):
+            allowed_payloads = {"result"}
+        elif source_type == "aggregate" and target_type == "decision":
+            allowed_payloads = {"result"}
         elif source_type == "decision" and target_type == "output":
             allowed_payloads = {"result"}
         else:
@@ -604,21 +616,49 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         allowed = ("input", "fixed_roi", "detection_crop", "inspection")
         if parent_type not in allowed:
             raise ValueError(f"Model node {node.id} has an unsupported upstream connection.")
-        if node.data.node_type == "inspection" and node.data.task not in ("anomaly", "segmentation", "classification"):
+        if node.data.node_type == "inspection" and node.data.task not in ("anomaly", "segmentation", "classification", "patch_classification"):
             raise ValueError(f"Inspection node {node.id} has an unsupported task.")
         targets = outgoing[node.id]
         if not targets:
             raise ValueError(f"Model node {node.id} must connect to an inspection or decision node.")
         target_types = {nodes[edge.target].data.node_type for edge in targets}
-        if not target_types.issubset({"inspection", "detection_crop", "decision"}):
+        if not target_types.issubset({"inspection", "detection_crop", "blob_measure", "aggregate", "decision"}):
             raise ValueError(f"Model node {node.id} must connect to a model or decision node.")
+    for node in blob_nodes:
+        parents = incoming[node.id]
+        if (len(parents) != 1 or nodes[parents[0].source].data.node_type != "inspection"
+                or nodes[parents[0].source].data.task != "segmentation"):
+            raise ValueError(f"Blob node {node.id} needs one segmentation result input.")
+        if not outgoing[node.id] or any(nodes[edge.target].data.node_type not in ("aggregate", "decision") for edge in outgoing[node.id]):
+            raise ValueError(f"Blob node {node.id} must feed an aggregate or decision.")
+        minimum_area = node.data.params.get("min_blob_area_px", 1)
+        minimum_count = node.data.params.get("min_blob_count_for_ng", 1)
+        if (type(minimum_area) is not int or minimum_area < 1
+                or type(minimum_count) is not int or minimum_count < 1):
+            raise ValueError("Blob area and count limits must be positive integers.")
+    for node in aggregate_nodes:
+        parents = incoming[node.id]
+        if not 1 <= len(parents) <= 8 or any(
+            nodes[edge.source].data.node_type not in ("inspection", "detection_crop", "blob_measure") for edge in parents
+        ):
+            raise ValueError(f"Aggregate node {node.id} needs 1-8 model/Blob result inputs.")
+        if len(outgoing[node.id]) != 1 or outgoing[node.id][0].target != decision_id:
+            raise ValueError(f"Aggregate node {node.id} must feed the decision directly.")
+        if node.data.rule not in ("any_ng", "all_ng"):
+            raise ValueError("Aggregate rule must be any_ng or all_ng.")
     decision_inputs = incoming[decision_id]
-    if not decision_inputs or any(nodes[edge.source].data.node_type not in ("inspection", "detection_crop") for edge in decision_inputs):
+    if not decision_inputs or any(nodes[edge.source].data.node_type not in ("inspection", "detection_crop", "blob_measure", "aggregate") for edge in decision_inputs):
         raise ValueError("Decision needs incoming model results.")
     decision = decisions[0]
     rule = decision.data.rule or "any_defect_is_ng"
-    if rule not in ("any_defect_is_ng", "score_gt_threshold", "max_flaws_allowed"):
+    if rule not in ("any_defect_is_ng", "score_gt_threshold", "max_flaws_allowed", "aggregate_verdict"):
         raise ValueError(f"Decision rule {rule} is unsupported.")
+    if rule == "aggregate_verdict" and (
+        len(decision_inputs) != 1 or nodes[decision_inputs[0].source].data.node_type != "aggregate"
+    ):
+        raise ValueError("aggregate_verdict requires one aggregate result input.")
+    if any(nodes[edge.source].data.node_type == "aggregate" for edge in decision_inputs) and rule != "aggregate_verdict":
+        raise ValueError("An aggregate result requires the aggregate_verdict decision rule.")
     if decision.data.params.get("incomplete_policy", "review") not in ("review", "ng"):
         raise ValueError("Decision incomplete_policy must be review or ng.")
     if decision.data.params.get("review_fallback") not in (None, "pass", "fail"):
@@ -665,7 +705,7 @@ def _edge_payload_type(edge: FlowEdge, source_type: str, target_type: str) -> Li
         return edge.payload_type
     if source_type == "input":
         return "image"
-    if target_type in ("decision", "output"):
+    if target_type in ("blob_measure", "aggregate", "decision", "output"):
         return "result"
     return "roi"
 
@@ -991,6 +1031,55 @@ class FlowchartEngine:
         probability_sum /= coverage
         return probability_sum, count
 
+    def _inspect_patch_crops(
+        self,
+        img_rgb: np.ndarray,
+        rois: List[Dict[str, Any]],
+        inspect_node: FlowNode,
+    ) -> Tuple[List[CropInspectionResult], float, str]:
+        """Map a trained patch model's local boxes back to original pixels."""
+        started = time.time()
+        checkpoint = self._resolve_checkpoint(inspect_node.data.model_job_id, "patch_classification")
+        if checkpoint is None:
+            raise FlowchartInspectionConfigurationError("Patch classification requires a completed checkpoint.")
+        max_patches = inspect_node.data.params.get("max_patches", 256)
+        if type(max_patches) is not int or not 1 <= max_patches <= 512:
+            raise FlowchartInspectionConfigurationError("Patch max_patches must be an integer from 1 to 512.")
+        threshold = inspect_node.data.threshold if inspect_node.data.threshold is not None else 0.5
+        results: List[CropInspectionResult] = []
+        try:
+            for roi in rois:
+                region, bounds = safe_crop_roi(
+                    img_rgb, roi["bbox"], padding_px=0, min_size=16, target_size=None,
+                )
+                prediction = predict_patch_classification(
+                    checkpoint, region, threshold=threshold, device=self.device,
+                    source_id=roi["id"], max_patches=max_patches - len(results),
+                )
+                for index, patch in enumerate(prediction["patches"]):
+                    px1, py1, px2, py2 = patch["box"]
+                    subimage = region[py1:py2, px1:px2]
+                    if max(subimage.shape[:2]) > 160:
+                        scale = 160 / max(subimage.shape[:2])
+                        subimage = cv2.resize(subimage, (
+                            max(1, round(subimage.shape[1] * scale)),
+                            max(1, round(subimage.shape[0] * scale)),
+                        ))
+                    _, encoded = cv2.imencode(".png", cv2.cvtColor(subimage, cv2.COLOR_RGB2BGR))
+                    score = float(patch["defect_score"])
+                    is_ng = patch["decision"] == "FAIL"
+                    results.append(CropInspectionResult(
+                        roi_id=f"{roi['id']}:patch_{index + 1}", label=patch["predicted_class"],
+                        bbox=[bounds[0] + px1, bounds[1] + py1, bounds[0] + px2, bounds[1] + py2],
+                        defect_score=round(score, 4), verdict="NG" if is_ng else "OK",
+                        crop_thumbnail=f"data:image/png;base64,{base64.b64encode(encoded.tobytes()).decode('utf-8')}",
+                        flaw_type="패치 분류 결함 기준 초과" if is_ng else "설정 기준 이내",
+                        confidence=float(patch["confidence"]),
+                    ))
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise FlowchartInspectionConfigurationError(str(exc)) from exc
+        return results, (time.time() - started) * 1000.0, "passed"
+
     def _inspect_crops(
         self,
         img_rgb: np.ndarray,
@@ -1015,6 +1104,9 @@ class FlowchartEngine:
             inspect_node.data.params.get("min_defect_area_px", 8) if (inspect_node and inspect_node.data.params) else 8
         )
         job_id = inspect_node.data.model_job_id if inspect_node else None
+
+        if task.lower().strip() == "patch_classification":
+            return self._inspect_patch_crops(img_rgb, rois, inspect_node)
 
         model, is_trained = self._get_inspection_model(task=task, job_id=job_id)
         task_clean = task.lower().strip()
@@ -1342,7 +1434,9 @@ class FlowchartEngine:
         decision_node = next(node for node in ordered_nodes if node.data.node_type == "decision")
         output_nodes = [node for node in ordered_nodes if node.data.node_type == "output"]
         model_nodes = [node for node in ordered_nodes if node.data.node_type in ("detection_crop", "inspection")]
-        processing_nodes = [node for node in ordered_nodes if node.data.node_type in ("fixed_roi", "detection_crop", "inspection")]
+        processing_nodes = [node for node in ordered_nodes if node.data.node_type in (
+            "fixed_roi", "detection_crop", "inspection", "blob_measure", "aggregate",
+        )]
         detector_only_ids = {
             node.id for node in model_nodes
             if node.data.node_type == "detection_crop"
@@ -1352,6 +1446,8 @@ class FlowchartEngine:
             raise ValueError("A trained detection model is required for a detector-only flow.")
         full_image_input: Dict[str, bool] = {}
         for node in processing_nodes:
+            if node.data.node_type in ("blob_measure", "aggregate"):
+                continue
             edge = incoming[node.id][0]
             source = nodes[edge.source]
             payload = _edge_payload_type(edge, source.data.node_type, node.data.node_type)
@@ -1418,10 +1514,88 @@ class FlowchartEngine:
         active_edges = {edge.id for edge in outgoing[input_node.id]}
         node_rois: Dict[str, List[Dict[str, Any]]] = {}
         node_evidence: Dict[str, List[CropInspectionResult]] = {}
+        node_branch_verdict: Dict[str, Literal["OK", "NG", "REVIEW"]] = {}
         incomplete_reasons: List[str] = []
         h, w = img_rgb.shape[:2]
         whole_image = [{"id": "full_image", "label": "Full image", "bbox": [0, 0, w, h]}]
         for node in processing_nodes:
+            if node.data.node_type in ("blob_measure", "aggregate"):
+                started = time.time()
+                parent_edges = [edge for edge in incoming[node.id] if edge.id in active_edges]
+                evidence: List[CropInspectionResult] = []
+                branch_verdict: Literal["OK", "NG", "REVIEW"] = "REVIEW"
+                if node.data.node_type == "blob_measure" and parent_edges:
+                    source = parent_edges[0].source
+                    min_area = node.data.params.get("min_blob_area_px", 1)
+                    min_count = node.data.params.get("min_blob_count_for_ng", 1)
+                    for crop in node_evidence[source]:
+                        mask = crop._defect_mask
+                        if mask is None:
+                            incomplete_reasons.append(f"Blob node {node.id} received no segmentation mask.")
+                            continue
+                        width = crop.bbox[2] - crop.bbox[0]
+                        height = crop.bbox[3] - crop.bbox[1]
+                        if width <= 0 or height <= 0:
+                            incomplete_reasons.append(f"Blob node {node.id} received an invalid source ROI.")
+                            continue
+                        binary = (mask > 0).astype(np.uint8)
+                        if binary.shape != (height, width):
+                            binary = cv2.resize(binary, (width, height), interpolation=cv2.INTER_NEAREST)
+                        count, _, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
+                        areas = [int(stats[index, cv2.CC_STAT_AREA]) for index in range(1, count)
+                                 if int(stats[index, cv2.CC_STAT_AREA]) >= min_area]
+                        blob_count = len(areas)
+                        measured = crop.model_copy(update={
+                            "blob_count": blob_count,
+                            "largest_blob_area_px": max(areas, default=0),
+                            "verdict": "NG" if blob_count >= min_count else "OK",
+                            "flaw_type": f"Blob count {blob_count} (minimum {min_count})",
+                        })
+                        measured._defect_mask = mask
+                        evidence.append(measured)
+                    branch_verdict = (
+                        "NG" if any(crop.verdict == "NG" for crop in evidence) else
+                        "OK" if evidence else "REVIEW"
+                    )
+                elif node.data.node_type == "aggregate" and parent_edges:
+                    verdicts = [node_branch_verdict.get(edge.source, "REVIEW") for edge in parent_edges]
+                    for edge in parent_edges:
+                        evidence.extend(
+                            crop.model_copy(update={
+                                "roi_id": f"{edge.source}:{crop.roi_id}",
+                                "source_node_id": edge.source,
+                            })
+                            for crop in node_evidence[edge.source]
+                        )
+                    if len(parent_edges) != len(incoming[node.id]):
+                        missing = [edge.source for edge in incoming[node.id] if edge.id not in active_edges]
+                        incomplete_reasons.append(
+                            f"Aggregate {node.id} is missing active result branches: {', '.join(missing)}."
+                        )
+                        branch_verdict = "REVIEW"
+                    elif "REVIEW" in verdicts or not evidence:
+                        branch_verdict = "REVIEW"
+                    elif node.data.rule == "all_ng":
+                        branch_verdict = "NG" if all(verdict == "NG" for verdict in verdicts) else "OK"
+                    else:
+                        branch_verdict = "NG" if any(verdict == "NG" for verdict in verdicts) else "OK"
+                if not parent_edges and node.data.node_type == "aggregate":
+                    incomplete_reasons.append(f"Aggregate {node.id} received no active model result.")
+                node_rois[node.id] = []
+                node_evidence[node.id] = evidence
+                node_branch_verdict[node.id] = branch_verdict
+                selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict)]
+                active_edges.update(edge.id for edge in selected)
+                execution_steps.append(FlowchartExecutionStep(
+                    node_id=node.id, name=node.data.label,
+                    status="review_required" if branch_verdict == "REVIEW" else "flagged_ng" if branch_verdict == "NG" else "passed",
+                    latency_ms=round((time.time() - started) * 1000.0, 2),
+                    input_payload_type="result", output_payload_type="result",
+                    input_count=sum(len(node_evidence[edge.source]) for edge in parent_edges),
+                    output_count=len(evidence), branch_verdict=branch_verdict,
+                    selected_edge_ids=[edge.id for edge in selected],
+                ))
+                continue
             parent_edge = incoming[node.id][0]
             parent = nodes[parent_edge.source]
             payload_type = _edge_payload_type(parent_edge, parent.data.node_type, node.data.node_type)
@@ -1433,6 +1607,7 @@ class FlowchartEngine:
                 ))
                 node_rois[node.id] = []
                 node_evidence[node.id] = []
+                node_branch_verdict[node.id] = "REVIEW"
                 continue
 
             rois = whole_image if payload_type == "image" or parent.id == input_node.id else node_rois[parent.id]
@@ -1447,6 +1622,7 @@ class FlowchartEngine:
                 ))
                 node_rois[node.id] = []
                 node_evidence[node.id] = []
+                node_branch_verdict[node.id] = "REVIEW"
                 continue
 
             if node.data.node_type == "fixed_roi":
@@ -1504,6 +1680,7 @@ class FlowchartEngine:
                 output_count = len(evidence)
 
             selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict)]
+            node_branch_verdict[node.id] = branch_verdict
             active_edges.update(edge.id for edge in selected)
             output_types = {
                 _edge_payload_type(edge, node.data.node_type, nodes[edge.target].data.node_type)
@@ -1531,10 +1708,18 @@ class FlowchartEngine:
             incomplete_reasons.append("No active route reached the decision; review required.")
         empty_is_ok = bool(decision_edges) and all(edge.source in detector_only_ids for edge in decision_edges)
         no_inspection_reason = "; ".join(incomplete_reasons) or None
-        verdict, is_ok, reason, dec_lat, dec_status = self._evaluate_decision_rules(
-            crops, decision_node, no_inspection_reason=no_inspection_reason,
-            empty_is_ok=empty_is_ok and not incomplete_reasons,
-        )
+        if decision_node.data.rule == "aggregate_verdict" and decision_edges:
+            started = time.time()
+            verdict = node_branch_verdict.get(decision_edges[0].source, "REVIEW")
+            is_ok = verdict == "OK"
+            reason = f"Aggregate {decision_edges[0].source} returned {verdict}."
+            dec_lat = (time.time() - started) * 1000.0
+            dec_status = "review_required" if verdict == "REVIEW" else "flagged_ng" if verdict == "NG" else "passed"
+        else:
+            verdict, is_ok, reason, dec_lat, dec_status = self._evaluate_decision_rules(
+                crops, decision_node, no_inspection_reason=no_inspection_reason,
+                empty_is_ok=empty_is_ok and not incomplete_reasons,
+            )
         if incomplete_reasons:
             incomplete_policy = decision_node.data.params.get("incomplete_policy", "review")
             if incomplete_policy == "ng":

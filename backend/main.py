@@ -53,6 +53,10 @@ from backend.api.routes_export import router as export_router
 from backend.api.routes_flowchart import router as flowchart_router
 from backend.api.routes_inspections import router as inspections_router
 from backend.api.routes_label_suggestions import router as label_suggestions_router
+from backend.api.routes_model_deployments import router as model_deployments_router
+from backend.api.routes_ocr import router as ocr_router
+from backend.api.routes_defect_gan import router as defect_gan_router
+from backend.api.routes_rotated_detection import router as rotated_detection_router
 from backend.api.routes_project import get_current_project, router as project_router
 from backend.api.routes_report import router as report_router
 from backend.api.routes_training import router as training_router, training_job_manager
@@ -214,6 +218,10 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     app.include_router(label_suggestions_router)
     app.include_router(training_router)
     app.include_router(evaluation_router)
+    app.include_router(model_deployments_router)
+    app.include_router(ocr_router)
+    app.include_router(defect_gan_router)
+    app.include_router(rotated_detection_router)
     app.include_router(flowchart_router)
     app.include_router(inspections_router)
     app.include_router(export_router)

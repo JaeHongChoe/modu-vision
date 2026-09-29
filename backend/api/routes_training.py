@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import tempfile
 import threading
 import time
@@ -28,6 +29,9 @@ from backend.engine.dataset_loaders import ClassificationDataset, scoped_split_r
 from backend.engine.trainer import UnifiedAutoMLTrainer
 from backend.engine.labelme_preparation import LabelMePreparationCancelled, prepare_labelme_segmentation
 from backend.engine.dataset_fingerprint import fingerprint_dataset
+from backend.engine.patch_classification import load_patch_manifest
+from backend.engine.warm_start import WarmStartParent, architecture_for, resolve_warm_start_parent
+from backend.remote.profiles import ComputeProfile
 from backend.utils.error_catalog import classify_exception, format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_training")
@@ -65,6 +69,10 @@ class JobRecord:
     total_bytes: int = 0
     remote_device_name: Optional[str] = None
     remote_runner: Optional[Callable[[JobRecord], Dict[str, Any]]] = field(default=None, repr=False)
+    remote_profile: Optional[ComputeProfile] = field(default=None, repr=False)
+    launch_spec: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    split_manifest_root: Optional[str] = None
+    warm_start: Optional[WarmStartParent] = None
 
 
 def _write_job_receipt(record: JobRecord) -> None:
@@ -83,6 +91,8 @@ def _write_job_receipt(record: JobRecord) -> None:
         receipt["dataset_fingerprint"] = record.dataset_fingerprint
     if record.remote_profile_id:
         receipt["compute_profile_id"] = record.remote_profile_id
+    if record.warm_start is not None:
+        receipt["warm_start"] = record.warm_start.lineage()
     temporary_path = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -112,19 +122,68 @@ class TrainingJobManager:
         self._lock = threading.Lock()
         self._jobs: Dict[str, JobRecord] = {}
         self._active_job_id: Optional[str] = None
+        self._remote_queue: List[str] = []
+
+    @staticmethod
+    def _profiles_conflict(first: ComputeProfile, second: ComputeProfile) -> bool:
+        """Reserve the physical SSH host, allowing disjoint explicit GPUs."""
+        first_host = first.ssh_target.rsplit("@", 1)[-1].lower()
+        second_host = second.ssh_target.rsplit("@", 1)[-1].lower()
+        if (first_host, first.ssh_port) != (second_host, second.ssh_port):
+            return False
+        if first.gpu_selector in (None, "all") or second.gpu_selector in (None, "all"):
+            return True
+        first_devices = first.gpu_selector.split(",")
+        second_devices = second.gpu_selector.split(",")
+        first_numeric = all(re.fullmatch(r"[0-9]+", device) for device in first_devices)
+        second_numeric = all(re.fullmatch(r"[0-9]+", device) for device in second_devices)
+        first_uuids = all(re.fullmatch(r"GPU-[0-9a-fA-F-]+", device) for device in first_devices)
+        second_uuids = all(re.fullmatch(r"GPU-[0-9a-fA-F-]+", device) for device in second_devices)
+        if not ((first_numeric and second_numeric) or (first_uuids and second_uuids)):
+            # Ranges, MIG selectors, and mixed UUID/index forms have ambiguous
+            # overlap. Reserve the host until the run reaches a terminal state.
+            return True
+        return bool(set(first_devices) & set(second_devices))
+
+    def _remote_slot_busy(self, profile: ComputeProfile) -> bool:
+        for record in self._jobs.values():
+            if record.status not in self.ACTIVE_STATES or record.remote_profile_id is None:
+                continue
+            if record.remote_profile is None or self._profiles_conflict(profile, record.remote_profile):
+                return True
+        return False
+
+    def _refresh_active_id(self) -> None:
+        active = self._jobs.get(self._active_job_id) if self._active_job_id else None
+        if active is not None and active.status in self.ACTIVE_STATES:
+            return
+        self._active_job_id = next(
+            (job_id for job_id, record in self._jobs.items() if record.status in self.ACTIVE_STATES),
+            None,
+        )
+
+    def list_jobs(self) -> List[JobRecord]:
+        with self._lock:
+            return list(self._jobs.values())
+
+    def restore_terminal_job(self, record: JobRecord) -> None:
+        if record.status not in ("completed", "aborted", "failed"):
+            raise ValueError("Only terminal jobs can be restored without a worker")
+        with self._lock:
+            self._jobs.setdefault(record.job_id, record)
 
     @property
     def is_training(self) -> bool:
         with self._lock:
-            if self._active_job_id is None:
-                return False
-            rec = self._jobs.get(self._active_job_id)
-            return rec is not None and rec.status in self.ACTIVE_STATES
+            return any(record.status in self.ACTIVE_STATES for record in self._jobs.values())
 
     def get_active_job(self) -> Optional[JobRecord]:
         with self._lock:
+            self._refresh_active_id()
             if self._active_job_id:
                 return self._jobs.get(self._active_job_id)
+            if self._remote_queue:
+                return self._jobs.get(self._remote_queue[0])
             return None
 
     def get_job(self, job_id: str) -> Optional[JobRecord]:
@@ -144,11 +203,15 @@ class TrainingJobManager:
         source_dataset_path: Optional[str] = None,
         dataset_fingerprint: Optional[str] = None,
         split_manifest_root: Optional[str] = None,
+        warm_start: Optional[WarmStartParent] = None,
     ) -> JobRecord:
         with self._lock:
-            active_record = self._jobs.get(self._active_job_id) if self._active_job_id else None
-            if active_record is not None and active_record.status in self.ACTIVE_STATES:
-                active = self._active_job_id
+            active_record = next(
+                (record for record in self._jobs.values()
+                 if record.remote_profile_id is None and record.status in self.ACTIVE_STATES), None,
+            )
+            if active_record is not None:
+                active = active_record.job_id
                 raise HTTPException(
                     status_code=409,
                     detail=f"Another training job ({active}) is currently in progress.",
@@ -194,6 +257,7 @@ class TrainingJobManager:
                     device=device,
                     callback=cb,
                     config_overrides=config_overrides,
+                    warm_start=warm_start,
                 )
             except Exception as e:
                 err_card = classify_exception(e, details=str(e))
@@ -212,6 +276,7 @@ class TrainingJobManager:
                 trainer=trainer,
                 source_dataset_path=source_dataset_path,
                 dataset_fingerprint=dataset_fingerprint,
+                warm_start=warm_start,
             )
             self._jobs[job_id] = record
             self._active_job_id = job_id
@@ -255,6 +320,7 @@ class TrainingJobManager:
                                 record.best_metric = result.get("best_metric")
                             if self._active_job_id == job_id:
                                 self._active_job_id = None
+                            self._refresh_active_id()
                         try:
                             _write_job_receipt(record)
                         except OSError:
@@ -278,6 +344,9 @@ class TrainingJobManager:
         source_dataset_path: Optional[str] = None,
         dataset_fingerprint: Optional[str] = None,
         split_manifest_root: Optional[str] = None,
+        profile: Optional[ComputeProfile] = None,
+        launch_spec: Optional[Dict[str, Any]] = None,
+        recovery_state: Optional[str] = None,
     ) -> JobRecord:
         """Track one detached remote run through the existing training contract.
 
@@ -286,23 +355,46 @@ class TrainingJobManager:
         ``disconnected`` so the run remains reserved for later reconciliation.
         """
         with self._lock:
-            active = self._jobs.get(self._active_job_id) if self._active_job_id else None
-            if active is not None and active.status in self.ACTIVE_STATES:
-                raise HTTPException(status_code=409, detail=f"Another training job ({active.job_id}) is currently in progress.")
+            if job_id in self._jobs:
+                raise HTTPException(status_code=409, detail=f"Training job {job_id} already exists")
+            if profile is None:
+                active = next((rec for rec in self._jobs.values() if rec.status in self.ACTIVE_STATES), None)
+                if active is not None:
+                    raise HTTPException(status_code=409, detail=f"Another training job ({active.job_id}) is currently in progress.")
+            else:
+                if profile.id != remote_profile_id:
+                    raise ValueError("Remote profile identity does not match the training job")
+                if launch_spec is None and recovery_state is None:
+                    raise ValueError("A durable launch specification is required for queued remote jobs")
+            queued = profile is not None and recovery_state not in ("launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
             record = JobRecord(
                 job_id=job_id, task=task, preset=preset, dataset_path=dataset_path,
-                output_dir=output_dir, status="running", remote_profile_id=remote_profile_id,
-                phase="preparing", source_dataset_path=source_dataset_path,
+                output_dir=output_dir, status="queued" if queued else "running", remote_profile_id=remote_profile_id,
+                phase="queued" if queued else ("reconnecting" if recovery_state else "preparing"), source_dataset_path=source_dataset_path,
                 dataset_fingerprint=dataset_fingerprint,
-                remote_runner=remote_runner,
+                remote_runner=remote_runner, remote_profile=profile, launch_spec=launch_spec,
+                split_manifest_root=split_manifest_root,
             )
+            if profile is not None and recovery_state is None:
+                from backend.remote.coordinator import persist_queued_remote_job
+
+                persist_queued_remote_job(record, profile, launch_spec)
             self._jobs[job_id] = record
-            self._active_job_id = job_id
+            if queued:
+                self._remote_queue.append(job_id)
+            else:
+                if self._active_job_id is None:
+                    self._active_job_id = job_id
+                self._launch_remote_worker_locked(record)
+            return record
+
+    def _launch_remote_worker_locked(self, record: JobRecord) -> None:
+        job_id = record.job_id
 
         def _worker() -> None:
             try:
-                with split_root_scope(split_manifest_root):
-                    result = remote_runner(record)
+                with split_root_scope(record.split_manifest_root):
+                    result = record.remote_runner(record)
                 state = result.get("status", "failed")
                 if state not in ("completed", "aborted", "failed", "disconnected"):
                     raise ValueError(f"Unexpected remote job status: {state}")
@@ -312,25 +404,43 @@ class TrainingJobManager:
                     record.best_metric = result.get("best_metric")
                     if state == "failed" and result.get("error"):
                         record.error = {"message": str(result["error"])}
-                    if state != "disconnected" and self._active_job_id == job_id:
-                        self._active_job_id = None
             except Exception as exc:
                 logger.exception("Remote training job %s failed: %s", job_id, exc)
                 with self._lock:
-                    record.status = "failed"
+                    record.status = "disconnected" if record.phase in ("running", "reconnecting", "disconnected") else "failed"
                     record.error = {"message": str(exc)}
-                    if self._active_job_id == job_id:
-                        self._active_job_id = None
             if record.status != "disconnected":
                 try:
                     _write_job_receipt(record)
                 except OSError:
                     logger.exception("Could not persist terminal receipt for remote job %s", job_id)
+                with self._lock:
+                    if self._active_job_id == job_id:
+                        self._active_job_id = None
+                    self._start_waiting_remote_jobs_locked()
+                    self._refresh_active_id()
 
         thread = threading.Thread(target=_worker, name=f"RemoteTrainer-{job_id}", daemon=True)
         record.thread = thread
         thread.start()
-        return record
+
+    def _start_waiting_remote_jobs_locked(self) -> None:
+        for job_id in list(self._remote_queue):
+            record = self._jobs.get(job_id)
+            if record is None:
+                self._remote_queue.remove(job_id)
+                continue
+            if record.status != "queued":
+                self._remote_queue.remove(job_id)
+                continue
+            if record.remote_profile is not None and self._remote_slot_busy(record.remote_profile):
+                continue
+            self._remote_queue.remove(job_id)
+            record.status = "running"
+            record.phase = "preparing"
+            if self._active_job_id is None:
+                self._active_job_id = job_id
+            self._launch_remote_worker_locked(record)
 
     def reconnect_remote_job(self, job_id: str) -> Optional[JobRecord]:
         """Recheck the same server/run after network loss without launching it again."""
@@ -345,7 +455,8 @@ class TrainingJobManager:
             was_stopping = record.preparation_cancel.is_set()
             record.status = "stopping" if was_stopping else "running"
             record.phase = "reconnecting"
-            self._active_job_id = job_id
+            if self._active_job_id is None:
+                self._active_job_id = job_id
 
         def _worker() -> None:
             try:
@@ -359,8 +470,6 @@ class TrainingJobManager:
                     record.best_metric = result.get("best_metric")
                     if state == "failed" and result.get("error"):
                         record.error = {"message": str(result["error"])}
-                    if state != "disconnected" and self._active_job_id == job_id:
-                        self._active_job_id = None
             except Exception as exc:
                 logger.exception("Could not reconnect remote job %s", job_id)
                 with self._lock:
@@ -371,6 +480,11 @@ class TrainingJobManager:
                     _write_job_receipt(record)
                 except OSError:
                     logger.exception("Could not persist terminal receipt for remote job %s", job_id)
+                with self._lock:
+                    if self._active_job_id == job_id:
+                        self._active_job_id = None
+                    self._start_waiting_remote_jobs_locked()
+                    self._refresh_active_id()
 
         thread = threading.Thread(target=_worker, name=f"RemoteReconnect-{job_id}", daemon=True)
         record.thread = thread
@@ -378,25 +492,36 @@ class TrainingJobManager:
         return record
 
     def abort_job(self, job_id: str) -> bool:
+        queued_record = None
         with self._lock:
             record = self._jobs.get(job_id)
-            if not record or record.status not in self.ACTIVE_STATES:
+            if record is not None and record.status == "queued":
+                record.status = "aborted"
+                record.phase = "aborted"
+                record.result = {"status": "aborted"}
+                self._remote_queue.remove(job_id)
+                queued_record = record
+            elif not record or record.status not in self.ACTIVE_STATES:
                 return False
-            record.status = "stopping"
-            record.preparation_cancel.set()
-            if record.trainer is not None:
-                record.trainer.abort()
+            else:
+                record.status = "stopping"
+                record.preparation_cancel.set()
+                if record.trainer is not None:
+                    record.trainer.abort()
+
+        if queued_record is not None:
+            _write_job_receipt(queued_record)
+            return True
 
         logger.info("Aborting job %s...", job_id)
         return True
 
     def abort_all(self) -> None:
         with self._lock:
-            active_id = self._active_job_id
-        if active_id:
-            record = self.get_job(active_id)
-            if record is not None and record.remote_profile_id is None:
-                self.abort_job(active_id)
+            local_ids = [record.job_id for record in self._jobs.values()
+                         if record.remote_profile_id is None and record.status in self.ACTIVE_STATES]
+        for job_id in local_ids:
+            self.abort_job(job_id)
 
 
 # Global singleton instance
@@ -415,18 +540,64 @@ class TrainingConfigOverrides(BaseModel):
 
 class TrainingStartRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    task: Literal["classification", "detection", "segmentation", "anomaly"] = "classification"
+    task: Literal["classification", "patch_classification", "detection", "segmentation", "anomaly"] = "classification"
     preset: Literal["fast", "precision"] = "fast"
     dataset_path: str = Field(..., min_length=1)
     output_dir: Optional[str] = None
     config_overrides: Optional[Dict[str, Any]] = None
     device: Optional[str] = None
     compute_profile_id: Optional[str] = None
+    warm_start_job_id: Optional[str] = None
 
 
 class TrainingStopRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     job_id: Optional[str] = None
+
+
+def _warm_start_scope(request: Request, dataset_path: Path) -> Path:
+    """Pin retraining to the selected project's registered source and model store."""
+    from backend.api.routes_project import get_current_project
+
+    project = get_current_project(request)
+    registered_source = project.get("source_dataset_dir")
+    if (not registered_source or Path(registered_source).expanduser().resolve() != dataset_path):
+        raise HTTPException(status_code=409, detail="Warm-start source must match the current project's dataset")
+    models = Path(project["models_dir"])
+    if models.is_symlink() or not models.is_dir() or models.resolve() != (Path(project["project_dir"]) / "models").resolve():
+        raise HTTPException(status_code=422, detail="Current project models directory is invalid")
+    return models
+
+
+@router.get("/warm-start-parents")
+def list_warm_start_parents(
+    dataset_path: str, task: str, preset: str = "fast", request: Request = None,
+    backbone: Optional[str] = None,
+):
+    if request is None:
+        raise HTTPException(status_code=409, detail="Open a project before selecting a warm-start parent")
+    source = Path(dataset_path).expanduser().resolve()
+    models = _warm_start_scope(request, source)
+    try:
+        architecture = architecture_for(task, preset, {"backbone": backbone} if backbone else None)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    parents = []
+    for job_dir in sorted(models.iterdir()):
+        if job_dir.is_symlink() or not job_dir.is_dir():
+            continue
+        try:
+            parent = resolve_warm_start_parent(job_dir.name, models, source, task, architecture)
+        except (OSError, ValueError):
+            continue
+        parents.append({
+            "job_id": parent.job_id,
+            "classes": list(parent.classes),
+            "architecture": parent.architecture,
+            "checkpoint_sha256": parent.checkpoint_sha256,
+            "dataset_fingerprint": parent.dataset_fingerprint,
+        })
+    return {"parents": parents, "total": len(parents)}
 
 
 @router.post("/start")
@@ -439,6 +610,9 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             status_code=400,
             detail=format_error_response("ERR_NO_DATA", details=f"Dataset folder not found: {req.dataset_path}"),
         )
+
+    if req.warm_start_job_id and req.compute_profile_id:
+        raise HTTPException(status_code=422, detail="Remote warm start needs portable parent checkpoint transfer; select this computer")
 
     profile = None
     if req.compute_profile_id:
@@ -461,8 +635,16 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     split_manifest_root = scoped_split_root(SPLIT_MANIFEST_DIR)
     effective_dataset_path = _resolve_task_folder(d_path, req.task)
 
-    paired_images = _paired_labelme_images(d_path)
+    paired_images = [] if req.task == "patch_classification" else _paired_labelme_images(d_path)
     local_labelme = bool(paired_images)
+
+    if req.task == "patch_classification":
+        if profile is not None:
+            raise HTTPException(status_code=422, detail="Remote patch classification training is not supported yet")
+        try:
+            load_patch_manifest(effective_dataset_path)
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid patch classification dataset: {exc}") from exc
 
     if req.task == "detection" and not local_labelme and not _detection_train_val_ready(effective_dataset_path):
         raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
@@ -539,6 +721,20 @@ def start_training(req: TrainingStartRequest, request: Request = None):
         # Direct Python calls used by backend tests retain their historical default.
         out_dir = Path("./models").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    warm_start = None
+    if req.warm_start_job_id:
+        if request is None:
+            raise HTTPException(status_code=409, detail="Open a project before warm-start retraining")
+        models = _warm_start_scope(request, d_path)
+        if out_dir.resolve() != models.resolve():
+            raise HTTPException(status_code=422, detail="Warm-start candidate must be stored in the current project")
+        try:
+            architecture = architecture_for(req.task, req.preset, req.config_overrides)
+            warm_start = resolve_warm_start_parent(
+                req.warm_start_job_id, models, d_path, req.task, architecture,
+            )
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
@@ -570,29 +766,28 @@ def start_training(req: TrainingStartRequest, request: Request = None):
                     annotation_root=annotation_root,
                 )
     elif profile is not None and req.task == "classification":
-        from backend.remote.preparation import prepare_remote_classification
-
         dataset_for_training = job_dir / "dataset"
 
-        def prepare_dataset(cancel_event: threading.Event) -> None:
-            prepare_remote_classification(effective_dataset_path, dataset_for_training, cancel_event)
-
     if profile is not None:
-        from backend.remote.coordinator import reconnect_remote_training, run_remote_training
+        from backend.remote.coordinator import make_remote_runner
 
-        def remote_runner(current: JobRecord) -> Dict[str, Any]:
-            journal_path = job_dir / "remote_job.json"
-            if journal_path.is_file():
-                try:
-                    journal_state = json.loads(journal_path.read_text(encoding="utf-8")).get("state")
-                except (OSError, ValueError):
-                    journal_state = None
-                if journal_state in ("launching", "launched", "completed"):
-                    return reconnect_remote_training(current)
-            return run_remote_training(
-                current, profile, prepare_dataset=prepare_dataset,
-                config_overrides=req.config_overrides or {}, device=req.device,
-            )
+        preparation = "none"
+        prepare_source_path = effective_dataset_path
+        if local_labelme:
+            preparation = "labelme_detection" if req.task == "detection" else "labelme_segmentation"
+            prepare_source_path = d_path
+        elif req.task == "classification":
+            preparation = "remote_classification"
+        launch_spec = {
+            "preparation": preparation,
+            "prepare_source_path": str(prepare_source_path),
+            "image_size": int((req.config_overrides or {}).get("image_size", 256)),
+            "assignments": assignments,
+            "require_complete_assignments": has_split_manifest,
+            "annotation_root": str(annotation_root),
+            "config_overrides": req.config_overrides or {},
+            "device": req.device,
+        }
 
         record = training_job_manager.start_remote_job(
             job_id=job_id,
@@ -603,8 +798,10 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             preset=req.preset,
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
-            remote_runner=remote_runner,
+            remote_runner=make_remote_runner(profile, launch_spec),
             split_manifest_root=str(split_manifest_root),
+            profile=profile,
+            launch_spec=launch_spec,
         )
     else:
         record = training_job_manager.start_job(
@@ -619,15 +816,18 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
             split_manifest_root=str(split_manifest_root),
+            warm_start=warm_start,
         )
 
     return {
         "job_id": job_id,
-        "status": "started",
+        "status": "queued" if profile is not None and record.status == "queued" else "started",
         "preset": req.preset,
         "task": req.task,
         "output_dir": str(job_dir),
         "compute_profile_id": profile.id if profile is not None else None,
+        "phase": record.phase if profile is not None else None,
+        "warm_start_parent_job_id": warm_start.job_id if warm_start is not None else None,
     }
 
 
@@ -704,3 +904,26 @@ def get_training_status(job_id: Optional[str] = Query(None)):
         "total_bytes": record.total_bytes,
         "device_name": record.remote_device_name,
     }
+
+
+@router.get("/jobs")
+def list_training_jobs():
+    """Expose active and queued jobs so clients can reconnect by original ID."""
+    queue_position = 0
+    jobs = []
+    for record in training_job_manager.list_jobs():
+        position = None
+        if record.status == "queued":
+            queue_position += 1
+            position = queue_position
+        jobs.append({
+            "job_id": record.job_id,
+            "status": record.status,
+            "phase": record.phase,
+            "compute_profile_id": record.remote_profile_id,
+            "task": record.task,
+            "preset": record.preset,
+            "queue_position": position,
+            "output_dir": record.output_dir,
+        })
+    return {"jobs": jobs}

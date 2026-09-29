@@ -62,8 +62,8 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 _ENGINE = FlowchartEngine()
 
 
-InspectionTask = Literal["anomaly", "segmentation", "classification"]
-PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "mixed"]
+InspectionTask = Literal["anomaly", "segmentation", "classification", "patch_classification"]
+PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"]
 
 
 def _recipe_file(
@@ -173,7 +173,7 @@ def _inferred_recipe(pipeline: FlowchartPipeline) -> PipelineTask:
         return "mixed"
     if inspections:
         task = inspections[0].data.task
-        if task in ("anomaly", "segmentation", "classification"):
+        if task in ("anomaly", "segmentation", "classification", "patch_classification"):
             return task
     if any(node.data.node_type == "detection_crop" for node in pipeline.nodes):
         return "detection"
@@ -187,6 +187,7 @@ def _single_inspection_template(inspection_task: InspectionTask, job_id: Optiona
     labels = {
         "classification": ("원본 이미지 분류 검사", "전체 이미지 분류"),
         "anomaly": ("원본 이미지 이상 탐지", "전체 이미지 이상 탐지"),
+        "patch_classification": ("이미지 패치 분류 검사", "전체 이미지 패치 분류"),
     }
     pipeline.id = f"single_{inspection_task}"
     pipeline.name, inspection_label = labels[inspection_task]
@@ -303,7 +304,7 @@ def get_single_segmentation_template(
 
 @router.get("/templates/detector-roi")
 def get_detector_roi_template(
-    inspection_task: Literal["anomaly", "segmentation", "classification"] = "segmentation",
+    inspection_task: InspectionTask = "segmentation",
 ) -> FlowchartPipeline:
     """Create the other linear graph supported by the execution engine."""
     pipeline = get_default_flowchart()
@@ -339,7 +340,7 @@ def get_conditional_inspection_template() -> FlowchartPipeline:
 
 class FlowchartModelReference(BaseModel):
     job_id: str
-    task: Literal["detection", "anomaly", "segmentation", "classification"]
+    task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification"]
 
 
 class FlowchartModelVerificationRequest(BaseModel):
@@ -395,7 +396,7 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
         except (HTTPException, OSError, ValueError):
             continue
         if output_dir.resolve() != directory.resolve() or task not in (
-            "detection", "anomaly", "segmentation", "classification",
+            "detection", "anomaly", "segmentation", "classification", "patch_classification",
         ):
             continue
         seen.add(job_id)
@@ -543,7 +544,7 @@ def activate_saved_pipeline_version(
                 or record.get("source_dataset_path") != requested_source):
             raise ValueError("Saved flow version belongs to another dataset.")
         task = record.get("recipe_task")
-        if task not in ("detection", "anomaly", "segmentation", "classification", "mixed"):
+        if task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
             raise ValueError("Saved flow recipe is invalid.")
         pipeline = FlowchartPipeline.model_validate(record["pipeline"])
         ordered_linear_nodes(pipeline)

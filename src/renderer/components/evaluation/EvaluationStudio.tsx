@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
+import { useTrainingStore } from '../../stores/useTrainingStore';
+import type { FlowModelTask } from '../../types';
 import {
   useEvaluationStore,
   computeSampleVerdict,
@@ -34,6 +36,7 @@ import { ZeroEscapeTradeoffChart } from './ZeroEscapeTradeoffChart';
 import { SynchronizedDualViewport } from './SynchronizedDualViewport';
 import { DetectionEvaluationGrains, summarizeDetectionGrains } from './DetectionEvaluationGrains';
 import { ModelComparisonPanel } from './ModelComparisonPanel';
+import { ModelDeploymentPanel } from './ModelDeploymentPanel';
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -74,12 +77,15 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 export const EvaluationStudio: React.FC = () => {
   const { language, setStep, task } = useProjectStore();
   const projectDir = useProjectStore((state) => state.projectDir);
+  const warmCandidateJobId = useTrainingStore((state) => state.status === 'completed' && state.warmStartParentJobId ? state.jobId : null);
+  const warmParentJobId = useTrainingStore((state) => state.status === 'completed' ? state.warmStartParentJobId : null);
   const folderPath = useDatasetStore((state) => state.folderPath);
   const datasetKey = useDatasetStore((state) => state.datasetKey);
   const datasetIsLoading = useDatasetStore((state) => state.isLoading);
   const importError = useDatasetStore((state) => state.importError);
   const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
+  const [comparisonTask, setComparisonTask] = useState<FlowModelTask>(task);
   const [reportError, setReportError] = useState<string | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{
     i: number;
@@ -124,6 +130,8 @@ export const EvaluationStudio: React.FC = () => {
     loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
     loadOverkillUnderkill().catch(() => {});
   }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task]);
+
+  useEffect(() => { setComparisonTask(task); }, [task]);
 
   const handleExportHtml = async () => {
     setReportError(null);
@@ -405,13 +413,24 @@ export const EvaluationStudio: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Metrics & Clickable Confusion Matrix */}
         <div className="w-[500px] bg-[#131822] border-r border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
+          <div className="rounded border border-[#3B5269] bg-[#111C2A] p-2.5 text-xs text-slate-300">
+            <div className="mb-2 font-semibold text-white">후보 모델 비교 유형</div>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="후보 모델 비교 유형">
+              <button type="button" onClick={() => setComparisonTask(task)} aria-pressed={comparisonTask === task}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === task ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>프로젝트 모델</button>
+              <button type="button" onClick={() => setComparisonTask('patch_classification')} aria-pressed={comparisonTask === 'patch_classification'}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === 'patch_classification' ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>패치 분류 모델</button>
+            </div>
+          </div>
           <ModelComparisonPanel
             projectDir={projectDir}
             sourceFolder={sourceFolder}
-            task={task}
-            preferredJobId={jobId}
+            task={comparisonTask}
+            preferredJobId={warmCandidateJobId || jobId}
+            preferredParentJobId={warmParentJobId}
             language={language}
           />
+          <ModelDeploymentPanel taskOverride={comparisonTask} />
           {/* 1-Click Zero-Escape Calibration Prominent Card */}
           <div className="p-3.5 bg-[#1A212E] rounded-[6px] border border-[#2B3547] space-y-3">
             <div className="flex items-center justify-between">

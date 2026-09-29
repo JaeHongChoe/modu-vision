@@ -67,7 +67,7 @@ def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
         job_id = node.data.model_job_id
         task = "detection" if node.data.node_type == "detection_crop" else node.data.task
         if (not job_id or not is_job_id(job_id)
-                or task not in ("classification", "detection", "segmentation", "anomaly")
+                or task not in ("classification", "detection", "segmentation", "anomaly", "patch_classification")
                 or (job_id in references and references[job_id] != task)):
             raise HTTPException(status_code=409, detail="Saved inspection flow has an invalid model reference.")
         references[job_id] = task
@@ -220,8 +220,26 @@ def _run_project(request: Request, run_id: str) -> Dict[str, Any]:
     with _run_index(request) as conn:
         owner = conn.execute("SELECT project_dir, project_id FROM run_projects WHERE run_id = ?", (run_id,)).fetchone()
     if owner is None:
-        # Runs created before the index was introduced remain readable in their active project.
-        return get_current_project(request)
+        # Restored archives give copied runs fresh IDs. Register a local run on
+        # first access so later requests remain bound after a project switch.
+        project = get_current_project(request)
+        database = Path(project["project_dir"]) / "inspection_history.sqlite3"
+        if database.is_file() and not database.is_symlink():
+            try:
+                with sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True) as local:
+                    found = local.execute("SELECT 1 FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+            except sqlite3.Error:
+                found = None
+            if found:
+                with _run_index(request) as conn:
+                    conn.execute("INSERT OR IGNORE INTO run_projects VALUES (?, ?, ?)",
+                                 (run_id, project["project_dir"], project["id"]))
+                    owner = conn.execute(
+                        "SELECT project_dir, project_id FROM run_projects WHERE run_id = ?", (run_id,),
+                    ).fetchone()
+        if owner is None:
+            # Runs created before the index was introduced remain readable in their active project.
+            return project
     try:
         project = _load_project(Path(owner["project_dir"]).expanduser().resolve())
     except HTTPException as exc:
@@ -442,6 +460,55 @@ def create_run(payload: CreateRun, request: Request):
         "pipeline_hash": hashlib.sha256(pipeline_json.encode("utf-8")).hexdigest(),
         "model_sha256": model_sha256,
     }
+
+
+@router.get("/review-queue")
+def review_queue(request: Request, source_folder: str, task: Literal["classification", "detection", "segmentation", "anomaly"],
+                 limit: int = Query(100, ge=1, le=500)):
+    """Surface unresolved model REVIEW results and diagnostic errors across this project's runs."""
+    project = get_current_project(request)
+    configured = project.get("source_dataset_dir")
+    if (not configured or Path(configured).expanduser().resolve() != Path(source_folder).expanduser().resolve()
+            or project.get("task") != task):
+        raise HTTPException(status_code=409, detail="Review queue source or task differs from the active project.")
+    latest_review = """(SELECT reviews.final_verdict FROM reviews
+        WHERE reviews.run_id = rows.run_id AND reviews.image_path = rows.image_path
+        ORDER BY reviews.created_at DESC, reviews.rowid DESC LIMIT 1)"""
+    where = f"""runs.source_folder = ? AND runs.task = ? AND
+        (rows.state = 'error' OR (rows.state IN ('OK', 'NG', 'REVIEW') AND
+        ({latest_review} = 'REVIEW' OR (rows.state = 'REVIEW' AND {latest_review} IS NULL))))"""
+    with _store(request) as conn:
+        totals = conn.execute(
+            f"""SELECT COUNT(*) AS total,
+                SUM(CASE WHEN rows.state = 'error' THEN 1 ELSE 0 END) AS diagnostic_errors
+                FROM rows JOIN runs ON runs.run_id = rows.run_id WHERE {where}""",
+            (source_folder, task),
+        ).fetchone()
+        found = conn.execute(
+            f"""SELECT rows.run_id, rows.image_json, rows.state, rows.error, rows.result_json,
+                runs.created_at, runs.pipeline_name, runs.saved_version_id,
+                {latest_review} AS operator_verdict
+                FROM rows JOIN runs ON runs.run_id = rows.run_id
+                WHERE {where}
+                ORDER BY runs.created_at DESC, runs.rowid DESC, rows.rowid ASC LIMIT ?""",
+            (source_folder, task, limit),
+        ).fetchall()
+    items = []
+    for row in found:
+        state = row["state"]
+        items.append({
+            "run_id": row["run_id"], "image": json.loads(row["image_json"]),
+            "model_verdict": state if state in ("OK", "NG", "REVIEW") else None,
+            "operator_verdict": row["operator_verdict"],
+            "status": "error" if state == "error" else "still_review" if row["operator_verdict"] else "unreviewed",
+            "can_review": state in ("OK", "NG", "REVIEW"), "error": row["error"],
+            "created_at": row["created_at"], "pipeline_name": row["pipeline_name"],
+            "saved_version_id": row["saved_version_id"],
+        })
+    error_count = totals["diagnostic_errors"] or 0
+    return {"items": items, "total": totals["total"],
+            "review_required": totals["total"] - error_count,
+            "diagnostic_errors": error_count}
 
 
 @router.get("/runs")

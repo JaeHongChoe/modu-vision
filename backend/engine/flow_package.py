@@ -27,6 +27,13 @@ if __name__ == '__main__':
     raise SystemExit(main())
 """
 
+_SERVICE_RUNNER = """#!/usr/bin/env python3
+from backend.engine.inspection_service import main
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+"""
+
 _REQUIREMENTS = """numpy>=1.26
 Pillow>=10.4
 opencv-python-headless>=4.10
@@ -35,6 +42,9 @@ psutil>=6.0
 scikit-learn>=1.5
 torch>=2.4
 torchvision>=0.19
+fastapi>=0.115
+uvicorn>=0.30
+httpx>=0.28
 """
 
 _README = """# Modu Vision offline flow package
@@ -58,6 +68,28 @@ Inspect one image and save all node evidence:
 
 The runner uses CPU for portability. Recheck image-by-image verdicts against the
 source app before using this package for an operational decision.
+
+Run the standalone, persistent HTTP inspection service with a private state
+directory and API token (the desktop app may be closed):
+
+    VISION_INSPECTION_TOKEN=your-secret python serve_flow.py --state-dir /absolute/private/state
+
+POST a file path to `/v1/jobs/file` or binary image bytes to `/v1/jobs/upload`,
+then poll `/v1/jobs/{job_id}`. Include `X-Vision-Token` in every request. The
+service binds to 127.0.0.1 by default. It records failures as REVIEW and
+reclaims interrupted rows after restart. Use `--input-root` to restrict file
+path submissions to one inspected directory. `--inbox` watches a file folder;
+`--camera-source` accepts an OpenCV device index, video file, or RTSP URL;
+`--result-webhook-url` sends model results to a MES/device endpoint. Until the
+endpoint acknowledges delivery, the operational verdict remains REVIEW. A
+failed delivery can be retried via `/v1/jobs/{job_id}/retry-delivery`.
+
+For a controlled release, export the saved flow with every model's active
+approval revision ID. Save the returned release_policy JSON in a trusted file
+outside this package and start the service with
+`--require-approved-release --release-policy /absolute/path/to/release-policy.json`.
+Startup checks the
+whole package manifest and each approved checkpoint against that file.
 """
 
 
@@ -76,7 +108,7 @@ def _model_jobs(pipeline: FlowchartPipeline) -> dict[str, str]:
             continue
         job_id = node.data.model_job_id
         task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if not is_job_id(job_id) or task not in ("detection", "classification", "segmentation", "anomaly"):
+        if not is_job_id(job_id) or task not in ("detection", "classification", "segmentation", "anomaly", "patch_classification"):
             raise ValueError(f"Invalid model job or task for node {node.id}")
         if job_id in jobs and jobs[job_id] != task:
             raise ValueError(f"Model job {job_id} has conflicting tasks")
@@ -90,6 +122,7 @@ def build_flow_package(
     checkpoints: Mapping[str, Path],
     output_base_dir: Path,
     package_name: str,
+    approved_revisions: Mapping[str, Mapping[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Create a new package, never overwriting an existing release."""
     if not isinstance(package_name, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,95}", package_name):
@@ -102,6 +135,27 @@ def build_flow_package(
         path = Path(checkpoint)
         if path.is_symlink() or not path.is_file() or path.name != "best_model.pt":
             raise ValueError(f"Unsafe or missing checkpoint for {job_id}")
+
+    release_revisions: list[dict[str, str]] | None = None
+    if approved_revisions is not None:
+        if set(approved_revisions) != set(jobs):
+            raise ValueError("Every flow model needs an approved revision")
+        release_revisions = []
+        for job_id, task in sorted(jobs.items()):
+            revision = approved_revisions[job_id]
+            if (not isinstance(revision, Mapping)
+                    or revision.get("job_id") != job_id or revision.get("task") != task
+                    or not isinstance(revision.get("revision_id"), str)
+                    or not re.fullmatch(r"[0-9a-f]{32}", revision["revision_id"])
+                    or not isinstance(revision.get("checkpoint_sha256"), str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", revision["checkpoint_sha256"])):
+                raise ValueError(f"Invalid approved revision for {job_id}")
+            if _sha256(Path(checkpoints[job_id])) != revision["checkpoint_sha256"]:
+                raise ValueError(f"Approved checkpoint SHA-256 does not match {job_id}")
+            release_revisions.append({
+                "revision_id": revision["revision_id"], "job_id": job_id, "task": task,
+                "checkpoint_sha256": revision["checkpoint_sha256"],
+            })
 
     base = Path(output_base_dir).expanduser()
     if any(path.is_symlink() for path in (base, *base.parents)):
@@ -116,6 +170,7 @@ def build_flow_package(
             json.dumps(pipeline.model_dump(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )
         (staging / "run_flow.py").write_text(_RUNNER, encoding="utf-8")
+        (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
         (staging / "requirements.txt").write_text(_REQUIREMENTS, encoding="utf-8")
         (staging / "README_DEPLOY.md").write_text(_README, encoding="utf-8")
         (staging / "backend").mkdir()
@@ -129,6 +184,8 @@ def build_flow_package(
             shutil.copyfile(checkpoint, destination, follow_symlinks=False)
             if _sha256(destination) != _sha256(Path(checkpoint)):
                 raise ValueError(f"Checkpoint changed during copy: {job_id}")
+            if release_revisions is not None and _sha256(destination) != approved_revisions[job_id]["checkpoint_sha256"]:
+                raise ValueError(f"Approved checkpoint SHA-256 changed during copy: {job_id}")
             metadata = Path(checkpoint).parent / "model_meta.json"
             if metadata.exists():
                 if metadata.is_symlink() or not metadata.is_file():
@@ -162,6 +219,8 @@ def build_flow_package(
             ],
             "files": files,
         }
+        if release_revisions is not None:
+            manifest["release"] = {"approval_revisions": release_revisions}
         (staging / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )
@@ -170,10 +229,17 @@ def build_flow_package(
         if target.exists() or target.is_symlink():
             target = base / f"{package_name}_{time.time_ns()}"
         os.rename(staging, target)
-        return {
+        result = {
             "status": "success", "package_path": str(target), "package_name": target.name,
             "pipeline_id": pipeline.id, "model_job_ids": sorted(jobs), "total_files": len(files) + 1,
         }
+        if release_revisions is not None:
+            result["release_policy"] = {
+                "schema_version": 1,
+                "manifest_sha256": _sha256(target / "manifest.json"),
+                "approval_revisions": release_revisions,
+            }
+        return result
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         raise
