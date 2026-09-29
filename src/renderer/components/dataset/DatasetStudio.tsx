@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
+import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
@@ -22,10 +23,13 @@ import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 
 export const DatasetStudio: React.FC = () => {
-  const { task, language } = useProjectStore();
+  const { task, language, openImageForLabeling } = useProjectStore();
   const {
     folderPath,
     importError,
+    splitError,
+    splitSupported,
+    splitUnavailableReason,
     totalImages,
     sourceImages,
     unlabeledImages,
@@ -54,6 +58,12 @@ export const DatasetStudio: React.FC = () => {
 
   // Inspection Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
+  const [openingImageId, setOpeningImageId] = useState<string | null>(null);
+  const [imageOpenError, setImageOpenError] = useState<string | null>(null);
+  const splitUnavailableForTask = splitSupported === false || task === 'detection' || task === 'anomaly';
+  const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
+    ? '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 사용하세요.'
+    : 'This task does not support re-splitting here. Use the source train/val/test folders.');
 
   // Natural resolution dimension cache for image cards
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({});
@@ -66,10 +76,10 @@ export const DatasetStudio: React.FC = () => {
     return { train, val, test: remaining - val };
   });
 
-  const handleImageLoad = (id: string, naturalWidth: number, naturalHeight: number) => {
+  const handleImageLoad = (filePath: string, naturalWidth: number, naturalHeight: number) => {
     setImgDimensions((prev) => {
-      if (prev[id] && prev[id].w === naturalWidth && prev[id].h === naturalHeight) return prev;
-      return { ...prev, [id]: { w: naturalWidth, h: naturalHeight } };
+      if (prev[filePath] && prev[filePath].w === naturalWidth && prev[filePath].h === naturalHeight) return prev;
+      return { ...prev, [filePath]: { w: naturalWidth, h: naturalHeight } };
     });
   };
 
@@ -99,6 +109,23 @@ export const DatasetStudio: React.FC = () => {
     }
   };
 
+  const handleOpenImage = async (imageId: string, filePath: string) => {
+    if (openingImageId) return;
+    setImageOpenError(null);
+    setOpeningImageId(imageId);
+    try {
+      const opened = await openImageForLabeling(imageId, filePath);
+      if (!opened) {
+        setImageOpenError(useAnnotationStore.getState().saveMessage ||
+          (language === 'ko' ? '이미지를 라벨링 화면에서 열지 못했습니다.' : 'Could not open image in Labeling Studio.'));
+      }
+    } catch (error) {
+      setImageOpenError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOpeningImageId(null);
+    }
+  };
+
   const totalPages = Math.ceil(totalImagesCount / pageSize) || 1;
 
   // Class distribution calculation
@@ -111,6 +138,16 @@ export const DatasetStudio: React.FC = () => {
   const trainCount = Math.round(totalImages * (splitRatios.train / 100));
   const valCount = Math.round(totalImages * (splitRatios.val / 100));
   const testCount = Math.max(0, totalImages - trainCount - valCount);
+  const appliedTotal = split.train + split.val + split.test;
+  const showAppliedSplit = splitUnavailableForTask && appliedTotal > 0;
+  const shownCounts = showAppliedSplit ? split : { train: trainCount, val: valCount, test: testCount };
+  const shownRatios = showAppliedSplit
+    ? {
+        train: Math.round((split.train / appliedTotal) * 100),
+        val: Math.round((split.val / appliedTotal) * 100),
+        test: 100 - Math.round((split.train / appliedTotal) * 100) - Math.round((split.val / appliedTotal) * 100),
+      }
+    : splitRatios;
 
   const gridClassByDensity = {
     S: 'grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2',
@@ -182,7 +219,9 @@ export const DatasetStudio: React.FC = () => {
             </div>
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
-                {language === 'ko' ? '클래스 종류' : 'Classes'}
+                {task === 'segmentation' && splitUnavailableForTask
+                  ? (language === 'ko' ? '마스크 채널' : 'Mask Channels')
+                  : (language === 'ko' ? '클래스 종류' : 'Classes')}
               </span>
               <span className="text-lg font-bold font-mono tabular-nums text-blue-400">
                 {classEntries.length}
@@ -224,7 +263,7 @@ export const DatasetStudio: React.FC = () => {
               원본 {sourceImages}장 중 주석 없는 {unlabeledImages}장은 갤러리에서만 보이며 학습 분할에서 제외됩니다.
             </div>
           )}
-          {task === 'segmentation' && classes.defect_mask && !classes.OK && !classes.good && (
+          {task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
             <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
               결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
             </div>
@@ -273,7 +312,9 @@ export const DatasetStudio: React.FC = () => {
               <div className="flex items-center space-x-1.5">
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
-                  {language === 'ko' ? '3-Way 분할 캘리브레이터' : '3-Way Split Calibrator'}
+                  {showAppliedSplit
+                    ? (language === 'ko' ? '원본 폴더 분할' : 'Source Folder Split')
+                    : (language === 'ko' ? '3-Way 분할 캘리브레이터' : '3-Way Split Calibrator')}
                 </span>
               </div>
               <JargonTooltip termKey="early_stopping" />
@@ -295,10 +336,11 @@ export const DatasetStudio: React.FC = () => {
                     key={preset.label}
                     type="button"
                     onClick={() => handlePresetSplit(preset.t, preset.v, preset.te)}
+                    disabled={splitUnavailableForTask}
                     className={`py-1 text-[10px] font-mono tabular-nums font-semibold rounded-[3px] border transition-tactile cursor-pointer ${
-                      isActive
+                      isActive && !splitUnavailableForTask
                         ? 'bg-[#3B82F6] text-white border-blue-400 font-bold'
-                        : 'bg-[#131822] text-slate-300 border-[#2B3547] hover:bg-[#222B3D] hover:text-white'
+                        : 'bg-[#131822] text-slate-300 border-[#2B3547] hover:bg-[#222B3D] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
                     }`}
                     title={preset.title}
                   >
@@ -313,29 +355,29 @@ export const DatasetStudio: React.FC = () => {
               <div className="w-full bg-[#0B0E14] h-2.5 rounded-[2px] border border-[#2B3547] overflow-hidden flex">
                 <div
                   className="bg-[#3B82F6] h-full transition-all duration-200"
-                  style={{ width: `${splitRatios.train}%` }}
-                  title={`Train: ${splitRatios.train}% (${trainCount}장)`}
+                  style={{ width: `${shownRatios.train}%` }}
+                  title={`Train: ${shownRatios.train}% (${shownCounts.train}장)`}
                 />
                 <div
                   className="bg-[#F59E0B] h-full transition-all duration-200"
-                  style={{ width: `${splitRatios.val}%` }}
-                  title={`Val: ${splitRatios.val}% (${valCount}장)`}
+                  style={{ width: `${shownRatios.val}%` }}
+                  title={`Val: ${shownRatios.val}% (${shownCounts.val}장)`}
                 />
                 <div
                   className="bg-[#10B981] h-full transition-all duration-200"
-                  style={{ width: `${splitRatios.test}%` }}
-                  title={`Test: ${splitRatios.test}% (${testCount}장)`}
+                  style={{ width: `${shownRatios.test}%` }}
+                  title={`Test: ${shownRatios.test}% (${shownCounts.test}장)`}
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono tabular-nums">
                 <span className="text-blue-400 font-semibold">
-                  Train: {splitRatios.train}% ({trainCount})
+                  Train: {shownRatios.train}% ({shownCounts.train})
                 </span>
                 <span className="text-amber-400 font-semibold">
-                  Val: {splitRatios.val}% ({valCount})
+                  Val: {shownRatios.val}% ({shownCounts.val})
                 </span>
                 <span className="text-emerald-400 font-semibold">
-                  Test: {splitRatios.test}% ({testCount})
+                  Test: {shownRatios.test}% ({shownCounts.test})
                 </span>
               </div>
             </div>
@@ -345,7 +387,7 @@ export const DatasetStudio: React.FC = () => {
               <div className="flex justify-between items-center text-[11px] text-slate-300">
                 <span>{language === 'ko' ? '학습 세트 비율' : 'Train Ratio'}</span>
                 <span className="font-mono tabular-nums font-bold text-blue-400">
-                  {splitRatios.train}%
+                  {shownRatios.train}%
                 </span>
               </div>
               <input
@@ -353,17 +395,19 @@ export const DatasetStudio: React.FC = () => {
                 min="50"
                 max="90"
                 step="5"
-                value={splitRatios.train}
+                value={shownRatios.train}
                 onChange={(e) => handleTrainSliderChange(parseInt(e.target.value, 10))}
-                className="w-full accent-blue-500 bg-[#0B0E14] h-1.5 rounded cursor-pointer"
+                disabled={splitUnavailableForTask}
+                className="w-full accent-blue-500 bg-[#0B0E14] h-1.5 rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               />
             </div>
 
             {/* Apply Split Button */}
             <button
               type="button"
-              onClick={() => applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100)}
-              disabled={isSplitting || totalImages === 0}
+              onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100).catch(() => {})}
+              disabled={isSplitting || totalImages === 0 || splitUnavailableForTask}
+              title={splitUnavailableForTask ? splitUnavailableHint : undefined}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"
             >
               <Sliders className="w-3.5 h-3.5" />
@@ -377,6 +421,14 @@ export const DatasetStudio: React.FC = () => {
                   : 'Apply 3-Way Split'}
               </span>
             </button>
+            {splitUnavailableForTask && totalImages > 0 && (
+              <p className="text-[11px] text-amber-300">{splitUnavailableHint}</p>
+            )}
+            {splitError && (
+              <div role="alert" className="text-[11px] text-red-200 bg-red-950/40 border border-red-700/60 rounded px-2 py-1.5">
+                {splitError}
+              </div>
+            )}
           </div>
 
           {/* Industrial Digital Class Gauges */}
@@ -385,13 +437,25 @@ export const DatasetStudio: React.FC = () => {
               <div className="flex items-center space-x-1.5">
                 <Layers className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
-                  {language === 'ko' ? '클래스별 계측 분포' : 'Class Digital Gauges'}
+                  {task === 'segmentation' && splitUnavailableForTask
+                    ? (language === 'ko' ? '마스크 채널별 이미지 수' : 'Images per Mask Channel')
+                    : (language === 'ko' ? '클래스별 계측 분포' : 'Class Digital Gauges')}
                 </span>
               </div>
               <span className="text-[11px] font-mono tabular-nums text-slate-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
-                {classEntries.length} {language === 'ko' ? '분류' : 'classes'}
+                {classEntries.length} {task === 'segmentation' && splitUnavailableForTask
+                  ? (language === 'ko' ? '채널' : 'channels')
+                  : (language === 'ko' ? '분류' : 'classes')}
               </span>
             </div>
+
+            {task === 'segmentation' && splitUnavailableForTask && (
+              <p className="mb-2 text-[10px] text-slate-400">
+                {language === 'ko'
+                  ? '이미지별 정상·결함 수가 아닌 마스크 채널별 이미지 수입니다.'
+                  : 'Counts images per mask channel, not normal versus defect images.'}
+              </p>
+            )}
 
             <div className="space-y-2 flex-1 overflow-y-auto pr-1">
               {classEntries.length === 0 ? (
@@ -413,8 +477,10 @@ export const DatasetStudio: React.FC = () => {
                   return (
                     <div
                       key={cName}
-                      onClick={() => setClassFilter(isSelected ? null : cName)}
-                      className={`cursor-pointer p-2 rounded-[4px] bg-[#131822] border transition-tactile select-none ${
+                      onClick={() => { if (!(task === 'segmentation' && splitUnavailableForTask)) setClassFilter(isSelected ? null : cName); }}
+                      className={`p-2 rounded-[4px] bg-[#131822] border transition-tactile select-none ${
+                        task === 'segmentation' && splitUnavailableForTask ? 'cursor-default' : 'cursor-pointer'
+                      } ${
                         isSelected
                           ? 'border-[#3B82F6] ring-1 ring-[#3B82F6] bg-[#1E293B]'
                           : 'border-[#2B3547] hover:border-slate-500 hover:bg-[#222B3D]'
@@ -425,7 +491,9 @@ export const DatasetStudio: React.FC = () => {
                         <div className="flex items-center space-x-1.5 truncate">
                           <span
                             className={`w-2 h-2 rounded-full shrink-0 ${
-                              isNormal ? 'bg-[#10B981]' : 'bg-[#EF4444]'
+                              task === 'segmentation' && splitUnavailableForTask
+                                ? 'bg-[#3B82F6]'
+                                : isNormal ? 'bg-[#10B981]' : 'bg-[#EF4444]'
                             }`}
                           />
                           <span className="font-semibold text-slate-200 truncate">{cName}</span>
@@ -450,8 +518,8 @@ export const DatasetStudio: React.FC = () => {
                         />
                       </div>
 
-                      {/* Bottom row: Real-time 3-way split distribution micro-bar */}
-                      <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex items-center justify-between text-[10px] font-mono tabular-nums text-slate-400">
+                      {/* Class split counts are estimates only when the split can be applied here. */}
+                      {!splitUnavailableForTask && <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex items-center justify-between text-[10px] font-mono tabular-nums text-slate-400">
                         <div className="flex space-x-2">
                           <span className="text-blue-400">T: {cTrain}</span>
                           <span className="text-amber-400">V: {cVal}</span>
@@ -474,7 +542,7 @@ export const DatasetStudio: React.FC = () => {
                             title={`Test: ${cTest}`}
                           />
                         </div>
-                      </div>
+                      </div>}
                     </div>
                   );
                 })
@@ -489,6 +557,11 @@ export const DatasetStudio: React.FC = () => {
             <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
               <div className="font-semibold mb-1">{language === 'ko' ? '데이터셋을 불러오지 못했습니다' : 'Could not import dataset'}</div>
               <div>{importError}</div>
+            </div>
+          )}
+          {imageOpenError && (
+            <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
+              {imageOpenError}
             </div>
           )}
           {totalImages === 0 && !importError && (
@@ -631,15 +704,19 @@ export const DatasetStudio: React.FC = () => {
                 {images.map((img) => {
                   const thumbUrl = resolveApiUrl(img.thumbnail_url);
                   const isNormal = img.label?.toLowerCase() === 'ok' || img.label?.toLowerCase() === 'good';
-                  const dim = imgDimensions[img.image_id];
+                  const dim = imgDimensions[img.file_path];
                   const w = img.width || dim?.w || 0;
                   const h = img.height || dim?.h || 0;
                   const resBadge = `${w}×${h} px`;
 
                   return (
-                    <div
-                      key={img.image_id}
-                      className="group bg-[#1A212E] rounded-[4px] border border-[#2B3547] hover:border-[#3B82F6] hover:bg-[#222B3D] overflow-hidden transition-tactile flex flex-col cursor-pointer select-none"
+                    <button
+                      key={img.file_path}
+                      type="button"
+                      onClick={() => void handleOpenImage(img.image_id, img.file_path)}
+                      disabled={openingImageId !== null}
+                      aria-label={language === 'ko' ? `${img.file_name} 라벨링에서 열기` : `Open ${img.file_name} in Labeling Studio`}
+                      className="group bg-[#1A212E] rounded-[4px] border border-[#2B3547] hover:border-[#3B82F6] hover:bg-[#222B3D] overflow-hidden transition-tactile flex flex-col cursor-pointer select-none text-left disabled:opacity-60 disabled:cursor-wait"
                     >
                       <div className="relative aspect-square bg-[#0B0E14] overflow-hidden flex items-center justify-center border-b border-[#2B3547]">
                         <img
@@ -648,7 +725,7 @@ export const DatasetStudio: React.FC = () => {
                           loading="lazy"
                           decoding="async"
                           onLoad={(e) =>
-                            handleImageLoad(img.image_id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                            handleImageLoad(img.file_path, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
                           }
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-100"
                         />
@@ -701,7 +778,7 @@ export const DatasetStudio: React.FC = () => {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

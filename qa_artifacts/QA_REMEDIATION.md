@@ -1,5 +1,7 @@
 # NG_labelme QA remediation (2026-09-29)
 
+This records the earlier NG_labelme pass. The later end-to-end desktop verification and final test counts are in [FUNCTION_FLOW_QA_2026-09-29.md](FUNCTION_FLOW_QA_2026-09-29.md).
+
 This change addresses reproducible defects found while testing the desktop application with manufacturing LabelMe data. The source images and JSON files are never modified by the application tests.
 
 ## Behavior corrected

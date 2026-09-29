@@ -108,6 +108,8 @@ export const api = {
         total_images: number;
         source_images?: number;
         unlabeled_images?: number;
+        split_supported?: boolean;
+        split_unavailable_reason?: string | null;
         classes: Record<string, number>;
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
@@ -131,15 +133,16 @@ export const api = {
         val_count?: number;
       }>('/api/dataset/generate', { method: 'POST', body: JSON.stringify(data) }),
 
-    split: (data: { folder_path?: string; train_ratio: number; val_ratio?: number; test_ratio?: number; seed?: number }) =>
+    split: (data: { folder_path?: string; task?: VisionTask; train_ratio: number; val_ratio?: number; test_ratio?: number; seed?: number }) =>
       request<{ status: string; split: { train: number; val: number; test: number } }>('/api/dataset/split', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
 
-    getImages: (params: { folder_path?: string; limit?: number; offset?: number; split?: string; class_name?: string }) => {
+    getImages: (params: { folder_path?: string; task?: VisionTask; limit?: number; offset?: number; split?: string; class_name?: string }) => {
       const q = new URLSearchParams();
       if (params.folder_path) q.set('folder_path', params.folder_path);
+      if (params.task) q.set('task', params.task);
       if (params.limit !== undefined) q.set('limit', String(params.limit));
       if (params.offset !== undefined) q.set('offset', String(params.offset));
       if (params.split) q.set('split', params.split);
@@ -282,6 +285,12 @@ export const api = {
     getPipeline: () => request<any>('/api/flowchart/pipeline'),
     getSingleSegmentationTemplate: (jobId?: string) =>
       request<any>(`/api/flowchart/templates/single-segmentation${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
+    getDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) =>
+      request<any>(`/api/flowchart/templates/detector-roi?inspection_task=${encodeURIComponent(inspectionTask)}`),
+    verifyModels: (data: { source_dataset_path: string; models: Array<{ job_id: string; task: VisionTask }> }) =>
+      request<{ verified_job_ids: string[] }>('/api/flowchart/models/verify', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
     savePipeline: (data: any) =>
       request<{ status: string; pipeline_id: string; node_count: number }>('/api/flowchart/pipeline', {
         method: 'POST',

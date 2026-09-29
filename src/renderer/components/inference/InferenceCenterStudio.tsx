@@ -1,13 +1,13 @@
 /**
  * src/renderer/components/inference/InferenceCenterStudio.tsx
- * Stage 6: Inference Center & Production Runtime Export (Runtime Style).
+ * Stage 6: Inference Center & Standalone Runtime Export.
  * Adheres to Industrial & Inspection Industrial Deployment Standards:
  * - Industrial Digital Instrument Bay: High-contrast tabular-nums digital readouts
  * - Real-time FPS gauge & PPM throughput
  * - Cycle Time Limit Gauge Bar with line-speed threshold marker (25.0 ms)
  * - Jitter indicator (±1-sigma) & P95 tail latency gauge
  * - Physical LED Line Readiness Annunciator
- * - Standalone Runtime Package Manifest & tabbed C#/C++/Python SDK Code Inspector
+ * - Standalone Python package manifest and usage example
  * - Zero diffuse glows, zero optical blurs, zero gradients, 1px precision borders
  */
 
@@ -59,7 +59,6 @@ export const InferenceCenterStudio: React.FC = () => {
     }
   }, [jobId, trainingIsCurrentData, trainingJobId, sourceFolder, allowLatestRecovery, task, loadEvaluation]);
 
-  const [activeCodeTab, setActiveCodeTab] = useState<'csharp' | 'cpp' | 'python'>('python');
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<RuntimeExportResult | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -127,15 +126,11 @@ export const InferenceCenterStudio: React.FC = () => {
   const actualFillPct = Math.min(100, Math.max(0, (meanLatency / gaugeMaxMs) * 100));
   const thresholdMarkerPct = Math.min(100, Math.max(0, (maxTaktLimit / gaugeMaxMs) * 100));
 
-  // Only the generated infer.py is a supported client. Native SDKs need parity tests.
-  const activeSnippet = activeCodeTab === 'python'
-    ? `# Run the infer.py shipped in the exported package.
+  // Only the generated infer.py is included in the exported package.
+  const activeSnippet = `# Run the infer.py shipped in the exported package.
 # It reads config.json and loads model.onnx or model.pt.
 python infer.py --image /path/to/inspection_image.jpg
-python infer.py --self-test`
-    : `# Native ${activeCodeTab === 'csharp' ? 'C#' : 'C++'} client is unavailable.
-# Use the verified infer.py in the package, or integrate the model
-# after preprocessing and output parity tests against it.`;
+python infer.py --self-test`;
 
   const codeLines = activeSnippet.split('\n');
 
@@ -164,8 +159,8 @@ python infer.py --self-test`
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
             {isKo
-              ? '합성 입력으로 로드된 모델의 계산 시간만 측정하고 Python 독립 실행 패키지를 내보냅니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.'
-              : 'Benchmark the loaded model forward pass with synthetic input and export a standalone Python package.'}
+              ? '합성 입력으로 로드된 모델의 계산 시간만 측정하고 Python 모델 패키지를 내보냅니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.'
+              : 'Benchmark the loaded model forward pass with synthetic input and export a Python model package.'}
           </p>
         </div>
 
@@ -200,7 +195,7 @@ python infer.py --self-test`
                   ? '패키징 생성 중...'
                   : 'Exporting...'
                 : isKo
-                ? 'Python 런타임 패키지 내보내기'
+                ? 'Python 모델 패키지 내보내기'
                 : 'Export Runtime Package'}
             </span>
           </button>
@@ -327,7 +322,7 @@ python infer.py --self-test`
             {/* Headroom / Buffer status */}
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-0.5">
               <span>
-                모델 계산 여유:{' '}
+                평균 계산 여유:{' '}
                 <span className={`font-bold tabular-nums ${headroomPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {benchmarkResult ? (headroomPct >= 0 ? `+${headroomPct}%` : `${headroomPct}% (초과)`) : '미측정'}
                 </span>
@@ -355,19 +350,21 @@ python infer.py --self-test`
                     : '모델 계산 속도 목표 미달'}
                 </h4>
                 <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded border bg-[#0B0E14] text-slate-300 border-[#2B3547]">
-                  {!benchmarkResult ? 'UNTESTED' : isForwardWithinTarget ? 'MODEL FORWARD PASS' : 'MODEL FORWARD OVER TARGET'}
+                  {!benchmarkResult ? 'UNTESTED' : isForwardWithinTarget ? 'MODEL FORWARD PASS' : 'MODEL TIMING OVER TARGET'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
                 {!benchmarkResult ? '학습 모델로 벤치마크를 실행해야 속도 수치를 표시합니다.' : isForwardWithinTarget
                   ? `합성 입력에서 모델 전방 계산 ${meanLatency}ms를 측정했습니다. 영상 입력·전처리·PLC 시간은 포함되지 않습니다.`
-                  : `합성 입력에서 모델 전방 계산 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`}
+                  : meanLatency > maxTaktLimit
+                    ? `합성 입력에서 평균 모델 계산 ${meanLatency}ms가 목표 ${maxTaktLimit}ms를 초과했습니다.`
+                    : `합성 입력에서 P95 모델 계산 ${p95Latency}ms가 허용치 ${(maxTaktLimit * 1.25).toFixed(1)}ms를 초과했습니다. 평균은 ${meanLatency}ms입니다.`}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Runtime Standalone Package Manifest */}
+        {/* Right Column: Standalone Package Manifest */}
         <div className="bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col space-y-4">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">
@@ -454,7 +451,7 @@ python infer.py --self-test`
         </div>
       </div>
 
-      {/* Bottom Section: Client SDK Code Inspector */}
+      {/* Bottom Section: Package Usage Example */}
       <div className="bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-[#2B3547]">
           <div className="flex items-center space-x-2">
@@ -467,39 +464,9 @@ python infer.py --self-test`
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Language Tabs */}
-            <div className="flex bg-[#0B0E14] p-0.5 rounded border border-[#2B3547] text-xs font-mono">
-              <button
-                onClick={() => setActiveCodeTab('csharp')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'csharp'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                C# (.NET 8 / WPF)
-              </button>
-              <button
-                onClick={() => setActiveCodeTab('cpp')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'cpp'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                C++ (OpenCV DNN)
-              </button>
-              <button
-                onClick={() => setActiveCodeTab('python')}
-                className={`px-3 py-1 rounded cursor-pointer transition-colors font-semibold ${
-                  activeCodeTab === 'python'
-                    ? 'bg-[#1A212E] text-slate-100 border border-[#2B3547]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Python (infer.py)
-              </button>
-            </div>
+            <span className="px-3 py-1 rounded bg-[#1A212E] text-slate-100 border border-[#2B3547] text-xs font-mono font-semibold">
+              Python (infer.py)
+            </span>
 
             {/* Copy Button */}
             <button
@@ -520,6 +487,11 @@ python infer.py --self-test`
             </button>
           </div>
         </div>
+        <p className="text-[11px] text-slate-400">
+          {isKo
+            ? '내보내는 패키지에는 Python 실행기와 설치 목록이 포함됩니다. 대상 PC에 Python과 패키지를 설치해야 하며, C#·C++ 클라이언트는 제공되지 않습니다.'
+            : 'The package includes a Python runner and requirements file. Install Python and those packages on the target PC. C# and C++ clients are not included.'}
+        </p>
 
         {/* IDE-Grade Numbered Code Gutter Block */}
         <div className="flex bg-[#05070A] rounded border border-[#1F2737] overflow-hidden">

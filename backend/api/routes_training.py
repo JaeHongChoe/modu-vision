@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.websocket_telemetry import WebSocketTelemetryCallback, broadcaster
 from backend.engine.device import clear_device_cache, get_device
+from backend.engine.dataset_loaders import ClassificationDataset
 from backend.engine.trainer import UnifiedAutoMLTrainer
 from backend.engine.labelme_preparation import LabelMePreparationCancelled, prepare_labelme_segmentation
 from backend.engine.dataset_fingerprint import fingerprint_dataset
@@ -309,8 +310,14 @@ def start_training(req: TrainingStartRequest):
         )
 
     from backend.api.routes_dataset import (
-        STUDIO_ANNOTATIONS_DIR, _paired_labelme_images, _read_split_manifest, _split_manifest_file,
+        DETECTION_SPLIT_LAYOUT_MESSAGE, STUDIO_ANNOTATIONS_DIR,
+        _detection_train_val_ready, _paired_labelme_images, _read_split_manifest,
+        _resolve_task_folder, _split_manifest_file,
     )
+    effective_dataset_path = _resolve_task_folder(d_path, req.task)
+
+    if req.task == "detection" and not _detection_train_val_ready(effective_dataset_path):
+        raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
 
     paired_images = _paired_labelme_images(d_path)
     local_labelme = bool(paired_images)
@@ -320,9 +327,28 @@ def start_training(req: TrainingStartRequest):
             detail="Flat LabelMe folders currently support segmentation training only; other tasks need task-specific OK/NG data.",
         )
 
+    if req.task == "classification":
+        try:
+            train_count = len(ClassificationDataset(effective_dataset_path, split="train"))
+            val_count = len(ClassificationDataset(effective_dataset_path, split="val"))
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 다시 확인하세요. / Check classification split: {exc}") from exc
+        if train_count == 0 or val_count == 0:
+            raise HTTPException(
+                status_code=422,
+                detail="분류 학습에는 서로 분리된 train 및 val 이미지가 필요합니다. test는 val 대신 사용하지 않습니다. / Classification training requires separate train and val images; test cannot replace val.",
+            )
+
     has_split_manifest = local_labelme and _split_manifest_file(d_path).is_file()
     assignments = _read_split_manifest(d_path) if has_split_manifest else {}
     if has_split_manifest:
+        # LabelMe preparation resolves image symlinks before applying assignments.
+        # Keep the gallery's lexical paths, but canonicalize this training copy so
+        # a read-only linked subset uses the split chosen in Step 1.
+        resolved_assignments = {str(Path(path).resolve()): partition for path, partition in assignments.items()}
+        if len(resolved_assignments) != len(assignments):
+            raise HTTPException(status_code=422, detail="Saved split contains multiple links to the same image; use unique source images.")
+        assignments = resolved_assignments
         missing = sorted(str(image) for image in paired_images if str(image) not in assignments)
         invalid = sorted(str(image) for image in paired_images
                          if str(image) in assignments and assignments[str(image)] not in {"train", "val", "test"})
@@ -345,7 +371,7 @@ def start_training(req: TrainingStartRequest):
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
-    dataset_for_training = d_path
+    dataset_for_training = effective_dataset_path
     prepare_dataset = None
 
     if local_labelme:

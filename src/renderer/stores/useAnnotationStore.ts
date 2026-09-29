@@ -21,6 +21,17 @@ const MAX_HISTORY = 40;
 let annotationLoadSequence = 0;
 let pendingSave: Promise<boolean> | null = null;
 
+function annotationReadErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    for (const key of ['details', 'message_ko', 'detail', 'message']) {
+      const value = (error as Record<string, unknown>)[key];
+      if (typeof value === 'string' && value) return value;
+    }
+  }
+  return '알 수 없는 오류';
+}
+
 interface AnnotationState {
   // Current Task & Images
   task: TaskType;
@@ -55,12 +66,16 @@ interface AnnotationState {
   isDirty: boolean;
   isSaving: boolean;
   saveMessage: string | null;
+  annotationLoadStatus: 'ready' | 'loading' | 'error';
+  annotationLoadError: string | null;
+  autoSelectError: string | null;
   history: AnnotationItem[][];
   future: AnnotationItem[][];
 
   // Actions
   setTask: (task: TaskType) => void;
   setImages: (images: ImageMeta[], initialIndex?: number) => Promise<boolean>;
+  syncDatasetImages: (images: ImageMeta[]) => Promise<boolean>;
   setActiveImage: (image: ImageMeta | null) => Promise<void>;
   selectImageByIndex: (index: number) => Promise<void>;
   nextImage: () => Promise<void>;
@@ -89,12 +104,13 @@ interface AnnotationState {
   setHeatmapUrl: (url: string | null) => void;
 
   markNormal: (isNormal: boolean) => void;
-  loadAnnotationsForCurrent: () => Promise<void>;
+  loadAnnotationsForCurrent: () => Promise<boolean>;
   saveAnnotations: () => Promise<boolean>;
 
   autoSelectTolerance: number;
   setAutoSelectTolerance: (tolerance: number) => void;
   triggerAutoSelect: (seedX: number, seedY: number) => Promise<boolean>;
+  clearAutoSelectError: () => void;
   triggerShapeConverter: () => Promise<boolean>;
   convertShape: (annId: string, targetType: 'bbox' | 'polygon' | 'mask' | 'rotated_bbox') => Promise<boolean>;
 
@@ -131,6 +147,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   isDirty: false,
   isSaving: false,
   saveMessage: null,
+  annotationLoadStatus: 'ready',
+  annotationLoadError: null,
+  autoSelectError: null,
   history: [],
   future: [],
 
@@ -153,11 +172,23 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       history: [],
       future: [],
       isDirty: false,
+      annotationLoadStatus: current ? 'loading' : 'ready',
+      annotationLoadError: null,
+      autoSelectError: null,
     });
     if (current) {
       await get().loadAnnotationsForCurrent();
     }
     return true;
+  },
+
+  syncDatasetImages: async (images) => {
+    const { currentImage } = get();
+    const preservedIndex = currentImage
+      ? images.findIndex((image) =>
+          image.image_id === currentImage.image_id && image.file_path === currentImage.file_path)
+      : -1;
+    return get().setImages(images, preservedIndex >= 0 ? preservedIndex : 0);
   },
 
   setActiveImage: async (activeImage) => {
@@ -172,10 +203,14 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         currentImageIndex: -1,
         annotations: [],
         isDirty: false,
+        annotationLoadStatus: 'ready',
+        annotationLoadError: null,
+        autoSelectError: null,
       });
       return;
     }
-    const idx = get().images.findIndex((img) => img.image_id === activeImage.image_id);
+    const idx = get().images.findIndex((img) =>
+      img.image_id === activeImage.image_id && img.file_path === activeImage.file_path);
     set({
       currentImage: activeImage,
       activeImage,
@@ -186,6 +221,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       history: [],
       future: [],
       isDirty: false,
+      annotationLoadStatus: 'loading',
+      annotationLoadError: null,
+      autoSelectError: null,
     });
     await get().loadAnnotationsForCurrent();
   },
@@ -209,6 +247,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       history: [],
       future: [],
       isDirty: false,
+      annotationLoadStatus: 'loading',
+      annotationLoadError: null,
+      autoSelectError: null,
     });
     await get().loadAnnotationsForCurrent();
   },
@@ -228,10 +269,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   setAnnotations: (annotations) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     set({ annotations, isDirty: true });
   },
 
   addAnnotation: (item) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history } = get();
     const itemWithId = {
       ...item,
@@ -247,6 +290,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   updateAnnotation: (id, updates) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history } = get();
     set({
       history: [...history, annotations].slice(-MAX_HISTORY),
@@ -257,6 +301,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   deleteAnnotation: (idOrIndex) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history, selectedAnnotationId } = get();
     let newAnnotations: AnnotationItem[];
     let deletedId: string | null = null;
@@ -287,7 +332,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setSelectedAnnotationId: (id) => set({ selectedAnnotationId: id }),
 
-  setActiveTool: (tool) => set({ activeTool: tool }),
+  setActiveTool: (tool) => set({ activeTool: tool, autoSelectError: null }),
 
   setActiveCategory: (cat) => set({ activeCategory: cat, currentLabel: cat.name }),
 
@@ -317,6 +362,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setBrushRadius: (radius) => set({ brushRadius: Math.max(2, Math.min(64, radius)) }),
   commitBrushMask: (dataUrl) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history, activeCategory, currentImage } = get();
     if (!currentImage) return;
     const existing = annotations.find((item) => item.type === 'brush_mask');
@@ -383,6 +429,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   setHeatmapUrl: (url) => set({ heatmapUrl: url }),
 
   markNormal: (isNormal) => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history } = get();
     set({ history: [...history, annotations].slice(-MAX_HISTORY), future: [] });
 
@@ -403,14 +450,19 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   loadAnnotationsForCurrent: async () => {
     const { currentImage } = get();
-    if (!currentImage) return;
+    if (!currentImage || get().isDirty) return false;
     const requestSequence = ++annotationLoadSequence;
+    set({ annotationLoadStatus: 'loading', annotationLoadError: null });
 
     try {
       const data = await api.annotations.get(currentImage.image_id, undefined, currentImage.file_path);
       if (requestSequence !== annotationLoadSequence ||
-          get().currentImage !== currentImage || get().isDirty) return;
-      const items: AnnotationItem[] = (data.annotations || []).map((item: any, idx: number) => ({
+          get().currentImage !== currentImage || get().isDirty) return false;
+      if (!data || !Array.isArray(data.annotations)
+          || (data.image_id && data.image_id !== currentImage.image_id)) {
+        throw new Error('라벨 조회 응답이 올바르지 않습니다.');
+      }
+      const items: AnnotationItem[] = data.annotations.map((item: any, idx: number) => ({
         ...item,
         id: item.id || `ann_${idx}_${Date.now()}`,
         color: item.color || DEFAULT_CATEGORIES.find((c) => c.name === item.label)?.color || '#3b82f6',
@@ -441,13 +493,24 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         imageDimensions: nextDimensions,
         maskUrl: data.mask_file ? data.mask_file : null,
         isDirty: false,
+        annotationLoadStatus: 'ready',
+        annotationLoadError: null,
+        saveMessage: null,
       });
-    } catch {
-      // no existing annotations
+      return true;
+    } catch (error) {
+      if (requestSequence === annotationLoadSequence && get().currentImage === currentImage) {
+        set({ annotationLoadStatus: 'error', annotationLoadError: annotationReadErrorMessage(error) });
+      }
+      return false;
     }
   },
 
   saveAnnotations: () => {
+    if (get().annotationLoadStatus !== 'ready') {
+      set({ saveMessage: '기존 라벨을 불러온 뒤 저장할 수 있습니다.' });
+      return Promise.resolve(false);
+    }
     if (pendingSave) return pendingSave;
     const { currentImage, annotations, isDirty } = get();
     if (!currentImage) return Promise.resolve(false);
@@ -500,6 +563,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   undo: () => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { history, annotations, future } = get();
     if (history.length === 0) return;
     const prev = history[history.length - 1];
@@ -512,6 +576,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   redo: () => {
+    if (get().annotationLoadStatus !== 'ready') return;
     const { future, annotations, history } = get();
     if (future.length === 0) return;
     const next = future[0];
@@ -525,10 +590,16 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   autoSelectTolerance: 25,
   setAutoSelectTolerance: (autoSelectTolerance) => set({ autoSelectTolerance }),
+  clearAutoSelectError: () => set({ autoSelectError: null }),
 
   triggerAutoSelect: async (seedX, seedY) => {
-    const { currentImage, activeCategory, autoSelectTolerance, annotations, history } = get();
-    if (!currentImage) return false;
+    const { currentImage, activeCategory, autoSelectTolerance } = get();
+    if (get().annotationLoadStatus !== 'ready') return false;
+    if (!currentImage) {
+      set({ autoSelectError: '외곽선을 추출할 이미지를 먼저 선택하세요.' });
+      return false;
+    }
+    set({ autoSelectError: null });
     try {
       const res = await api.annotations.autoSelect({
         image_path: currentImage.file_path,
@@ -537,6 +608,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         seed_y: seedY,
         tolerance: autoSelectTolerance,
       });
+      if (get().currentImage !== currentImage || get().annotationLoadStatus !== 'ready') return false;
       if (res?.result?.polygon && res.result.polygon.length >= 3) {
         const newAnn: AnnotationItem = {
           id: `auto_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -548,21 +620,26 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
           points: res.result.polygon,
           bbox: res.result.bbox,
         };
-        set({
-          annotations: [...annotations, newAnn],
-          history: [...history, annotations].slice(-MAX_HISTORY),
-          future: [],
-          isDirty: true,
-        });
+        get().addAnnotation(newAnn);
         return true;
       }
+      set({ autoSelectError: '선택한 지점에서 외곽선을 찾지 못했습니다. 민감도를 조정하거나 수동 도구를 사용하세요.' });
     } catch (e) {
-      console.error('Auto-select failed:', e);
+      if (get().currentImage === currentImage) {
+        const details = e && typeof e === 'object' && 'details' in e ? e.details : null;
+        const message = e && typeof e === 'object' && 'message_ko' in e ? e.message_ko : null;
+        const detail = e instanceof Error ? e.message
+          : typeof details === 'string' && details ? details
+          : typeof message === 'string' && message ? message
+          : String(e);
+        set({ autoSelectError: `자동 외곽선 추출 실패: ${detail}` });
+      }
     }
     return false;
   },
 
   convertShape: async (annId: string, targetType: 'bbox' | 'polygon' | 'mask' | 'rotated_bbox') => {
+    if (get().annotationLoadStatus !== 'ready') return false;
     const { currentImage, annotations, history } = get();
     if (!currentImage) return false;
     const target = annotations.find((a) => a.id === annId);
@@ -617,6 +694,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       }
 
       const json = await res.json();
+      if (get().currentImage !== currentImage || get().annotationLoadStatus !== 'ready') return false;
       const converted = json.converted_data || json.result;
       if (!converted) return false;
 

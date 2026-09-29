@@ -52,6 +52,7 @@ export const LabelingToolbar: React.FC = () => {
     isDirty,
     isSaving,
     saveMessage,
+    annotationLoadStatus,
     saveAnnotations,
     markNormal,
     annotations,
@@ -182,10 +183,10 @@ export const LabelingToolbar: React.FC = () => {
 
         <div className="w-[1px] h-5 bg-[#2B3547] mx-1" />
 
-        {/* Tool 7: AI Auto-Selector (Clean Anti-AI Design without gradient) */}
+        {/* Tool 7: Color/boundary based auto selection */}
         <button
           onClick={() => setActiveTool('auto_select')}
-          title="AI 오토 셀렉터: 클릭 한 번으로 결함 외곽선 자동 추출 (Wand)"
+          title="오토 셀렉터: 클릭한 지점의 색상·경계로 외곽선 자동 추출 (Wand)"
           className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all border cursor-pointer ${
             activeTool === 'auto_select'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'
@@ -330,6 +331,7 @@ export const LabelingToolbar: React.FC = () => {
       <div className="flex items-center space-x-2">
         <button
           onClick={() => markNormal(!isNormalMarked)}
+          disabled={annotationLoadStatus !== 'ready'}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all border cursor-pointer ${
             isNormalMarked
               ? 'bg-[#10B981]/20 text-[#10B981] border-[#10B981] ring-1 ring-[#10B981]/40'
@@ -346,7 +348,7 @@ export const LabelingToolbar: React.FC = () => {
         {/* Undo / Redo */}
         <button
           onClick={undo}
-          disabled={history.length === 0}
+          disabled={annotationLoadStatus !== 'ready' || history.length === 0}
           title="Undo (Ctrl+Z)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
@@ -354,7 +356,7 @@ export const LabelingToolbar: React.FC = () => {
         </button>
         <button
           onClick={redo}
-          disabled={future.length === 0}
+          disabled={annotationLoadStatus !== 'ready' || future.length === 0}
           title="Redo (Ctrl+Y)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
@@ -402,7 +404,8 @@ export const LabelingToolbar: React.FC = () => {
         {/* Save Button */}
         <button
           onClick={() => saveAnnotations()}
-          disabled={isSaving}
+          disabled={isSaving || annotationLoadStatus !== 'ready'}
+          title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : undefined}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border cursor-pointer ${
             isDirty
               ? 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400 shadow-sm'

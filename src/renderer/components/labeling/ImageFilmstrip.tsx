@@ -63,7 +63,7 @@ export const ImageFilmstrip: React.FC = () => {
 
           return (
             <div
-              key={img.image_id}
+              key={img.file_path}
               onClick={() => selectImageByIndex(idx)}
               className={`relative flex-shrink-0 w-16 h-14 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
                 isSelected

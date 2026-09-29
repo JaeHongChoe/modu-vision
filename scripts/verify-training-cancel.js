@@ -12,6 +12,7 @@ const mockApi = {
     getStatus: async () => ({ status: 'aborted' }),
   },
 };
+const datasetState = { isSplitting: false };
 
 const storePath = path.resolve(__dirname, '../src/renderer/stores/useTrainingStore.ts');
 const source = fs.readFileSync(storePath, 'utf8');
@@ -24,7 +25,9 @@ storeModule.paths = Module._nodeModulePaths(path.dirname(storePath));
 const originalRequire = storeModule.require.bind(storeModule);
 storeModule.require = (specifier) => specifier === '../services/api'
   ? { api: mockApi }
-  : originalRequire(specifier);
+  : specifier === './useDatasetStore'
+    ? { useDatasetStore: { getState: () => datasetState } }
+    : originalRequire(specifier);
 storeModule._compile(compiled, storePath);
 const store = storeModule.exports.useTrainingStore;
 
@@ -151,4 +154,20 @@ test('Step 3 checks backend activity before enabling Start', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/training/TrainingController.tsx'), 'utf8');
   assert.match(source, /void recoverActiveJob\(\)/);
   assert.match(source, /!isRecoveringTraining && !importError/);
+});
+
+test('split in progress rejects training before replacing an existing completed model', async () => {
+  store.setState({ jobId: 'existing-job', status: 'completed', isTraining: false, isCurrentData: true });
+  datasetState.isSplitting = true;
+  let startCalls = 0;
+  mockApi.training.start = async () => { startCalls += 1; return { job_id: 'new-job' }; };
+  try {
+    await assert.rejects(store.getState().startTraining('/test/data', 'segmentation'), /분할/);
+    assert.equal(startCalls, 0);
+    assert.equal(store.getState().jobId, 'existing-job');
+    assert.equal(store.getState().status, 'completed');
+    assert.equal(store.getState().isCurrentData, true);
+  } finally {
+    datasetState.isSplitting = false;
+  }
 });

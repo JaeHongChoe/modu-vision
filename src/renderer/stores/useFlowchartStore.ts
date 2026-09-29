@@ -11,29 +11,20 @@ import type {
   FlowNode,
   FlowNodeData,
   SelectedInspectionImage,
+  VisionTask,
 } from '../types';
 import { api } from '../services/api';
-import { useEvaluationStore } from './useEvaluationStore';
 
 let flowchartGeneration = 0;
-
-function onlyVerifiedModelIds(
-  pipeline: FlowchartPipeline,
-  verifiedJobId: string | null,
-): { pipeline: FlowchartPipeline; removedModelId: boolean } {
-  let removedModelId = false;
-  const nodes = pipeline.nodes.map((node) => {
-    if (!node.data.model_job_id || node.data.model_job_id === verifiedJobId) return node;
-    removedModelId = true;
-    return { ...node, data: { ...node.data, model_job_id: undefined } };
-  });
-  return { pipeline: { ...pipeline, nodes }, removedModelId };
-}
+let flowchartSaveGeneration = 0;
+let flowchartRunInputRevision = 0;
+let flowchartRunSequence = 0;
 
 interface FlowchartState {
   pipeline: FlowchartPipeline | null;
   executionResult: FlowchartExecutionResult | null;
   isLoading: boolean;
+  isSaving: boolean;
   isRunning: boolean;
   activeRunningNodeId: string | null;
   selectedNodeId: string | null;
@@ -53,6 +44,7 @@ interface FlowchartState {
   // Actions
   loadPipeline: (force?: boolean) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string) => Promise<void>;
+  loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
   savePipeline: (customPipeline?: FlowchartPipeline) => Promise<void>;
   runPipeline: (customImagePath?: string, customImageId?: string) => Promise<boolean>;
   selectNode: (id: string | null) => void;
@@ -70,6 +62,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   pipeline: null,
   executionResult: null,
   isLoading: false,
+  isSaving: false,
   isRunning: false,
   activeRunningNodeId: null,
   selectedNodeId: null,
@@ -90,19 +83,15 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     try {
       const data = await api.flowchart.getPipeline();
       if (generation !== flowchartGeneration) return null;
-      // Step 4 clears its job ID when the dataset, labels, split, or task change.
-      // A saved model reference is reusable only after that exact job is verified again.
-      const verifiedJobId = useEvaluationStore.getState().jobId;
-      const { pipeline, removedModelId } = onlyVerifiedModelIds(data, verifiedJobId);
       set({
-        pipeline,
-        pipelineDirty: removedModelId,
+        pipeline: data,
+        pipelineDirty: false,
         selectedNodeId: null,
         executionResult: null,
         inspectedCrop: null,
         isLoading: false,
       });
-      return pipeline;
+      return data;
     } catch (e: any) {
       if (generation !== flowchartGeneration) return null;
       console.error('Failed to load flowchart pipeline:', e);
@@ -131,19 +120,50 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
+  loadDetectorRoiTemplate: async (inspectionTask) => {
+    const generation = ++flowchartGeneration;
+    set({ isLoading: true, errorMessage: null });
+    try {
+      const pipeline = await api.flowchart.getDetectorRoiTemplate(inspectionTask);
+      if (generation !== flowchartGeneration) return;
+      set({
+        pipeline,
+        pipelineDirty: false,
+        selectedNodeId: 'node_crop',
+        executionResult: null,
+        inspectedCrop: null,
+        isLoading: false,
+      });
+    } catch (e: any) {
+      if (generation !== flowchartGeneration) return;
+      set({ isLoading: false, errorMessage: e?.message || '검출 ROI 플로우를 불러오지 못했습니다.' });
+    }
+  },
+
   savePipeline: async (customPipeline) => {
+    if (get().isSaving) return;
     const target = customPipeline || get().pipeline;
     if (!target) return;
     const generation = flowchartGeneration;
+    const saveGeneration = ++flowchartSaveGeneration;
+    set({ isSaving: true, errorMessage: null, saveMessage: null });
     try {
       await api.flowchart.savePipeline(target);
-      if (generation !== flowchartGeneration) return;
-      set({ pipelineDirty: false, saveMessage: '파이프라인이 저장되었습니다.' });
+      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+      const currentVersionSaved = get().pipeline === target;
+      set({
+        pipelineDirty: currentVersionSaved ? false : get().pipelineDirty,
+        saveMessage: currentVersionSaved
+          ? '파이프라인이 저장되었습니다.'
+          : '이전 버전이 저장되었습니다. 새 변경 사항은 미저장입니다.',
+      });
       setTimeout(() => set({ saveMessage: null }), 3000);
     } catch (e: any) {
-      if (generation !== flowchartGeneration) return;
+      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
       console.error('Failed to save flowchart pipeline:', e);
       set({ errorMessage: e?.message || '파이프라인 저장 실패' });
+    } finally {
+      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
     }
   },
 
@@ -168,6 +188,18 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
 
     const generation = ++flowchartGeneration;
+    const inputRevision = flowchartRunInputRevision;
+    const runSequence = ++flowchartRunSequence;
+    const discardStaleRun = () => {
+      // Data invalidation can start a newer run. Never clear that newer run's state.
+      if (runSequence === flowchartRunSequence) {
+        set({
+          isRunning: false,
+          activeRunningNodeId: null,
+          errorMessage: '검사 중 이미지나 플로우가 변경되어 이전 결과를 표시하지 않았습니다. 다시 실행하세요.',
+        });
+      }
+    };
     set({ isRunning: true, errorMessage: null, executionResult: null, inspectedCrop: null, activeRunningNodeId: null });
 
     try {
@@ -176,7 +208,10 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         image_id: imageId,
         pipeline: pipeline || undefined,
       });
-      if (generation !== flowchartGeneration) return false;
+      if (generation !== flowchartGeneration || inputRevision !== flowchartRunInputRevision) {
+        discardStaleRun();
+        return false;
+      }
 
       set({
         executionResult: res,
@@ -185,7 +220,10 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       });
       return true;
     } catch (e: any) {
-      if (generation !== flowchartGeneration) return false;
+      if (generation !== flowchartGeneration || inputRevision !== flowchartRunInputRevision) {
+        discardStaleRun();
+        return false;
+      }
       console.error('Failed to run flowchart pipeline:', e);
       set({
         isRunning: false,
@@ -213,6 +251,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       }
       return node;
     });
+    flowchartRunInputRevision += 1;
     set({
       pipeline: {
         ...current,
@@ -227,6 +266,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   addNode: (newNode) => {
     const current = get().pipeline;
     if (!current) return;
+    flowchartRunInputRevision += 1;
     set({
       pipeline: {
         ...current,
@@ -238,20 +278,29 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     });
   },
 
-  setSelectedImage: (image) => set({ selectedImage: image, executionResult: null, inspectedCrop: null }),
+  setSelectedImage: (image) => {
+    flowchartRunInputRevision += 1;
+    set({ selectedImage: image, executionResult: null, inspectedCrop: null });
+  },
   setImagePickerOpen: (isImagePickerOpen) => set({ isImagePickerOpen }),
   setInspectedCrop: (inspectedCrop) => set({ inspectedCrop }),
   clearError: () => set({ errorMessage: null }),
-  resetExecution: () => set({ executionResult: null, inspectedCrop: null, activeRunningNodeId: null }),
+  resetExecution: () => {
+    flowchartRunInputRevision += 1;
+    set({ executionResult: null, inspectedCrop: null, activeRunningNodeId: null });
+  },
 
   invalidateForDataChange: () => {
     flowchartGeneration += 1;
+    flowchartSaveGeneration += 1;
+    flowchartRunInputRevision += 1;
+    flowchartRunSequence += 1;
     set({
       pipeline: null,
       pipelineDirty: false,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
-      executionResult: null, isLoading: false, isRunning: false,
+      executionResult: null, isLoading: false, isSaving: false, isRunning: false,
       activeRunningNodeId: null, selectedNodeId: null,
       selectedImage: null, isImagePickerOpen: false, inspectedCrop: null,
       saveMessage: null, errorMessage: null,

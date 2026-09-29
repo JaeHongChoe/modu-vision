@@ -46,7 +46,13 @@ const api = {
       result.nodes[0].data.model_job_id = jobId;
       return result;
     },
-    run: async () => { runCalls += 1; return { final_verdict: 'OK' }; },
+    run: async ({ pipeline }) => {
+      if (pipeline.nodes.some((node) => node.data.model_job_id === 'job_unverified')) {
+        throw new Error('Trained model is unavailable');
+      }
+      runCalls += 1;
+      return { final_verdict: 'OK' };
+    },
   },
   annotations: { save: async () => ({ status: 'saved' }) },
   project: { update: async () => ({ status: 'ok' }) },
@@ -101,7 +107,7 @@ async function completedA() {
   assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
 }
 
-test('saved flow keeps only the Step 4 verified model for current data', async () => {
+test('saved flow preserves model references while execution rejects unavailable checkpoints', async () => {
   await completedA();
   await flowchart.getState().loadPipeline(true);
   assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
@@ -114,12 +120,13 @@ test('saved flow keeps only the Step 4 verified model for current data', async (
   savedPipeline = structuredClone(oldPipeline);
   savedPipeline.nodes[0].data.model_job_id = 'job_unverified';
   await flowchart.getState().loadPipeline(true);
-  assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, undefined);
-  assert.equal(flowchart.getState().pipelineDirty, true);
+  assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, 'job_unverified');
+  assert.equal(flowchart.getState().pipelineDirty, false);
   assert.equal(await flowchart.getState().runPipeline(), false);
+  assert.equal(runCalls, beforeRuns + 1);
 });
 
-test('multi-model flow retains verified IDs but never fills missing model nodes', async () => {
+test('multi-model flow retains every saved ID but never fills missing model nodes', async () => {
   await completedA();
   savedPipeline = structuredClone(oldPipeline);
   savedPipeline.id = 'multi-model';
@@ -134,8 +141,8 @@ test('multi-model flow retains verified IDs but never fills missing model nodes'
   await flowchart.getState().loadPipeline(true);
   assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
   assert.equal(flowchart.getState().pipeline.nodes[1].data.model_job_id, undefined);
-  assert.equal(flowchart.getState().pipeline.nodes[2].data.model_job_id, undefined);
-  assert.equal(flowchart.getState().pipelineDirty, true);
+  assert.equal(flowchart.getState().pipeline.nodes[2].data.model_job_id, 'job_unverified');
+  assert.equal(flowchart.getState().pipelineDirty, false);
   flowchart.getState().setSelectedImage({ imageId: 'a', imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
   const beforeRuns = runCalls;
   assert.equal(await flowchart.getState().runPipeline(), false);
@@ -162,10 +169,10 @@ test('A model and saved flow cannot become B results after dataset import', asyn
   assert.equal(evaluation.getState().jobId, null);
 
   await flowchart.getState().loadPipeline(true);
-  assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, undefined);
-  flowchart.getState().setSelectedImage({ imageId: 'b', imagePath: '/dataset/B/b.jpg', fileName: 'b.jpg', source: 'dataset' });
+  // The persisted reference remains visible for diagnosis. Stage 5 separately
+  // blocks its actions until evaluation/model verification for B succeeds.
+  assert.equal(flowchart.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
   const beforeRuns = runCalls;
-  assert.equal(await flowchart.getState().runPipeline(), false);
   assert.equal(runCalls, beforeRuns);
   const beforeTemplates = templateCalls;
   await flowchart.getState().loadSingleSegmentationTemplate();
