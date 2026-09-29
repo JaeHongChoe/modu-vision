@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -59,8 +60,12 @@ def main() -> None:
                 destination.unlink()
             destination.symlink_to(path)
 
+    # Checkpoint resolution intentionally trusts only ./models under the active
+    # project root. Run the isolated QA project from its own work directory.
+    os.chdir(work)
     exporter.EXPORTS_DIR = work / "exports"
-    with TestClient(create_app(project_dir=str(work / "project"))) as client:
+    app = create_app(project_dir=str(work / "project"))
+    with TestClient(app, headers={"X-Vision-Token": app.state.api_token}) as client:
         imported = client.post("/api/dataset/import", json={
             "folder_path": str(subset), "task": "segmentation", "validate_images": False,
         })
@@ -75,7 +80,8 @@ def main() -> None:
             "output_dir": str(work / "models"), "device": "mps",
             "config_overrides": {"epochs": 1, "batch_size": 2, "image_size": 256},
         })
-        started.raise_for_status()
+        if not started.is_success:
+            raise RuntimeError(f"Training start failed ({started.status_code}): {started.text}")
         job_id = started.json()["job_id"]
         deadline = time.monotonic() + 240
         while True:

@@ -21,6 +21,7 @@ interface ProjectState {
   projectDir: string | null;
 
   setStep: (step: 1 | 2 | 3 | 4 | 5 | 6) => Promise<void>;
+  openImageForLabeling: (imageId: string, filePath: string) => Promise<boolean>;
   setTask: (task: VisionTask) => Promise<void>;
   setLanguage: (lang: Language) => void;
   setBackendStatus: (status: BackendStatus) => void;
@@ -46,6 +47,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (!saved || useAnnotationStore.getState().isDirty) return;
     }
     set({ activeStep: step });
+  },
+  openImageForLabeling: async (imageId, filePath) => {
+    const images = useDatasetStore.getState().images;
+    const index = images.findIndex((image) => image.image_id === imageId && image.file_path === filePath);
+    if (index < 0) return false;
+    const opened = await useAnnotationStore.getState().setImages(images, index);
+    if (!opened) return false;
+    await get().setStep(2);
+    return get().activeStep === 2;
   },
   setTask: async (task) => {
     if (task === get().task) return;

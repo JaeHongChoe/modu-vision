@@ -303,7 +303,12 @@ export const AnnotationList: React.FC = () => {
                 </div>
 
                 {/* Sub-item geometric summary */}
-                {ann.type !== 'tag' && (
+                {ann.type === 'brush_mask' && (
+                  <div className="mt-1 border-t border-[#2B3547]/50 pt-1 text-[10px] text-slate-400">
+                    브러시 마스크 · 픽셀 면적 미계측
+                  </div>
+                )}
+                {ann.type !== 'tag' && ann.type !== 'brush_mask' && (
                   <div className="mt-1 flex items-center justify-between text-[10px] font-mono tabular-nums text-slate-400 border-t border-[#2B3547]/50 pt-1">
                     <span>
                       {Math.round(geom.w)}×{Math.round(geom.h)} <span className="text-slate-500">px</span>
@@ -323,7 +328,7 @@ export const AnnotationList: React.FC = () => {
       </div>
 
       {/* Selected Annotation Geometric Measurement Inspector Panel */}
-      {selectedAnn && selGeom && (
+      {selectedAnn && selGeom && selectedAnn.type !== 'brush_mask' && selectedAnn.type !== 'tag' && (
         <div className="border-t border-[#2B3547] bg-[#0B0E14] p-3 space-y-3">
           <div className="flex items-center justify-between border-b border-[#2B3547] pb-2">
             <div className="flex items-center space-x-1.5">

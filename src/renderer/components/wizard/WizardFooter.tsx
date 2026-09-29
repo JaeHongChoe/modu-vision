@@ -25,7 +25,7 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 export const WizardFooter: React.FC = () => {
   const { activeStep, setStep, language } = useProjectStore();
   const { totalImages, split } = useDatasetStore();
-  const { status } = useTrainingStore();
+  const { status, jobId: trainingJobId, isCurrentData } = useTrainingStore();
   const { jobId, testPredictions, isLoading: isEvaluationLoading } = useEvaluationStore();
 
   const handlePrev = () => {
@@ -145,6 +145,11 @@ export const WizardFooter: React.FC = () => {
   };
 
   const warningHint = getStepWarningHint();
+  const hasCurrentModel = Boolean((status === 'completed' && isCurrentData && trainingJobId) || jobId);
+  const isPreviewOnly = (activeStep === 1 && totalImages === 0)
+    || (activeStep === 3 && !hasCurrentModel)
+    || (activeStep === 4 && !jobId)
+    || (activeStep === 5 && !hasCurrentModel);
 
   return (
     <footer className="h-14 bg-[#0B0E14] border-t border-[#2B3547] px-6 flex items-center justify-between text-xs select-none text-slate-300">
@@ -206,12 +211,12 @@ export const WizardFooter: React.FC = () => {
             onClick={handleNext}
             disabled={!canGoNext}
             className="flex items-center space-x-2 px-4 py-2 rounded font-semibold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white border border-blue-400/30 transition-colors duration-75 cursor-pointer"
-            title="Advance to next stage (Alt+→ or ])"
+            title={isPreviewOnly ? 'Preview the next stage; its actions may require data or a completed model' : 'Advance to next stage (Alt+→ or ])'}
           >
             <span>
               {language === 'ko'
-                ? `다음: ${stepTargetNamesKo[activeStep]}`
-                : `Next: ${stepTargetNamesEn[activeStep]}`}
+                ? `${isPreviewOnly ? '다음 단계 보기' : '다음'}: ${stepTargetNamesKo[activeStep]}`
+                : `${isPreviewOnly ? 'Preview next' : 'Next'}: ${stepTargetNamesEn[activeStep]}`}
             </span>
             <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-blue-700/80 border border-blue-400/40 rounded text-blue-100">
               Alt+→

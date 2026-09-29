@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 import { api, resolveApiUrl } from '../../services/api';
 import type { ImageMeta, SelectedInspectionImage } from '../../types';
 
@@ -24,6 +25,7 @@ export interface ImagePickerModalProps {
 
 export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onClose }) => {
   const folderPath = useDatasetStore((state) => state.folderPath);
+  const task = useProjectStore((state) => state.task);
   const { selectedImage, setSelectedImage } = useFlowchartStore();
 
   const [activeTab, setActiveTab] = useState<'dataset' | 'local'>('dataset');
@@ -59,6 +61,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     setDatasetError(null);
     api.dataset.getImages({
       folder_path: folderPath,
+      task,
       limit: pageSize,
       offset: (datasetPage - 1) * pageSize,
       split: datasetSplit === 'all' ? undefined : datasetSplit,
@@ -75,7 +78,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       if (!cancelled) setDatasetLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isOpen, activeTab, folderPath, datasetPage, datasetSplit]);
+  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit]);
 
   if (!isOpen) return null;
 
@@ -235,7 +238,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                     const isSelected = tempSelected?.imagePath === img.file_path;
                     return (
                       <div
-                        key={img.image_id}
+                        key={img.file_path}
                         onClick={() => handleSelectFromDataset(img)}
                         className={`relative rounded border p-2 cursor-pointer transition-colors bg-[#1A212E] ${
                           isSelected

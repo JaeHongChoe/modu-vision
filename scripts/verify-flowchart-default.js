@@ -7,7 +7,13 @@ const ts = require('typescript');
 
 let savedLoads = 0;
 let templateLoads = 0;
+let detectorTemplateLoads = 0;
 let runs = 0;
+let saveCalls = 0;
+let releaseSave = null;
+let delaySave = false;
+let releaseRun = null;
+let delayRun = false;
 const saved = {
   id: 'updated-test-pipeline', name: 'Updated Test Pipeline', edges: [],
   nodes: [
@@ -16,7 +22,6 @@ const saved = {
   ],
 };
 let savedPipeline = saved;
-let verifiedJobId = null;
 const blankSegmentation = {
   id: 'single_segmentation', name: '원본 이미지 타일 분할 검사', edges: [],
   nodes: [{ id: 'node_inspect', position: { x: 0, y: 0 },
@@ -31,7 +36,25 @@ const api = {
       pipeline.nodes[0].data.model_job_id = jobId || null;
       return pipeline;
     },
-    run: async () => { runs += 1; return { final_verdict: 'OK' }; },
+    getDetectorRoiTemplate: async (task) => {
+      detectorTemplateLoads += 1;
+      return {
+        id: 'detector_roi', name: '검출 ROI 후 결함 검사', edges: [],
+        nodes: [
+          { id: 'detect', position: { x: 0, y: 0 }, data: { node_type: 'detection_crop', task: 'detection', label: 'Detector' } },
+          { id: 'inspect', position: { x: 0, y: 0 }, data: { node_type: 'inspection', task, label: 'Inspector' } },
+        ],
+      };
+    },
+    savePipeline: async () => {
+      saveCalls += 1;
+      if (delaySave) await new Promise((resolve) => { releaseSave = resolve; });
+    },
+    run: async () => {
+      runs += 1;
+      if (delayRun) return new Promise((resolve) => { releaseRun = resolve; });
+      return { final_verdict: 'OK' };
+    },
   },
 };
 const filename = path.resolve(__dirname, '../src/renderer/stores/useFlowchartStore.ts');
@@ -44,9 +67,6 @@ item.paths = Module._nodeModulePaths(path.dirname(filename));
 const originalRequire = item.require.bind(item);
 item.require = (specifier) => {
   if (specifier === '../services/api') return { api };
-  if (specifier === './useEvaluationStore') {
-    return { useEvaluationStore: { getState: () => ({ jobId: verifiedJobId }) } };
-  }
   return originalRequire(specifier);
 };
 item._compile(compiled, filename);
@@ -81,38 +101,135 @@ test('blank template can be selected but cannot execute until a model is specifi
   assert.equal(runs, 1);
 });
 
-test('explicit saved DAG restore strips old model IDs after data change', async () => {
-  verifiedJobId = null;
+test('explicit saved DAG restore preserves model IDs for source verification', async () => {
   await flow.getState().loadPipeline(true);
   assert.equal(flow.getState().pipeline.id, 'updated-test-pipeline');
-  assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, undefined);
-  assert.equal(flow.getState().pipeline.nodes[1].data.model_job_id, undefined);
+  assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
+  assert.equal(flow.getState().pipeline.nodes[1].data.model_job_id, 'job_A');
   await flow.getState().loadSingleSegmentationTemplate();
   assert.equal(flow.getState().pipeline.id, 'single_segmentation');
 });
 
-test('saved single-model restore preserves only the Step 4 verified job ID', async () => {
+test('saved single-model restore never rewrites a model ID before verification', async () => {
   try {
     savedPipeline = structuredClone(blankSegmentation);
     savedPipeline.nodes[0].data.model_job_id = 'job_A';
-    verifiedJobId = 'job_A';
     await flow.getState().loadPipeline(true);
     assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_A');
     assert.equal(flow.getState().pipelineDirty, false);
 
     savedPipeline.nodes[0].data.model_job_id = 'job_B';
     await flow.getState().loadPipeline(true);
-    assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, undefined);
-    assert.equal(flow.getState().pipelineDirty, true);
+    assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_B');
+    assert.equal(flow.getState().pipelineDirty, false);
   } finally {
     savedPipeline = saved;
-    verifiedJobId = null;
   }
 });
 
-test('Step 5 defaults to template and disables RUN without a model', () => {
+test('saved detector and inspection model IDs both survive a reopen', async () => {
+  try {
+    savedPipeline = structuredClone(saved);
+    savedPipeline.nodes[0].data.model_job_id = 'job_detector';
+    savedPipeline.nodes[1].data.model_job_id = 'job_A';
+    await flow.getState().loadPipeline(true);
+    assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_detector');
+    assert.equal(flow.getState().pipeline.nodes[1].data.model_job_id, 'job_A');
+    assert.equal(flow.getState().pipelineDirty, false);
+  } finally {
+    savedPipeline = saved;
+  }
+});
+
+test('detector ROI template opens the supported five-node chain for the chosen inspection task', async () => {
+  await flow.getState().loadDetectorRoiTemplate('segmentation');
+  assert.equal(flow.getState().pipeline.id, 'detector_roi');
+  assert.equal(flow.getState().pipeline.nodes[1].data.task, 'segmentation');
+  assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, undefined);
+  assert.equal(detectorTemplateLoads, 1);
+});
+
+test('editing during save keeps newer changes unsaved and prevents concurrent writes', async () => {
+  await flow.getState().loadSingleSegmentationTemplate();
+  flow.getState().updateNodeData('node_inspect', { label: 'before-save' });
+  delaySave = true;
+  const firstSave = flow.getState().savePipeline();
+  assert.equal(flow.getState().isSaving, true);
+  const startedCalls = saveCalls;
+  await flow.getState().savePipeline();
+  assert.equal(saveCalls, startedCalls);
+  flow.getState().updateNodeData('node_inspect', { label: 'edited-while-saving' });
+  releaseSave();
+  await firstSave;
+  assert.equal(flow.getState().pipeline.nodes[0].data.label, 'edited-while-saving');
+  assert.equal(flow.getState().pipelineDirty, true);
+  assert.equal(flow.getState().isSaving, false);
+  delaySave = false;
+  await flow.getState().savePipeline();
+  assert.equal(flow.getState().pipelineDirty, false);
+});
+
+test('changing the target image during RUN discards the prior result and releases running state', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  delayRun = true;
+  const pending = flow.getState().runPipeline();
+  assert.equal(flow.getState().isRunning, true);
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/b.jpg', fileName: 'b.jpg', source: 'dataset' });
+  releaseRun({ final_verdict: 'NG', image_path: '/dataset/A/a.jpg' });
+  assert.equal(await pending, false);
+  assert.equal(flow.getState().isRunning, false);
+  assert.equal(flow.getState().executionResult, null);
+  assert.equal(flow.getState().selectedImage.fileName, 'b.jpg');
+  delayRun = false;
+  assert.equal(await flow.getState().runPipeline(), true);
+  assert.equal(flow.getState().executionResult.final_verdict, 'OK');
+});
+
+test('editing a node during RUN cannot attach the old result to the new flow', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  delayRun = true;
+  const pending = flow.getState().runPipeline();
+  flow.getState().updateNodeData('node_inspect', { threshold: 0.9 });
+  releaseRun({ final_verdict: 'NG', image_path: '/dataset/A/a.jpg' });
+  assert.equal(await pending, false);
+  assert.equal(flow.getState().isRunning, false);
+  assert.equal(flow.getState().executionResult, null);
+  assert.equal(flow.getState().pipeline.nodes[0].data.threshold, 0.9);
+  delayRun = false;
+});
+
+test('an invalidated old RUN cannot clear a newer run', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  delayRun = true;
+  const oldRun = flow.getState().runPipeline();
+  const releaseOldRun = releaseRun;
+  flow.getState().invalidateForDataChange();
+  await flow.getState().loadSingleSegmentationTemplate('job_B');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/B/b.jpg', fileName: 'b.jpg', source: 'dataset' });
+  const newRun = flow.getState().runPipeline();
+  const releaseNewRun = releaseRun;
+  releaseOldRun({ final_verdict: 'NG', image_path: '/dataset/A/a.jpg' });
+  assert.equal(await oldRun, false);
+  assert.equal(flow.getState().isRunning, true);
+  assert.equal(flow.getState().executionResult, null);
+  releaseNewRun({ final_verdict: 'OK', image_path: '/dataset/B/b.jpg' });
+  assert.equal(await newRun, true);
+  assert.equal(flow.getState().isRunning, false);
+  assert.equal(flow.getState().executionResult.image_path, '/dataset/B/b.jpg');
+  delayRun = false;
+});
+
+test('Step 5 verifies the source before reopening a saved flow and disables RUN until ready', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/flowchart/FlowchartStudio.tsx'), 'utf8');
-  assert.match(source, /if \(modelContextInvalidated\)/);
-  assert.match(source, /await loadSingleSegmentationTemplate\(segmentationJobId \|\| undefined\)/);
-  assert.match(source, /disabled=\{isRunning \|\| isLoading \|\| needsModel\}/);
+  assert.match(source, /recoverThenLoadFlowchart\(/);
+  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel\}/);
+  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel\}/);
+  assert.match(source, /if \(modelNodes\.length === 0 \|\| models\.length !== modelNodes\.length\)/);
+  assert.match(source, /loadDetectorRoiTemplate\(/);
+  assert.match(source, /검출 ROI 검사 플로우/);
+  assert.match(source, /verifyModels:/);
+  assert.match(source, /모델 다시 확인/);
 });

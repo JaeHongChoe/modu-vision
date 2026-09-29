@@ -56,8 +56,10 @@ def test_fingerprint_ignores_unrelated_source_files(tmp_path: Path):
 def test_training_receipt_records_source_version(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "source"
-    source.mkdir()
-    (source / "image.jpg").write_bytes(b"original")
+    ok_class = source / "OK"
+    ok_class.mkdir(parents=True)
+    (ok_class / "image_a.jpg").write_bytes(b"original a")
+    (ok_class / "image_b.jpg").write_bytes(b"original b")
     captured = {}
 
     def capture_start(**kwargs):

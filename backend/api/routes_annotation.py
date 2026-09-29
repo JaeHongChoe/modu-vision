@@ -304,6 +304,8 @@ def get_annotations(
         try:
             with open(candidate_json, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, dict) or not isinstance(data.get("shapes"), list):
+                raise ValueError("LabelMe JSON must contain a shapes list")
             # If standard LabelMe schema with "shapes"
             if "shapes" in data:
                 img_w = data.get("imageWidth", 8192)
@@ -321,9 +323,13 @@ def get_annotations(
                     "Mount Guide 볼트 1EA 체결상태 불량": "#f97316",
                 }
                 for idx, shape in enumerate(data.get("shapes", [])):
+                    if not isinstance(shape, dict):
+                        raise ValueError(f"Shape {idx + 1} must be an object")
                     lbl = shape.get("label", "Defect")
                     stype = shape.get("shape_type", "polygon")
                     pts = shape.get("points", [])
+                    if not isinstance(pts, list):
+                        raise ValueError(f"Shape {idx + 1} points must be a list")
                     color = class_colors.get(lbl, "#3b82f6")
 
                     if stype == "polygon" and len(pts) >= 3:
@@ -353,6 +359,8 @@ def get_annotations(
                             "bbox": [xmin, ymin, xmax, ymax],
                             "color": color,
                         })
+                    else:
+                        raise ValueError(f"Shape {idx + 1} has unsupported type or invalid points: {stype}")
                 return {
                     "image_id": image_id,
                     "annotations": converted_annotations,
@@ -360,8 +368,12 @@ def get_annotations(
                     "image_height": img_h,
                     "mask_file": None,
                 }
+        except (OSError, UnicodeError) as e:
+            logger.warning("Failed to read LabelMe JSON %s: %s", candidate_json, e)
+            raise HTTPException(status_code=500, detail=f"Cannot read LabelMe annotations: {candidate_json.name}: {e}") from e
         except Exception as e:
             logger.warning("Failed to parse LabelMe JSON %s: %s", candidate_json, e)
+            raise HTTPException(status_code=422, detail=f"Invalid LabelMe annotations: {candidate_json.name}: {e}") from e
 
     # Return empty list for unannotated images
     return {

@@ -1,13 +1,11 @@
 """
 backend/api/routes_export.py
 
-Neuro-R Style Production Model & Runtime Export:
-Generates self-contained, offline-first deployment packages for industrial PC / PLC / C# / C++ factory lines:
+Standalone Model & Runtime Export:
+Generates a model package with a Python inference runner:
 - ONNX Optimized Model (model.onnx) or TorchScript (model.pt)
 - Configuration & Calibration metadata (config.json)
-- Zero-dependency standalone Python inference client (infer.py)
-- Industrial C# .NET 8 WPF inspection client snippet (Program.cs)
-- Ultra-low-latency C++ OpenCV DNN / ONNXRuntime inspection client snippet (main.cpp)
+- Python inference client (infer.py) with package requirements
 - Deployment handbook (README_DEPLOY.md)
 """
 
@@ -37,17 +35,18 @@ class ExportRuntimeRequest(BaseModel):
     export_format: str = "onnx"  # 'onnx', 'torchscript'
     resolution: Optional[int] = 256
     quantize_fp16: Optional[bool] = False
-    package_name: Optional[str] = "neuro_r_production_package"
+    package_name: Optional[str] = "modu_vision_model_package"
 
 
 @router.post("/runtime")
 def export_runtime_package(req: ExportRuntimeRequest):
     """
-    Exports trained vision model into a deployable Neuro-R style runtime package.
+    Exports a trained vision model into a standalone Python runtime package.
     Produces:
       - model.onnx or model.pt (TorchScript)
       - config.json (including calibration status)
       - infer.py (standalone runnable Python CLI client)
+      - requirements.txt (runtime Python dependencies)
       - README_DEPLOY.md
     """
     try:

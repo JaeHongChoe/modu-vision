@@ -184,6 +184,12 @@ export const EvaluationStudio: React.FC = () => {
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth));
   const hasNormalSamples = testPredictions.some((p) => !isDefectLabel(p.ground_truth));
   const hasCalibrationEvidence = Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
+  const reportAvailabilityHint = !jobId
+    ? (language === 'ko' ? '평가가 완료된 모델이 있어야 리포트를 내보낼 수 있습니다.' : 'Load an evaluated model before exporting a report.')
+    : !hasReportableResult
+    ? (language === 'ko' ? '평가 결과와 검증 이미지가 있어야 리포트를 내보낼 수 있습니다.' : 'Evaluation results and validation images are required for a report.')
+    : undefined;
 
   // Compute marginal row metrics (Support & Recall)
   const rowMetrics = useMemo(() => {
@@ -325,8 +331,9 @@ export const EvaluationStudio: React.FC = () => {
           <button
             type="button"
             onClick={handleExportHtml}
-            disabled={isExportingReport}
-            className="flex items-center space-x-1.5 px-4 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] rounded-[4px] text-white font-semibold border border-[#3B82F6] cursor-pointer transition-all"
+            disabled={isExportingReport || isLoading || !hasReportableResult}
+            title={reportAvailabilityHint}
+            className="flex items-center space-x-1.5 px-4 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] rounded-[4px] text-white font-semibold border border-[#3B82F6] cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <FileText className="w-3.5 h-3.5" />
             <span>{language === 'ko' ? 'HTML 리포트 내보내기' : 'Export HTML Report'}</span>
@@ -336,8 +343,9 @@ export const EvaluationStudio: React.FC = () => {
           <button
             type="button"
             onClick={handleExportJson}
-            disabled={isExportingReport}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all"
+            disabled={isExportingReport || isLoading || !hasReportableResult}
+            title={reportAvailabilityHint}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5" />
             <span>JSON</span>

@@ -1,7 +1,7 @@
 """
 backend/engine/exporter.py
 
-Authentic Standalone Runtime Exporter for Vision AI Studio (Neuro-R Style).
+Authentic Standalone Runtime Exporter for Modu Vision.
 Exports genuine trained model weights into standalone, self-contained deployment packages:
   - Reconstructs authentic model architecture from trained checkpoint (Classification, Detection, Segmentation, Anomaly).
   - Multi-format export: ONNX (with dynamic batching) and TorchScript (torch.jit).
@@ -214,9 +214,9 @@ def run_smoke_test_validation(
 
 
 def generate_standalone_infer_py() -> str:
-    """Generates a clean, standalone, zero-dependency Python inference client script."""
+    """Generates the Python inference client shipped with each model package."""
     return '''"""
-Neuro-R Standalone Python Industrial Line Client
+Modu Vision Standalone Python Inference Client
 Usage:
     python infer.py --image path/to/image.png
     python infer.py --self-test
@@ -530,7 +530,7 @@ class StandaloneInspector:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Neuro-R Standalone Industrial Inspector")
+    parser = argparse.ArgumentParser(description="Modu Vision Standalone Inspector")
     parser.add_argument("--image", "-i", type=str, default=None, help="Path to image file")
     parser.add_argument("--model", "-m", type=str, default=None, help="Path to model artifact")
     parser.add_argument("--config", "-c", type=str, default="config.json", help="Path to config.json")
@@ -746,8 +746,19 @@ def export_runtime_package(
     # 6. Standalone code templates
     with open(pkg_dir / "infer.py", "w", encoding="utf-8") as f:
         f.write(generate_standalone_infer_py())
+    runtime_requirements = [
+        "numpy>=1.26.0",
+        "opencv-python-headless>=4.10.0.84",
+    ]
+    if format_clean == "onnx":
+        runtime_requirements.append("onnxruntime>=1.19.0")
+    else:
+        runtime_requirements.extend(["torch>=2.4.0", "torchvision>=0.19.0"])
+    (pkg_dir / "requirements.txt").write_text(
+        "\n".join(runtime_requirements) + "\n",
+        encoding="utf-8",
+    )
 
-    native_clients = False  # No task-specific native client has been validated.
     if task == "segmentation":
         inspection_scope = f"""## Inspection Scope
 - `infer.py` inspects the original image with overlapping {res}×{res} tiles (batch size 4, at most 1024 tiles).
@@ -763,7 +774,7 @@ def export_runtime_package(
 
 """
 
-    readme_content = f"""# Neuro-R Industrial Runtime Package
+    readme_content = f"""# Modu Vision Runtime Package
 
 **Package Name**: `{pkg_name}`
 **Export Date**: {config_data['exported_at']}
@@ -775,14 +786,25 @@ def export_runtime_package(
 - `{model_filename}`: Authentic trained model weights ({format_clean})
 - `config.json`: Preprocessing coefficients & shop-floor zero-escape threshold
 - `infer.py`: Standalone Python inference script (CLI runner)
-- Native C#/C++ clients: {'included for ONNX classification/segmentation; validate against Python before use' if native_clients else 'not available for this model format/task'}
+- `requirements.txt`: Python packages needed by `infer.py`
+- Native C#/C++ clients: not included
 - `README_DEPLOY.md`: Quickstart deployment guide
 
 {inspection_scope}
 ## Standalone Quickstart
+Install Python 3.10 or newer, then from this package directory:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt
+```
+
+Run an image or verify the packaged model:
 ```bash
 python infer.py --image test_sample.png
+python infer.py --self-test
 ```
+The exported files include the model and client; a Python runtime and the listed packages must be installed on the target machine.
 """
     with open(pkg_dir / "README_DEPLOY.md", "w", encoding="utf-8") as f:
         f.write(readme_content)

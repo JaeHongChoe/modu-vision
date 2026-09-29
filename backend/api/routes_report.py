@@ -409,8 +409,9 @@ def export_report(req: ReportExportRequest):
     Exports quality evaluation summary as standalone HTML or JSON report.
     Returns { file_path: str, content?: str }.
     """
-    job_id = req.job_id or "job_latest"
-    eval_data = run_or_load_evaluation(job_id=job_id)
+    requested_job_id = req.job_id or "latest"
+    eval_data = run_or_load_evaluation(job_id=requested_job_id)
+    job_id = str(eval_data.get("job_id") or requested_job_id)
 
     now_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     now_iso = time.strftime("%Y%m%d_%H%M%S", time.gmtime())

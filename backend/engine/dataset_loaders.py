@@ -14,6 +14,7 @@ Supports:
 from __future__ import annotations
 
 import glob
+import hashlib
 import json
 import logging
 import os
@@ -33,6 +34,34 @@ import torchvision.transforms.functional as TF
 logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
+SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+
+
+def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
+    """Read the split selected in Step 1, if one was saved for this folder."""
+    root = root.resolve()
+    # Generated datasets place task data in selected/classification while the
+    # source folder selected in Step 1 owns the saved split manifest.
+    candidate_roots = (root, root.parent) if root.name == "classification" else (root,)
+    for selected_root in candidate_roots:
+        key = hashlib.sha256(str(selected_root).encode("utf-8")).hexdigest()
+        manifest = SPLIT_MANIFEST_DIR / f"{key}.json"
+        if not manifest.is_file():
+            continue
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            if data.get("folder_path") != str(selected_root) or not isinstance(data.get("assignments"), dict):
+                raise ValueError("folder path or assignments are invalid")
+            assignments = {}
+            for relative, partition in data["assignments"].items():
+                path = Path(relative)
+                if path.is_absolute() or ".." in path.parts or partition not in {"train", "val", "test"}:
+                    raise ValueError("an image path or partition is invalid")
+                assignments[str(selected_root / path)] = partition
+            return assignments
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            raise ValueError(f"Saved split is invalid for {selected_root}; apply the split again: {exc}") from exc
+    return None
 
 
 # ============================================================================
@@ -316,6 +345,7 @@ class ClassificationDataset(Dataset):
         transform: Optional[Callable] = None,
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
+        ignore_saved_split: bool = False,
     ):
         self.root_dir = Path(root_dir)
         self.split = split
@@ -329,9 +359,45 @@ class ClassificationDataset(Dataset):
         val_dir = self.root_dir / "val"
         test_dir = self.root_dir / "test"
 
+        assignments = None if ignore_saved_split else _classification_split_assignments(self.root_dir)
+        if assignments is not None:
+            source_dirs = [d for d in (train_dir, val_dir, test_dir) if d.is_dir()] or [self.root_dir]
+            folder_samples = [self._load_from_folder(source_dir) for source_dir in source_dirs]
+            class_names = {name for _, names, _ in folder_samples for name in names}
+            self.classes = sorted(
+                class_names,
+                key=lambda name: (0 if name.lower() in ("ok", "good", "normal", "pass", "정상_ok", "정상") else 1,
+                                  name.lower()),
+            )
+            self.class_to_idx = {name: idx for idx, name in enumerate(self.classes)}
+            all_samples = [
+                (path, self.class_to_idx[names[label_idx]])
+                for samples, names, _ in folder_samples for path, label_idx in samples
+            ]
+            image_paths = {str(path) for path, _ in all_samples}
+            if image_paths != set(assignments):
+                raise ValueError("Saved split no longer matches classification images; apply the split again")
+            self.samples = [
+                sample for sample in all_samples
+                if split is None or assignments[str(sample[0])] == split
+            ]
+            return
+
         if split and (train_dir.is_dir() or val_dir.is_dir()):
-            target_dir = train_dir if split == "train" else (val_dir if val_dir.is_dir() else test_dir)
-            self.samples, self.classes, self.class_to_idx = self._load_from_folder(target_dir)
+            available = [directory for directory in (train_dir, val_dir, test_dir) if directory.is_dir()]
+            names = {name for directory in available for name in self._load_from_folder(directory)[1]}
+            self.classes = sorted(
+                names,
+                key=lambda name: (0 if name.lower() in ("ok", "good", "normal", "pass", "정상_ok", "정상") else 1,
+                                  name.lower()),
+            )
+            self.class_to_idx = {name: idx for idx, name in enumerate(self.classes)}
+            target_dir = train_dir if split == "train" else (val_dir if split == "val" else test_dir)
+            if target_dir.is_dir():
+                local_samples, local_classes, _ = self._load_from_folder(target_dir)
+                self.samples = [(path, self.class_to_idx[local_classes[label_idx]]) for path, label_idx in local_samples]
+            else:
+                self.samples = []
         else:
             self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir)
             if split and split in ["train", "val"]:
@@ -936,7 +1002,7 @@ class CocoJsonParser:
 # Universal Dataset Factory & Inspection
 # ============================================================================
 
-def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
+def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: bool = False) -> DatasetSummary:
     """
     Fast, metadata-only dataset scanner for Electron GUI project import.
     Returns counts matching REST API contract without loading full images.
@@ -945,6 +1011,20 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
     task_clean = task.lower().strip()
 
     if task_clean == "classification":
+        if not ignore_saved_split and _classification_split_assignments(root) is not None:
+            all_dataset = ClassificationDataset(root_dir=root)
+            counts: Dict[str, int] = {}
+            for _, label_idx in all_dataset.samples:
+                name = all_dataset.classes[label_idx]
+                counts[name] = counts.get(name, 0) + 1
+            split_counts = {
+                partition: len(ClassificationDataset(root_dir=root, split=partition))
+                for partition in ("train", "val", "test")
+            }
+            return DatasetSummary(
+                task="classification", total_images=len(all_dataset),
+                classes=counts, split_counts=split_counts,
+            )
         if (root / "train").is_dir():
             split_counts: Dict[str, int] = {}
             counts: Dict[str, int] = {}
@@ -973,7 +1053,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
                 split_counts=split_counts,
             )
         else:
-            ds = ClassificationDataset(root_dir=root)
+            ds = ClassificationDataset(root_dir=root, ignore_saved_split=ignore_saved_split)
             counts = {}
             for _, lbl in ds.samples:
                 cname = ds.classes[lbl]
@@ -1041,12 +1121,11 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
                     cname = ds.categories.get(ann["category_id"], "defect")
                     counts[cname] = counts.get(cname, 0) + 1
             total = len(ds)
-            train_count = int(total * 0.8)
             return DatasetSummary(
                 task="detection",
                 total_images=total,
                 classes=counts,
-                split_counts={"train": train_count, "val": total - train_count},
+                split_counts={"train": total, "val": 0},
             )
 
     elif task_clean == "segmentation":

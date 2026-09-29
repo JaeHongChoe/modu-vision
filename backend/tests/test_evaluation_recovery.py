@@ -335,5 +335,5 @@ def test_repeated_runtime_export_keeps_each_format_in_a_separate_package(monkeyp
     assert first["package_path"] != second["package_path"]
     assert (tmp_path / "exports" / first["package_name"] / "model.onnx").is_file()
     assert [item["name"] for item in second["manifest"]] == [
-        "README_DEPLOY.md", "config.json", "infer.py", "model.pt"
+        "README_DEPLOY.md", "config.json", "infer.py", "model.pt", "requirements.txt"
     ]

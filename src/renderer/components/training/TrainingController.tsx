@@ -26,7 +26,8 @@ import { RecipePresetSelector } from './RecipePresetSelector';
 
 export const TrainingController: React.FC = () => {
   const { task, language, setStep } = useProjectStore();
-  const { folderPath, totalImages, split, isLoading, isSplitting, importError, applySplit } = useDatasetStore();
+  const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
+    splitSupported, splitUnavailableReason, applySplit } = useDatasetStore();
   const {
     status,
     isTraining,
@@ -57,6 +58,7 @@ export const TrainingController: React.FC = () => {
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
     !isLoading && !isSplitting && !isRecoveringTraining && !importError;
+  const requiresSourcePartitions = splitSupported === false || task === 'detection' || task === 'anomaly';
 
   const handleStart = async () => {
     if (!canStart) return;
@@ -115,9 +117,16 @@ export const TrainingController: React.FC = () => {
             type="warning"
             stepContext="3단계 학습 가드레일"
             title="검증 데이터 분할(Validation Split)이 필요합니다"
-            description={`현재 총 ${totalImages}장의 이미지에 대해 학습·검증 분할이 완료되지 않았습니다. 데이터나 라벨을 바꾼 뒤에는 분할을 다시 적용해야 합니다.`}
-            shopFloorTip="산업 표준 추천 비율은 학습 80% : 검증 20% 입니다. 아래 버튼을 누르면 즉시 자동 분할됩니다."
-            actions={[
+            description={requiresSourcePartitions
+              ? splitUnavailableReason || '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 확인하세요.'
+              : `현재 총 ${totalImages}장의 이미지에 대해 학습·검증 분할이 완료되지 않았습니다. 데이터나 라벨을 바꾼 뒤에는 분할을 다시 적용해야 합니다.`}
+            shopFloorTip={requiresSourcePartitions ? undefined : '산업 표준 추천 비율은 학습 80% : 검증 20% 입니다. 아래 버튼을 누르면 즉시 자동 분할됩니다.'}
+            actions={requiresSourcePartitions ? [{
+              label: '1단계에서 데이터 폴더 확인',
+              icon: ArrowLeft,
+              variant: 'primary',
+              onClick: () => setStep(1),
+            }] : [
               {
                 label: '80:20 기본 검증 분할 즉시 적용 (추천)',
                 icon: Sliders,
@@ -130,6 +139,12 @@ export const TrainingController: React.FC = () => {
             ]}
           />
         ) : null}
+
+        {splitError && (
+          <div role="alert" className="rounded border border-red-700/60 bg-red-950/40 px-3 py-2 text-xs text-red-200">
+            데이터 분할 실패: {splitError}
+          </div>
+        )}
 
         {/* Industrial Recipe Presets Section */}
         <RecipePresetSelector

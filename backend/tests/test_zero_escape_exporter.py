@@ -353,6 +353,12 @@ def test_authentic_model_export_classification():
         assert res_onnx["status"] == "success"
         onnx_file = Path(res_onnx["package_path"]) / "model.onnx"
         assert onnx_file.is_file()
+        onnx_requirements = (onnx_file.parent / "requirements.txt").read_text(encoding="utf-8")
+        assert "onnxruntime" in onnx_requirements
+        assert "opencv-python-headless" in onnx_requirements
+        assert "torch" not in onnx_requirements
+        assert any(item["name"] == "requirements.txt" for item in res_onnx["manifest"])
+        assert "pip install -r requirements.txt" in (onnx_file.parent / "README_DEPLOY.md").read_text(encoding="utf-8")
 
         # 3. Export to TorchScript
         pkg_ts_dir = temp_dir / "pkg_ts"
@@ -366,6 +372,10 @@ def test_authentic_model_export_classification():
         assert res_ts["status"] == "success"
         ts_file = Path(res_ts["package_path"]) / "model.pt"
         assert ts_file.is_file()
+        torchscript_requirements = (ts_file.parent / "requirements.txt").read_text(encoding="utf-8")
+        assert "torch" in torchscript_requirements
+        assert "torchvision" in torchscript_requirements
+        assert "onnxruntime" not in torchscript_requirements
 
         # 4. Compare outputs on the same test input tensor
         test_input = torch.randn(1, 3, 128, 128)

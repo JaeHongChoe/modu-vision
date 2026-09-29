@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { HardwareStats, TrainingPreset, VisionTask } from '../types';
 import { api } from '../services/api';
+import { useDatasetStore } from './useDatasetStore';
 
 export interface LossPoint {
   epoch: number;
@@ -98,6 +99,9 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   setPreset: (preset) => set({ preset }),
 
   startTraining: async (datasetPath, task) => {
+    if (useDatasetStore.getState().isSplitting) {
+      throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
+    }
     pendingStartEvents = [];
     set({
       jobId: null,

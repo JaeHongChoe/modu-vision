@@ -23,6 +23,7 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_loaders import (
+    AnomalyDataset,
     SUPPORTED_IMAGE_EXTENSIONS,
     inspect_dataset,
     split_dataset,
@@ -81,6 +82,7 @@ class IndustrialDatasetImportRequest(BaseModel):
 class DatasetSplitRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     folder_path: Optional[str] = None
+    task: Optional[Literal["classification", "detection", "segmentation", "anomaly"]] = None
     train_ratio: float = Field(0.8, gt=0.0, lt=1.0)
     val_ratio: Optional[float] = Field(None, ge=0.0, lt=1.0)
     test_ratio: float = Field(0.0, ge=0.0, lt=1.0)
@@ -177,6 +179,53 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
         return True
     studio_dir = dataset_annotation_dir(folder, STUDIO_ANNOTATIONS_DIR)
     return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
+
+
+def _resolve_task_folder(folder: Path, task: Optional[str]) -> Path:
+    """Use the same task subfolder for import, split, and training."""
+    if task:
+        task_folder = folder / task.lower().strip()
+        if task_folder.is_dir() and any(path.is_dir() for path in task_folder.iterdir()):
+            return task_folder
+    return folder
+
+
+DETECTION_SPLIT_LAYOUT_MESSAGE = (
+    "검출 학습에는 images/train, images/val과 데이터 폴더 바로 아래의 "
+    "annotations_train.json, annotations_val.json이 필요합니다. / "
+    "Detection training requires separate images/train, images/val and root-level "
+    "annotations_train.json, annotations_val.json."
+)
+
+
+def _split_capability(task: str, flat_labelme: bool) -> tuple[bool, Optional[str]]:
+    """Describe whether the split endpoint changes what this task's loader reads."""
+    if task == "classification" or (task == "segmentation" and flat_labelme):
+        return True, None
+    if task == "segmentation":
+        return False, (
+            "일반 이미지·마스크 세그멘테이션의 재분할은 지원되지 않습니다. "
+            "원본 train/val 폴더를 사용하세요. / Re-splitting paired image/mask "
+            "segmentation is not supported; use source train/val folders."
+        )
+    return False, (
+        f"{task} 분할은 현재 학습 데이터에 적용되지 않습니다. "
+        f"원본 데이터의 train/val/test 구성을 사용하세요. / "
+        f"{task} split is not applied by the training loader; use source train/val/test folders."
+    )
+
+
+def _detection_train_val_ready(folder: Path) -> bool:
+    train_images = folder / "images" / "train"
+    val_images = folder / "images" / "val"
+    train_annotations = folder / "annotations_train.json"
+    val_annotations = folder / "annotations_val.json"
+    return (
+        train_images.is_dir() and val_images.is_dir()
+        and train_annotations.is_file() and val_annotations.is_file()
+        and train_images.resolve() != val_images.resolve()
+        and train_annotations.resolve() != val_annotations.resolve()
+    )
 
 
 def _split_labelme_source_groups(
@@ -327,18 +376,25 @@ def import_dataset(req: DatasetImportRequest):
             detail="This flat LabelMe NG dataset supports segmentation training only. Select segmentation; classification and anomaly training also require task-specific OK data.",
         )
 
-    effective_folder = folder
-    task_clean = req.task.lower().strip()
-    if (folder / task_clean / "train").is_dir():
-        effective_folder = folder / task_clean
-    elif not (folder / "train").is_dir():
-        for sub in folder.iterdir():
-            if sub.is_dir() and (sub / "train").is_dir():
-                effective_folder = sub
-                break
+    effective_folder = _resolve_task_folder(folder, req.task)
+    if req.task == "detection":
+        named_annotations = any(
+            (effective_folder / parent / f"annotations_{partition}.json").is_file()
+            for parent in ("", "annotations") for partition in ("train", "val")
+        )
+        if named_annotations and not _detection_train_val_ready(effective_folder):
+            raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
 
     try:
-        summary = inspect_dataset(effective_folder, req.task)
+        try:
+            summary = inspect_dataset(effective_folder, req.task)
+        except ValueError as exc:
+            if req.task != "classification" or not str(exc).startswith("Saved split"):
+                raise
+            # Preserve the actual inventory so the user can reapply the split.
+            # Training still rejects the stale manifest until that succeeds.
+            summary = inspect_dataset(effective_folder, req.task, ignore_saved_split=True)
+            summary.split_counts = {"train": 0, "val": 0, "test": 0}
         # If standard scanner found 0 images, auto-inspect via industrial adapter (LabelMe, manufacturing layout)
         if summary.total_images == 0:
             ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
@@ -369,10 +425,13 @@ def import_dataset(req: DatasetImportRequest):
         if req.task == "segmentation":
             summary.classes = {"defect_mask": len(paired_images)}
         assignments = _read_split_manifest(folder)
+        # Paired LabelMe discovery resolves image symlinks to their source,
+        # while the saved manifest names files inside the selected folder.
+        resolved_assignments = {str(Path(path).resolve()): partition for path, partition in assignments.items()}
         image_keys = {str(p) for p in paired_images}
         valid_partitions = {"train", "val", "test"}
-        if image_keys.issubset(assignments) and all(assignments[key] in valid_partitions for key in image_keys):
-            split_counts = {part: sum(assignments[key] == part for key in image_keys) for part in valid_partitions}
+        if image_keys.issubset(resolved_assignments) and all(resolved_assignments[key] in valid_partitions for key in image_keys):
+            split_counts = {part: sum(resolved_assignments[key] == part for key in image_keys) for part in valid_partitions}
         else:
             split_counts = {"train": 0, "val": 0, "test": 0}
         train_count = split_counts["train"]
@@ -395,6 +454,8 @@ def import_dataset(req: DatasetImportRequest):
                 if count_checked > 200:  # Sample-based check for quick responsiveness
                     break
 
+    split_supported, split_unavailable_reason = _split_capability(req.task, flat_labelme)
+
     return {
         "status": "success",
         "total_images": summary.total_images,
@@ -407,6 +468,8 @@ def import_dataset(req: DatasetImportRequest):
             "test": split_counts.get("test", 0),
         },
         "corrupted_images": corrupted_images,
+        "split_supported": split_supported,
+        "split_unavailable_reason": split_unavailable_reason,
     }
 
 
@@ -443,16 +506,35 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     folder = Path(target_dir).resolve()
     if not folder.is_dir():
         raise HTTPException(status_code=404, detail=f"Dataset folder not found: {folder}")
+    flat_labelme = _has_flat_labelme_annotations(folder)
+    if req.task in ("detection", "anomaly"):
+        raise HTTPException(
+            status_code=422,
+            detail=(f"{req.task} 분할은 현재 학습 데이터에 적용되지 않습니다. "
+                    f"원본 데이터의 train/val/test 구성을 사용하세요. / "
+                    f"{req.task} split is not applied by the training loader; use source train/val/test folders."),
+        )
+    if req.task == "segmentation" and not flat_labelme:
+        raise HTTPException(
+            status_code=422,
+            detail=("일반 이미지·마스크 세그멘테이션의 재분할은 지원되지 않습니다. "
+                    "LabelMe 이미지와 라벨 폴더에서 분할하거나 원본 train/val 폴더를 사용하세요. / "
+                    "Re-splitting paired image/mask segmentation is not supported; use flat LabelMe or source train/val folders."),
+        )
+    if req.task == "classification" and flat_labelme:
+        raise HTTPException(status_code=422, detail="이 LabelMe 폴더는 세그멘테이션 분할만 지원합니다. / This LabelMe folder supports segmentation split only.")
+    if req.task is None and not flat_labelme and (
+        (folder / "images").is_dir() or (folder / "masks").is_dir()
+        or any(folder.glob("annotations*.json"))
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="데이터 작업 유형을 지정해야 안전하게 분할할 수 있습니다. / Specify the dataset task before splitting this layout.",
+        )
     val_ratio = req.val_ratio if req.val_ratio is not None else 1.0 - req.train_ratio - req.test_ratio
     if val_ratio < 0 or abs(req.train_ratio + val_ratio + req.test_ratio - 1.0) > 1e-6:
         raise HTTPException(status_code=422, detail="Train, validation and test ratios must sum to 1.")
-    # Check for nested task directory
-    effective_folder = folder
-    if not (folder / "train").is_dir():
-        for sub in folder.iterdir():
-            if sub.is_dir() and (sub / "train").is_dir():
-                effective_folder = sub
-                break
+    effective_folder = _resolve_task_folder(folder, req.task)
 
     # Gather image items
     items = []
@@ -518,6 +600,7 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
 @router.get("/images")
 def list_dataset_images(
     folder_path: Optional[str] = Query(None, description="Dataset folder path"),
+    task: Optional[Literal["classification", "detection", "segmentation", "anomaly"]] = Query(None, description="Dataset task"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     split: Optional[str] = Query(None, description="Filter by train, val, or test"),
@@ -528,17 +611,63 @@ def list_dataset_images(
     if not target_dir.exists():
         return {"total": 0, "limit": limit, "offset": offset, "items": []}
 
-    effective_dir = target_dir
-    if not (target_dir / "train").is_dir():
+    requested_task = task if isinstance(task, str) else None
+    effective_dir = _resolve_task_folder(target_dir, requested_task) if requested_task else target_dir
+    if not requested_task and not (target_dir / "train").is_dir():
         for sub in target_dir.iterdir():
             if sub.is_dir() and (sub / "train").is_dir():
                 effective_dir = sub
                 break
 
+    # Detection and paired segmentation store source images separately from
+    # masks/annotations. The gallery must follow the same image root as import.
+    image_root = effective_dir / "images"
+    task_image_mode = requested_task in ("detection", "segmentation") and image_root.is_dir()
+    alternate_segmentation_layout = (
+        requested_task == "segmentation" and not task_image_mode
+        and (effective_dir / "train" / "images").is_dir()
+    )
+    if alternate_segmentation_layout:
+        task_image_mode = True
+    anomaly_mode = requested_task == "anomaly"
+
     all_images: List[ImageMeta] = []
+    assignments = _read_split_manifest(target_dir)
     # Search structured splits
-    for s_name in (["train", "val", "test"] if not split else [split]):
-        s_dir = effective_dir / s_name
+    split_names = ["train", "val", "test"] if not split else [split]
+    if anomaly_mode:
+        # The anomaly loader derives val/test from test/ when no val/ exists.
+        # Use its metadata partition so the gallery shows the actual images
+        # counted by import and read during training/evaluation.
+        for s_name in split_names:
+            if s_name not in ("train", "val", "test"):
+                continue
+            try:
+                samples = AnomalyDataset(root_dir=effective_dir, split=s_name).samples
+            except (OSError, ValueError) as exc:
+                raise HTTPException(status_code=422, detail=f"Cannot list anomaly {s_name} images: {exc}") from exc
+            for image_path, label, _mask_path in samples:
+                label_name = "defect" if label else "good"
+                if class_name and class_name != label_name:
+                    continue
+                all_images.append(ImageMeta(
+                    image_id=image_path.stem,
+                    file_name=image_path.name,
+                    file_path=str(image_path),
+                    split=s_name,
+                    label=label_name,
+                    thumbnail_url=f"/api/dataset/thumbnail/{image_path.name}?file_path={image_path}",
+                ))
+        split_dirs = []
+    elif task_image_mode:
+        split_dirs = [
+            (name, effective_dir / name / "images" if alternate_segmentation_layout else image_root / name)
+            for name in split_names
+        ]
+    else:
+        split_dirs = [(name, effective_dir / name) for name in ([] if assignments else split_names)]
+    has_physical_splits = any(path.is_dir() for _, path in split_dirs)
+    for s_name, s_dir in split_dirs:
         if s_dir.is_dir():
             for sub in sorted(s_dir.iterdir()):
                 if sub.is_dir() and (not class_name or sub.name == class_name):
@@ -568,11 +697,10 @@ def list_dataset_images(
                     )
 
     # Fallback to direct recursive glob if no splits
-    if not all_images and not any((effective_dir / name).is_dir() for name in ("train", "val", "test")):
-        assignments = _read_split_manifest(target_dir)
+    if not anomaly_mode and not task_image_mode and not all_images and (assignments or not any((effective_dir / name).is_dir() for name in ("train", "val", "test"))):
         paired_images = _paired_labelme_images(target_dir)
         has_labelme = _has_flat_labelme_annotations(target_dir)
-        for f in sorted(target_dir.rglob("*")):
+        for f in sorted(effective_dir.rglob("*")):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 assigned_split = assignments.get(str(f))
                 if split and assigned_split != split:
@@ -606,6 +734,20 @@ def list_dataset_images(
                         thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                     )
                 )
+
+    if task_image_mode and not has_physical_splits and not split and not alternate_segmentation_layout:
+        # Single-COCO-file layouts have an unsplit images/ directory. Keep
+        # those visible while accurately reporting no train/val partition.
+        for f in sorted(image_root.iterdir()):
+            if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                all_images.append(ImageMeta(
+                    image_id=f.stem,
+                    file_name=f.name,
+                    file_path=str(f),
+                    split="all",
+                    label=None,
+                    thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
+                ))
 
     total = len(all_images)
     paged = all_images[offset : offset + limit]

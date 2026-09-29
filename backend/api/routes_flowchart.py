@@ -13,12 +13,14 @@ import logging
 import os
 from pathlib import Path
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 import urllib.parse
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 import torch
 
+from backend.api.routes_evaluation import _resolve_job_artifacts
 from backend.api.routes_training import training_job_manager
 from backend.engine.flowchart_engine import (
     CropInspectionResult,
@@ -36,6 +38,7 @@ from backend.engine.flowchart_engine import (
     safe_crop_roi,
 )
 from backend.utils.error_catalog import format_error_response
+from backend.engine.checkpoint_paths import is_job_id
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -69,6 +72,56 @@ def get_pipeline() -> FlowchartPipeline:
 def get_single_segmentation_template(job_id: Optional[str] = None) -> FlowchartPipeline:
     """Create a full-image segmentation flow without changing the saved graph."""
     return get_single_segmentation_flowchart(job_id=job_id)
+
+
+@router.get("/templates/detector-roi")
+def get_detector_roi_template(
+    inspection_task: Literal["anomaly", "segmentation", "classification"] = "segmentation",
+) -> FlowchartPipeline:
+    """Create the other linear graph supported by the execution engine."""
+    pipeline = get_default_flowchart()
+    pipeline.id = "detector_roi"
+    pipeline.name = "검출 ROI 후 결함 검사"
+    for node in pipeline.nodes:
+        if node.data.node_type == "inspection":
+            node.data.task = inspection_task
+            node.data.label = "ROI 결함 검사"
+            node.data.model_job_id = None
+        elif node.data.node_type == "detection_crop":
+            node.data.model_job_id = None
+    return pipeline
+
+
+class FlowchartModelReference(BaseModel):
+    job_id: str
+    task: Literal["detection", "anomaly", "segmentation", "classification"]
+
+
+class FlowchartModelVerificationRequest(BaseModel):
+    source_dataset_path: str
+    models: List[FlowchartModelReference] = Field(min_length=1, max_length=8)
+
+
+@router.post("/models/verify")
+def verify_flowchart_models(request: FlowchartModelVerificationRequest):
+    """Verify every saved model against the selected source and its node task."""
+    verified: List[str] = []
+    for model in request.models:
+        if not is_job_id(model.job_id):
+            raise HTTPException(status_code=409, detail=f"Invalid model job ID: {model.job_id}")
+        try:
+            _resolve_job_artifacts(
+                model.job_id,
+                source_dataset_path=request.source_dataset_path,
+                source_task=model.task,
+            )
+        except HTTPException as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Model {model.job_id} is not a completed {model.task} model for the selected dataset.",
+            ) from exc
+        verified.append(model.job_id)
+    return {"verified_job_ids": verified}
 
 
 @router.post("/pipeline")
