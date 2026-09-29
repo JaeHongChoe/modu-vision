@@ -36,14 +36,18 @@ def create_detection_model(
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_mobilenet_v3_large_fpn(weights=weights)
+        model = detection.fasterrcnn_mobilenet_v3_large_fpn(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
     elif preset_clean in ("precision", "resnet50", "fasterrcnn_resnet50_fpn_v2"):
         weights = (
             detection.FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_resnet50_fpn_v2(weights=weights)
+        model = detection.fasterrcnn_resnet50_fpn_v2(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
     else:
         # Default fallback to MobileNetV3 FPN
         weights = (
@@ -51,7 +55,9 @@ def create_detection_model(
             if pretrained
             else None
         )
-        model = detection.fasterrcnn_mobilenet_v3_large_fpn(weights=weights)
+        model = detection.fasterrcnn_mobilenet_v3_large_fpn(
+            weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+        )
 
     # Replace box predictor head with target num_classes
     in_features = model.roi_heads.box_predictor.cls_score.in_features

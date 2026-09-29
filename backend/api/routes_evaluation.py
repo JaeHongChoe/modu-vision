@@ -193,7 +193,7 @@ def _resolve_job_artifacts(
             raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
         rec = training_job_manager.get_job(job_id)
         if rec:
-            if rec.status in ("running", "stopping"):
+            if rec.status in ("running", "stopping", "disconnected"):
                 raise HTTPException(status_code=400, detail=f"Training job '{job_id}' is still in progress")
             if rec.status in ("failed", "aborted"):
                 raise HTTPException(
@@ -259,7 +259,7 @@ def _resolve_job_artifacts(
                 and _matches_source_dataset(p.parent, source_dataset_path, source_task)
             ]
             active = training_job_manager.get_active_job()
-            if active and active.status in ("running", "stopping"):
+            if active and active.status in ("running", "stopping", "disconnected"):
                 candidates = [p for p in candidates if p.parent.name != active.job_id]
             if not candidates:
                 raise HTTPException(status_code=404, detail="No completed training job has been selected")
@@ -750,6 +750,19 @@ def run_or_load_evaluation(
         source_dataset_path=source_dataset_path, source_task=source_task,
     )
 
+    from backend.remote.operations import remote_job_context, run_remote_evaluation
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+    try:
+        remote_context = remote_job_context(out_dir, resolved_job_id)
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
+    if remote_context is not None and ds_path_clean and resolved_dataset.resolve() != remote_context.dataset_path:
+        raise HTTPException(
+            status_code=422,
+            detail="Remote evaluation currently uses its original training snapshot; a different dataset path is unsupported",
+        )
+
     eval_json = out_dir / "eval_results.json"
     if not force_clean and eval_json.is_file():
         try:
@@ -777,6 +790,14 @@ def run_or_load_evaluation(
                     return cached
         except Exception:
             pass
+
+    try:
+        if remote_context is not None:
+            return run_remote_evaluation(remote_context, force_recompute=force_clean)
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote evaluation connection lost; retry the same job: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote evaluation result could not be verified: {exc}") from exc
 
     dev = get_device()
     effective_data = _resolve_dataset_dir(resolved_dataset, task)
@@ -862,6 +883,21 @@ def get_defect_heatmap(
             status_code=404,
             detail=f"Model checkpoint not found for job: {job_id}",
         )
+
+    from backend.remote.operations import remote_job_context, run_remote_inference
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+    try:
+        remote_context = remote_job_context(model_file.parent, model_file.parent.name)
+        if remote_context is not None:
+            payload, png_bytes = run_remote_inference(remote_context, img_file, threshold, image_id)
+            if format.lower() in ("image", "png"):
+                return Response(content=png_bytes, media_type="image/png")
+            return payload
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote inspection connection lost; retry the same image: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote inspection result could not be verified: {exc}") from exc
 
     task = "classification"
     meta_path = model_file.parent / "model_meta.json"
@@ -1104,9 +1140,6 @@ def run_inference_benchmark(req: BenchmarkRequest):
     """
     from backend.engine.exporter import load_checkpoint_and_reconstruct_model
 
-    device = get_device()
-    dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
-
     iters = max(5, min(req.iterations or 25, 100))
     res = req.resolution or 256
     if res < 32 or res > 2048:
@@ -1115,6 +1148,20 @@ def run_inference_benchmark(req: BenchmarkRequest):
     model_file = _find_model_file(req.job_id) if req.job_id else None
     if not model_file or not model_file.is_file():
         raise HTTPException(status_code=404, detail="A trained model checkpoint is required for benchmarking.")
+    from backend.remote.operations import remote_job_context, run_remote_benchmark
+    from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+    try:
+        remote_context = remote_job_context(model_file.parent, model_file.parent.name)
+        if remote_context is not None:
+            return run_remote_benchmark(remote_context, iters, res)
+    except RemoteDisconnected as exc:
+        raise HTTPException(status_code=503, detail=f"Remote benchmark connection lost; retry the same run: {exc}") from exc
+    except ArtifactValidationError as exc:
+        raise HTTPException(status_code=502, detail=f"Remote benchmark result could not be verified: {exc}") from exc
+
+    device = get_device()
+    dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
     try:
         model, meta, _ = load_checkpoint_and_reconstruct_model(model_file)
         model = model.to(device).eval()

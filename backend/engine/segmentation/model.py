@@ -130,7 +130,9 @@ class DeepLabV3Wrapper(nn.Module):
 
         if backbone == "resnet50":
             weights = tv_seg.DeepLabV3_ResNet50_Weights.DEFAULT if pretrained else None
-            self.model = tv_seg.deeplabv3_resnet50(weights=weights)
+            self.model = tv_seg.deeplabv3_resnet50(
+                weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+            )
             in_ch = self.model.classifier[4].in_channels
             self.model.classifier[4] = nn.Conv2d(in_ch, num_classes, kernel_size=1)
             if self.model.aux_classifier is not None:
@@ -138,7 +140,9 @@ class DeepLabV3Wrapper(nn.Module):
                 self.model.aux_classifier[4] = nn.Conv2d(aux_in, num_classes, kernel_size=1)
         elif backbone in ("mobilenet_v3", "mobilenet"):
             weights = tv_seg.DeepLabV3_MobileNet_V3_Large_Weights.DEFAULT if pretrained else None
-            self.model = tv_seg.deeplabv3_mobilenet_v3_large(weights=weights)
+            self.model = tv_seg.deeplabv3_mobilenet_v3_large(
+                weights=weights, **({"weights_backbone": None} if not pretrained else {}),
+            )
             in_ch = self.model.classifier[4].in_channels
             self.model.classifier[4] = nn.Conv2d(in_ch, num_classes, kernel_size=1)
             if self.model.aux_classifier is not None:

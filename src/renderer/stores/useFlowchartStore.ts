@@ -42,10 +42,10 @@ interface FlowchartState {
   inspectedCrop: FlowchartCrop | null;
 
   // Actions
-  loadPipeline: (force?: boolean) => Promise<FlowchartPipeline | null>;
-  loadSingleSegmentationTemplate: (jobId?: string) => Promise<void>;
+  loadPipeline: (force?: boolean, inspectionTask?: VisionTask, sourceDatasetPath?: string) => Promise<FlowchartPipeline | null>;
+  loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
-  savePipeline: (customPipeline?: FlowchartPipeline) => Promise<void>;
+  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask, sourceDatasetPath?: string) => Promise<void>;
   runPipeline: (customImagePath?: string, customImageId?: string) => Promise<boolean>;
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
@@ -76,12 +76,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   isImagePickerOpen: false,
   inspectedCrop: null,
 
-  loadPipeline: async (force = false) => {
+  loadPipeline: async (force = false, inspectionTask, sourceDatasetPath) => {
     if (!force && get().pipeline) return get().pipeline;
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
     try {
-      const data = await api.flowchart.getPipeline();
+      const data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
       if (generation !== flowchartGeneration) return null;
       set({
         pipeline: data,
@@ -100,16 +100,18 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
-  loadSingleSegmentationTemplate: async (jobId) => {
+  loadSingleSegmentationTemplate: async (jobId, inspectionTask) => {
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
     try {
-      const pipeline = await api.flowchart.getSingleSegmentationTemplate(jobId);
+      const pipeline = inspectionTask === 'detection'
+        ? await api.flowchart.getSingleDetectionTemplate(jobId)
+        : await api.flowchart.getSingleSegmentationTemplate(jobId, inspectionTask);
       if (generation !== flowchartGeneration) return;
       set({
         pipeline,
         pipelineDirty: Boolean(jobId),
-        selectedNodeId: 'node_inspect',
+        selectedNodeId: inspectionTask === 'detection' ? 'node_crop' : 'node_inspect',
         executionResult: null,
         inspectedCrop: null,
         isLoading: false,
@@ -140,7 +142,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
-  savePipeline: async (customPipeline) => {
+  savePipeline: async (customPipeline, recipeTask, sourceDatasetPath) => {
     if (get().isSaving) return;
     const target = customPipeline || get().pipeline;
     if (!target) return;
@@ -148,7 +150,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const saveGeneration = ++flowchartSaveGeneration;
     set({ isSaving: true, errorMessage: null, saveMessage: null });
     try {
-      await api.flowchart.savePipeline(target);
+      await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath);
       if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
       const currentVersionSaved = get().pipeline === target;
       set({

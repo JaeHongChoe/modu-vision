@@ -9,6 +9,7 @@ Enables visual assembly of multi-stage vision AI inspection:
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 from pathlib import Path
@@ -33,6 +34,7 @@ from backend.engine.flowchart_engine import (
     FlowchartPipeline,
     FlowchartRunRequest,
     get_default_flowchart,
+    get_single_detection_flowchart,
     get_single_segmentation_flowchart,
     ordered_linear_nodes,
     safe_crop_roi,
@@ -52,26 +54,102 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 _ENGINE = FlowchartEngine()
 
 
+InspectionTask = Literal["anomaly", "segmentation", "classification"]
+PipelineTask = Literal["detection", "anomaly", "segmentation", "classification"]
+
+
+def _recipe_file(task: PipelineTask, source_dataset_path: Optional[str] = None) -> Path:
+    if not source_dataset_path:
+        return DEFAULT_PIPELINE_FILE.with_name(f"pipeline_{task}.json")
+    source = Path(source_dataset_path).expanduser().resolve()
+    if not source.is_dir():
+        raise HTTPException(status_code=422, detail="Select an existing dataset folder before saving or loading its flowchart.")
+    source_key = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:16]
+    return DEFAULT_PIPELINE_FILE.with_name(f"pipeline_{task}_{source_key}.json")
+
+
+def _pipeline_matches_recipe(pipeline: FlowchartPipeline, task: PipelineTask) -> bool:
+    detectors = [node for node in pipeline.nodes if node.data.node_type == "detection_crop"]
+    inspections = [node for node in pipeline.nodes if node.data.node_type == "inspection"]
+    if task == "detection":
+        return bool(detectors)
+    return bool(inspections) and all(node.data.task == task for node in inspections)
+
+
+def _inferred_recipe(pipeline: FlowchartPipeline) -> PipelineTask:
+    inspections = [node for node in pipeline.nodes if node.data.node_type == "inspection"]
+    if inspections:
+        task = inspections[0].data.task
+        if task in ("anomaly", "segmentation", "classification"):
+            return task
+    if any(node.data.node_type == "detection_crop" for node in pipeline.nodes):
+        return "detection"
+    raise ValueError("Pipeline has no supported model task.")
+
+
+def _single_inspection_template(inspection_task: InspectionTask, job_id: Optional[str] = None) -> FlowchartPipeline:
+    pipeline = get_single_segmentation_flowchart(job_id=job_id)
+    if inspection_task == "segmentation":
+        return pipeline
+    labels = {
+        "classification": ("원본 이미지 분류 검사", "전체 이미지 분류"),
+        "anomaly": ("원본 이미지 이상 탐지", "전체 이미지 이상 탐지"),
+    }
+    pipeline.id = f"single_{inspection_task}"
+    pipeline.name, inspection_label = labels[inspection_task]
+    pipeline.description = "전체 이미지 검사 -> OK/NG/REVIEW 판정 -> 로컬 미리보기"
+    inspection = next(node for node in pipeline.nodes if node.data.node_type == "inspection")
+    inspection.data.task = inspection_task
+    inspection.data.label = inspection_label
+    inspection.data.params = {}
+    return pipeline
+
+
 @router.get("/pipeline")
-def get_pipeline() -> FlowchartPipeline:
+def get_pipeline(
+    inspection_task: PipelineTask = "segmentation", source_dataset_path: Optional[str] = None,
+) -> FlowchartPipeline:
     """Retrieves the saved pipeline or a runnable single-model template."""
-    if DEFAULT_PIPELINE_FILE.is_file():
+    recipe_files = [_recipe_file(inspection_task, source_dataset_path)]
+    if source_dataset_path:
+        recipe_files.append(_recipe_file(inspection_task))
+    recipe_files.append(DEFAULT_PIPELINE_FILE)
+    for path in recipe_files:
+        if not path.is_file():
+            continue
         try:
-            with open(DEFAULT_PIPELINE_FILE, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             pipeline = FlowchartPipeline.model_validate(data)
             ordered_linear_nodes(pipeline)
-            return pipeline
+            if path == DEFAULT_PIPELINE_FILE and inspection_task == "detection" and any(
+                node.data.node_type == "inspection" for node in pipeline.nodes
+            ):
+                # An old shared ROI graph is not the new detector-only default.
+                continue
+            if _pipeline_matches_recipe(pipeline, inspection_task):
+                return pipeline
+            if path != DEFAULT_PIPELINE_FILE:
+                raise ValueError("Saved flowchart task does not match its recipe file.")
         except Exception as e:
             logger.exception("Could not read saved pipeline: %s", e)
             raise HTTPException(status_code=409, detail=f"Saved flowchart is invalid: {e}") from e
-    return get_single_segmentation_flowchart()
+    return get_single_detection_flowchart() if inspection_task == "detection" else _single_inspection_template(inspection_task)
+
+
+@router.get("/templates/single-detection")
+def get_single_detection_template(job_id: Optional[str] = None) -> FlowchartPipeline:
+    """Create a detector-only defect inspection flow."""
+    return get_single_detection_flowchart(job_id=job_id)
 
 
 @router.get("/templates/single-segmentation")
-def get_single_segmentation_template(job_id: Optional[str] = None) -> FlowchartPipeline:
-    """Create a full-image segmentation flow without changing the saved graph."""
-    return get_single_segmentation_flowchart(job_id=job_id)
+def get_single_segmentation_template(
+    job_id: Optional[str] = None,
+    inspection_task: InspectionTask = "segmentation",
+) -> FlowchartPipeline:
+    """Create a full-image inspection flow without changing the saved graph."""
+    return _single_inspection_template(inspection_task, job_id=job_id)
 
 
 @router.get("/templates/detector-roi")
@@ -125,24 +203,31 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest):
 
 
 @router.post("/pipeline")
-def save_pipeline(pipeline: FlowchartPipeline):
+def save_pipeline(
+    pipeline: FlowchartPipeline, recipe_task: Optional[PipelineTask] = None,
+    source_dataset_path: Optional[str] = None,
+):
     """Saves a supported linear flow without corrupting the previous file."""
     try:
         ordered_linear_nodes(pipeline)
+        task = recipe_task or _inferred_recipe(pipeline)
+        if not _pipeline_matches_recipe(pipeline, task):
+            raise ValueError(f"Pipeline model tasks do not match the {task} recipe.")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    target_path = _recipe_file(task, source_dataset_path)
     temporary_path: Optional[Path] = None
     try:
-        DEFAULT_PIPELINE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=DEFAULT_PIPELINE_FILE.parent,
-            prefix=f".{DEFAULT_PIPELINE_FILE.name}.", suffix=".tmp", delete=False,
+            mode="w", encoding="utf-8", dir=target_path.parent,
+            prefix=f".{target_path.name}.", suffix=".tmp", delete=False,
         ) as f:
             temporary_path = Path(f.name)
             json.dump(pipeline.model_dump(), f, indent=2, ensure_ascii=False)
-        os.replace(temporary_path, DEFAULT_PIPELINE_FILE)
-        return {"status": "saved", "pipeline_id": pipeline.id, "node_count": len(pipeline.nodes)}
+        os.replace(temporary_path, target_path)
+        return {"status": "saved", "pipeline_id": pipeline.id, "node_count": len(pipeline.nodes), "recipe_task": task}
     except Exception as e:
         logger.exception("Failed to save pipeline: %s", e)
         raise HTTPException(
@@ -220,6 +305,8 @@ def run_flowchart(req: FlowchartRunRequest):
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if not req.image_path or not Path(req.image_path).is_file():
             raise HTTPException(status_code=422, detail="Select an existing inspection image before running the flowchart.")
+        model_contexts: Dict[str, Any] = {}
+        local_model_jobs: set[str] = set()
         for node in ordered_nodes:
             if node.data.node_type not in ("detection_crop", "inspection"):
                 continue
@@ -243,6 +330,31 @@ def run_flowchart(req: FlowchartRunRequest):
                     raise ValueError(f"Expected {expected_task}, found {actual_task or 'unknown'}")
             except Exception as exc:
                 raise HTTPException(status_code=409, detail=f"Model is incompatible with {node.data.label}: {exc}") from exc
+            from backend.remote.operations import remote_job_context
+            from backend.remote.coordinator import ArtifactValidationError
+
+            try:
+                context = remote_job_context(checkpoint.parent, job_id)
+            except ArtifactValidationError as exc:
+                raise HTTPException(status_code=409, detail=f"Remote model provenance is invalid for {node.data.label}: {exc}") from exc
+            if context is None:
+                local_model_jobs.add(job_id)
+            else:
+                model_contexts[job_id] = context
+        if model_contexts:
+            if local_model_jobs:
+                raise HTTPException(status_code=409, detail="Flowchart models must all be on the same compute server; train or select matching models.")
+            from backend.remote.operations import run_remote_flowchart
+            from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+            try:
+                return run_remote_flowchart(
+                    list(model_contexts.values()), pipeline.model_dump(), Path(req.image_path), req.image_id,
+                )
+            except RemoteDisconnected as exc:
+                raise HTTPException(status_code=503, detail=f"Remote flowchart connection lost; retry the same run: {exc}") from exc
+            except ArtifactValidationError as exc:
+                raise HTTPException(status_code=502, detail=f"Remote flowchart result could not be verified: {exc}") from exc
         result = _ENGINE.execute(
             pipeline=pipeline,
             image_path=req.image_path,

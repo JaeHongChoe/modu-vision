@@ -11,6 +11,29 @@ import type {
   VisionTask,
 } from '../types';
 
+export interface ComputeProfile {
+  id: string;
+  name: string;
+  ssh_target: string;
+  ssh_port: number;
+  remote_root: string;
+  runtime_kind: 'python' | 'docker';
+  runtime_value: string;
+  gpu_selector?: string | null;
+}
+
+export type ComputeProfileInput = Omit<ComputeProfile, 'id'> & { id?: string };
+
+export interface ComputeProbeResult {
+  ready: boolean;
+  device_name?: string | null;
+  device_type?: string | null;
+  checks?: Record<string, unknown> | Array<unknown>;
+  message?: string | null;
+  protocol_version?: string | number | null;
+  free_space_bytes?: number | null;
+}
+
 let cachedPort: number | null = null;
 
 export async function getBackendPort(): Promise<number> {
@@ -85,12 +108,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(errorDetail);
   }
 
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
 export const api = {
   health: {
     check: () => request<{ status: string; version: string; device: string; device_name: string }>('/health'),
+  },
+
+  compute: {
+    listProfiles: () => request<{ profiles: ComputeProfile[] }>('/api/compute/profiles'),
+    saveProfile: (profile: ComputeProfileInput) =>
+      request<{ profile: ComputeProfile }>('/api/compute/profiles', {
+        method: 'POST', body: JSON.stringify(profile),
+      }),
+    deleteProfile: (id: string) =>
+      request<void>(`/api/compute/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    getSelection: () => request<{ compute_profile_id: string | null }>('/api/compute/selection'),
+    selectProfile: (computeProfileId: string | null) =>
+      request<{ compute_profile_id: string | null }>('/api/compute/selection', {
+        method: 'PUT', body: JSON.stringify({ compute_profile_id: computeProfileId }),
+      }),
+    probeProfile: (id: string) =>
+      request<ComputeProbeResult>(`/api/compute/profiles/${encodeURIComponent(id)}/probe`, { method: 'POST' }),
   },
 
   project: {
@@ -206,13 +247,21 @@ export const api = {
       dataset_path: string;
       output_dir?: string;
       config_overrides?: any;
-    }) => request<{ job_id: string; status: string; preset: string; task: string }>('/api/training/start', {
+      compute_profile_id?: string;
+    }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string }>('/api/training/start', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
     stop: (jobId?: string) =>
       request<{ status: string; job_id: string | null }>('/api/training/stop', {
+        method: 'POST',
+        body: JSON.stringify({ job_id: jobId }),
+        signal: AbortSignal.timeout(10000),
+      }),
+
+    reconnect: (jobId: string) =>
+      request<{ job_id: string; status: string; compute_profile_id: string | null }>('/api/training/reconnect', {
         method: 'POST',
         body: JSON.stringify({ job_id: jobId }),
         signal: AbortSignal.timeout(10000),
@@ -282,20 +331,35 @@ export const api = {
   },
 
   flowchart: {
-    getPipeline: () => request<any>('/api/flowchart/pipeline'),
-    getSingleSegmentationTemplate: (jobId?: string) =>
-      request<any>(`/api/flowchart/templates/single-segmentation${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
+    getPipeline: (inspectionTask?: VisionTask, sourceDatasetPath?: string) => {
+      const query = new URLSearchParams();
+      if (inspectionTask) query.set('inspection_task', inspectionTask);
+      if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
+      return request<any>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`);
+    },
+    getSingleDetectionTemplate: (jobId?: string) =>
+      request<any>(`/api/flowchart/templates/single-detection${jobId ? `?job_id=${encodeURIComponent(jobId)}` : ''}`),
+    getSingleSegmentationTemplate: (jobId?: string, inspectionTask?: Exclude<VisionTask, 'detection'>) => {
+      const query = new URLSearchParams();
+      if (jobId) query.set('job_id', jobId);
+      if (inspectionTask) query.set('inspection_task', inspectionTask);
+      return request<any>(`/api/flowchart/templates/single-segmentation${query.size ? `?${query.toString()}` : ''}`);
+    },
     getDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) =>
       request<any>(`/api/flowchart/templates/detector-roi?inspection_task=${encodeURIComponent(inspectionTask)}`),
     verifyModels: (data: { source_dataset_path: string; models: Array<{ job_id: string; task: VisionTask }> }) =>
       request<{ verified_job_ids: string[] }>('/api/flowchart/models/verify', {
         method: 'POST', body: JSON.stringify(data),
       }),
-    savePipeline: (data: any) =>
-      request<{ status: string; pipeline_id: string; node_count: number }>('/api/flowchart/pipeline', {
+    savePipeline: (data: any, recipeTask?: VisionTask, sourceDatasetPath?: string) => {
+      const query = new URLSearchParams();
+      if (recipeTask) query.set('recipe_task', recipeTask);
+      if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
+      return request<{ status: string; pipeline_id: string; node_count: number }>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`, {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+    },
     run: (data: { image_path?: string; image_id?: string; pipeline?: any }) =>
       request<any>('/api/flowchart/run', {
         method: 'POST',

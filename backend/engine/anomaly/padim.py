@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from backend.engine.anomaly.feature_extractor import ResNetFeatureExtractor
+from backend.engine.anomaly.cancellation import check_fit_cancelled
 
 logger = logging.getLogger("vision_ai_studio.anomaly.padim")
 
@@ -72,22 +73,29 @@ class PaDiMDetector:
         self.feature_extractor.eval()
         return self
 
-    def fit(self, dataloader: torch.utils.data.DataLoader) -> Dict[str, Any]:
+    def fit(
+        self, dataloader: torch.utils.data.DataLoader,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> Dict[str, Any]:
         """
         Fits Gaussian distributions over normal training images.
         HARD CONSTRAINT: dataloader must contain ONLY normal images.
         """
+        check_fit_cancelled(cancellation_requested)
         self.feature_extractor.eval()
         all_embeddings: List[torch.Tensor] = []
 
         with torch.no_grad():
             for batch in dataloader:
+                check_fit_cancelled(cancellation_requested)
                 images = batch[0] if isinstance(batch, (list, tuple)) else batch
                 images = images.to(self.device)
                 feats = self.feature_extractor(images)  # [B, D, H, W]
                 feats = feats[:, self.sub_dims, :, :]   # [B, d, H, W]
                 all_embeddings.append(feats.cpu())
+                check_fit_cancelled(cancellation_requested)
 
+        check_fit_cancelled(cancellation_requested)
         train_feats = torch.cat(all_embeddings, dim=0).to(self.device)
         N, d, H, W = train_feats.shape
         if N < 2:
@@ -106,12 +114,15 @@ class PaDiMDetector:
         cov_reg = cov + self.regularizer * eye
 
         # Flatten to [H*W, d, d] for clean MPS inversion
+        check_fit_cancelled(cancellation_requested)
         cov_flat = cov_reg.view(-1, d, d)
         cov_inv_flat = torch.linalg.inv(cov_flat)
+        check_fit_cancelled(cancellation_requested)
         self.cov_inv = cov_inv_flat.view(H, W, d, d)
 
         # Compute training normal scores to calibrate default statistical threshold (mu + 3*sigma)
-        train_scores = self.predict_scores(dataloader)
+        train_scores = self.predict_scores(dataloader, cancellation_requested=cancellation_requested)
+        check_fit_cancelled(cancellation_requested)
         mean_s = float(np.mean(train_scores))
         std_s = float(np.std(train_scores))
         self.threshold = round(mean_s + 3.0 * std_s, 4)
@@ -126,10 +137,13 @@ class PaDiMDetector:
         }
 
     # Alias for trainer integration
-    def fit_normal_features(self, dataloader: torch.utils.data.DataLoader, device: Optional[Any] = None) -> Dict[str, Any]:
+    def fit_normal_features(
+        self, dataloader: torch.utils.data.DataLoader, device: Optional[Any] = None,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> Dict[str, Any]:
         if device is not None:
             self.to(device)
-        return self.fit(dataloader)
+        return self.fit(dataloader, cancellation_requested=cancellation_requested)
 
     def predict_anomaly_map(
         self, image_tensor: torch.Tensor, out_size: Optional[Tuple[int, int]] = None
@@ -171,14 +185,20 @@ class PaDiMDetector:
         score = float(np.max(smoothed))
         return smoothed, score
 
-    def predict_scores(self, dataloader: torch.utils.data.DataLoader) -> List[float]:
+    def predict_scores(
+        self, dataloader: torch.utils.data.DataLoader,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> List[float]:
         """Calculates image-level anomaly scores across a dataloader."""
         scores: List[float] = []
         for batch in dataloader:
+            check_fit_cancelled(cancellation_requested)
             imgs = batch[0] if isinstance(batch, (list, tuple)) else batch
             for i in range(len(imgs)):
+                check_fit_cancelled(cancellation_requested)
                 _, score = self.predict_anomaly_map(imgs[i : i + 1])
                 scores.append(score)
+                check_fit_cancelled(cancellation_requested)
         return scores
 
     def __call__(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

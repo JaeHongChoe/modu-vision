@@ -7,7 +7,11 @@ const ts = require('typescript');
 
 let savedLoads = 0;
 let templateLoads = 0;
+let detectionTemplateLoads = 0;
 let detectorTemplateLoads = 0;
+const requestedPipelineTasks = [];
+const requestedPipelineSources = [];
+const requestedTemplateTasks = [];
 let runs = 0;
 let saveCalls = 0;
 let releaseSave = null;
@@ -29,12 +33,35 @@ const blankSegmentation = {
 };
 const api = {
   flowchart: {
-    getPipeline: async () => { savedLoads += 1; return structuredClone(savedPipeline); },
-    getSingleSegmentationTemplate: async (jobId) => {
+    getPipeline: async (task, source) => {
+      savedLoads += 1;
+      requestedPipelineTasks.push(task);
+      requestedPipelineSources.push(source);
+      const pipeline = structuredClone(savedPipeline);
+      if (pipeline.id === 'single_segmentation' && task && task !== 'segmentation') {
+        pipeline.id = `single_${task}`;
+        pipeline.nodes[0].data.task = task;
+      }
+      return pipeline;
+    },
+    getSingleSegmentationTemplate: async (jobId, task) => {
       templateLoads += 1;
+      requestedTemplateTasks.push(task);
       const pipeline = structuredClone(blankSegmentation);
+      if (task && task !== 'segmentation') {
+        pipeline.id = `single_${task}`;
+        pipeline.nodes[0].data.task = task;
+      }
       pipeline.nodes[0].data.model_job_id = jobId || null;
       return pipeline;
+    },
+    getSingleDetectionTemplate: async (jobId) => {
+      detectionTemplateLoads += 1;
+      return {
+        id: 'single_detection', name: '원본 이미지 결함 검출', edges: [],
+        nodes: [{ id: 'node_crop', position: { x: 0, y: 0 },
+          data: { node_type: 'detection_crop', task: 'detection', label: 'Detector', model_job_id: jobId || null } }],
+      };
     },
     getDetectorRoiTemplate: async (task) => {
       detectorTemplateLoads += 1;
@@ -88,6 +115,30 @@ test('new dataset clears old DAG and opens a blank segmentation template', async
   assert.equal(templateLoads, 1);
   flow.getState().invalidateForDataChange();
   assert.equal(flow.getState().contextRevision, revision + 1);
+});
+
+test('classification flow requests a matching default and binds its completed model in the template', async () => {
+  try {
+    savedPipeline = structuredClone(blankSegmentation);
+    const loaded = await flow.getState().loadPipeline(true, 'classification', '/data/source');
+    assert.equal(requestedPipelineTasks.at(-1), 'classification');
+    assert.equal(requestedPipelineSources.at(-1), '/data/source');
+    assert.equal(loaded.nodes[0].data.task, 'classification');
+    await flow.getState().loadSingleSegmentationTemplate('job_verified', 'classification');
+    assert.equal(requestedTemplateTasks.at(-1), 'classification');
+    assert.equal(flow.getState().pipeline.nodes[0].data.task, 'classification');
+    assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_verified');
+  } finally {
+    savedPipeline = saved;
+  }
+});
+
+test('detection recipe opens a single detector flow with its completed model', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_detector', 'detection');
+  assert.equal(detectionTemplateLoads, 1);
+  assert.equal(flow.getState().pipeline.id, 'single_detection');
+  assert.equal(flow.getState().pipeline.nodes[0].data.model_job_id, 'job_detector');
+  assert.equal(flow.getState().selectedNodeId, 'node_crop');
 });
 
 test('blank template can be selected but cannot execute until a model is specified', async () => {

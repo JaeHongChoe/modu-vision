@@ -312,6 +312,35 @@ def get_single_segmentation_flowchart(job_id: Optional[str] = None) -> Flowchart
     )
 
 
+def get_single_detection_flowchart(job_id: Optional[str] = None) -> FlowchartPipeline:
+    """A detector-only flow that treats detected defect boxes as NG evidence."""
+    return FlowchartPipeline(
+        id="single_detection",
+        name="원본 이미지 결함 검출",
+        description="결함 객체 검출 -> 검출 수 기준 OK/NG 판정 -> 로컬 미리보기",
+        nodes=[
+            FlowNode(id="node_input", position={"x": 40, "y": 160}, data=FlowNodeData(
+                label="Inspection image", node_type="input",
+            )),
+            FlowNode(id="node_crop", position={"x": 360, "y": 160}, data=FlowNodeData(
+                label="결함 객체 검출", node_type="detection_crop", task="detection",
+                model_job_id=job_id, threshold=0.5, crop_padding=0,
+            )),
+            FlowNode(id="node_decision", position={"x": 680, "y": 160}, data=FlowNodeData(
+                label="Defect decision", node_type="decision", rule="any_defect_is_ng",
+            )),
+            FlowNode(id="node_output", position={"x": 1000, "y": 160}, data=FlowNodeData(
+                label="Local result", node_type="output",
+            )),
+        ],
+        edges=[
+            FlowEdge(id="input-detect", source="node_input", target="node_crop", label="Original image"),
+            FlowEdge(id="detect-decision", source="node_crop", target="node_decision", label="Detected defects"),
+            FlowEdge(id="decision-output", source="node_decision", target="node_output", label="Local verdict"),
+        ],
+    )
+
+
 def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     """Follow edges through one of the supported linear inspection graphs."""
     nodes = {node.id: node for node in pipeline.nodes}
@@ -349,10 +378,11 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     node_types = [node.data.node_type for node in order]
     supported = [
         ["input", "inspection", "decision", "output"],
+        ["input", "detection_crop", "decision", "output"],
         ["input", "detection_crop", "inspection", "decision", "output"],
     ]
     if node_types not in supported:
-        raise ValueError("Pipeline supports only full-image or detector-ROI linear inspection flows.")
+        raise ValueError("Pipeline supports only full-image, detector-only, or detector-ROI linear inspection flows.")
     return order
 
 
@@ -776,11 +806,35 @@ class FlowchartEngine:
         status = "passed" if is_trained else "warning_untrained"
         return crop_results, latency_ms, status
 
+    def _detected_defect_crops(
+        self, img_rgb: np.ndarray, rois: List[Dict[str, Any]],
+    ) -> List[CropInspectionResult]:
+        """Represent detector boxes as defect evidence without a second model."""
+        results: List[CropInspectionResult] = []
+        for roi in rois:
+            crop, bbox = safe_crop_roi(
+                img_rgb, roi["bbox"], padding_px=0, min_size=1, target_size=None,
+            )
+            height, width = crop.shape[:2]
+            if max(height, width) > 160:
+                scale = 160 / max(height, width)
+                crop = cv2.resize(crop, (max(1, round(width * scale)), max(1, round(height * scale))))
+            _, encoded = cv2.imencode(".png", cv2.cvtColor(crop, cv2.COLOR_RGB2BGR))
+            confidence = float(roi.get("confidence", 0.0))
+            results.append(CropInspectionResult(
+                roi_id=roi["id"], label=roi["label"], bbox=bbox,
+                defect_score=round(confidence, 4), verdict="NG",
+                crop_thumbnail=f"data:image/png;base64,{base64.b64encode(encoded.tobytes()).decode('utf-8')}",
+                flaw_type="결함 객체 검출", confidence=confidence,
+            ))
+        return results
+
     def _evaluate_decision_rules(
         self,
         crops: List[CropInspectionResult],
         decision_node: Optional[FlowNode],
         no_inspection_reason: Optional[str] = None,
+        empty_is_ok: bool = False,
     ) -> Tuple[Literal["OK", "NG", "REVIEW"], bool, str, float, str]:
         """
         Evaluates Stage 3 decision rules:
@@ -797,7 +851,11 @@ class FlowchartEngine:
         ng_crops = [c for c in crops if c.verdict == "NG"]
         defective_count = len(ng_crops)
 
-        if not crops:
+        if not crops and empty_is_ok:
+            final_verdict = "OK"
+            is_ok = True
+            rejection_reason = "설정한 신뢰도 이상으로 검출된 결함 객체가 없습니다."
+        elif not crops:
             final_verdict: Literal["OK", "NG", "REVIEW"] = "REVIEW"
             is_ok = False
             rejection_reason = no_inspection_reason or "No inspection region was found; the image was not inspected. Review required."
@@ -892,10 +950,13 @@ class FlowchartEngine:
         nodes_by_type = {node.data.node_type: node for node in ordered_nodes}
         input_node = nodes_by_type["input"]
         det_node = nodes_by_type.get("detection_crop")
-        inspect_node = nodes_by_type["inspection"]
+        inspect_node = nodes_by_type.get("inspection")
         decision_node = nodes_by_type["decision"]
         output_node = nodes_by_type["output"]
-        full_image_segmentation = det_node is None and (inspect_node.data.task or "").lower() == "segmentation"
+        detection_only = det_node is not None and inspect_node is None
+        if detection_only and not det_node.data.model_job_id:
+            raise ValueError("A trained detection model is required for a detector-only flow.")
+        full_image_segmentation = det_node is None and inspect_node is not None and (inspect_node.data.task or "").lower() == "segmentation"
         input_max_dim = None if full_image_segmentation else 1600
 
         execution_steps: List[FlowchartExecutionStep] = []
@@ -977,7 +1038,9 @@ class FlowchartEngine:
         # Stage 2: Inspection on Extracted Crops
         # ====================================================================
         no_inspection_reason = None
-        if rois:
+        if detection_only:
+            crops = self._detected_defect_crops(img_rgb, rois)
+        elif rois:
             inspect_t0 = time.time()
             try:
                 crops, insp_lat, insp_status = self._inspect_crops(img_rgb, rois, inspect_node)
@@ -986,20 +1049,22 @@ class FlowchartEngine:
                 no_inspection_reason = str(exc)
         else:
             crops, insp_lat, insp_status = [], 0.0, "skipped"
-        execution_steps.append(
-            FlowchartExecutionStep(
-                node_id=inspect_node.id,
-                name=inspect_node.data.label,
-                status=insp_status,
-                latency_ms=round(insp_lat, 2),
+        if inspect_node is not None:
+            execution_steps.append(
+                FlowchartExecutionStep(
+                    node_id=inspect_node.id,
+                    name=inspect_node.data.label,
+                    status=insp_status,
+                    latency_ms=round(insp_lat, 2),
+                )
             )
-        )
 
         # ====================================================================
         # Stage 3: Decision Rule Evaluation
         # ====================================================================
         verdict, is_ok, reason, dec_lat, dec_status = self._evaluate_decision_rules(
             crops, decision_node, no_inspection_reason=no_inspection_reason,
+            empty_is_ok=detection_only,
         )
         execution_steps.append(
             FlowchartExecutionStep(

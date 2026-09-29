@@ -30,7 +30,7 @@ import { ImagePickerModal } from './ImagePickerModal';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport } from './flowchartViewport';
-import { getFlowchartModelReferences, recoverThenLoadFlowchart } from './flowchartStartup';
+import { getFlowchartModelReferences, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -114,9 +114,9 @@ export const FlowchartStudio: React.FC = () => {
         loadEvaluation,
         loadSavedPipeline: () => {
           const current = useFlowchartStore.getState();
-          return current.pipeline && current.pipelineDirty
+          return current.pipeline && current.pipelineDirty && pipelineMatchesTask(current.pipeline, task)
             ? Promise.resolve(current.pipeline)
-            : loadPipeline(true);
+            : loadPipeline(true, task, folderPath);
         },
         verifyModels: verifyModelReferences,
         isCurrent,
@@ -125,21 +125,13 @@ export const FlowchartStudio: React.FC = () => {
       if (result.status === 'waiting') return;
       if (result.status === 'blocked') {
         setModelCheck({ status: 'blocked', reason: result.reason });
-        if (!useFlowchartStore.getState().pipeline) {
-          await loadSingleSegmentationTemplate();
+        if (!pipelineMatchesTask(useFlowchartStore.getState().pipeline, task)) {
+          await loadSingleSegmentationTemplate(undefined, task);
         }
         return;
       }
-      const loaded = result.pipeline;
-      const modelNodes = loaded.nodes.filter((node) =>
-        node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop'
-      );
-      const singleInspection = loaded.id === 'single_segmentation'
-        ? modelNodes.find((node) => node.data.node_type === 'inspection')
-        : null;
-      if (task === 'segmentation' && singleInspection && !singleInspection.data.model_job_id) {
-        updateNodeData(singleInspection.id, { model_job_id: result.verifiedJobId });
-      }
+      const binding = singleModelAutoBinding(result.pipeline, task, result.verifiedJobId);
+      if (binding) updateNodeData(binding.nodeId, { model_job_id: binding.modelJobId });
       setModelCheck({ status: 'ready' });
     };
     openFlow().catch(() => {
@@ -181,7 +173,7 @@ export const FlowchartStudio: React.FC = () => {
     try {
       await verifyCurrentPipeline(currentPipeline, folderPath);
       if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== currentPipeline) return;
-      await savePipeline();
+      await savePipeline(undefined, task, folderPath);
     } catch (error) {
       setActionValidationError(error instanceof Error ? error.message : '모델의 데이터 출처를 확인할 수 없습니다.');
     } finally {
@@ -207,9 +199,9 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const handleSingleModel = async () => {
-    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 단일 분할 플로우를 불러올까요?')) return;
+    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 단일 검사 플로우를 불러올까요?')) return;
     const verifiedJobId = useEvaluationStore.getState().jobId;
-    await loadSingleSegmentationTemplate(task === 'segmentation' ? verifiedJobId || undefined : undefined);
+    await loadSingleSegmentationTemplate(verifiedJobId || undefined, task);
     if (verifiedJobId) setModelCheck({ status: 'ready' });
     setActionValidationError(null);
     setActiveTab('flow');
@@ -239,7 +231,7 @@ export const FlowchartStudio: React.FC = () => {
       allowLatestRecovery, completedCurrentJobId,
       getVerifiedJobId: () => useEvaluationStore.getState().jobId,
       loadEvaluation,
-      loadSavedPipeline: () => loadPipeline(true),
+      loadSavedPipeline: () => loadPipeline(true, task, folderPath),
       verifyModels: verifyModelReferences,
       isCurrent: () => useDatasetStore.getState().datasetKey === sourceKey
         && useProjectStore.getState().task === task,
@@ -304,8 +296,8 @@ export const FlowchartStudio: React.FC = () => {
             </h2>
             <p className="text-[10px] font-mono text-[#94A3B8]">
               {language === 'ko'
-                ? '원본 타일 분할 · 검출 ROI 후 검사 · 노드 속성 편집'
-                : 'Original-resolution tiled segmentation · detector ROI inspection · node settings'}
+                ? `${task === 'classification' ? '전체 이미지 분류' : task === 'anomaly' ? '전체 이미지 이상 탐지' : task === 'detection' ? '객체 검출' : '원본 타일 분할'} · 검출 ROI 후 검사 · 노드 속성 편집`
+                : `${task === 'classification' ? 'Full-image classification' : task === 'anomaly' ? 'Full-image anomaly inspection' : task === 'detection' ? 'Object detection' : 'Original-resolution tiled segmentation'} · detector ROI inspection · node settings`}
             </p>
           </div>
         </div>
@@ -354,7 +346,7 @@ export const FlowchartStudio: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={modelCheck.status !== 'ready' || isVerifyingAction || isSaving || isLoading || isRunning || !pipeline || needsModel}
-            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '검출·검사 노드마다 학습 모델 작업 ID를 지정하세요.' : undefined}
+            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] text-[#E2E8F0] rounded border border-[#2B3547] text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5 text-[#94A3B8]" />
@@ -365,7 +357,7 @@ export const FlowchartStudio: React.FC = () => {
           <button
             onClick={handleRun}
             disabled={modelCheck.status !== 'ready' || isVerifyingAction || isRunning || isLoading || needsModel}
-            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '검출·검사 노드마다 학습 모델 작업 ID를 지정하세요.' : undefined}
+            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined}
             className="flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
@@ -391,9 +383,9 @@ export const FlowchartStudio: React.FC = () => {
               검출 모델: {pipeline?.nodes.find((node) => node.data.node_type === 'detection_crop')?.data.model_job_id || '지정 필요'}
             </span>
           )}
-          {pipeline?.nodes.some((node) => node.data.node_type === 'inspection' && node.data.task === 'segmentation') && (
+          {pipeline?.nodes.some((node) => node.data.node_type === 'inspection') && (
             <span className="text-slate-400 truncate">
-              분할 모델: {pipeline.nodes.find((node) => node.data.node_type === 'inspection')?.data.model_job_id || '검사 노드에서 지정 필요'}
+              검사 모델: {pipeline.nodes.find((node) => node.data.node_type === 'inspection')?.data.model_job_id || '검사 노드에서 지정 필요'}
             </span>
           )}
         </div>
@@ -403,7 +395,7 @@ export const FlowchartStudio: React.FC = () => {
             disabled={isLoading || isSaving || isRunning || isVerifyingAction}
             className="px-2.5 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-200 border border-cyan-700 rounded font-bold disabled:opacity-50"
           >
-            원본 타일 분할 플로우
+            {task === 'classification' ? '원본 이미지 분류 플로우' : task === 'anomaly' ? '원본 이미지 이상 탐지 플로우' : task === 'detection' ? '결함 검출 플로우' : '원본 타일 분할 플로우'}
           </button>
           <button
             onClick={handleDetectorRoi}
@@ -625,6 +617,7 @@ export const FlowchartStudio: React.FC = () => {
                       isSkipped={step?.status === 'skipped'}
                       isReviewRequired={step?.status === 'review_required'}
                       latencyMs={step?.latency_ms}
+                      isDetectorOnly={!pipeline?.nodes.some((item) => item.data.node_type === 'inspection')}
                       onSelect={() => selectNode(node.id)}
                     />
                   </div>
@@ -675,9 +668,13 @@ export const FlowchartStudio: React.FC = () => {
                       </select>
                     )}
                     <p className="text-amber-400 text-[10px]">
-                      {selectedNode.data.node_type === 'inspection' && !pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
+                      {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && !pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
                         ? '원본 해상도를 타일로 검사합니다. 타일 상한 초과 시 REVIEW로 표시하고, 결과 이미지는 축소 미리보기입니다.'
-                        : '검출 모델과 검사 모델이 모두 필요합니다. 결과는 로컬 화면에만 표시됩니다.'}
+                        : selectedNode.data.node_type === 'detection_crop' && !pipeline?.nodes.some((node) => node.data.node_type === 'inspection')
+                          ? '검출된 결함 객체가 있으면 NG, 없으면 OK로 판정합니다. 검출 모델 하나만 필요합니다.'
+                        : pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
+                          ? '검출 모델과 검사 모델이 모두 필요합니다. 결과는 로컬 화면에만 표시됩니다.'
+                          : '전체 이미지를 선택한 모델로 검사합니다. 결과는 로컬 화면에만 표시됩니다.'}
                     </p>
                   </div>
                 )}

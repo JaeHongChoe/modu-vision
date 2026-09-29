@@ -32,6 +32,7 @@ interface CustomNodeProps {
   isSkipped?: boolean;
   isReviewRequired?: boolean;
   latencyMs?: number;
+  isDetectorOnly?: boolean;
   onSelect: () => void;
   onPortHover?: (port: NodePort, nodeId: string) => void;
 }
@@ -45,6 +46,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   isSkipped,
   isReviewRequired,
   latencyMs,
+  isDetectorOnly = false,
   onSelect,
 }) => {
   const nodeType = node.data.node_type;
@@ -108,7 +110,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         ];
       case 'decision':
         return [
-          { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: 'SCORES IN', pinNumber: 1 },
+          { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: isDetectorOnly ? 'DETECTIONS' : 'SCORES IN', pinNumber: 1 },
         ];
       case 'output':
         return [{ id: 'in_result', name: 'Verdict In', type: 'data', direction: 'in', label: 'VERDICT IN', pinNumber: 1 }];
@@ -125,7 +127,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         ];
       case 'detection_crop':
         return [
-          { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: 'ROI CROPS', pinNumber: 1 },
+          { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: isDetectorOnly ? 'DEFECT BOXES' : 'ROI CROPS', pinNumber: 1 },
         ];
       case 'inspection':
         return [
@@ -181,7 +183,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="flex items-center space-x-2">
           {getNodeIcon()}
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300 font-bold truncate max-w-[110px]">
-            {node.data.node_type}
+            {nodeType === 'detection_crop' ? (isDetectorOnly ? 'DEFECT DETECTION' : 'ROI DETECTION') : nodeType}
           </span>
         </div>
 

@@ -19,6 +19,7 @@ from backend.engine.flowchart_engine import (
     FlowchartPipeline,
     FlowchartRunRequest,
     get_default_flowchart,
+    get_single_detection_flowchart,
 )
 from backend.engine.segmentation.model import build_segmentation_model
 
@@ -204,6 +205,117 @@ def test_new_flowchart_defaults_to_single_segmentation(monkeypatch, tmp_path):
         "input", "inspection", "decision", "output",
     ]
     assert pipeline.nodes[1].data.task == "segmentation"
+
+
+@pytest.mark.parametrize("task,label", [
+    ("classification", "분류"),
+    ("anomaly", "이상"),
+])
+def test_new_single_inspection_flow_matches_completed_model_task(monkeypatch, tmp_path, task, label):
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
+
+    default = routes_flowchart.get_pipeline(inspection_task=task)
+    selected = routes_flowchart.get_single_segmentation_template(
+        job_id="job_123_abc123", inspection_task=task,
+    )
+
+    assert [node.data.node_type for node in default.nodes] == [
+        "input", "inspection", "decision", "output",
+    ]
+    assert default.nodes[1].data.task == task
+    assert default.nodes[1].data.model_job_id is None
+    assert selected.nodes[1].data.task == task
+    assert selected.nodes[1].data.model_job_id == "job_123_abc123"
+    assert label in selected.name
+
+
+def test_saved_flow_is_only_loaded_for_its_inspection_recipe(monkeypatch, tmp_path):
+    target = tmp_path / "pipeline.json"
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", target)
+    saved = routes_flowchart.get_single_segmentation_template(inspection_task="classification")
+    routes_flowchart.save_pipeline(saved)
+
+    assert routes_flowchart.get_pipeline(inspection_task="classification").id == saved.id
+    anomaly = routes_flowchart.get_pipeline(inspection_task="anomaly")
+    assert anomaly.id == "single_anomaly"
+    assert anomaly.nodes[1].data.task == "anomaly"
+    assert routes_flowchart.get_pipeline(inspection_task="classification").id == saved.id
+
+
+def test_saving_another_recipe_preserves_the_first_saved_flow(monkeypatch, tmp_path):
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
+    classification = routes_flowchart.get_single_segmentation_template(inspection_task="classification")
+    classification.name = "Saved classification"
+    anomaly = routes_flowchart.get_single_segmentation_template(inspection_task="anomaly")
+    anomaly.name = "Saved anomaly"
+    detector = routes_flowchart.get_single_detection_template()
+
+    routes_flowchart.save_pipeline(classification, recipe_task="classification")
+    routes_flowchart.save_pipeline(anomaly, recipe_task="anomaly")
+    routes_flowchart.save_pipeline(detector, recipe_task="detection")
+
+    assert routes_flowchart.get_pipeline(inspection_task="classification").name == "Saved classification"
+    assert routes_flowchart.get_pipeline(inspection_task="anomaly").name == "Saved anomaly"
+    assert routes_flowchart.get_pipeline(inspection_task="detection").id == "single_detection"
+    assert len(list(tmp_path.glob("pipeline_*.json"))) == 3
+
+
+def test_saved_flows_are_scoped_to_dataset_and_recipe(monkeypatch, tmp_path):
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
+    source_a = tmp_path / "source_a"
+    source_b = tmp_path / "source_b"
+    source_a.mkdir()
+    source_b.mkdir()
+    first = routes_flowchart.get_single_segmentation_template(inspection_task="classification")
+    second = routes_flowchart.get_single_segmentation_template(inspection_task="classification")
+    first.name = "Source A classification"
+    second.name = "Source B classification"
+
+    routes_flowchart.save_pipeline(first, recipe_task="classification", source_dataset_path=str(source_a))
+    routes_flowchart.save_pipeline(second, recipe_task="classification", source_dataset_path=str(source_b))
+
+    assert routes_flowchart.get_pipeline("classification", str(source_a)).name == first.name
+    assert routes_flowchart.get_pipeline("classification", str(source_b)).name == second.name
+    assert len(list(tmp_path.glob("pipeline_classification_*.json"))) == 2
+
+
+def test_legacy_roi_flow_does_not_replace_detector_only_default(monkeypatch, tmp_path):
+    legacy = tmp_path / "pipeline.json"
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", legacy)
+    legacy.write_text(get_default_flowchart().model_dump_json(), encoding="utf-8")
+
+    assert routes_flowchart.get_pipeline(inspection_task="detection").id == "single_detection"
+
+
+@pytest.mark.parametrize("rois, verdict, count", [
+    ([{"id": "crop_1", "label": "defect", "bbox": [2, 3, 20, 22], "confidence": 0.91}], "NG", 1),
+    ([], "OK", 0),
+])
+def test_detector_only_flow_uses_defect_boxes_without_second_model(monkeypatch, rois, verdict, count):
+    pipeline = get_single_detection_flowchart("job_detector")
+    engine = FlowchartEngine(device="cpu")
+    monkeypatch.setattr(engine, "_extract_candidate_rois", lambda *_: (rois, 1.0, "passed"))
+    monkeypatch.setattr(engine, "_get_inspection_model", lambda **_: pytest.fail("second model must not run"))
+
+    result = engine.execute(pipeline=pipeline, image=np.zeros((32, 40, 3), dtype=np.uint8))
+
+    assert result["final_verdict"] == verdict
+    assert result["roi_count"] == count
+    assert result["defective_roi_count"] == count
+    assert len(result["execution_steps"]) == 4
+    if rois:
+        assert result["crops"][0]["crop_thumbnail"].startswith("data:image/png;base64,")
+
+
+def test_detection_recipe_opens_detector_only_template(monkeypatch, tmp_path):
+    monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "pipeline.json")
+    default = routes_flowchart.get_pipeline(inspection_task="detection")
+    assert default.id == "single_detection"
+    assert [node.data.node_type for node in default.nodes] == [
+        "input", "detection_crop", "decision", "output",
+    ]
+    selected = routes_flowchart.get_single_detection_template(job_id="job_123_abc123")
+    assert selected.nodes[1].data.model_job_id == "job_123_abc123"
 
 
 def test_cannot_save_disconnected_pipeline(monkeypatch, tmp_path):

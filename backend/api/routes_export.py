@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict
 from backend.engine.exporter import (
     EXPORTS_DIR,
     export_runtime_package as engine_export_runtime,
+    locate_checkpoint,
 )
 from backend.utils.error_catalog import format_error_response
 
@@ -50,6 +51,18 @@ def export_runtime_package(req: ExportRuntimeRequest):
       - README_DEPLOY.md
     """
     try:
+        from backend.remote.operations import remote_job_context, run_remote_export
+        from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+
+        checkpoint = locate_checkpoint(req.job_id) if req.job_id else None
+        if checkpoint is not None:
+            remote_context = remote_job_context(checkpoint.parent, checkpoint.parent.name)
+            if remote_context is not None:
+                return run_remote_export(
+                    remote_context, req.export_format, req.resolution or 256,
+                    bool(req.quantize_fp16),
+                    req.package_name or f"modu_vision_export_{req.job_id}",
+                )
         return engine_export_runtime(
             job_id=req.job_id,
             export_format=req.export_format,
@@ -61,6 +74,10 @@ def export_runtime_package(req: ExportRuntimeRequest):
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    except RemoteDisconnected as e:
+        raise HTTPException(status_code=503, detail=f"Remote export connection lost; retry the same run: {e}") from e
+    except ArtifactValidationError as e:
+        raise HTTPException(status_code=502, detail=f"Remote export could not be verified: {e}") from e
     except Exception as e:
         logger.exception("Export runtime package failed: %s", e)
         raise HTTPException(
