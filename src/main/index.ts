@@ -1,5 +1,6 @@
 import { app, BrowserWindow, nativeTheme, shell } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
 import { registerIpcHandlers } from './ipc';
 
@@ -8,6 +9,20 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 const supervisor = new BackendSupervisor();
+
+function trustedRendererUrl(url: string, packagedUrl: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'file:') {
+      return parsed.href.split(/[?#]/, 1)[0] === packagedUrl;
+    }
+    return isDev && parsed.protocol === 'http:'
+      && ['127.0.0.1', 'localhost'].includes(parsed.hostname)
+      && parsed.port === '5173';
+  } catch {
+    return false;
+  }
+}
 
 async function createWindow(): Promise<BrowserWindow> {
   // Enforce native dark theme styling
@@ -31,6 +46,34 @@ async function createWindow(): Promise<BrowserWindow> {
       webSecurity: true,
     },
   });
+  const prodHtmlPath = path.join(__dirname, '../../dist/index.html');
+  const packagedUrl = pathToFileURL(prodHtmlPath).href;
+
+  // Keep the capability in the main process. This covers fetch, <img>, canvas
+  // image loads, and WebSocket handshakes without exposing it to page scripts.
+  win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    const port = supervisor.getPort();
+    const token = supervisor.getApiToken();
+    const frameUrl = details.frame?.url;
+    if (!port || !token || details.method === 'OPTIONS'
+      || details.webContentsId !== win.webContents.id
+      || !frameUrl || !trustedRendererUrl(frameUrl, packagedUrl)
+      || !trustedRendererUrl(win.webContents.getURL(), packagedUrl)) {
+      callback({ requestHeaders: details.requestHeaders });
+      return;
+    }
+    try {
+      const target = new URL(details.url);
+      if (['http:', 'ws:'].includes(target.protocol)
+        && target.hostname === '127.0.0.1' && Number(target.port) === port) {
+        callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token } });
+        return;
+      }
+    } catch {
+      // Non-URL requests are sent without the capability.
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
 
   // Smooth window display without flicker
   win.once('ready-to-show', () => {
@@ -45,6 +88,14 @@ async function createWindow(): Promise<BrowserWindow> {
     return { action: 'deny' };
   });
 
+  win.webContents.on('will-navigate', (event, url) => {
+    if (trustedRendererUrl(url, packagedUrl)) return;
+    event.preventDefault();
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      shell.openExternal(url);
+    }
+  });
+
   // Load renderer
   if (isDev) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
@@ -52,12 +103,10 @@ async function createWindow(): Promise<BrowserWindow> {
       await win.loadURL(devServerUrl);
     } catch (err) {
       console.warn(`[Main] Failed to load dev server at ${devServerUrl}, falling back to static build if present:`, err);
-      const prodHtmlPath = path.join(__dirname, '../../dist/index.html');
       await win.loadFile(prodHtmlPath);
     }
   } else {
     // In production, load dist/index.html
-    const prodHtmlPath = path.join(__dirname, '../../dist/index.html');
     await win.loadFile(prodHtmlPath);
   }
 

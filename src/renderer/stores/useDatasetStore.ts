@@ -6,9 +6,17 @@
 import { create } from 'zustand';
 import type { ImageMeta, VisionTask } from '../types';
 import { api } from '../services/api';
+import { useTrainingStore } from './useTrainingStore';
+import { useEvaluationStore } from './useEvaluationStore';
+import { useFlowchartStore } from './useFlowchartStore';
 
 interface DatasetState {
   folderPath: string;
+  hasSelectedFolder: boolean;
+  datasetKey: string | null;
+  lastImportedKey: string | null;
+  staleDatasetKeys: string[];
+  importError: string | null;
   totalImages: number;
   sourceImages: number;
   unlabeledImages: number;
@@ -32,7 +40,8 @@ interface DatasetState {
   setSplitFilter: (split: 'all' | 'train' | 'val' | 'test') => void;
   setClassFilter: (className: string | null) => void;
   setTrainRatio: (ratio: number) => void;
-  importFolder: (folder: string, task: VisionTask) => Promise<void>;
+  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean) => Promise<void>;
+  ensureImported: (task: VisionTask) => Promise<void>;
   generateSynthetic: (params: {
     task: VisionTask;
     num_samples: number;
@@ -40,13 +49,41 @@ interface DatasetState {
     split_ratio: number;
   }) => Promise<void>;
   applySplit: (ratio: number, valRatio?: number, testRatio?: number) => Promise<void>;
+  annotationsChanged: () => Promise<void>;
   loadImages: (page?: number) => Promise<void>;
 }
 
 let latestImageRequest = 0;
+let latestImportRequest = 0;
+let latestSplitRequest = 0;
+
+const importKey = (folder: string, task: VisionTask) => `${folder}\0${task}`;
+
+function invalidateDownstream(allowSourceRecovery = false): void {
+  useTrainingStore.getState().invalidateForDataChange();
+  useEvaluationStore.getState().invalidateForDataChange(allowSourceRecovery);
+  useFlowchartStore.getState().invalidateForDataChange();
+}
+
+function importErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const detail = 'detail' in error ? error.detail : undefined;
+    if (typeof detail === 'string') return detail;
+    const message = 'message' in error ? error.message : undefined;
+    if (typeof message === 'string') return message;
+  }
+  return 'Dataset import failed';
+}
 
 export const useDatasetStore = create<DatasetState>((set, get) => ({
   folderPath: './datasets/synthetic',
+  hasSelectedFolder: false,
+  datasetKey: null,
+  lastImportedKey: null,
+  staleDatasetKeys: [],
+  importError: null,
   totalImages: 0,
   sourceImages: 0,
   unlabeledImages: 0,
@@ -65,7 +102,20 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   showGeneratorModal: false,
   corruptedImages: [],
 
-  setFolderPath: (folderPath) => set({ folderPath }),
+  setFolderPath: (folderPath) => {
+    if (folderPath === get().folderPath) return;
+    invalidateDownstream();
+    latestImportRequest += 1;
+    latestImageRequest += 1;
+    latestSplitRequest += 1;
+    set({
+      folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null,
+      totalImages: 0, sourceImages: 0, unlabeledImages: 0,
+      classes: {}, split: { train: 0, val: 0, test: 0 },
+      images: [], totalImagesCount: 0, corruptedImages: [],
+      activeSplitFilter: 'all', activeClassFilter: null, page: 1, isLoading: false, isSplitting: false,
+    });
+  },
   setShowGeneratorModal: (showGeneratorModal) => set({ showGeneratorModal }),
   setSplitFilter: (activeSplitFilter) => {
     set({ activeSplitFilter, page: 1 });
@@ -77,13 +127,33 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
-  importFolder: async (folder, task) => {
+  importFolder: async (folder, task, allowRecoveryOverride) => {
+    const key = importKey(folder, task);
+    const previous = get().lastImportedKey;
+    const previousFolder = previous?.slice(0, previous.lastIndexOf('\0'));
+    const changedTaskInSameFolder = previousFolder === folder && previous !== key;
+    if (changedTaskInSameFolder && previous) {
+      set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, previous, key])] }));
+    }
+    const allowSourceRecovery = allowRecoveryOverride ?? (
+      !get().staleDatasetKeys.includes(key)
+      && !changedTaskInSameFolder
+      && (!previous || previousFolder !== folder)
+    );
+    invalidateDownstream(allowSourceRecovery);
+    const requestId = ++latestImportRequest;
     latestImageRequest += 1;
-    set({ folderPath: folder, images: [], totalImagesCount: 0, totalImages: 0, sourceImages: 0, unlabeledImages: 0,
-      split: { train: 0, val: 0, test: 0 }, activeSplitFilter: 'all', page: 1, isLoading: true });
+    latestSplitRequest += 1;
+    set({
+      folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null,
+      images: [], totalImagesCount: 0, totalImages: 0,
+      sourceImages: 0, unlabeledImages: 0, classes: {}, corruptedImages: [],
+      split: { train: 0, val: 0, test: 0 },
+      activeSplitFilter: 'all', activeClassFilter: null, page: 1, isLoading: true, isSplitting: false,
+    });
     try {
       const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
-      if (get().folderPath !== folder) return;
+      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
       set({
         totalImages: res.total_images,
         sourceImages: res.source_images ?? res.total_images,
@@ -95,17 +165,27 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           test: res.split.test || 0,
         },
         corruptedImages: res.corrupted_images || [],
+        lastImportedKey: key,
         isLoading: false,
         page: 1,
       });
       await get().loadImages(1);
     } catch (err) {
-      set({ isLoading: false });
+      if (requestId === latestImportRequest && get().datasetKey === key) {
+        set({ isLoading: false, importError: importErrorMessage(err) });
+      }
       throw err;
     }
   },
 
+  ensureImported: async (task) => {
+    const { folderPath, hasSelectedFolder, datasetKey } = get();
+    if (!folderPath || !hasSelectedFolder || datasetKey === importKey(folderPath, task)) return;
+    await get().importFolder(folderPath, task);
+  },
+
   generateSynthetic: async (params) => {
+    invalidateDownstream();
     set({ isGenerating: true });
     try {
       const res = await api.dataset.generate({
@@ -117,7 +197,10 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         seed: 42,
       });
       set({ isGenerating: false, showGeneratorModal: false });
-      await get().importFolder(res.output_dir, params.task);
+      set((state) => ({
+        staleDatasetKeys: [...new Set([...state.staleDatasetKeys, importKey(res.output_dir, params.task)])],
+      }));
+      await get().importFolder(res.output_dir, params.task, false);
     } catch (err) {
       set({ isGenerating: false });
       throw err;
@@ -125,15 +208,23 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   applySplit: async (ratio, valRatio, testRatio = 0) => {
+    const currentKey = get().datasetKey;
+    if (currentKey) {
+      set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, currentKey])] }));
+    }
+    invalidateDownstream();
+    const requestId = ++latestSplitRequest;
+    const { folderPath, datasetKey } = get();
     set({ isSplitting: true });
     try {
       const res = await api.dataset.split({
-        folder_path: get().folderPath,
+        folder_path: folderPath,
         train_ratio: ratio,
         val_ratio: valRatio,
         test_ratio: testRatio,
         seed: 42,
       });
+      if (requestId !== latestSplitRequest || get().datasetKey !== datasetKey) return;
       set({
         isSplitting: false,
         trainRatio: ratio,
@@ -141,12 +232,45 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       });
       await get().loadImages(1);
     } catch (err) {
-      set({ isSplitting: false });
+      if (requestId === latestSplitRequest && get().datasetKey === datasetKey) {
+        set({ isSplitting: false });
+      }
       throw err;
     }
   },
 
+  annotationsChanged: async () => {
+    const currentKey = get().datasetKey;
+    if (currentKey) {
+      set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, currentKey])] }));
+    }
+    invalidateDownstream();
+    const { folderPath, datasetKey } = get();
+    if (!datasetKey) return;
+    // Until the refreshed manifest is read, never show the old split as trainable.
+    set({ split: { train: 0, val: 0, test: 0 } });
+    const task = datasetKey.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask;
+    const requestId = ++latestImportRequest;
+    try {
+      const res = await api.dataset.import({ folder_path: folderPath, task, validate_images: false });
+      if (requestId !== latestImportRequest || get().datasetKey !== datasetKey) return;
+      set({
+        totalImages: res.total_images,
+        sourceImages: res.source_images ?? res.total_images,
+        unlabeledImages: res.unlabeled_images ?? 0,
+        classes: res.classes || {},
+        split: { train: res.split.train, val: res.split.val, test: res.split.test || 0 },
+        importError: null,
+      });
+    } catch (error) {
+      if (requestId === latestImportRequest && get().datasetKey === datasetKey) {
+        set({ importError: importErrorMessage(error) });
+      }
+    }
+  },
+
   loadImages: async (pageArg) => {
+    if (get().isLoading || get().importError) return;
     const requestId = ++latestImageRequest;
     const { folderPath, pageSize, activeSplitFilter, activeClassFilter } = get();
     const p = pageArg || get().page;

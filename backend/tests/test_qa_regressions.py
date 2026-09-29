@@ -265,24 +265,29 @@ def test_benchmark_rejects_missing_model(monkeypatch):
     assert error.value.status_code == 404
 
 
-def test_flowchart_rejects_pipeline_without_trained_models(monkeypatch):
+def test_flowchart_rejects_pipeline_without_trained_models(monkeypatch, tmp_path):
+    image = tmp_path / "inspection.png"
+    Image.new("RGB", (32, 32)).save(image)
     monkeypatch.setattr(routes_flowchart._ENGINE, "execute", lambda **kwargs: {"status": "success"})
     with pytest.raises(HTTPException) as error:
-        routes_flowchart.run_flowchart(FlowchartRunRequest(pipeline=get_default_flowchart()))
+        routes_flowchart.run_flowchart(FlowchartRunRequest(pipeline=get_default_flowchart(), image_path=str(image)))
     assert error.value.status_code == 409
 
 
-def test_flowchart_loads_trained_segmentation_checkpoint(tmp_path):
+def test_flowchart_loads_trained_segmentation_checkpoint(tmp_path, monkeypatch):
     import torch
     from backend.engine.flowchart_engine import FlowchartEngine
     from backend.engine.segmentation.model import build_segmentation_model
 
     model = build_segmentation_model(num_classes=2, preset="fast", pretrained=False)
-    checkpoint = tmp_path / "best_model.pt"
+    monkeypatch.chdir(tmp_path)
+    job_id = "job_123_abc123"
+    checkpoint = tmp_path / "models" / job_id / "best_model.pt"
+    checkpoint.parent.mkdir(parents=True)
     torch.save({"model_state_dict": model.state_dict(), "task": "segmentation",
                 "classes": ["background", "defect"], "preset": "fast"}, checkpoint)
     engine = FlowchartEngine(device="cpu")
-    loaded, is_trained = engine._get_inspection_model(task="segmentation", job_id=str(checkpoint))
+    loaded, is_trained = engine._get_inspection_model(task="segmentation", job_id=job_id)
     assert is_trained
     assert torch.equal(next(model.parameters()), next(loaded.parameters()))
 
@@ -337,21 +342,36 @@ def test_training_start_uses_prepared_labelme_dataset(tmp_path, monkeypatch):
             "imagePath": image.name, "imageWidth": 128, "imageHeight": 128,
             "shapes": [{"label": "Bow", "points": [[50, 50], [60, 50], [55, 60]]}],
         }), encoding="utf-8")
-    captured = {}
+    prepared_counts = {}
 
-    def capture_start(**kwargs):
-        captured.update(kwargs)
-        return object()
+    class ObservePreparedTrainer:
+        def __init__(self, dataset_path, **kwargs):
+            self.dataset_path = dataset_path
 
-    monkeypatch.setattr(routes_training.training_job_manager, "start_job", capture_start)
+        def abort(self):
+            pass
+
+        def train(self, job_id):
+            from pathlib import Path
+
+            dataset = Path(self.dataset_path)
+            prepared_counts["train"] = len(list((dataset / "images" / "train").glob("*.png")))
+            prepared_counts["val"] = len(list((dataset / "masks" / "val").glob("*.png")))
+            return {"status": "completed"}
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", ObservePreparedTrainer)
+    manager = routes_training.TrainingJobManager()
+    monkeypatch.setattr(routes_training, "training_job_manager", manager)
     response = routes_training.start_training(routes_training.TrainingStartRequest(
         task="segmentation", dataset_path=str(source), output_dir=str(tmp_path / "models"),
         config_overrides={"epochs": 1, "image_size": 64},
     ))
     assert response["status"] == "started"
-    assert captured["dataset_path"] != str(source)
-    assert len(list((tmp_path / "models").glob("*/dataset/images/train/*.png"))) == 2
-    assert len(list((tmp_path / "models").glob("*/dataset/masks/val/*.png"))) == 1
+    record = manager.get_job(response["job_id"])
+    assert record.dataset_path != str(source)
+    record.thread.join(timeout=5)
+    assert record.status == "completed"
+    assert prepared_counts == {"train": 2, "val": 1}
 
 
 def test_export_never_creates_a_fake_default_checkpoint(tmp_path, monkeypatch):
@@ -368,7 +388,8 @@ def test_flat_ng_filenames_are_not_imported_as_ok(tmp_path):
     assert result["classes"] == {"NG": 1}
 
 
-def test_brush_mask_is_saved_as_real_mask_pixels(tmp_path):
+def test_brush_mask_is_saved_as_real_mask_pixels(tmp_path, monkeypatch):
+    monkeypatch.setenv("VISION_AI_STUDIO_ANNOTATION_ROOTS", str(tmp_path))
     mask = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
     for x in range(4, 8):
         for y in range(5, 9):

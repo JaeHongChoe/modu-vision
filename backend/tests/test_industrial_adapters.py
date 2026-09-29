@@ -376,9 +376,9 @@ class TestFlexibleAnomalyDataset:
         for i in range(2):
             Image.new("RGB", (32, 32), (255, 50, 50)).save(anom_dir / f"ng_{i}.png")
 
-        # Train split uses normal_dir exclusively
+        # Two held-out normals are needed for separate validation and test sets.
         ds_tr = FlexibleAnomalyDataset(normal_dir=norm_dir, split="train", image_size=(32, 32))
-        assert len(ds_tr) == 5
+        assert len(ds_tr) == 3
         for idx in range(len(ds_tr)):
             img_t, lbl, mask_t = ds_tr[idx]
             assert lbl == 0
@@ -386,7 +386,64 @@ class TestFlexibleAnomalyDataset:
 
         # Val split includes both normal and anomaly
         ds_val = FlexibleAnomalyDataset(normal_dir=norm_dir, anomaly_dir=anom_dir, split="val", image_size=(32, 32))
-        assert len(ds_val) >= 3  # anomalies + val normals
+        assert len(ds_val) == 2  # one normal and one anomaly
+
+    def test_normal_paths_are_disjoint_across_train_and_validation(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        for index in range(10):
+            Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index:02d}.png")
+        for index in range(2):
+            Image.new("RGB", (8, 8), "red").save(anomaly_dir / f"ng_{index:02d}.png")
+
+        train = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="train")
+        val = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="val")
+        test = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="test")
+        train_paths = {sample[0].resolve() for sample in train.samples}
+        val_normal_paths = {sample[0].resolve() for sample in val.samples if sample[1] == 0}
+        test_normal_paths = {sample[0].resolve() for sample in test.samples if sample[1] == 0}
+
+        assert len(train_paths) == 8
+        assert len(val_normal_paths) == 1
+        assert len(test_normal_paths) == 1
+        assert train_paths.isdisjoint(val_normal_paths)
+        assert train_paths.isdisjoint(test_normal_paths)
+        assert val_normal_paths.isdisjoint(test_normal_paths)
+        assert train_paths | val_normal_paths | test_normal_paths == {p.resolve() for p in normal_dir.glob("*.png")}
+        assert len([sample for sample in val.samples if sample[1] == 1]) == 1
+        assert len([sample for sample in test.samples if sample[1] == 1]) == 1
+
+    def test_single_normal_is_not_reused_for_validation(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        Image.new("RGB", (8, 8), "white").save(normal_dir / "only_ok.png")
+        Image.new("RGB", (8, 8), "red").save(anomaly_dir / "ng.png")
+
+        train = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="train")
+        val = FlexibleAnomalyDataset(normal_dir=normal_dir, anomaly_dir=anomaly_dir, split="val")
+
+        assert len(train.samples) == 1
+        assert all(label == 1 for _, label, _ in val.samples)
+
+    def test_inspection_summary_counts_each_split_once(self, tmp_path: Path):
+        normal_dir = tmp_path / "OK"
+        anomaly_dir = tmp_path / "NG"
+        normal_dir.mkdir()
+        anomaly_dir.mkdir()
+        for index in range(10):
+            Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index:02d}.png")
+        for index in range(4):
+            Image.new("RGB", (8, 8), "red").save(anomaly_dir / f"ng_{index:02d}.png")
+
+        summary = inspect_industrial_dataset(tmp_path, task="anomaly")
+
+        assert summary["total_images"] == 14
+        assert summary["split"] == {"train": 8, "val": 3, "test": 3}
+        assert summary["classes"] == {"good": 10, "defect": 4}
 
     @pytest.mark.skipif(not REAL_OPERATIONAL_SERVER.exists(), reason="Operational server not available on this host")
     def test_real_operational_server_anomaly_inspection(self):
@@ -427,7 +484,9 @@ class TestImportIndustrialEndpoint:
     @pytest.fixture
     def client(self, tmp_path: Path):
         test_app = create_app(project_dir=str(tmp_path / "projects"))
-        return TestClient(test_app)
+        client = TestClient(test_app)
+        client.headers["X-Vision-Token"] = test_app.state.api_token
+        return client
 
     def test_import_industrial_endpoint_synthetic(self, client: TestClient, tmp_path: Path):
         """Calls POST /api/dataset/import-industrial on a created folder."""
@@ -542,9 +601,12 @@ class TestM7RemediationSafeguards:
         # Two different aspect ratios: 120x80 vs 80x160
         Image.new("RGB", (120, 80), (128, 128, 128)).save(norm_dir / "norm1.png")
         Image.new("RGB", (80, 160), (100, 100, 100)).save(norm_dir / "norm2.png")
+        for index in range(3, 11):
+            size = (120, 80) if index % 2 else (80, 160)
+            Image.new("RGB", size, (110, 110, 110)).save(norm_dir / f"norm{index}.png")
 
         ds = FlexibleAnomalyDataset(normal_dir=norm_dir, split="train", image_size=None, max_dim=256)
-        assert len(ds) == 2
+        assert len(ds) == 8
 
         loader = DataLoader(ds, batch_size=2, shuffle=False)
         for imgs, lbls, masks in loader:

@@ -5,7 +5,7 @@ Automated Test Suite for Feature F09: FastAPI Server & Daemon Lifecycle.
 Validates:
   - Ephemeral port pre-binding (port 0) and stdout machine-parseable announcement (VISION_AI_STUDIO_PORT=<port>)
   - Subprocess live launch, health check handshake, and clean shutdown on SIGTERM / SIGINT
-  - CORS header propagation across Electron renderer origins (localhost:*, 127.0.0.1:*)
+  - CORS header propagation across the exact dev and packaged renderer origins
   - Lifespan context manager startup and shutdown resource cleanup
 """
 
@@ -51,10 +51,9 @@ class TestCORSHeaders:
     @pytest.mark.parametrize(
         "origin",
         [
-            "http://localhost:3000",
             "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:8080",
+            "http://127.0.0.1:5173",
+            "null",
         ],
     )
     def test_cors_preflight_and_get(self, origin: str):
@@ -71,12 +70,12 @@ class TestCORSHeaders:
             },
         )
         assert options_res.status_code == 200
-        assert "access-control-allow-origin" in options_res.headers
+        assert options_res.headers["access-control-allow-origin"] == origin
 
         # Direct GET request
         get_res = client.get("/health", headers={"Origin": origin})
         assert get_res.status_code == 200
-        assert "access-control-allow-origin" in get_res.headers
+        assert get_res.headers["access-control-allow-origin"] == origin
 
 
 class TestDaemonSubprocessLifecycle:

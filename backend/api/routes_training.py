@@ -8,13 +8,16 @@ and handles clean aborts with GPU/MPS memory clearing.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
+import tempfile
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,8 +25,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.api.websocket_telemetry import WebSocketTelemetryCallback, broadcaster
 from backend.engine.device import clear_device_cache, get_device
 from backend.engine.trainer import UnifiedAutoMLTrainer
-from backend.engine.industrial_adapters import is_valid_labelme_file
-from backend.engine.labelme_preparation import prepare_labelme_segmentation
+from backend.engine.labelme_preparation import LabelMePreparationCancelled, prepare_labelme_segmentation
+from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.utils.error_catalog import classify_exception, format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_training")
@@ -52,6 +55,39 @@ class JobRecord:
     val_loss: Optional[float] = None
     best_metric: Optional[float] = None
     metrics: Dict[str, float] = field(default_factory=dict)
+    preparation_cancel: threading.Event = field(default_factory=threading.Event, repr=False)
+    source_dataset_path: Optional[str] = None
+    dataset_fingerprint: Optional[str] = None
+
+
+def _write_job_receipt(record: JobRecord) -> None:
+    """Persist the terminal state so evaluation can resolve jobs after a restart."""
+    output_dir = Path(record.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "job_id": record.job_id,
+        "status": record.status,
+        "task": record.task,
+        "dataset_path": record.dataset_path,
+        "output_dir": record.output_dir,
+    }
+    if record.source_dataset_path and record.dataset_fingerprint:
+        receipt["source_dataset_path"] = record.source_dataset_path
+        receipt["dataset_fingerprint"] = record.dataset_fingerprint
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=output_dir,
+            prefix=".job_receipt-", suffix=".tmp", delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            json.dump(receipt, temporary)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_path, output_dir / "job_receipt.json")
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 class TrainingJobManager:
@@ -89,6 +125,9 @@ class TrainingJobManager:
         preset: str = "fast",
         device: Optional[str] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
+        prepare_dataset: Optional[Callable[[threading.Event], Any]] = None,
+        source_dataset_path: Optional[str] = None,
+        dataset_fingerprint: Optional[str] = None,
     ) -> JobRecord:
         with self._lock:
             active_record = self._jobs.get(self._active_job_id) if self._active_job_id else None
@@ -155,6 +194,8 @@ class TrainingJobManager:
                 output_dir=output_dir,
                 status="running",
                 trainer=trainer,
+                source_dataset_path=source_dataset_path,
+                dataset_fingerprint=dataset_fingerprint,
             )
             self._jobs[job_id] = record
             self._active_job_id = job_id
@@ -164,7 +205,16 @@ class TrainingJobManager:
                 error = None
                 try:
                     logger.info("Background training thread started for job %s", job_id)
+                    if record.preparation_cancel.is_set():
+                        raise LabelMePreparationCancelled("Training preparation cancelled by user request")
+                    if prepare_dataset is not None:
+                        prepare_dataset(record.preparation_cancel)
+                    if record.preparation_cancel.is_set():
+                        raise LabelMePreparationCancelled("Training preparation cancelled by user request")
                     result = trainer.train(job_id=job_id)
+                except LabelMePreparationCancelled:
+                    result = {"status": "aborted"}
+                    cb.on_training_aborted(0, "Training preparation cancelled by user request")
                 except Exception as ex:
                     logger.exception("Training job %s failed: %s", job_id, ex)
                     err_card = classify_exception(ex, details=str(ex))
@@ -188,6 +238,10 @@ class TrainingJobManager:
                                 record.best_metric = result.get("best_metric")
                             if self._active_job_id == job_id:
                                 self._active_job_id = None
+                        try:
+                            _write_job_receipt(record)
+                        except OSError:
+                            logger.exception("Could not persist terminal receipt for job %s", job_id)
                     logger.info("Background training thread finished for job %s", job_id)
 
             t = threading.Thread(target=_worker, name=f"Trainer-{job_id}", daemon=True)
@@ -201,6 +255,7 @@ class TrainingJobManager:
             if not record or record.trainer is None or record.status not in ("running", "stopping"):
                 return False
             record.status = "stopping"
+            record.preparation_cancel.set()
             record.trainer.abort()
 
         logger.info("Aborting job %s...", job_id)
@@ -247,18 +302,43 @@ def start_training(req: TrainingStartRequest):
     """Initiates an asynchronous background AutoML training job."""
     # Verify dataset path exists
     d_path = Path(req.dataset_path).resolve()
-    if not d_path.exists():
+    if not d_path.is_dir():
         raise HTTPException(
             status_code=400,
-            detail=format_error_response("ERR_NO_DATA", details=f"Dataset path not found: {req.dataset_path}"),
+            detail=format_error_response("ERR_NO_DATA", details=f"Dataset folder not found: {req.dataset_path}"),
         )
 
-    local_labelme = any(is_valid_labelme_file(path, require_image=True) for path in d_path.glob("*.json"))
+    from backend.api.routes_dataset import (
+        STUDIO_ANNOTATIONS_DIR, _paired_labelme_images, _read_split_manifest, _split_manifest_file,
+    )
+
+    paired_images = _paired_labelme_images(d_path)
+    local_labelme = bool(paired_images)
     if local_labelme and req.task != "segmentation":
         raise HTTPException(
             status_code=422,
             detail="Flat LabelMe folders currently support segmentation training only; other tasks need task-specific OK/NG data.",
         )
+
+    has_split_manifest = local_labelme and _split_manifest_file(d_path).is_file()
+    assignments = _read_split_manifest(d_path) if has_split_manifest else {}
+    if has_split_manifest:
+        missing = sorted(str(image) for image in paired_images if str(image) not in assignments)
+        invalid = sorted(str(image) for image in paired_images
+                         if str(image) in assignments and assignments[str(image)] not in {"train", "val", "test"})
+        if missing or invalid:
+            raise HTTPException(
+                status_code=422,
+                detail=("Saved split is incomplete for the current labels. Apply the train/validation split again "
+                        f"before training (missing={len(missing)}, invalid={len(invalid)})."),
+            )
+
+    try:
+        source_fingerprint = fingerprint_dataset(
+            d_path, studio_root=STUDIO_ANNOTATIONS_DIR, split_manifest=_split_manifest_file(d_path),
+        )
+    except OSError as exc:
+        raise HTTPException(status_code=422, detail=f"Could not fingerprint training data: {exc}") from exc
 
     out_dir = Path(req.output_dir or "./models").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -266,19 +346,20 @@ def start_training(req: TrainingStartRequest):
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
     dataset_for_training = d_path
+    prepare_dataset = None
 
     if local_labelme:
-        from backend.api.routes_dataset import _read_split_manifest
-
         dataset_for_training = job_dir / "dataset"
-        try:
+        image_size = int((req.config_overrides or {}).get("image_size", 256))
+
+        def prepare_dataset(cancel_event: threading.Event) -> None:
             prepare_labelme_segmentation(
                 d_path, dataset_for_training,
-                image_size=int((req.config_overrides or {}).get("image_size", 256)),
-                assignments=_read_split_manifest(d_path),
+                image_size=image_size,
+                assignments=assignments,
+                require_complete_assignments=has_split_manifest,
+                cancellation_requested=cancel_event.is_set,
             )
-        except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"Could not prepare LabelMe training data: {exc}") from exc
 
     record = training_job_manager.start_job(
         job_id=job_id,
@@ -288,6 +369,9 @@ def start_training(req: TrainingStartRequest):
         preset=req.preset,
         device=req.device,
         config_overrides=req.config_overrides,
+        prepare_dataset=prepare_dataset,
+        source_dataset_path=str(d_path),
+        dataset_fingerprint=source_fingerprint,
     )
 
     return {

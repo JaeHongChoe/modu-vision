@@ -7,6 +7,8 @@ import { create } from 'zustand';
 import type { BackendStatus } from '../../types/electron';
 import type { ErrorCatalogItem, Language, VisionTask } from '../types';
 import { api, setCachedPort } from '../services/api';
+import { useAnnotationStore } from './useAnnotationStore';
+import { useDatasetStore } from './useDatasetStore';
 
 interface ProjectState {
   activeStep: 1 | 2 | 3 | 4 | 5 | 6;
@@ -18,8 +20,8 @@ interface ProjectState {
   projectName: string;
   projectDir: string | null;
 
-  setStep: (step: 1 | 2 | 3 | 4 | 5 | 6) => void;
-  setTask: (task: VisionTask) => void;
+  setStep: (step: 1 | 2 | 3 | 4 | 5 | 6) => Promise<void>;
+  setTask: (task: VisionTask) => Promise<void>;
   setLanguage: (lang: Language) => void;
   setBackendStatus: (status: BackendStatus) => void;
   showError: (error: ErrorCatalogItem) => void;
@@ -37,10 +39,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   projectName: 'Industrial Vision Project',
   projectDir: null,
 
-  setStep: (step) => set({ activeStep: step }),
-  setTask: (task) => {
+  setStep: async (step) => {
+    if (step === get().activeStep) return;
+    if (get().activeStep === 2 && useAnnotationStore.getState().isDirty) {
+      const saved = await useAnnotationStore.getState().saveAnnotations();
+      if (!saved || useAnnotationStore.getState().isDirty) return;
+    }
+    set({ activeStep: step });
+  },
+  setTask: async (task) => {
+    if (task === get().task) return;
+    if (useAnnotationStore.getState().isDirty) {
+      const saved = await useAnnotationStore.getState().saveAnnotations();
+      if (!saved || useAnnotationStore.getState().isDirty) return;
+    }
     set({ task });
     api.project.update({ task }).catch(() => {});
+    const dataset = useDatasetStore.getState();
+    if (dataset.hasSelectedFolder) {
+      await dataset.importFolder(dataset.folderPath, task).catch(() => {});
+    }
   },
   setLanguage: (language) => set({ language }),
   setBackendStatus: (status) => {

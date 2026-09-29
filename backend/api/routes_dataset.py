@@ -6,13 +6,15 @@ Dataset Management, Synthetic Generation, Inspection, Pagination & Thumbnail Ser
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import io
 import json
 import logging
 import os
+import random
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Query, Response
@@ -27,6 +29,7 @@ from backend.engine.dataset_loaders import (
     validate_image_file,
 )
 from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
+from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.synthetic_generator import generate_synthetic_dataset
 from backend.utils.error_catalog import format_error_response
 
@@ -37,6 +40,7 @@ router = APIRouter(prefix="/api/dataset", tags=["dataset"])
 THUMBNAIL_CACHE_DIR = Path.home() / ".vision_ai_studio_thumbnails"
 THUMBNAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+STUDIO_ANNOTATIONS_DIR = Path("./annotations")
 
 
 class DatasetGenerateRequest(BaseModel):
@@ -124,6 +128,132 @@ def _write_split_manifest(folder: Path, assignments: Dict[str, str], seed: int) 
     os.replace(temporary, path)
 
 
+def _paired_labelme_images(folder: Path) -> set[Path]:
+    """Find images trainable with their source or dataset-scoped Studio label.
+
+    A Studio save takes precedence over source LabelMe, including an empty save
+    that intentionally removes the original annotation.
+    """
+    images = {
+        path.resolve() for path in folder.iterdir()
+        if path.is_file() and not path.name.startswith("._")
+        and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+    }
+    paired = {
+        match.resolve() for annotation in folder.glob("*.json")
+        if is_valid_labelme_file(annotation, require_image=True)
+        for match in [find_matching_image(annotation)] if match is not None
+    } & images
+    studio_dir = dataset_annotation_dir(folder, STUDIO_ANNOTATIONS_DIR)
+    for image in images:
+        studio_json = studio_dir / f"{image.stem}.json"
+        if not studio_json.is_file():
+            continue
+        try:
+            saved = json.loads(studio_json.read_text(encoding="utf-8"))
+            annotations = saved["annotations"]
+            if not isinstance(annotations, list):
+                raise ValueError("annotations must be a list")
+        except (OSError, UnicodeError, ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid Studio annotation {studio_json}: {exc}") from exc
+        has_region_or_ok = any(
+            isinstance(item, dict) and (
+                len(item.get("polygon") or item.get("points") or []) >= 3
+                or len(item.get("bbox") or []) == 4
+                or item.get("is_normal") or item.get("label") == "OK"
+            )
+            for item in annotations
+        )
+        has_mask = bool(saved.get("mask_file")) and (studio_dir / "masks" / f"{image.stem}.png").is_file()
+        if has_region_or_ok or has_mask:
+            paired.add(image)
+        else:
+            paired.discard(image)
+    return paired
+
+
+def _has_flat_labelme_annotations(folder: Path) -> bool:
+    if any(is_valid_labelme_file(path, require_image=True) for path in folder.glob("*.json")):
+        return True
+    studio_dir = dataset_annotation_dir(folder, STUDIO_ANNOTATIONS_DIR)
+    return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
+
+
+def _split_labelme_source_groups(
+    items: List[Dict[str, Any]], manifest_path: Path,
+    train_ratio: float, val_ratio: float, test_ratio: float, seed: int,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Keep each original parent directory in one partition when flatten metadata exists."""
+    source_group_by_name: Dict[str, str] = {}
+    try:
+        with manifest_path.open(newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            if not {"renamed_filename", "relative_source_path"}.issubset(reader.fieldnames or []):
+                raise ValueError("required renamed_filename and relative_source_path columns are missing")
+            for row in reader:
+                name = (row.get("renamed_filename") or "").strip()
+                source = (row.get("relative_source_path") or "").strip().replace("\\", "/")
+                relative = PurePosixPath(source)
+                if not name or Path(name).name != name or relative.is_absolute() or ".." in relative.parts or len(relative.parts) < 2:
+                    raise ValueError("each row needs a filename and a relative source parent directory")
+                if name in source_group_by_name:
+                    raise ValueError(f"duplicate renamed_filename: {name}")
+                source_group_by_name[name] = str(relative.parent)
+    except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid flatten_manifest.csv: {exc}") from exc
+
+    missing = sorted({Path(item["image_path"]).name for item in items} - source_group_by_name.keys())
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=f"flatten_manifest.csv has no source group for {len(missing)} labeled image(s), including {missing[0]}",
+        )
+
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for item in sorted(items, key=lambda item: item["image_path"]):
+        groups.setdefault(source_group_by_name[Path(item["image_path"]).name], []).append(item)
+    group_names = sorted(groups)
+    rng = random.Random(seed)
+    rng.shuffle(group_names)
+    ratios = (train_ratio, val_ratio, test_ratio)
+    active = tuple(index for index, ratio in enumerate(ratios) if ratio > 0)
+    if len(group_names) < len(active):
+        raise HTTPException(
+            status_code=422,
+            detail=f"flatten_manifest.csv has {len(group_names)} source groups; at least {len(active)} are needed for the requested split.",
+        )
+
+    # A state retains one reproducible assignment for each possible (train, val)
+    # image count. This finds the closest achievable ratios with indivisible groups.
+    states = {(0, 0): ()}
+    for group_name in group_names:
+        size = len(groups[group_name])
+        next_states = {}
+        for (train_count, val_count), assignment in states.items():
+            for partition in active:
+                key = (train_count + (size if partition == 0 else 0),
+                       val_count + (size if partition == 1 else 0))
+                next_states.setdefault(key, assignment + (partition,))
+        states = next_states
+
+    total = len(items)
+    targets = tuple(total * ratio for ratio in ratios)
+    feasible = []
+    for (train_count, val_count), assignment in states.items():
+        counts = (train_count, val_count, total - train_count - val_count)
+        if all(counts[index] > 0 for index in active):
+            distance = tuple(abs(counts[index] - targets[index]) for index in range(3))
+            feasible.append((sum(value * value for value in distance), max(distance), sum(distance),
+                             counts, assignment))
+    if not feasible:
+        raise HTTPException(status_code=422, detail="No nonempty group-preserving split is possible.")
+    _, _, _, _, selected = min(feasible)
+    result: Dict[str, List[Dict[str, Any]]] = {"train": [], "val": [], "test": []}
+    for group_name, partition in zip(group_names, selected):
+        result[("train", "val", "test")[partition]].extend(groups[group_name])
+    return result
+
+
 @router.post("/generate")
 def generate_dataset(req: DatasetGenerateRequest):
     """Procedurally renders synthetic industrial defect dataset for OK/NG verification."""
@@ -187,6 +317,16 @@ def import_dataset(req: DatasetImportRequest):
             detail=format_error_response("ERR_NO_DATA", details=f"Folder not found: {req.folder_path}"),
         )
 
+    image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
+                   and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
+    paired_images = _paired_labelme_images(folder)
+    flat_labelme = _has_flat_labelme_annotations(folder)
+    if flat_labelme and req.task != "segmentation":
+        raise HTTPException(
+            status_code=422,
+            detail="This flat LabelMe NG dataset supports segmentation training only. Select segmentation; classification and anomaly training also require task-specific OK data.",
+        )
+
     effective_folder = folder
     task_clean = req.task.lower().strip()
     if (folder / task_clean / "train").is_dir():
@@ -222,12 +362,21 @@ def import_dataset(req: DatasetImportRequest):
     split_counts = summary.split_counts
     train_count = split_counts.get("train", 0)
     val_count = split_counts.get("val", 0)
-    image_files = {p.resolve() for p in folder.iterdir() if p.is_file() and not p.name.startswith("._")
-                   and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
-    paired_images = {match.resolve() for annotation in folder.glob("*.json")
-                     if is_valid_labelme_file(annotation, require_image=True)
-                     for match in [find_matching_image(annotation)] if match is not None}
-    unlabeled_images = len(image_files - paired_images) if paired_images else 0
+    unlabeled_images = len(image_files - paired_images) if flat_labelme else 0
+
+    if flat_labelme:
+        summary.total_images = len(paired_images)
+        if req.task == "segmentation":
+            summary.classes = {"defect_mask": len(paired_images)}
+        assignments = _read_split_manifest(folder)
+        image_keys = {str(p) for p in paired_images}
+        valid_partitions = {"train", "val", "test"}
+        if image_keys.issubset(assignments) and all(assignments[key] in valid_partitions for key in image_keys):
+            split_counts = {part: sum(assignments[key] == part for key in image_keys) for part in valid_partitions}
+        else:
+            split_counts = {"train": 0, "val": 0, "test": 0}
+        train_count = split_counts["train"]
+        val_count = split_counts["val"]
 
     # Optional image validation scanning
     corrupted_images = []
@@ -249,7 +398,7 @@ def import_dataset(req: DatasetImportRequest):
     return {
         "status": "success",
         "total_images": summary.total_images,
-        "source_images": len(image_files) if paired_images else summary.total_images,
+        "source_images": len(image_files) if flat_labelme else summary.total_images,
         "unlabeled_images": unlabeled_images,
         "classes": summary.classes,
         "split": {
@@ -323,26 +472,31 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 items.append({"image_path": str(f), "label": f.parent.name})
 
-    paired_images = {match.resolve() for annotation in effective_folder.glob("*.json")
-                     if is_valid_labelme_file(annotation, require_image=True)
-                     for match in [find_matching_image(annotation)] if match is not None}
-    if paired_images:
+    paired_images = _paired_labelme_images(effective_folder)
+    if _has_flat_labelme_annotations(effective_folder):
         items = [item for item in items if Path(item["image_path"]).resolve() in paired_images]
 
     if not items:
         raise HTTPException(status_code=422, detail="No valid images found to split.")
 
     seed = req.seed if req.seed is not None else 42
-    primary = split_dataset(items, train_ratio=req.train_ratio, val_ratio=val_ratio + req.test_ratio, seed=seed)
-    train_items = primary["train"]
-    remaining = primary["val"]
-    if req.test_ratio > 0 and remaining:
-        secondary = split_dataset(
-            remaining, train_ratio=val_ratio, val_ratio=req.test_ratio, seed=seed + 1,
+    flatten_manifest = folder / "flatten_manifest.csv"
+    if paired_images and flatten_manifest.is_file():
+        grouped = _split_labelme_source_groups(
+            items, flatten_manifest, req.train_ratio, val_ratio, req.test_ratio, seed,
         )
-        val_items, test_items = secondary["train"], secondary["val"]
+        train_items, val_items, test_items = grouped["train"], grouped["val"], grouped["test"]
     else:
-        val_items, test_items = remaining, []
+        primary = split_dataset(items, train_ratio=req.train_ratio, val_ratio=val_ratio + req.test_ratio, seed=seed)
+        train_items = primary["train"]
+        remaining = primary["val"]
+        if req.test_ratio > 0 and remaining:
+            secondary = split_dataset(
+                remaining, train_ratio=val_ratio, val_ratio=req.test_ratio, seed=seed + 1,
+            )
+            val_items, test_items = secondary["train"], secondary["val"]
+        else:
+            val_items, test_items = remaining, []
 
     assignments = {}
     for partition, partition_items in (("train", train_items), ("val", val_items), ("test", test_items)):
@@ -416,7 +570,8 @@ def list_dataset_images(
     # Fallback to direct recursive glob if no splits
     if not all_images and not any((effective_dir / name).is_dir() for name in ("train", "val", "test")):
         assignments = _read_split_manifest(target_dir)
-        has_labelme = any(is_valid_labelme_file(path, require_image=True) for path in target_dir.glob("*.json"))
+        paired_images = _paired_labelme_images(target_dir)
+        has_labelme = _has_flat_labelme_annotations(target_dir)
         for f in sorted(target_dir.rglob("*")):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 assigned_split = assignments.get(str(f))
@@ -446,7 +601,7 @@ def list_dataset_images(
                         file_path=str(f),
                         width=img_w,
                         height=img_h,
-                        split=assigned_split or ("unlabeled" if has_labelme and not json_candidate.exists() else "all"),
+                        split=assigned_split or ("unlabeled" if has_labelme and f.resolve() not in paired_images else "all"),
                         label=c_label,
                         thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                     )

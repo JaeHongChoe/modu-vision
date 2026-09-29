@@ -26,7 +26,7 @@ export const WizardFooter: React.FC = () => {
   const { activeStep, setStep, language } = useProjectStore();
   const { totalImages, split } = useDatasetStore();
   const { status } = useTrainingStore();
-  const { jobId, testPredictions } = useEvaluationStore();
+  const { jobId, testPredictions, isLoading: isEvaluationLoading } = useEvaluationStore();
 
   const handlePrev = () => {
     if (activeStep > 1) {
@@ -84,18 +84,18 @@ export const WizardFooter: React.FC = () => {
     '',
     'AI 오토라벨링 (2단계)',
     '오토딥러닝 학습 (3단계)',
-    '검증 & 과검/미검 제로화 (4단계)',
+    '품질 평가 & 과검/미검 분석 (4단계)',
     '플로우차트 체이닝 (5단계)',
-    '런타임 배포 (6단계)',
+    '추론 & 모델 내보내기 (6단계)',
   ];
 
   const stepTargetNamesEn = [
     '',
     'AI Auto-Labeling (Step 2)',
     'AutoML Training (Step 3)',
-    'Evaluation & Zero-Escape (Step 4)',
+    'Evaluation & Error Analysis (Step 4)',
     'Flowchart Chaining (Step 5)',
-    'Runtime Export (Step 6)',
+    'Inference & Model Export (Step 6)',
   ];
 
   const currentStepNamesKo = [
@@ -104,7 +104,7 @@ export const WizardFooter: React.FC = () => {
     '오토딥러닝',
     '평가 & 과검/미검',
     '플로우차트',
-    '인퍼런스 & 배포',
+    '추론 & 모델 내보내기',
   ];
 
   const currentStepNamesEn = [
@@ -132,6 +132,9 @@ export const WizardFooter: React.FC = () => {
       return language === 'ko'
         ? 'AutoML 학습이 백그라운드에서 진행 중입니다...'
         : 'AutoML training in progress in background...';
+    }
+    if (activeStep === 4 && isEvaluationLoading) {
+      return language === 'ko' ? '평가 결과를 불러오는 중...' : 'Loading evaluation results...';
     }
     if (activeStep === 4 && !jobId && testPredictions.length === 0) {
       return language === 'ko'

@@ -263,13 +263,13 @@ export interface FlowchartCrop {
 export interface FlowchartExecutionStep {
   node_id: string;
   name: string;
-  status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'warning_untrained';
+  status: 'pending' | 'running' | 'passed' | 'flagged_ng' | 'error' | 'skipped' | 'review_required' | 'warning_untrained';
   latency_ms: number;
 }
 
 export interface FlowchartExecutionResult {
   status: string;
-  final_verdict: 'OK' | 'NG';
+  final_verdict: 'OK' | 'NG' | 'REVIEW';
   is_ok: boolean;
   rejection_reason: string;
   roi_count: number;
@@ -278,6 +278,9 @@ export interface FlowchartExecutionResult {
   annotated_image?: string;
   execution_steps: FlowchartExecutionStep[];
   total_latency_ms: number;
+  inspected_image_size?: number[];
+  tiles_processed?: number;
+  preview_max_dim_px?: number;
   image_path?: string;
   image_id?: string;
   error_message?: string;

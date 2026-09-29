@@ -41,16 +41,20 @@ def app_and_client():
     temp_dir = tempfile.mkdtemp(prefix="test_vision_studio_")
     app = create_app(project_dir=temp_dir)
     client = TestClient(app)
+    client.headers["X-Vision-Token"] = app.state.api_token
     yield app, client, Path(temp_dir)
     shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
-def trained_eval_job(tmp_path_factory):
+def trained_eval_job(tmp_path_factory, request):
     """Trains a fast 1-epoch classification model on a synthetic dataset for authentic API evaluation."""
     tmp_dir = tmp_path_factory.mktemp("eval_job_suite")
     data_dir = tmp_dir / "dataset"
-    out_dir = tmp_dir / "model_job"
+    out_dir = tmp_dir / "models" / "job_eval_authentic"
+    original_cwd = Path.cwd()
+    request.addfinalizer(lambda: os.chdir(original_cwd))
+    os.chdir(tmp_dir)
 
     # Generate 20 synthetic samples for robust train/val split
     generate_synthetic_dataset(output_dir=data_dir, num_samples=20, modality="pcb", task="classification")
@@ -262,9 +266,10 @@ class TestDatasetRoutes:
 class TestAnnotationRoutes:
     """Validates BBox sanitization, mask generation, and annotation persistence."""
 
-    def test_annotation_save_bbox_sanitization_and_mask_generation(self, app_and_client):
+    def test_annotation_save_bbox_sanitization_and_mask_generation(self, app_and_client, monkeypatch):
         _, client, temp_dir = app_and_client
         annot_dir = temp_dir / "annotations_test"
+        monkeypatch.setenv("VISION_AI_STUDIO_ANNOTATION_ROOTS", str(annot_dir))
         payload = {
             "image_id": "test_img_001",
             "output_dir": str(annot_dir),

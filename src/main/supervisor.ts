@@ -13,6 +13,7 @@
  */
 
 import { ChildProcess, execSync, spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import http from 'http';
@@ -85,6 +86,7 @@ export class BackendSupervisor extends EventEmitter {
   private state: ProcessState = 'STOPPED';
   private childProcess: ChildProcess | null = null;
   private port: number | null = null;
+  private apiToken: string | null = null;
   private healthInfo: BackendHealth | null = null;
   private resolvedPythonPath: string | null = null;
   private startTime: number | null = null;
@@ -124,6 +126,10 @@ export class BackendSupervisor extends EventEmitter {
 
   public getPort(): number | null {
     return this.port;
+  }
+
+  public getApiToken(): string | null {
+    return this.apiToken;
   }
 
   public isHealthy(): boolean {
@@ -189,6 +195,8 @@ export class BackendSupervisor extends EventEmitter {
 
     this.isShuttingDown = false;
     this.setState('STARTING');
+    const apiToken = randomBytes(32).toString('hex');
+    this.apiToken = apiToken;
 
     const projectDir = this.resolveProjectDir();
     const standaloneBin = this.resolveStandaloneBinary();
@@ -225,16 +233,18 @@ export class BackendSupervisor extends EventEmitter {
     }
 
     const appRoot = this.getAppRoot();
+    const backendCwd = this.getBackendWorkingDirectory(appRoot);
     const env = {
       ...process.env,
       PYTHONUNBUFFERED: '1',
       PYTHONDONTWRITEBYTECODE: '1',
       PYTHONPATH: appRoot,
+      VISION_AI_STUDIO_API_TOKEN: apiToken,
     };
 
     try {
       this.childProcess = spawn(spawnBin, spawnArgs, {
-        cwd: appRoot,
+        cwd: backendCwd,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -396,6 +406,7 @@ export class BackendSupervisor extends EventEmitter {
 
     this.childProcess = null;
     this.port = null;
+    this.apiToken = null;
     this.healthInfo = null;
 
     const now = Date.now();
@@ -692,6 +703,16 @@ export class BackendSupervisor extends EventEmitter {
     return process.cwd();
   }
 
+  private getBackendWorkingDirectory(appRoot: string): string {
+    const app = getElectronApp();
+    if (!app?.isPackaged) {
+      return appRoot;
+    }
+    const userData = app.getPath('userData');
+    fs.mkdirSync(userData, { recursive: true });
+    return userData;
+  }
+
   private setState(newState: ProcessState): void {
     if (this.state !== newState) {
       this.state = newState;
@@ -709,6 +730,7 @@ export class BackendSupervisor extends EventEmitter {
   private cleanupState(): void {
     this.childProcess = null;
     this.port = null;
+    this.apiToken = null;
     this.healthInfo = null;
     this.startTime = null;
     this.setState('STOPPED');

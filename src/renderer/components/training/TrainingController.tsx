@@ -5,7 +5,7 @@
  * factory line recipe presets, and Inspection Deep Steel chassis theme.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Play,
   Square,
@@ -26,16 +26,18 @@ import { RecipePresetSelector } from './RecipePresetSelector';
 
 export const TrainingController: React.FC = () => {
   const { task, language, setStep } = useProjectStore();
-  const { folderPath, totalImages, split, applySplit } = useDatasetStore();
+  const { folderPath, totalImages, split, isLoading, isSplitting, importError, applySplit } = useDatasetStore();
   const {
     status,
     isTraining,
+    isRecoveringTraining,
     isStopRequestPending,
     stopError,
     preset,
     setPreset,
     startTraining,
     stopTraining,
+    recoverActiveJob,
     currentEpoch,
     totalEpochs,
     currentStep,
@@ -49,7 +51,15 @@ export const TrainingController: React.FC = () => {
     hardware,
   } = useTrainingStore();
 
+  useEffect(() => {
+    void recoverActiveJob();
+  }, [recoverActiveJob]);
+
+  const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
+    !isLoading && !isSplitting && !isRecoveringTraining && !importError;
+
   const handleStart = async () => {
+    if (!canStart) return;
     await startTraining(folderPath, task);
   };
 
@@ -105,7 +115,7 @@ export const TrainingController: React.FC = () => {
             type="warning"
             stepContext="3단계 학습 가드레일"
             title="검증 데이터 분할(Validation Split)이 필요합니다"
-            description={`현재 총 ${totalImages}장의 이미지 중 검증용 데이터가 0장으로 설정되어 있습니다. 검증 데이터가 없으면 과적합(Overfitting)을 방지할 수 없고 실시간 검증 손실 측정이 불가능합니다.`}
+            description={`현재 총 ${totalImages}장의 이미지에 대해 학습·검증 분할이 완료되지 않았습니다. 데이터나 라벨을 바꾼 뒤에는 분할을 다시 적용해야 합니다.`}
             shopFloorTip="산업 표준 추천 비율은 학습 80% : 검증 20% 입니다. 아래 버튼을 누르면 즉시 자동 분할됩니다."
             actions={[
               {
@@ -136,11 +146,12 @@ export const TrainingController: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStart}
-                disabled={totalImages === 0}
+                disabled={!canStart}
                 className="flex items-center space-x-2 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] rounded-[4px] border border-[#3B82F6] text-xs font-bold text-white uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{language === 'ko' ? 'AutoML 원클릭 학습 시작' : 'Start Auto Training'}</span>
+                <span>{isRecoveringTraining ? '기존 학습 확인 중...' :
+                  language === 'ko' ? 'AutoML 원클릭 학습 시작' : 'Start Auto Training'}</span>
               </button>
             ) : (
               <button
@@ -186,7 +197,7 @@ export const TrainingController: React.FC = () => {
           {/* Metric Summary Badge if completed */}
           {bestMetric !== null && (
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold font-mono">BEST CONVERGENCE:</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold font-mono">BEST VAL LOSS:</span>
               <span className="text-sm font-mono tabular-nums font-bold text-emerald-400 bg-[#0B0E14] px-2.5 py-1 rounded-[3px] border border-[#2B3547]">
                 {bestMetric.toFixed(4)}
               </span>

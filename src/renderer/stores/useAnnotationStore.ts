@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { AnnotationItem, Category, ImageMeta, TaskType, ToolType, ViewTransform } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
+import { useDatasetStore } from './useDatasetStore';
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 0, name: 'OK', color: '#10b981' },
@@ -17,6 +18,8 @@ export const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 const MAX_HISTORY = 40;
+let annotationLoadSequence = 0;
+let pendingSave: Promise<boolean> | null = null;
 
 interface AnnotationState {
   // Current Task & Images
@@ -57,7 +60,7 @@ interface AnnotationState {
 
   // Actions
   setTask: (task: TaskType) => void;
-  setImages: (images: ImageMeta[], initialIndex?: number) => void;
+  setImages: (images: ImageMeta[], initialIndex?: number) => Promise<boolean>;
   setActiveImage: (image: ImageMeta | null) => Promise<void>;
   selectImageByIndex: (index: number) => Promise<void>;
   nextImage: () => Promise<void>;
@@ -133,7 +136,11 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setTask: (task) => set({ task }),
 
-  setImages: (images, initialIndex = 0) => {
+  setImages: async (images, initialIndex = 0) => {
+    if (get().isDirty) {
+      const saved = await get().saveAnnotations();
+      if (!saved || get().isDirty) return false;
+    }
     const idx = images.length > 0 ? Math.max(0, Math.min(images.length - 1, initialIndex)) : -1;
     const current = idx >= 0 ? images[idx] : null;
     set({
@@ -148,11 +155,16 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       isDirty: false,
     });
     if (current) {
-      get().loadAnnotationsForCurrent();
+      await get().loadAnnotationsForCurrent();
     }
+    return true;
   },
 
   setActiveImage: async (activeImage) => {
+    if (get().isDirty) {
+      const saved = await get().saveAnnotations();
+      if (!saved || get().isDirty) return;
+    }
     if (!activeImage) {
       set({
         currentImage: null,
@@ -181,8 +193,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   selectImageByIndex: async (index) => {
     const { images, isDirty, saveAnnotations } = get();
     if (index < 0 || index >= images.length) return;
+    if (index === get().currentImageIndex && get().currentImage) return;
     if (isDirty) {
-      await saveAnnotations();
+      const saved = await saveAnnotations();
+      if (!saved || get().isDirty) return;
     }
     const current = images[index];
     set({
@@ -390,9 +404,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   loadAnnotationsForCurrent: async () => {
     const { currentImage } = get();
     if (!currentImage) return;
+    const requestSequence = ++annotationLoadSequence;
 
     try {
       const data = await api.annotations.get(currentImage.image_id, undefined, currentImage.file_path);
+      if (requestSequence !== annotationLoadSequence ||
+          get().currentImage !== currentImage || get().isDirty) return;
       const items: AnnotationItem[] = (data.annotations || []).map((item: any, idx: number) => ({
         ...item,
         id: item.id || `ann_${idx}_${Date.now()}`,
@@ -430,44 +447,56 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     }
   },
 
-  saveAnnotations: async () => {
-    const { currentImage, annotations } = get();
-    if (!currentImage) return false;
+  saveAnnotations: () => {
+    if (pendingSave) return pendingSave;
+    const { currentImage, annotations, isDirty } = get();
+    if (!currentImage) return Promise.resolve(false);
 
     set({ isSaving: true, saveMessage: 'Saving...' });
 
-    try {
-      const res = await api.annotations.save({
-        image_id: currentImage.image_id,
-        annotations: annotations.map((a) => ({
-          id: a.id,
-          type: a.type,
-          label: a.label,
-          category_id: a.category_id,
-          bbox: a.bbox,
-          polygon: a.polygon || a.points,
-          points: a.points || a.polygon,
-          is_normal: a.is_normal,
-          color: a.color,
-          rotated_bbox: a.rotated_bbox,
-          mask_rle: a.mask_rle,
-        })),
-        image_width: get().imageDimensions?.width || currentImage.width || 8192,
-        image_height: get().imageDimensions?.height || currentImage.height || 5464,
-      });
+    const save = async (): Promise<boolean> => {
+      try {
+        const res = await api.annotations.save({
+          image_id: currentImage.image_id,
+          image_path: currentImage.file_path,
+          annotations: annotations.map((a) => ({
+            id: a.id,
+            type: a.type,
+            label: a.label,
+            category_id: a.category_id,
+            bbox: a.bbox,
+            polygon: a.polygon || a.points,
+            points: a.points || a.polygon,
+            is_normal: a.is_normal,
+            color: a.color,
+            rotated_bbox: a.rotated_bbox,
+            mask_rle: a.mask_rle,
+          })),
+          image_width: get().imageDimensions?.width || currentImage.width || 8192,
+          image_height: get().imageDimensions?.height || currentImage.height || 5464,
+        });
 
-      if (res.status === 'saved' || res.status === 'ok') {
-        set({ isDirty: false, isSaving: false, saveMessage: 'Saved' });
-        setTimeout(() => set({ saveMessage: null }), 2000);
-        return true;
+        if (res.status === 'saved' || res.status === 'ok') {
+          set({
+            isDirty: get().currentImage !== currentImage || get().annotations !== annotations,
+            isSaving: false,
+            saveMessage: 'Saved',
+          });
+          setTimeout(() => {
+            if (get().saveMessage === 'Saved') set({ saveMessage: null });
+          }, 2000);
+          if (isDirty) void useDatasetStore.getState().annotationsChanged();
+          return true;
+        }
+        set({ isSaving: false, saveMessage: `Failed: unexpected save status ${res.status}` });
+        return false;
+      } catch (e: any) {
+        set({ isSaving: false, saveMessage: `Failed: ${e.message || e}` });
+        return false;
       }
-      set({ isSaving: false, saveMessage: 'Saved' });
-      setTimeout(() => set({ saveMessage: null }), 2000);
-      return true;
-    } catch (e: any) {
-      set({ isSaving: false, saveMessage: `Failed: ${e.message || e}` });
-      return false;
-    }
+    };
+    pendingSave = save().finally(() => { pendingSave = null; });
+    return pendingSave;
   },
 
   undo: () => {

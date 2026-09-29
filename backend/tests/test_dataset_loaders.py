@@ -97,13 +97,112 @@ def test_anomaly_loader_strict_normal_train(loader_module, synthetic_data_dir):
 
 
 def test_anomaly_loader_flaw_detection_in_test(loader_module, synthetic_data_dir):
-    """Tier 1: Verifies AnomalyDataset test split yields both normal and defect samples."""
+    """Tier 1: Small validation/test sets remain disjoint and retain all labels together."""
     anom_root = os.path.join(synthetic_data_dir, "anomaly")
+    val_ds = loader_module.AnomalyDataset(root_dir=anom_root, split="val")
     test_ds = loader_module.AnomalyDataset(root_dir=anom_root, split="test")
 
-    labels = [test_ds[i][1] for i in range(len(test_ds))]
-    assert 0 in labels  # Normal test samples
-    assert 1 in labels  # Defective test samples
+    labels = [sample[1] for sample in val_ds.samples + test_ds.samples]
+    assert 0 in labels
+    assert 1 in labels
+    assert {p.resolve() for p, _, _ in val_ds.samples}.isdisjoint(
+        {p.resolve() for p, _, _ in test_ds.samples}
+    )
+
+
+def test_anomaly_explicit_normal_folder_has_disjoint_train_val_test(loader_module, tmp_path):
+    normal_dir = tmp_path / "OK"
+    anomaly_dir = tmp_path / "NG"
+    normal_dir.mkdir()
+    anomaly_dir.mkdir()
+    for index in range(10):
+        Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index:02d}.png")
+    for index in range(4):
+        Image.new("RGB", (8, 8), "red").save(anomaly_dir / f"ng_{index:02d}.png")
+
+    datasets = {
+        split: loader_module.AnomalyDataset(
+            normal_dir=normal_dir, anomaly_dir=anomaly_dir, split=split
+        ) for split in ("train", "val", "test")
+    }
+    paths = {split: {p.resolve() for p, _, _ in ds.samples} for split, ds in datasets.items()}
+
+    assert [len(datasets[split]) for split in ("train", "val", "test")] == [8, 3, 3]
+    assert paths["train"].isdisjoint(paths["val"])
+    assert paths["train"].isdisjoint(paths["test"])
+    assert paths["val"].isdisjoint(paths["test"])
+    assert {label for _, label, _ in datasets["val"].samples} == {0, 1}
+    assert {label for _, label, _ in datasets["test"].samples} == {0, 1}
+    assert paths["train"] | paths["val"] | paths["test"] == {
+        p.resolve() for p in list(normal_dir.glob("*.png")) + list(anomaly_dir.glob("*.png"))
+    }
+
+
+@pytest.mark.parametrize("count,expected", [(1, (1, 0, 0)), (2, (1, 1, 0)), (3, (1, 1, 1))])
+def test_anomaly_small_normal_only_folder_never_reuses_images(loader_module, tmp_path, count, expected):
+    normal_dir = tmp_path / "OK"
+    normal_dir.mkdir()
+    for index in range(count):
+        Image.new("RGB", (8, 8), "white").save(normal_dir / f"ok_{index}.png")
+
+    datasets = [loader_module.AnomalyDataset(root_dir=tmp_path, split=split) for split in ("train", "val", "test")]
+    paths = [{p.resolve() for p, _, _ in ds.samples} for ds in datasets]
+
+    assert tuple(map(len, datasets)) == expected
+    assert len(set.union(*paths)) == count
+    assert sum(map(len, paths)) == count
+
+
+def test_anomaly_reference_test_source_is_partitioned_between_val_and_test(loader_module, tmp_path):
+    train_dir = tmp_path / "train" / "good"
+    test_ok = tmp_path / "test" / "good"
+    test_ng = tmp_path / "test" / "scratch"
+    for directory in (train_dir, test_ok, test_ng):
+        directory.mkdir(parents=True)
+    for index in range(4):
+        Image.new("RGB", (8, 8), "white").save(train_dir / f"train_{index}.png")
+        Image.new("RGB", (8, 8), "white").save(test_ok / f"ok_{index}.png")
+        Image.new("RGB", (8, 8), "red").save(test_ng / f"ng_{index}.png")
+
+    datasets = {split: loader_module.AnomalyDataset(root_dir=tmp_path, split=split)
+                for split in ("train", "val", "test")}
+    paths = {split: {p.resolve() for p, _, _ in ds.samples} for split, ds in datasets.items()}
+
+    assert [len(datasets[split]) for split in ("train", "val", "test")] == [4, 4, 4]
+    assert paths["train"].isdisjoint(paths["val"])
+    assert paths["train"].isdisjoint(paths["test"])
+    assert paths["val"].isdisjoint(paths["test"])
+    assert {label for _, label, _ in datasets["val"].samples} == {0, 1}
+    assert {label for _, label, _ in datasets["test"].samples} == {0, 1}
+
+    summary = loader_module.inspect_dataset(tmp_path, task="anomaly")
+    assert summary.total_images == 12
+    assert summary.split_counts == {"train": 4, "val": 4, "test": 4}
+    assert summary.classes == {"good": 8, "defect": 4}
+
+    for split in ("train", "val", "test"):
+        flexible = loader_module.FlexibleAnomalyDataset(root_dir=tmp_path, split=split)
+        assert {p.resolve() for p, _, _ in flexible.samples} == paths[split]
+
+    industrial = loader_module.inspect_industrial_dataset(tmp_path, task="anomaly")
+    assert industrial["total_images"] == 12
+    assert industrial["split"] == {"train": 4, "val": 4, "test": 4}
+
+
+def test_anomaly_train_good_only_still_creates_disjoint_validation_and_test(loader_module, tmp_path):
+    good_dir = tmp_path / "train" / "good"
+    good_dir.mkdir(parents=True)
+    for index in range(10):
+        Image.new("RGB", (8, 8), "white").save(good_dir / f"ok_{index:02d}.png")
+
+    datasets = {split: loader_module.AnomalyDataset(root_dir=tmp_path, split=split)
+                for split in ("train", "val", "test")}
+    paths = [{p.resolve() for p, _, _ in datasets[split].samples}
+             for split in ("train", "val", "test")]
+
+    assert tuple(len(datasets[split]) for split in ("train", "val", "test")) == (8, 1, 1)
+    assert len(set.union(*paths)) == 10
+    assert sum(map(len, paths)) == 10
 
 
 def test_stratified_dataset_splitter(loader_module):
@@ -344,4 +443,3 @@ def test_inspect_dataset_contract(loader_module, temp_dir):
     assert summary.classes["NG_scratch"] == 5
     assert "train" in summary.split_counts
     assert "val" in summary.split_counts
-

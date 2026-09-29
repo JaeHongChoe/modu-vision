@@ -697,11 +697,21 @@ class AnomalyDataset(Dataset):
         self.anomaly_dir = Path(anomaly_dir) if anomaly_dir is not None else None
         self.samples: List[Tuple[Path, int, Optional[Path]]] = []
 
+        from backend.engine.anomaly_split import partition_evaluation_images, partition_normal_images
+
+        def image_paths(directory: Path, recursive: bool = True) -> List[Path]:
+            paths = directory.rglob("*") if recursive else directory.glob("*")
+            return [
+                p for p in paths
+                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                and not (directory.name == "test_crop_output" and p.name.startswith("mask_"))
+            ]
+
         if self.split == "train":
             if self.normal_dir and self.normal_dir.is_dir():
-                for p in sorted(self.normal_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 0, None))
+                self.samples.extend(
+                    (p, 0, None) for p in partition_normal_images(image_paths(self.normal_dir))["train"]
+                )
             elif self.root_dir is not None:
                 train_dir = self.root_dir / "train"
                 if train_dir.exists():
@@ -726,62 +736,90 @@ class AnomalyDataset(Dataset):
                         for p in sorted(train_dir.glob("*")):
                             if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                                 self.samples.append((p, 0, None))
+                    if not (self.root_dir / "test").is_dir() and not (self.root_dir / "val").is_dir():
+                        self.samples = [
+                            (p, 0, None)
+                            for p in partition_normal_images(p for p, _, _ in self.samples)["train"]
+                        ]
                 elif (self.root_dir / "OK").is_dir():
-                    for p in sorted((self.root_dir / "OK").rglob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                            self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(image_paths(self.root_dir / "OK"))["train"]
+                    )
                 elif (self.root_dir / "test_crop_output").is_dir():
-                    for p in sorted((self.root_dir / "test_crop_output").glob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and not p.name.startswith("mask_"):
-                            self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(
+                            image_paths(self.root_dir / "test_crop_output", recursive=False)
+                        )["train"]
+                    )
                 else:
                     raise FileNotFoundError(f"Anomaly train directory does not exist at {train_dir}")
             else:
                 raise FileNotFoundError("Neither root_dir nor normal_dir was provided for AnomalyDataset")
 
         elif self.split in ["test", "val"]:
-            if self.anomaly_dir and self.anomaly_dir.is_dir():
-                for p in sorted(self.anomaly_dir.rglob("*")):
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                        self.samples.append((p, 1, None))
+            if self.normal_dir or self.anomaly_dir:
                 if self.normal_dir and self.normal_dir.is_dir():
-                    norm_imgs = [p for p in sorted(self.normal_dir.rglob("*")) if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
-                    val_normals = norm_imgs[:max(1, len(norm_imgs) // 5)] if len(norm_imgs) > 1 else norm_imgs
-                    for p in val_normals:
-                        self.samples.append((p, 0, None))
+                    self.samples.extend(
+                        (p, 0, None) for p in partition_normal_images(image_paths(self.normal_dir))[self.split]
+                    )
+                if self.anomaly_dir and self.anomaly_dir.is_dir():
+                    self.samples.extend(
+                        (p, 1, None) for p in partition_evaluation_images(image_paths(self.anomaly_dir))[self.split]
+                    )
             elif self.root_dir is not None:
                 test_dir = self.root_dir / "test"
-                if not test_dir.exists():
-                    test_dir = self.root_dir / "val"
+                val_dir = self.root_dir / "val"
                 gt_dir = self.root_dir / "ground_truth"
 
-                if test_dir.exists():
-                    for sub in sorted(test_dir.iterdir()):
-                        if sub.is_dir() and not sub.name.startswith("."):
-                            is_good = (sub.name.lower() in ["good", "ok", "normal", "pass"])
-                            label = 0 if is_good else 1
-                            for p in sorted(sub.glob("*")):
-                                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                                    mask_p = None
-                                    if not is_good and gt_dir.exists():
-                                        candidate = gt_dir / sub.name / f"{p.stem}_mask.png"
-                                        if not candidate.exists():
-                                            candidate = gt_dir / sub.name / f"{p.name}"
-                                        if candidate.exists():
-                                            mask_p = candidate
-                                    self.samples.append((p, label, mask_p))
-                elif (self.root_dir / "fail").is_dir() or (self.root_dir / "NG").is_dir():
+                if test_dir.is_dir() or val_dir.is_dir():
+                    has_named_splits = test_dir.is_dir() and val_dir.is_dir()
+                    source_dir = (val_dir if self.split == "val" else test_dir) if has_named_splits else (
+                        test_dir if test_dir.is_dir() else val_dir
+                    )
+                    normal_samples: List[Tuple[Path, int, Optional[Path]]] = []
+                    defect_samples: List[Tuple[Path, int, Optional[Path]]] = []
+                    for sub in sorted(source_dir.iterdir()):
+                        if not sub.is_dir() or sub.name.startswith("."):
+                            continue
+                        is_good = sub.name.lower() in ("good", "ok", "normal", "pass")
+                        for p in sorted(image_paths(sub, recursive=False)):
+                            mask_p = None
+                            if not is_good and gt_dir.exists():
+                                candidate = gt_dir / sub.name / f"{p.stem}_mask.png"
+                                if not candidate.exists():
+                                    candidate = gt_dir / sub.name / p.name
+                                if candidate.exists():
+                                    mask_p = candidate
+                            sample = (p, 0 if is_good else 1, mask_p)
+                            (normal_samples if is_good else defect_samples).append(sample)
+
+                    if has_named_splits:
+                        self.samples.extend(normal_samples + defect_samples)
+                    else:
+                        selected = set(partition_evaluation_images(
+                            p for p, _, _ in normal_samples
+                        )[self.split]) | set(partition_evaluation_images(
+                            p for p, _, _ in defect_samples
+                        )[self.split])
+                        self.samples.extend(
+                            sample for sample in normal_samples + defect_samples if sample[0] in selected
+                        )
+                else:
+                    norm_dir = next((directory for directory in (
+                        self.root_dir / "test_crop_output",
+                        self.root_dir / "OK",
+                        self.root_dir / "train" / "good",
+                        self.root_dir / "train",
+                    ) if directory.is_dir()), self.root_dir / "OK")
                     anom_dir = (self.root_dir / "fail") if (self.root_dir / "fail").is_dir() else (self.root_dir / "NG")
-                    for p in sorted(anom_dir.rglob("*")):
-                        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                            self.samples.append((p, 1, None))
-                    # Add normal samples from test_crop_output or OK
-                    norm_dir = (self.root_dir / "test_crop_output") if (self.root_dir / "test_crop_output").is_dir() else (self.root_dir / "OK")
                     if norm_dir.is_dir():
-                        norm_imgs = [p for p in sorted(norm_dir.glob("*")) if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and not p.name.startswith("mask_")]
-                        val_normals = norm_imgs[:max(1, len(norm_imgs) // 5)] if len(norm_imgs) > 1 else norm_imgs
-                        for p in val_normals:
-                            self.samples.append((p, 0, None))
+                        self.samples.extend(
+                            (p, 0, None) for p in partition_normal_images(image_paths(norm_dir))[self.split]
+                        )
+                    if anom_dir.is_dir():
+                        self.samples.extend(
+                            (p, 1, None) for p in partition_evaluation_images(image_paths(anom_dir))[self.split]
+                        )
         else:
             raise ValueError(f"Unknown anomaly split: {split}")
 
@@ -1050,17 +1088,18 @@ def inspect_dataset(root_dir: Union[str, Path], task: str) -> DatasetSummary:
 
     elif task_clean in ("anomaly", "anomaly_detection"):
         ds_train = AnomalyDataset(root_dir=root, split="train")
+        ds_val = AnomalyDataset(root_dir=root, split="val")
         ds_test = AnomalyDataset(root_dir=root, split="test")
         counts = {"good": len(ds_train)}
-        for _, label, _ in ds_test.samples:
+        for _, label, _ in ds_val.samples + ds_test.samples:
             name = "defect" if label == 1 else "good"
             counts[name] = counts.get(name, 0) + 1
-        total = len(ds_train) + len(ds_test)
+        total = len(ds_train) + len(ds_val) + len(ds_test)
         return DatasetSummary(
             task="anomaly",
             total_images=total,
             classes=counts,
-            split_counts={"train": len(ds_train), "val": len(ds_test)},
+            split_counts={"train": len(ds_train), "val": len(ds_val), "test": len(ds_test)},
         )
 
     else:
@@ -1110,5 +1149,3 @@ from backend.engine.industrial_adapters import (
     normalize_defect_category,
     read_image_safely_rgb,
 )
-
-
