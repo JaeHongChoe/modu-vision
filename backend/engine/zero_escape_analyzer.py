@@ -40,7 +40,11 @@ def is_defect_label(label: Any) -> bool:
     if isinstance(label, (int, float)):
         return label != 0
     clean = str(label).strip().lower()
-    return clean not in NORMAL_LABELS
+    tokens = clean.replace("-", "_").split("_")
+    if "ng" in tokens or "defect" in tokens or "fail" in tokens:
+        return True
+    return not (clean in NORMAL_LABELS or clean.startswith(("ok_", "normal_", "good_"))
+                or clean.endswith(("_ok", "_normal", "_good")))
 
 
 def compute_sample_defect_score(

@@ -116,6 +116,7 @@ export interface TestPredictionItem {
   ground_truth: string;
   predicted_class: string;
   confidence: number;
+  defect_score?: number;
   is_correct: boolean;
   thumbnail_url: string;
 }
@@ -211,6 +212,7 @@ export interface FlowNodeData {
   label: string;
   node_type: 'input' | 'detection_crop' | 'inspection' | 'decision' | 'output';
   task?: string;
+  model_job_id?: string;
   threshold?: number;
   crop_padding?: number;
   rule?: string;
@@ -296,4 +298,3 @@ export interface RuntimeExportResult {
   manifest: Array<{ name: string; size_kb: number }>;
   total_files: number;
 }
-

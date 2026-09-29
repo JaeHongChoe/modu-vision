@@ -12,6 +12,7 @@ import type {
   TestPredictionItem,
 } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
+import { useTrainingStore } from './useTrainingStore';
 
 export type SampleVerdict = 'ESCAPE' | 'OVERKILL' | 'CORRECT_NG' | 'CORRECT_OK';
 export type SampleFilter =
@@ -33,7 +34,9 @@ export function isDefectLabel(label?: string | number): boolean {
   if (typeof label === 'number') return label !== 0;
   const clean = String(label).trim().toLowerCase();
   const normalSet = new Set(['ok', 'normal', 'pass', 'good', '0', 'background', 'ok_normal', 'true_ok', 'ok_chip']);
-  return !normalSet.has(clean);
+  const tokens = clean.replace(/-/g, '_').split('_');
+  if (tokens.some((token) => ['ng', 'defect', 'fail'].includes(token))) return true;
+  return !(normalSet.has(clean) || /^(ok|normal|good)_/.test(clean) || /_(ok|normal|good)$/.test(clean));
 }
 
 export function computeSampleVerdict(
@@ -94,6 +97,7 @@ interface EvaluationState {
   heatmapLoading: boolean;
   isExportingReport: boolean;
   exportedReportPath: string | null;
+  errorMessage: string | null;
 
   // F33: Sample Filtering & Verdicts
   sampleFilter: SampleFilter;
@@ -143,6 +147,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   heatmapLoading: false,
   isExportingReport: false,
   exportedReportPath: null,
+  errorMessage: null,
 
   sampleFilter: 'all',
   setSampleFilter: (sampleFilter) => {
@@ -215,9 +220,15 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   loadEvaluation: async (jobId) => {
+    const requestedJob = jobId || useTrainingStore.getState().jobId || get().jobId;
+    if (!requestedJob) {
+      set({ jobId: null, metrics: {}, confusionMatrix: null, testPredictions: [],
+        filteredPredictions: [], overkillAnalysis: null, errorMessage: '완료된 학습 모델이 없습니다.' });
+      return;
+    }
     set({ isLoading: true });
     try {
-      const res = await api.evaluation.getResults(jobId);
+      const res = await api.evaluation.getResults(requestedJob);
       set({
         jobId: res.job_id,
         metrics: res.metrics || {},
@@ -227,6 +238,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         selectedCell: null,
         selectedPrediction: res.test_predictions?.[0] || null,
         isLoading: false,
+        errorMessage: null,
       });
 
       // Also proactively load overkill/underkill analysis
@@ -236,7 +248,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         get().updateHeatmap();
       }
     } catch (e) {
-      set({ isLoading: false });
+      set({ isLoading: false, metrics: {}, confusionMatrix: null, testPredictions: [],
+        filteredPredictions: [], overkillAnalysis: null,
+        errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
     }
   },
@@ -291,23 +305,28 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   exportReport: async (format) => {
+    if (!get().jobId) throw new Error('평가를 완료한 모델이 있어야 보고서를 내보낼 수 있습니다.');
     set({ isExportingReport: true });
     try {
       const res = await api.report.export({
-        job_id: get().jobId || 'latest',
+        job_id: get().jobId || undefined,
         format,
         include_images: true,
       });
       set({ isExportingReport: false, exportedReportPath: res.file_path });
       return res.file_path;
     } catch (e) {
-      set({ isExportingReport: false });
+      set({ isExportingReport: false, errorMessage: e instanceof Error ? e.message : '보고서 내보내기 실패' });
       throw e;
     }
   },
 
   loadOverkillUnderkill: async (targetUnderkill, escapeCost, scrapCost) => {
     const { jobId, confidenceThreshold } = get();
+    if (!jobId) {
+      set({ overkillAnalysis: null, isAnalyzingTradeoff: false });
+      return;
+    }
     const tu = targetUnderkill !== undefined ? targetUnderkill : get().targetMaxUnderkill;
     const ce = escapeCost !== undefined ? escapeCost : get().costEscape;
     const cs = scrapCost !== undefined ? scrapCost : get().costScrap;
@@ -325,20 +344,27 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       get().computeFilteredList();
     } catch (e) {
       console.error('Failed to load overkill/underkill analysis:', e);
-      set({ isAnalyzingTradeoff: false });
+      set({ isAnalyzingTradeoff: false, overkillAnalysis: null });
     }
   },
 
   applyOptimalThreshold: () => {
-    const { overkillAnalysis } = get();
-    if (overkillAnalysis?.optimal_threshold !== undefined) {
+    const { overkillAnalysis, testPredictions } = get();
+    const hasBothClasses = testPredictions.some((p) => isDefectLabel(p.ground_truth))
+      && testPredictions.some((p) => !isDefectLabel(p.ground_truth));
+    if (hasBothClasses && overkillAnalysis?.optimal_threshold !== undefined) {
       get().setConfidenceThreshold(overkillAnalysis.optimal_threshold);
     }
   },
 
   calibrateZeroEscape: async (jobIdOverride) => {
-    const { jobId, costEscape, costScrap, confidenceThreshold } = get();
+    const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions } = get();
     const activeJob = jobIdOverride || jobId;
+    if (!activeJob || !testPredictions.some((p) => isDefectLabel(p.ground_truth))
+        || !testPredictions.some((p) => !isDefectLabel(p.ground_truth))) {
+      set({ calibrationMessage: 'NG와 OK 검증 예측이 모두 있어야 임계값을 적용할 수 있습니다.', calibrationSuccess: false });
+      return;
+    }
     set({ isCalibrating: true, calibrationMessage: null, calibrationSuccess: false });
     try {
       const base = await getApiBaseUrl();
@@ -374,29 +400,17 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       await get().updateHeatmap();
     } catch (err: any) {
       console.error('Zero-escape calibration API failed, falling back:', err);
-      // Fallback to local analysis optimal threshold if available
-      const fallbackTh = get().overkillAnalysis?.optimal_threshold;
-      if (fallbackTh !== undefined) {
-        set({
-          confidenceThreshold: fallbackTh,
-          isCalibrating: false,
-          calibrationSuccess: true,
-          calibrationMessage: `분석 권장 임계값 적용: τ* = ${fallbackTh.toFixed(4)} (미검 0건 달성)`,
-        });
-        get().computeFilteredList();
-        await get().updateHeatmap();
-      } else {
-        set({
-          isCalibrating: false,
-          calibrationSuccess: false,
-          calibrationMessage: err?.message || '미검 제로화 요청 실패',
-        });
-      }
+      set({ isCalibrating: false, calibrationSuccess: false,
+        calibrationMessage: err?.message || '미검 제로화 요청 실패' });
     }
   },
 
   runBenchmark: async (iterations = 25, resolution = 256) => {
-    const { jobId } = get();
+    const jobId = useTrainingStore.getState().jobId || get().jobId;
+    if (!jobId) {
+      set({ benchmarkResult: null, errorMessage: '학습 모델이 없어 속도를 측정할 수 없습니다.' });
+      return;
+    }
     set({ isBenchmarking: true });
     try {
       const res = await api.evaluation.runBenchmark({
@@ -407,7 +421,8 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       set({ benchmarkResult: res, isBenchmarking: false });
     } catch (e) {
       console.error('Benchmark failed:', e);
-      set({ isBenchmarking: false });
+      set({ isBenchmarking: false, benchmarkResult: null,
+        errorMessage: e instanceof Error ? e.message : '속도 측정 실패' });
     }
   },
 }));

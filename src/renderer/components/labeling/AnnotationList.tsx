@@ -43,8 +43,8 @@ export const AnnotationList: React.FC = () => {
     updateAnnotation,
   } = useAnnotationStore();
 
-  // Optical Calibration: Micrometers per pixel (standard machine vision pitch)
-  const [pixelPitchUm, setPixelPitchUm] = useState<number>(2.5);
+  // Physical units are shown only after the operator enters a measured scale.
+  const [pixelPitchUm, setPixelPitchUm] = useState<number>(0);
   const [isCalibratorOpen, setIsCalibratorOpen] = useState<boolean>(false);
 
   const selectedAnn = annotations.find((a) => a.id === selectedAnnotationId);
@@ -212,7 +212,7 @@ export const AnnotationList: React.FC = () => {
             className="p-1 rounded bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] text-slate-300 text-[10px] font-mono tabular-nums flex items-center space-x-1 cursor-pointer"
           >
             <Ruler className="w-3 h-3 text-cyan-400" />
-            <span>{pixelPitchUm} μm/px</span>
+            <span>{pixelPitchUm > 0 ? `${pixelPitchUm} μm/px` : 'Not calibrated'}</span>
           </button>
           <span className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums bg-[#1A212E] border border-[#2B3547] rounded text-cyan-400 font-bold">
             {annotations.length}
@@ -225,7 +225,7 @@ export const AnnotationList: React.FC = () => {
         <div className="p-2.5 bg-[#1A212E] border-b border-[#2B3547] text-xs space-y-2">
           <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
             <span>Optical Calibration</span>
-            <span className="text-cyan-400 font-mono">1 px = {pixelPitchUm} μm</span>
+            <span className="text-cyan-400 font-mono">{pixelPitchUm > 0 ? `1 px = ${pixelPitchUm} μm` : 'Measured scale required'}</span>
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-[11px] text-slate-400">Scale:</span>
@@ -234,27 +234,14 @@ export const AnnotationList: React.FC = () => {
               step="0.1"
               min="0.1"
               max="100"
-              value={pixelPitchUm}
-              onChange={(e) => setPixelPitchUm(Math.max(0.01, parseFloat(e.target.value) || 1))}
+              value={pixelPitchUm || ''}
+              placeholder="Enter measured pitch"
+              onChange={(e) => setPixelPitchUm(Math.max(0, parseFloat(e.target.value) || 0))}
               className="flex-1 bg-[#131822] border border-[#2B3547] rounded px-2 py-0.5 text-xs font-mono tabular-nums text-slate-200 focus:outline-none focus:border-cyan-500"
             />
             <span className="text-[10px] font-mono text-slate-400">μm/px</span>
           </div>
-          <div className="flex items-center space-x-1 pt-1">
-            {[1.0, 2.5, 5.0, 10.0].map((preset) => (
-              <button
-                key={preset}
-                onClick={() => setPixelPitchUm(preset)}
-                className={`flex-1 py-0.5 text-[10px] font-mono tabular-nums rounded border ${
-                  pixelPitchUm === preset
-                    ? 'bg-cyan-600/30 border-cyan-500 text-cyan-300'
-                    : 'bg-[#131822] border-[#2B3547] text-slate-400 hover:bg-[#222B3D]'
-                }`}
-              >
-                {preset} μm
-              </button>
-            ))}
-          </div>
+          <p className="text-[10px] text-slate-400">촬영 장비의 실측 μm/px 값만 입력하세요.</p>
         </div>
       )}
 
@@ -322,8 +309,7 @@ export const AnnotationList: React.FC = () => {
                       {Math.round(geom.w)}×{Math.round(geom.h)} <span className="text-slate-500">px</span>
                     </span>
                     <span>
-                      {Math.round(geom.w * pixelPitchUm)}×{Math.round(geom.h * pixelPitchUm)}{' '}
-                      <span className="text-cyan-400/80">μm</span>
+                      {pixelPitchUm > 0 ? `${Math.round(geom.w * pixelPitchUm)}×${Math.round(geom.h * pixelPitchUm)} μm` : 'Physical scale unset'}
                     </span>
                     <span>
                       {Math.round(geom.area).toLocaleString()} <span className="text-slate-500">px²</span>
@@ -358,7 +344,7 @@ export const AnnotationList: React.FC = () => {
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="font-bold text-slate-300">X</span>
                 <span className="font-mono tabular-nums text-cyan-400">
-                  {(selGeom.x * pixelPitchUm).toFixed(1)} μm
+                  {pixelPitchUm > 0 ? `${(selGeom.x * pixelPitchUm).toFixed(1)} μm` : '—'}
                 </span>
               </div>
               <div className="flex items-center space-x-1">
@@ -383,7 +369,7 @@ export const AnnotationList: React.FC = () => {
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="font-bold text-slate-300">Y</span>
                 <span className="font-mono tabular-nums text-cyan-400">
-                  {(selGeom.y * pixelPitchUm).toFixed(1)} μm
+                  {pixelPitchUm > 0 ? `${(selGeom.y * pixelPitchUm).toFixed(1)} μm` : '—'}
                 </span>
               </div>
               <div className="flex items-center space-x-1">
@@ -408,7 +394,7 @@ export const AnnotationList: React.FC = () => {
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="font-bold text-slate-300">W</span>
                 <span className="font-mono tabular-nums text-cyan-400">
-                  {(selGeom.w * pixelPitchUm).toFixed(1)} μm
+                  {pixelPitchUm > 0 ? `${(selGeom.w * pixelPitchUm).toFixed(1)} μm` : '—'}
                 </span>
               </div>
               <div className="flex items-center space-x-1">
@@ -434,7 +420,7 @@ export const AnnotationList: React.FC = () => {
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="font-bold text-slate-300">H</span>
                 <span className="font-mono tabular-nums text-cyan-400">
-                  {(selGeom.h * pixelPitchUm).toFixed(1)} μm
+                  {pixelPitchUm > 0 ? `${(selGeom.h * pixelPitchUm).toFixed(1)} μm` : '—'}
                 </span>
               </div>
               <div className="flex items-center space-x-1">
@@ -485,7 +471,7 @@ export const AnnotationList: React.FC = () => {
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span className="font-bold text-slate-300">Area</span>
                 <span className="font-mono tabular-nums text-cyan-400">
-                  {Math.round(selGeom.area * pixelPitchUm * pixelPitchUm).toLocaleString()} μm²
+                  {pixelPitchUm > 0 ? `${Math.round(selGeom.area * pixelPitchUm * pixelPitchUm).toLocaleString()} μm²` : '—'}
                 </span>
               </div>
               <div className="flex items-center justify-between pt-1">

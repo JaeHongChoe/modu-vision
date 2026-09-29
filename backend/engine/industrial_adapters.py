@@ -319,7 +319,11 @@ class HierarchicalClassificationAdapter:
             raw_folder_parts = list(p.relative_to(root).parts)
 
             is_ok = any(part in ("ok", "good", "normal", "pass", "정상", "test_crop_output") for part in rel_parts)
-            is_ng = any(part in ("ng", "fail", "defect", "scan_anomalies", "불량") for part in rel_parts) or (p.name in fail_records_map)
+            is_ng = (
+                any(part in ("ng", "fail", "defect", "scan_anomalies", "불량") for part in rel_parts)
+                or p.name in fail_records_map
+                or p.name.lower().startswith("ng_")
+            )
 
             if mode == "binary":
                 if is_ng:
@@ -491,12 +495,6 @@ class LabelMeParser:
 
         boxes: List[Dict[str, Any]] = []
 
-        # Extract defect category from filename if generic "Bow" or missing
-        fn_category = None
-        fn_match = re.search(r"ng_\d+__([^_]+)___", p.name)
-        if fn_match:
-            fn_category = normalize_defect_category(fn_match.group(1).strip())
-
         for shape in data.get("shapes", []):
             points = shape.get("points", [])
             if not points or len(points) < 2:
@@ -526,10 +524,7 @@ class LabelMeParser:
                 ymax = min(img_h, ymin + 1.0)
 
             raw_label = shape.get("label", "defect")
-            if fn_category and (raw_label.lower() in ("bow", "defect", "ng", "shape")):
-                category_name = fn_category
-            else:
-                category_name = normalize_defect_category(raw_label)
+            category_name = str(raw_label).strip() or "defect"
 
             boxes.append({
                 "category_name": category_name,

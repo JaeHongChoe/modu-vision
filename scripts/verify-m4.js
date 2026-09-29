@@ -37,7 +37,7 @@ const pkgPath = path.join(ROOT_DIR, 'package.json');
 assert(fs.existsSync(pkgPath), 'package.json exists');
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-assert(pkg.name === 'vision-ai-studio', 'Package name is "vision-ai-studio"');
+assert(pkg.name === 'modu-vision', 'Package name is "modu-vision"');
 assert(pkg.main === 'dist-electron/main/index.js', 'Main entry point is "dist-electron/main/index.js"');
 
 const requiredScripts = ['dev', 'build', 'build:renderer', 'build:main', 'package', 'test:m4'];
@@ -55,10 +55,9 @@ for (const dep of requiredDeps) {
 console.log('\n--- Step 2: Validating Tooling & Bundler Configs ---');
 const requiredConfigs = [
   'tsconfig.json',
-  'tsconfig.node.json',
+  'build/tsconfig.node.json',
   'vite.config.ts',
   'tailwind.config.js',
-  'postcss.config.js',
   'index.html',
 ];
 
@@ -75,6 +74,8 @@ assert(indexHtml.includes('class="dark"'), 'index.html enables dark class');
 // Verify vite.config.ts has relative base
 const viteConfig = fs.readFileSync(path.join(ROOT_DIR, 'vite.config.ts'), 'utf8');
 assert(viteConfig.includes("base: './'"), 'vite.config.ts configures base: "./" for Electron');
+assert(viteConfig.includes('tailwindcss()') && viteConfig.includes('autoprefixer()'),
+  'vite.config.ts configures Tailwind and Autoprefixer inline');
 
 // 3. Electron Shell Source Files
 console.log('\n--- Step 3: Validating Electron Source Files ---');
@@ -105,8 +106,8 @@ assert(typesFile.includes('onBackendCrashed:'), 'electron.d.ts declares onBacken
 
 // 4. Packaging Configuration
 console.log('\n--- Step 4: Validating Packaging Configuration ---');
-const builderYmlPath = path.join(ROOT_DIR, 'electron-builder.yml');
-assert(fs.existsSync(builderYmlPath), 'electron-builder.yml exists');
+const builderYmlPath = path.join(ROOT_DIR, 'build/electron-builder.yml');
+assert(fs.existsSync(builderYmlPath), 'build/electron-builder.yml exists');
 const builderContent = fs.readFileSync(builderYmlPath, 'utf8');
 assert(builderContent.includes('appId: com.visionaistudio.app'), 'electron-builder.yml defines appId');
 assert(builderContent.includes('productName: Vision AI Studio'), 'electron-builder.yml defines productName');

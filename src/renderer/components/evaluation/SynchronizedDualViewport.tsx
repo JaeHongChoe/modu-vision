@@ -1,7 +1,7 @@
 /**
  * src/renderer/components/evaluation/SynchronizedDualViewport.tsx
  * Synchronized Pan/Zoom Dual Viewport: Raw Image vs Defect Heatmap Overlay.
- * 60fps pan/zoom, subpixel crosshair reticle, physical scale bar calibrated to Example Sensor (3.45 μm/px).
+ * Synchronized pan/zoom, crosshair reticle, and pixel-scale readout.
  */
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
@@ -36,9 +36,9 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   heatmapLoading,
   confidenceThreshold,
   onThresholdChange,
-  defectScore = 0.5,
-  groundTruth = 'OK',
-  predictedClass = 'OK',
+  defectScore,
+  groundTruth,
+  predictedClass,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [transform, setTransform] = useState<ViewTransform>({ scale: 1.0, offsetX: 0, offsetY: 0 });
@@ -228,12 +228,12 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={transform.scale} pixelPitchUm={3.45} />
+          <PhysicalScaleOverlay scale={transform.scale} />
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
-            <span>GT: <strong className="text-slate-200">{groundTruth}</strong></span>
-            <span>PRED: <strong className="text-slate-200">{predictedClass}</strong></span>
+            <span>GT: <strong className="text-slate-200">{prediction ? groundTruth || '—' : '—'}</strong></span>
+            <span>PRED: <strong className="text-slate-200">{prediction ? predictedClass || '—' : '—'}</strong></span>
           </div>
         </div>
 
@@ -289,13 +289,13 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={transform.scale} pixelPitchUm={3.45} />
+          <PhysicalScaleOverlay scale={transform.scale} />
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
-            <span>DEFECT SCORE: <strong className="text-[#EF4444]">{(defectScore * 100).toFixed(1)}%</strong></span>
-            <span>VERDICT: <strong className={defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]'}>
-              {defectScore >= confidenceThreshold ? 'REJECT (NG)' : 'PASS (OK)'}
+            <span>DEFECT SCORE: <strong className="text-slate-200">{prediction && defectScore != null ? `${(defectScore * 100).toFixed(1)}%` : '—'}</strong></span>
+            <span>VERDICT: <strong className={prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'text-[#EF4444]' : 'text-[#10B981]') : 'text-slate-400'}>
+              {prediction && defectScore != null ? (defectScore >= confidenceThreshold ? 'REJECT (NG)' : 'PASS (OK)') : '—'}
             </strong></span>
           </div>
         </div>
@@ -306,12 +306,12 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
         <div className="flex items-center space-x-4">
           <span className="flex items-center space-x-1">
             <Crosshair className="w-3 h-3 text-[#3B82F6]" />
-            <span>X: {cursorPos?.x ?? 0} px ({(((cursorPos?.x ?? 0) * 3.45)).toFixed(1)} μm)</span>
+            <span>X: {cursorPos?.x ?? 0} px</span>
           </span>
-          <span>Y: {cursorPos?.y ?? 0} px ({(((cursorPos?.y ?? 0) * 3.45)).toFixed(1)} μm)</span>
+          <span>Y: {cursorPos?.y ?? 0} px</span>
         </div>
         <div className="flex items-center space-x-3 text-slate-500 text-[10px]">
-          <span>Optical Cal: 3.45 μm/px (IMX250)</span>
+          <span>Physical scale uncalibrated</span>
           <span>Zoom: {(transform.scale * 100).toFixed(0)}%</span>
         </div>
       </div>
