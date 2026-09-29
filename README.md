@@ -190,7 +190,7 @@
 ### 저장소 복제 및 설치
 ```bash
 # 1. 저장소 복제
-git clone https://github.com/USER/modu-vision.git
+git clone https://github.com/JaeHongChoe/modu-vision.git
 cd modu-vision
 
 # 2. 파이썬 가상환경 생성 및 의존성 설치
