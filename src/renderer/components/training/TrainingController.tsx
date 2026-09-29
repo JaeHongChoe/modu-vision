@@ -30,6 +30,8 @@ export const TrainingController: React.FC = () => {
   const {
     status,
     isTraining,
+    isStopRequestPending,
+    stopError,
     preset,
     setPreset,
     startTraining,
@@ -65,7 +67,7 @@ export const TrainingController: React.FC = () => {
 
   // Map status string to LedState
   const getStatusLedState = (): LedState => {
-    if (status === 'running') return 'running';
+    if (status === 'running' || status === 'stopping') return 'running';
     if (status === 'completed') return 'pass';
     if (status === 'aborted') return 'standby';
     if (status === 'failed') return 'fail';
@@ -144,10 +146,13 @@ export const TrainingController: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAbort}
-                className="flex items-center space-x-2 px-5 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:bg-[#991B1B] rounded-[4px] border border-[#EF4444] text-xs font-bold text-white uppercase tracking-wider cursor-pointer transition-all"
+                disabled={isStopRequestPending}
+                className="flex items-center space-x-2 px-5 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:bg-[#991B1B] rounded-[4px] border border-[#EF4444] text-xs font-bold text-white uppercase tracking-wider cursor-pointer transition-all disabled:opacity-50"
               >
                 <Square className="w-3.5 h-3.5 fill-white" />
-                <span>{language === 'ko' ? '학습 중단 (Abort)' : 'Abort Training'}</span>
+                <span>{status === 'stopping'
+                  ? (isStopRequestPending ? '중단 중...' : '중단 상태 다시 확인')
+                  : (language === 'ko' ? '학습 중단 (Abort)' : 'Abort Training')}</span>
               </button>
             )}
 
@@ -188,6 +193,12 @@ export const TrainingController: React.FC = () => {
             </div>
           )}
         </div>
+
+        {stopError && (
+          <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+            {stopError}
+          </div>
+        )}
 
         {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Industrial Telemetry (34%) */}
         <div className="grid grid-cols-12 gap-5">

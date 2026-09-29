@@ -21,8 +21,10 @@ export interface StepLossPoint {
 
 interface TrainingState {
   jobId: string | null;
-  status: 'idle' | 'running' | 'completed' | 'aborted' | 'failed';
+  status: 'idle' | 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
   isTraining: boolean;
+  isStopRequestPending: boolean;
+  stopError: string | null;
   preset: TrainingPreset;
   currentEpoch: number;
   totalEpochs: number;
@@ -45,10 +47,26 @@ interface TrainingState {
   resetTraining: () => void;
 }
 
+let startRequest: ReturnType<typeof api.training.start> | null = null;
+
+async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted' | 'failed'> {
+  const deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    const job = await api.training.getStatus(jobId);
+    if (job.status === 'completed' || job.status === 'aborted' || job.status === 'failed') {
+      return job.status;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error('학습 중단을 요청했지만 종료 확인이 지연되고 있습니다. 상태를 다시 확인하세요.');
+}
+
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobId: null,
   status: 'idle',
   isTraining: false,
+  isStopRequestPending: false,
+  stopError: null,
   preset: 'fast',
   currentEpoch: 0,
   totalEpochs: 0,
@@ -74,8 +92,11 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
 
   startTraining: async (datasetPath, task) => {
     set({
+      jobId: null,
       status: 'running',
       isTraining: true,
+      isStopRequestPending: false,
+      stopError: null,
       currentEpoch: 0,
       currentStep: 0,
       lossHistory: [],
@@ -86,24 +107,46 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       metrics: {},
     });
     try {
-      const res = await api.training.start({
+      startRequest = api.training.start({
         task,
         preset: get().preset,
         dataset_path: datasetPath,
       });
+      const res = await startRequest;
       set({ jobId: res.job_id });
     } catch (e) {
-      set({ status: 'failed', isTraining: false });
+      set({ status: 'failed', isTraining: false, isStopRequestPending: false });
       throw e;
+    } finally {
+      startRequest = null;
     }
   },
 
   stopTraining: async () => {
+    if (get().isStopRequestPending) return;
+    const wasStarting = startRequest;
+    let stopAccepted = false;
+    set({ status: 'stopping', isTraining: true, isStopRequestPending: true, stopError: null });
     try {
-      await api.training.stop(get().jobId || undefined);
-      set({ status: 'aborted', isTraining: false });
-    } catch {
-      set({ status: 'aborted', isTraining: false });
+      const jobId = get().jobId || (wasStarting ? (await wasStarting).job_id : null);
+      if (!jobId) throw new Error('중단할 학습 작업 ID를 찾지 못했습니다.');
+      set({ jobId });
+      const response = await api.training.stop(jobId);
+      if (response.status !== 'stopping' && response.status !== 'not_running') {
+        throw new Error(`학습 중단 응답을 확인할 수 없습니다: ${response.status}`);
+      }
+      stopAccepted = true;
+      const status = await waitForStoppedJob(jobId);
+      set({ status, isTraining: false, stopError: null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '학습 중단 상태를 확인할 수 없습니다.';
+      set((state) => ({
+        status: state.jobId ? (stopAccepted ? 'stopping' : 'running') : 'failed',
+        isTraining: Boolean(state.jobId),
+        stopError: message,
+      }));
+    } finally {
+      set({ isStopRequestPending: false });
     }
   },
 
@@ -145,22 +188,28 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         ],
       }));
     } else if (event === 'training_completed') {
+      if (get().status === 'stopping') return;
       set({
         status: 'completed',
         isTraining: false,
         bestMetric: data.best_metric ?? null,
       });
     } else if (event === 'training_aborted') {
+      if (get().status === 'stopping') return;
       set({ status: 'aborted', isTraining: false });
     } else if (event === 'training_error') {
+      if (get().status === 'stopping') return;
       set({ status: 'failed', isTraining: false });
     }
   },
 
   resetTraining: () =>
     set({
+      jobId: null,
       status: 'idle',
       isTraining: false,
+      isStopRequestPending: false,
+      stopError: null,
       currentEpoch: 0,
       totalEpochs: 0,
       currentStep: 0,

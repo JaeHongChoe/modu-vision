@@ -212,11 +212,14 @@ export const api = {
       request<{ status: string; job_id: string | null }>('/api/training/stop', {
         method: 'POST',
         body: JSON.stringify({ job_id: jobId }),
+        signal: AbortSignal.timeout(10000),
       }),
 
     getStatus: (jobId?: string) => {
       const q = jobId ? `?job_id=${encodeURIComponent(jobId)}` : '';
-      return request<any>(`/api/training/status${q}`);
+      return request<any>(`/api/training/status${q}`, {
+        signal: AbortSignal.timeout(5000),
+      });
     },
   },
 

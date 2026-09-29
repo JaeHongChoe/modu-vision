@@ -38,7 +38,7 @@ class JobRecord:
     preset: str
     dataset_path: str
     output_dir: str
-    status: str  # "running" | "completed" | "aborted" | "failed"
+    status: str  # "running" | "stopping" | "completed" | "aborted" | "failed"
     thread: Optional[threading.Thread] = None
     trainer: Optional[UnifiedAutoMLTrainer] = None
     result: Optional[Dict[str, Any]] = None
@@ -68,7 +68,7 @@ class TrainingJobManager:
             if self._active_job_id is None:
                 return False
             rec = self._jobs.get(self._active_job_id)
-            return rec is not None and rec.status == "running"
+            return rec is not None and rec.status in ("running", "stopping")
 
     def get_active_job(self) -> Optional[JobRecord]:
         with self._lock:
@@ -92,7 +92,7 @@ class TrainingJobManager:
     ) -> JobRecord:
         with self._lock:
             active_record = self._jobs.get(self._active_job_id) if self._active_job_id else None
-            if active_record is not None and active_record.status == "running":
+            if active_record is not None and active_record.status in ("running", "stopping"):
                 active = self._active_job_id
                 raise HTTPException(
                     status_code=409,
@@ -160,26 +160,34 @@ class TrainingJobManager:
             self._active_job_id = job_id
 
             def _worker():
+                result = None
+                error = None
                 try:
                     logger.info("Background training thread started for job %s", job_id)
-                    res = trainer.train(job_id=job_id)
-                    with self._lock:
-                        record.status = res.get("status", "completed")
-                        record.result = res
-                        record.best_metric = res.get("best_metric")
+                    result = trainer.train(job_id=job_id)
                 except Exception as ex:
                     logger.exception("Training job %s failed: %s", job_id, ex)
                     err_card = classify_exception(ex, details=str(ex))
-                    with self._lock:
-                        record.status = "failed"
-                        record.error = err_card.to_ws_payload()
+                    error = err_card.to_ws_payload()
                     # Also notify via WebSocket
                     cb.on_error(ex, stage="training_loop")
                 finally:
-                    clear_device_cache()
-                    with self._lock:
-                        if self._active_job_id == job_id:
-                            self._active_job_id = None
+                    try:
+                        clear_device_cache()
+                    finally:
+                        with self._lock:
+                            if error is not None:
+                                record.status = "failed"
+                                record.error = error
+                            elif record.status == "stopping":
+                                record.status = "aborted"
+                                record.result = {"status": "aborted"}
+                            elif result is not None:
+                                record.status = result.get("status", "completed")
+                                record.result = result
+                                record.best_metric = result.get("best_metric")
+                            if self._active_job_id == job_id:
+                                self._active_job_id = None
                     logger.info("Background training thread finished for job %s", job_id)
 
             t = threading.Thread(target=_worker, name=f"Trainer-{job_id}", daemon=True)
@@ -190,22 +198,12 @@ class TrainingJobManager:
     def abort_job(self, job_id: str) -> bool:
         with self._lock:
             record = self._jobs.get(job_id)
-            if not record or record.trainer is None:
+            if not record or record.trainer is None or record.status not in ("running", "stopping"):
                 return False
-            trainer = record.trainer
-            thread = record.thread
+            record.status = "stopping"
+            record.trainer.abort()
 
         logger.info("Aborting job %s...", job_id)
-        trainer.abort()
-        if thread and thread.is_alive():
-            thread.join(timeout=4.0)
-
-        clear_device_cache()
-
-        with self._lock:
-            record.status = "aborted"
-            if self._active_job_id == job_id:
-                self._active_job_id = None
         return True
 
     def abort_all(self) -> None:
@@ -340,7 +338,7 @@ def get_training_status(job_id: Optional[str] = Query(None)):
     return {
         "job_id": record.job_id,
         "status": record.status,
-        "is_training": record.status == "running",
+        "is_training": record.status in ("running", "stopping"),
         "task": record.task,
         "preset": record.preset,
         "current_epoch": record.current_epoch,
