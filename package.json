@@ -1,7 +1,7 @@
 {
-  "name": "vision-ai-studio",
+  "name": "modu-vision",
   "version": "0.1.0",
-  "description": "Industrial No-Code Vision AI Training Studio",
+  "description": "Modu Vision (모두의 비전) - Universal No-Code Vision AI Training Platform",
   "private": true,
   "main": "dist-electron/main/index.js",
   "scripts": {

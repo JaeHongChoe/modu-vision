@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="assets/logo.png" width="128" height="128" alt="Vision AI Studio Logo" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+<img src="assets/logo.png" width="128" height="128" alt="Modu Vision Logo" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 
-# Vision AI Studio
-### 🏭 Industrial No-Code Deep Learning Vision Inspection Platform
-**차세대 첨단 제조 공정(반도체, HBM, 세라믹, PCB, 2차전지)을 위한 완제품 머신비전 AI 솔루션**
+# 👁️ Modu Vision (모두의 비전)
+### 🚀 Universal No-Code Vision AI Training Studio
+**코딩 없이 누구나 클릭 몇 번으로 완성하는 올인원 비전 AI 학습 플랫폼**
 
 <br />
 
@@ -31,7 +31,7 @@
 ---
 
 ### 🖥️ Main Screen Preview
-<img src="assets/screenshots/02_canvas_labeling.png" width="95%" alt="Vision AI Studio Main Canvas" style="border-radius: 12px; border: 1px solid #2B3547; box-shadow: 0 16px 36px rgba(0,0,0,0.6);" />
+<img src="assets/screenshots/02_canvas_labeling.png" width="95%" alt="Modu Vision Main Canvas" style="border-radius: 12px; border: 1px solid #2B3547; box-shadow: 0 16px 36px rgba(0,0,0,0.6);" />
 
 *Cognex ViDi / Keyence Vision 벤치마크 기반의 다크 스틸 인더스트리얼 테마 & 서브픽셀 정밀 검사 캔버스*
 
@@ -43,10 +43,13 @@
 
 ## 💡 프로젝트 소개 (Overview)
 
-**Vision AI Studio**는 인공지능 엔지니어가 없는 제조 현장에서도 현장 엔지니어가 직접 **결함 이미지 업로드 ➔ 초고해상도 어노테이션 ➔ AutoML 모델 학습 ➔ 불량 유출 제로(Zero-Escape) 임계값 튜닝 ➔ 성적서 발행**까지 전 과정을 단일 데스크톱 앱에서 원스톱으로 수행할 수 있도록 설계된 **산업용 노코드 딥러닝 비전 검사 플랫폼**입니다.
+**Modu Vision(모두의 비전)**은 복잡한 딥러닝 코드나 인공지능 지식이 없어도 학생, 현장 실무자, 연구원, 엔지니어 등 **모든 사용자가 클릭 몇 번만으로 비전 AI 모델을 직접 학습시키고 활용할 수 있도록 설계된 올인원 노코드 머신비전 플랫폼**입니다.
+
+데이터셋 업로드부터 초정밀 어노테이션(LabelMe 완벽 호환), 정상 이미지만으로 결함을 잡아내는 비지도 이상탐지(Anomaly Detection)를 포함한 원클릭 AutoML 학습, 불량 유출 제로(Zero-Escape) 판정 튜닝, 그리고 실제 라인 추론까지의 전 과정을 직관적인 데스크톱 GUI로 원스톱 지원합니다.
 
 > [!IMPORTANT]
-> **실제 양산 데이터셋 검증 완료**: 마이코세라믹스(Mico Ceramics) 초고해상도(8,192 × 5,464, 44.8MP) 정밀 세라믹 기판 결함 데이터셋(80장, 8개 불량 클래스)을 무손실 60fps로 실시간 처리하도록 설계 및 검증되었습니다.
+> **초보자 친화적 쉬운 사용성 + 산업 현장급 초고성능 동시 제공**:
+> 직관적인 마우스 클릭 인터페이스를 제공하면서도, 내부적으로는 44.8MP(8,192 × 5,464) 초고해상도 기가픽셀 무손실 60fps 뷰포트와 PyTorch 기반 하드웨어 가속(Apple MPS / NVIDIA CUDA)을 지원하여 실제 공정 양산 라인에서도 즉시 도입할 수 있습니다.
 
 <br />
 
@@ -127,7 +130,7 @@
 
 ## 📊 산업용 솔루션 비교 (Comparison Matrix)
 
-| 비교 항목 | **Vision AI Studio** | Cognex ViDi Suite | Keyence IV / XG | Label Studio / Roboflow |
+| 비교 항목 | **Modu Vision (모두의 비전)** | Cognex ViDi Suite | Keyence IV / XG | Label Studio / Roboflow |
 | :--- | :---: | :---: | :---: | :---: |
 | **44.8MP 기가픽셀 RAW 렌더링** | **✅ 무손실 60fps (Frustum Blit)** | ⚠️ 대용량 시 래그 발생 | ❌ 특정 센서 제한 | ❌ 웹 브라우저 메모리 폭발 |
 | **LabelMe JSON 포맷 네이티브 연동** | **✅ 자동 파싱 및 팔레트 매핑** | ❌ 전용 포맷 변환 필요 | ❌ 전용 포맷 변환 필요 | ⚠️ 수동 플러그인 필요 |
@@ -187,8 +190,8 @@
 ### 저장소 복제 및 설치
 ```bash
 # 1. 저장소 복제
-git clone https://github.com/USER/vision-ai-studio.git
-cd vision-ai-studio
+git clone https://github.com/USER/modu-vision.git
+cd modu-vision
 
 # 2. 파이썬 가상환경 생성 및 의존성 설치
 python -m venv .venv
@@ -281,7 +284,7 @@ node scripts/verify-packaging.js
 ## 📁 프로젝트 레이아웃 (Repository Layout)
 
 ```
-vision-ai-studio/
+modu-vision/
 ├── 📂 assets/                     # 고해상도 로고 및 6단계 스튜디오 스크린샷
 ├── 📂 backend/                    # Python 3 / FastAPI 백엔드 데몬
 │   ├── 📂 api/                    # REST 엔드포인트 및 WebSocket 원격 측정
@@ -321,5 +324,5 @@ vision-ai-studio/
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 <div align="center">
-  <sub>Built with ❤️ by the Vision AI Studio Engineering Team.</sub>
+  <sub>Built with ❤️ by the Modu Vision Open Source Team.</sub>
 </div>
