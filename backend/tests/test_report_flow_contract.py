@@ -5,8 +5,31 @@ from __future__ import annotations
 import json
 
 import pytest
+from PIL import Image
 
 from backend.api import routes_report
+
+
+def test_detection_report_calls_top_class_match_only_and_explains_object_metric(tmp_path, monkeypatch):
+    image = tmp_path / "sample.png"
+    Image.new("RGB", (12, 12), "white").save(image)
+    monkeypatch.setattr(routes_report, "_find_model_file", lambda _job_id: None)
+    monkeypatch.setattr(routes_report, "get_device", lambda: "cpu")
+    html = routes_report._render_standalone_html(
+        "job_detection", {
+            "task": "detection", "metrics": {"mAP_50": 0.0},
+            "confusion_matrix": {"classes": ["background", "Bow"], "matrix": [[0, 0], [2, 6]]},
+            "test_predictions": [{
+                "image_id": "1", "file_path": str(image), "ground_truth": "Bow",
+                "predicted_class": "Bow", "confidence": 0.2088, "is_correct": True,
+            }],
+        }, "2026-09-29T00:00:00Z",
+    )
+
+    assert "Top box class table" in html
+    assert "threshold" in html.lower() and "IoU" in html
+    assert "TOP CLASS MATCH" in html
+    assert ">PASS<" not in html
 
 
 @pytest.mark.parametrize("report_format", ["json", "html"])

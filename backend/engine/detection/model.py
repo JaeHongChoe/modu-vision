@@ -7,11 +7,27 @@ Supports Fast Prototype (MobileNetV3 Large FPN) and High Precision (ResNet50 FPN
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Mapping, Optional, Sequence
 import torch
 import torch.nn as nn
 import torchvision.models.detection as detection
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+
+
+def checkpoint_detection_num_classes(state_dict: Mapping[str, torch.Tensor], classes: Sequence[str]) -> int:
+    """Use the trained predictor head, including older background-named metadata."""
+    predictor = state_dict.get("roi_heads.box_predictor.cls_score.weight")
+    if predictor is not None:
+        return int(predictor.shape[0])
+    foreground = foreground_class_names(classes)
+    return max(2, len(foreground) + 1)
+
+
+def foreground_class_names(classes: Sequence[str]) -> list[str]:
+    names = [str(name) for name in classes]
+    if names and names[0].lower() in {"background", "__background__"}:
+        return names[1:]
+    return names
 
 
 def create_detection_model(

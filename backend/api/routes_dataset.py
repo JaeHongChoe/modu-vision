@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_loaders import (
     AnomalyDataset,
+    DatasetSummary,
     SUPPORTED_IMAGE_EXTENSIONS,
     inspect_dataset,
     split_dataset,
@@ -181,6 +182,37 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
     return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
 
 
+def _flat_labelme_class_counts(folder: Path, paired_images: set[Path]) -> Dict[str, int]:
+    """Count the active source or Studio regions without parsing LabelMe as COCO."""
+    source_annotations = {
+        match.resolve(): path for path in folder.glob("*.json")
+        if is_valid_labelme_file(path, require_image=True)
+        for match in [find_matching_image(path)] if match is not None
+    }
+    studio_dir = dataset_annotation_dir(folder, STUDIO_ANNOTATIONS_DIR)
+    classes: Dict[str, int] = {}
+    for image in paired_images:
+        studio_json = studio_dir / f"{image.stem}.json"
+        annotation = studio_json if studio_json.is_file() else source_annotations.get(image)
+        if annotation is None:
+            continue
+        data = json.loads(annotation.read_text(encoding="utf-8"))
+        shapes = data.get("annotations", []) if annotation == studio_json else data.get("shapes", [])
+        found = False
+        for shape in shapes:
+            if not isinstance(shape, dict) or shape.get("is_normal") or shape.get("label") == "OK":
+                continue
+            if not (len(shape.get("polygon") or shape.get("points") or []) >= 2
+                    or len(shape.get("bbox") or []) == 4):
+                continue
+            label = str(shape.get("label") or "defect").strip() or "defect"
+            classes[label] = classes.get(label, 0) + 1
+            found = True
+        if not found and annotation == studio_json and data.get("mask_file"):
+            classes["defect"] = classes.get("defect", 0) + 1
+    return classes
+
+
 def _resolve_task_folder(folder: Path, task: Optional[str]) -> Path:
     """Use the same task subfolder for import, split, and training."""
     if task:
@@ -200,7 +232,7 @@ DETECTION_SPLIT_LAYOUT_MESSAGE = (
 
 def _split_capability(task: str, flat_labelme: bool) -> tuple[bool, Optional[str]]:
     """Describe whether the split endpoint changes what this task's loader reads."""
-    if task == "classification" or (task == "segmentation" and flat_labelme):
+    if task == "classification" or (task in ("segmentation", "detection") and flat_labelme):
         return True, None
     if task == "segmentation":
         return False, (
@@ -370,10 +402,10 @@ def import_dataset(req: DatasetImportRequest):
                    and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS}
     paired_images = _paired_labelme_images(folder)
     flat_labelme = _has_flat_labelme_annotations(folder)
-    if flat_labelme and req.task != "segmentation":
+    if flat_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(
             status_code=422,
-            detail="This flat LabelMe NG dataset supports segmentation training only. Select segmentation; classification and anomaly training also require task-specific OK data.",
+            detail="This flat LabelMe NG dataset supports segmentation and detection training. Classification and anomaly training also require task-specific OK data.",
         )
 
     effective_folder = _resolve_task_folder(folder, req.task)
@@ -386,27 +418,32 @@ def import_dataset(req: DatasetImportRequest):
             raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
 
     try:
-        try:
-            summary = inspect_dataset(effective_folder, req.task)
-        except ValueError as exc:
-            if req.task != "classification" or not str(exc).startswith("Saved split"):
-                raise
-            # Preserve the actual inventory so the user can reapply the split.
-            # Training still rejects the stale manifest until that succeeds.
-            summary = inspect_dataset(effective_folder, req.task, ignore_saved_split=True)
-            summary.split_counts = {"train": 0, "val": 0, "test": 0}
-        # If standard scanner found 0 images, auto-inspect via industrial adapter (LabelMe, manufacturing layout)
-        if summary.total_images == 0:
-            ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
-            if ind_res and ind_res.get("total_images", 0) > 0:
-                summary.total_images = ind_res["total_images"]
-                summary.classes = ind_res.get("classes", {})
-                ind_split = ind_res.get("split", {})
-                summary.split_counts = {
-                    "train": ind_split.get("train", 0),
-                    "val": ind_split.get("val", 0),
-                    "test": ind_split.get("test", 0),
-                }
+        if flat_labelme and req.task == "detection":
+            summary = DatasetSummary(task="detection", total_images=len(paired_images),
+                                     classes=_flat_labelme_class_counts(folder, paired_images),
+                                     split_counts={"train": 0, "val": 0, "test": 0})
+        else:
+            try:
+                summary = inspect_dataset(effective_folder, req.task)
+            except ValueError as exc:
+                if req.task != "classification" or not str(exc).startswith("Saved split"):
+                    raise
+                # Preserve the actual inventory so the user can reapply the split.
+                # Training still rejects the stale manifest until that succeeds.
+                summary = inspect_dataset(effective_folder, req.task, ignore_saved_split=True)
+                summary.split_counts = {"train": 0, "val": 0, "test": 0}
+            # If standard scanner found 0 images, auto-inspect via industrial adapter (LabelMe, manufacturing layout)
+            if summary.total_images == 0:
+                ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
+                if ind_res and ind_res.get("total_images", 0) > 0:
+                    summary.total_images = ind_res["total_images"]
+                    summary.classes = ind_res.get("classes", {})
+                    ind_split = ind_res.get("split", {})
+                    summary.split_counts = {
+                        "train": ind_split.get("train", 0),
+                        "val": ind_split.get("val", 0),
+                        "test": ind_split.get("test", 0),
+                    }
     except Exception as e:
         logger.exception("Failed to inspect dataset: %s", e)
         raise HTTPException(
@@ -507,7 +544,7 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     if not folder.is_dir():
         raise HTTPException(status_code=404, detail=f"Dataset folder not found: {folder}")
     flat_labelme = _has_flat_labelme_annotations(folder)
-    if req.task in ("detection", "anomaly"):
+    if req.task == "anomaly" or (req.task == "detection" and not flat_labelme):
         raise HTTPException(
             status_code=422,
             detail=(f"{req.task} 분할은 현재 학습 데이터에 적용되지 않습니다. "

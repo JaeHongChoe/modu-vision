@@ -454,9 +454,12 @@ def start_training(req: TrainingStartRequest):
     )
     effective_dataset_path = _resolve_task_folder(d_path, req.task)
 
-    if req.task == "detection" and not _detection_train_val_ready(effective_dataset_path):
+    paired_images = _paired_labelme_images(d_path)
+    local_labelme = bool(paired_images)
+
+    if req.task == "detection" and not local_labelme and not _detection_train_val_ready(effective_dataset_path):
         raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
-    if profile is not None and req.task == "detection":
+    if profile is not None and req.task == "detection" and not local_labelme:
         from backend.remote.detection_validation import validate_coco_detection_paths
 
         try:
@@ -464,12 +467,10 @@ def start_training(req: TrainingStartRequest):
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=f"Remote detection dataset is not portable: {exc}") from exc
 
-    paired_images = _paired_labelme_images(d_path)
-    local_labelme = bool(paired_images)
-    if local_labelme and req.task != "segmentation":
+    if local_labelme and req.task not in ("segmentation", "detection"):
         raise HTTPException(
             status_code=422,
-            detail="Flat LabelMe folders currently support segmentation training only; other tasks need task-specific OK/NG data.",
+            detail="Flat LabelMe folders support segmentation and detection training. Classification or anomaly training needs task-specific OK/NG data.",
         )
 
     if req.task == "classification":
@@ -534,13 +535,23 @@ def start_training(req: TrainingStartRequest):
         image_size = int((req.config_overrides or {}).get("image_size", 256))
 
         def prepare_dataset(cancel_event: threading.Event) -> None:
-            prepare_labelme_segmentation(
-                d_path, dataset_for_training,
-                image_size=image_size,
-                assignments=assignments,
-                require_complete_assignments=has_split_manifest,
-                cancellation_requested=cancel_event.is_set,
-            )
+            if req.task == "detection":
+                from backend.engine.labelme_detection_preparation import prepare_labelme_detection
+                prepare_labelme_detection(
+                    d_path, dataset_for_training,
+                    image_size=image_size,
+                    assignments=assignments,
+                    require_complete_assignments=has_split_manifest,
+                    cancellation_requested=cancel_event.is_set,
+                )
+            else:
+                prepare_labelme_segmentation(
+                    d_path, dataset_for_training,
+                    image_size=image_size,
+                    assignments=assignments,
+                    require_complete_assignments=has_split_manifest,
+                    cancellation_requested=cancel_event.is_set,
+                )
     elif profile is not None and req.task == "classification":
         from backend.remote.preparation import prepare_remote_classification
 

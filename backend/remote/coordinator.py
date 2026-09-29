@@ -260,7 +260,7 @@ def run_remote_training(
             snapshot = build_snapshot(
                 Path(record.dataset_path), output / "remote_snapshot", record.preparation_cancel,
                 exclude_relative_paths=frozenset({"source_manifest.json"})
-                if record.task == "segmentation" else frozenset(),
+                if record.task in ("segmentation", "detection") else frozenset(),
             )
             if record.preparation_cancel.is_set():
                 return {"status": "aborted"}

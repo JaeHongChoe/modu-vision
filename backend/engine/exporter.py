@@ -29,7 +29,7 @@ import torch.nn as nn
 from backend.api.routes_training import training_job_manager
 from backend.engine.checkpoint_paths import trusted_checkpoint
 from backend.engine.classification import create_classification_model
-from backend.engine.detection import create_detection_model
+from backend.engine.detection import create_detection_model, checkpoint_detection_num_classes
 from backend.engine.segmentation import build_segmentation_model
 from backend.engine.anomaly import PaDiMDetector, PatchCoreDetector
 from backend.engine.zero_escape_analyzer import analyze_zero_escape
@@ -82,7 +82,7 @@ def load_checkpoint_and_reconstruct_model(
 
     elif task == "detection":
         det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
-        num_classes = max(2, len(classes))
+        num_classes = checkpoint_detection_num_classes(state_dict, classes)
         model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False)
         model.load_state_dict(state_dict)
         model.eval()
@@ -289,7 +289,9 @@ def is_defect_class(name):
     tokens = clean.split("_")
     if "ng" in tokens or "defect" in tokens or "fail" in tokens:
         return True
-    return not (clean in ("ok", "normal", "pass", "good", "0", "background", "bg")
+    compact = clean.replace("_", "").replace(" ", "")
+    return not (compact in ("ok", "normal", "pass", "good", "0", "background", "bg",
+                           "nondefect", "nodefect", "정상", "양품")
                 or clean.startswith(("ok_", "normal_", "good_"))
                 or clean.endswith(("_ok", "_normal", "_good")))
 
@@ -458,6 +460,9 @@ class StandaloneInspector:
         latency_ms = (time.perf_counter() - t0) * 1000.0
 
         # Calculate task-specific defect score
+        requires_review = False
+        review_reason = None
+        detections = []
         if self.task == "classification":
             logits = raw_out[0]
             # Softmax
@@ -467,27 +472,48 @@ class StandaloneInspector:
             confidence = float(probs[pred_idx])
             pred_name = self.classes[pred_idx] if pred_idx < len(self.classes) else f"class_{pred_idx}"
 
-            is_defect = is_defect_class(pred_name)
-            defect_score = confidence if is_defect else (1.0 - confidence)
+            normal_indices = [index for index, name in enumerate(self.classes)
+                              if not is_defect_class(name)]
+            if not normal_indices:
+                requires_review = True
+                review_reason = "Classification checkpoint has no OK/normal class."
+                defect_score = 1.0
+            else:
+                defect_score = float(1.0 - np.sum(probs[normal_indices]))
 
         elif self.task == "detection":
-            defect_indices = []
-            for idx, cname in enumerate(self.classes):
-                if is_defect_class(cname):
-                    defect_indices.append(idx)
+            foreground_classes = list(self.classes)
+            if foreground_classes and str(foreground_classes[0]).strip().lower() in ("background", "__background__"):
+                foreground_classes = foreground_classes[1:]
+            defect_indices = [idx for idx, cname in enumerate(foreground_classes, start=1)
+                              if is_defect_class(cname)]
             if not defect_indices:
-                defect_indices = list(range(1, max(2, len(self.classes))))
+                requires_review = True
+                review_reason = "Detection checkpoint has no defect class."
 
-            defect_scores = []
+            defect_candidates = []
             if len(det_scores) > 0:
-                for score, lbl in zip(det_scores, det_labels):
+                for box, score, lbl in zip(det_boxes, det_scores, det_labels):
                     lbl_id = int(lbl)
                     if lbl_id in defect_indices:
-                        defect_scores.append(float(score))
+                        defect_candidates.append((float(score), lbl_id, box))
+                        if float(score) >= self.threshold:
+                            scale_x = orig_w / self.resolution[0]
+                            scale_y = orig_h / self.resolution[1]
+                            detections.append({
+                                "bbox": [round(float(box[0]) * scale_x, 2),
+                                         round(float(box[1]) * scale_y, 2),
+                                         round(float(box[2]) * scale_x, 2),
+                                         round(float(box[3]) * scale_y, 2)],
+                                "score": round(float(score), 4),
+                                "label": foreground_classes[lbl_id - 1],
+                            })
 
-            defect_score = float(max(defect_scores)) if defect_scores else 0.0
+            strongest = max(defect_candidates, key=lambda row: row[0]) if defect_candidates else None
+            defect_score = strongest[0] if strongest else 0.0
             confidence = defect_score
-            pred_name = "Defect" if defect_score >= self.threshold else "OK"
+            pred_name = (foreground_classes[strongest[1] - 1]
+                         if strongest and defect_score >= self.threshold else "OK")
 
         elif self.task == "segmentation":
             # [1, C, H, W]
@@ -513,9 +539,9 @@ class StandaloneInspector:
             confidence = defect_score
             pred_name = "Defect" if defect_score >= self.threshold else "OK"
 
-        verdict = "NG" if defect_score >= self.threshold else "OK"
+        verdict = "REVIEW" if requires_review else "NG" if defect_score >= self.threshold else "OK"
 
-        return {
+        result = {
             "status": "success",
             "verdict": verdict,
             "defect_score": round(defect_score, 4),
@@ -524,9 +550,13 @@ class StandaloneInspector:
             "optimal_threshold": round(self.threshold, 4),
             "task": self.task,
             "predicted_class": pred_name,
+            "review_reason": review_reason,
             "latency_ms": round(latency_ms, 2),
             "image_dimensions": [orig_w, orig_h],
         }
+        if self.task == "detection":
+            result["detections"] = detections
+        return result
 
 
 def main():
@@ -613,6 +643,19 @@ def export_runtime_package(
     pkg_name = package_name or f"modu_vision_export_{Path(job_id).name}"
     if not isinstance(pkg_name, str) or not re.fullmatch(r"[\w][\w.-]{0,95}", pkg_name, flags=re.UNICODE):
         raise ValueError("Invalid package name: use letters, numbers, underscores, dots, or hyphens only.")
+
+    model, meta, anomaly_obj = load_checkpoint_and_reconstruct_model(ckpt_path)
+    task = meta.get("task", "classification").lower().strip()
+    if task in ("anomaly", "anomaly_detection"):
+        raise ValueError(
+            "Standalone anomaly export is unavailable: the generated infer.py does not apply "
+            "the trained PaDiM/PatchCore statistics or memory bank. Use the model in the app until "
+            "a verified anomaly runtime is available."
+        )
+    classes = meta.get("classes", ["OK", "Defect"])
+    res = int(resolution or meta.get("image_size", [256, 256])[0])
+    img_size = [res, res]
+
     base_dir = (output_base_dir or EXPORTS_DIR).resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
     requested_name = pkg_name
@@ -629,14 +672,6 @@ def export_runtime_package(
             continue
     else:
         raise RuntimeError("Could not reserve a unique runtime package directory")
-
-    # 2. Reconstruct authentic model architecture
-    model, meta, anomaly_obj = load_checkpoint_and_reconstruct_model(ckpt_path)
-
-    task = meta.get("task", "classification").lower().strip()
-    classes = meta.get("classes", ["OK", "Defect"])
-    res = int(resolution or meta.get("image_size", [256, 256])[0])
-    img_size = [res, res]
 
     # 3. Export Multi-Format Artifact
     format_clean = str(export_format).lower().strip()

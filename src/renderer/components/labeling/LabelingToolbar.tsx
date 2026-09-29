@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { calculateActualSize, calculateCenterZoom, calculateFitToScreen } from '../../utils/coordinateMath';
+import { isShapeConvertible } from './convertedAnnotation';
 
 export const LabelingToolbar: React.FC = () => {
   const {
@@ -66,10 +67,7 @@ export const LabelingToolbar: React.FC = () => {
   const [isConverterOpen, setIsConverterOpen] = useState(false);
   const isNormalMarked = annotations.some((a) => a.is_normal);
   const selectedAnn = annotations.find((a) => a.id === selectedAnnotationId);
-  const canConvertShape = !!(
-    selectedAnn &&
-    (selectedAnn.bbox || selectedAnn.polygon || selectedAnn.points || selectedAnn.rotated_bbox)
-  );
+  const canConvertShape = isShapeConvertible(selectedAnn);
 
   const handleFit = () => {
     const parent = document.querySelector('[data-canvas-container="true"]');

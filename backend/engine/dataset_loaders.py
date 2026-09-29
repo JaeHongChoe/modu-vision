@@ -499,6 +499,7 @@ class DetectionDataset(Dataset):
         transform: Optional[Callable] = None,
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
+        class_names: Optional[Sequence[str]] = None,
     ):
         self.transform = transform
         self.image_size = image_size
@@ -530,7 +531,31 @@ class DetectionDataset(Dataset):
         with open(self.annotation_file, "r", encoding="utf-8") as f:
             coco_data = json.load(f)
 
-        self.categories = {c["id"]: c["name"] for c in coco_data.get("categories", [])}
+        raw_categories = coco_data.get("categories", [])
+        if not isinstance(raw_categories, list) or not raw_categories:
+            raise ValueError("COCO detection annotations require at least one category")
+        original_categories = {int(c["id"]): str(c["name"]) for c in raw_categories}
+        if len(original_categories) != len(raw_categories):
+            raise ValueError("COCO detection category IDs must be unique")
+        # Torchvision reserves model class 0 for background. COCO IDs need
+        # not be contiguous or start at 1. Reuse the training class order for
+        # validation and evaluation, even if their COCO files omit a class.
+        names = list(class_names) if class_names is not None else [
+            original_categories[original_id] for original_id in sorted(original_categories)
+        ]
+        if len(set(names)) != len(names):
+            raise ValueError("COCO detection category names must be unique")
+        name_to_dense = {name: index for index, name in enumerate(names, start=1)}
+        unknown_names = set(original_categories.values()) - name_to_dense.keys()
+        if unknown_names:
+            raise ValueError(f"COCO detection has categories absent from the training class mapping: {sorted(unknown_names)}")
+        self.original_to_dense = {
+            original_id: name_to_dense[name]
+            for original_id, name in original_categories.items()
+        }
+        self.categories = {
+            dense_id: name for name, dense_id in name_to_dense.items()
+        }
         self.images = {img["id"]: img for img in coco_data.get("images", [])}
 
         self.img_to_annos: Dict[int, List[Dict[str, Any]]] = {img_id: [] for img_id in self.images}
@@ -603,7 +628,10 @@ class DetectionDataset(Dataset):
                 y2 = min(float(target_h), y1 + 1.0)
 
             valid_boxes.append([x1, y1, x2, y2])
-            valid_labels.append(int(a["category_id"]))
+            original_category = int(a["category_id"])
+            if original_category not in self.original_to_dense:
+                raise ValueError(f"COCO annotation references unknown category ID: {original_category}")
+            valid_labels.append(self.original_to_dense[original_category])
             valid_areas.append(float((x2 - x1) * (y2 - y1)))
             valid_norms.append([x1 / target_w, y1 / target_h, x2 / target_w, y2 / target_h])
 
@@ -1118,7 +1146,10 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             counts = {c: 0 for c in ds.categories.values() if c != "__background__"}
             for item_annos in ds.img_to_annos.values():
                 for ann in item_annos:
-                    cname = ds.categories.get(ann["category_id"], "defect")
+                    dense_id = ds.original_to_dense.get(int(ann["category_id"]))
+                    if dense_id is None:
+                        raise ValueError(f"COCO annotation references unknown category ID: {ann['category_id']}")
+                    cname = ds.categories[dense_id]
                     counts[cname] = counts.get(cname, 0) + 1
             total = len(ds)
             return DatasetSummary(

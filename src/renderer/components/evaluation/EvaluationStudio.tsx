@@ -32,6 +32,7 @@ import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { ZeroEscapeTradeoffChart } from './ZeroEscapeTradeoffChart';
 import { SynchronizedDualViewport } from './SynchronizedDualViewport';
+import { DetectionEvaluationGrains, summarizeDetectionGrains } from './DetectionEvaluationGrains';
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -181,6 +182,15 @@ export const EvaluationStudio: React.FC = () => {
       defect: correctNgs,
     };
   }, [testPredictions, confidenceThreshold, overkillAnalysis]);
+  const detectionGrains = useMemo(() => task === 'detection' && testPredictions.length > 0
+    ? summarizeDetectionGrains({
+      matrix,
+      verdicts: testPredictions.map((prediction) => computeSampleVerdict(prediction, confidenceThreshold, overkillAnalysis)),
+      threshold: confidenceThreshold,
+      map50: metrics.mAP_50,
+    })
+    : null,
+  [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, metrics.mAP_50]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth));
   const hasNormalSamples = testPredictions.some((p) => !isDefectLabel(p.ground_truth));
   const hasCalibrationEvidence = Boolean(jobId && hasDefectSamples && hasNormalSamples);
@@ -272,7 +282,7 @@ export const EvaluationStudio: React.FC = () => {
         textColor = 'text-[#475569]';
         borderColor = 'border-[#1E2638]';
       } else {
-        const isEscape = !isTrueOk && isPredOk;
+        const isEscape = task !== 'detection' && !isTrueOk && isPredOk;
         if (isEscape) {
           baseBg = 'bg-[#450A0A]';
           textColor = 'text-[#FCA5A5]';
@@ -399,7 +409,7 @@ export const EvaluationStudio: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Target className="w-4 h-4 text-[#38BDF8] shrink-0" />
                 <span className="font-bold text-xs text-slate-100">
-                  {language === 'ko' ? '검증 데이터 기준 임계값 분석' : 'Validation Threshold Analysis'}
+                  {language === 'ko' ? '평가 이미지 임계값 분석' : 'Evaluation Image Threshold Analysis'}
                 </span>
                 <JargonTooltip termKey="optimal_threshold" />
               </div>
@@ -408,7 +418,7 @@ export const EvaluationStudio: React.FC = () => {
               ) : sampleCounts.escape === 0 ? (
                 <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#064E3B] text-[#6EE7B7] border border-[#10B981] flex items-center space-x-1 font-mono">
                   <CheckCircle2 className="w-3 h-3" />
-                  <span>검증 표본 내 미검 0건</span>
+                  <span>평가 표본 내 미검 0건</span>
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-[4px] text-[10px] font-bold bg-[#450A0A] text-[#FCA5A5] border border-[#EF4444] animate-pulse flex items-center space-x-1 font-mono">
@@ -424,11 +434,11 @@ export const EvaluationStudio: React.FC = () => {
                   현재 임계값: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
                 </div>
                 <div className="text-[10px] text-[#38BDF8] font-mono">
-                  검증 집합 권장 임계값:{' '}
+                  평가 표본 탐색 임계값:{' '}
                   <span className="font-bold font-mono tabular-nums text-white">
                     {hasCalibrationEvidence && overkillAnalysis?.optimal_threshold !== undefined
                       ? `τ* = ${overkillAnalysis.optimal_threshold.toFixed(4)}`
-                      : 'NG·OK 검증 데이터 필요'}
+                      : 'NG·OK 평가 이미지 필요'}
                   </span>
                 </div>
               </div>
@@ -444,7 +454,7 @@ export const EvaluationStudio: React.FC = () => {
                 ) : (
                   <Zap className="w-3.5 h-3.5 fill-current" />
                 )}
-                <span>{isCalibrating ? '계산 중...' : '검증 임계값 적용'}</span>
+                <span>{isCalibrating ? '계산 중...' : '평가 임계값 적용'}</span>
               </button>
             </div>
 
@@ -479,6 +489,8 @@ export const EvaluationStudio: React.FC = () => {
             </div>
           </div>
 
+          {detectionGrains && <DetectionEvaluationGrains summary={detectionGrains} language={language} />}
+
           {/* Sub-Tab Selector: Confusion Matrix vs Overkill / Underkill */}
           <div className="flex items-center space-x-1 bg-[#0B0E14] p-1 rounded-[4px] border border-[#2B3547]">
             <button
@@ -488,7 +500,9 @@ export const EvaluationStudio: React.FC = () => {
                 evalTab === 'matrix' ? 'bg-[#1A212E] text-[#38BDF8] border border-[#2B3547]' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {language === 'ko' ? '혼동 행렬 (VISION RUNTIME 규격)' : 'Confusion Matrix'}
+              {task === 'detection'
+                ? (language === 'ko' ? '상위 박스 클래스 표' : 'Top Box Class Table')
+                : (language === 'ko' ? '혼동 행렬' : 'Confusion Matrix')}
             </button>
             <button
               type="button"
@@ -502,15 +516,17 @@ export const EvaluationStudio: React.FC = () => {
             </button>
           </div>
 
-          {/* TAB 1: Reference VISION RUNTIME Standard Heatmap Confusion Matrix */}
+          {/* TAB 1: Task-specific class comparison table */}
           {evalTab === 'matrix' ? (
             <div className="flex-1 flex flex-col bg-[#1A212E] p-3.5 rounded-[6px] border border-[#2B3547]">
               <div className="flex items-center justify-between mb-2 pb-2 border-b border-[#2B3547]">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-xs font-bold text-slate-200 tracking-wide">
-                    {language === 'ko' ? '혼동 행렬 (Reference VISION RUNTIME 규격)' : 'Confusion Matrix (VISION RUNTIME Standard)'}
+                    {task === 'detection'
+                      ? (language === 'ko' ? '최고 점수 박스 클래스 (τ·IoU 미적용)' : 'Highest-scoring box class (no τ or IoU)')
+                      : (language === 'ko' ? '혼동 행렬' : 'Confusion Matrix')}
                   </h3>
-                  <JargonTooltip termKey="confusion_matrix" />
+                  {task !== 'detection' && <JargonTooltip termKey="confusion_matrix" />}
                 </div>
 
                 {selectedCell && (
@@ -551,7 +567,7 @@ export const EvaluationStudio: React.FC = () => {
                           Support
                         </th>
                         <th className="p-1.5 font-mono font-semibold text-[#6EE7B7] bg-[#131822] text-[10px]">
-                          Recall
+                          {task === 'detection' ? (language === 'ko' ? '행 일치율' : 'Row match') : 'Recall'}
                         </th>
                       </tr>
                     </thead>
@@ -637,7 +653,7 @@ export const EvaluationStudio: React.FC = () => {
 
                       <tr className="border-t border-[#2B3547]/50 bg-[#131822]">
                         <th className="p-1.5 font-mono text-slate-400 text-left text-[10px] uppercase">
-                          Precision
+                          {task === 'detection' ? (language === 'ko' ? '열 일치율' : 'Column match') : 'Precision'}
                         </th>
                         {colMetrics.map((col, idx) => (
                           <td
@@ -650,7 +666,9 @@ export const EvaluationStudio: React.FC = () => {
                           </td>
                         ))}
                         <td colSpan={2} className="p-1.5 font-mono font-bold text-xs text-white bg-[#0E1624] border-l border-[#2B3547] tabular-nums">
-                          {overallAccuracy.toFixed(1)}% Acc
+                          {task === 'detection'
+                            ? `${overallAccuracy.toFixed(1)}% ${language === 'ko' ? '클래스 일치' : 'class match'}`
+                            : `${overallAccuracy.toFixed(1)}% Acc`}
                         </td>
                       </tr>
                     </tbody>
@@ -753,7 +771,7 @@ export const EvaluationStudio: React.FC = () => {
             <div className="text-xs font-semibold text-slate-400 px-1 mb-1 flex items-center justify-between">
               <span>
                 {language === 'ko'
-                  ? `검증 샘플 목록 (${filteredPredictions.length})`
+                  ? `평가 이미지 목록 (${filteredPredictions.length})`
                   : `Samples (${filteredPredictions.length})`}
               </span>
               {selectedCell && (
@@ -904,7 +922,7 @@ export const EvaluationStudio: React.FC = () => {
                       </span>
                       <div className="flex items-center space-x-1.5 mt-0.5">
                         <span className="text-[10px] text-slate-400 font-mono tabular-nums">
-                          점수: {(((pred as any).defect_score ?? pred.confidence) * 100).toFixed(1)}%
+                          {task === 'detection' ? '최고 박스 점수' : '점수'}: {(((pred as any).defect_score ?? pred.confidence) * 100).toFixed(1)}%
                         </span>
                       </div>
                     </div>
@@ -945,6 +963,7 @@ export const EvaluationStudio: React.FC = () => {
 
             {/* Synchronized Pan/Zoom Dual Viewport */}
             <SynchronizedDualViewport
+              task={task}
               prediction={selectedPrediction}
               heatmapOverlayBase64={heatmapOverlayBase64}
               heatmapLoading={heatmapLoading}

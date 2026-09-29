@@ -3,6 +3,7 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
 import { registerIpcHandlers } from './ipc';
+import { acquireAppInstanceLock } from './instanceLock';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -118,7 +119,7 @@ async function createWindow(): Promise<BrowserWindow> {
 }
 
 // Single instance lock
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
+const gotSingleInstanceLock = acquireAppInstanceLock(app, process.env.VISION_AI_STUDIO_USER_DATA_DIR);
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {

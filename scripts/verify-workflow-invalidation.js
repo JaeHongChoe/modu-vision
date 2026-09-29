@@ -78,6 +78,9 @@ function loadStore(name) {
     if (specifier.startsWith('./use') && specifier.endsWith('Store')) {
       return loadStore(`${specifier.slice(2)}.ts`);
     }
+    if (specifier === '../components/labeling/convertedAnnotation') {
+      return { applyConvertedShape: () => null };
+    }
     return originalRequire(specifier);
   };
   item._compile(compiled, filename);
@@ -90,8 +93,10 @@ const flowchart = loadStore('useFlowchartStore.ts').useFlowchartStore;
 const dataset = loadStore('useDatasetStore.ts').useDatasetStore;
 const annotation = loadStore('useAnnotationStore.ts').useAnnotationStore;
 const project = loadStore('useProjectStore.ts').useProjectStore;
+const compute = loadStore('useComputeStore.ts').useComputeStore;
 
 async function completedA() {
+  compute.setState({ isLoaded: true, loadError: null, selectedProfileId: null });
   savedPipeline = oldPipeline;
   labelMutated = false;
   nextJob = 'job_A';

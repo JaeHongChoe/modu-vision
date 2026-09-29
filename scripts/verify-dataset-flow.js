@@ -285,3 +285,30 @@ test('dataset counters render saved partition sizes, not ratio preview values', 
   assert.doesNotMatch(studio, /split\.(?:train|val|test)\s*\|\|\s*(?:trainCount|valCount|testCount)/);
   assert.match(studio, /labelKo: `학습용 \(\$\{split\.train\}\)`/);
 });
+
+test('detection distribution uses object totals while preserving labeled image count', () => {
+  const metricsPath = path.resolve(__dirname, '../src/renderer/components/dataset/classDistribution.ts');
+  const metricsSource = fs.readFileSync(metricsPath, 'utf8');
+  const metricsCompiled = ts.transpileModule(metricsSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const metricsModule = new Module(metricsPath, module);
+  metricsModule.filename = metricsPath;
+  metricsModule.paths = Module._nodeModulePaths(path.dirname(metricsPath));
+  metricsModule._compile(metricsCompiled, metricsPath);
+
+  const stats = metricsModule.exports.classDistributionStats('detection', { Bow: 111 }, 80);
+  assert.equal(stats.imageCount, 80);
+  assert.equal(stats.objectCount, 111);
+  assert.equal(stats.countUnit, 'objects');
+  assert.equal(stats.sharePercent(111), 100);
+  assert.equal(stats.sharePercent(0), 0);
+
+  const classification = metricsModule.exports.classDistributionStats('classification', { OK: 70, NG: 10 }, 80);
+  assert.equal(classification.countUnit, 'images');
+  assert.equal(classification.sharePercent(70), 88);
+
+  const studio = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/dataset/DatasetStudio.tsx'), 'utf8');
+  assert.match(studio, /classDistributionStats\(task, classes, totalImages\)/);
+  assert.doesNotMatch(studio, /count\s*\/\s*totalImages/);
+});

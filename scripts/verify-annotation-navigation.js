@@ -32,6 +32,9 @@ function loadStore(relativePath, overrides = {}) {
     if (specifier === './useDatasetStore') {
       return { useDatasetStore: { getState: () => datasetState } };
     }
+    if (specifier === '../components/labeling/convertedAnnotation') {
+      return { applyConvertedShape: () => null };
+    }
     if (Object.hasOwn(overrides, specifier)) return overrides[specifier];
     return originalRequire(specifier);
   };

@@ -80,21 +80,30 @@ def prepare_labelme_segmentation(
         is_normal = False
         if is_studio:
             for item in data.get("annotations", []):
+                if item.get("is_normal") or item.get("label") == "OK":
+                    is_normal = True
+                    continue
                 points = item.get("polygon") or item.get("points") or []
                 if len(points) >= 3:
                     polygons.append(points)
                 elif item.get("bbox") and len(item["bbox"]) == 4:
                     x1, y1, x2, y2 = item["bbox"]
                     polygons.append([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
-                if item.get("is_normal") or item.get("label") == "OK":
-                    is_normal = True
             mask_path = studio_dir / "masks" / f"{image_path.stem}.png"
-            if data.get("mask_file") and mask_path.is_file():
+            if data.get("mask_file") and mask_path.is_file() and not (is_normal and not polygons):
                 with Image.open(mask_path) as saved_mask:
                     studio_mask = saved_mask.convert("L")
         else:
-            polygons = [shape.get("points", []) for shape in data.get("shapes", [])
-                        if len(shape.get("points", [])) >= 3]
+            for shape in data.get("shapes", []):
+                if shape.get("is_normal") or shape.get("label") == "OK":
+                    is_normal = True
+                    continue
+                points = shape.get("points", [])
+                if len(points) >= 3:
+                    polygons.append(points)
+                elif shape.get("shape_type") == "rectangle" and len(points) == 2:
+                    (x1, y1), (x2, y2) = points
+                    polygons.append([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
         if not polygons and studio_mask is None and not is_normal:
             continue
         image_key = str(image_path.resolve())

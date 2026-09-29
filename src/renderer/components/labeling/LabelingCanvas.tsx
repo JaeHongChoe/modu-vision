@@ -11,6 +11,7 @@ import type { AnnotationItem, BBox, HandleType, Point } from '../../types';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { resolveApiUrl } from '../../services/api';
+import { resolveLabelingShortcut } from './labelingShortcuts';
 import {
   calcRotatedCorners,
   calculateFitToScreen,
@@ -62,6 +63,8 @@ export const LabelingCanvas: React.FC = () => {
     setSelectedAnnotationId,
     deleteSelected,
     undo,
+    redo,
+    setActiveTool,
     triggerAutoSelect,
   } = useAnnotationStore();
   const { backendPort } = useProjectStore();
@@ -663,6 +666,25 @@ export const LabelingCanvas: React.FC = () => {
         return;
       }
 
+      const shortcut = resolveLabelingShortcut(e);
+      if (shortcut) {
+        e.preventDefault();
+        if (shortcut.kind === 'tool') {
+          setActiveTool(shortcut.tool);
+        } else if (shortcut.kind === 'fit') {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect && baseImageRef.current) {
+            const { width, height } = imgDimensionsRef.current;
+            setViewTransform(calculateFitToScreen(rect.width, rect.height, width, height));
+          }
+        } else if (shortcut.kind === 'undo') {
+          undo();
+        } else {
+          redo();
+        }
+        return;
+      }
+
       // Spacebar for canvas panning
       if (e.code === 'Space' && !e.repeat) {
         setIsSpacePressed(true);
@@ -765,11 +787,6 @@ export const LabelingCanvas: React.FC = () => {
       else if (e.key === 'Delete' || e.key === 'Backspace') {
         deleteSelected();
       }
-      // Undo
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        undo();
-      }
       // Enter: Complete polygon drafting
       else if (e.key === 'Enter') {
         if (polygonPointsRef.current.length >= 3) {
@@ -790,7 +807,7 @@ export const LabelingCanvas: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [deleteSelected, undo, setSelectedAnnotationId, finishPolygon]);
+  }, [deleteSelected, undo, redo, setActiveTool, setViewTransform, setSelectedAnnotationId, finishPolygon]);
 
   // -------------------------------------------------------------
   // Brush Painting to Offscreen Canvas

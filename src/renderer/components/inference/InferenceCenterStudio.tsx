@@ -32,6 +32,8 @@ import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { LedAnnunciator } from '../common/LedAnnunciator';
 import type { RuntimeExportResult } from '../../types';
 import { selectInferenceJobId } from './selectInferenceJob';
+import { BatchInspectionPanel } from './BatchInspectionPanel';
+import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
   const { language, backendStatus, task } = useProjectStore();
@@ -185,7 +187,7 @@ python infer.py --self-test`;
 
           <button
             onClick={handleExport}
-            disabled={isExporting || isFindingModel || !jobId}
+            disabled={isExporting || isFindingModel || !jobId || task === 'anomaly'}
             className="flex items-center space-x-2 px-4 py-2 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-slate-950 font-bold rounded border border-[#10B981] transition-colors cursor-pointer text-xs"
           >
             <Package className="w-4 h-4" />
@@ -203,6 +205,18 @@ python infer.py --self-test`;
       </div>
 
       {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
+      <div role="note" className="rounded border border-[#364357] bg-[#131822] p-2 text-xs text-slate-300">
+        {isKo
+          ? 'Python 내보내기는 선택한 모델 하나를 패키징합니다. 5단계의 모델 연결·ROI 크롭·판정 룰은 포함되지 않으며, 패키지 config.json의 임계값도 저장된 플로우와 비교해 확인해야 합니다.'
+          : 'Python export packages one model. It does not include Step 5 model connections, ROI crops, or decision rules; check the package threshold against the saved flow.'}
+      </div>
+      {task === 'anomaly' && (
+        <div role="status" className="rounded border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-200">
+          이상탐지 모델의 단독 패키지 내보내기는 학습 통계와 메모리 뱅크를 적용하는 추론기가 준비될 때까지 사용할 수 없습니다. 앱 안의 검사 플로우에서 모델을 확인하세요.
+        </div>
+      )}
+
+      <BatchInspectionPanel />
 
       {/* Main Grid: 2 Column Bay */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -417,9 +431,7 @@ python infer.py --self-test`;
           </div>
 
           <p className="text-[11px] leading-relaxed text-amber-200/90 bg-amber-950/20 border border-amber-700/30 rounded px-3 py-2">
-            {isKo
-              ? '분할 모델의 infer.py는 원본 이미지를 겹치는 타일로 검사하고 결함 면적으로 판정합니다. 5단계 플로우차트의 탐지 ROI·크롭·필터·최종 판정 노드는 패키지에 포함되지 않습니다. 타일 해상도·임계값·최소 결함 면적을 5단계와 맞춰 비교하세요.'
-              : 'For segmentation, infer.py inspects the original image with overlapping tiles and decides from defect area. The package does not run the Step 5 detector ROI, crop, filter, or final decision nodes. Match tile resolution, threshold, and minimum defect area to Step 5 before comparing results.'}
+            {exportPackageGuidance(task, isKo)}
           </p>
 
           {/* File Manifest List */}

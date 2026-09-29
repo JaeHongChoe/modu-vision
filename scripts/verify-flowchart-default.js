@@ -251,6 +251,34 @@ test('editing a node during RUN cannot attach the old result to the new flow', a
   delayRun = false;
 });
 
+test('editing a threshold after RUN clears the displayed ROI and old result', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
+  assert.equal(await flow.getState().runPipeline(), true);
+  const crop = { roi_id: 'full_image', defect_score: 0.4, verdict: 'OK' };
+  flow.getState().setInspectedCrop(crop);
+  assert.equal(flow.getState().executionResult.final_verdict, 'OK');
+  assert.equal(flow.getState().inspectedCrop, crop);
+  flow.getState().updateNodeData('node_inspect', { threshold: 0.1 });
+  assert.equal(flow.getState().executionResult, null);
+  assert.equal(flow.getState().inspectedCrop, null);
+});
+
+test('graph edits and node dragging invalidate an old result and mark the flow unsaved', async () => {
+  await flow.getState().loadSingleSegmentationTemplate('job_A');
+  const previous = flow.getState().pipeline;
+  const extended = { ...previous, nodes: [...previous.nodes, {
+    id: 'new_output', position: { x: 123, y: 42 }, data: { node_type: 'output', label: 'NG result' },
+  }] };
+  flow.getState().replacePipeline(extended);
+  assert.equal(flow.getState().pipeline.nodes.length, previous.nodes.length + 1);
+  assert.equal(flow.getState().pipelineDirty, true);
+  flow.getState().moveNode('new_output', { x: 200, y: 80 });
+  assert.deepEqual(flow.getState().pipeline.nodes.at(-1).position, { x: 200, y: 80 });
+  assert.equal(flow.getState().pipelineDirty, true);
+  assert.notEqual(flow.getState().pipeline, extended);
+});
+
 test('an invalidated old RUN cannot clear a newer run', async () => {
   await flow.getState().loadSingleSegmentationTemplate('job_A');
   flow.getState().setSelectedImage({ imagePath: '/dataset/A/a.jpg', fileName: 'a.jpg', source: 'dataset' });
@@ -276,8 +304,8 @@ test('an invalidated old RUN cannot clear a newer run', async () => {
 test('Step 5 verifies the source before reopening a saved flow and disables RUN until ready', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/flowchart/FlowchartStudio.tsx'), 'utf8');
   assert.match(source, /recoverThenLoadFlowchart\(/);
-  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel\}/);
-  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel\}/);
+  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel \|\| !!graphError\}/);
+  assert.match(source, /disabled=\{modelCheck\.status !== 'ready' \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel \|\| !!graphError\}/);
   assert.match(source, /if \(modelNodes\.length === 0 \|\| models\.length !== modelNodes\.length\)/);
   assert.match(source, /loadDetectorRoiTemplate\(/);
   assert.match(source, /검출 ROI 검사 플로우/);

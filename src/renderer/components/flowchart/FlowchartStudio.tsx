@@ -1,8 +1,6 @@
 /**
  * src/renderer/components/flowchart/FlowchartStudio.tsx
- * Stage 5: the two linear inspection templates supported by flowchart_engine.
- * Node settings and saved model references are editable; arbitrary graph edits
- * and branches are not supported by the runtime.
+ * Stage 5: editable inspection graph with model fan-out and verdict branches.
  */
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -10,10 +8,13 @@ import {
   AlertTriangle,
   GitFork,
   Image as ImageIcon,
+  Link2,
+  Plus,
   Play,
   RotateCcw,
   Save,
   Sliders,
+  Trash2,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -23,7 +24,7 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { api, resolveApiUrl } from '../../services/api';
-import type { FlowchartPipeline, VisionTask } from '../../types';
+import type { FlowNode, FlowchartPipeline, VisionTask } from '../../types';
 import { CustomNode } from './CustomNode';
 import { DAGCircuitOverlay } from './DAGCircuitOverlay';
 import { ImagePickerModal } from './ImagePickerModal';
@@ -31,6 +32,7 @@ import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport } from './flowchartViewport';
 import { getFlowchartModelReferences, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
+import { connectFlowNodes, decisionRulePatch, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, validateFlowchartGraph } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -69,6 +71,8 @@ export const FlowchartStudio: React.FC = () => {
     runPipeline,
     selectNode,
     updateNodeData,
+    replacePipeline,
+    moveNode,
     setImagePickerOpen,
     setInspectedCrop,
     clearError,
@@ -80,8 +84,15 @@ export const FlowchartStudio: React.FC = () => {
   const [isVerifyingAction, setIsVerifyingAction] = useState(false);
   const [actionValidationError, setActionValidationError] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [dragViewport, setDragViewport] = useState<ReturnType<typeof computeFlowchartViewport> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const dragRef = useRef<{
+    nodeId: string; startX: number; startY: number; x: number; y: number; scale: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (activeTab !== 'flow' || !canvasRef.current) return;
@@ -152,6 +163,7 @@ export const FlowchartStudio: React.FC = () => {
     node.data.node_type === 'inspection' && !node.data.model_job_id
   ) ?? false;
   const needsModel = !pipeline || missingDetectionModel || missingInspectionModel;
+  const graphError = pipeline ? validateFlowchartGraph(pipeline) : null;
 
   const verifyCurrentPipeline = async (current: FlowchartPipeline, sourceFolder: string) => {
     const modelNodes = current.nodes.filter((node) =>
@@ -166,6 +178,7 @@ export const FlowchartStudio: React.FC = () => {
 
   const handleSave = async () => {
     if (modelCheck.status !== 'ready' || !pipeline || isVerifyingAction || needsModel) return;
+    if (graphError) { setActionValidationError(graphError); return; }
     const currentPipeline = pipeline;
     const sourceKey = datasetKey;
     setIsVerifyingAction(true);
@@ -183,6 +196,7 @@ export const FlowchartStudio: React.FC = () => {
 
   const handleRun = async () => {
     if (modelCheck.status !== 'ready' || !pipeline || isVerifyingAction || needsModel) return;
+    if (graphError) { setActionValidationError(graphError); return; }
     const currentPipeline = pipeline;
     const sourceKey = datasetKey;
     setIsVerifyingAction(true);
@@ -242,6 +256,90 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
+  const selectedEdge = pipeline?.edges.find((edge) => edge.id === selectedEdgeId);
+
+  const addEditableNode = (nodeType: 'detection_crop' | 'inspection' | 'output') => {
+    if (!pipeline || isRunning || isSaving) return;
+    if (nodeType === 'output' && pipeline.nodes.filter((node) => node.data.node_type === 'output').length >= 3) {
+      setEditorError('출력 분기는 최대 세 개입니다.'); return;
+    }
+    if (nodeType !== 'output' && pipeline.nodes.filter((node) =>
+      node.data.node_type === 'detection_crop' || node.data.node_type === 'inspection').length >= 8) {
+      setEditorError('모델 노드는 최대 여덟 개입니다.'); return;
+    }
+    const id = `node_${nodeType}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const modelCount = pipeline.nodes.filter((node) => node.data.node_type === 'detection_crop' || node.data.node_type === 'inspection').length;
+    const outputCount = pipeline.nodes.filter((node) => node.data.node_type === 'output').length;
+    const node: FlowNode = {
+      id,
+      position: nodeType === 'output'
+        ? { x: 1320, y: 80 + outputCount * 240 }
+        : { x: nodeType === 'detection_crop' ? 340 : 670, y: 80 + modelCount * 240 },
+      data: {
+        label: nodeType === 'output' ? `판정 출력 ${outputCount + 1}` : nodeType === 'detection_crop' ? `검출 모델 ${modelCount + 1}` : `검사 모델 ${modelCount + 1}`,
+        node_type: nodeType,
+        task: nodeType === 'detection_crop' ? 'detection' : nodeType === 'inspection' ? (task === 'detection' ? 'segmentation' : task) : undefined,
+        model_job_id: undefined,
+        threshold: nodeType === 'output' ? undefined : 0.5,
+        crop_padding: nodeType === 'detection_crop' ? 10 : undefined,
+        params: nodeType === 'inspection' ? { min_defect_area_px: 8 } : {},
+      },
+    };
+    replacePipeline({ ...pipeline, nodes: [...pipeline.nodes, node] });
+    selectNode(id);
+    setSelectedEdgeId(null);
+    setEditorError(null);
+  };
+
+  const startConnection = (nodeId: string) => {
+    setConnectionSourceId(nodeId);
+    setSelectedEdgeId(null);
+    selectNode(nodeId);
+    setEditorError(null);
+  };
+
+  const finishConnection = (targetId: string) => {
+    if (!pipeline || !connectionSourceId) {
+      setEditorError('먼저 출발 노드의 출력 포트를 클릭하세요.'); return;
+    }
+    try {
+      replacePipeline(connectFlowNodes(pipeline, connectionSourceId, targetId));
+      setConnectionSourceId(null);
+      setEditorError(null);
+      selectNode(targetId);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : '연결에 실패했습니다.');
+    }
+  };
+
+  const deleteSelectedNode = () => {
+    if (!pipeline || !selectedNode) return;
+    try {
+      replacePipeline(removeFlowNode(pipeline, selectedNode.id));
+      selectNode(null);
+      setEditorError(null);
+      if (connectionSourceId === selectedNode.id) setConnectionSourceId(null);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : '노드를 삭제할 수 없습니다.');
+    }
+  };
+
+  const deleteSelectedEdge = () => {
+    if (!pipeline || !selectedEdgeId) return;
+    replacePipeline({ ...pipeline, edges: pipeline.edges.filter((edge) => edge.id !== selectedEdgeId) });
+    setSelectedEdgeId(null);
+    setEditorError(null);
+  };
+
+  const changeEdgeBranch = (branch: 'pass' | 'fail' | 'review') => {
+    if (!pipeline || !selectedEdgeId) return;
+    try {
+      replacePipeline(updateFlowEdgeBranch(pipeline, selectedEdgeId, branch));
+      setEditorError(null);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : '분기를 바꿀 수 없습니다.');
+    }
+  };
   const modelCheckMessage = modelCheck.reason === 'dataset_unavailable'
     ? (language === 'ko' ? '현재 데이터 폴더를 확인할 수 없습니다. 1단계에서 데이터셋을 다시 불러오세요.' : 'The current dataset is unavailable. Import it again in Step 1.')
     : modelCheck.reason === 'model_recovery_disabled'
@@ -281,6 +379,33 @@ export const FlowchartStudio: React.FC = () => {
     position: getNodePosition(node.id, idx, node.position),
   })) || [];
   const viewport = computeFlowchartViewport(positionedNodes, canvasSize, zoomLevel);
+  const displayViewport = dragViewport || viewport;
+
+  const beginNodeDrag = (event: React.PointerEvent<HTMLDivElement>, node: FlowNode) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('button, input, select')) return;
+    dragRef.current = {
+      nodeId: node.id, startX: event.clientX, startY: event.clientY,
+      x: node.position.x, y: node.position.y, scale: displayViewport.scale,
+    };
+    setDragViewport(displayViewport);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    selectNode(node.id);
+    setSelectedEdgeId(null);
+  };
+
+  const dragNode = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = (event.clientX - drag.startX) / drag.scale;
+    const dy = (event.clientY - drag.startY) / drag.scale;
+    if (Math.abs(dx) + Math.abs(dy) < 2) return;
+    moveNode(drag.nodeId, { x: Math.round(drag.x + dx), y: Math.round(drag.y + dy) });
+  };
+
+  const endNodeDrag = () => {
+    dragRef.current = null;
+    setDragViewport(null);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-hidden select-none">
@@ -292,12 +417,12 @@ export const FlowchartStudio: React.FC = () => {
           </div>
           <div>
             <h2 className="font-bold text-xs text-[#F8FAFC] tracking-wide">
-              {language === 'ko' ? '템플릿 기반 검사 플로우' : 'Template-based Inspection Flow'}
+              {language === 'ko' ? '검사 플로우 편집기' : 'Inspection Flow Editor'}
             </h2>
             <p className="text-[10px] font-mono text-[#94A3B8]">
               {language === 'ko'
-                ? `${task === 'classification' ? '전체 이미지 분류' : task === 'anomaly' ? '전체 이미지 이상 탐지' : task === 'detection' ? '객체 검출' : '원본 타일 분할'} · 검출 ROI 후 검사 · 노드 속성 편집`
-                : `${task === 'classification' ? 'Full-image classification' : task === 'anomaly' ? 'Full-image anomaly inspection' : task === 'detection' ? 'Object detection' : 'Original-resolution tiled segmentation'} · detector ROI inspection · node settings`}
+                ? `${task === 'classification' ? '전체 이미지 분류' : task === 'anomaly' ? '전체 이미지 이상 탐지' : task === 'detection' ? '객체 검출' : '원본 타일 분할'} · 노드·연결·판정 분기 편집`
+                : `${task === 'classification' ? 'Full-image classification' : task === 'anomaly' ? 'Full-image anomaly inspection' : task === 'detection' ? 'Object detection' : 'Original-resolution tiled segmentation'} · edit nodes, edges and verdict branches`}
             </p>
           </div>
         </div>
@@ -345,8 +470,8 @@ export const FlowchartStudio: React.FC = () => {
           {/* Save Pipeline Button */}
           <button
             onClick={handleSave}
-            disabled={modelCheck.status !== 'ready' || isVerifyingAction || isSaving || isLoading || isRunning || !pipeline || needsModel}
-            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined}
+            disabled={modelCheck.status !== 'ready' || isVerifyingAction || isSaving || isLoading || isRunning || !pipeline || needsModel || !!graphError}
+            title={modelCheck.status === 'blocked' ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined)}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] text-[#E2E8F0] rounded border border-[#2B3547] text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5 text-[#94A3B8]" />
@@ -356,8 +481,8 @@ export const FlowchartStudio: React.FC = () => {
           {/* Industrial Solid Run Button (Zero Gradients / Zero Diffuse Shadows) */}
           <button
             onClick={handleRun}
-            disabled={modelCheck.status !== 'ready' || isVerifyingAction || isRunning || isLoading || needsModel}
-            title={modelCheck.status === 'blocked' ? modelCheckMessage : needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined}
+            disabled={modelCheck.status !== 'ready' || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
+            title={modelCheck.status === 'blocked' ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 학습 모델 작업 ID를 지정하세요.' : undefined)}
             className="flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
@@ -372,6 +497,30 @@ export const FlowchartStudio: React.FC = () => {
             </span>
           </button>
         </div>
+      </div>
+
+      <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-5 py-1.5 flex items-center gap-2 text-xs">
+        <span className="text-slate-400 font-bold">편집</span>
+        <button onClick={() => addEditableNode('detection_crop')} disabled={!pipeline || isLoading || isSaving || isRunning}
+          className="px-2 py-1 border border-amber-700 rounded text-amber-200 hover:bg-amber-950 disabled:opacity-50 flex items-center gap-1">
+          <Plus className="w-3 h-3" /> 검출 모델
+        </button>
+        <button onClick={() => addEditableNode('inspection')} disabled={!pipeline || isLoading || isSaving || isRunning}
+          className="px-2 py-1 border border-purple-700 rounded text-purple-200 hover:bg-purple-950 disabled:opacity-50 flex items-center gap-1">
+          <Plus className="w-3 h-3" /> 검사 모델
+        </button>
+        <button onClick={() => addEditableNode('output')} disabled={!pipeline || isLoading || isSaving || isRunning}
+          className="px-2 py-1 border border-emerald-700 rounded text-emerald-200 hover:bg-emerald-950 disabled:opacity-50 flex items-center gap-1">
+          <Plus className="w-3 h-3" /> 판정 출력
+        </button>
+        <span className="border-l border-[#2B3547] pl-3 text-slate-400 flex items-center gap-1">
+          <Link2 className="w-3 h-3" /> 출력 포트 → 입력 포트를 클릭해 연결 · 노드를 끌어 이동 · 선을 클릭해 편집
+        </span>
+        {connectionSourceId && (
+          <button onClick={() => setConnectionSourceId(null)} className="ml-auto px-2 py-1 border border-cyan-700 rounded text-cyan-200">
+            연결 시작: {pipeline?.nodes.find((node) => node.id === connectionSourceId)?.data.label || connectionSourceId} · 취소
+          </button>
+        )}
       </div>
 
       <div className="min-h-11 bg-[#111923] border-b border-[#2B3547] px-5 py-1.5 flex items-center justify-between gap-3 text-xs">
@@ -432,6 +581,12 @@ export const FlowchartStudio: React.FC = () => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {graphError && pipeline && (
+        <div className="min-h-9 bg-amber-950/40 border-b border-amber-800 px-5 py-2 text-xs text-amber-200" role="status">
+          연결을 완성하면 저장·실행할 수 있습니다: {graphError}
         </div>
       )}
 
@@ -503,7 +658,7 @@ export const FlowchartStudio: React.FC = () => {
               <ZoomOut className="w-3 h-3" />
             </button>
             <span className="text-[10px] font-mono tabular-nums px-1 text-slate-300">
-              {Math.round(viewport.scale * 100)}%
+              {Math.round(displayViewport.scale * 100)}%
             </span>
             <button
               onClick={() => setZoomLevel((z) => Math.min(1.5, z + 0.1))}
@@ -545,7 +700,12 @@ export const FlowchartStudio: React.FC = () => {
       )}
       {actionValidationError && (
         <div className="bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300" role="alert">
-          모델 검증 실패: {actionValidationError}
+          검사 플로우 오류: {actionValidationError}
+        </div>
+      )}
+      {editorError && (
+        <div className="bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300 flex justify-between" role="alert">
+          {editorError}<button onClick={() => setEditorError(null)} className="underline">닫기</button>
         </div>
       )}
 
@@ -564,17 +724,17 @@ export const FlowchartStudio: React.FC = () => {
           >
             <div
               style={{
-                width: viewport.contentWidth,
-                height: viewport.contentHeight,
+                width: displayViewport.contentWidth,
+                height: displayViewport.contentHeight,
                 position: 'relative',
               }}
             >
               <div
                 style={{
-                  transform: `translate(${viewport.offsetX}px, ${viewport.offsetY}px) scale(${viewport.scale})`,
+                  transform: `translate(${displayViewport.offsetX}px, ${displayViewport.offsetY}px) scale(${displayViewport.scale})`,
                   transformOrigin: '0 0',
-                  width: viewport.layerWidth,
-                  height: viewport.layerHeight,
+                  width: displayViewport.layerWidth,
+                  height: displayViewport.layerHeight,
                   position: 'absolute',
                   left: 0,
                   top: 0,
@@ -587,6 +747,9 @@ export const FlowchartStudio: React.FC = () => {
                   edges={pipeline.edges}
                   activeRunningNodeId={activeRunningNodeId}
                   finalVerdict={executionResult?.final_verdict}
+                  routedOutputNodeId={executionResult?.routed_output_node_id}
+                  selectedEdgeId={selectedEdgeId}
+                  onSelectEdge={(edgeId) => { setSelectedEdgeId(edgeId); selectNode(null); }}
                 />
               )}
 
@@ -606,7 +769,12 @@ export const FlowchartStudio: React.FC = () => {
                       position: 'absolute',
                       left: pos.x,
                       top: pos.y,
+                      touchAction: 'none',
                     }}
+                    onPointerDown={(event) => beginNodeDrag(event, node)}
+                    onPointerMove={dragNode}
+                    onPointerUp={endNodeDrag}
+                    onPointerCancel={endNodeDrag}
                   >
                     <CustomNode
                       node={{ ...node, position: pos }}
@@ -617,8 +785,12 @@ export const FlowchartStudio: React.FC = () => {
                       isSkipped={step?.status === 'skipped'}
                       isReviewRequired={step?.status === 'review_required'}
                       latencyMs={step?.latency_ms}
-                      isDetectorOnly={!pipeline?.nodes.some((item) => item.data.node_type === 'inspection')}
-                      onSelect={() => selectNode(node.id)}
+                      isDetectorOnly={pipeline?.edges.some((edge) => edge.source === node.id &&
+                        pipeline.nodes.some((item) => item.id === edge.target && item.data.node_type === 'decision'))}
+                      isConnectionSource={connectionSourceId === node.id}
+                      onSelect={() => { selectNode(node.id); setSelectedEdgeId(null); }}
+                      onConnectStart={() => startConnection(node.id)}
+                      onConnectFinish={() => finishConnection(node.id)}
                     />
                   </div>
                 );
@@ -628,13 +800,47 @@ export const FlowchartStudio: React.FC = () => {
           </div>
 
           {/* Node Property Inspector Sidebar (Inspection Deep Steel Panel) */}
-          <div className="w-80 shrink-0 bg-[#131822] border-l border-[#2B3547] p-4 flex flex-col space-y-4">
+          <div className="w-80 shrink-0 bg-[#131822] border-l border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
             <h3 className="text-xs font-bold text-[#F8FAFC] uppercase tracking-wider flex items-center space-x-2 border-b border-[#2B3547] pb-2">
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{language === 'ko' ? '노드 속성 (INSPECTOR)' : 'Node Properties'}</span>
+              <span>{language === 'ko' ? '노드·연결 속성' : 'Node and Connection Properties'}</span>
             </h3>
 
-            {selectedNode ? (
+            {selectedEdge ? (
+              <div className="space-y-4 text-xs font-mono">
+                <div className="rounded border border-[#2B3547] bg-[#1A212E] p-3 text-slate-200">
+                  {pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.label || selectedEdge.source}
+                  <span className="mx-2 text-cyan-400">→</span>
+                  {pipeline?.nodes.find((node) => node.id === selectedEdge.target)?.data.label || selectedEdge.target}
+                </div>
+                <div>
+                  <label className="text-[#94A3B8] block mb-1">연결선 이름</label>
+                  <input type="text" value={selectedEdge.label || ''}
+                    onChange={(event) => pipeline && replacePipeline({ ...pipeline, edges: pipeline.edges.map((edge) =>
+                      edge.id === selectedEdge.id ? { ...edge, label: event.target.value } : edge) })}
+                    className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
+                </div>
+                {pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type === 'decision' &&
+                  pipeline.edges.filter((edge) => edge.source === selectedEdge.source).length > 1 && (
+                  <div>
+                    <label className="text-[#94A3B8] block mb-1">판정 분기</label>
+                    <select value={selectedEdge.isBranch || ''}
+                      onChange={(event) => changeEdgeBranch(event.target.value as 'pass' | 'fail' | 'review')}
+                      className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]">
+                      <option value="pass">OK (pass)</option>
+                      <option value="fail">NG (fail)</option>
+                      {pipeline.edges.filter((edge) => edge.source === selectedEdge.source).length === 3 &&
+                        <option value="review">REVIEW</option>}
+                    </select>
+                    <p className="mt-2 text-slate-400">분기를 바꾸면 기존 출력과 자동으로 맞바꿉니다.</p>
+                  </div>
+                )}
+                <button onClick={deleteSelectedEdge} disabled={isRunning || isSaving}
+                  className="w-full px-3 py-2 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 disabled:opacity-50 flex justify-center items-center gap-2">
+                  <Trash2 className="w-3.5 h-3.5" /> 연결선 삭제
+                </button>
+              </div>
+            ) : selectedNode ? (
               <div className="space-y-4 text-xs font-mono">
                 <div>
                   <label className="text-[#94A3B8] block mb-1">노드 명칭 (LABEL)</label>
@@ -679,14 +885,12 @@ export const FlowchartStudio: React.FC = () => {
                   </div>
                 )}
 
-                {selectedNode.data.threshold !== undefined &&
-                  (selectedNode.data.node_type === 'inspection' || selectedNode.data.node_type === 'detection_crop' ||
-                    (selectedNode.data.node_type === 'decision' && selectedNode.data.rule === 'score_gt_threshold')) && (
+                {shouldShowThreshold(selectedNode) && (
                   <div>
                     <div className="flex justify-between text-[#94A3B8] mb-1">
                       <span>결함 판정 임계치 (THRESHOLD)</span>
                       <span className="text-cyan-400 font-bold tabular-nums">
-                        {selectedNode.data.threshold.toFixed(2)}
+                        {(selectedNode.data.threshold ?? 0.5).toFixed(2)}
                       </span>
                     </div>
                     <input
@@ -694,7 +898,7 @@ export const FlowchartStudio: React.FC = () => {
                       min="0.05"
                       max="0.95"
                       step="0.01"
-                      value={selectedNode.data.threshold}
+                      value={selectedNode.data.threshold ?? 0.5}
                       onChange={(e) =>
                         updateNodeData(selectedNode.id, { threshold: parseFloat(e.target.value) })
                       }
@@ -729,7 +933,7 @@ export const FlowchartStudio: React.FC = () => {
                       value={selectedNode.data.crop_padding}
                       onChange={(e) =>
                         updateNodeData(selectedNode.id, {
-                          crop_padding: parseInt(e.target.value) || 0,
+                          crop_padding: Math.max(0, parseInt(e.target.value) || 0),
                         })
                       }
                       className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] tabular-nums focus:border-cyan-400 outline-none"
@@ -737,12 +941,26 @@ export const FlowchartStudio: React.FC = () => {
                   </div>
                 )}
 
-                {selectedNode.data.node_type === 'decision' && selectedNode.data.rule && (
+                {selectedNode.data.node_type === 'decision' && (
                   <div>
                     <label className="text-[#94A3B8] block mb-1">판정 룰 정책 (RULE POLICY)</label>
-                    <div className="bg-[#1A212E] p-2 rounded border border-[#2B3547] text-amber-400 font-bold">
-                      {selectedNode.data.rule}
-                    </div>
+                    <select value={selectedNode.data.rule || 'any_defect_is_ng'}
+                      onChange={(event) => updateNodeData(selectedNode.id, decisionRulePatch(selectedNode.data, event.target.value))}
+                      className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-amber-400 font-bold">
+                      <option value="any_defect_is_ng">결함 하나라도 NG</option>
+                      <option value="score_gt_threshold">최고 점수 임계치</option>
+                      <option value="max_flaws_allowed">허용 NG 검사 영역 수</option>
+                    </select>
+                    {selectedNode.data.rule === 'max_flaws_allowed' && (
+                      <div className="mt-2">
+                        <label className="text-[#94A3B8] block mb-1">허용 NG 검사 영역 수</label>
+                        <input type="number" min="0" value={selectedNode.data.params?.max_flaws_allowed ?? 0}
+                          onChange={(event) => updateNodeData(selectedNode.id, {
+                            params: { ...selectedNode.data.params, max_flaws_allowed: Math.max(0, Number(event.target.value) || 0) },
+                          })}
+                          className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -751,6 +969,12 @@ export const FlowchartStudio: React.FC = () => {
                   <div>TYPE: <span className="text-slate-300 font-bold">{selectedNode.data.node_type}</span></div>
                   <div>COORD: <span className="text-slate-300 tabular-nums">({selectedNode.position?.x ?? 0}, {selectedNode.position?.y ?? 0})</span></div>
                 </div>
+                {selectedNode.data.node_type !== 'input' && selectedNode.data.node_type !== 'decision' && (
+                  <button onClick={deleteSelectedNode} disabled={isRunning || isSaving}
+                    className="w-full px-3 py-2 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 disabled:opacity-50 flex justify-center items-center gap-2">
+                    <Trash2 className="w-3.5 h-3.5" /> 노드 삭제
+                  </button>
+                )}
               </div>
             ) : (
               <div className="text-[#94A3B8] text-xs font-mono italic text-center py-12">

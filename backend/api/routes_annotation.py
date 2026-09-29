@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Literal, Optional
 import cv2
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox
@@ -236,6 +237,8 @@ def save_annotations(req: AnnotationSaveRequest):
     try:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+        if mask_file_path is None:
+            (masks_dir / f"{req.image_id}.png").unlink(missing_ok=True)
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -385,6 +388,60 @@ def get_annotations(
     }
 
 
+@router.get("/{image_id}/mask")
+def get_annotation_mask(
+    image_id: str,
+    dir_path: Optional[str] = Query(None),
+    file_path: Optional[str] = Query(None),
+):
+    """Serve only this image's saved mask from its dataset-scoped annotation folder."""
+    _validate_image_id(image_id)
+    if file_path and Path(file_path).stem != image_id:
+        raise HTTPException(status_code=422, detail="image_id must match file_path filename")
+    target_dir = (_trusted_annotation_directory(dir_path) if dir_path else
+                  dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR)
+                  if file_path else ANNOTATIONS_DIR)
+    mask_path = target_dir / "masks" / f"{image_id}.png"
+    json_path = target_dir / f"{image_id}.json"
+    if not json_path.is_file() or not mask_path.is_file():
+        raise HTTPException(status_code=404, detail="Annotation mask not found")
+    try:
+        saved = json.loads(json_path.read_text(encoding="utf-8"))
+        if not saved.get("mask_file"):
+            raise HTTPException(status_code=404, detail="Annotation mask not found")
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_UNCHANGED)
+        if mask is None or mask.ndim != 2:
+            raise ValueError("Saved annotation mask is unreadable")
+        overlay = np.zeros((*mask.shape, 4), dtype=np.uint8)
+        category_colors: dict[int, str] = {}
+        for item in saved.get("annotations", []):
+            if isinstance(item, dict):
+                color = item.get("color")
+                if isinstance(color, str) and len(color) == 7 and color.startswith("#"):
+                    try:
+                        int(color[1:], 16)
+                        category_colors[int(item.get("category_id") or 1)] = color
+                    except (TypeError, ValueError):
+                        continue
+        for category_id in np.unique(mask):
+            if category_id == 0:
+                continue
+            color = category_colors.get(int(category_id), "#3b82f6")
+            pixels = mask == category_id
+            overlay[pixels, 0] = int(color[5:7], 16)
+            overlay[pixels, 1] = int(color[3:5], 16)
+            overlay[pixels, 2] = int(color[1:3], 16)
+            overlay[pixels, 3] = 255
+        ok, encoded = cv2.imencode(".png", overlay)
+        if not ok:
+            raise ValueError("Could not encode annotation mask")
+        return Response(content=encoded.tobytes(), media_type="image/png")
+    except HTTPException:
+        raise
+    except (OSError, UnicodeError, ValueError, cv2.error) as exc:
+        raise HTTPException(status_code=500, detail=f"Cannot read annotation mask: {exc}") from exc
+
+
 @router.delete("/{image_id}")
 def delete_annotations(image_id: str, dir_path: Optional[str] = Query(None)):
     """Deletes stored annotations for the requested image_id."""
@@ -440,6 +497,7 @@ class ShapeConverterRequest(BaseModel):
     target_type: Optional[Literal["bbox", "polygon", "mask", "rotated_bbox"]] = None
     data: Optional[Any] = None
     image_dimensions: Optional[Dict[str, int]] = None
+    mask_color: str = Field(default="#3b82f6", pattern=r"^#[0-9a-fA-F]{6}$")
 
     # Legacy fields
     image_path: Optional[str] = None
@@ -493,12 +551,42 @@ def _extract_rotated_bbox_from_data(data: Any) -> Tuple[List[float], List[float]
 
 
 def _extract_mask_from_data(data: Any) -> np.ndarray:
-    if isinstance(data, dict) and "mask" in data:
-        data = data["mask"]
+    if isinstance(data, dict):
+        data = data.get("mask_rle", data.get("mask", data))
+    if isinstance(data, str):
+        prefix, separator, encoded = data.partition(",")
+        if prefix != "data:image/png;base64" or not separator or len(encoded) > 32_000_000:
+            raise ValueError("Mask must be a PNG data URL under 24 MB")
+        decoded = base64.b64decode(encoded, validate=True)
+        image = cv2.imdecode(np.frombuffer(decoded, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        if image is None:
+            raise ValueError("Mask PNG could not be decoded")
+        if image.ndim == 3:
+            data = image[:, :, 3] if image.shape[2] == 4 else np.any(image > 0, axis=2)
+        else:
+            data = image
     m = np.asarray(data, dtype=np.uint8)
     if m.ndim > 2:
-        m = m[:, :, 0]
+        m = m[:, :, 3] if m.shape[2] == 4 else m[:, :, 0]
+    if m.ndim != 2:
+        raise ValueError("Mask must have two image dimensions")
     return (m > 0).astype(np.uint8) * 255
+
+
+def _encode_mask_result(mask: np.ndarray, color: str) -> Dict[str, Any]:
+    red, green, blue = (int(color[i:i + 2], 16) for i in (1, 3, 5))
+    bgra = np.empty((*mask.shape, 4), dtype=np.uint8)
+    bgra[:, :, 0] = blue
+    bgra[:, :, 1] = green
+    bgra[:, :, 2] = red
+    bgra[:, :, 3] = mask
+    encoded_ok, encoded_png = cv2.imencode(".png", bgra, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+    if not encoded_ok:
+        raise ValueError("Mask PNG encoding failed")
+    return {
+        "mask_rle": "data:image/png;base64," + base64.b64encode(encoded_png.tobytes()).decode("ascii"),
+        "shape": [int(mask.shape[0]), int(mask.shape[1])],
+    }
 
 
 @router.post("/auto-select")
@@ -596,7 +684,7 @@ def api_shape_converter(req: ShapeConverterRequest):
                     converted = {"polygon": poly}
             elif tgt == "mask":
                 m = bbox_to_mask(bbox, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "rotated_bbox":
                 rbox = bbox_to_rotated_bbox(bbox)
                 converted = {
@@ -613,7 +701,7 @@ def api_shape_converter(req: ShapeConverterRequest):
                 converted = {"bbox": bb}
             elif tgt == "mask":
                 m = polygon_to_mask(poly, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "rotated_bbox":
                 rbox = polygon_to_rotated_bbox(poly)
                 converted = {
@@ -624,7 +712,7 @@ def api_shape_converter(req: ShapeConverterRequest):
         elif src == "mask":
             m = _extract_mask_from_data(data)
             if tgt == "mask":
-                converted = {"mask": m.tolist(), "shape": list(m.shape)}
+                converted = _encode_mask_result(m, req.mask_color)
             elif tgt == "bbox":
                 bb = mask_to_bbox(m)
                 converted = {"bbox": bb}
@@ -656,7 +744,7 @@ def api_shape_converter(req: ShapeConverterRequest):
             elif tgt == "mask":
                 poly = rotated_bbox_to_polygon(center, size, angle)
                 m = polygon_to_mask(poly, (img_h, img_w))
-                converted = {"mask": m.tolist(), "shape": [img_h, img_w]}
+                converted = _encode_mask_result(m, req.mask_color)
 
         return {
             "status": "success",

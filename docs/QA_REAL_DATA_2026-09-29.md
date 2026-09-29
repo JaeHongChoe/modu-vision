@@ -1,5 +1,7 @@
 # Real-data functional QA · 2026-09-29
 
+This records the first isolated CPU smoke pass. The later full-dataset GPU training, editable flowchart, and native batch-inspection results are in [QA_WORKFLOW_FUNCTIONAL_2026-09-29.md](QA_WORKFLOW_FUNCTIONAL_2026-09-29.md).
+
 Source: `/Users/kai/Documents/test_imgage`. Scope: workflow and remote-compute behavior, not model quality approval.
 
 ## Desktop workflow

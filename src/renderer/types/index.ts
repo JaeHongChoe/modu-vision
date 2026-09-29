@@ -237,7 +237,7 @@ export interface FlowEdge {
   sourcePort?: string;
   targetPort?: string;
   label?: string;
-  isBranch?: 'pass' | 'fail' | 'default';
+  isBranch?: 'pass' | 'fail' | 'review' | 'default';
 }
 
 export interface FlowchartPipeline {
@@ -283,6 +283,7 @@ export interface FlowchartExecutionResult {
   preview_max_dim_px?: number;
   image_path?: string;
   image_id?: string;
+  routed_output_node_id?: string;
   error_message?: string;
 }
 

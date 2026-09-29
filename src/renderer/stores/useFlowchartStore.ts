@@ -50,6 +50,8 @@ interface FlowchartState {
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
   addNode: (node: FlowNode) => void;
+  replacePipeline: (pipeline: FlowchartPipeline) => void;
+  moveNode: (id: string, position: { x: number; y: number }) => void;
   setSelectedImage: (image: SelectedInspectionImage | null) => void;
   setImagePickerOpen: (open: boolean) => void;
   setInspectedCrop: (crop: FlowchartCrop | null) => void;
@@ -277,6 +279,38 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       pipelineDirty: true,
       executionResult: null,
       inspectedCrop: null,
+    });
+  },
+
+  replacePipeline: (pipeline) => {
+    if (!get().pipeline) return;
+    flowchartRunInputRevision += 1;
+    const selectedNodeId = get().selectedNodeId;
+    set({
+      pipeline,
+      pipelineDirty: true,
+      selectedNodeId: selectedNodeId && pipeline.nodes.some((node) => node.id === selectedNodeId) ? selectedNodeId : null,
+      executionResult: null,
+      inspectedCrop: null,
+      errorMessage: null,
+      saveMessage: null,
+    });
+  },
+
+  moveNode: (id, position) => {
+    const current = get().pipeline;
+    if (!current || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+    const nextNodes = current.nodes.map((node) => node.id === id
+      ? { ...node, position: { x: Math.max(0, position.x), y: Math.max(0, position.y) } }
+      : node);
+    if (nextNodes.every((node, index) => node === current.nodes[index])) return;
+    flowchartRunInputRevision += 1;
+    set({
+      pipeline: { ...current, nodes: nextNodes },
+      pipelineDirty: true,
+      executionResult: null,
+      inspectedCrop: null,
+      saveMessage: null,
     });
   },
 

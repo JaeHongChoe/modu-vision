@@ -310,6 +310,25 @@ class TestAnnotationRoutes:
         # Verify raster mask PNG was generated
         mask_file = annot_dir / "masks" / "test_img_001.png"
         assert mask_file.is_file()
+        mask_res = client.get("/api/annotations/test_img_001/mask", params={"dir_path": str(annot_dir)})
+        assert mask_res.status_code == 200
+        assert mask_res.headers["content-type"] == "image/png"
+        import cv2
+        import numpy as np
+        overlay = cv2.imdecode(np.frombuffer(mask_res.content, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        assert overlay.shape == (256, 256, 4)
+        assert overlay[200, 200, 3] == 0
+        assert overlay[20, 20, 3] > 0
+        assert overlay[20, 20, :3].max() > 1
+        assert client.get("/api/annotations/other_image/mask", params={"dir_path": str(annot_dir)}).status_code == 404
+        assert client.get("/api/annotations/%2E%2E/mask", params={"dir_path": str(annot_dir)}).status_code in (404, 422)
+
+        cleared = client.post("/api/annotations/save", json={**payload, "annotations": []})
+        assert cleared.status_code == 200
+        assert cleared.json()["mask_generated"] is False
+        assert client.get("/api/annotations/test_img_001", params={"dir_path": str(annot_dir)}).json()["mask_file"] is None
+        assert client.get("/api/annotations/test_img_001/mask", params={"dir_path": str(annot_dir)}).status_code == 404
+        assert not mask_file.exists()
 
         # Delete annotation
         del_res = client.delete(f"/api/annotations/test_img_001?dir_path={annot_dir}")

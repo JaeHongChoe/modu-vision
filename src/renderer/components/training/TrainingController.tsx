@@ -26,6 +26,7 @@ import { LedAnnunciator, LedState } from '../common/LedAnnunciator';
 import { OscilloscopeLossCurve } from './OscilloscopeLossCurve';
 import { HardwareTelemetryPanel } from './HardwareTelemetryPanel';
 import { RecipePresetSelector } from './RecipePresetSelector';
+import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -72,8 +73,10 @@ export const TrainingController: React.FC = () => {
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId);
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
+  const jobProfile = profiles.find((profile) => profile.id === jobComputeProfileId);
+  const jobGpuSelector = jobProfile?.gpu_selector?.trim();
   const displayedJobLabel = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
-    ? profiles.find((profile) => profile.id === jobComputeProfileId)?.name || jobComputeLabel
+    ? jobProfile?.name || jobComputeLabel
     : jobComputeLabel;
   const computeReady = isComputeLoaded && !isComputeLoading && !computeLoadError &&
     (!selectedProfileId || (Boolean(selectedProfile) && selectedProbe?.ready === true));
@@ -90,7 +93,7 @@ export const TrainingController: React.FC = () => {
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
     !isLoading && !isSplitting && !isRecoveringTraining && !importError && computeReady;
-  const requiresSourcePartitions = splitSupported === false || task === 'detection' || task === 'anomaly';
+  const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
     if (!canStart) return;
@@ -153,10 +156,14 @@ export const TrainingController: React.FC = () => {
             <div className="mt-3 border-t border-[#2B3547] pt-3">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span><span className="text-slate-400">현재 작업 위치:</span> <strong className="text-slate-100">{displayedJobLabel}</strong></span>
-                <span><span className="text-slate-400">장치:</span> {jobDeviceName || (jobComputeProfileId ? '서버 장치 확인 중' : hardware.gpu_name)}</span>
+                {jobComputeProfileId && jobGpuSelector && <span><span className="text-slate-400">프로필 GPU 선택자:</span> {jobGpuSelector}</span>}
+                <span><span className="text-slate-400">{jobComputeProfileId ? '작업 내부 장치:' : '장치:'}</span> {jobDeviceName || (jobComputeProfileId ? '서버 장치 확인 중' : hardware.gpu_name)}</span>
                 <span><span className="text-slate-400">단계:</span> <strong className={status === 'disconnected' ? 'text-amber-300' : 'text-blue-300'}>{phaseLabels[currentPhase] || currentPhase}</strong></span>
               </div>
               {jobComputeProfileId && <p className="mt-1 text-[11px] text-slate-500">서버 선택 변경은 새 작업에만 적용됩니다.</p>}
+              {jobGpuSelector && jobDeviceName?.startsWith('cuda:') && (
+                <p className="mt-1 text-[11px] text-slate-400">프로필 GPU 선택자는 서버 번호이고, {jobDeviceName}은 CUDA_VISIBLE_DEVICES 적용 후 작업 내부 번호입니다.</p>
+              )}
               {transferProgress !== null && (status === 'transferring' || currentPhase === 'transferring') && (
                 <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-300">
                   <span>전송</span><div className="h-1.5 flex-1 overflow-hidden rounded bg-[#2B3547]"><div className="h-full bg-blue-500" style={{ width: `${transferProgress}%` }} /></div>
@@ -338,7 +345,8 @@ export const TrainingController: React.FC = () => {
               <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-xs">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">원격 장치</div>
                 <div className="mt-3 font-semibold text-slate-100">{displayedJobLabel}</div>
-                <div className="mt-1 break-words font-mono text-blue-300">{jobDeviceName || '서버 장치 확인 중'}</div>
+                {jobGpuSelector && <div className="mt-1 break-words font-mono text-slate-300">프로필 GPU 선택자: {jobGpuSelector}</div>}
+                <div className="mt-1 break-words font-mono text-blue-300">작업 내부 장치: {jobDeviceName || '서버 장치 확인 중'}</div>
                 <div className="mt-3 text-slate-400">CPU 및 메모리 계측 값은 이 서버에서 제공되지 않습니다.</div>
               </div>
             ) : !jobId && selectedProfileId ? (

@@ -15,12 +15,28 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
-import type { FlowchartCrop } from '../../types';
+import type { FlowchartCrop, FlowchartPipeline, FlowNode } from '../../types';
 
 interface CropDetailModalProps {
   crop: FlowchartCrop | null;
   onClose: () => void;
 }
+
+const modelNodeForCrop = (pipeline: FlowchartPipeline | null, roiId: string): FlowNode | undefined => {
+  if (!pipeline) return undefined;
+  const modelNodes = pipeline.nodes.filter((node) =>
+    node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop');
+  const taggedNode = modelNodes.find((node) => roiId.startsWith(`${node.id}:`));
+  if (taggedNode) return taggedNode;
+
+  // The engine adds a node ID to ROI IDs only when multiple model leaves feed the decision.
+  const decisionIds = new Set(pipeline.nodes
+    .filter((node) => node.data.node_type === 'decision')
+    .map((node) => node.id));
+  const producerNodes = modelNodes.filter((node) => pipeline.edges.some((edge) =>
+    edge.source === node.id && decisionIds.has(edge.target)));
+  return producerNodes.length === 1 ? producerNodes[0] : undefined;
+};
 
 export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose }) => {
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
@@ -59,15 +75,16 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const areaPx = width * height;
   const isNg = crop.verdict === 'NG';
 
-  // Inspection Threshold
-  const inspectNode = pipeline?.nodes.find((n) => n.data.node_type === 'inspection');
-  const threshold = inspectNode?.data.threshold ?? 0.45;
+  // Read the threshold from the model that produced this ROI, including detector-only flows.
+  const inspectNode = modelNodeForCrop(pipeline, crop.roi_id);
+  const threshold = inspectNode?.data.threshold;
   const isSegmentation = inspectNode?.data.task === 'segmentation';
   const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
   const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
   const scorePercent = crop.defect_score * 100;
-  const thresholdPercent = threshold * 100;
-  const deltaScore = crop.defect_score - threshold;
+  const thresholdPercent = typeof threshold === 'number' && Number.isFinite(threshold)
+    ? threshold * 100 : null;
+  const deltaPercent = thresholdPercent === null ? null : scorePercent - thresholdPercent;
 
   return (
     <div className="fixed inset-0 z-50 bg-[#000000]/80 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
@@ -157,18 +174,20 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                     style={{ width: `${Math.min(100, Math.max(0, scorePercent))}%` }}
                   />
                   {/* Threshold Pin Marker */}
-                  <div
-                    className="absolute top-0 bottom-0 w-0.5 bg-[#F59E0B] z-10"
-                    style={{ left: `${thresholdPercent}%` }}
-                    title={`기준 임계값: ${thresholdPercent.toFixed(1)}%`}
-                  />
+                  {thresholdPercent !== null && (
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-[#F59E0B] z-10"
+                      style={{ left: `${thresholdPercent}%` }}
+                      title={`기준 임계값: ${thresholdPercent.toFixed(1)}%`}
+                    />
+                  )}
                 </div>
 
                 {/* Gauge Labels */}
                 <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
                   <span>0.0%</span>
                   <span className="text-[#F59E0B]">
-                    임계 기준: {thresholdPercent.toFixed(1)}%
+                    임계 기준: {thresholdPercent === null ? '확인 불가' : `${thresholdPercent.toFixed(1)}%`}
                   </span>
                   <span>100.0%</span>
                 </div>
@@ -176,8 +195,8 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 {/* Delta Calculation */}
                 <div className="mt-2 pt-2 border-t border-[#2B3547] flex justify-between text-[10px] font-mono">
                   <span className="text-slate-400">임계값 초과 편차 (Δ):</span>
-                  <span className={`font-bold tabular-nums ${deltaScore > 0 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
-                    {deltaScore > 0 ? `+${(deltaScore * 100).toFixed(1)}%` : `${(deltaScore * 100).toFixed(1)}%`}
+                  <span className={`font-bold tabular-nums ${deltaPercent !== null && deltaPercent > 0 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                    {deltaPercent === null ? '—' : deltaPercent > 0 ? `+${deltaPercent.toFixed(1)}%` : `${deltaPercent.toFixed(1)}%`}
                   </span>
                 </div>
               </div>

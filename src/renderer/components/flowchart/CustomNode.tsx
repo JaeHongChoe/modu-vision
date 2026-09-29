@@ -34,7 +34,9 @@ interface CustomNodeProps {
   latencyMs?: number;
   isDetectorOnly?: boolean;
   onSelect: () => void;
-  onPortHover?: (port: NodePort, nodeId: string) => void;
+  onConnectStart?: () => void;
+  onConnectFinish?: () => void;
+  isConnectionSource?: boolean;
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({
@@ -48,6 +50,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   latencyMs,
   isDetectorOnly = false,
   onSelect,
+  onConnectStart,
+  onConnectFinish,
+  isConnectionSource = false,
 }) => {
   const nodeType = node.data.node_type;
 
@@ -138,7 +143,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           { id: 'out_verdict', name: 'Verdict Out', type: 'data', direction: 'out', label: 'VERDICT', pinNumber: 1 },
         ];
       case 'output':
-        return [{ id: 'out_result', name: 'Local Result', type: 'data', direction: 'out', label: 'LOCAL VIEW', pinNumber: 1 }];
+        return [];
       default:
         return [{ id: 'out_def', name: 'Output', type: 'data', direction: 'out', label: 'OUT 1', pinNumber: 1 }];
     }
@@ -166,7 +171,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         width: FLOW_NODE_WIDTH,
       }}
       className={`relative select-none rounded-[4px] border transition-colors cursor-pointer bg-[#1A212E] ${
-        isSelected
+        isConnectionSource
+          ? 'border-cyan-300 ring-2 ring-cyan-400 z-20'
+          : isSelected
           ? 'border-cyan-400 ring-1 ring-cyan-400 z-20'
           : isFlaggedNg
           ? 'border-rose-500 hover:border-rose-400 z-10'
@@ -257,15 +264,19 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         <div className="space-y-1.5 flex-1 pr-2">
           {inputs.map((port) => (
             <div key={port.id} className="flex items-center space-x-1.5">
-              <div
+              <button
+                type="button"
+                aria-label={`Connect to ${node.data.label}`}
+                title="이 노드의 입력에 연결"
+                onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
                 style={{ borderColor: getPortColor(port.type) }}
-                className="w-2.5 h-2.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0"
+                className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
                   style={{ backgroundColor: getPortColor(port.type) }}
                   className="w-1 h-1 rounded-full"
                 />
-              </div>
+              </button>
               <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
             </div>
           ))}
@@ -276,15 +287,19 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           {outputs.map((port) => (
             <div key={port.id} className="flex items-center justify-end space-x-1.5">
               <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
-              <div
+              <button
+                type="button"
+                aria-label={`Start connection from ${node.data.label}`}
+                title="여기서 연결 시작"
+                onClick={(event) => { event.stopPropagation(); onConnectStart?.(); }}
                 style={{ borderColor: getPortColor(port.type) }}
-                className="w-2.5 h-2.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0"
+                className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
                   style={{ backgroundColor: getPortColor(port.type) }}
                   className="w-1 h-1 rounded-full"
                 />
-              </div>
+              </button>
             </div>
           ))}
         </div>
