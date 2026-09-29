@@ -19,6 +19,7 @@ let flowchartGeneration = 0;
 let flowchartSaveGeneration = 0;
 let flowchartRunInputRevision = 0;
 let flowchartRunSequence = 0;
+const HISTORY_LIMIT = 50;
 
 interface FlowchartState {
   pipeline: FlowchartPipeline | null;
@@ -34,6 +35,12 @@ interface FlowchartState {
   errorMessage: string | null;
   modelContextInvalidated: boolean;
   contextRevision: number;
+  cleanPipeline: FlowchartPipeline | null;
+  historyPast: FlowchartPipeline[];
+  historyFuture: FlowchartPipeline[];
+  historyGroupStart: FlowchartPipeline | null;
+  canUndo: boolean;
+  canRedo: boolean;
 
   // Real Image Selection
   selectedImage: SelectedInspectionImage | null;
@@ -47,7 +54,7 @@ interface FlowchartState {
   loadPipelineVersion: (versionId: string, sourceDatasetPath: string) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
-  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask | 'mixed', sourceDatasetPath?: string) => Promise<void>;
+  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask | 'patch_classification' | 'mixed', sourceDatasetPath?: string) => Promise<void>;
   runPipeline: (customImagePath?: string, customImageId?: string,
     source?: { savedVersionId: string | null }) => Promise<boolean>;
   selectNode: (id: string | null) => void;
@@ -55,12 +62,22 @@ interface FlowchartState {
   addNode: (node: FlowNode) => void;
   replacePipeline: (pipeline: FlowchartPipeline) => void;
   moveNode: (id: string, position: { x: number; y: number }) => void;
+  beginHistoryGroup: () => void;
+  endHistoryGroup: () => void;
+  undo: () => void;
+  redo: () => void;
   setSelectedImage: (image: SelectedInspectionImage | null) => void;
   setImagePickerOpen: (open: boolean) => void;
   setInspectedCrop: (crop: FlowchartCrop | null) => void;
   clearError: () => void;
   resetExecution: () => void;
   invalidateForDataChange: () => void;
+}
+
+function editedHistory(state: FlowchartState): Pick<FlowchartState, 'historyPast' | 'historyFuture' | 'canUndo' | 'canRedo'> {
+  const historyPast = state.historyGroupStart || !state.pipeline
+    ? state.historyPast : [...state.historyPast, state.pipeline].slice(-HISTORY_LIMIT);
+  return { historyPast, historyFuture: [], canUndo: historyPast.length > 0, canRedo: false };
 }
 
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
@@ -77,6 +94,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   errorMessage: null,
   modelContextInvalidated: false,
   contextRevision: 0,
+  cleanPipeline: null,
+  historyPast: [],
+  historyFuture: [],
+  historyGroupStart: null,
+  canUndo: false,
+  canRedo: false,
 
   selectedImage: null,
   isImagePickerOpen: false,
@@ -101,6 +124,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return null;
       set({
         pipeline: data,
+        cleanPipeline: data,
+        historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false,
         selectedNodeId: null,
         executionResult: null,
@@ -124,7 +149,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return null;
       flowchartRunInputRevision += 1;
       set({
-        pipeline: data, pipelineDirty: false, selectedNodeId: null,
+        pipeline: data, cleanPipeline: data,
+        historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
+        pipelineDirty: false, selectedNodeId: null,
         executionResult: null, inspectedCrop: null, isLoading: false,
       });
       return data;
@@ -145,6 +172,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return;
       set({
         pipeline,
+        cleanPipeline: jobId ? null : pipeline,
+        historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: Boolean(jobId),
         selectedNodeId: inspectionTask === 'detection' ? 'node_crop' : 'node_inspect',
         executionResult: null,
@@ -165,6 +194,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return;
       set({
         pipeline,
+        cleanPipeline: pipeline,
+        historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false,
         selectedNodeId: 'node_crop',
         executionResult: null,
@@ -189,6 +220,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
       const currentVersionSaved = get().pipeline === target;
       set({
+        cleanPipeline: currentVersionSaved ? target : get().cleanPipeline,
         pipelineDirty: currentVersionSaved ? false : get().pipelineDirty,
         saveMessage: currentVersionSaved
           ? '파이프라인이 저장되었습니다.'
@@ -279,8 +311,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   selectNode: (id) => set({ selectedNodeId: id }),
 
   updateNodeData: (id, patch) => {
-    const current = get().pipeline;
-    if (!current) return;
+    const state = get();
+    const current = state.pipeline;
+    if (!current || !current.nodes.some((node) => node.id === id)) return;
     const nextNodes = current.nodes.map((node) => {
       if (node.id === id) {
         return {
@@ -295,6 +328,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     });
     flowchartRunInputRevision += 1;
     set({
+      ...editedHistory(state),
       pipeline: {
         ...current,
         nodes: nextNodes,
@@ -306,10 +340,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   addNode: (newNode) => {
-    const current = get().pipeline;
+    const state = get();
+    const current = state.pipeline;
     if (!current) return;
     flowchartRunInputRevision += 1;
     set({
+      ...editedHistory(state),
       pipeline: {
         ...current,
         nodes: [...current.nodes, newNode],
@@ -321,10 +357,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   replacePipeline: (pipeline) => {
-    if (!get().pipeline) return;
+    const state = get();
+    if (!state.pipeline || state.pipeline === pipeline) return;
     flowchartRunInputRevision += 1;
-    const selectedNodeId = get().selectedNodeId;
+    const selectedNodeId = state.selectedNodeId;
     set({
+      ...editedHistory(state),
       pipeline,
       pipelineDirty: true,
       selectedNodeId: selectedNodeId && pipeline.nodes.some((node) => node.id === selectedNodeId) ? selectedNodeId : null,
@@ -336,19 +374,70 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   moveNode: (id, position) => {
-    const current = get().pipeline;
+    const state = get();
+    const current = state.pipeline;
     if (!current || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+    const clamped = { x: Math.max(0, position.x), y: Math.max(0, position.y) };
+    if (!current.nodes.some((node) => node.id === id &&
+      (node.position.x !== clamped.x || node.position.y !== clamped.y))) return;
     const nextNodes = current.nodes.map((node) => node.id === id
-      ? { ...node, position: { x: Math.max(0, position.x), y: Math.max(0, position.y) } }
+      ? { ...node, position: clamped }
       : node);
-    if (nextNodes.every((node, index) => node === current.nodes[index])) return;
     flowchartRunInputRevision += 1;
     set({
+      ...editedHistory(state),
       pipeline: { ...current, nodes: nextNodes },
       pipelineDirty: true,
       executionResult: null,
       inspectedCrop: null,
       saveMessage: null,
+    });
+  },
+
+  beginHistoryGroup: () => {
+    const state = get();
+    if (state.pipeline && !state.historyGroupStart) set({ historyGroupStart: state.pipeline });
+  },
+  endHistoryGroup: () => {
+    const state = get();
+    const start = state.historyGroupStart;
+    if (!start) return;
+    if (state.pipeline === start) { set({ historyGroupStart: null }); return; }
+    const historyPast = [...state.historyPast, start].slice(-HISTORY_LIMIT);
+    set({ historyPast, historyGroupStart: null, canUndo: true });
+  },
+  undo: () => {
+    get().endHistoryGroup();
+    const state = get();
+    if (!state.pipeline || !state.historyPast.length) return;
+    const previous = state.historyPast[state.historyPast.length - 1];
+    const historyPast = state.historyPast.slice(0, -1);
+    const historyFuture = [...state.historyFuture, state.pipeline].slice(-HISTORY_LIMIT);
+    flowchartRunInputRevision += 1;
+    set({
+      pipeline: previous, pipelineDirty: previous !== state.cleanPipeline,
+      historyPast, historyFuture, canUndo: historyPast.length > 0, canRedo: true,
+      selectedNodeId: state.selectedNodeId && previous.nodes.some((node) => node.id === state.selectedNodeId)
+        ? state.selectedNodeId : null,
+      executionResult: null, lastRunSource: null, inspectedCrop: null,
+      errorMessage: null, saveMessage: null,
+    });
+  },
+  redo: () => {
+    get().endHistoryGroup();
+    const state = get();
+    if (!state.pipeline || !state.historyFuture.length) return;
+    const next = state.historyFuture[state.historyFuture.length - 1];
+    const historyFuture = state.historyFuture.slice(0, -1);
+    const historyPast = [...state.historyPast, state.pipeline].slice(-HISTORY_LIMIT);
+    flowchartRunInputRevision += 1;
+    set({
+      pipeline: next, pipelineDirty: next !== state.cleanPipeline,
+      historyPast, historyFuture, canUndo: true, canRedo: historyFuture.length > 0,
+      selectedNodeId: state.selectedNodeId && next.nodes.some((node) => node.id === state.selectedNodeId)
+        ? state.selectedNodeId : null,
+      executionResult: null, lastRunSource: null, inspectedCrop: null,
+      errorMessage: null, saveMessage: null,
     });
   },
 
@@ -371,6 +460,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     flowchartRunSequence += 1;
     set({
       pipeline: null,
+      cleanPipeline: null,
+      historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
       pipelineDirty: false,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,

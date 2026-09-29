@@ -204,8 +204,10 @@ export const IntermediateCropDrawer: React.FC = () => {
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${isStepNg || step.status === 'error' ? 'bg-[#EF4444]' : isStepPassed ? 'bg-[#10B981]' : 'bg-amber-400'}`} />
-                        <span>{step.status}</span>
+                        <span>{step.status}{step.branch_verdict ? ` · ${step.branch_verdict}` : ''}</span>
                       </span>
+                      {step.input_count !== undefined && step.output_count !== undefined &&
+                        <span className="ml-1 text-[9px] text-slate-400 tabular-nums">{step.input_count}→{step.output_count}</span>}
                     </td>
                     <td className="py-1 px-2 text-right font-bold text-slate-100 tabular-nums">
                       {stepLat.toFixed(1)} <span className="text-slate-400 text-[9px]">ms</span>
@@ -380,6 +382,11 @@ export const IntermediateCropDrawer: React.FC = () => {
                     {crop.defect_area_px !== undefined && (
                       <div className="text-[10px] text-slate-400 mt-0.5">
                         임계값 초과 픽셀: {crop.defect_area_px} px
+                      </div>
+                    )}
+                    {crop.blob_count !== undefined && (
+                      <div className="text-[10px] text-teal-300 mt-0.5 tabular-nums">
+                        Blob {crop.blob_count}개 · 최대 면적 {crop.largest_blob_area_px ?? 0} px²
                       </div>
                     )}
 

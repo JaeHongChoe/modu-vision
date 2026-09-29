@@ -4,6 +4,7 @@
  */
 
 export type VisionTask = 'classification' | 'detection' | 'segmentation' | 'anomaly';
+export type FlowModelTask = VisionTask | 'patch_classification';
 export type TaskType = VisionTask;
 export type TrainingPreset = 'fast' | 'precision';
 export type Language = 'ko' | 'en';
@@ -210,7 +211,7 @@ export interface NodePort {
 
 export interface FlowNodeData {
   label: string;
-  node_type: 'input' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'decision' | 'output';
+  node_type: 'input' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
@@ -251,6 +252,7 @@ export interface FlowchartPipeline {
 
 export interface FlowchartCrop {
   roi_id: string;
+  source_node_id?: string;
   label: string;
   bbox: [number, number, number, number] | number[];
   defect_score: number;
@@ -259,6 +261,8 @@ export interface FlowchartCrop {
   flaw_type: string;
   confidence?: number;
   defect_area_px?: number;
+  blob_count?: number;
+  largest_blob_area_px?: number;
 }
 
 export interface FlowchartExecutionStep {

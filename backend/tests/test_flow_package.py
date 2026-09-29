@@ -2,6 +2,7 @@
 
 import json
 import importlib
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -80,6 +81,47 @@ def test_flow_package_contains_saved_graph_and_checksum_bound_model(tmp_path: Pa
     rejected = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True, text=True)
     assert rejected.returncode != 0
     assert "checksum" in rejected.stderr.lower()
+
+
+def test_approved_release_rejects_checkpoint_hash_mismatch_before_package_write(tmp_path: Path):
+    checkpoint = _checkpoint(tmp_path)
+    with pytest.raises(ValueError, match="Approved checkpoint SHA-256"):
+        build_flow_package(
+            pipeline=get_single_detection_flowchart(job_id="job_detector"),
+            checkpoints={"job_detector": checkpoint},
+            output_base_dir=tmp_path / "exports",
+            package_name="invalid_release",
+            approved_revisions={"job_detector": {
+                "revision_id": "a" * 32, "job_id": "job_detector", "task": "detection",
+                "checkpoint_sha256": "0" * 64,
+            }},
+        )
+    assert not (tmp_path / "exports" / "invalid_release").exists()
+
+
+def test_approved_release_records_revision_and_pins_whole_manifest(tmp_path: Path):
+    checkpoint = _checkpoint(tmp_path)
+    model_sha = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    result = build_flow_package(
+        pipeline=get_single_detection_flowchart(job_id="job_detector"),
+        checkpoints={"job_detector": checkpoint},
+        output_base_dir=tmp_path / "exports",
+        package_name="approved_release",
+        approved_revisions={"job_detector": {
+            "revision_id": "a" * 32, "job_id": "job_detector", "task": "detection",
+            "checkpoint_sha256": model_sha,
+        }},
+    )
+    package = Path(result["package_path"])
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    revisions = [{"revision_id": "a" * 32, "job_id": "job_detector", "task": "detection",
+                  "checkpoint_sha256": model_sha}]
+    assert manifest["release"] == {"approval_revisions": revisions}
+    assert result["release_policy"] == {
+        "schema_version": 1,
+        "manifest_sha256": hashlib.sha256((package / "manifest.json").read_bytes()).hexdigest(),
+        "approval_revisions": revisions,
+    }
 
 
 @pytest.mark.parametrize("name", ["../outside", "nested/name", "bad\\name", "..", ""])
@@ -219,6 +261,35 @@ def test_parity_comparison_ignores_latency_but_catches_changed_roi_verdict():
     mismatch = compare(reference, same)
     assert mismatch["status"] == "mismatch"
     assert any("crops" in field for field in mismatch["mismatched_fields"])
+
+
+def test_parity_comparison_checks_blob_and_branch_provenance():
+    from backend.engine.flow_package_runtime import compare_flow_results
+
+    reference = {
+        "final_verdict": "NG", "roi_count": 1, "defective_roi_count": 1,
+        "execution_steps": [{
+            "node_id": "blob", "status": "flagged_ng", "input_count": 1,
+            "output_count": 1, "branch_verdict": "NG",
+            "selected_edge_ids": ["blob-aggregate"], "latency_ms": 1.0,
+        }],
+        "crops": [{
+            "roi_id": "seg:fixed_roi", "source_node_id": "seg",
+            "label": "defect", "bbox": [0, 0, 32, 32],
+            "verdict": "NG", "defect_score": 0.8, "defect_area_px": 12,
+            "blob_count": 2, "largest_blob_area_px": 8,
+        }],
+    }
+    for path, replacement, expected in (
+        (("execution_steps", 0, "branch_verdict"), "OK", "execution_steps[0].branch_verdict"),
+        (("execution_steps", 0, "selected_edge_ids"), [], "execution_steps[0].selected_edge_ids"),
+        (("crops", 0, "source_node_id"), "other", "crops[0].source_node_id"),
+        (("crops", 0, "blob_count"), 1, "crops[0].blob_count"),
+        (("crops", 0, "largest_blob_area_px"), 7, "crops[0].largest_blob_area_px"),
+    ):
+        changed = json.loads(json.dumps(reference))
+        changed[path[0]][path[1]][path[2]] = replacement
+        assert expected in compare_flow_results(reference, changed)["mismatched_fields"]
 
 
 def test_flow_export_can_verify_real_image_parity_before_claiming_pass(tmp_path: Path, monkeypatch):

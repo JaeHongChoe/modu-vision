@@ -293,24 +293,35 @@ class SSHTransport:
             checks = json.loads(output_lines[-1] if output_lines else "")
             if not isinstance(checks, dict):
                 raise ValueError("probe output must be a JSON object")
+            if checks.get("protocol_version") != 1:
+                return {
+                    "ready": False,
+                    "checks": {"ssh": True, "runtime": True, **checks},
+                    "message": "Incompatible remote worker protocol",
+                }
             dependencies = checks["runtime_dependencies"]
             required = (
                 "torch", "torchvision", "cv2", "numpy", "PIL", "sklearn",
                 "psutil", "fastapi", "pydantic",
             )
             pretrained_weights = checks.get("pretrained_weights") or {}
+            gpu_ready = profile.gpu_selector is None or checks["device_type"] == "cuda"
             ready = bool(
                 checks["remote_root_exists"]
                 and checks["free_bytes"] >= 1_000_000_000
                 and all(dependencies.get(module, False) for module in required)
                 and all(pretrained_weights.get(name, {}).get("ok") for name in _REQUIRED_WEIGHTS)
+                and gpu_ready
             )
             return {
                 "ready": ready,
                 "device_name": checks["device_name"],
                 "device_type": checks["device_type"],
                 "checks": {"ssh": True, "runtime": True, **checks},
-                "message": "Ready" if ready else "Runtime dependencies, pretrained weights, workspace, or free space check failed",
+                "message": "Ready" if ready else (
+                    "Selected GPU is unavailable to the runtime" if not gpu_ready else
+                    "Runtime dependencies, pretrained weights, workspace, or free space check failed"
+                ),
             }
         except (ValueError, KeyError, TypeError) as exc:
             return {"ready": False, "checks": {"ssh": True, "runtime": False}, "message": f"Invalid probe response: {exc}"}

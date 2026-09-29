@@ -328,6 +328,72 @@ def test_probe_blocks_when_pretrained_checkpoint_is_missing(monkeypatch):
     assert SSHTransport().probe(profile)["ready"] is False
 
 
+def test_probe_rejects_incompatible_worker_protocol(monkeypatch):
+    profile = ComputeProfile(**profile_data())
+    checks = {
+        "protocol_version": 2,
+        "runtime_dependencies": {
+            name: True for name in (
+                "torch", "torchvision", "cv2", "numpy", "PIL", "sklearn",
+                "psutil", "fastapi", "pydantic",
+            )
+        },
+        "pretrained_weights": {
+            name: {"ok": True} for name in (
+                "resnet18", "convnext_tiny", "efficientnet_b0",
+                "fasterrcnn_mobilenet_v3_large_fpn", "fasterrcnn_resnet50_fpn_v2",
+                "deeplabv3_resnet50", "deeplabv3_mobilenet_v3_large",
+            )
+        },
+        "remote_root_exists": True,
+        "free_bytes": 2_000_000_000,
+        "device_type": "cpu",
+        "device_name": "CPU",
+    }
+
+    def fake_exec(self, _profile, _argv, *, timeout=30):
+        return subprocess.CompletedProcess([], 0, stdout=json.dumps(checks), stderr="")
+
+    monkeypatch.setattr(SSHTransport, "exec", fake_exec)
+    result = SSHTransport().probe(profile)
+
+    assert result["ready"] is False
+    assert "protocol" in result["message"].lower()
+
+
+def test_probe_rejects_missing_selected_gpu(monkeypatch):
+    profile = ComputeProfile(**profile_data(gpu_selector="2"))
+    checks = {
+        "protocol_version": 1,
+        "runtime_dependencies": {
+            name: True for name in (
+                "torch", "torchvision", "cv2", "numpy", "PIL", "sklearn",
+                "psutil", "fastapi", "pydantic",
+            )
+        },
+        "pretrained_weights": {
+            name: {"ok": True} for name in (
+                "resnet18", "convnext_tiny", "efficientnet_b0",
+                "fasterrcnn_mobilenet_v3_large_fpn", "fasterrcnn_resnet50_fpn_v2",
+                "deeplabv3_resnet50", "deeplabv3_mobilenet_v3_large",
+            )
+        },
+        "remote_root_exists": True,
+        "free_bytes": 2_000_000_000,
+        "device_type": "cpu",
+        "device_name": "CPU",
+    }
+
+    def fake_exec(self, _profile, _argv, *, timeout=30):
+        return subprocess.CompletedProcess([], 0, stdout=json.dumps(checks), stderr="")
+
+    monkeypatch.setattr(SSHTransport, "exec", fake_exec)
+    result = SSHTransport().probe(profile)
+
+    assert result["ready"] is False
+    assert "gpu" in result["message"].lower()
+
+
 def test_probe_parses_last_json_line_after_container_banner(monkeypatch):
     profile = ComputeProfile(**profile_data(runtime_kind="docker", runtime_value="worker:latest"))
     checks = {

@@ -46,7 +46,7 @@ from backend.engine.zero_escape_analyzer import (
 @pytest.fixture
 def client(tmp_path):
     app = create_app(project_dir=str(tmp_path))
-    return TestClient(app)
+    return TestClient(app, headers={"X-Vision-Token": app.state.api_token})
 
 
 # ============================================================================

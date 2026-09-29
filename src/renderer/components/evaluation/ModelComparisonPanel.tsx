@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, GitCompareArrows, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
-import type { Language, VisionTask } from '../../types';
+import type { FlowModelTask, Language } from '../../types';
 import {
   api,
   type ModelComparisonModel,
@@ -12,8 +12,9 @@ import {
 interface Props {
   projectDir: string | null;
   sourceFolder: string;
-  task: VisionTask;
+  task: FlowModelTask;
   preferredJobId?: string | null;
+  preferredParentJobId?: string | null;
   language: Language;
 }
 
@@ -38,7 +39,7 @@ function Verdict({ outcome }: { outcome: ModelComparisonOutcome }) {
   );
 }
 
-export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, language }) => {
+export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, language }) => {
   const isKo = language === 'ko';
   const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}`;
   const currentScope = useRef(scopeKey);
@@ -75,17 +76,19 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (!active || currentScope.current !== scopeKey) return;
       setModels(catalog.models);
       setRecords(history.comparisons);
-      const initial = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id
-        || catalog.models[0]?.job_id || '';
+      const candidate = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id || '';
+      const parent = catalog.models.find((model) => model.job_id === preferredParentJobId)?.job_id || '';
+      const initial = parent && candidate && parent !== candidate ? parent : candidate || catalog.models[0]?.job_id || '';
       setIncumbentId(initial);
-      setCandidateId(catalog.models.find((model) => model.job_id !== initial)?.job_id || '');
+      setCandidateId(candidate && candidate !== initial ? candidate
+        : catalog.models.find((model) => model.job_id !== initial)?.job_id || '');
     }).catch((cause) => {
       if (active && currentScope.current === scopeKey) setError(errorMessage(cause));
     }).finally(() => {
       if (active && currentScope.current === scopeKey) setIsLoading(false);
     });
     return () => { active = false; };
-  }, [scopeKey, projectDir, sourceFolder, task]);
+  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId]);
 
   const openReport = async (comparisonId: string) => {
     if (!comparisonId || !sourceFolder) return;
@@ -206,6 +209,11 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             {task === 'segmentation' && (
               <span className="block text-amber-200/85">
                 {isKo ? '원본 해상도 타일 검사이므로 고해상도 이미지는 시간이 걸릴 수 있습니다.' : 'Original-resolution tiled inspection may take time on large images.'}
+              </span>
+            )}
+            {task === 'patch_classification' && (
+              <span className="block text-amber-200/85">
+                patches.json의 test_image_verdicts에 각 test 원본의 별도 검토된 OK/NG 정답이 있어야 비교할 수 있습니다.
               </span>
             )}
           </p>

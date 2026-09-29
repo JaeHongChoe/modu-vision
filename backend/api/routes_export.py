@@ -30,6 +30,7 @@ from backend.engine.exporter import (
 )
 from backend.utils.error_catalog import format_error_response
 from backend.api.routes_project import get_current_project
+from backend.api.routes_model_deployments import verified_release_revision
 from backend.api.routes_evaluation import _resolve_job_artifacts
 from backend.api.routes_flowchart import _recipe_file, _version_dir
 from backend.engine.checkpoint_paths import is_job_id
@@ -51,12 +52,13 @@ class ExportFlowRequest(BaseModel):
     version_id: Optional[str] = None
     verification_image_path: Optional[str] = None
     verification_image_id: Optional[str] = None
+    approval_revision_ids: Optional[Dict[str, str]] = None
 
 
 @router.post("/flow")
 def export_saved_flow(req: ExportFlowRequest, request: Request):
     """Export only a saved, source-matched graph and all its verified checkpoints."""
-    if req.recipe_task not in ("detection", "anomaly", "segmentation", "classification", "mixed"):
+    if req.recipe_task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
         raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
     source = Path(req.source_dataset_path).expanduser().resolve()
     if not source.is_dir():
@@ -94,13 +96,17 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         raise HTTPException(status_code=409, detail=f"Saved flow is invalid: {exc}") from exc
 
     checkpoints: Dict[str, Path] = {}
+    job_tasks: Dict[str, str] = {}
     for node in pipeline.nodes:
         if node.data.node_type not in ("detection_crop", "inspection"):
             continue
         job_id = node.data.model_job_id
         task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if not is_job_id(job_id) or task not in ("detection", "anomaly", "segmentation", "classification"):
+        if not is_job_id(job_id) or task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification"):
             raise HTTPException(status_code=409, detail=f"Flow model is missing or invalid at {node.id}")
+        if job_id in job_tasks and job_tasks[job_id] != task:
+            raise HTTPException(status_code=409, detail=f"Flow model {job_id} has conflicting tasks")
+        job_tasks[job_id] = task
         if job_id in checkpoints:
             continue
         try:
@@ -120,11 +126,25 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
                 detail=f"Completed {task} model {job_id} does not match the selected dataset or saved flow: {exc}",
             ) from exc
         checkpoints[job_id] = checkpoint
+    approved_revisions = None
+    if req.approval_revision_ids is not None:
+        if set(req.approval_revision_ids) != set(checkpoints):
+            raise HTTPException(status_code=409, detail="Every flow model needs one active approval revision")
+        approved_revisions = {}
+        for job_id, checkpoint in checkpoints.items():
+            revision = verified_release_revision(
+                project, req.approval_revision_ids[job_id], source=source,
+                task=job_tasks[job_id], job_id=job_id, checkpoint=checkpoint,
+            )
+            if revision is None:
+                raise HTTPException(status_code=409, detail=f"Flow model {job_id} has no matching active approval")
+            approved_revisions[job_id] = revision
     try:
         result = build_flow_package(
             pipeline=pipeline, checkpoints=checkpoints,
             output_base_dir=project_dir / "exports" / "flows",
             package_name=req.package_name,
+            approved_revisions=approved_revisions,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

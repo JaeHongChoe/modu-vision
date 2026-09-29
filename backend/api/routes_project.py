@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from backend.engine.checkpoint_paths import set_active_project_models_dir
 from backend.engine.annotation_storage import migrate_legacy_dataset_overlay
+from backend.engine.project_labelsets import activate_labelset, create_labelset, labelset_root, load_labelsets
+from backend.engine.project_archive import ArchiveError, create_archive, restore_archive
 
 logger = logging.getLogger("vision_ai_studio.routes_project")
 router = APIRouter(prefix="/api/project", tags=["project"])
@@ -85,7 +87,8 @@ def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, An
     _write_json(_project_root(request) / _ACTIVE_FILE_NAME, {"project_dir": project["project_dir"]})
     request.app.state.current_project = project
     try:
-        migrate_legacy_dataset_overlay(project)
+        if project.get("active_labelset_id", "default") == "default":
+            migrate_legacy_dataset_overlay(project)
     except (OSError, ValueError) as exc:
         logger.warning("Could not copy legacy annotations into project %s: %s", project["id"], exc)
     try:
@@ -110,12 +113,14 @@ def _load_project(path: Path) -> Dict[str, Any]:
             raise ValueError("project.json must contain an object")
         # A workspace can be moved; its managed folders move with project.json.
         data = dict(saved)
+        active_set = load_labelsets(path)["active_id"]
         data.update({
             "project_dir": str(path),
             "dataset_dir": str(path / "dataset"),
             "models_dir": str(path / "models"),
             "reports_dir": str(path / "reports"),
-            "annotations_dir": str(path / "annotations"),
+            "annotations_dir": str(labelset_root(path, active_set)),
+            "active_labelset_id": active_set,
         })
         data.setdefault("source_dataset_dir", None)
         project = ProjectConfigResponse.model_validate(data).model_dump()
@@ -143,6 +148,19 @@ class ProjectOpenRequest(BaseModel):
     project_dir: str = Field(..., min_length=1)
 
 
+class LabelSetCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+
+
+class ProjectBackupRequest(BaseModel):
+    destination_dir: str = Field(..., min_length=1)
+
+
+class ProjectRestoreRequest(BaseModel):
+    archive_path: str = Field(..., min_length=1)
+    target_dir: str = Field(..., min_length=1)
+
+
 class ProjectUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     name: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -162,6 +180,7 @@ class ProjectConfigResponse(BaseModel):
     models_dir: str
     reports_dir: str
     annotations_dir: str
+    active_labelset_id: str = "default"
     description: str = ""
     active_preset: Literal["fast", "precision"] = "fast"
     source_dataset_dir: Optional[str] = None
@@ -195,6 +214,7 @@ def create_project(req: ProjectCreateRequest, request: Request):
         annotations_dir=str(path / "annotations"), description=req.description,
         active_preset=req.active_preset, created_at=now, updated_at=now,
     ).model_dump()
+    load_labelsets(path)
     _write_json(manifest, project)
     return _activate_project(request, project)
 
@@ -247,3 +267,51 @@ def update_project(req: ProjectUpdateRequest, request: Request):
 @router.get("/list")
 def list_projects(request: Request):
     return {"projects": _load_history(request)}
+
+
+@router.get("/labelsets")
+def list_labelsets(request: Request):
+    project = get_current_project(request)
+    try:
+        return load_labelsets(Path(project["project_dir"]))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/labelsets")
+def add_labelset(req: LabelSetCreateRequest, request: Request):
+    project = get_current_project(request)
+    try:
+        return create_labelset(Path(project["project_dir"]), req.name)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.put("/labelsets/{set_id}/activate", response_model=ProjectConfigResponse)
+def select_labelset(set_id: str, request: Request):
+    project = get_current_project(request)
+    try:
+        activate_labelset(Path(project["project_dir"]), set_id)
+        return _activate_project(request, _load_project(Path(project["project_dir"])))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Label set not found: {set_id}") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/backup")
+def backup_project(req: ProjectBackupRequest, request: Request):
+    project = get_current_project(request)
+    try:
+        return create_archive(project, Path(req.destination_dir))
+    except ArchiveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.post("/restore", response_model=ProjectConfigResponse)
+def restore_project(req: ProjectRestoreRequest, request: Request):
+    try:
+        restored = restore_archive(Path(req.archive_path), Path(req.target_dir))
+        return _activate_project(request, _load_project(restored))
+    except ArchiveError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc

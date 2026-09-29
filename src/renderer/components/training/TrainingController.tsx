@@ -26,15 +26,23 @@ import { LedAnnunciator, LedState } from '../common/LedAnnunciator';
 import { OscilloscopeLossCurve } from './OscilloscopeLossCurve';
 import { HardwareTelemetryPanel } from './HardwareTelemetryPanel';
 import { RecipePresetSelector } from './RecipePresetSelector';
+import { OCRWorkbench } from './OCRWorkbench';
+import { RotatedDetectionPanel } from './RotatedDetectionPanel';
+import { DefectGANWorkbench } from './DefectGANWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
+import { api } from '../../services/api';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
-  const { task, language, setStep } = useProjectStore();
+  const [warmParentId, setWarmParentId] = useState('');
+  const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
+  const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
+  const { task, language, setStep, projectDir } = useProjectStore();
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
-    splitSupported, splitUnavailableReason, applySplit } = useDatasetStore();
+    splitSupported, splitUnavailableReason, applySplit, datasetKey } = useDatasetStore();
   const {
     jobId,
+    warmStartParentJobId,
     jobComputeProfileId,
     jobComputeLabel,
     jobDeviceName,
@@ -80,6 +88,22 @@ export const TrainingController: React.FC = () => {
     : jobComputeLabel;
   const computeReady = isComputeLoaded && !isComputeLoading && !computeLoadError &&
     (!selectedProfileId || (Boolean(selectedProfile) && selectedProbe?.ready === true));
+  const warmStartSupported = task === 'classification' || task === 'segmentation';
+  const sourceReady = Boolean(projectDir && folderPath && datasetKey === `${folderPath}\0${task}`);
+
+  useEffect(() => {
+    let valid = true;
+    setWarmParents([]);
+    setWarmParentId('');
+    setWarmParentsError(null);
+    if (!sourceReady || !warmStartSupported || selectedProfileId) return () => { valid = false; };
+    api.training.warmStartParents(folderPath, task, preset).then((result) => {
+      if (valid) setWarmParents(result.parents);
+    }).catch((error) => {
+      if (valid) setWarmParentsError(error instanceof Error ? error.message : String(error));
+    });
+    return () => { valid = false; };
+  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir]);
 
   useEffect(() => {
     void recoverActiveJob();
@@ -92,13 +116,14 @@ export const TrainingController: React.FC = () => {
   }, [jobId, isTraining, refreshCurrentJob]);
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
-    !isLoading && !isSplitting && !isRecoveringTraining && !importError && computeReady;
+    !isLoading && !isSplitting && !isRecoveringTraining && !importError && computeReady &&
+    (!warmParentId || !selectedProfileId);
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
     if (!canStart) return;
     setActionError(null);
-    try { await startTraining(folderPath, task); }
+    try { await startTraining(folderPath, task, warmParentId || undefined); }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
 
@@ -249,6 +274,25 @@ export const TrainingController: React.FC = () => {
           language={language}
         />
 
+        {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+          <div className="font-semibold text-white">이전 모델에서 재학습</div>
+          <p className="mt-1 text-slate-400">완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다. 새 결과는 후보 모델로 저장됩니다.</p>
+          {selectedProfileId ? <p className="mt-2 text-amber-300">원격 서버의 체크포인트 전송을 검증하기 전까지 재학습은 이 컴퓨터에서만 가능합니다.</p>
+            : <label className="mt-2 block text-slate-300">시작 모델
+              <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
+                disabled={!sourceReady || isTraining} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
+                <option value="">새 모델로 학습</option>
+                {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parent.job_id} · SHA {parent.checkpoint_sha256.slice(0, 12)}</option>)}
+              </select>
+            </label>}
+          {warmParentsError && <p role="alert" className="mt-2 text-amber-300">재학습 모델 목록: {warmParentsError}</p>}
+          {warmParentId && <p className="mt-2 text-cyan-200">학습 뒤 4단계에서 이전 모델과 같은 test 이미지로 비교하고 승인 기준을 확인하세요. 승인 전에는 활성 모델을 바꾸지 않습니다.</p>}
+          {status === 'completed' && warmStartParentJobId && jobId && <button type="button" onClick={() => void setStep(4)}
+            className="mt-2 rounded border border-cyan-500/50 bg-cyan-700/20 px-3 py-2 font-semibold text-cyan-100 hover:bg-cyan-700/40">
+            4단계에서 {warmStartParentJobId} → {jobId} 비교
+          </button>}
+        </div>}
+
         {/* Inspection Deep Steel Execution Control Toolbar */}
         <div className="p-3 bg-[#131822] rounded-[4px] border border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -367,6 +411,9 @@ export const TrainingController: React.FC = () => {
             )}
           </div>
         </div>
+        <OCRWorkbench />
+        {task === 'detection' && <RotatedDetectionPanel />}
+        <DefectGANWorkbench />
       </div>
     </div>
   );

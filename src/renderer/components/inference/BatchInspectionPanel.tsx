@@ -8,6 +8,7 @@ import { useInspectionRunStore } from '../../stores/useInspectionRunStore';
 import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
+import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, createInspectionRunExitGuard,
@@ -59,6 +60,7 @@ export const BatchInspectionPanel: React.FC = () => {
   const [reviewer, setReviewer] = useState(() => localStorage.getItem('inspection-reviewer') || 'operator');
   const [reviewReason, setReviewReason] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewQueueRevision, setReviewQueueRevision] = useState(0);
   const stopReasonRef = useRef<BatchStopReason>(null);
   const exitGuardRef = useRef<ReturnType<typeof createInspectionRunExitGuard> | null>(null);
   const ownedOperationRef = useRef<number | null>(null);
@@ -162,7 +164,7 @@ export const BatchInspectionPanel: React.FC = () => {
     return () => { active = false; };
   }, [folderPath, task, projectDir]);
 
-  const openHistoryRun = async (runId: string) => {
+  const openHistoryRun = async (runId: string, preferredImagePath?: string) => {
     const started = historyContext;
     const requestId = ++historyRequestRef.current;
     const isCurrent = () => requestId === historyRequestRef.current
@@ -174,7 +176,8 @@ export const BatchInspectionPanel: React.FC = () => {
       setReport(previous);
       setScope(previous.scope);
       setFilter('all');
-      setSelectedPath(previous.rows.find((row) => row.result)?.image.file_path ?? previous.rows[0]?.image.file_path ?? null);
+      setSelectedPath(previous.rows.find((row) => row.image.file_path === preferredImagePath)?.image.file_path
+        ?? previous.rows.find((row) => row.result)?.image.file_path ?? previous.rows[0]?.image.file_path ?? null);
       setReviewReason('');
     } catch (cause) {
       if (isCurrent()) setHistoryError(cause instanceof Error ? cause.message : String(cause));
@@ -265,6 +268,7 @@ export const BatchInspectionPanel: React.FC = () => {
         if (!currentSource()) return;
         setReport(persisted);
         await refreshHistory(startedSource);
+        setReviewQueueRevision((value) => value + 1);
       }
     } catch (cause) {
       if (currentSource() && stopReasonRef.current !== 'user_stop') {
@@ -314,6 +318,7 @@ export const BatchInspectionPanel: React.FC = () => {
       setReport(refreshed);
       setSelectedPath(imagePath);
       setReviewReason('');
+      setReviewQueueRevision((value) => value + 1);
     } catch (cause) {
       if (isCurrent()) setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -414,6 +419,10 @@ export const BatchInspectionPanel: React.FC = () => {
         </div>
       )}
       {error && <div role="alert" className="flex items-start gap-2 rounded border border-red-700 bg-red-950/30 p-2 text-xs text-red-200"><AlertTriangle className="h-4 w-4 shrink-0" />{error}</div>}
+
+      <ReviewQueuePanel sourceFolder={sourceReady ? folderPath : ''} task={task} projectDir={projectDir}
+        refreshKey={reviewQueueRevision} disabled={isRunning}
+        onOpen={(runId, imagePath) => { void openHistoryRun(runId, imagePath); }} />
 
       <div className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3" aria-label="검사 이력">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

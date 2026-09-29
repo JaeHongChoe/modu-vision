@@ -131,6 +131,7 @@ def _manifest_digest(manifest: Dict[str, Any]) -> str:
 def _summary(manifest: Dict[str, Any], *, status: str = "not_checked") -> Dict[str, Any]:
     return {
         "id": manifest["id"], "name": manifest["name"], "note": manifest["note"],
+        "labelset_id": manifest.get("labelset_id", "default"),
         "kind": manifest["kind"], "created_at": manifest["created_at"],
         "source_dataset_dir": manifest["source_dataset_dir"],
         "image_count": manifest["image_count"], "label_file_count": manifest["label_file_count"],
@@ -186,6 +187,7 @@ def _snapshot(project: Dict[str, Any], source: Path, name: str, note: str, kind:
         rows.sort(key=lambda row: (row["origin"], row["relative_path"]))
         manifest = {
             "schema_version": 1, "id": version_id, "project_id": project["id"],
+            "labelset_id": project.get("active_labelset_id", "default"),
             "name": name.strip(), "note": note.strip(), "kind": kind,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "source_dataset_dir": str(source), "task": project["task"],
@@ -221,6 +223,11 @@ def _read_manifest(project: Dict[str, Any], version_id: str) -> tuple[Path, Dict
     except (OSError, ValueError, TypeError, KeyError) as exc:
         raise HTTPException(status_code=422, detail=f"Corrupt dataset version {version_id}: {exc}") from exc
     return path, manifest
+
+
+def _require_active_labelset(project: Dict[str, Any], manifest: Dict[str, Any]) -> None:
+    if manifest.get("labelset_id", "default") != project.get("active_labelset_id", "default"):
+        raise HTTPException(status_code=409, detail="Dataset version belongs to another label set. Activate that label set first.")
 
 
 def _file_hash(path: Path, *, allow_symlink: bool = False) -> Optional[str]:
@@ -393,7 +400,8 @@ def list_versions(request: Request):
         if path.is_dir() and _VERSION_ID.fullmatch(path.name):
             try:
                 _, manifest = _read_manifest(project, path.name)
-                versions.append(_summary(manifest))
+                if manifest.get("labelset_id", "default") == project.get("active_labelset_id", "default"):
+                    versions.append(_summary(manifest))
             except HTTPException:
                 versions.append({
                     "id": path.name, "name": "손상된 버전", "note": "", "kind": "manual",
@@ -408,6 +416,7 @@ def list_versions(request: Request):
 def get_version(version_id: str, request: Request):
     project = _current_project(request)
     _, manifest = _read_manifest(project, version_id)
+    _require_active_labelset(project, manifest)
     return manifest
 
 
@@ -415,6 +424,7 @@ def get_version(version_id: str, request: Request):
 def verify_version(version_id: str, request: Request):
     project = _current_project(request)
     path, manifest = _read_manifest(project, version_id)
+    _require_active_labelset(project, manifest)
     return _verify(project, path, manifest)
 
 
@@ -428,6 +438,7 @@ def restore_version(version_id: str, request: Request):
         if active is not None:
             raise HTTPException(status_code=409, detail="A training job is active. Finish or stop it before restoring labels.")
         path, manifest = _read_manifest(project, version_id)
+        _require_active_labelset(project, manifest)
         verification = _verify(project, path, manifest)
         if verification["status"] != "verified":
             raise HTTPException(status_code=409, detail={

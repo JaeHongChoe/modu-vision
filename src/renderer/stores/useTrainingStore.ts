@@ -58,6 +58,7 @@ export interface StepLossPoint {
 
 interface TrainingState {
   jobId: string | null;
+  warmStartParentJobId: string | null;
   jobComputeProfileId: string | null;
   jobComputeLabel: string;
   jobDeviceName: string | null;
@@ -87,7 +88,7 @@ interface TrainingState {
   hardware: HardwareStats;
 
   setPreset: (preset: TrainingPreset) => void;
-  startTraining: (datasetPath: string, task: VisionTask) => Promise<void>;
+  startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string) => Promise<void>;
   stopTraining: () => Promise<void>;
   recoverActiveJob: () => Promise<void>;
   refreshCurrentJob: () => Promise<void>;
@@ -117,6 +118,7 @@ async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted'
 
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobId: null,
+  warmStartParentJobId: null,
   jobComputeProfileId: null,
   jobComputeLabel: 'This computer',
   jobDeviceName: null,
@@ -153,7 +155,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
 
   setPreset: (preset) => set({ preset }),
 
-  startTraining: async (datasetPath, task) => {
+  startTraining: async (datasetPath, task, warmStartParentJobId) => {
     if (useDatasetStore.getState().isSplitting) {
       throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
     }
@@ -172,6 +174,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     pendingStartEvents = [];
     set({
       jobId: null,
+      warmStartParentJobId: warmStartParentJobId || null,
       jobComputeProfileId: selectedProfileId,
       jobComputeLabel: computeLabel(selectedProfileId, profile?.name),
       jobDeviceName: selectedProfileId ? compute.probeResults[selectedProfileId]?.device_name || null : null,
@@ -198,6 +201,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         task,
         preset: get().preset,
         dataset_path: datasetPath,
+        ...(warmStartParentJobId ? { warm_start_job_id: warmStartParentJobId } : {}),
         ...(selectedProfileId ? { compute_profile_id: selectedProfileId } : {}),
       });
       const res = await startRequest;
@@ -453,6 +457,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     pendingStartEvents = [];
     set({
       jobId: null,
+      warmStartParentJobId: null,
       jobComputeProfileId: null,
       jobComputeLabel: 'This computer',
       jobDeviceName: null,

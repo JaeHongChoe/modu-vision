@@ -70,6 +70,26 @@ def _save_journal(journal: dict[str, Any]) -> None:
     _atomic_json(_journal_index() / f"{journal['job_id']}.json", journal)
 
 
+def persist_queued_remote_job(record: Any, profile: ComputeProfile, launch_spec: dict[str, Any]) -> None:
+    """Write the launch intent before a slot is granted or a worker can start."""
+    _save_journal({
+        "protocol_version": PROTOCOL_VERSION,
+        "job_id": record.job_id,
+        "operation": "train",
+        "state": "queued",
+        "enqueued_at": record.start_time,
+        "profile": profile.model_dump(),
+        "task": record.task,
+        "preset": record.preset,
+        "output_dir": record.output_dir,
+        "dataset_path": record.dataset_path,
+        "source_dataset_path": record.source_dataset_path,
+        "dataset_fingerprint": record.dataset_fingerprint,
+        "split_manifest_root": record.split_manifest_root,
+        "launch_spec": launch_spec,
+    })
+
+
 def _bundle_backend(destination: Path) -> Path:
     """Bundle only application Python source; no user data or local secrets."""
     root = Path(__file__).resolve().parents[2]
@@ -245,6 +265,7 @@ def run_remote_training(
     output.mkdir(parents=True, exist_ok=True)
     journal_path = output / "remote_job.json"
     launched = resume
+    journal: dict[str, Any] = {}
     try:
         if resume:
             journal = json.loads(journal_path.read_text(encoding="utf-8"))
@@ -252,10 +273,33 @@ def run_remote_training(
                 raise ValueError("Remote journal does not match this job and server")
             record.dataset_path = journal["dataset_path"]
         else:
+            if journal_path.is_file():
+                journal = json.loads(journal_path.read_text(encoding="utf-8"))
+                if (journal.get("job_id") != record.job_id
+                        or journal.get("profile") != profile.model_dump()
+                        or journal.get("state") != "queued"):
+                    raise ValueError("Remote launch intent does not match this job and server")
+            else:
+                journal = {
+                    "protocol_version": PROTOCOL_VERSION,
+                    "job_id": record.job_id,
+                    "operation": "train",
+                    "profile": profile.model_dump(),
+                    "task": record.task,
+                    "preset": record.preset,
+                    "output_dir": str(output),
+                    "dataset_path": record.dataset_path,
+                    "source_dataset_path": record.source_dataset_path,
+                    "dataset_fingerprint": record.dataset_fingerprint,
+                }
+            journal["state"] = "preparing"
+            _save_journal(journal)
             record.phase = "preparing"
             if prepare_dataset is not None:
                 prepare_dataset(record.preparation_cancel)
             if record.preparation_cancel.is_set():
+                journal["state"] = "aborted"
+                _save_journal(journal)
                 return {"status": "aborted"}
             snapshot = build_snapshot(
                 Path(record.dataset_path), output / "remote_snapshot", record.preparation_cancel,
@@ -263,24 +307,17 @@ def run_remote_training(
                 if record.task in ("segmentation", "detection") else frozenset(),
             )
             if record.preparation_cancel.is_set():
+                journal["state"] = "aborted"
+                _save_journal(journal)
                 return {"status": "aborted"}
             record.dataset_path = str(snapshot.data_path)
             code_archive = _bundle_backend(output)
-            journal = {
-                "protocol_version": PROTOCOL_VERSION,
-                "job_id": record.job_id,
-                "operation": "train",
+            journal.update({
                 "state": "prepared",
-                "profile": profile.model_dump(),
-                "task": record.task,
-                "preset": record.preset,
-                "output_dir": str(output),
                 "dataset_path": record.dataset_path,
-                "source_dataset_path": record.source_dataset_path,
-                "dataset_fingerprint": record.dataset_fingerprint,
                 "input_manifest_sha256": snapshot.manifest_sha256,
                 "snapshot_archive_sha256": snapshot.archive_sha256,
-            }
+            })
             _save_journal(journal)
             record.phase = "transferring"
             job_id = record.job_id
@@ -374,6 +411,53 @@ def reconnect_remote_training(record: Any, *, transport: Optional[SSHTransport] 
     return run_remote_training(record, profile, transport=transport, resume=True)
 
 
+def make_remote_runner(profile: ComputeProfile, launch_spec: Optional[dict[str, Any]]) -> Callable[[Any], dict[str, Any]]:
+    """Rebuild a queued launch from serializable inputs after daemon restart."""
+    def runner(record: Any) -> dict[str, Any]:
+        journal_path = Path(record.output_dir) / "remote_job.json"
+        if journal_path.is_file():
+            state = json.loads(journal_path.read_text(encoding="utf-8")).get("state")
+            if state in ("launching", "launched", "artifacts_verified", "completed"):
+                return reconnect_remote_training(record)
+            if state != "queued":
+                raise ValueError(f"Remote run cannot be launched from journal state {state!r}")
+        if launch_spec is None:
+            raise ValueError("Queued run is missing its durable launch specification")
+
+        preparation = launch_spec.get("preparation", "none")
+        prepare_dataset = None
+        if preparation == "remote_classification":
+            from backend.remote.preparation import prepare_remote_classification
+
+            def prepare_dataset(cancel):
+                prepare_remote_classification(Path(launch_spec["prepare_source_path"]), Path(record.dataset_path), cancel)
+        elif preparation in ("labelme_segmentation", "labelme_detection"):
+            if preparation == "labelme_detection":
+                from backend.engine.labelme_detection_preparation import prepare_labelme_detection as prepare_labelme
+            else:
+                from backend.engine.labelme_preparation import prepare_labelme_segmentation as prepare_labelme
+
+            def prepare_dataset(cancel):
+                prepare_labelme(
+                    Path(launch_spec["prepare_source_path"]), Path(record.dataset_path),
+                    image_size=int(launch_spec["image_size"]),
+                    assignments=launch_spec.get("assignments", {}),
+                    require_complete_assignments=bool(launch_spec.get("require_complete_assignments")),
+                    cancellation_requested=cancel.is_set,
+                    annotation_root=Path(launch_spec["annotation_root"]),
+                )
+        elif preparation != "none":
+            raise ValueError(f"Unknown remote training preparation: {preparation}")
+
+        return run_remote_training(
+            record, profile, prepare_dataset=prepare_dataset,
+            config_overrides=launch_spec.get("config_overrides") or {},
+            device=launch_spec.get("device"),
+        )
+
+    return runner
+
+
 def mark_remote_journal_terminal(output_dir: Path, job_id: str, status: str) -> None:
     path = Path(output_dir) / "remote_job.json"
     if not path.is_file():
@@ -386,33 +470,71 @@ def mark_remote_journal_terminal(output_dir: Path, job_id: str, status: str) -> 
 
 
 def recover_remote_jobs(manager: Any) -> None:
-    """Reattach the daemon to the last durable run after an app restart."""
+    """Reattach launched runs first, then reclaim queued launch intents."""
     index = _journal_index()
     if not index.is_dir():
         return
-    for path in sorted(index.glob("job_*.json")):
+    paths = sorted(index.glob("job_*.json"))
+    journals = []
+    for path in paths:
         try:
             journal = json.loads(path.read_text(encoding="utf-8"))
-            if journal.get("state") in ("completed", "aborted", "failed") and (Path(journal["output_dir"]) / "job_receipt.json").is_file():
-                continue
-            if journal.get("state") == "prepared":
-                # Upload had not yet reached the launch boundary, so no worker
-                # could have started. A new user action can safely start over.
+            if journal.get("operation") == "train":
+                journals.append((path, journal))
+        except (OSError, ValueError):
+            logger.exception("Could not read remote training journal %s", path)
+    def recovery_order(item):
+        enqueued_at = item[1].get("enqueued_at")
+        if not isinstance(enqueued_at, (int, float)):
+            enqueued_at = 0
+        return (item[1].get("state") == "queued", enqueued_at, str(item[0]))
+
+    journals.sort(key=recovery_order)
+    for path, journal in journals:
+        try:
+            if journal.get("state") in ("preparing", "prepared", "transferring"):
+                # No launch was attempted. Reusing a half-prepared snapshot is
+                # unsafe; make the interruption explicit and release its slot.
                 journal["state"] = "failed"
                 journal["error"] = "The desktop app closed before the remote worker was launched"
                 _save_journal(journal)
-                continue
             output = Path(journal["output_dir"])
-            if (output / "job_receipt.json").is_file() or manager.get_job(journal["job_id"]):
+            if manager.get_job(journal["job_id"]):
                 continue
             profile = ComputeProfile.model_validate(journal["profile"])
+            if journal.get("state") == "queued" and not isinstance(journal.get("launch_spec"), dict):
+                journal["state"] = "failed"
+                journal["error"] = "Queued run is missing its launch specification"
+                _save_journal(journal)
+            receipt_exists = (output / "job_receipt.json").is_file()
+            if journal.get("state") in ("aborted", "failed") or (journal.get("state") == "completed" and receipt_exists):
+                from backend.api.routes_training import JobRecord, _write_job_receipt
+
+                record = JobRecord(
+                    job_id=journal["job_id"], task=journal["task"], preset=journal["preset"],
+                    dataset_path=journal["dataset_path"], output_dir=str(output),
+                    status=journal["state"], remote_profile_id=profile.id,
+                    remote_profile=profile,
+                    source_dataset_path=journal.get("source_dataset_path"),
+                    dataset_fingerprint=journal.get("dataset_fingerprint"),
+                    error={"message": str(journal["error"])} if journal.get("error") else None,
+                )
+                if not receipt_exists:
+                    _write_job_receipt(record)
+                manager.restore_terminal_job(record)
+                continue
+            if receipt_exists:
+                continue
             manager.start_remote_job(
                 job_id=journal["job_id"], task=journal["task"],
                 dataset_path=journal["dataset_path"], output_dir=str(output),
                 preset=journal["preset"], remote_profile_id=profile.id,
                 source_dataset_path=journal.get("source_dataset_path"),
                 dataset_fingerprint=journal.get("dataset_fingerprint"),
-                remote_runner=reconnect_remote_training,
+                remote_runner=make_remote_runner(profile, journal.get("launch_spec")),
+                profile=profile, launch_spec=journal.get("launch_spec"),
+                split_manifest_root=journal.get("split_manifest_root"),
+                recovery_state=journal["state"],
             )
         except Exception:
             logger.exception("Could not reconnect remote training journal %s", path)

@@ -4,6 +4,18 @@ type FlowNodeType = FlowNode['data']['node_type'];
 type Branch = NonNullable<FlowEdge['isBranch']>;
 
 const modelTypes: FlowNodeType[] = ['detection_crop', 'inspection'];
+const resultTypes: FlowNodeType[] = [...modelTypes, 'blob_measure', 'aggregate'];
+
+function allowedPayloads(from: FlowNodeType, to: FlowNodeType): NonNullable<FlowEdge['payload_type']>[] {
+  if (from === 'input' && (modelTypes.includes(to) || to === 'fixed_roi')) return ['image'];
+  if (from === 'fixed_roi' && modelTypes.includes(to)) return ['roi'];
+  if (modelTypes.includes(from) && modelTypes.includes(to)) return ['image', 'roi'];
+  if (modelTypes.includes(from) && ['blob_measure', 'aggregate', 'decision'].includes(to)) return ['result'];
+  if (from === 'blob_measure' && (to === 'aggregate' || to === 'decision')) return ['result'];
+  if (from === 'aggregate' && to === 'decision') return ['result'];
+  if (from === 'decision' && to === 'output') return ['result'];
+  return [];
+}
 
 export function decisionRulePatch(data: FlowNodeData, rule: string): Partial<FlowNodeData> {
   if (rule !== 'score_gt_threshold') return { rule };
@@ -36,11 +48,15 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   const outputs = pipeline.nodes.filter((node) => node.data.node_type === 'output');
   const models = pipeline.nodes.filter((node) => modelTypes.includes(node.data.node_type));
   const fixedRois = pipeline.nodes.filter((node) => node.data.node_type === 'fixed_roi');
+  const blobs = pipeline.nodes.filter((node) => node.data.node_type === 'blob_measure');
+  const aggregates = pipeline.nodes.filter((node) => node.data.node_type === 'aggregate');
   if (inputs.length !== 1) return '입력 노드는 하나여야 합니다.';
   if (decisions.length !== 1) return '판정 노드는 하나여야 합니다.';
   if (outputs.length < 1 || outputs.length > 3) return '출력 노드는 1~3개가 필요합니다.';
   if (models.length < 1 || models.length > 8) return '모델 노드는 1~8개가 필요합니다.';
   if (fixedRois.length > 8) return '고정 ROI 노드는 최대 8개입니다.';
+  if (blobs.length > 8) return 'Blob 측정 노드는 최대 8개입니다.';
+  if (aggregates.length > 4) return '결과 집계 노드는 최대 4개입니다.';
   const edgeIds = new Set<string>();
   const connections = new Set<string>();
   for (const edge of pipeline.edges) {
@@ -52,13 +68,9 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     connections.add(pair);
     const from = nodes.get(edge.source)?.data.node_type;
     const to = nodes.get(edge.target)?.data.node_type;
-    const allowedPayloads = from === 'input' && (modelTypes.includes(to as FlowNodeType) || to === 'fixed_roi') ? ['image']
-      : from === 'fixed_roi' && modelTypes.includes(to as FlowNodeType) ? ['roi']
-      : modelTypes.includes(from as FlowNodeType) && modelTypes.includes(to as FlowNodeType) ? ['image', 'roi']
-      : modelTypes.includes(from as FlowNodeType) && to === 'decision' ? ['result']
-      : from === 'decision' && to === 'output' ? ['result'] : [];
-    if (allowedPayloads.length === 0) return '노드 사이의 연결 형식이 올바르지 않습니다.';
-    if (edge.payload_type && !allowedPayloads.includes(edge.payload_type)) return '연결선의 데이터 형식(payload)이 노드와 맞지 않습니다.';
+    const payloads = allowedPayloads(from as FlowNodeType, to as FlowNodeType);
+    if (payloads.length === 0) return '노드 사이의 연결 형식이 올바르지 않습니다.';
+    if (edge.payload_type && !payloads.includes(edge.payload_type)) return '연결선의 데이터 형식(payload)이 노드와 맞지 않습니다.';
     if ((from === 'input' || from === 'fixed_roi') && edge.isBranch && edge.isBranch !== 'default') {
       return '입력과 고정 ROI 연결에는 조건 분기를 지정할 수 없습니다.';
     }
@@ -92,22 +104,53 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     if (parentType !== 'input' && parentType !== 'fixed_roi' && !modelTypes.includes(parentType as FlowNodeType)) {
       return `${node.data.label}: 지원하지 않는 상류 연결입니다.`;
     }
-    if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly'].includes(node.data.task || '')) {
+    if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification'].includes(node.data.task || '')) {
       return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
     }
     const targets = outgoing.get(node.id) || [];
-    if (!targets.length || targets.some((edge) => ![...modelTypes, 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
-      return `${node.data.label}: 다음 모델 또는 판정 노드로 연결하세요.`;
+    if (!targets.length || targets.some((edge) => ![...modelTypes, 'blob_measure', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
+      return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
     }
   }
+  for (const node of blobs) {
+    const parents = incoming.get(node.id) || [];
+    const source = nodes.get(parents[0]?.source);
+    if (parents.length !== 1 || source?.data.node_type !== 'inspection' || source.data.task !== 'segmentation') {
+      return `${node.data.label}: Blob 측정에는 분할 모델 결과 연결선 하나가 필요합니다.`;
+    }
+    const targets = outgoing.get(node.id) || [];
+    if (!targets.length || targets.some((edge) => !['aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type || ''))) {
+      return `${node.data.label}: Blob 결과를 집계 또는 판정 노드로 연결하세요.`;
+    }
+    for (const key of ['min_blob_area_px', 'min_blob_count_for_ng'] as const) {
+      const value = node.data.params?.[key] ?? 1;
+      if (!Number.isInteger(value) || value < 1) return `${node.data.label}: Blob 면적과 개수 기준은 1 이상의 정수여야 합니다.`;
+    }
+  }
+  for (const node of aggregates) {
+    const parents = incoming.get(node.id) || [];
+    if (parents.length < 1 || parents.length > 8 || parents.some((edge) =>
+      ![...modelTypes, 'blob_measure'].includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
+      return `${node.data.label}: 집계 노드에는 모델 또는 Blob 결과 연결선 1~8개가 필요합니다.`;
+    }
+    const targets = outgoing.get(node.id) || [];
+    if (targets.length !== 1 || targets[0].target !== decisionId) return `${node.data.label}: 집계 결과를 판정 노드에 직접 연결하세요.`;
+    if (node.data.rule !== 'any_ng' && node.data.rule !== 'all_ng') return `${node.data.label}: 집계 룰은 any_ng 또는 all_ng여야 합니다.`;
+  }
   const evidence = incoming.get(decisionId) || [];
-  if (!evidence.length || evidence.some((edge) => !modelTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
-    return '판정 노드에 모델 결과 연결선이 필요합니다.';
+  if (!evidence.length || evidence.some((edge) => !resultTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
+    return '판정 노드에 모델, Blob 또는 집계 결과 연결선이 필요합니다.';
   }
   const decision = decisions[0];
   const rule = decision.data.rule || 'any_defect_is_ng';
-  if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed'].includes(rule)) {
+  if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed', 'aggregate_verdict'].includes(rule)) {
     return '지원하지 않는 판정 룰입니다.';
+  }
+  if (rule === 'aggregate_verdict' && (evidence.length !== 1 || nodes.get(evidence[0].source)?.data.node_type !== 'aggregate')) {
+    return '집계 판정 룰에는 집계 결과 연결선 하나가 필요합니다.';
+  }
+  if (evidence.some((edge) => nodes.get(edge.source)?.data.node_type === 'aggregate') && rule !== 'aggregate_verdict') {
+    return '집계 결과에는 집계 판정 룰을 선택하세요.';
   }
   if (rule === 'score_gt_threshold' &&
     (typeof decision.data.threshold !== 'number' || !Number.isFinite(decision.data.threshold) ||
@@ -153,6 +196,31 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   return visited === nodes.size ? null : '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.';
 }
 
+/** Point an editor validation message at the node or connection the user can fix. */
+export function locateFlowIssue(
+  pipeline: FlowchartPipeline,
+  message: string | null,
+): { kind: 'node' | 'edge'; id: string } | null {
+  if (!message) return null;
+  const named = pipeline.nodes.find((node) => message.startsWith(`${node.data.label}:`));
+  if (named) return { kind: 'node', id: named.id };
+  if (message.includes('데이터 형식(payload)') || message.includes('노드 사이의 연결 형식')) {
+    const nodes = new Map(pipeline.nodes.map((node) => [node.id, node]));
+    const edge = pipeline.edges.find((item) => {
+      const from = nodes.get(item.source)?.data.node_type;
+      const to = nodes.get(item.target)?.data.node_type;
+      if (!from || !to) return true;
+      const allowed = allowedPayloads(from, to);
+      return !allowed.length || Boolean(item.payload_type && !allowed.includes(item.payload_type));
+    });
+    if (edge) return { kind: 'edge', id: edge.id };
+  }
+  const type = message.includes('출력 분기') || message.includes('판정') ? 'decision'
+    : message.includes('입력') ? 'input' : null;
+  const node = type && pipeline.nodes.find((item) => item.data.node_type === type);
+  return node ? { kind: 'node', id: node.id } : null;
+}
+
 /** Add a typed connection. Draft graphs may stay incomplete until all nodes connect. */
 export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, targetId: string): FlowchartPipeline {
   const { nodes, incoming, outgoing } = graphParts(pipeline);
@@ -162,12 +230,14 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
   if (pipeline.edges.some((edge) => edge.source === sourceId && edge.target === targetId)) throw new Error('이미 연결된 노드입니다.');
   const from = source.data.node_type;
   const to = target.data.node_type;
-  const allowed = (from === 'input' && (to === 'fixed_roi' || to === 'detection_crop' || to === 'inspection')) ||
-    (from === 'fixed_roi' && modelTypes.includes(to)) ||
-    (modelTypes.includes(from) && (modelTypes.includes(to) || to === 'decision')) ||
-    (from === 'decision' && to === 'output');
-  if (!allowed) throw new Error('이 노드 사이의 연결은 지원하지 않습니다.');
-  if (to !== 'decision' && (incoming.get(targetId)?.length || 0) > 0) throw new Error('대상 노드에는 이미 입력 연결이 있습니다.');
+  const payloads = allowedPayloads(from, to);
+  if (!payloads.length) throw new Error('이 노드 사이의 연결은 지원하지 않습니다.');
+  if (to === 'blob_measure' && (from !== 'inspection' || source.data.task !== 'segmentation')) {
+    throw new Error('Blob 측정은 분할 모델 결과에만 연결할 수 있습니다.');
+  }
+  if (to !== 'decision' && to !== 'aggregate' && (incoming.get(targetId)?.length || 0) > 0) throw new Error('대상 노드에는 이미 입력 연결이 있습니다.');
+  if (to === 'aggregate' && (incoming.get(targetId)?.length || 0) >= 8) throw new Error('집계 입력은 최대 여덟 개입니다.');
+  if (from === 'aggregate' && (outgoing.get(sourceId)?.length || 0) > 0) throw new Error('집계 노드는 판정 노드 하나로 연결하세요.');
   if (from === 'decision' && (outgoing.get(sourceId)?.length || 0) >= 3) throw new Error('판정 출력은 최대 세 개입니다.');
 
   const edgeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -182,8 +252,7 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
     isBranch = (['pass', 'fail', 'review'] as Branch[]).find((branch) => !assigned.has(branch));
     if (existing.length === 0) isBranch = undefined;
   }
-  const payload_type: FlowEdge['payload_type'] = from === 'input' ? 'image'
-    : to === 'decision' || to === 'output' ? 'result' : 'roi';
+  const payload_type: FlowEdge['payload_type'] = payloads.includes('roi') ? 'roi' : payloads[0];
   return { ...pipeline, edges: [...edges, { id: edgeId, source: sourceId, target: targetId, isBranch, payload_type }] };
 }
 
@@ -204,7 +273,7 @@ export function removeFlowNode(pipeline: FlowchartPipeline, nodeId: string): Flo
 export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, edgeId: string, branch: Branch): FlowchartPipeline {
   const edge = pipeline.edges.find((item) => item.id === edgeId);
   const sourceType = pipeline.nodes.find((node) => node.id === edge?.source)?.data.node_type;
-  if (!edge || (!modelTypes.includes(sourceType as FlowNodeType) && sourceType !== 'decision')) throw new Error('모델 또는 판정 연결선만 분기를 바꿀 수 있습니다.');
+  if (!edge || (!resultTypes.includes(sourceType as FlowNodeType) && sourceType !== 'decision')) throw new Error('결과 또는 판정 연결선만 분기를 바꿀 수 있습니다.');
   if (sourceType !== 'decision') return {
     ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, isBranch: branch } : item),
   };
@@ -224,10 +293,8 @@ export function updateFlowEdgePayload(pipeline: FlowchartPipeline, edgeId: strin
   if (!edge) throw new Error('연결선을 찾을 수 없습니다.');
   const sourceType = pipeline.nodes.find((node) => node.id === edge.source)?.data.node_type;
   const targetType = pipeline.nodes.find((node) => node.id === edge.target)?.data.node_type;
-  const allowed = sourceType === 'input' ? payload === 'image'
-    : sourceType === 'fixed_roi' ? payload === 'roi'
-    : targetType === 'decision' || targetType === 'output' ? payload === 'result'
-    : payload === 'image' || payload === 'roi';
-  if (!allowed) throw new Error('이 노드 연결에서 지원하지 않는 데이터 형식입니다.');
+  if (!allowedPayloads(sourceType as FlowNodeType, targetType as FlowNodeType).includes(payload)) {
+    throw new Error('이 노드 연결에서 지원하지 않는 데이터 형식입니다.');
+  }
   return { ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, payload_type: payload } : item) };
 }

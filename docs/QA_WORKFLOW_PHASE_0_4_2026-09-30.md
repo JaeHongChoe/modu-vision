@@ -1,0 +1,26 @@
+# Phase 0~4 기능 QA 기록 · 2026-09-30
+
+## 판정 범위
+
+이번 브랜치는 Workflow/Runtime/Workflow Engine의 전체 기능 동등성을 달성한 상태가 아니다. 아래 `확인`은 적힌 입력·실행 경로의 기능 확인이다. 단위·통합 테스트, API 실행, 네이티브 앱 클릭, 별도 서비스 프로세스 실행을 구분한다. 1 epoch 학습과 단일 이미지 판정은 정확도·재현율·과검률·지연시간 또는 양산 승인 근거가 아니다. 원본 88장에는 독립 검증된 OK 정답 코호트가 없어 실제 후보 모델 승격 조건을 충족했다고 볼 수 없다. 고객 파일명·경로·호스트·해시·비공개 자료는 이 문서에 적지 않는다.
+
+| 단계 | 이번 브랜치에서 확인한 근거 | 남은 수용 범위 |
+| --- | --- | --- |
+| Phase 0 프로젝트·데이터 | [프로젝트 백업/복원 테스트](../backend/tests/test_project_archive.py)는 소스·프로젝트 파일 검증과 새 위치 복원, 라벨 세트·분할·플로우·검사 이력 재연결을 다룬다. [라벨 세트 테스트](../backend/tests/test_project_labelsets.py)는 생성·전환·격리·재시작을 다룬다. [데이터 버전 테스트](../backend/tests/test_dataset_versions.py)는 이미지 해시·라벨 사본과 변경 원본의 복원 차단을 다룬다. | 실제 고객 프로젝트 전체 백업→새 위치 복원→학습·검사 재실행, 다중 사용자 동시 편집은 미검증이다. 이름 있는 세트의 삭제·작업 할당도 없다. |
+| Phase 1 혼합 플로우 | 실제 출처 이미지 8장으로 라벨 패치 16개를 구성했다. 분할과 패치 분류를 CPU에서 각 1 epoch 학습했다. 저장된 고정 ROI→분할+패치 분류→Blob 측정→집계 그래프를 같은 실제 시험 이미지에 5단계 API와 6단계 API로 실행했고 둘 다 NG였으며 `compare_flow_results`가 불일치 0건을 보고했다. [집계](../backend/tests/test_flowchart_aggregate_nodes.py)·[패치 플로우](../backend/tests/test_flowchart_patch_nodes.py) 테스트는 분기 증거와 원본 좌표를 확인한다. 네이티브 5단계에서 Blob 추가·Undo·Redo, 확대·축소·전체 맞춤, 검출 노드와 ROI 전달 연결선 속성 선택·조건 변경·되돌리기를 눌렀다. [화면 배치 테스트](../src/renderer/components/flowchart/flowchartViewport.test.cjs)는 긴 저장 그래프가 큰 빈 공간 아래로 밀리지 않도록 첫 표시 위치를 확인한다. | 혼합 그래프 전체의 네이티브 5→6 연속 조작, 정상 이미지의 분기·Blob 기준 품질은 미검증이다. |
+| Phase 1 별도 5모델 체인 | 서로 다른 체크포인트 5개(분할 3, 패치 분류 2)를 같은 출처 이미지 8장으로 CPU에서 각각 1 epoch 학습했다. 선형 체인을 동일 시험 이미지에 5단계 API·6단계 API·독립 패키지로 실행해 모두 NG, 모델 노드 5개 모두 `passed`, 결과 비교 모두 일치를 확인했다. 네이티브 앱에서 저장된 5모델 그래프를 열고 기본 72% 확대·좌우 탐색·전체 맞춤을 눌렀다. 실제 TEST 이미지를 5단계에서 실행해 모델 노드 5개가 모두 `passed`, 최종 NG를 확인했다. 6단계 TEST 2장 배치는 재시작 후 완료 2/2, NG 2, 실패 0으로 이력·노드 trace가 저장됐다. 이 과정에서 분할 이미지 수 누락과 패치 모델 사전 검증 누락을 재현·수정했다([데이터 로더](../backend/engine/dataset_loaders.py), [배치 검사](../src/renderer/components/inference/batchInspection.ts)). | 두 TEST 이미지의 기능 검증이다. 대표 OK/NG 조건에서의 판정 품질과 모든 조건 분기·복잡한 그래프 편집은 미검증이다. |
+| Phase 1 패키지 | 저장된 혼합 플로우 패키지의 61개 파일과 별도 5모델 체인 패키지의 68개 파일이 각각 검증됐다. 동일 시험 이미지의 앱/패키지 결과 비교가 통과했다. 네이티브 6단계에서도 다른 실제 시험 이미지의 전체 플로우를 내보내 63개 파일과 REVIEW/ROI 0개, 앱·패키지 결과 일치를 확인했다. 이어 5모델 저장본을 네이티브 6단계에서 TEST 이미지로 내보내 71개 파일을 만들고 앱·독립 패키지 모두 NG/ROI 1개로 일치함을 확인했다. [패키지 테스트](../backend/tests/test_flow_package.py)는 무결성·모델/그래프 결속과 단계별 결과 비교를 다룬다. | 한 이미지 parity는 다른 이미지·장비·OS·GPU·지연시간·장시간 입력의 parity를 보장하지 않는다. |
+| Phase 2 검사·모델 릴리스 | [검토 큐 API 테스트](../backend/tests/test_inspection_history.py)는 미확정 REVIEW, 작업자 재판정, 진단 오류, 프로젝트 격리를 다룬다. 네이티브 6단계에서 미확정 이미지의 검토 작업함 항목을 눌러 해당 실행·이미지로 이동했다. [승인 테스트](../backend/tests/test_model_deployments.py)는 OK·NG 정답 부족 시 승격 차단, 명시적 검토자 확인, 불변 revision·롤백, 체크포인트 변경 차단을 다룬다. 패치 후보 비교는 시험 원본 이미지별로 독립 검토한 OK/NG 정답이 없으면 차단한다. | 고객 데이터로 승인/롤백 후 실제 서비스 전환은 미검증이다. 현재 OK 정답 부족으로 실제 모델 승인은 하지 않았다. |
+| Phase 3 모델군 | [Patch Classification 테스트](../backend/tests/test_patch_classification.py)는 출처 연결 manifest, 학습·평가, 패치별 좌표·점수와 원본 변경 차단을 다룬다. 위 16개 패치로 CPU 학습 경로도 실행했다. [OCR 테스트](../backend/tests/test_ocr.py)는 명시적 문자 정답·원본 해시·학습·평가·추론을 확인했고 3단계 실험 화면을 연결했다. 주어진 결함 데이터에는 문자 정답이 없어 OCR 실데이터 학습을 진행하지 않았다. [회전 검출 테스트](../backend/tests/test_rotated_detection.py)는 다각형에서 회전 박스 추출·학습·평가·예측을 다룬다. 실제 LabelMe 원본 6장에서 크롭을 만들어 train 4/val 1/test 1로 CPU 1 epoch 학습하고 시험 예측을 실행했다. [GAN 테스트](../backend/tests/test_defect_gan.py)는 학습형 생성기와 체크포인트·검토 대기 후보를 확인했다. 실제 출처 이미지 8장에서 자른 결함 영역 4개로 CPU 1 epoch 학습하고 미검증 후보 2장을 생성했다. 3단계 화면에서 후보 미리보기를 제공하며 학습 데이터에 자동 편입하지 않는다. [warm-start 테스트](../backend/tests/test_warm_start.py)는 완료 부모 모델의 구조·클래스·해시·계보를 확인한다. | 회전 검출 시험은 단 1장이고 oriented IoU 0.0102, 각도 오차 80.15°로 품질을 승인하지 않았다. 정렬·향상 모델·Keyword/Prompt Labeler, 대표 OK/NG holdout의 성능 보존 재학습은 미검증 또는 미구현이다. 원격 warm-start·패치 학습은 지원하지 않는다. GAN 생성 품질도 승인하지 않았다. |
+| Phase 4 독립 서비스·컴퓨트 | [독립 서비스](../backend/engine/inspection_service.py)를 데스크톱 앱과 다른 프로세스로 띄워 실제 이미지 파일 입력을 수락했고, 완료 NG를 저장했다. 재시작 후 같은 완료 행을 다시 조회했으며 시도 횟수는 1이었다. [서비스 테스트](../backend/tests/test_inspection_service.py)는 인증, 큐 복구, 패키지 변조 거부, 파일 인박스, HTTP 이미지 업로드, 카메라·장치 이벤트와 결과 전송 실패를 다룬다. [원격 큐 테스트](../backend/tests/test_compute_queue.py)는 같은 서버/GPU 충돌과 재접속을 다룬다. 기존 외부 GPU 프로필의 SSH·런타임·의존성·저장 공간·선택 GPU를 읽기 전용으로 확인했고 준비 상태를 받았다. | 카메라·PLC 실장비, 현장 결과 신호, 실제 Edge/GPU 장시간 실행, 최대 택트시간, 여러 서버의 운영 자원 배분은 미검증이다. 이번 읽기 전용 검사로 새 학습 작업을 시작하지 않았다. 독립 서비스의 승인 릴리스 강제 옵션은 실제 승인 고객 모델로 시험하지 않았다. |
+
+## 수용 판단
+
+
+## 최종 검증 명령
+
+- `python -m pytest backend/tests tests -q`: **886 passed, 11 skipped, 95 warnings**. skip·경고가 있는 환경과 모든 외부 장비 구성을 통과했다고 해석하지 않는다.
+- `npm run typecheck`, `npm run build:renderer`: 통과. 배치 검사 스크립트 20개, 집계·이력·뷰포트 그래프 스크립트 17개, 원격 컴퓨트 UI 10개, 학습 취소 9개, M5 무결성 100개가 통과했다.
+- macOS arm64 unsigned 앱 디렉터리를 재생성한 뒤 `npm run test:packaging`: **26개 통과**. 패키지 내부 구성 검사이며 다른 PC에서 설치·첫 실행한 근거는 아니다.
+
+네이티브 클릭 증거는 위 표의 동작에 한정하며 모든 세부 버튼을 눌렀다는 뜻은 아니다.

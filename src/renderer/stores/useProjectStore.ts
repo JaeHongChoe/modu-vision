@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type { BackendStatus } from '../../types/electron';
 import type { ErrorCatalogItem, Language, VisionTask } from '../types';
-import { api, setCachedPort, type ProjectConfig, type RecentProject } from '../services/api';
+import { api, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
 import { useAnnotationStore } from './useAnnotationStore';
 import { useDatasetStore } from './useDatasetStore';
 import { useFlowchartStore } from './useFlowchartStore';
@@ -41,6 +41,10 @@ interface ProjectState {
   loadRecentProjects: () => Promise<void>;
   createProject: (data: { name: string; task: VisionTask; project_dir?: string; description?: string }) => Promise<boolean>;
   openProject: (projectDir: string) => Promise<boolean>;
+  activateLabelset: (id: string) => Promise<boolean>;
+  createAndActivateLabelset: (name: string) => Promise<boolean>;
+  backupProject: (destinationDir: string) => Promise<ProjectBackupResult | null>;
+  restoreProject: (archivePath: string, targetDir: string) => Promise<boolean>;
 }
 
 function projectErrorMessage(error: unknown): string {
@@ -283,6 +287,87 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({ project, projectName: project.name, projectDir: project.project_dir,
         task: project.task, activeStep: 1 });
       await get().loadRecentProjects();
+      return true;
+    } catch (error) {
+      set({ projectError: projectErrorMessage(error) });
+      return false;
+    } finally {
+      set({ isProjectBusy: false });
+    }
+  },
+
+  activateLabelset: async (id) => {
+    if (get().isProjectBusy) return false;
+    set({ isProjectBusy: true, projectError: null });
+    try {
+      await saveOpenEdits();
+      const previous = get().project;
+      if (!previous) throw new Error('열린 프로젝트가 없습니다.');
+      const project = await api.project.activateLabelset(id);
+      await applyProject(project, previous, true);
+      set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
+      if (project.source_dataset_dir) {
+        await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
+      }
+      return true;
+    } catch (error) {
+      set({ projectError: projectErrorMessage(error) });
+      return false;
+    } finally {
+      set({ isProjectBusy: false });
+    }
+  },
+
+  createAndActivateLabelset: async (name) => {
+    if (get().isProjectBusy) return false;
+    set({ isProjectBusy: true, projectError: null });
+    try {
+      await saveOpenEdits();
+      const previous = get().project;
+      if (!previous) throw new Error('열린 프로젝트가 없습니다.');
+      const created = await api.project.createLabelset(name);
+      const project = await api.project.activateLabelset(created.id);
+      await applyProject(project, previous, true);
+      set({ project, projectName: project.name, projectDir: project.project_dir, task: project.task });
+      if (project.source_dataset_dir) {
+        await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
+      }
+      return true;
+    } catch (error) {
+      set({ projectError: projectErrorMessage(error) });
+      return false;
+    } finally {
+      set({ isProjectBusy: false });
+    }
+  },
+
+  backupProject: async (destinationDir) => {
+    if (get().isProjectBusy) return null;
+    set({ isProjectBusy: true, projectError: null });
+    try {
+      await saveOpenEdits();
+      return await api.project.backup(destinationDir);
+    } catch (error) {
+      set({ projectError: projectErrorMessage(error) });
+      return null;
+    } finally {
+      set({ isProjectBusy: false });
+    }
+  },
+
+  restoreProject: async (archivePath, targetDir) => {
+    if (get().isProjectBusy) return false;
+    set({ isProjectBusy: true, projectError: null });
+    try {
+      await saveOpenEdits();
+      const project = await api.project.restore(archivePath, targetDir);
+      await applyProject(project, get().project, true);
+      set({ project, projectName: project.name, projectDir: project.project_dir,
+        task: project.task, activeStep: 1 });
+      await get().loadRecentProjects();
+      if (project.source_dataset_dir) {
+        await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
+      }
       return true;
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });

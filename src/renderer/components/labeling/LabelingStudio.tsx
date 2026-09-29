@@ -20,6 +20,7 @@ import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
+import { LabelSetBar } from './LabelSetBar';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -49,6 +50,7 @@ export const LabelingStudio: React.FC = () => {
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
       <LabelingToolbar />
+      <LabelSetBar />
 
       {currentImage && annotationLoadStatus === 'error' && (
         <div role="alert" className="px-4 py-2 bg-red-950/50 border-b border-red-700 text-red-200 text-xs flex items-center justify-between gap-3">
