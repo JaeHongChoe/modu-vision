@@ -65,6 +65,7 @@ from backend.engine.anomaly import (
     PatchCoreDetector,
     compute_anomaly_metrics,
 )
+from backend.engine.anomaly.cancellation import AnomalyFitCancelled
 
 logger = logging.getLogger("vision_ai_studio.trainer")
 
@@ -354,7 +355,12 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_training_aborted(0, "Training aborted by user request")
                     return {"status": "aborted", "epoch": 0}
 
-                model.fit(train_loader)
+                try:
+                    model.fit(train_loader, cancellation_requested=self._abort_flag.is_set)
+                except AnomalyFitCancelled:
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
 
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)

@@ -40,6 +40,33 @@ export function getFlowchartModelReferences(pipeline: FlowchartPipeline): Array<
   return models;
 }
 
+/** Attach the source-verified model only to an empty, matching single inspection flow. */
+export function singleModelAutoBinding(
+  pipeline: FlowchartPipeline,
+  task: VisionTask,
+  verifiedJobId: string,
+): { nodeId: string; modelJobId: string } | null {
+  if (task === 'detection') {
+    const detector = pipeline.nodes.filter((node) => node.data.node_type === 'detection_crop');
+    if (detector.length !== 1 || pipeline.nodes.some((node) => node.data.node_type === 'inspection') || detector[0].data.model_job_id) return null;
+    return { nodeId: detector[0].id, modelJobId: verifiedJobId };
+  }
+  if (pipeline.nodes.some((node) => node.data.node_type === 'detection_crop')) return null;
+  const inspectionNodes = pipeline.nodes.filter((node) => node.data.node_type === 'inspection');
+  if (inspectionNodes.length !== 1) return null;
+  const inspection = inspectionNodes[0];
+  if (inspection.data.task !== task || inspection.data.model_job_id) return null;
+  return { nodeId: inspection.id, modelJobId: verifiedJobId };
+}
+
+/** A draft from another recipe must not appear under the newly selected recipe. */
+export function pipelineMatchesTask(pipeline: FlowchartPipeline | null, task: VisionTask): boolean {
+  if (!pipeline) return false;
+  if (task === 'detection') return pipeline.nodes.some((node) => node.data.node_type === 'detection_crop');
+  const inspections = pipeline.nodes.filter((node) => node.data.node_type === 'inspection');
+  return inspections.length > 0 && inspections.every((node) => node.data.task === task);
+}
+
 /** Confirm a model belongs to the selected source before reading a saved model reference. */
 export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions): Promise<FlowchartStartupResult> {
   if (!options.isCurrent()) return { status: 'cancelled' };

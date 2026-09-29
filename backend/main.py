@@ -45,6 +45,7 @@ def _compat_httpx_init(self, *args, app=None, **kwargs):
 httpx.Client.__init__ = _compat_httpx_init
 
 from backend.api.routes_annotation import router as annotation_router
+from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
 from backend.api.routes_evaluation import router as evaluation_router
 from backend.api.routes_export import router as export_router
@@ -100,6 +101,8 @@ async def lifespan(app: FastAPI):
     # Startup Sequence
     loop = asyncio.get_running_loop()
     broadcaster.start(loop)
+    from backend.remote.coordinator import recover_remote_jobs
+    recover_remote_jobs(training_job_manager)
     logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
     yield
     # Graceful Shutdown Sequence
@@ -169,6 +172,7 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
 
     # Register all modular routers
     app.include_router(project_router)
+    app.include_router(compute_router)
     app.include_router(dataset_router)
     app.include_router(annotation_router)
     app.include_router(training_router)

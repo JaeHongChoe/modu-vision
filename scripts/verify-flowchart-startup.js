@@ -13,7 +13,47 @@ const loaded = new Module(filename, module);
 loaded.filename = filename;
 loaded.paths = Module._nodeModulePaths(path.dirname(filename));
 loaded._compile(compiled, filename);
-const { recoverThenLoadFlowchart } = loaded.exports;
+const { pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } = loaded.exports;
+
+test('a recipe change rejects the previous inspection draft', () => {
+  const classification = {
+    nodes: [{ data: { node_type: 'inspection', task: 'classification' } }],
+  };
+  assert.equal(pipelineMatchesTask(classification, 'classification'), true);
+  assert.equal(pipelineMatchesTask(classification, 'anomaly'), false);
+  assert.equal(pipelineMatchesTask(null, 'classification'), false);
+  const detector = {
+    nodes: [{ id: 'node_crop', data: { node_type: 'detection_crop', task: 'detection', model_job_id: null } }],
+  };
+  assert.equal(pipelineMatchesTask(detector, 'detection'), true);
+  assert.equal(pipelineMatchesTask(detector, 'classification'), false);
+  assert.deepEqual(singleModelAutoBinding(detector, 'detection', 'job_verified'), {
+    nodeId: 'node_crop', modelJobId: 'job_verified',
+  });
+});
+
+test('source-verified classification and anomaly models bind only to blank single-model flows', () => {
+  for (const task of ['classification', 'anomaly']) {
+    const blank = {
+      id: `single_${task}`,
+      nodes: [{ id: 'node_inspect', data: { node_type: 'inspection', task, model_job_id: null } }],
+    };
+    assert.deepEqual(singleModelAutoBinding(blank, task, 'job_verified'), {
+      nodeId: 'node_inspect', modelJobId: 'job_verified',
+    });
+    assert.equal(singleModelAutoBinding(blank, task === 'classification' ? 'anomaly' : 'classification', 'job_verified'), null);
+    blank.nodes[0].data.model_job_id = 'job_saved';
+    assert.equal(singleModelAutoBinding(blank, task, 'job_verified'), null);
+  }
+  const chained = {
+    id: 'detector_roi',
+    nodes: [
+      { id: 'node_detect', data: { node_type: 'detection_crop', model_job_id: 'job_detector' } },
+      { id: 'node_inspect', data: { node_type: 'inspection', task: 'classification', model_job_id: null } },
+    ],
+  };
+  assert.equal(singleModelAutoBinding(chained, 'classification', 'job_verified'), null);
+});
 
 function setup() {
   let evaluationJobId = null;

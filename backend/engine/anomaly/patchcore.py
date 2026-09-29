@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
@@ -18,6 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from backend.engine.anomaly.feature_extractor import ResNetFeatureExtractor
+from backend.engine.anomaly.cancellation import check_fit_cancelled
 
 logger = logging.getLogger("vision_ai_studio.anomaly.patchcore")
 
@@ -63,15 +64,20 @@ class PatchCoreDetector:
         self.feature_extractor.eval()
         return self
 
-    def fit(self, dataloader: torch.utils.data.DataLoader) -> Dict[str, Any]:
+    def fit(
+        self, dataloader: torch.utils.data.DataLoader,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> Dict[str, Any]:
         """
         Collects normal patch embeddings and builds coreset memory bank.
         """
+        check_fit_cancelled(cancellation_requested)
         self.feature_extractor.eval()
         all_patches: List[torch.Tensor] = []
 
         with torch.no_grad():
             for batch in dataloader:
+                check_fit_cancelled(cancellation_requested)
                 images = batch[0] if isinstance(batch, (list, tuple)) else batch
                 images = images.to(self.device)
                 feats = self.feature_extractor(images)  # [B, D, H, W]
@@ -79,7 +85,9 @@ class PatchCoreDetector:
                 # Reshape to [B * H * W, D]
                 patches = feats.permute(0, 2, 3, 1).reshape(-1, D)
                 all_patches.append(patches.cpu())
+                check_fit_cancelled(cancellation_requested)
 
+        check_fit_cancelled(cancellation_requested)
         raw_memory = torch.cat(all_patches, dim=0).to(self.device)
         total_patches, embed_dim = raw_memory.shape
 
@@ -94,20 +102,24 @@ class PatchCoreDetector:
         proj_dim = min(128, embed_dim)
         proj = torch.randn(embed_dim, proj_dim, device=self.device) / (proj_dim ** 0.5)
         mem_proj = torch.matmul(raw_memory, proj)
+        check_fit_cancelled(cancellation_requested)
 
         selected_indices = [0]
         dists = torch.norm(mem_proj - mem_proj[0], dim=1)
 
         for _ in range(1, target_k):
+            check_fit_cancelled(cancellation_requested)
             new_idx = int(torch.argmax(dists).item())
             selected_indices.append(new_idx)
             new_dists = torch.norm(mem_proj - mem_proj[new_idx], dim=1)
             dists = torch.minimum(dists, new_dists)
 
+        check_fit_cancelled(cancellation_requested)
         self.coreset = raw_memory[selected_indices]
 
         # Calibrate threshold
-        train_scores = self.predict_scores(dataloader)
+        train_scores = self.predict_scores(dataloader, cancellation_requested=cancellation_requested)
+        check_fit_cancelled(cancellation_requested)
         mean_s = float(np.mean(train_scores))
         std_s = float(np.std(train_scores))
         self.threshold = round(mean_s + 3.0 * std_s, 4)
@@ -122,10 +134,13 @@ class PatchCoreDetector:
         }
 
     # Alias for trainer integration
-    def fit_normal_features(self, dataloader: torch.utils.data.DataLoader, device: Optional[Any] = None) -> Dict[str, Any]:
+    def fit_normal_features(
+        self, dataloader: torch.utils.data.DataLoader, device: Optional[Any] = None,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> Dict[str, Any]:
         if device is not None:
             self.to(device)
-        return self.fit(dataloader)
+        return self.fit(dataloader, cancellation_requested=cancellation_requested)
 
     def predict_anomaly_map(
         self, image_tensor: torch.Tensor, out_size: Optional[Tuple[int, int]] = None
@@ -163,14 +178,20 @@ class PatchCoreDetector:
         score = float(np.max(smoothed))
         return smoothed, score
 
-    def predict_scores(self, dataloader: torch.utils.data.DataLoader) -> List[float]:
+    def predict_scores(
+        self, dataloader: torch.utils.data.DataLoader,
+        cancellation_requested: Optional[Callable[[], bool]] = None,
+    ) -> List[float]:
         """Computes anomaly scores for all images in a dataloader."""
         scores: List[float] = []
         for batch in dataloader:
+            check_fit_cancelled(cancellation_requested)
             imgs = batch[0] if isinstance(batch, (list, tuple)) else batch
             for i in range(len(imgs)):
+                check_fit_cancelled(cancellation_requested)
                 _, score = self.predict_anomaly_map(imgs[i : i + 1])
                 scores.append(score)
+                check_fit_cancelled(cancellation_requested)
         return scores
 
     def __call__(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

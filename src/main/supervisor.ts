@@ -234,12 +234,14 @@ export class BackendSupervisor extends EventEmitter {
 
     const appRoot = this.getAppRoot();
     const backendCwd = this.getBackendWorkingDirectory(appRoot);
+    const userDataDir = getElectronApp()?.getPath('userData');
     const env = {
       ...process.env,
       PYTHONUNBUFFERED: '1',
       PYTHONDONTWRITEBYTECODE: '1',
       PYTHONPATH: appRoot,
       VISION_AI_STUDIO_API_TOKEN: apiToken,
+      ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
     };
 
     try {

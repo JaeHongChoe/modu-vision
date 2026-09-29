@@ -13,6 +13,13 @@ const mockApi = {
   },
 };
 const datasetState = { isSplitting: false };
+const computeState = {
+  isLoaded: true,
+  selectedProfileId: null,
+  loadError: null,
+  probeResults: {},
+  getSelectedProfile: () => undefined,
+};
 
 const storePath = path.resolve(__dirname, '../src/renderer/stores/useTrainingStore.ts');
 const source = fs.readFileSync(storePath, 'utf8');
@@ -27,6 +34,8 @@ storeModule.require = (specifier) => specifier === '../services/api'
   ? { api: mockApi }
   : specifier === './useDatasetStore'
     ? { useDatasetStore: { getState: () => datasetState } }
+    : specifier === './useComputeStore'
+      ? { useComputeStore: { getState: () => computeState } }
     : originalRequire(specifier);
 storeModule._compile(compiled, storePath);
 const store = storeModule.exports.useTrainingStore;
