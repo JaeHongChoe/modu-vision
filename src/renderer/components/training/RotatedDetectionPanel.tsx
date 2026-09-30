@@ -6,6 +6,7 @@ import {
 } from '../../services/api';
 import { specializedApi, type MultiRotatedSample, type MultiRotatedPrediction } from '../../services/specializedApi';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { WarmStartSelector } from './WarmStartSelector';
 
 function parseRows(text: string): MultiRotatedSample[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -47,6 +48,8 @@ function errorText(cause: unknown): string {
 export const RotatedDetectionPanel: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
   const datasetPath = useProjectStore((state) => state.project?.source_dataset_dir || '');
+  const labelsetId = useProjectStore((state) => state.project?.active_labelset_id || 'default');
+  const [warmParentId, setWarmParentId] = useState('');
   const [rowsText, setRowsText] = useState('');
   const [sampleCount, setSampleCount] = useState<number | null>(null);
   const [splitCounts, setSplitCounts] = useState<Record<string, number> | null>(null);
@@ -63,12 +66,13 @@ export const RotatedDetectionPanel: React.FC = () => {
   const isActive = job?.status === 'running' || job?.status === 'stopping';
 
   const sameProject = () => useProjectStore.getState().projectDir === projectDir &&
-    (useProjectStore.getState().project?.source_dataset_dir || '') === datasetPath;
+    (useProjectStore.getState().project?.source_dataset_dir || '') === datasetPath &&
+    (useProjectStore.getState().project?.active_labelset_id || 'default') === labelsetId;
 
   useEffect(() => {
     setRowsText(''); setSampleCount(null); setSplitCounts(null);
     setModels([]); setModelId(''); setJob(null); setImagePath('');
-    setEvaluation(null); setPrediction(null); setNotice(''); setError('');
+    setEvaluation(null); setPrediction(null); setNotice(''); setError(''); setBusy(null); setWarmParentId('');
     if (!projectDir) return;
     let active = true;
     void specializedApi.rotated.models().then(({ models: items }) => {
@@ -86,7 +90,7 @@ export const RotatedDetectionPanel: React.FC = () => {
       // A newly selected source may have no rotated labels yet.
     });
     return () => { active = false; };
-  }, [projectDir, datasetPath]);
+  }, [projectDir, datasetPath, labelsetId]);
 
   useEffect(() => {
     if (!job || !isActive || !projectDir) return;
@@ -113,7 +117,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     const timer = window.setInterval(() => void check(), 700);
     void check();
     return () => { active = false; window.clearInterval(timer); };
-  }, [job?.job_id, job?.status, projectDir, datasetPath]);
+  }, [job?.job_id, job?.status, projectDir, datasetPath, labelsetId]);
 
   const applyManifest = (result: {
     sample_count: number; split_counts: Record<string, number>; samples: MultiRotatedSample[];
@@ -156,7 +160,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const started = await specializedApi.rotated.train(datasetPath, epochs);
+      const started = await specializedApi.rotated.train(datasetPath, epochs, warmParentId || undefined);
       if (!sameProject()) return;
       setJob(started);
       if (started.status === 'completed') {
@@ -230,6 +234,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         {sampleCount !== null && splitCounts && <span className="text-emerald-300">검증 {sampleCount}개 · 학습 {splitCounts.train || 0} / 검증 {splitCounts.val || 0} / 시험 {splitCounts.test || 0}</span>}
       </div>
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
+        <WarmStartSelector family="rotated-detection" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || isActive} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input type="number" min="1" max="200" value={epochs}
           onChange={(event) => setEpochs(Math.max(1, Math.min(200, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>

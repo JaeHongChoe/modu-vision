@@ -66,7 +66,7 @@ def cancel_job(root,identifier):
         return record
 
 
-def start_job(*,project,task,source,output,options,runner,family_digest):
+def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None):
     from backend.engine.training_provenance import bind_family_training,validate_training_binding,persist_model_binding
     from backend.engine.runtime_device import resolve_runtime_device
     source=require_training_source(project,source);output=Path(output).resolve();root=output.parent
@@ -79,6 +79,8 @@ def start_job(*,project,task,source,output,options,runner,family_digest):
         'epochs':options.epochs,'dataset_path':str(source),'source_dataset_path':str(source),
         'device':device,'owner_instance':PROCESS_INSTANCE,'created_at':time.time(),'error':None,
         'training_provenance':binding,'events':[]}
+    if warm_start is not None:
+        record['warm_start'] = warm_start.lineage()
     def persist(**changes):
         with _LOCK:
             # Cancellation must not race a batch callback back to running.
@@ -113,6 +115,8 @@ def start_job(*,project,task,source,output,options,runner,family_digest):
             receipt={'job_id':output.name,'task':task,'status':'completed','source_dataset_path':str(source),
                 'dataset_path':str(source),'dataset_fingerprint':binding['dataset_fingerprint'],
                 'training_provenance':binding,'checkpoint_sha256':digest}
+            if warm_start is not None:
+                receipt['warm_start'] = warm_start.lineage()
             if task=='defect_gan':result={**result,'checkpoint_sha256':digest}
             response={'job_id':output.name,'checkpoint_path':str(checkpoint),'model_sha256':digest,'result':result}
             # Serialize completion with cancel acceptance. A stopping journal never

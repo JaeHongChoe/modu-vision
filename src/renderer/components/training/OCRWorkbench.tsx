@@ -4,6 +4,7 @@ import { api, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from 
 import { useProjectStore } from '../../stores/useProjectStore';
 import {useSpecializedTraining} from './useSpecializedTraining';
 import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
+import {WarmStartSelector} from './WarmStartSelector';
 
 function parseRows(value: string): OCRLabelRow[] {
   const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -30,6 +31,7 @@ export const OCRWorkbench: React.FC = () => {
   const [datasetPath, setDatasetPath] = useState('');
   const [rowsText, setRowsText] = useState('');
   const [epochs, setEpochs] = useState(20);
+  const [warmParentId, setWarmParentId] = useState('');
   const [models, setModels] = useState<OCRModelSummary[]>([]);
   const [jobId, setJobId] = useState('');
   const [imagePath, setImagePath] = useState('');
@@ -97,7 +99,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || busy || !manifestCount) return;
     setBusy('train'); setError(''); setNotice('');
     try {
-      await training.start(datasetPath.trim(),epochs);
+      await training.start(datasetPath.trim(),epochs,warmParentId || undefined);
       if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -144,6 +146,7 @@ export const OCRWorkbench: React.FC = () => {
         {manifestCount !== null && <span className="text-emerald-300">검증된 정답 {manifestCount}개</span>}
       </div>
       <SpecializedTrainingStatus {...training} />
+      <WarmStartSelector family="ocr" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training.active} refreshKey={training.job?.status === 'completed' ? training.job.job_id : null} />
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>

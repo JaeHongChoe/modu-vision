@@ -23,7 +23,7 @@ def _evaluate(tmp_path,monkeypatch,mode,with_mask):
             self.calls+=1
             return (torch.tensor([[[[.1,.1],[.1,.1]]]]) if self.calls==1 else torch.tensor([[[[.9,.2],[.2,.2]]]]),torch.tensor([.1 if self.calls==1 else .9]))
     monkeypatch.setattr(routes_evaluation,'AnomalyDataset',Dataset)
-    monkeypatch.setattr(routes_evaluation,'PaDiMDetector',Detector)
+    monkeypatch.setattr(routes_evaluation,'reconstruct_anomaly_detector',lambda *args, **kwargs: Detector())
     checkpoint=tmp_path/'model.pt';torch.save({'model_state_dict':{}},checkpoint)
     return routes_evaluation._evaluate_anomaly(checkpoint,{'anomaly_mode':mode,'image_size':[8,8]},tmp_path,torch.device('cpu'))
 

@@ -51,13 +51,56 @@ const summary = (task, split = { train: 0, val: 0, test: 0 }) => ({
 function reset(folder = '/data') {
   store.setState({
     folderPath: folder, hasSelectedFolder: true, datasetKey: null, importError: null,
-    totalImages: 0, sourceImages: 0, unlabeledImages: 0, classes: {},
+    totalImages: 0, sourceImages: 0, unlabeledImages: 0, classes: {}, classSplitCounts: null,
     split: { train: 0, val: 0, test: 0 }, images: [], totalImagesCount: 0,
     page: 1, activeSplitFilter: 'all', activeClassFilter: null,
     isLoading: false, isSplitting: false, splitError: null,
     splitSupported: null, splitUnavailableReason: null, staleDatasetKeys: [],
   });
 }
+
+test('applied class counts survive gallery filters and refresh after a split', async () => {
+  reset('/presplit');
+  const originalCounts = { B: { train: 2, val: 1, test: 1 }, C: { train: 2, val: 1, test: 1 } };
+  let actualCounts = originalCounts;
+  mockApi.dataset.import = async () => ({ ...summary('classification'), total_images: 8,
+    classes: { B: 4, C: 4 }, split: { train: 4, val: 2, test: 2 } });
+  mockApi.dataset.getImages = async ({ split, class_name, label_status }) => ({
+    total: split ? 4 : 8, items: [],
+    class_split_counts: split || class_name || label_status ? null : actualCounts,
+  });
+  await store.getState().importFolder('/presplit', 'classification');
+  assert.deepEqual(store.getState().classSplitCounts, originalCounts);
+  store.setState({ activeSplitFilter: 'train' });
+  await store.getState().loadImages();
+  assert.deepEqual(store.getState().classSplitCounts, originalCounts);
+
+  actualCounts = { B: { train: 3, val: 1, test: 0 }, C: { train: 3, val: 1, test: 0 } };
+  mockApi.dataset.split = async () => ({ split: { train: 6, val: 2, test: 0 } });
+  await store.getState().applySplit(0.75, 0.25);
+  assert.deepEqual(store.getState().classSplitCounts, actualCounts);
+  store.getState().setFolderPath('/next-source');
+  assert.equal(store.getState().classSplitCounts, null);
+});
+
+test('a gallery response from before a label edit cannot restore old class split counts', async () => {
+  reset('/edited');
+  store.setState({ datasetKey: '/edited\0classification', split: { train: 4, val: 2, test: 2 } });
+  const oldCounts = { B: { train: 2, val: 1, test: 1 } };
+  let resolveImages, resolveImport;
+  mockApi.dataset.getImages = () => new Promise((resolve) => { resolveImages = resolve; });
+  const oldGallery = store.getState().loadImages();
+  mockApi.dataset.import = () => new Promise((resolve) => { resolveImport = resolve; });
+  const refresh = store.getState().annotationsChanged();
+  resolveImages({ total: 4, items: [], class_split_counts: oldCounts });
+  await oldGallery;
+  assert.equal(store.getState().classSplitCounts, null);
+  const newCounts = { B: { train: 1, val: 1, test: 1 } };
+  mockApi.dataset.getImages = async () => ({ total: 3, items: [], class_split_counts: newCounts });
+  resolveImport({ ...summary('classification'), split: { train: 1, val: 1, test: 1 } });
+  await refresh;
+  assert.deepEqual(store.getState().classSplitCounts, newCounts);
+});
 
 test('default folder is not imported before the operator selects data', async () => {
   reset('./datasets/synthetic');

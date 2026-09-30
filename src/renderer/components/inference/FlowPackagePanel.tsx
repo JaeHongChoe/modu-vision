@@ -7,6 +7,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import type { ImageMeta, VisionTask } from '../../types';
 import { savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
+import { canVerifyFlowOnHost, edgeDeploymentCommands, flowDeploymentOptions, type EdgeTarget, type FlowDeploymentProfile } from './edgeDeployment';
 
 interface FlowExportResult {
   package_path: string;
@@ -14,6 +15,7 @@ interface FlowExportResult {
   pipeline_id: string;
   model_job_ids: string[];
   total_files: number;
+  deployment?: { profile: 'edge_cpu'; device: 'cpu'; target: EdgeTarget };
   parity: {
     status: 'not_run' | 'passed';
     image_path?: string;
@@ -40,6 +42,26 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [result, setResult] = useState<FlowExportResult | null>(null);
   const [identity, setIdentity] = useState<SavedFlowIdentity | null>(null);
   const [identityError, setIdentityError] = useState<string | null>(null);
+  const [deploymentProfile, setDeploymentProfile] = useState<FlowDeploymentProfile>('standard');
+  const [edgeTarget, setEdgeTarget] = useState<EdgeTarget>({ os: 'linux', architecture: 'x86_64' });
+  const [hostTarget, setHostTarget] = useState<EdgeTarget | null>(null);
+  const [edgeTargets, setEdgeTargets] = useState<Record<EdgeTarget['os'], EdgeTarget['architecture'][]>>({
+    linux: ['x86_64', 'arm64'], windows: ['x86_64'], macos: ['arm64'],
+  });
+  const [edgeTargetError, setEdgeTargetError] = useState<string | null>(null);
+  const canVerify = canVerifyFlowOnHost(deploymentProfile, edgeTarget, hostTarget);
+  useEffect(() => {
+    let active = true;
+    api.export.edgeTargets().then((available) => {
+      if (!active) return;
+      setHostTarget(available.host);
+      setEdgeTargets(available.supported);
+      if (available.host) setEdgeTarget(available.host);
+    }).catch((cause) => {
+      if (active) setEdgeTargetError(cause instanceof Error ? cause.message : 'Edge 대상 정보를 읽지 못했습니다.');
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     setVersions([]);
@@ -89,7 +111,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   }, [selectedVersionId, versions, sourceFolder, projectDir]);
   const exportFlow = async () => {
     if (!sourceFolder || !selectedVersion || identity?.versionId !== selectedVersion.version_id || isExporting) return;
-    if (verifyOnImage && !selectedImage) {
+    if (verifyOnImage && canVerify && !selectedImage) {
       setError('동일성 검증에 사용할 실제 이미지를 선택하세요.');
       return;
     }
@@ -103,7 +125,8 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         recipe_task: selectedVersion.recipe_task,
         version_id: selectedVersion.version_id,
         package_name: `modu_flow_${selectedVersion.version_id.slice(0, 8)}_${Date.now()}`,
-        ...(verifyOnImage && selectedImage ? {
+        ...flowDeploymentOptions(deploymentProfile, edgeTarget),
+        ...(verifyOnImage && canVerify && selectedImage ? {
           verification_image_path: selectedImage.file_path,
           verification_image_id: selectedImage.image_id,
         } : {}),
@@ -150,6 +173,39 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       <SavedFlowIdentityCard identity={identity} isActive={selectedVersion.is_active} />
     </div>}
     {identityError && <p role="alert" className="mt-3 text-xs text-rose-300">저장 버전 확인 실패: {identityError}</p>}
+    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <label className="grid gap-1.5 text-xs font-medium text-slate-300">배포 프로필
+        <select value={deploymentProfile} disabled={isExporting} onChange={(event) => {
+          setDeploymentProfile(event.target.value as FlowDeploymentProfile); setResult(null); setFailedExport(null); setError(null);
+        }} className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100">
+          <option value="standard">표준 Python 패키지 (CPU / CUDA / MPS)</option>
+          <option value="edge_cpu">CPU Edge (설치·사전 점검·실행)</option>
+        </select>
+      </label>
+      {deploymentProfile === 'edge_cpu' && <>
+        <label className="grid gap-1.5 text-xs font-medium text-slate-300">대상 운영체제
+          <select value={edgeTarget.os} disabled={isExporting} onChange={(event) => {
+            const os = event.target.value as EdgeTarget['os'];
+            setEdgeTarget({ os, architecture: edgeTargets[os].includes(edgeTarget.architecture) ? edgeTarget.architecture : edgeTargets[os][0] });
+            setResult(null); setFailedExport(null); setError(null);
+          }} className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100">
+            <option value="linux">Linux</option><option value="windows">Windows</option><option value="macos">macOS</option>
+          </select>
+        </label>
+        <label className="grid gap-1.5 text-xs font-medium text-slate-300">대상 CPU 아키텍처
+          <select value={edgeTarget.architecture} disabled={isExporting} onChange={(event) => {
+            setEdgeTarget({ ...edgeTarget, architecture: event.target.value as EdgeTarget['architecture'] });
+            setResult(null); setFailedExport(null); setError(null);
+          }} className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100">
+            {edgeTargets[edgeTarget.os].map((arch) => <option key={arch} value={arch}>{arch === 'arm64' ? 'ARM64 / aarch64' : 'x86_64 / AMD64'}</option>)}
+          </select>
+        </label>
+      </>}
+    </div>
+    {deploymentProfile === 'edge_cpu' && <p className="mt-2 text-xs leading-5 text-slate-400">
+      전체 플로우를 CPU로 실행합니다. 대상에 Python 3.10–3.13과 호환 패키지가 필요하며 설치·사전 점검 CLI를 포함합니다. 특정 보드·벤더 SDK·양자화·현장 성능은 검증하지 않았습니다.
+    </p>}
+    {deploymentProfile === 'edge_cpu' && edgeTargetError && <p className="mt-2 text-xs text-amber-300">{edgeTargetError} 대상 장비에서 사전 점검을 실행하세요.</p>}
     <div className="grid gap-4 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
       <label className="grid min-w-0 gap-1.5 text-xs font-medium text-slate-300">
         저장된 플로우 버전
@@ -165,22 +221,23 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       <label className="grid min-w-0 gap-1.5 text-xs font-medium text-slate-300">
         검증 이미지
         <select value={selectedImagePath} onChange={(event) => { setSelectedImagePath(event.target.value); setResult(null); }}
-          disabled={!verifyOnImage || images.length === 0 || isExporting}
+          disabled={!verifyOnImage || !canVerify || images.length === 0 || isExporting}
           className="w-full rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100 disabled:opacity-50">
           {images.length === 0 && <option value="">사용 가능한 이미지 없음</option>}
           {images.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
         </select>
       </label>
-      <button type="button" onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting || (verifyOnImage && !selectedImage)}
+      <button type="button" onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting || (verifyOnImage && canVerify && !selectedImage)}
         className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">
         {isExporting ? '패키지 생성·검증 중...' : '전체 플로우 내보내기'}
       </button>
     </div>
     <label className="mt-3 flex items-center gap-2 text-xs text-slate-300">
-      <input type="checkbox" checked={verifyOnImage} onChange={(event) => setVerifyOnImage(event.target.checked)} disabled={isExporting}
+      <input type="checkbox" checked={verifyOnImage && canVerify} onChange={(event) => setVerifyOnImage(event.target.checked)} disabled={isExporting || !canVerify}
         className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
       실제 이미지로 앱 엔진과 독립 실행 패키지 결과 비교
     </label>
+    {!canVerify && <p role="status" className="mt-2 text-xs text-amber-300">선택한 Edge 대상과 현재 앱의 OS/CPU가 다르거나 현재 대상 정보가 없습니다. 이미지 결과 비교는 대상 장비에서 실행하세요.</p>}
     {error && <div role="alert" className="mt-3 rounded border border-rose-700 bg-rose-950/30 p-3 text-xs text-rose-200">
       <p>{error}</p>
       {failedExport?.mismatchedFields.length ? <p className="mt-2 break-all font-mono">불일치 항목: {failedExport.mismatchedFields.join(', ')}</p> : null}
@@ -197,6 +254,11 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       </div>
       {result.parity.status === 'passed' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
       <p className="mt-2 break-all font-mono text-slate-400">{result.package_path}</p>
+      {result.deployment && <div className="mt-3 rounded border border-sky-800 bg-sky-950/20 p-3">
+        <p className="font-semibold text-sky-200">CPU Edge · {result.deployment.target.os} / {result.deployment.target.architecture} · CPU 고정</p>
+        <p className="mt-2 text-slate-400">패키지 폴더를 대상 장비로 복사한 뒤 아래 순서로 실행하세요.</p>
+        <pre className="mt-2 overflow-x-auto whitespace-pre text-[11px] text-slate-300">{Object.values(edgeDeploymentCommands(result.deployment.target)).join('\n')}</pre>
+      </div>}
       <p className="mt-2 text-slate-500">이 결과는 선택한 이미지 1장의 동일성 검증입니다. 현장 서비스 적용 여부는 별도로 확인하세요.</p>
     </div>}
   </section>;

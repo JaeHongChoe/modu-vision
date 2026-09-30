@@ -243,7 +243,7 @@ def test_probe_runs_runtime_read_only_and_reports_device(monkeypatch, tmp_path):
     monkeypatch.setattr(SSHTransport, "exec", local_exec)
     result = SSHTransport().probe(profile)
 
-    assert result["ready"] is False
+    assert result["ready"] is True
     assert result["device_type"] in ("cpu", "cuda")
     assert isinstance(result["checks"]["free_bytes"], int)
     assert result["checks"]["free_bytes"] > 0
@@ -305,7 +305,7 @@ def test_probe_requires_stage4_evaluation_imports(monkeypatch, missing_module):
     assert result["ready"] is False
 
 
-def test_probe_blocks_when_pretrained_checkpoint_is_missing(monkeypatch):
+def test_selected_legacy_training_blocks_when_pretrained_checkpoint_is_missing(monkeypatch):
     profile = ComputeProfile(**profile_data())
     checks = {
         "protocol_version": 1,
@@ -325,7 +325,11 @@ def test_probe_blocks_when_pretrained_checkpoint_is_missing(monkeypatch):
         return subprocess.CompletedProcess([], 0, stdout=json.dumps(checks), stderr="")
 
     monkeypatch.setattr(SSHTransport, "exec", fake_exec)
-    assert SSHTransport().probe(profile)["ready"] is False
+    result = SSHTransport().probe(profile)
+    assert result['ready'] is True
+    from backend.remote.ssh_transport import require_training_runtime
+    with pytest.raises(ValueError, match='resnet18'):
+        require_training_runtime(result, 'classification', 'fast', {'backbone': 'resnet18'})
 
 
 def test_probe_rejects_incompatible_worker_protocol(monkeypatch):
@@ -402,8 +406,10 @@ def test_probe_parses_last_json_line_after_container_banner(monkeypatch):
             name: True for name in (
                 "torch", "torchvision", "cv2", "numpy", "PIL", "sklearn",
                 "psutil", "fastapi", "pydantic",
+                'timm', 'safetensors', 'huggingface_hub', 'ultralytics',
             )
         },
+        'model_dependencies': {'dinov3_vits16': True, 'yolo26n': True},
         "pretrained_weights": {
             name: {"ok": True} for name in (
                 "resnet18", "convnext_tiny", "efficientnet_b0",

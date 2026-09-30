@@ -35,8 +35,8 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     }).catch(cause=>{if(active&&current())setError(String(cause.message ?? cause));});},600);
     return()=>{active=false;clearTimeout(timer);};
   },[family,job,projectDir,source,labelset]);
-  const start=async(path:string,epochs:number)=>{
-    setError('');const record=await specializedApi.startTraining(family,path,epochs);
+  const start=async(path:string,epochs:number,warmStartJobId?:string)=>{
+    setError('');const record=await specializedApi.startTraining(family,path,epochs,warmStartJobId);
     if(current()){setJob(record);setJobs(rows=>[record,...rows.filter(item=>item.job_id!==record.job_id)]);}
   };
   const cancel=async()=>{

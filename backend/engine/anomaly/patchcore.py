@@ -212,6 +212,7 @@ class PatchCoreDetector:
     def state_dict(self) -> Dict[str, Any]:
         """Returns serializable state dictionary."""
         return {
+            "feature_extractor_state_dict": {key: value.cpu() for key, value in self.feature_extractor.state_dict().items()},
             "coreset": self.coreset.cpu() if self.coreset is not None else None,
             "threshold": self.threshold,
             "backbone_name": self.backbone_name,
@@ -222,6 +223,8 @@ class PatchCoreDetector:
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """Loads state dictionary."""
+        if state_dict.get('feature_extractor_state_dict') is not None:
+            self.feature_extractor.load_state_dict(state_dict['feature_extractor_state_dict'], strict=True)
         self.coreset = state_dict["coreset"].to(self.device) if state_dict.get("coreset") is not None else None
         self.threshold = state_dict.get("threshold", 0.0)
         self.coreset_sampling_ratio = state_dict.get("coreset_sampling_ratio", self.coreset_sampling_ratio)

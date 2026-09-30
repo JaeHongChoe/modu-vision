@@ -49,6 +49,7 @@ class GANTrainRequest(BaseModel):
     base_channels: int = Field(default=16, ge=8, le=128)
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     background: bool = False
+    warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
 class GANGenerateRequest(BaseModel):
@@ -122,13 +123,27 @@ def train(req: GANTrainRequest, request: Request):
     project=get_current_project(request)
     try:source=require_training_source(project,req.dataset_path)
     except ValueError as exc:raise HTTPException(409,str(exc)) from exc
-    output=_models_root(request)/uuid.uuid4().hex
     try:
+        from backend.engine.specialized_warm_start import resolve_family_parent
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'defect_gan', source, source, req.model_dump()) if req.warm_start_job_id else None
+        output=_models_root(request)/uuid.uuid4().hex
         result=start_job(project=project,task='defect_gan',source=source,output=output,options=req,
-            runner=lambda event,progress,device:train_defect_gan(source,output,epochs=req.epochs,batch_size=req.batch_size,seed=req.seed,base_channels=req.base_channels,device=device,cancel_event=event,on_progress=progress),family_digest=lambda:_family_digest(source))
+            runner=lambda event,progress,device:train_defect_gan(source,output,epochs=req.epochs,batch_size=req.batch_size,seed=req.seed,base_channels=req.base_channels,device=device,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:_family_digest(source),warm_start=parent)
         return JSONResponse(result,status_code=202) if req.background else result
     except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/warm-start-parents')
+def warm_start_parents(dataset_path: str, request: Request, base_channels: int = 16):
+    from backend.engine.specialized_warm_start import list_family_parents
+    project = get_current_project(request)
+    _models_root(request)
+    try:
+        source = require_training_source(project, dataset_path)
+        return list_family_parents(project['models_dir'], 'defect_gan', source, source, {'base_channels': base_channels})
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _job_action(request,action,job_id=None):

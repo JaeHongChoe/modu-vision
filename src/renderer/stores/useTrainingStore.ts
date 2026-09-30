@@ -8,6 +8,7 @@ import type { HardwareStats, TrainingPreset, VisionTask } from '../types';
 import { api } from '../services/api';
 import { useComputeStore } from './useComputeStore';
 import { useDatasetStore } from './useDatasetStore';
+import { trainingComputeReadiness } from '../utils/trainingComputeReadiness';
 
 export type TrainingStatus = 'idle' | 'queued' | 'preparing' | 'transferring' | 'running'
   | 'stopping' | 'syncing' | 'disconnected' | 'completed' | 'aborted' | 'failed';
@@ -108,7 +109,7 @@ interface TrainingState {
   hardware: HardwareStats;
 
   setPreset: (preset: TrainingPreset) => void;
-  startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string) => Promise<void>;
+  startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string, modelOverrides?: Record<string, unknown>) => Promise<void>;
   stopTraining: () => Promise<void>;
   recoverActiveJob: (source?: TrainingRecoverySource) => Promise<void>;
   refreshCurrentJob: () => Promise<void>;
@@ -176,7 +177,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
 
   setPreset: (preset) => set({ preset }),
 
-  startTraining: async (datasetPath, task, warmStartParentJobId) => {
+  startTraining: async (datasetPath, task, warmStartParentJobId, modelOverrides) => {
     if (useDatasetStore.getState().isSplitting) {
       throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
     }
@@ -189,8 +190,9 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     }
     const selectedProfileId = compute.selectedProfileId;
     const profile = selectedProfileId ? compute.getSelectedProfile() : undefined;
-    if (selectedProfileId && (!profile || compute.probeResults[selectedProfileId]?.ready !== true)) {
-      throw new Error('선택한 서버가 학습 준비 상태가 아닙니다. 연결 검사를 완료하세요.');
+    if (selectedProfileId) {
+      const readiness = trainingComputeReadiness(compute.probeResults[selectedProfileId], task, get().preset, modelOverrides, !!warmStartParentJobId);
+      if (!profile || !readiness.ready) throw new Error(readiness.reason);
     }
     trainingRecoverySequence += 1;
     pendingStartEvents = [];
@@ -225,6 +227,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         preset: get().preset,
         dataset_path: datasetPath,
         ...(warmStartParentJobId ? { warm_start_job_id: warmStartParentJobId } : {}),
+        ...(modelOverrides ? { config_overrides: modelOverrides } : {}),
         ...(selectedProfileId ? { compute_profile_id: selectedProfileId } : {}),
       });
       const res = await startRequest;

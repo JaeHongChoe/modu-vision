@@ -49,12 +49,14 @@ class _LiveJob:
     started_at: float = field(default_factory=time.time)
     cancel: threading.Event = field(default_factory=threading.Event, repr=False)
     thread: threading.Thread | None = field(default=None, repr=False)
+    warm_start: Any = field(default=None, repr=False)
 
     def summary(self) -> dict[str, Any]:
         return {"job_id": self.job_id, "status": self.status,
                 "epochs_completed": self.epochs_completed, "total_epochs": self.total_epochs,
                 "started_at": self.started_at, "result": self.result, "error": self.error,
-                "training_provenance": self.training_provenance}
+                "training_provenance": self.training_provenance,
+                "warm_start": self.warm_start.lineage() if self.warm_start else None}
 
 
 _JOBS: dict[tuple[str, str], _LiveJob] = {}
@@ -92,6 +94,7 @@ class TrainRequest(BaseModel):
     batch_size: int = Field(default=8, ge=1, le=64)
     image_size: int = Field(default=64, ge=16, le=512)
     learning_rate: float = Field(default=1e-3, gt=0, le=1)
+    warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
 class EvaluateRequest(BaseModel):
@@ -195,7 +198,7 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
         result = train_rotated_detector(
             job.dataset_path, job.output_dir, epochs=options.epochs,
             batch_size=options.batch_size, image_size=options.image_size,
-            learning_rate=options.learning_rate, device="cpu", cancel_event=job.cancel,
+            learning_rate=options.learning_rate, device="cpu", cancel_event=job.cancel, warm_start=job.warm_start,
         )
         validate_training_binding(job.training_provenance)
         if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
@@ -215,6 +218,8 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                     'source_dataset_path':str(job.dataset_path),'dataset_path':str(job.dataset_path),
                     'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
                     'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
+                if job.warm_start:
+                    receipt['warm_start'] = job.warm_start.lineage()
                 (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt))
                 result.update(checkpoint_sha256=checksum,model_sha256=checksum)
                 _set_job(job, "completed", result=result)
@@ -274,6 +279,12 @@ def start_training(req: TrainRequest, request: Request):
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     project = get_current_project(request)
+    from backend.engine.specialized_warm_start import resolve_family_parent
+    _models_root(request)
+    try:
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'rotated_detection', source, source, req.model_dump()) if req.warm_start_job_id else None
+    except (ValueError, OSError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
     from backend.engine.training_provenance import bind_family_training
     binding=bind_family_training(project,source,'rotated_detection')
     binding.update(family_dataset_path=str(source),family_dataset_sha256=load_rotated_manifest(source).provenance['dataset_sha256'],label_kind='rotated_detection')
@@ -284,7 +295,7 @@ def start_training(req: TrainRequest, request: Request):
                 raise HTTPException(status_code=409, detail="Another rotated training job is already running")
         job_id = uuid.uuid4().hex
         job = _LiveJob(Path(project["project_dir"]).resolve(), job_id,
-                       source, root / job_id, req.epochs,training_provenance=binding)
+                       source, root / job_id, req.epochs,training_provenance=binding, warm_start=parent)
         _JOBS[_key(job)] = job
         _write_state(job)
         context=copy_context()
@@ -292,6 +303,18 @@ def start_training(req: TrainRequest, request: Request):
                                       name=f"rotated-{job.job_id[:8]}", daemon=True)
         job.thread.start()
         return job.summary()
+
+
+@router.get('/warm-start-parents')
+def warm_start_parents(dataset_path: str, request: Request, image_size: int = 64):
+    from backend.engine.specialized_warm_start import list_family_parents
+    source = _project_source(request, dataset_path)
+    project = get_current_project(request)
+    _models_root(request)
+    try:
+        return list_family_parents(project['models_dir'], 'rotated_detection', source, source, {'image_size': image_size})
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.get("/jobs/{job_id}")

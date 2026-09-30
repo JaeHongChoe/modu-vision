@@ -33,15 +33,33 @@ const storeModule = new Module(storePath, module);
 storeModule.filename = storePath;
 storeModule.paths = Module._nodeModulePaths(path.dirname(storePath));
 const originalRequire = storeModule.require.bind(storeModule);
+const readinessPath = path.resolve(__dirname, '../src/renderer/utils/trainingComputeReadiness.ts');
+const readinessModule = new Module(readinessPath, module);
+readinessModule._compile(ts.transpileModule(fs.readFileSync(readinessPath, 'utf8'), {
+  compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022},
+}).outputText, readinessPath);
 storeModule.require = (specifier) => specifier === '../services/api'
   ? { api: mockApi }
   : specifier === './useDatasetStore'
     ? { useDatasetStore: { getState: () => datasetState } }
+    : specifier === '../utils/trainingComputeReadiness'
+      ? readinessModule.exports
     : specifier === './useComputeStore'
       ? { useComputeStore: { getState: () => computeState } }
     : originalRequire(specifier);
 storeModule._compile(compiled, storePath);
 const store = storeModule.exports.useTrainingStore;
+
+test('training sends the selected pretrained architecture and checkpoint without losing parent identity', async () => {
+  let sent;
+  mockApi.training.start = async (payload) => { sent = payload; return {job_id: 'configured-job'}; };
+  const options = {model_name: 'dinov3_vits16', pretrained_checkpoint: '/weights/dino.safetensors'};
+  await store.getState().startTraining('/test/data', 'segmentation', 'verified-parent', options);
+  assert.deepEqual(sent.config_overrides, options);
+  assert.equal(sent.warm_start_job_id, 'verified-parent');
+  assert.equal(sent.task, 'segmentation');
+  store.getState().updateFromTelemetry('training_completed', {job_id: 'configured-job', best_metric: .4});
+});
 
 test('polling restores complete remote epoch curves without duplicate points', async () => {
   store.setState({ jobId: 'remote-curve', jobComputeProfileId: 'gpu', isCurrentData: true, lossHistory: [] });

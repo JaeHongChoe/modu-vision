@@ -180,3 +180,38 @@ test('structured segmentation split capability removes the training quick split 
   assert.match(html, /images\/masks 구성은 재분할을 지원하지 않습니다/);
   assert.doesNotMatch(html, /80:20 기본 검증 분할 즉시 적용/);
 });
+
+test('class distribution uses the applied pre-split counts rather than the slider preview', () => {
+  useProjectStore.setState({ task: 'classification', language: 'ko' });
+  useDatasetStore.setState({
+    totalImages: 8, sourceImages: 8, classes: { B: 4, C: 4 },
+    split: { train: 4, val: 2, test: 2 }, trainRatio: 0.8,
+    classSplitCounts: { B: { train: 2, val: 1, test: 1 }, C: { train: 2, val: 1, test: 1 } },
+    images: [], totalImagesCount: 8, splitSupported: true, splitUnavailableReason: null,
+    activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all',
+  });
+  const text = renderCurrent(DatasetStudio).replace(/<[^>]*>/g, '');
+  assert.equal((text.match(/T: 2V: 1Test: 1/g) || []).length, 2);
+  assert.doesNotMatch(text, /T: 3V: 0Test: 1/);
+});
+
+test('unapplied class split counts are clearly described as a preview', () => {
+  useProjectStore.setState({ task: 'classification', language: 'ko' });
+  useDatasetStore.setState({
+    totalImages: 8, classes: { B: 4, C: 4 }, split: { train: 0, val: 0, test: 0 },
+    classSplitCounts: null, trainRatio: 0.8, splitSupported: true,
+  });
+  const text = renderCurrent(DatasetStudio).replace(/<[^>]*>/g, '');
+  assert.match(text, /분할 예상/);
+});
+
+test('an applied split without its class summary never shows ratio estimates as saved counts', () => {
+  useProjectStore.setState({ task: 'classification', language: 'ko' });
+  useDatasetStore.setState({
+    totalImages: 8, classes: { B: 4, C: 4 }, split: { train: 4, val: 2, test: 2 },
+    classSplitCounts: null, trainRatio: 0.8, splitSupported: true,
+  });
+  const text = renderCurrent(DatasetStudio).replace(/<[^>]*>/g, '');
+  assert.match(text, /적용된 분할 집계 확인 중/);
+  assert.doesNotMatch(text, /T: 3V: 0Test: 1/);
+});

@@ -176,7 +176,7 @@ class _DefectDiscriminator(nn.Module):
 def train_defect_gan(
     root: str | Path, output_dir: str | Path, *, epochs: int = 20,
     batch_size: int = 8, seed: int = 0, device: str = "cpu", base_channels: int = 16,
-    cancel_event=None, on_progress=None,
+    cancel_event=None, on_progress=None, warm_start=None,
 ) -> dict[str, Any]:
     if epochs < 1 or batch_size < 2 or base_channels < 8:
         raise ValueError("Defect GAN epochs must be positive, batch size >= 2, base channels >= 8")
@@ -191,6 +191,13 @@ def train_defect_gan(
                         shuffle=True, drop_last=False)
     generator = DefectGenerator(base_channels).to(dev)
     discriminator = _DefectDiscriminator(base_channels).to(dev)
+    lineage = {}
+    if warm_start is not None:
+        from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
+        require_new_candidate(output_dir, warm_start)
+        load_family_weights({'generator_state_dict': generator, 'discriminator_state_dict': discriminator},
+                            warm_start, requested_signature('defect_gan', root, {'base_channels': base_channels}))
+        lineage = {'warm_start': warm_start.lineage()}
     loss_fn = nn.BCELoss()
     generator_opt = torch.optim.Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     discriminator_opt = torch.optim.Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
@@ -232,6 +239,7 @@ def train_defect_gan(
         "discriminator_state_dict": discriminator.cpu().state_dict(),
         "source_manifest_sha256": source_manifest_sha256,
         "sample_count": len(samples), "epochs": epochs, "seed": seed,
+        **lineage,
     }
     torch.save(payload, temporary)
     os.replace(temporary, checkpoint)

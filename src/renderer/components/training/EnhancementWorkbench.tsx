@@ -3,6 +3,7 @@ import { ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { request } from '../../services/api';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { WarmStartSelector } from './WarmStartSelector';
 
 interface EnhancementModel { job_id: string; metadata: { best_epoch: number; dataset_path: string; source_dataset_path: string } }
 interface EnhancementMetrics { sample_count: number; input_psnr: number; output_psnr: number; improved: boolean }
@@ -12,10 +13,12 @@ const activeStatus = (status: string) => ['queued', 'running', 'stopping'].inclu
 export function EnhancementWorkbench() {
   const source = useDatasetStore((s) => s.folderPath);
   const projectId = useProjectStore((s) => s.project?.id);
+  const labelsetId = useProjectStore((s) => s.project?.active_labelset_id || 'default');
   const [datasetPath, setDatasetPath] = useState('');
   const [models, setModels] = useState<EnhancementModel[]>([]);
   const [jobId, setJobId] = useState('');
   const [epochs, setEpochs] = useState(1);
+  const [warmParentId, setWarmParentId] = useState('');
   const [sigma, setSigma] = useState(15);
   const [imageLimit, setImageLimit] = useState(0);
   const [sampleCount, setSampleCount] = useState<number | null>(null);
@@ -25,7 +28,7 @@ export function EnhancementWorkbench() {
   const [notice, setNotice] = useState('');
   const [jobs, setJobs] = useState<EnhancementJob[]>([]);
   const [job, setJob] = useState<EnhancementJob | null>(null);
-  const scope = `${projectId || ''}\n${source}`;
+  const scope = `${projectId || ''}\n${source}\n${labelsetId}`;
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const training = job !== null && activeStatus(job.status);
@@ -49,7 +52,7 @@ export function EnhancementWorkbench() {
       if (running) { setJob(running); setDatasetPath(running.dataset_path); }
     }).catch((e) => { if (current) setError(e instanceof Error ? e.message : '학습 작업을 읽지 못했습니다.'); });
     return () => { current = false; };
-  }, [projectId, source]);
+  }, [projectId, source, labelsetId]);
 
   useEffect(() => {
     if (!job || !activeStatus(job.status)) return;
@@ -94,7 +97,7 @@ export function EnhancementWorkbench() {
   });
   const train = () => action('이미지 개선 학습', async () => {
     const result = await request<EnhancementJob>('/api/enhancement/train', {
-      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs, device: 'cpu', background: true }),
+      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs, device: 'cpu', background: true, ...(warmParentId ? {warm_start_job_id: warmParentId} : {}) }),
     });
     if (currentScope.current !== scope) return;
     setJob(result); setJobs((old) => [result, ...old.filter((item) => item.job_id !== result.job_id)]);
@@ -134,6 +137,7 @@ export function EnhancementWorkbench() {
       <button type="button" disabled={!datasetPath || !!busy} onClick={() => void load()} className={button}>정답 쌍 확인</button>
       {sampleCount !== null && <span className="ml-3 text-emerald-300">검증된 이미지 쌍 {sampleCount}개</span>}
       <div className="flex flex-wrap items-end gap-3 border-t border-[#344255] pt-4">
+        <WarmStartSelector family="enhancement" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input aria-label="이미지 개선 학습 epoch" type="number" min={1} max={500} value={epochs} onChange={(e) => setEpochs(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className={`${input} max-w-24`} /></label>
         <button type="button" disabled={!sampleCount || !!busy || training} onClick={() => void train()} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">이미지 개선 후보 학습</button>
         <label className="min-w-56 flex-1">완료 후보 모델<select value={jobId} onChange={(e) => {

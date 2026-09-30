@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import pickle
 from pathlib import Path
 import re
 import shutil
@@ -19,6 +20,7 @@ from backend.engine.specialized_models import FLOW_TASKS, flow_model_task, valid
 from backend.engine.flowchart_engine import FlowchartEngine, FlowchartPipeline, ordered_linear_nodes
 from backend.engine.flow_package_runtime import compare_flow_results, verify_flow_package
 from backend.engine.industrial_adapters import read_image_safely_rgb
+from backend.engine.edge_runtime import create_edge_profile
 
 
 _RUNNER = """#!/usr/bin/env python3
@@ -33,6 +35,58 @@ from backend.engine.inspection_service import main
 
 if __name__ == '__main__':
     raise SystemExit(main())
+"""
+
+_EDGE_RUNNER = """#!/usr/bin/env python3
+from pathlib import Path
+import runpy
+
+if __name__ == '__main__':
+    runpy.run_path(str(Path(__file__).resolve().parent / 'backend' / 'engine' / 'edge_runtime.py'), run_name='__main__')
+"""
+
+_EDGE_README = """# Generic CPU Edge deployment
+
+This package declares one target OS and CPU architecture in
+`edge_deployment.json`. It includes the entire saved flow and exact model
+checkpoints. The execution device is fixed to CPU. Python >=3.10,<3.14 and
+compatible dependency wheels are required. Target declarations do not certify
+an Edge board, latency, vendor SDK, quantization, or model quality.
+
+Run these commands from this package directory on the declared target:
+
+    python edge.py preflight --skip-dependencies
+    python edge.py install
+
+The first command checks target, Python, and every manifest file using only
+Python's standard library. Installation creates a new `.edge_venv` environment,
+installs CPU PyTorch wheels on Linux/Windows, installs requirements, then runs
+the full dependency preflight. An existing environment is never overwritten.
+Network access to package indexes and compatible wheels are required for setup;
+inference uses the bundled checkpoints offline. If pip has no compatible wheel,
+installation fails with its diagnostic; emulated CPUs and cross-install are
+unsupported. Provision an approved compatible Python/runtime on your target.
+
+On Linux/macOS use the environment's interpreter:
+
+    .edge_venv/bin/python edge.py preflight
+    .edge_venv/bin/python edge.py run -- --image /absolute/path/image.png --output result.json
+    VISION_INSPECTION_TOKEN=your-secret .edge_venv/bin/python edge.py serve -- --state-dir /absolute/private/state
+
+On Windows PowerShell use:
+
+    .\\.edge_venv\\Scripts\\python.exe edge.py preflight
+    .\\.edge_venv\\Scripts\\python.exe edge.py run -- --image C:\\inputs\\image.png --output result.json
+    $env:VISION_INSPECTION_TOKEN = 'your-secret'
+    .\\.edge_venv\\Scripts\\python.exe edge.py serve -- --state-dir C:\\private\\state
+
+`run` and `serve` recheck integrity, target and usable dependency versions before
+launching. They reject package/device overrides. The regular flow runner and
+service also enforce the declared host and CPU device. The service's HTTP and
+release approval contracts are described below. Keep the package manifest hash
+or approved release policy in a separate trusted location: checksums detect
+changed content against a manifest, and are not a vendor or signing certificate.
+
 """
 
 _REQUIREMENTS = """numpy>=1.26
@@ -122,6 +176,32 @@ def _model_jobs(pipeline: FlowchartPipeline) -> dict[str, str]:
     return jobs
 
 
+def _runtime_requirements(checkpoints: Mapping[str, Path]) -> str:
+    """Add only the optional adapters that the packaged checkpoints require."""
+    import torch
+    extra: set[str] = set()
+    for checkpoint in checkpoints.values():
+        metadata = Path(checkpoint).with_name("model_meta.json")
+        records = []
+        if metadata.is_file() and not metadata.is_symlink():
+            records.append(json.loads(metadata.read_text(encoding="utf-8")))
+        try:
+            records.append(torch.load(checkpoint, map_location="cpu", weights_only=True))
+        except (OSError, ValueError, RuntimeError, EOFError, IndexError, KeyError, pickle.UnpicklingError):
+            # Checksum-only legacy exports remain supported by the builder. The
+            # API's scoped checkpoint resolver validates genuine weights.
+            pass
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            identifiers = [str(record.get(key, "")).lower() for key in ("backbone", "model_name", "architecture")]
+            if any("dinov3" in name for name in identifiers):
+                extra.add("timm>=1.0.24")
+            if any(name.startswith("yolo") or "detection:yolo" in name for name in identifiers):
+                extra.add("ultralytics>=8.4.41")
+    return _REQUIREMENTS + "".join(f"{requirement}\n" for requirement in sorted(extra))
+
+
 def build_flow_package(
     *,
     pipeline: FlowchartPipeline,
@@ -129,10 +209,19 @@ def build_flow_package(
     output_base_dir: Path,
     package_name: str,
     approved_revisions: Mapping[str, Mapping[str, str]] | None = None,
+    deployment_profile: str = "standard",
+    target_os: str | None = None,
+    target_arch: str | None = None,
 ) -> dict[str, Any]:
     """Create a new package, never overwriting an existing release."""
     if not isinstance(package_name, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,95}", package_name):
         raise ValueError("Invalid package name")
+    if deployment_profile not in ("standard", "edge_cpu"):
+        raise ValueError("Unsupported flow deployment profile")
+    if deployment_profile == "standard" and (target_os is not None or target_arch is not None):
+        raise ValueError("Target OS/architecture requires the edge_cpu deployment profile")
+    # Validate the declaration before reserving a directory or reading models.
+    deployment = create_edge_profile(target_os, target_arch, _REQUIREMENTS) if deployment_profile == "edge_cpu" else None
     ordered_linear_nodes(pipeline)
     jobs = _model_jobs(pipeline)
     if set(checkpoints) != set(jobs):
@@ -143,6 +232,10 @@ def build_flow_package(
         path = Path(checkpoint)
         if path.is_symlink() or not path.is_file() or path.name != "best_model.pt":
             raise ValueError(f"Unsafe or missing checkpoint for {job_id}")
+
+    requirements = _runtime_requirements(checkpoints)
+    if deployment is not None:
+        deployment = create_edge_profile(target_os, target_arch, requirements)
 
     release_revisions: list[dict[str, str]] | None = None
     if approved_revisions is not None:
@@ -179,8 +272,15 @@ def build_flow_package(
         )
         (staging / "run_flow.py").write_text(_RUNNER, encoding="utf-8")
         (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
-        (staging / "requirements.txt").write_text(_REQUIREMENTS, encoding="utf-8")
+        (staging / "requirements.txt").write_text(requirements, encoding="utf-8")
         (staging / "README_DEPLOY.md").write_text(_README, encoding="utf-8")
+        if deployment is not None:
+            (staging / "edge.py").write_text(_EDGE_RUNNER, encoding="utf-8")
+            (staging / "edge.py").chmod(0o755)
+            (staging / "edge_deployment.json").write_text(
+                json.dumps(deployment, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
+            )
+            (staging / "README_DEPLOY.md").write_text(_EDGE_README + _README, encoding="utf-8")
         for name in ("inspection-service-client.mjs", "InspectionServiceClient.cs"):
             client = source_root / "examples" / name
             if client.is_symlink() or not client.is_file():
@@ -235,6 +335,8 @@ def build_flow_package(
         }
         if release_revisions is not None:
             manifest["release"] = {"approval_revisions": release_revisions}
+        if deployment is not None:
+            manifest["deployment"] = deployment
         (staging / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )
@@ -253,6 +355,8 @@ def build_flow_package(
                 "manifest_sha256": _sha256(target / "manifest.json"),
                 "approval_revisions": release_revisions,
             }
+        if deployment is not None:
+            result["deployment"] = deployment
         return result
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)

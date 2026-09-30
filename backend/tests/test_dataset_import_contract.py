@@ -14,6 +14,33 @@ from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.labelme_preparation import prepare_labelme_segmentation
 
 
+def test_class_split_summary_uses_all_images_before_pagination(tmp_path):
+    folder = tmp_path / "presplit"
+    for partition, count in (("train", 2), ("val", 1), ("test", 1)):
+        for label in ("B", "C"):
+            class_dir = folder / partition / label
+            class_dir.mkdir(parents=True)
+            for index in range(count):
+                Image.new("RGB", (12, 10)).save(class_dir / f"{label}_{partition}_{index}.png")
+    response = routes_dataset.list_dataset_images(
+        folder_path=str(folder), task="classification", limit=1, offset=0,
+        split=None, class_name=None, label_status=None,
+    )
+    assert response["total"] == 8
+    assert len(response["items"]) == 1
+    assert response["class_split_counts"] == {
+        "B": {"train": 2, "val": 1, "test": 1},
+        "C": {"train": 2, "val": 1, "test": 1},
+    }
+
+    filtered = routes_dataset.list_dataset_images(
+        folder_path=str(folder), task="classification", limit=1, offset=0,
+        split="train", class_name="B", label_status=None,
+    )
+    assert filtered["total"] == 2
+    assert filtered.get("class_split_counts") is None
+
+
 def _flat_ng_folder(tmp_path, count=8, paired=6):
     folder = tmp_path / "flat_ng"
     folder.mkdir()

@@ -32,6 +32,9 @@ import { DefectGANWorkbench } from './DefectGANWorkbench';
 import { EnhancementWorkbench } from './EnhancementWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { api } from '../../services/api';
+import { ModelFamilyCatalog } from './ModelFamilyCatalog';
+import { modelChoices, trainingModelOverrides } from './modelTrainingOptions';
+import { trainingComputeReadiness } from '../../utils/trainingComputeReadiness';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -39,6 +42,9 @@ export const TrainingController: React.FC = () => {
   const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project } = useProjectStore();
+  const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
+  const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
+  const selectedBackbone = modelChoices[task].some(choice => choice.value === trainingBackbone) ? trainingBackbone : modelChoices[task][0].value;
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, applySplit, datasetKey } = useDatasetStore();
   const {
@@ -84,13 +90,20 @@ export const TrainingController: React.FC = () => {
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
   const jobProfile = profiles.find((profile) => profile.id === jobComputeProfileId);
   const jobGpuSelector = jobProfile?.gpu_selector?.trim();
+  const selectedReadiness = trainingComputeReadiness(selectedProbe, task, preset, trainingModelOverrides(task, selectedBackbone), !!warmParentId);
+  const completedJobId = status === 'completed' ? jobId : null;
   const displayedJobLabel = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
     ? jobProfile?.name || jobComputeLabel
     : jobComputeLabel;
   const computeReady = isComputeLoaded && !isComputeLoading && !computeLoadError &&
-    (!selectedProfileId || (Boolean(selectedProfile) && selectedProbe?.ready === true));
-  const warmStartSupported = task === 'classification' || task === 'segmentation';
+    (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
+  const warmStartSupported = true;
   const sourceReady = Boolean(projectDir && folderPath && datasetKey === `${folderPath}\0${task}`);
+
+  useEffect(() => {
+    setTrainingBackbone(modelChoices[task][0].value);
+    setPretrainedCheckpoint('');
+  }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
   useEffect(() => {
     let valid = true;
@@ -98,13 +111,13 @@ export const TrainingController: React.FC = () => {
     setWarmParentId('');
     setWarmParentsError(null);
     if (!sourceReady || !warmStartSupported) return () => { valid = false; };
-    api.training.warmStartParents(folderPath, task, preset).then((result) => {
+    api.training.warmStartParents(folderPath, task, preset, trainingModelOverrides(task, selectedBackbone)).then((result) => {
       if (valid) setWarmParents(result.parents);
     }).catch((error) => {
       if (valid) setWarmParentsError(error instanceof Error ? error.message : String(error));
     });
     return () => { valid = false; };
-  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir]);
+  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId]);
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {
@@ -125,7 +138,7 @@ export const TrainingController: React.FC = () => {
   const handleStart = async () => {
     if (!canStart) return;
     setActionError(null);
-    try { await startTraining(folderPath, task, warmParentId || undefined); }
+    try { await startTraining(folderPath, task, warmParentId || undefined, trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint)); }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
 
@@ -162,14 +175,15 @@ export const TrainingController: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
+        <ModelFamilyCatalog />
         <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Server className="h-4 w-4 text-blue-400" />
               <span className="font-semibold text-slate-400">새 학습 대상</span>
               <span className="font-bold text-slate-100">{!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : 'This computer'}</span>
-              {selectedProfileId && <span className={selectedProbe?.ready ? 'text-emerald-400' : 'text-amber-300'}>
-                {selectedProbe?.ready ? `준비 완료 · ${selectedProbe.device_name || selectedProbe.device_type || '서버'}` : '연결 검사 필요'}
+              {selectedProfileId && <span className={selectedReadiness.ready ? 'text-emerald-400' : 'text-amber-300'}>
+                {selectedReadiness.ready ? `준비 완료 · ${selectedProbe?.device_name || selectedProbe?.device_type || '서버'}` : selectedReadiness.reason}
               </span>}
             </div>
             {selectedProfileId && <button type="button" onClick={() => void probeProfile(selectedProfileId).catch(() => {})}
@@ -276,9 +290,26 @@ export const TrainingController: React.FC = () => {
           language={language}
         />
 
+        <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
+          <label className="font-semibold text-white">다음 학습 모델
+            <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
+              className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
+              {modelChoices[task].map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+            </select>
+          </label>
+          {selectedBackbone.startsWith('dinov3') && <p className="mt-2 text-slate-300">DINOv3 사전학습 특징을 사용하고 현재 라벨에 맞는 분류·분할 헤드를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p>}
+          {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
+          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo')) && <label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
+            <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
+              placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
+              className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />
+          </label>}
+          {task === 'anomaly' && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
+        </div>
+
         {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <div className="font-semibold text-white">이전 모델에서 재학습</div>
-          <p className="mt-1 text-slate-400">완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다. 새 결과는 후보 모델로 저장됩니다.</p>
+          <p className="mt-1 text-slate-400">{task === 'anomaly' ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
           <label className="mt-2 block text-slate-300">시작 모델
               <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
                 disabled={!sourceReady || isTraining} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">

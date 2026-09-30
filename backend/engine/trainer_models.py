@@ -13,12 +13,19 @@ from backend.engine.segmentation import build_segmentation_model
 from backend.engine.anomaly import PaDiMDetector, PatchCoreDetector
 
 
-def build_classification_model(num_classes: int = 2, backbone: str = "resnet18", pretrained: bool = True) -> nn.Module:
-    return create_classification_model(backbone=backbone, num_classes=num_classes, pretrained=pretrained)
+def build_classification_model(num_classes: int = 2, backbone: str = "resnet18", pretrained: bool = True,
+                               pretrained_checkpoint: str | None = None,
+                               pretrained_sha256: str | None = None) -> nn.Module:
+    return create_classification_model(backbone=backbone, num_classes=num_classes, pretrained=pretrained,
+                                       pretrained_checkpoint=pretrained_checkpoint, pretrained_sha256=pretrained_sha256)
 
 
-def build_detection_model(num_classes: int = 4, preset: str = "fast", pretrained: bool = True) -> nn.Module:
-    return create_detection_model(preset=preset, num_classes=num_classes, pretrained=pretrained)
+def build_detection_model(num_classes: int = 4, preset: str = "fast", pretrained: bool = True,
+                          backbone: str | None = None, pretrained_checkpoint: str | None = None,
+                          pretrained_sha256: str | None = None) -> nn.Module:
+    return create_detection_model(preset=preset, num_classes=num_classes, pretrained=pretrained,
+                                  backbone=backbone, pretrained_checkpoint=pretrained_checkpoint,
+                                  pretrained_sha256=pretrained_sha256)
 
 
 def build_anomaly_model(backbone: str = "resnet18", preset: str = "fast", pretrained: bool = True):

@@ -32,10 +32,14 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import tempfile
 from urllib.parse import urlparse
 
 root = sys.argv[1]
-modules = ('torch', 'torchvision', 'cv2', 'numpy', 'PIL', 'sklearn', 'psutil', 'fastapi', 'pydantic')
+scratch = tempfile.TemporaryDirectory(prefix='modu-vision-probe-')
+os.environ['YOLO_CONFIG_DIR'] = str(Path(scratch.name) / 'ultralytics')
+modules = ('torch', 'torchvision', 'cv2', 'numpy', 'PIL', 'sklearn', 'psutil', 'fastapi', 'pydantic',
+           'timm', 'safetensors', 'huggingface_hub', 'ultralytics')
 dependencies = {}
 for name in modules:
     try:
@@ -43,6 +47,17 @@ for name in modules:
         dependencies[name] = True
     except Exception:
         dependencies[name] = False
+model_dependencies = {}
+if dependencies['timm']:
+    import timm
+    supported = tuple(int(p) for p in re.findall(r'\d+', timm.__version__)[:3]) >= (1, 0, 24)
+    model_dependencies['dinov3_vits16'] = supported and bool(timm.is_model('vit_small_patch16_dinov3.lvd1689m'))
+    model_dependencies['dinov3_vitb16'] = supported and bool(timm.is_model('vit_base_patch16_dinov3.lvd1689m'))
+if dependencies['ultralytics']:
+    from importlib.metadata import version
+    parts = tuple(int(p) for p in re.findall(r'\d+', version('ultralytics'))[:3])
+    model_dependencies['yolo26n'] = parts >= (8, 4, 41)
+    model_dependencies['yolo26s'] = parts >= (8, 4, 41)
 root_exists = os.path.isdir(root)
 free_bytes = shutil.disk_usage(root).free if root_exists else 0
 device_type = 'cpu'
@@ -90,9 +105,11 @@ if dependencies['torch'] and dependencies['torchvision']:
             'file': filename,
             'sha256': digest,
         }
+scratch.cleanup()
 print(json.dumps({
     'protocol_version': 1,
     'runtime_dependencies': dependencies,
+    'model_dependencies': model_dependencies,
     'pretrained_weights': pretrained_weights,
     'remote_root_exists': root_exists,
     'free_bytes': free_bytes,
@@ -108,6 +125,40 @@ class SSHTransportError(RuntimeError):
 
 class SSHTransferCancelled(SSHTransportError):
     """The caller stopped a transfer before it completed."""
+
+
+def require_training_runtime(readiness, task, preset, overrides=None, *, warm_start=False):
+    """Gate only the selected architecture; run-owned weights are transferred separately."""
+    if not readiness.get('runtime_ready', readiness.get('ready', False)):
+        raise ValueError(readiness.get('message') or 'Compute runtime is unavailable')
+    from backend.engine.trainer import PRESET_CONFIGS
+    from backend.engine.model_backbones import is_dino_backbone, canonical_dino_name
+    options = overrides or {}
+    config = PRESET_CONFIGS[preset]
+    if task in ('classification', 'patch_classification'):
+        model = options.get('backbone', config.backbone_classification)
+    elif task == 'segmentation':
+        model = options.get('model_name', config.backbone_segmentation)
+    elif task == 'detection':
+        model = options.get('backbone', config.backbone_detection)
+    else:
+        model = 'resnet18'
+    checks = readiness.get('checks', {})
+    dependencies = checks.get('runtime_dependencies', {})
+    required = ('timm', 'safetensors', 'huggingface_hub') if is_dino_backbone(str(model)) else ('ultralytics',) if str(model).startswith('yolo') else ()
+    missing = [name for name in required if not dependencies.get(name, False)]
+    if missing:
+        raise ValueError('Selected model requires installed remote dependencies: ' + ', '.join(missing))
+    canonical = canonical_dino_name(str(model)) if is_dino_backbone(str(model)) else model
+    if required and checks.get('model_dependencies') is not None and not checks['model_dependencies'].get(canonical, False):
+        raise ValueError(f'Remote runtime does not implement {canonical}; update timm>=1.0.24 or ultralytics>=8.4.41')
+    if not required and not warm_start and options.get('pretrained', True):
+        if task in ('anomaly', 'anomaly_detection'):
+            model = 'resnet18'
+        elif task == 'detection' and model == 'fasterrcnn':
+            model = 'fasterrcnn_mobilenet_v3_large_fpn' if preset == 'fast' else 'fasterrcnn_resnet50_fpn_v2'
+        if model in _REQUIRED_WEIGHTS and not checks.get('pretrained_weights', {}).get(model, {}).get('ok'):
+            raise ValueError(f'Remote verified pretrained weights are missing: {model}')
 
 
 def _validate_run_id(run_id: str) -> str:
@@ -306,21 +357,26 @@ class SSHTransport:
             )
             pretrained_weights = checks.get("pretrained_weights") or {}
             gpu_ready = profile.gpu_selector is None or checks["device_type"] == "cuda"
-            ready = bool(
+            runtime_ready = bool(
                 checks["remote_root_exists"]
                 and checks["free_bytes"] >= 1_000_000_000
                 and all(dependencies.get(module, False) for module in required)
-                and all(pretrained_weights.get(name, {}).get("ok") for name in _REQUIRED_WEIGHTS)
                 and gpu_ready
             )
+            # The selected task gates its own architectures and weights. An unused
+            # legacy cache must not make a valid DINO/YOLO transfer unavailable.
+            ready = runtime_ready
+            missing = [name for name in required if not dependencies.get(name, False)]
             return {
                 "ready": ready,
+                'runtime_ready': runtime_ready,
                 "device_name": checks["device_name"],
                 "device_type": checks["device_type"],
                 "checks": {"ssh": True, "runtime": True, **checks},
                 "message": "Ready" if ready else (
                     "Selected GPU is unavailable to the runtime" if not gpu_ready else
-                    "Runtime dependencies, pretrained weights, workspace, or free space check failed"
+                    'Missing runtime dependencies: ' + ', '.join(missing) if missing else
+                    "Workspace or free space check failed"
                 ),
             }
         except (ValueError, KeyError, TypeError) as exc:

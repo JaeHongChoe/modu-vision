@@ -20,5 +20,11 @@ scikit-learn>=1.5.0
 torch>=2.4.0
 torchvision>=0.19.0
 
+# Pretrained DINOv3 feature backbones and YOLO detectors
+timm>=1.0.24
+safetensors>=0.4.0
+huggingface-hub>=0.24.0
+ultralytics>=8.4.41
+
 # Optional Inference & Export Runtime
 onnxruntime>=1.19.0

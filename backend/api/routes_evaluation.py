@@ -48,6 +48,7 @@ from backend.engine.anomaly import (
     PaDiMDetector,
     PatchCoreDetector,
     compute_anomaly_metrics,
+    reconstruct_anomaly_detector,
 )
 from backend.engine.dataset_loaders import (
     SUPPORTED_IMAGE_EXTENSIONS,
@@ -446,7 +447,7 @@ def _evaluate_classification(
 
     # Determine model output size from state dict if available to match checkpoint head
     model_num_classes = None
-    for k in ["fc.weight", "classifier.2.weight", "classifier.1.weight"]:
+    for k in ["fc.weight", "classifier.2.weight", "classifier.1.weight", "head.weight"]:
         if k in state_dict:
             model_num_classes = state_dict[k].shape[0]
             break
@@ -668,7 +669,8 @@ def _evaluate_detection(
     if num_classes != len(classes) + 1:
         raise HTTPException(status_code=422, detail="Detection checkpoint class count does not match saved class mapping")
     det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
-    model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False).to(device)
+    model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False,
+                                   backbone=meta.get("backbone", ckpt.get("backbone"))).to(device)
     model.load_state_dict(state_dict)
     model.eval()
 
@@ -773,7 +775,8 @@ def _evaluate_segmentation(
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
     seg_preset = meta.get("preset", "fast")
-    model = build_segmentation_model(num_classes=num_classes, preset=seg_preset, pretrained=False).to(device)
+    model = build_segmentation_model(model_name=meta.get("model_name", ckpt.get("model_name", "unet")),
+                                     num_classes=num_classes, preset=seg_preset, pretrained=False).to(device)
     model.load_state_dict(state_dict)
     model.eval()
 
@@ -874,15 +877,7 @@ def _evaluate_anomaly(
 
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
-    det_type = meta.get("detector_type", "")
-    preset_str = str(meta.get("preset", "")).lower()
-
-    if det_type == "patchcore" or "patchcore" in preset_str or "precision" in preset_str:
-        model = PatchCoreDetector(backbone_name="resnet18", device=device, pretrained=False)
-    else:
-        model = PaDiMDetector(backbone_name="resnet18", device=device, pretrained=False)
-    model.load_state_dict(state_dict)
-    model.eval()
+    model = reconstruct_anomaly_detector(state_dict, {**ckpt, **meta}, device)
 
     img_size = tuple(meta.get("image_size", [256, 256]))
     image_scores: List[float] = []

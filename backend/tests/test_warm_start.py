@@ -143,7 +143,7 @@ def test_patch_retraining_loads_parent_before_optimizer_and_saves_lineage(tmp_pa
     candidate_dir = models / "job_candidate01"
     trainer = trainer_module.UnifiedAutoMLTrainer(
         task="patch_classification", dataset_path=source, output_dir=candidate_dir,
-        device="cpu", config_overrides={"epochs": 1, "batch_size": 2, "image_size": 64, "pretrained": False},
+        device="cpu", config_overrides={"epochs": 1, "batch_size": 2, "image_size": 64, "pretrained": False, 'backbone': 'resnet18'},
         warm_start=parent,
     )
     result = trainer.train(job_id="job_candidate01")
@@ -193,12 +193,13 @@ def test_training_api_only_accepts_project_parent_and_records_lineage(tmp_path: 
 
     monkeypatch.setattr(routes_training.training_job_manager, "start_job", capture)
     parents = client.get("/api/training/warm-start-parents", params={
-        "dataset_path": str(source), "task": "classification", "preset": "fast",
+        "dataset_path": str(source), "task": "classification", "preset": "fast", 'backbone': 'resnet18',
     })
     assert parents.status_code == 200, parents.text
     assert [row["job_id"] for row in parents.json()["parents"]] == ["job_parent01"]
     started = client.post("/api/training/start", json={
         "task": "classification", "dataset_path": str(source), "warm_start_job_id": "job_parent01",
+        'config_overrides': {'backbone': 'resnet18'},
     })
     assert started.status_code == 200, started.text
     assert captured[-1]["warm_start"].checkpoint_sha256 == hashlib.sha256(checkpoint.read_bytes()).hexdigest()

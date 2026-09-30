@@ -456,6 +456,8 @@ def create_service_app(
         raise ValueError("An API token is required")
     package_dir = Path(package_dir).expanduser().resolve()
     pipeline, checkpoints = verify_flow_package(package_dir)
+    from backend.engine.edge_runtime import enforce_edge_device
+    enforce_edge_device(package_dir, device)
     if require_approved_release and release_policy is None:
         raise ValueError("Approved release policy is required")
     if release_policy is not None:

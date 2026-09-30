@@ -38,6 +38,7 @@ import torch.nn.functional as F
 from backend.engine.anomaly.feature_extractor import ResNetFeatureExtractor
 from backend.engine.anomaly.padim import PaDiMDetector
 from backend.engine.anomaly.patchcore import PatchCoreDetector
+from backend.engine.anomaly.reconstruction import reconstruct_anomaly_detector
 from backend.engine.classification.model import create_classification_model
 from backend.engine.checkpoint_paths import trusted_checkpoint
 from backend.engine.detection.model import (
@@ -844,6 +845,7 @@ class FlowchartEngine:
                 classes = ckpt.get("classes", [])
                 model = create_detection_model(
                     preset=ckpt.get("detector_preset", ckpt.get("preset", preset)),
+                    backbone=ckpt.get("backbone"),
                     num_classes=checkpoint_detection_num_classes(state, classes), pretrained=False,
                 )
                 model.load_state_dict(state, strict=True)
@@ -878,13 +880,9 @@ class FlowchartEngine:
                 try:
                     ckpt = torch.load(str(ckpt_path), map_location=self.device, weights_only=True)
                     state = ckpt.get("model_state_dict", ckpt)
-                    use_patchcore = "patchcore" in str(ckpt.get("detector_type", "")).lower() or "coreset" in state
-                    detector = (PatchCoreDetector if use_patchcore else PaDiMDetector)(
-                        backbone_name="resnet18", device=self.device, pretrained=True,
-                    )
-                    detector.load_state_dict(state)
+                    detector = reconstruct_anomaly_detector(state, ckpt, self.device)
                     self._remember_input_size(cache_key, ckpt)
-                    is_trained = detector.coreset is not None if use_patchcore else (detector.mean is not None and detector.cov_inv is not None)
+                    is_trained = detector.coreset is not None if isinstance(detector, PatchCoreDetector) else (detector.mean is not None and detector.cov_inv is not None)
                     if not is_trained:
                         raise ValueError("checkpoint has no fitted anomaly statistics")
                     logger.info("Loaded PaDiM anomaly checkpoint from %s", ckpt_path)

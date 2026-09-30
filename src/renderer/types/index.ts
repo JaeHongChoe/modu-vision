@@ -60,6 +60,8 @@ export interface HandlePosition {
   cursor: string;
 }
 
+export type ClassSplitCounts = Record<string, { train: number; val: number; test: number }>;
+
 export interface ImageMeta {
   image_id: string;
   file_name: string;

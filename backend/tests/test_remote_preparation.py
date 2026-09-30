@@ -82,7 +82,8 @@ def test_training_api_sends_the_selected_classification_split_to_server(tmp_path
     get_profile_store().save(profile)
     fake = FakeRemote(tmp_path / "server")
     monkeypatch.setattr(coordinator, "SSHTransport", lambda: fake)
-    monkeypatch.setattr(ssh_transport.SSHTransport, "probe", lambda self, profile: {"ready": True})
+    monkeypatch.setattr(ssh_transport.SSHTransport, "probe", lambda self, profile: {"ready": True,
+        'checks': {'runtime_dependencies': {'timm': True, 'safetensors': True, 'huggingface_hub': True, 'ultralytics': True}}})
     manager = routes_training.TrainingJobManager()
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
 

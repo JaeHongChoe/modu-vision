@@ -695,6 +695,17 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
     }
 
 
+def _class_split_counts(images: List[ImageMeta]) -> dict[str, dict[str, int]]:
+    """Count saved image partitions across the complete, unfiltered gallery."""
+    counts: dict[str, dict[str, int]] = {}
+    for item in images:
+        if item.label is None or item.split not in ("train", "val", "test"):
+            continue
+        partitions = counts.setdefault(item.label, {"train": 0, "val": 0, "test": 0})
+        partitions[item.split] += 1
+    return counts
+
+
 @router.get("/images")
 def list_dataset_images(
     folder_path: Optional[str] = Query(None, description="Dataset folder path"),
@@ -705,12 +716,13 @@ def list_dataset_images(
     class_name: Optional[str] = Query(None, description="Filter by category"),
     label_status: Optional[Literal["labeled", "unlabeled"]] = Query(None, description="Filter by active project annotation status"),
 ):
-    """Returns paginated image metadata with thumbnail URLs."""
+    """Return image metadata and unfiltered class partition counts before pagination."""
     target_dir = Path(folder_path).resolve() if folder_path else Path("./datasets/synthetic").resolve()
     if not target_dir.exists():
         return {"total": 0, "limit": limit, "offset": offset, "items": []}
 
     requested_task = task if isinstance(task, str) else None
+    include_class_splits = requested_task in ("classification", "anomaly") and not (split or class_name or label_status)
     effective_dir = _resolve_task_folder(target_dir, requested_task) if requested_task else target_dir
     if not requested_task and not (target_dir / "train").is_dir():
         for sub in target_dir.iterdir():
@@ -757,7 +769,9 @@ def list_dataset_images(
             all_images.append(ImageMeta(image_id=image.stem,file_name=image.name,file_path=str(image),width=width,height=height,
                 split=partition,label=label,thumbnail_url=f'/api/dataset/thumbnail/{image.name}?file_path={image}'))
         total=len(all_images)
-        return {'total':total,'limit':limit,'offset':offset,'items':[item.model_dump() for item in all_images[offset:offset+limit]]}
+        return {'total':total,'limit':limit,'offset':offset,
+                'class_split_counts': _class_split_counts(all_images) if include_class_splits else None,
+                'items':[item.model_dump() for item in all_images[offset:offset+limit]]}
     # Search structured splits
     split_names = ["train", "val", "test"] if not split else [split]
     if anomaly_mode:
@@ -901,6 +915,7 @@ def list_dataset_images(
         "total": total,
         "limit": limit,
         "offset": offset,
+        "class_split_counts": _class_split_counts(all_images) if include_class_splits else None,
         "items": [item.model_dump() for item in paged],
     }
 

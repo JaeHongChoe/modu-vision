@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { ImageMeta, VisionTask } from '../types';
+import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
 import { api } from '../services/api';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
@@ -25,6 +25,7 @@ interface DatasetState {
   sourceImages: number;
   unlabeledImages: number;
   classes: Record<string, number>;
+  classSplitCounts: ClassSplitCounts | null;
   split: { train: number; val: number; test: number };
   images: ImageMeta[];
   totalImagesCount: number;
@@ -101,6 +102,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   sourceImages: 0,
   unlabeledImages: 0,
   classes: {},
+  classSplitCounts: null,
   split: { train: 0, val: 0, test: 0 },
   images: [],
   totalImagesCount: 0,
@@ -126,7 +128,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
-      classes: {}, split: { train: 0, val: 0, test: 0 },
+      classes: {}, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
       images: [], totalImagesCount: 0, corruptedImages: [],
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
     });
@@ -167,7 +169,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
-      sourceImages: 0, unlabeledImages: 0, classes: {}, corruptedImages: [],
+      sourceImages: 0, unlabeledImages: 0, classes: {}, classSplitCounts: null, corruptedImages: [],
       split: { train: 0, val: 0, test: 0 },
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
@@ -268,6 +270,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         isSplitting: false,
         trainRatio: ratio,
         split: res.split,
+        classSplitCounts: null,
       });
       await get().loadImages(1);
     } catch (err) {
@@ -286,8 +289,9 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     invalidateDownstream();
     const { folderPath, datasetKey } = get();
     if (!datasetKey) return;
+    latestImageRequest += 1;
     // Until the refreshed manifest is read, never show the old split as trainable.
-    set({ split: { train: 0, val: 0, test: 0 }, splitError: null });
+    set({ split: { train: 0, val: 0, test: 0 }, classSplitCounts: null, splitError: null });
     const task = datasetKey.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask;
     const requestId = ++latestImportRequest;
     try {
@@ -333,8 +337,17 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       set({
         images: res.items || [],
         totalImagesCount: res.total || 0,
+        ...(res.class_split_counts != null ? { classSplitCounts: res.class_split_counts } : {}),
         page: p,
       });
+      // A split/label refresh may occur while the gallery is filtered. Obtain
+      // its full summary independently so a page can never stand in for a class.
+      if (get().classSplitCounts === null && (task === 'classification' || task === 'anomaly')
+        && (activeSplitFilter !== 'all' || activeClassFilter || activeLabelFilter !== 'all')) {
+        const summary = await api.dataset.getImages({ folder_path: folderPath, task, limit: 1, offset: 0 });
+        if (requestId !== latestImageRequest || get().folderPath !== folderPath || get().datasetKey !== datasetKey) return;
+        if (summary.class_split_counts != null) set({ classSplitCounts: summary.class_split_counts });
+      }
     } catch {
       // non-blocking fallback
     }

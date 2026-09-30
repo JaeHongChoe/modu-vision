@@ -162,6 +162,8 @@ def build_segmentation_model(
     in_channels: int = 3,
     preset: str = "fast",
     pretrained: bool = True,
+    pretrained_checkpoint: str | None = None,
+    pretrained_sha256: str | None = None,
 ) -> nn.Module:
     """
     Factory constructing segmentation models based on model_name and preset.
@@ -169,9 +171,19 @@ def build_segmentation_model(
     name = model_name.lower().strip()
     p = preset.lower().strip()
 
+    from backend.engine.model_backbones import DinoTaskModel, is_dino_backbone
+    if is_dino_backbone(name):
+        if in_channels != 3:
+            raise ValueError("DINOv3 segmentation requires RGB input channels")
+        return DinoTaskModel("segmentation", name, num_classes, pretrained,
+                             pretrained_checkpoint, pretrained_sha256)
+
     if "deeplab" in name:
         bb = "resnet50" if ("resnet" in name or p == "precision") else "mobilenet_v3"
         return DeepLabV3Wrapper(num_classes=num_classes, backbone=bb, pretrained=pretrained)
+
+    if name not in {"unet", "unet_lightweight", "unet_full"}:
+        raise ValueError(f"Unsupported segmentation architecture: {model_name}")
 
     # UNet family
     if p == "precision" or "full" in name:

@@ -66,8 +66,10 @@ global.fetch = async (url, options = {}) => {
     return response(undefined, 204);
   }
   if (endpoint.endsWith('/probe') && method === 'POST') {
-    return response({ ready, device_name: ready ? 'L40S' : null, device_type: ready ? 'cuda' : null,
-      checks: { ssh: ready, runtime: ready }, message: ready ? 'Ready' : 'SSH unavailable' });
+    return response({ ready, runtime_ready: ready, device_name: ready ? 'L40S' : null, device_type: ready ? 'cuda' : null,
+      checks: { ssh: ready, runtime: ready,
+        runtime_dependencies: { timm: ready, safetensors: ready, huggingface_hub: ready },
+        model_dependencies: { dinov3_vits16: ready } }, message: ready ? 'Ready' : 'SSH unavailable' });
   }
   if (endpoint === '/api/compute/selection' && method === 'GET') return response({ compute_profile_id: selected });
   if (endpoint === '/api/compute/selection' && method === 'PUT') {
@@ -125,7 +127,7 @@ test('remote training requires a ready probe and sends its profile ID', async ()
   requests = [];
   ready = false;
   await useComputeStore.getState().probeProfile(server.id);
-  await assert.rejects(useTrainingStore.getState().startTraining('/local/data', 'segmentation'), /연결 검사|준비/);
+  await assert.rejects(useTrainingStore.getState().startTraining('/local/data', 'segmentation'), /SSH unavailable|연결 검사|준비/);
   assert.equal(requests.some((item) => item.endpoint === '/api/training/start'), false);
   ready = true;
   await useComputeStore.getState().probeProfile(server.id);
@@ -256,7 +258,7 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
         isLoading: false, isSplitting: false, importError: null, splitError: null, splitSupported: true, splitUnavailableReason: null, applySplit() {} }) };
       if (specifier === '../../stores/useTrainingStore') return { useTrainingStore: () => useTrainingStore.getState() };
       if (specifier === '../../stores/useComputeStore') return { useComputeStore: () => useComputeStore.getState() };
-      if (specifier.startsWith('../common/') || specifier.startsWith('./')) {
+      if (specifier.startsWith('../common/') || (specifier.startsWith('./') && specifier !== './modelTrainingOptions')) {
         return new Proxy({}, { get: () => () => null });
       }
     }

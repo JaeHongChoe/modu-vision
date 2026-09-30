@@ -5,6 +5,7 @@ import { specializedApi } from '../../services/specializedApi';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import {useSpecializedTraining} from './useSpecializedTraining';
+import {WarmStartSelector} from './WarmStartSelector';
 import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 
 function parseCrops(value: string): DefectGANCropRow[] {
@@ -39,6 +40,7 @@ export const DefectGANWorkbench: React.FC = () => {
   const [rowsText, setRowsText] = useState('');
   const [sampleCount, setSampleCount] = useState<number | null>(null);
   const [epochs, setEpochs] = useState(20);
+  const [warmParentId, setWarmParentId] = useState('');
   const [count, setCount] = useState(4);
   const [seed, setSeed] = useState(0);
   const [models, setModels] = useState<DefectGANModelSummary[]>([]);
@@ -106,7 +108,7 @@ export const DefectGANWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || !sampleCount || busy) return;
     setBusy('train'); setError(''); setNotice(''); setCandidates([]);
     try {
-      await training.start(datasetPath.trim(),epochs);
+      await training.start(datasetPath.trim(),epochs,warmParentId || undefined);
       if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -156,6 +158,7 @@ export const DefectGANWorkbench: React.FC = () => {
         {sampleCount !== null && <span className="text-emerald-300">검증된 영역 {sampleCount}개</span>}
       </div>
       <SpecializedTrainingStatus {...training} />
+      <WarmStartSelector family="defect-gan" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training.active} refreshKey={training.job?.status === 'completed' ? training.job.job_id : null} />
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>

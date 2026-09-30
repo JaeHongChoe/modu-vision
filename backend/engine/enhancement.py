@@ -212,13 +212,19 @@ def _evaluate(model: RGBDenoiser, dataset: _Pairs, device: torch.device) -> dict
 
 def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epochs: int = 1, batch_size: int = 4,
                       learning_rate: float = 1e-3, device: str = "cpu", seed: int = 0,
-                      cancel_event=None, on_progress=None) -> dict:
+                      cancel_event=None, on_progress=None, warm_start=None) -> dict:
     target_device = _device(device)
     if not 1 <= epochs <= 500 or not 1 <= batch_size <= 256 or not 0 < learning_rate <= 1:
         raise ValueError("Invalid enhancement training settings")
     manifest = load_enhancement_manifest(dataset_path)
     torch.manual_seed(seed)
     model = RGBDenoiser().to(target_device)
+    lineage = {}
+    if warm_start is not None:
+        from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
+        require_new_candidate(output_dir, warm_start)
+        load_family_weights({'model_state_dict': model}, warm_start, requested_signature('enhancement', dataset_path, {}))
+        lineage = {'warm_start': warm_start.lineage()}
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loader = DataLoader(_Pairs(manifest, "train"), batch_size=batch_size, shuffle=True,
                         generator=torch.Generator().manual_seed(seed))
@@ -255,7 +261,7 @@ def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epoch
                         "model_state_dict": model.cpu().state_dict(), "provenance": manifest["provenance"],
                         "dataset_provenance": manifest["provenance"], "dataset_path": manifest["dataset_path"],
                         "source_dataset_path": manifest["provenance"]["source_dataset_path"],
-                        "best_epoch": best_epoch, "validation": validation}, buffer)
+                        "best_epoch": best_epoch, "validation": validation, **lineage}, buffer)
             _atomic(output / "best_model.pt", buffer.getvalue())
             model.to(target_device)
     metadata = {"task": "enhancement", "version": 1, "architecture": "rgb_residual_cnn",
@@ -263,7 +269,7 @@ def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epoch
                 "provenance": manifest["provenance"], "dataset_provenance": manifest["provenance"],
                 "mode": manifest.get("mode", "explicit_pairs"), "best_epoch": best_epoch,
                 "epochs_completed": epochs, "training_loss_history": history,
-                "training_validation_geometry": dict(_TRAINING_GEOMETRY), "created_at": datetime.now(timezone.utc).isoformat()}
+                "training_validation_geometry": dict(_TRAINING_GEOMETRY), "created_at": datetime.now(timezone.utc).isoformat(), **lineage}
     encoded = json.dumps(metadata, ensure_ascii=False, indent=2).encode()
     _atomic(output / "model_meta.json", encoded)
     _atomic(output / "metadata.json", encoded)

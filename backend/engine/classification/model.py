@@ -15,6 +15,8 @@ def create_classification_model(
     backbone: str = "resnet18",
     num_classes: int = 2,
     pretrained: bool = True,
+    pretrained_checkpoint: str | None = None,
+    pretrained_sha256: str | None = None,
 ) -> nn.Module:
     """
     Constructs transfer learning classification model with custom classification head.
@@ -26,6 +28,11 @@ def create_classification_model(
         pretrained: If True, initializes weights from default ImageNet pretraining
     """
     backbone_clean = backbone.lower().strip()
+
+    from backend.engine.model_backbones import DinoTaskModel, is_dino_backbone
+    if is_dino_backbone(backbone_clean):
+        return DinoTaskModel("classification", backbone_clean, num_classes, pretrained,
+                             pretrained_checkpoint, pretrained_sha256)
 
     if backbone_clean in ("resnet18", "resnet"):
         weights = models.ResNet18_Weights.DEFAULT if pretrained else None

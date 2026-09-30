@@ -15,12 +15,13 @@ import logging
 import json
 from pathlib import Path
 import pickle
+import platform
 import re
 import subprocess
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 import torch
 
 from backend.engine.exporter import (
@@ -38,11 +39,23 @@ from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_no
 from backend.engine.flow_package import build_flow_package, verify_flow_parity
 from backend.engine.specialized_models import FLOW_TASKS, SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.industrial_adapters import read_image_safely_rgb
+from backend.engine.edge_runtime import SUPPORTED_TARGETS, normalize_target
 from backend.remote.coordinator import ArtifactValidationError
 
 logger = logging.getLogger("vision_ai_studio.routes_export")
 
 router = APIRouter(prefix="/api/export", tags=["export"])
+
+
+@router.get("/edge-targets")
+def edge_targets():
+    os_name = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(platform.system(), platform.system().lower())
+    try:
+        host = normalize_target(os_name, platform.machine())
+    except ValueError:
+        host = None
+    return {"profile": "edge_cpu", "device": "cpu", "supported": SUPPORTED_TARGETS,
+            "host": host, "python": {"minimum": "3.10", "maximum_exclusive": "3.14"}}
 
 
 class ExportFlowRequest(BaseModel):
@@ -54,6 +67,18 @@ class ExportFlowRequest(BaseModel):
     verification_image_path: Optional[str] = None
     verification_image_id: Optional[str] = None
     approval_revision_ids: Optional[Dict[str, str]] = None
+    deployment_profile: Literal["standard", "edge_cpu"] = "standard"
+    target_os: Optional[str] = None
+    target_arch: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_deployment(self):
+        if self.deployment_profile == "edge_cpu":
+            target = normalize_target(self.target_os, self.target_arch)
+            self.target_os, self.target_arch = target["os"], target["architecture"]
+        elif self.target_os is not None or self.target_arch is not None:
+            raise ValueError("Target OS/architecture requires the edge_cpu deployment profile")
+        return self
 
 
 @router.post("/flow")
@@ -150,6 +175,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             output_base_dir=project_dir / "exports" / "flows",
             package_name=req.package_name,
             approved_revisions=approved_revisions,
+            deployment_profile=req.deployment_profile, target_os=req.target_os, target_arch=req.target_arch,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -31,7 +31,7 @@ from backend.engine.checkpoint_paths import trusted_checkpoint
 from backend.engine.classification import create_classification_model
 from backend.engine.detection import create_detection_model, checkpoint_detection_num_classes
 from backend.engine.segmentation import build_segmentation_model
-from backend.engine.anomaly import PaDiMDetector, PatchCoreDetector
+from backend.engine.anomaly import PaDiMDetector, PatchCoreDetector, reconstruct_anomaly_detector
 from backend.engine.zero_escape_analyzer import analyze_zero_escape
 
 logger = logging.getLogger("vision_ai_studio.exporter")
@@ -73,7 +73,7 @@ def load_checkpoint_and_reconstruct_model(
     classes = meta.get("classes", ["OK", "Defect"])
     anomaly_obj = None
 
-    if task == "classification":
+    if task in ("classification", "patch_classification"):
         backbone = meta.get("backbone", "resnet18")
         num_classes = max(2, len(classes))
         model = create_classification_model(backbone=backbone, num_classes=num_classes, pretrained=False)
@@ -83,7 +83,8 @@ def load_checkpoint_and_reconstruct_model(
     elif task == "detection":
         det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
         num_classes = checkpoint_detection_num_classes(state_dict, classes)
-        model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False)
+        model = create_detection_model(preset=det_preset, num_classes=num_classes, pretrained=False,
+                                       backbone=meta.get("backbone"))
         model.load_state_dict(state_dict)
         model.eval()
 
@@ -100,14 +101,7 @@ def load_checkpoint_and_reconstruct_model(
         model.eval()
 
     elif task in ("anomaly", "anomaly_detection"):
-        det_type = str(meta.get("detector_type", "")).lower()
-        preset_str = str(meta.get("preset", "")).lower()
-        if "patchcore" in det_type or "patchcore" in preset_str or "precision" in preset_str:
-            anomaly_obj = PatchCoreDetector(backbone_name="resnet18", device="cpu", pretrained=False)
-        else:
-            anomaly_obj = PaDiMDetector(backbone_name="resnet18", device="cpu", pretrained=False)
-
-        anomaly_obj.load_state_dict(state_dict)
+        anomaly_obj = reconstruct_anomaly_detector(state_dict, meta, 'cpu')
         model = anomaly_obj.feature_extractor
         model.eval()
 
@@ -700,6 +694,13 @@ def export_runtime_package(
         output_names = ["output"]
         dynamic_axes = {"input": {0: "batch_size"}, "output": {0: "batch_size"}}
 
+    from backend.engine.model_backbones import YoloDetectionAdapter
+    if isinstance(model, YoloDetectionAdapter):
+        # Ultralytics lazily caches anchors on the first eval forward. Prepare
+        # that state before tracing so sanity checks compare the same graph.
+        with torch.no_grad():
+            export_model(dummy_tensor)
+
     if format_clean == "onnx":
         torch.onnx.export(
             export_model,
@@ -768,6 +769,11 @@ def export_runtime_package(
         "exported_from_checkpoint": ckpt_path.name,
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    for key in ("backbone", "model_name", "architecture", "encoder_architecture", "encoder_frozen",
+                "adapter_version", "pretrained", "pretrained_source", "pretrained_sha256",
+                "input_normalization", "foreground_label_offset"):
+        if key in meta:
+            config_data[key] = meta[key]
     if task == "segmentation":
         config_data.update({
             "segmentation_mode": "tiled_full_image",

@@ -362,6 +362,7 @@ def train_ocr(
     seed: int = 0,
     cancel_event=None,
     on_progress=None,
+    warm_start=None,
 ) -> dict[str, Any]:
     """Fit a scratch OCR model on train only, selecting by validation CTC loss."""
     manifest = load_ocr_manifest(dataset_root)
@@ -378,6 +379,13 @@ def train_ocr(
     target_device = torch.device(device)
     torch.manual_seed(seed)
     model = SmallCTCOCR(len(manifest.alphabet)).to(target_device)
+    lineage = {}
+    if warm_start is not None:
+        from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
+        require_new_candidate(output_dir, warm_start)
+        load_family_weights({'model_state_dict': model}, warm_start,
+                            requested_signature('ocr', dataset_root, {'image_size': image_size}))
+        lineage = {'warm_start': warm_start.lineage()}
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.CTCLoss(blank=0)
     loader = DataLoader(train, batch_size=batch_size, shuffle=True, collate_fn=_collate, generator=torch.Generator().manual_seed(seed))
@@ -413,6 +421,7 @@ def train_ocr(
                 "model_state_dict": model.state_dict(),
                 "dataset_provenance": manifest.provenance,
                 "best_epoch": epoch, "validation": validation,
+                **lineage,
             })
     metadata = {
         "task": "ocr", "version": 1, "architecture": "small_cnn_bigru_ctc",
@@ -421,6 +430,7 @@ def train_ocr(
         "best_epoch": best_epoch, "best_validation_loss": best_loss,
         "training_samples": len(train), "validation_samples": len(val),
         "epochs_completed": epochs, "training_loss_history": history,
+        **lineage,
     }
     _atomic_write(output_dir / "model_meta.json", (json.dumps(metadata, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     return metadata

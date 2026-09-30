@@ -143,8 +143,8 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
 
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
-              ? '더 큰 모델과 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
-              : 'Train a larger candidate with stronger augmentation. Validate on separate test data and the production line before use.'}
+              ? '더 큰 입력 이미지와 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
+              : 'Train with larger input images and stronger augmentation. Validate on separate test data and the production line before use.'}
           </p>
 
           <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">

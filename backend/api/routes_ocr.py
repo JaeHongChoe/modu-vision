@@ -54,6 +54,7 @@ class OCRTrainRequest(BaseModel):
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     background: bool = False
     seed: int = 0
+    warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
 class OCREvaluateRequest(BaseModel):
@@ -133,13 +134,27 @@ def train(req: OCRTrainRequest, request: Request):
     project=get_current_project(request)
     try:source=require_training_source(project,req.dataset_path)
     except ValueError as exc:raise HTTPException(409,str(exc)) from exc
-    output=_models_root(request)/uuid.uuid4().hex
     try:
+        from backend.engine.specialized_warm_start import resolve_family_parent
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'ocr', source, source, req.model_dump()) if req.warm_start_job_id else None
+        output=_models_root(request)/uuid.uuid4().hex
         result=start_job(project=project,task='ocr',source=source,output=output,options=req,
-            runner=lambda event,progress,device:train_ocr(source,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress),family_digest=lambda:load_ocr_manifest(source).provenance['dataset_sha256'])
+            runner=lambda event,progress,device:train_ocr(source,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:load_ocr_manifest(source).provenance['dataset_sha256'],warm_start=parent)
         return JSONResponse(result,status_code=202) if req.background else result
     except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/warm-start-parents')
+def warm_start_parents(dataset_path: str, request: Request, image_height: int = 32, image_width: int = 128):
+    from backend.engine.specialized_warm_start import list_family_parents
+    project = get_current_project(request)
+    _models_root(request)
+    try:
+        source = require_training_source(project, dataset_path)
+        return list_family_parents(project['models_dir'], 'ocr', source, source, {'image_height': image_height, 'image_width': image_width})
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _job_action(request,action,job_id=None):

@@ -66,6 +66,7 @@ from backend.engine.anomaly import (
     PaDiMDetector,
     PatchCoreDetector,
     compute_anomaly_metrics,
+    reconstruct_anomaly_detector,
 )
 from backend.engine.anomaly.cancellation import AnomalyFitCancelled
 from backend.engine.patch_classification import (
@@ -78,6 +79,21 @@ logger = logging.getLogger("vision_ai_studio.trainer")
 
 if TYPE_CHECKING:
     from backend.engine.warm_start import WarmStartParent
+
+
+def _detection_validation_loss(model: nn.Module, images, targets) -> torch.Tensor:
+    """Enable detector loss heads while keeping held-out inputs out of running statistics."""
+    training_states = [(module, module.training) for module in model.modules()]
+    try:
+        model.train()
+        for module in model.modules():
+            if isinstance(module, (nn.modules.batchnorm._BatchNorm, nn.modules.dropout._DropoutNd)):
+                module.eval()
+        with torch.no_grad():
+            return sum(model(images, targets).values())
+    finally:
+        for module, training in training_states:
+            module.training = training
 
 
 # ============================================================================
@@ -106,9 +122,9 @@ PRESET_CONFIGS: Dict[str, AutoMLPresetConfig] = {
         batch_size=16,
         learning_rate=1e-3,
         patience=4,
-        backbone_classification="resnet18",
-        backbone_detection="fasterrcnn_mobilenet_v3_large_fpn",
-        backbone_segmentation="unet_lightweight",
+        backbone_classification="dinov3_vits16",
+        backbone_detection="yolo26n",
+        backbone_segmentation="dinov3_vits16",
         backbone_anomaly="padim_resnet18",
     ),
     "precision": AutoMLPresetConfig(
@@ -118,10 +134,10 @@ PRESET_CONFIGS: Dict[str, AutoMLPresetConfig] = {
         batch_size=8,
         learning_rate=5e-4,
         patience=8,
-        backbone_classification="convnext_tiny",
-        backbone_detection="fasterrcnn_resnet50_fpn_v2",
-        backbone_segmentation="unet_full",
-        backbone_anomaly="patchcore_resnet50",
+        backbone_classification="dinov3_vits16",
+        backbone_detection="yolo26n",
+        backbone_segmentation="dinov3_vits16",
+        backbone_anomaly="patchcore_resnet18",
     ),
 }
 
@@ -288,6 +304,9 @@ class UnifiedAutoMLTrainer:
         self.task = task.lower().strip()
         self.dataset_path = Path(dataset_path)
         self.output_dir = Path(output_dir)
+        if warm_start is not None:
+            from backend.engine.specialized_warm_start import require_new_candidate
+            require_new_candidate(self.output_dir, warm_start)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.device = get_device(device)
         self.callback = callback or TrainingCallback()
@@ -338,10 +357,12 @@ class UnifiedAutoMLTrainer:
                 )
                 classes = train_ds.classes
                 num_classes = max(2, len(classes))
-                backbone = self.config.backbone_classification
+                backbone = str(self.overrides.get('backbone', self.config.backbone_classification))
                 model = create_classification_model(
                     backbone=backbone, num_classes=num_classes,
-                    pretrained=self.warm_start is None,
+                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                    pretrained_sha256=self.overrides.get('pretrained_sha256'),
                 ).to(self.device)
                 if not hasattr(train_ds, "class_counts"):
                     counts = [0] * num_classes
@@ -368,7 +389,9 @@ class UnifiedAutoMLTrainer:
                 self._patch_backbone = backbone
                 model = create_classification_model(
                     backbone=backbone, num_classes=len(classes),
-                    pretrained=bool(self.overrides.get("pretrained", False)),
+                    pretrained=self.warm_start is None and bool(self.overrides.get("pretrained", True)),
+                    pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                    pretrained_sha256=self.overrides.get('pretrained_sha256'),
                 ).to(self.device)
                 class_weights = compute_class_weights(train_ds.class_counts, num_classes=len(classes)).to(self.device)
                 criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
@@ -377,7 +400,11 @@ class UnifiedAutoMLTrainer:
                 train_ds, val_ds = _build_detection_datasets(self.dataset_path, aug, optimal_size)
                 classes = list(train_ds.categories.values())
                 num_classes = max(2, len(classes) + 1)
-                model = create_detection_model(preset=self.preset_key, num_classes=num_classes).to(self.device)
+                model = create_detection_model(preset=self.preset_key, num_classes=num_classes,
+                    backbone=str(self.overrides.get('backbone', self.config.backbone_detection)),
+                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                    pretrained_sha256=self.overrides.get('pretrained_sha256')).to(self.device)
                 criterion = None
 
             elif self.task == "segmentation":
@@ -395,7 +422,11 @@ class UnifiedAutoMLTrainer:
                     train_ds = SegmentationDataset(images_dir=train_img, masks_dir=train_mask, transform=aug, image_size=optimal_size)
                     val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=optimal_size)
                     classes = ["background", "defect"]
-                model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key).to(self.device)
+                model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key,
+                    model_name=str(self.overrides.get('model_name', self.config.backbone_segmentation)),
+                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                    pretrained_sha256=self.overrides.get('pretrained_sha256')).to(self.device)
                 criterion = ComboLoss(num_classes=len(classes), dice_weight=1.0)
 
             elif self.task in ("anomaly", "anomaly_detection"):
@@ -406,10 +437,16 @@ class UnifiedAutoMLTrainer:
                     train_ds = AnomalyDataset(root_dir=self.dataset_path, split="train", transform=aug, image_size=optimal_size)
                     val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
                 classes = ["good", "anomaly"]
-                if "patchcore" in self.config.backbone_anomaly:
-                    model = PatchCoreDetector(backbone_name="resnet18", device=self.device)
+                method = self.overrides.get('anomaly_method', 'patchcore' if 'patchcore' in self.config.backbone_anomaly else 'padim')
+                if method not in ('padim', 'patchcore'):
+                    raise ValueError('Unsupported anomaly method')
+                self._anomaly_method = method
+                if method == 'patchcore':
+                    model = PatchCoreDetector(backbone_name="resnet18", device=self.device,
+                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)))
                 else:
-                    model = PaDiMDetector(backbone_name="resnet18", device=self.device)
+                    model = PaDiMDetector(backbone_name="resnet18", device=self.device,
+                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)))
 
             if self.warm_start is not None:
                 from backend.engine.warm_start import architecture_for, load_parent_weights
@@ -552,10 +589,7 @@ class UnifiedAutoMLTrainer:
                             imgs, targets = batch
                             imgs = [img.to(self.device) for img in imgs]
                             targets_dev = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-                            model.train()
-                            loss_dict = model(imgs, targets_dev)
-                            loss = sum(v for v in loss_dict.values())
-                            model.eval()
+                            loss = _detection_validation_loss(model, imgs, targets_dev)
                         elif self.task == "segmentation":
                             imgs, masks = batch
                             imgs, masks = imgs.to(self.device), masks.to(self.device)
@@ -643,7 +677,7 @@ class UnifiedAutoMLTrainer:
         }
 
         if self.task == "classification":
-            meta["backbone"] = self.config.backbone_classification
+            meta["backbone"] = str(self.overrides.get('backbone', self.config.backbone_classification))
         elif self.task == "patch_classification":
             patch_manifest = self._patch_manifest
             meta.update({
@@ -655,15 +689,27 @@ class UnifiedAutoMLTrainer:
             })
         elif self.task == "detection":
             meta["detector_preset"] = self.preset_key
+            selected = str(self.overrides.get('backbone', self.config.backbone_detection))
+            if selected != 'fasterrcnn':
+                meta['backbone'] = selected
         elif self.task == "segmentation":
             meta["preset"] = self.preset_key
             meta["features"] = [64, 128, 256, 512] if self.preset_key == "precision" else [32, 64, 128, 256]
+            meta['model_name'] = str(self.overrides.get('model_name', self.config.backbone_segmentation))
         elif self.task in ("anomaly", "anomaly_detection"):
-            meta["detector_type"] = "patchcore" if "patchcore" in self.config.backbone_anomaly else "padim"
+            meta["detector_type"] = getattr(self, '_anomaly_method', 'patchcore' if 'patchcore' in self.config.backbone_anomaly else 'padim')
+            meta['feature_backbone'] = model.backbone_name
             meta["validation"] = getattr(self,"_anomaly_validation_metrics",{})
 
         if self.warm_start is not None:
             meta["warm_start"] = self.warm_start.lineage()
+
+        from backend.engine.model_backbones import model_metadata
+        meta.update(model_metadata(model))
+        if self.warm_start is None and meta.get('pretrained') and self.overrides.get('pretrained_origin'):
+            meta['pretrained_source'] = self.overrides['pretrained_origin']
+        from backend.engine.warm_start import architecture_for
+        meta['architecture'] = architecture_for(self.task, self.preset_key, self.overrides)
 
         ckpt_payload = {
             "epoch": epoch,
@@ -803,6 +849,7 @@ def infer(
         det_preset = meta.get("detector_preset", meta.get("preset", "fast"))
         model = create_detection_model(preset=det_preset,
                                        num_classes=checkpoint_detection_num_classes(state_dict, classes),
+                                       backbone=meta.get('backbone'),
                                        pretrained=False).to(dev)
         model.load_state_dict(state_dict)
         model.eval()
@@ -838,7 +885,8 @@ def infer(
 
     elif task_clean == "segmentation":
         seg_preset = meta.get("preset", "fast")
-        model = build_segmentation_model(num_classes=len(classes), preset=seg_preset, pretrained=False).to(dev)
+        model = build_segmentation_model(num_classes=len(classes), preset=seg_preset,
+                                        model_name=meta.get('model_name', 'unet'), pretrained=False).to(dev)
         model.load_state_dict(state_dict)
         model.eval()
 
@@ -879,14 +927,7 @@ def infer(
         )
 
     elif task_clean in ("anomaly", "anomaly_detection"):
-        det_type = meta.get("detector_type", "")
-        preset_str = str(meta.get("preset", "")).lower()
-        if det_type == "patchcore" or "patchcore" in preset_str or "precision" in preset_str:
-            model = PatchCoreDetector(backbone_name="resnet18", device=dev, pretrained=False)
-        else:
-            model = PaDiMDetector(backbone_name="resnet18", device=dev, pretrained=False)
-        model.load_state_dict(state_dict)
-        model.eval()
+        model = reconstruct_anomaly_detector(state_dict, meta, dev)
 
         with torch.no_grad():
             anom_map, score = model.predict_anomaly_map(img_t[0], out_size=(orig_h, orig_w))

@@ -173,6 +173,31 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         raise ValueError("Invalid expected_artifacts for train")
     data["expected_artifacts"] = expected
     data["config_overrides"] = overrides
+    weights = data.get('pretrained_weights')
+    if weights is not None:
+        if not isinstance(weights, dict) or weights.get('checkpoint') not in ('pretrained.pt', 'pretrained.safetensors'):
+            raise ValueError('Invalid pretrained weights transfer identity')
+        if overrides.get('pretrained_checkpoint') != weights['checkpoint']:
+            raise ValueError('Pretrained checkpoint must match the verified run input')
+        path = _run_relative_file(run_dir, weights['checkpoint'], 'pretrained checkpoint')
+        digest = weights.get('sha256')
+        if (path.is_symlink() or not path.is_file() or not isinstance(digest, str)
+                or not _SHA256_RE.fullmatch(digest) or _sha256_file(path)[1] != digest
+                or overrides.get('pretrained_sha256') != digest):
+            raise ValueError('Pretrained checkpoint SHA256 hash differs from the verified run input')
+        if not isinstance(weights.get('source'), str) or not weights['source']:
+            raise ValueError('Pretrained transfer origin is missing')
+        from backend.engine.trainer import PRESET_CONFIGS
+        from backend.engine.model_backbones import canonical_dino_name
+        config = PRESET_CONFIGS[data.get('preset', 'fast')]
+        selected = overrides.get('model_name', config.backbone_segmentation) if data['task'] == 'segmentation' else overrides.get(
+            'backbone', config.backbone_detection if data['task'] == 'detection' else config.backbone_classification)
+        if weights.get('model') != canonical_dino_name(str(selected)):
+            raise ValueError('Pretrained transfer architecture differs from the selected model')
+        overrides['pretrained_checkpoint'] = str(path)
+        overrides['pretrained_origin'] = weights['source']
+    elif overrides.get('pretrained_checkpoint') or overrides.get('pretrained_origin'):
+        raise ValueError('Pretrained checkpoint needs a hash-bound run input')
     return data
 
 

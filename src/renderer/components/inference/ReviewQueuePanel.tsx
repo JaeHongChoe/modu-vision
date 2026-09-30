@@ -31,7 +31,7 @@ export const ReviewQueuePanel: React.FC<{
     return () => { active = false; };
   }, [sourceFolder, task, projectDir, refreshKey, reload]);
 
-  return <div className="rounded-lg border border-amber-600/30 bg-gradient-to-br from-[#1B2230] to-[#171D29] p-3"
+  return <div className="rounded-lg border border-amber-600/30 bg-[#1B2230] p-3"
     aria-label="검토 작업함">
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div className="flex items-center gap-2">

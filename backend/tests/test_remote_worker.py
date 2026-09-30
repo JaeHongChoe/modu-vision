@@ -90,6 +90,11 @@ def test_worker_receives_verified_portable_warmstart_parent(tmp_path):
                 'model_state_dict':{'weight':torch.zeros(2,3)}},parent_path)
     parent=WarmStartParent('job_parent_123',parent_path,hashlib.sha256(parent_path.read_bytes()).hexdigest(),
                            'classification','classification:resnet18',('OK','NG'),'v1:source')
+    parent_path.with_name('job_receipt.json').write_text(json.dumps({
+        'job_id': parent.job_id, 'task': parent.task, 'status': 'completed',
+        'checkpoint_sha256': parent.checkpoint_sha256, 'dataset_fingerprint': parent.dataset_fingerprint,
+        'source_dataset_path': str(tmp_path / 'source'),
+    }))
     envelope=portable_parent(parent,run)
     payload=json.loads(spec.read_text());payload['warm_start']=envelope;spec.write_text(json.dumps(payload))
     observed=[]
@@ -110,6 +115,11 @@ def test_worker_rejects_changed_portable_warmstart_before_constructing_trainer(t
                 'model_state_dict':{'weight':torch.zeros(2,3)}},parent_path)
     parent=WarmStartParent('job_parent_123',parent_path,hashlib.sha256(parent_path.read_bytes()).hexdigest(),
                            'classification','classification:resnet18',('OK','NG'),'v1:source')
+    parent_path.with_name('job_receipt.json').write_text(json.dumps({
+        'job_id': parent.job_id, 'task': parent.task, 'status': 'completed',
+        'checkpoint_sha256': parent.checkpoint_sha256, 'dataset_fingerprint': parent.dataset_fingerprint,
+        'source_dataset_path': str(tmp_path / 'source'),
+    }))
     payload=json.loads(spec.read_text());payload['warm_start']=portable_parent(parent,run);spec.write_text(json.dumps(payload))
     (run/'parent.pt').write_bytes(b'changed')
     def should_not_construct(**kwargs):pytest.fail('Invalid parent reached trainer')

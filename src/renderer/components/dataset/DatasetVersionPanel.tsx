@@ -128,7 +128,7 @@ export const DatasetVersionPanel: React.FC<Props> = ({ datasetPath, onClose, onR
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#040912]/80 p-5 backdrop-blur-[3px]" onMouseDown={(event) => {
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#040912]/80 p-5" onMouseDown={(event) => {
       if (event.target === event.currentTarget && !busy) onClose();
     }}>
       <div role="dialog" aria-modal="true" aria-label="데이터와 라벨 버전" className="flex max-h-full w-full max-w-[960px] flex-col overflow-hidden rounded-xl border border-[#33465C] bg-[#111B29] shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
@@ -149,8 +149,8 @@ export const DatasetVersionPanel: React.FC<Props> = ({ datasetPath, onClose, onR
             </div>
             <form onSubmit={create} className="space-y-3">
               <div><h3 className="text-sm font-semibold text-white">새 버전 저장</h3><p className="mt-1 text-xs leading-5 text-slate-500">라벨 수정이나 분할 변경 전에 현재 상태를 남겨두세요.</p></div>
-              <label className="block text-xs font-medium text-slate-300">버전 이름<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} placeholder="예: 1차 검수 완료" className="mt-1.5 w-full rounded-md border border-[#3E526A] bg-[#0C1521] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-sky-500" /></label>
-              <label className="block text-xs font-medium text-slate-300">메모<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} rows={3} placeholder="변경 내용이나 검수 기준" className="mt-1.5 w-full resize-none rounded-md border border-[#3E526A] bg-[#0C1521] px-3 py-2 text-xs leading-5 text-white outline-none placeholder:text-slate-600 focus:border-sky-500" /></label>
+              <label className="block text-xs font-medium text-slate-300">버전 이름<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} placeholder="예: 1차 검수 완료" className="mt-1.5 w-full rounded-md border border-[#3E526A] bg-[#0C1521] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-400 focus:border-sky-500" /></label>
+              <label className="block text-xs font-medium text-slate-300">메모<textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} rows={3} placeholder="변경 내용이나 검수 기준" className="mt-1.5 w-full resize-none rounded-md border border-[#3E526A] bg-[#0C1521] px-3 py-2 text-xs leading-5 text-white outline-none placeholder:text-slate-400 focus:border-sky-500" /></label>
               <button type="submit" disabled={!name.trim() || Boolean(busy)} className="flex w-full items-center justify-center gap-2 rounded-md bg-sky-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"><FolderArchive className="h-4 w-4" />{busy === 'create' ? '해시 확인 및 저장 중...' : '현재 상태를 버전으로 저장'}</button>
             </form>
             <div className="mt-5 flex items-start gap-2 rounded-md border border-sky-800/50 bg-sky-950/20 p-3 text-[11px] leading-5 text-slate-400"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" /><span>복원 전 현재 편집 상태를 자동 백업합니다. 원본 LabelMe 파일과 원본 이미지는 수정하지 않습니다.</span></div>

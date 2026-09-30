@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -110,6 +111,51 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _local_pretrained_weights(task, preset, overrides):
+    """Resolve fresh default weights locally so a worker never needs host paths or credentials."""
+    from backend.engine.trainer import PRESET_CONFIGS
+    from backend.engine.model_backbones import _dino_weights, is_dino_backbone, canonical_dino_name
+    config = PRESET_CONFIGS[preset]
+    model = overrides.get('model_name', config.backbone_segmentation) if task == 'segmentation' else overrides.get(
+        'backbone', config.backbone_detection if task == 'detection' else config.backbone_classification)
+    explicit = overrides.get('pretrained_checkpoint')
+    expected = overrides.get('pretrained_sha256')
+    if task in ('classification', 'patch_classification', 'segmentation') and is_dino_backbone(str(model)):
+        path, digest, origin = _dino_weights(canonical_dino_name(str(model)), explicit, expected)
+        return path, digest, origin, canonical_dino_name(str(model))
+    if task == 'detection' and str(model) in ('yolo26n', 'yolo26s'):
+        from backend.engine.model_backbones import _yolo_weights
+        path, digest, origin = _yolo_weights(str(model), explicit, expected)
+        return path, digest, origin, model
+    if explicit:
+        raise ValueError('Explicit pretrained checkpoint is supported only for DINOv3 and YOLO adapters')
+    return None
+
+
+def _pretrained_transfer(output, task, preset, overrides, parent=None):
+    options = dict(overrides or {})
+    # Parent checkpoints already contain all initialized weights and their provenance.
+    if parent is not None or not options.get('pretrained', True):
+        options.pop('pretrained_checkpoint', None)
+        return options, None, None
+    receipt = _local_pretrained_weights(task, preset, options)
+    if receipt is None:
+        return options, None, None
+    source, digest, origin, model = receipt
+    target_name = 'pretrained.safetensors' if Path(source).suffix.lower() == '.safetensors' else 'pretrained.pt'
+    transfer_root = Path(output) / 'pretrained_transfer'
+    transfer_root.mkdir(parents=True, exist_ok=True)
+    target = transfer_root / target_name
+    shutil.copyfile(source, target)
+    if _sha256(target) != digest:
+        raise ValueError('Pretrained transfer SHA256 hash changed during copy')
+    options['pretrained_checkpoint'] = target_name
+    options['pretrained_sha256'] = digest
+    options.pop('pretrained_origin', None)
+    envelope = {'checkpoint': target_name, 'sha256': digest, 'source': origin, 'model': model}
+    return options, envelope, (target, target_name)
 
 
 def _remote_path(profile: ComputeProfile, job_id: str, relative: str) -> str:
@@ -331,18 +377,22 @@ def run_remote_training(
             _save_journal(journal)
             record.phase = "transferring"
             job_id = record.job_id
+            remote_overrides, pretrained_envelope, pretrained_transfer = _pretrained_transfer(
+                output, record.task, record.preset, config_overrides, getattr(record, 'warm_start', None))
             spec = {
                 "protocol_version": PROTOCOL_VERSION,
                 "job_id": job_id,
                 "operation": "train",
                 "task": record.task,
                 "preset": record.preset,
-                "config_overrides": config_overrides or {},
+                "config_overrides": remote_overrides,
                 "device": None if device in ("auto", "mps") else device,
                 "snapshot_archive": "snapshot.tar.gz",
                 "input_manifest_sha256": snapshot.manifest_sha256,
             }
             if getattr(record, "dataset_binding", None): spec["dataset_binding"] = record.dataset_binding
+            if pretrained_envelope:
+                spec['pretrained_weights'] = pretrained_envelope
             parent_transfer = None
             if getattr(record, "warm_start", None):
                 from backend.engine.warm_start import portable_parent
@@ -356,6 +406,7 @@ def run_remote_training(
                 (spec_path, "spec.json"),
             )
             if parent_transfer: transfers = transfers + (parent_transfer,)
+            if pretrained_transfer: transfers = transfers + (pretrained_transfer,)
             record.total_bytes = sum(source.stat().st_size for source, _ in transfers)
             for source, target in transfers:
                 if record.preparation_cancel.is_set():

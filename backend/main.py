@@ -60,6 +60,7 @@ from backend.api.routes_runtime_services import router as runtime_services_route
 from backend.api.routes_model_deployments import router as model_deployments_router
 from backend.api.routes_ocr import router as ocr_router
 from backend.api.routes_enhancement import router as enhancement_router
+from backend.api.routes_model_catalog import router as model_catalog_router
 from backend.api.routes_provenance import router as provenance_router
 from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
@@ -232,6 +233,7 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     app.include_router(model_deployments_router)
     app.include_router(ocr_router)
     app.include_router(enhancement_router)
+    app.include_router(model_catalog_router)
     app.include_router(provenance_router)
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)

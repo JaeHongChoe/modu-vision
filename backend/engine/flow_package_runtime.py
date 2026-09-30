@@ -82,9 +82,11 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
 
 
 def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None = None, *, device: str = "cpu") -> dict[str, Any]:
+    from backend.engine.edge_runtime import enforce_edge_device
+    pipeline, checkpoints = verify_flow_package(package_dir)
+    enforce_edge_device(package_dir, device)
     from backend.engine.runtime_device import resolve_runtime_device
     device = str(resolve_runtime_device(device))
-    pipeline, checkpoints = verify_flow_package(package_dir)
     image = Path(image_path).expanduser().resolve()
     if not image.is_file():
         raise FileNotFoundError(f"Inspection image not found: {image}")

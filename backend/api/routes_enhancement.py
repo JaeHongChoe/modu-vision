@@ -43,6 +43,7 @@ class Train(BaseModel):
     learning_rate: float = Field(default=1e-3, gt=0, le=1)
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     background: bool = False
+    warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
 class Evaluate(BaseModel):
@@ -121,6 +122,10 @@ def train(req: Train, request: Request):
     from backend.engine.training_provenance import bind_family_training, validate_training_binding, persist_model_binding
     try:
         binding = bind_family_training(project, req.dataset_path, 'enhancement')
+        from backend.engine.specialized_warm_start import resolve_family_parent
+        _root(request)
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'enhancement',
+            manifest['provenance']['source_dataset_path'], req.dataset_path, req.model_dump()) if req.warm_start_job_id else None
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
     event = threading.Event()
@@ -129,6 +134,8 @@ def train(req: Train, request: Request):
               "dataset_path": req.dataset_path, "source_dataset_path": manifest["provenance"]["source_dataset_path"],
               "owner_instance": _PROCESS_INSTANCE, "device": req.device, "created_at": time.time(), "error": None}
     record['training_provenance'] = binding
+    if parent is not None:
+        record['warm_start'] = parent.lineage()
     def persist(**changes):
         with _JOB_LOCK:
             if event.is_set() and changes.get('status') == 'running':
@@ -147,7 +154,7 @@ def train(req: Train, request: Request):
                 def progress(epoch, epochs, loss):
                     persist(epoch=epoch, epochs=epochs, loss=loss)
                 result = train_enhancement(req.dataset_path, folder, epochs=req.epochs, batch_size=req.batch_size,
-                                           learning_rate=req.learning_rate, device=req.device, cancel_event=event, on_progress=progress)
+                                           learning_rate=req.learning_rate, device=req.device, cancel_event=event, on_progress=progress, warm_start=parent)
                 validate_training_binding(binding)
                 if event.is_set(): raise InterruptedError('Enhancement training cancelled')
                 persist_model_binding(folder, binding)
@@ -160,13 +167,18 @@ def train(req: Train, request: Request):
                         'source_dataset_path': manifest['provenance']['source_dataset_path'],
                         'dataset_path': req.dataset_path, 'training_provenance': binding,
                         'checkpoint_sha256': digest,
+                        **({'warm_start': parent.lineage()} if parent else {}),
                     }, ensure_ascii=False).encode())
                     persist(status="completed", model_sha256=digest, result=result)
                 return {"job_id": folder.name, "model_sha256": record["model_sha256"], "result": result}
         except InterruptedError as exc:
+            for name in ('best_model.pt', 'model_meta.json', 'metadata.json', 'job_receipt.json'):
+                (folder / name).unlink(missing_ok=True)
             persist(status="stopped", error=str(exc))
             if not req.background: raise HTTPException(409, str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
+            for name in ('best_model.pt', 'model_meta.json', 'metadata.json', 'job_receipt.json'):
+                (folder / name).unlink(missing_ok=True)
             persist(status="failed", error=str(exc))
             if not req.background: raise HTTPException(422, str(exc)) from exc
         finally:
@@ -178,6 +190,21 @@ def train(req: Train, request: Request):
         threading.Thread(target=execute, daemon=True, name=f"enhancement-{folder.name}").start()
         return JSONResponse({**record}, status_code=202)
     return execute()
+
+
+@router.get('/warm-start-parents')
+def warm_start_parents(dataset_path: str, request: Request):
+    from backend.engine.specialized_warm_start import list_family_parents
+    project = get_current_project(request)
+    _root(request)
+    try:
+        manifest = load_enhancement_manifest(dataset_path)
+        source = Path(manifest['provenance']['source_dataset_path']).resolve()
+        if not project.get('source_dataset_dir') or source != Path(project['source_dataset_dir']).resolve():
+            raise ValueError('Enhancement parent source differs from the active project')
+        return list_family_parents(project['models_dir'], 'enhancement', source, dataset_path)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _job(request: Request, job_id: str) -> tuple[Path, dict]:

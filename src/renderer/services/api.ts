@@ -5,6 +5,7 @@
 
 import type {
   AnnotationItem,
+  ClassSplitCounts,
   ErrorCatalogItem,
   EvaluationResults,
   FlowchartExecutionResult,
@@ -55,6 +56,7 @@ export interface SavedFlowVersion {
 
 export interface ComputeProbeResult {
   ready: boolean;
+  runtime_ready?: boolean;
   device_name?: string | null;
   device_type?: string | null;
   checks?: Record<string, unknown> | Array<unknown>;
@@ -565,8 +567,9 @@ export const api = {
       '/api/rotated-detection/manifest', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, samples }) },
     ),
     models: () => request<{ models: RotatedModelSummary[] }>('/api/rotated-detection/models'),
-    train: (datasetPath: string, epochs: number) => request<RotatedJob>(
-      '/api/rotated-detection/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs }) },
+    train: (datasetPath: string, epochs: number, warmStartJobId?: string) => request<RotatedJob>(
+      '/api/rotated-detection/train', { method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs,
+        ...(warmStartJobId ? {warm_start_job_id: warmStartJobId} : {}) }) },
     ),
     job: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}`),
     cancel: (jobId: string) => request<RotatedJob>(`/api/rotated-detection/jobs/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' }),
@@ -641,7 +644,7 @@ export const api = {
       if (params.split) q.set('split', params.split);
       if (params.class_name) q.set('class_name', params.class_name);
       if (params.label_status) q.set('label_status', params.label_status);
-      return request<{ total: number; limit: number; offset: number; items: ImageMeta[] }>(
+      return request<{ total: number; limit: number; offset: number; items: ImageMeta[]; class_split_counts?: ClassSplitCounts | null }>(
         `/api/dataset/images?${q.toString()}`
       );
     },
@@ -694,8 +697,12 @@ export const api = {
   },
 
   training: {
-    warmStartParents: (datasetPath: string, task: VisionTask, preset: 'fast' | 'precision') => {
+    warmStartParents: (datasetPath: string, task: VisionTask, preset: 'fast' | 'precision', modelOverrides: Record<string, unknown> = {}) => {
       const query = new URLSearchParams({ dataset_path: datasetPath, task, preset });
+      for (const name of ['backbone', 'model_name', 'anomaly_method']) {
+        const value = modelOverrides[name];
+        if (typeof value === 'string') query.set(name, value);
+      }
       return request<{ parents: Array<{
         job_id: string; classes: string[]; architecture: string;
         checkpoint_sha256: string; dataset_fingerprint: string;
@@ -971,6 +978,12 @@ export const api = {
   },
 
   export: {
+    edgeTargets: () => request<{
+      profile: 'edge_cpu'; device: 'cpu';
+      supported: Record<'linux' | 'windows' | 'macos', Array<'x86_64' | 'arm64'>>;
+      host: { os: 'linux' | 'windows' | 'macos'; architecture: 'x86_64' | 'arm64' } | null;
+      python: { minimum: string; maximum_exclusive: string };
+    }>('/api/export/edge-targets'),
     flow: (data: {
       source_dataset_path: string;
       recipe_task: FlowModelTask | 'mixed';
@@ -978,6 +991,9 @@ export const api = {
       version_id?: string;
       verification_image_path?: string;
       verification_image_id?: string;
+      deployment_profile?: 'standard' | 'edge_cpu';
+      target_os?: 'linux' | 'windows' | 'macos';
+      target_arch?: 'x86_64' | 'arm64';
     }) => request<{
       status: string;
       package_path: string;
@@ -985,6 +1001,10 @@ export const api = {
       pipeline_id: string;
       model_job_ids: string[];
       total_files: number;
+      deployment?: {
+        profile: 'edge_cpu'; device: 'cpu';
+        target: { os: 'linux' | 'windows' | 'macos'; architecture: 'x86_64' | 'arm64' };
+      };
       parity: {
         status: 'not_run' | 'passed';
         image_path?: string;

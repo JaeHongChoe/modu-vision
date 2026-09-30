@@ -473,6 +473,7 @@ def train_rotated_detector(
     batch_size: int = 8, image_size: int = 64, learning_rate: float = 1e-3,
     device: str | torch.device = "cpu",
     cancel_event: threading.Event | None = None,
+    warm_start=None,
 ) -> dict[str, Any]:
     """Train a small single-object regressor; select the best validation IoU."""
     if type(epochs) is not int or epochs < 1 or type(batch_size) is not int or batch_size < 1:
@@ -485,10 +486,17 @@ def train_rotated_detector(
         raise RotatedTrainingCancelled()
     manifest = load_rotated_manifest(root)
     if manifest.version == 2:
-        return _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event)
+        return _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start)
     train = RotatedBoxDataset(manifest, split="train", image_size=image_size)
     loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=0)
     model = RotatedBoxNet().to(device)
+    lineage = {}
+    if warm_start is not None:
+        from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
+        require_new_candidate(output_dir, warm_start)
+        load_family_weights({'model_state_dict': model}, warm_start,
+                            requested_signature('rotated_detection', root, {'image_size': image_size}))
+        lineage = {'warm_start': warm_start.lineage()}
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     output = Path(output_dir).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -516,7 +524,7 @@ def train_rotated_detector(
                 best_score = metrics["mean_oriented_iou"]
                 best_metrics = metrics
                 torch.save({"task": "rotated_detection", "class_name": manifest.class_name,
-                            "image_size": image_size, "model_state_dict": model.state_dict()}, checkpoint)
+                            "image_size": image_size, "model_state_dict": model.state_dict(), **lineage}, checkpoint)
         if cancel_event is not None and cancel_event.is_set():
             raise RotatedTrainingCancelled()
     except RotatedTrainingCancelled:
@@ -531,7 +539,7 @@ def train_rotated_detector(
             "manifest_sha256": manifest.provenance["manifest_sha256"],
             "dataset_path": str(manifest.root), "provenance": manifest.provenance,
             "split_counts": manifest.provenance["split_counts"],
-            "validation": best_metrics}
+            "validation": best_metrics, **lineage}
     (output / "model_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     receipt = {"status": "completed", "task": "rotated_detection",
                "epochs_completed": epochs, "checkpoint_sha256": checksum,
@@ -635,13 +643,19 @@ def _evaluate_multi(model,manifest,split,meta,device):
     return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256']}
 
 
-def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event):
+def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start=None):
     groups={}
     for r in manifest.records: groups[r.image]=groups.get(r.image,0)+1
     max_objects=max(groups.values())
     meta={'task':'rotated_detection','version':2,'class_name':manifest.class_name,'class_names':list(manifest.class_names),'max_objects':max_objects,'image_size':image_size,'dataset_sha256':manifest.provenance['dataset_sha256'],'dataset_path':str(manifest.root),'provenance':manifest.provenance}
     data=RotatedMultiDataset(manifest,'train',image_size,max_objects)
     model=RotatedMultiBoxNet(len(manifest.class_names),max_objects).to(device)
+    if warm_start is not None:
+        from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
+        require_new_candidate(output_dir, warm_start)
+        load_family_weights({'model_state_dict': model}, warm_start,
+                            requested_signature('rotated_detection', manifest.root, {'image_size': image_size}))
+        meta['warm_start'] = warm_start.lineage()
     optimizer=torch.optim.Adam(model.parameters(),lr=learning_rate)
     output=Path(output_dir);output.mkdir(parents=True,exist_ok=True);checkpoint=output/'best_model.pt'
     best=-1

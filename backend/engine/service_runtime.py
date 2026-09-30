@@ -32,6 +32,8 @@ class ServiceRuntime:
             if self.runtime_root is None or not package.is_relative_to(self.runtime_root) or policy is None or not policy.is_relative_to(self.runtime_root):
                 raise ValueError('Runtime apply requires a release and policy under the managed root')
         pipeline,checkpoints=verify_flow_package(package)
+        from backend.engine.edge_runtime import enforce_edge_device
+        enforce_edge_device(package,device)
         if policy:self.verify_policy(package,checkpoints,policy)
         elif not initial:raise ValueError('Runtime apply requires approved release policy')
         digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()

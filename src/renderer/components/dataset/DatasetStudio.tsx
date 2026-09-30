@@ -41,6 +41,7 @@ export const DatasetStudio: React.FC = () => {
     sourceImages,
     unlabeledImages,
     classes,
+    classSplitCounts,
     split,
     images,
     totalImagesCount,
@@ -348,6 +349,11 @@ export const DatasetStudio: React.FC = () => {
               <JargonTooltip termKey="early_stopping" />
             </div>
 
+            {!showAppliedSplit && <p className="text-[11px] text-slate-400">
+              {language === 'ko' ? '아래는 분할 예상입니다. 적용 버튼을 눌러야 저장된 분할이 변경됩니다.'
+                : 'Preview below. Saved splits change when you select Apply.'}
+            </p>}
+
             {/* Quick Calibration Presets */}
             <div className="grid grid-cols-3 gap-1.5">
               {[
@@ -506,10 +512,12 @@ export const DatasetStudio: React.FC = () => {
                   const isNormal = cName.toLowerCase() === 'ok' || cName.toLowerCase() === 'good';
                   const isSelected = activeClassFilter === cName;
 
-                  // Stratified 3-way split estimates for this class
-                  const cTrain = Math.round(count * (splitRatios.train / 100));
-                  const cVal = Math.round(count * (splitRatios.val / 100));
-                  const cTest = Math.max(0, count - cTrain - cVal);
+                  const appliedClassSplit = appliedTotal > 0 && (task === 'classification' || task === 'anomaly');
+                  const confirmedClassSplit = appliedClassSplit && classSplitCounts != null;
+                  const savedCounts = classSplitCounts?.[cName] || { train: 0, val: 0, test: 0 };
+                  const cTrain = confirmedClassSplit ? savedCounts.train : Math.round(count * (splitRatios.train / 100));
+                  const cVal = confirmedClassSplit ? savedCounts.val : Math.round(count * (splitRatios.val / 100));
+                  const cTest = confirmedClassSplit ? savedCounts.test : Math.max(0, count - cTrain - cVal);
 
                   return (
                     <div
@@ -557,8 +565,13 @@ export const DatasetStudio: React.FC = () => {
                         />
                       </div>
 
-                      {/* Class split counts are estimates only when the split can be applied here. */}
-                      {!splitUnavailableForTask && <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex items-center justify-between text-[10px] font-mono tabular-nums text-slate-400">
+                      {appliedClassSplit && !confirmedClassSplit && <p className="mt-1 text-[10px] text-slate-400">
+                        {language === 'ko' ? '적용된 분할 집계 확인 중' : 'Loading applied split counts'}
+                      </p>}
+                      {!splitUnavailableForTask && (!appliedClassSplit || confirmedClassSplit) && <div className="mt-1 pt-1 border-t border-[#2B3547]/50 flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono tabular-nums text-slate-400">
+                        <span>{language === 'ko'
+                          ? (confirmedClassSplit ? '적용된 분할' : '분할 예상')
+                          : (confirmedClassSplit ? 'Applied split' : 'Split preview')}</span>
                         <div className="flex space-x-2">
                           <span className="text-blue-400">T: {cTrain}</span>
                           <span className="text-amber-400">V: {cVal}</span>

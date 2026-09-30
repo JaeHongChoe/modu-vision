@@ -19,6 +19,9 @@ def checkpoint_detection_num_classes(state_dict: Mapping[str, torch.Tensor], cla
     predictor = state_dict.get("roi_heads.box_predictor.cls_score.weight")
     if predictor is not None:
         return int(predictor.shape[0])
+    foreground_count = state_dict.get("_foreground_count")
+    if foreground_count is not None:
+        return int(foreground_count.item()) + 1
     foreground = foreground_class_names(classes)
     return max(2, len(foreground) + 1)
 
@@ -34,6 +37,9 @@ def create_detection_model(
     preset: str = "fast",
     num_classes: int = 4,  # 0 = background, 1..K = defect classes
     pretrained: bool = True,
+    backbone: str | None = None,
+    pretrained_checkpoint: str | None = None,
+    pretrained_sha256: str | None = None,
 ) -> nn.Module:
     """
     Constructs Faster R-CNN detection model with custom classification & box regression head.
@@ -45,6 +51,18 @@ def create_detection_model(
       full MPS hardware acceleration for backbone features, RPN, and prediction heads.
     """
     preset_clean = preset.lower().strip()
+    from backend.engine.model_backbones import YoloDetectionAdapter, YOLO_MODELS
+    chosen = (backbone or preset_clean).lower().strip()
+    if chosen.removesuffix(".pt").removesuffix(".yaml") in YOLO_MODELS:
+        return YoloDetectionAdapter(chosen, num_classes, pretrained,
+                                    pretrained_checkpoint, pretrained_sha256)
+    if backbone:
+        preset_clean = chosen
+        if preset_clean not in {"fast", "precision", "mobilenet", "resnet50", "fasterrcnn",
+                                 "fasterrcnn_mobilenet_v3_large_fpn", "fasterrcnn_resnet50_fpn_v2"}:
+            raise ValueError(f"Unsupported detection architecture: {backbone}")
+        if preset_clean == "fasterrcnn":
+            preset_clean = preset.lower().strip()
 
     if preset_clean in ("fast", "mobilenet", "fasterrcnn_mobilenet_v3_large_fpn"):
         weights = (

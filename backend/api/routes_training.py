@@ -110,6 +110,10 @@ def _write_job_receipt(record: JobRecord) -> None:
         receipt["compute_profile_id"] = record.remote_profile_id
     if record.warm_start is not None:
         receipt["warm_start"] = record.warm_start.lineage()
+    checkpoint = output_dir / 'best_model.pt'
+    if record.status == 'completed' and checkpoint.is_file() and not checkpoint.is_symlink():
+        from backend.engine.warm_start import _sha256
+        receipt['checkpoint_sha256'] = _sha256(checkpoint)
     temporary_path = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -617,6 +621,12 @@ class TrainingConfigOverrides(BaseModel):
     image_size: Optional[int] = Field(None, ge=64, le=1024)
     patience: Optional[int] = Field(None, ge=1, le=50)
     device: Optional[str] = None
+    backbone: Optional[str] = None
+    model_name: Optional[str] = None
+    anomaly_method: Optional[Literal['padim', 'patchcore']] = None
+    pretrained: Optional[bool] = None
+    pretrained_checkpoint: Optional[str] = None
+    pretrained_sha256: Optional[str] = None
 
 
 class TrainingStartRequest(BaseModel):
@@ -655,21 +665,31 @@ def _warm_start_scope(request: Request, dataset_path: Path) -> Path:
 def list_warm_start_parents(
     dataset_path: str, task: str, preset: str = "fast", request: Request = None,
     backbone: Optional[str] = None,
+    model_name: Optional[str] = None,
+    anomaly_method: Optional[str] = None,
 ):
     if request is None:
         raise HTTPException(status_code=409, detail="Open a project before selecting a warm-start parent")
     source = Path(dataset_path).expanduser().resolve()
     models = _warm_start_scope(request, source)
     try:
-        architecture = architecture_for(task, preset, {"backbone": backbone} if backbone else None)
+        architecture = architecture_for(task, preset, {key: value for key, value in {
+            'backbone': backbone, 'model_name': model_name, 'anomaly_method': anomaly_method}.items() if value})
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     parents = []
+    from backend.engine.warm_start import training_classes
+    try:
+        current_classes = training_classes(task, source)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
     for job_dir in sorted(models.iterdir()):
         if job_dir.is_symlink() or not job_dir.is_dir():
             continue
         try:
             parent = resolve_warm_start_parent(job_dir.name, models, source, task, architecture)
+            if parent.classes != current_classes:
+                continue
         except (OSError, ValueError):
             continue
         parents.append({
@@ -678,6 +698,7 @@ def list_warm_start_parents(
             "architecture": parent.architecture,
             "checkpoint_sha256": parent.checkpoint_sha256,
             "dataset_fingerprint": parent.dataset_fingerprint,
+            'semantics': parent.semantics,
         })
     return {"parents": parents, "total": len(parents)}
 
@@ -685,6 +706,9 @@ def list_warm_start_parents(
 @router.post("/start")
 def start_training(req: TrainingStartRequest, request: Request = None):
     """Initiates an asynchronous background AutoML training job."""
+    if req.config_overrides:
+        # Origin aliases are populated only by the worker after verifying its transferred input.
+        req.config_overrides = {key: value for key, value in req.config_overrides.items() if key != 'pretrained_origin'}
     # Verify dataset path exists
     d_path = Path(req.dataset_path).resolve()
     if not d_path.is_dir():
@@ -798,11 +822,14 @@ def start_training(req: TrainingStartRequest, request: Request = None):
         from backend.remote.ssh_transport import SSHTransport
 
         readiness = SSHTransport().probe(profile)
-        if not readiness.get("ready"):
+        try:
+            from backend.remote.ssh_transport import require_training_runtime
+            require_training_runtime(readiness, req.task, req.preset, req.config_overrides, warm_start=bool(req.warm_start_job_id))
+        except ValueError as exc:
             raise HTTPException(
                 status_code=422,
-                detail=f"Compute server is not ready: {readiness.get('message') or 'connection test failed'}",
-            )
+                detail=f"Compute server is not ready: {exc}",
+            ) from exc
 
     if req.output_dir:
         out_dir = Path(req.output_dir).resolve()
@@ -826,6 +853,9 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             warm_start = resolve_warm_start_parent(
                 req.warm_start_job_id, models, d_path, req.task, architecture,
             )
+            from backend.engine.warm_start import training_classes
+            if warm_start.classes != training_classes(req.task, d_path):
+                raise ValueError('Warm-start parent classes differ from current training classes')
         except (OSError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     dataset_binding = None
@@ -895,7 +925,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             "config_overrides": req.config_overrides or {},
             "device": req.device,
             "dataset_binding": dataset_binding,
-            "warm_start": {"job_id": warm_start.job_id, "checkpoint_path": str(warm_start.checkpoint_path), "checkpoint_sha256": warm_start.checkpoint_sha256, "task": warm_start.task, "architecture": warm_start.architecture, "classes": list(warm_start.classes), "dataset_fingerprint": warm_start.dataset_fingerprint} if warm_start else None,
+            "warm_start": {"job_id": warm_start.job_id, "checkpoint_path": str(warm_start.checkpoint_path), "checkpoint_sha256": warm_start.checkpoint_sha256, "task": warm_start.task, "architecture": warm_start.architecture, "classes": list(warm_start.classes), "dataset_fingerprint": warm_start.dataset_fingerprint, 'semantics': warm_start.semantics} if warm_start else None,
         }
 
         record = training_job_manager.start_remote_job(

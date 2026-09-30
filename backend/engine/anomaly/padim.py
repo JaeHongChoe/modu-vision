@@ -219,6 +219,7 @@ class PaDiMDetector:
     def state_dict(self) -> Dict[str, Any]:
         """Returns serializable state dictionary."""
         return {
+            "feature_extractor_state_dict": {key: value.cpu() for key, value in self.feature_extractor.state_dict().items()},
             "mean": self.mean.cpu() if self.mean is not None else None,
             "cov_inv": self.cov_inv.cpu() if self.cov_inv is not None else None,
             "sub_dims": self.sub_dims.cpu() if self.sub_dims is not None else None,
@@ -231,6 +232,8 @@ class PaDiMDetector:
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """Loads state dictionary."""
+        if state_dict.get('feature_extractor_state_dict') is not None:
+            self.feature_extractor.load_state_dict(state_dict['feature_extractor_state_dict'], strict=True)
         self.mean = state_dict["mean"].to(self.device) if state_dict.get("mean") is not None else None
         self.cov_inv = state_dict["cov_inv"].to(self.device) if state_dict.get("cov_inv") is not None else None
         if state_dict.get("sub_dims") is not None:
