@@ -67,7 +67,7 @@ def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
     root = root.resolve()
     # Generated datasets place task data in selected/classification while the
     # source folder selected in Step 1 owns the saved split manifest.
-    candidate_roots = (root, root.parent) if root.name == "classification" else (root,)
+    candidate_roots = (root, root.parent) if root.name in {"classification", "detection", "segmentation", "anomaly"} else (root,)
     for selected_root in candidate_roots:
         key = hashlib.sha256(str(selected_root).encode("utf-8")).hexdigest()
         manifest = scoped_split_root(SPLIT_MANIFEST_DIR) / f"{key}.json"
@@ -525,6 +525,7 @@ class DetectionDataset(Dataset):
         image_size: Optional[Tuple[int, int]] = None,
         max_dim: int = 1600,
         class_names: Optional[Sequence[str]] = None,
+        annotation_data: Optional[Dict[str, Any]] = None,
     ):
         self.transform = transform
         self.image_size = image_size
@@ -547,14 +548,17 @@ class DetectionDataset(Dataset):
                 annotation_file = annos[0] if annos else None
 
 
-        if images_dir is None or annotation_file is None:
+        if images_dir is None or (annotation_file is None and annotation_data is None):
             raise ValueError("images_dir and annotation_file must be specified for DetectionDataset")
 
         self.images_dir = Path(images_dir)
-        self.annotation_file = Path(annotation_file)
+        self.annotation_file = Path(annotation_file) if annotation_file is not None else None
 
-        with open(self.annotation_file, "r", encoding="utf-8") as f:
-            coco_data = json.load(f)
+        if annotation_data is None:
+            with open(self.annotation_file, "r", encoding="utf-8") as f:
+                coco_data = json.load(f)
+        else:
+            coco_data = annotation_data
 
         raw_categories = coco_data.get("categories", [])
         if not isinstance(raw_categories, list) or not raw_categories:

@@ -8,7 +8,7 @@ export function projectFlowRecipe(pipeline: FlowchartPipeline): FlowModelTask | 
   if (inspectionTasks.size > 1) return 'mixed';
   if (inspectionTasks.size === 1) {
     const task = [...inspectionTasks][0];
-    if (task === 'anomaly' || task === 'segmentation' || task === 'classification' || task === 'patch_classification') return task;
+    if (task === 'anomaly' || task === 'segmentation' || task === 'classification' || task === 'patch_classification' || task === 'ocr' || task === 'rotated_detection') return task;
     throw new Error('검사 노드의 작업 유형을 확인할 수 없습니다.');
   }
   if (pipeline.nodes.some((node) => node.data.node_type === 'detection_crop')) return 'detection';

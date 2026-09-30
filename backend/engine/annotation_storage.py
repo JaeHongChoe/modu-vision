@@ -88,3 +88,17 @@ def migrate_legacy_dataset_overlay(project: dict) -> Optional[dict]:
     finally:
         if staging.exists():
             shutil.rmtree(staging)
+
+
+def dataset_overlay_scopes(dataset_folder: Path, root: Path = LEGACY_ANNOTATIONS_ROOT, *, use_scope: bool = True):
+    """Every image-parent overlay belonging to this source, including nested layouts."""
+    from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+    source = Path(dataset_folder).resolve()
+    selected = scoped_annotation_root(root) if use_scope else Path(root)
+    result = {dataset_annotation_dir(source, selected, use_scope=False)}
+    project = request_project_root()
+    for directory, names, files in os.walk(source, followlinks=False):
+        names[:] = sorted(name for name in names if not name.startswith('.') and (project is None or (Path(directory)/name).resolve() != project))
+        if any(not name.startswith('.') and Path(name).suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS for name in files):
+            result.add(dataset_annotation_dir(Path(directory), selected, use_scope=False))
+    return sorted(result)

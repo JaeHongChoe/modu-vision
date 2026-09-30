@@ -176,6 +176,7 @@ class _DefectDiscriminator(nn.Module):
 def train_defect_gan(
     root: str | Path, output_dir: str | Path, *, epochs: int = 20,
     batch_size: int = 8, seed: int = 0, device: str = "cpu", base_channels: int = 16,
+    cancel_event=None, on_progress=None,
 ) -> dict[str, Any]:
     if epochs < 1 or batch_size < 2 or base_channels < 8:
         raise ValueError("Defect GAN epochs must be positive, batch size >= 2, base channels >= 8")
@@ -194,8 +195,10 @@ def train_defect_gan(
     generator_opt = torch.optim.Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     discriminator_opt = torch.optim.Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     generator_loss = discriminator_loss = 0.0
-    for _ in range(epochs):
-        for real in loader:
+    for epoch in range(1,epochs+1):
+        if cancel_event is not None and cancel_event.is_set():raise InterruptedError('GAN training cancelled')
+        for batch_index,real in enumerate(loader,1):
+            if cancel_event is not None and cancel_event.is_set():raise InterruptedError('GAN training cancelled')
             real = real.to(dev)
             size = real.shape[0]
             if size < 2:
@@ -215,13 +218,15 @@ def train_defect_gan(
             generator_opt.step()
             generator_loss = float(generator_loss_tensor.item())
             discriminator_loss = float(discriminator_loss_tensor.item())
+            if on_progress is not None:on_progress({'epoch':epoch,'batch':batch_index,'batches':len(loader),'loss':generator_loss,'discriminator_loss':discriminator_loss})
+    if cancel_event is not None and cancel_event.is_set():raise InterruptedError('GAN training cancelled')
     output = Path(output_dir).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
     checkpoint = output / "best_model.pt"
     temporary = output / f".{checkpoint.name}.{uuid.uuid4().hex}.tmp"
     source_manifest_sha256 = _hash(root / MANIFEST_NAME)
     payload = {
-        "model_kind": "dcgan_defect_crop", "image_size": IMAGE_SIZE,
+        "model_kind": "dcgan_defect_crop", "task":"defect_gan", "dataset_path":str(root), "image_size": IMAGE_SIZE,
         "latent_size": LATENT_SIZE, "base_channels": base_channels,
         "generator_state_dict": generator.cpu().state_dict(),
         "discriminator_state_dict": discriminator.cpu().state_dict(),
@@ -280,3 +285,90 @@ def generate_defect_candidates(
               "quality_status": "unvalidated", "seed": seed, "candidates": candidates}
     (output / "review_manifest.json").write_text(json.dumps(review, indent=2), encoding="utf-8")
     return review
+
+
+def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path,
+                             output_dir: str | Path, decisions: list[dict]) -> dict:
+    """Build a classification training snapshot after explicit per-image human review.
+
+    Copies real train/val/test data without changing the source. Generated images
+    enter only train under the reviewer's explicit existing defect class.
+    """
+    from backend.engine.dataset_loaders import ClassificationDataset
+    from datetime import datetime, timezone
+    import shutil
+    import re
+    review=Path(review_dir).resolve(); source=Path(source_dataset).resolve(); output=Path(output_dir)
+    manifest_path=review/'review_manifest.json'
+    if manifest_path.is_symlink() or not manifest_path.is_file() or not decisions: raise ValueError('Reviewed candidate manifest and decisions are required')
+    manifest=json.loads(manifest_path.read_text())
+    candidates={row['id']:row for row in manifest['candidates']}
+    real={split:ClassificationDataset(source,split=split) for split in ('train','val','test')}
+    if not len(real['train']) or not len(real['val']): raise ValueError('Adoption needs existing labeled classification train and validation samples')
+    classes=real['train'].classes
+    selected=[];seen=set()
+    for decision in decisions:
+        cid=decision.get('candidate_id')
+        if cid in seen or cid not in candidates: raise ValueError('Duplicate or unavailable generated candidate')
+        seen.add(cid);row=candidates[cid]
+        if row.get('status')!='synthetic_unreviewed': raise ValueError('Candidate has already been reviewed')
+        if decision.get('decision') not in ('adopt','reject') or not str(decision.get('reviewer','')).strip() or len(str(decision.get('reason','')).strip())<2:
+            raise ValueError('Each candidate needs adopt/reject, reviewer and review reason')
+        path=Path(row['path'])
+        if path.is_symlink() or path.parent.resolve()!=review or not path.is_file() or _hash(path)!=row['sha256']:
+            raise ValueError('Generated candidate source hash changed or escaped review directory')
+        if decision['decision']=='adopt':
+            label=decision.get('label')
+            if label not in classes or not re.fullmatch(r'[^/\\.][^/\\]*',str(label)) or str(label).casefold() in ('ok','normal','good','pass','정상'):
+                raise ValueError('Adoption requires an existing explicit defect class label')
+            selected.append((decision,row,path))
+    if output.exists() or output.is_symlink() or output.resolve().is_relative_to(source): raise ValueError('Use a new adoption dataset outside the source')
+    output.mkdir(parents=True)
+    rows=[]
+    try:
+        for split,dataset in real.items():
+            for index,(path,label_index) in enumerate(dataset.samples):
+                label=dataset.classes[label_index]
+                destination=output/split/label/f'real_{index:06d}_{path.name}'
+                destination.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,destination)
+                rows.append({'kind':'real','source_image':str(path),'source_sha256':_hash(path),'image':destination.relative_to(output).as_posix(),'split':split,'label':label})
+        for decision,row,path in selected:
+            destination=output/'train'/decision['label']/f"synthetic_{uuid.uuid4().hex}.png"
+            destination.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,destination)
+            rows.append({'kind':'synthetic_reviewed','image':destination.relative_to(output).as_posix(),'split':'train','label':decision['label'],'candidate_id':row['id'],'source_sha256':row['sha256'],'generator_sha256':manifest['generator_sha256'],'reviewer':decision['reviewer'],'reason':decision['reason']})
+        audit={'task':'classification','source_dataset_path':str(source),'generator_sha256':manifest['generator_sha256'],'reviewed_at':datetime.now(timezone.utc).isoformat(),'samples':rows,'decisions':decisions}
+        (output/'synthetic_provenance.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
+        for decision in decisions:
+            row=candidates[decision['candidate_id']];row['status']='synthetic_adopted' if decision['decision']=='adopt' else 'synthetic_rejected';row['review']={**decision,'dataset_path':str(output.resolve()),'reviewed_at':audit['reviewed_at']}
+        temporary=manifest_path.with_name(f'.review-{uuid.uuid4().hex}.tmp');temporary.write_text(json.dumps(manifest,ensure_ascii=False,indent=2));os.replace(temporary,manifest_path)
+    except BaseException:
+        shutil.rmtree(output,ignore_errors=True);raise
+    return {'status':'adopted','dataset_path':str(output.resolve()),'adopted_count':len(selected),'real_image_count':sum(len(ds) for ds in real.values()),'task':'classification'}
+
+
+def evaluate_defect_generator(checkpoint: str | Path, dataset_path: str | Path,
+                              *, split='test', count=8, seed=0, device='cpu') -> dict:
+    """Held-out RGB-statistic comparison, a diagnostic without model-quality approval."""
+    import tempfile
+    if split not in ('val','test'): raise ValueError('GAN evaluation requires held-out val or test crops')
+    root=Path(dataset_path).resolve();manifest=load_defect_gan_manifest(root)
+    checkpoint=Path(checkpoint)
+    metadata=json.loads(checkpoint.with_name('model_meta.json').read_text())
+    if metadata.get('source_manifest_sha256')!=_hash(root/MANIFEST_NAME): raise ValueError('GAN evaluation dataset differs from checkpoint')
+    rows=[r for r in manifest['samples'] if r['split']==split]
+    if not rows: raise ValueError(f'GAN {split} split has no ground-truth crops')
+    def features(pixels):
+        values=pixels.astype(np.float32)/255
+        return np.concatenate([values.mean((0,1)),values.std((0,1))])
+    real=[]
+    for row in rows:
+        with Image.open(_source_path(root,row['image'])) as image:
+            real.append(features(np.asarray(image.convert('RGB').crop(tuple(row['bbox'])).resize((64,64)))))
+    with tempfile.TemporaryDirectory(prefix='gan-evaluation-') as temp:
+        generated=generate_defect_candidates(checkpoint,temp,count=count,seed=seed,device=device)
+        fake=[features(np.asarray(Image.open(row['path']).convert('RGB'))) for row in generated['candidates']]
+    real,fake=np.asarray(real),np.asarray(fake)
+    def kernel(left,right):
+        return np.exp(-np.square(left[:,None,:]-right[None,:,:]).sum(2)/(2*0.1**2)).mean()
+    mmd=float(kernel(real,real)+kernel(fake,fake)-2*kernel(real,fake))
+    return {'task':'defect_gan','split':split,'real_sample_count':len(real),'generated_count':len(fake),'rgb_statistics_mmd':max(0,mmd),'metric_backend':'RGB mean/std Gaussian-kernel MMD (diagnostic)','quality_status':'unvalidated','checkpoint_sha256':_hash(checkpoint),'manifest_sha256':_hash(root/MANIFEST_NAME),'seed':seed}

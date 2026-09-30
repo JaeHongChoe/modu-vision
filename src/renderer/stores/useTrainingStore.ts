@@ -44,6 +44,18 @@ function computeLabel(id: string | null, fallback?: string | null): string {
   return fallback || useComputeStore.getState().profiles.find((profile) => profile.id === id)?.name || id;
 }
 
+function polledHistory(job: any): LossPoint[] | null {
+  if (!Array.isArray(job?.loss_history)) return null;
+  const rows = new Map<number, LossPoint>();
+  for (const row of job.loss_history) {
+    if (!Number.isInteger(row?.epoch) || row.epoch < 1
+        || !Number.isFinite(row.train_loss) || !Number.isFinite(row.val_loss)) continue;
+    rows.set(row.epoch, { epoch: row.epoch, trainLoss: row.train_loss, valLoss: row.val_loss,
+      ...(Number.isFinite(row.lr) ? { lr: row.lr } : {}) });
+  }
+  return [...rows.values()].sort((a, b) => a.epoch - b.epoch);
+}
+
 export interface LossPoint {
   epoch: number;
   trainLoss: number;
@@ -54,6 +66,14 @@ export interface LossPoint {
 export interface StepLossPoint {
   step: number;
   loss: number;
+}
+
+export interface TrainingRecoverySource {
+  projectId: string;
+  projectDir: string;
+  labelsetId: string;
+  folderPath: string;
+  task: VisionTask;
 }
 
 interface TrainingState {
@@ -90,7 +110,7 @@ interface TrainingState {
   setPreset: (preset: TrainingPreset) => void;
   startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string) => Promise<void>;
   stopTraining: () => Promise<void>;
-  recoverActiveJob: () => Promise<void>;
+  recoverActiveJob: (source?: TrainingRecoverySource) => Promise<void>;
   refreshCurrentJob: () => Promise<void>;
   reconnectCurrentJob: () => Promise<void>;
   updateFromTelemetry: (event: string, data: any) => void;
@@ -100,6 +120,7 @@ interface TrainingState {
 
 let startRequest: ReturnType<typeof api.training.start> | null = null;
 let pendingStartEvents: Array<{ event: string; data: any }> = [];
+let trainingRecoverySequence = 0;
 
 async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted' | 'failed'> {
   const deadline = Date.now() + 60000;
@@ -171,6 +192,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     if (selectedProfileId && (!profile || compute.probeResults[selectedProfileId]?.ready !== true)) {
       throw new Error('선택한 서버가 학습 준비 상태가 아닙니다. 연결 검사를 완료하세요.');
     }
+    trainingRecoverySequence += 1;
     pendingStartEvents = [];
     set({
       jobId: null,
@@ -185,6 +207,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       isCurrentData: true,
       status: selectedProfileId ? 'preparing' : 'running',
       isTraining: true,
+      isRecoveringTraining: false,
       isStopRequestPending: false,
       stopError: null,
       currentEpoch: 0,
@@ -264,12 +287,25 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     }
   },
 
-  recoverActiveJob: async () => {
-    if (get().isTraining || get().isRecoveringTraining || startRequest) return;
+  recoverActiveJob: async (source) => {
+    if (get().isTraining || startRequest || (get().isRecoveringTraining && !source)) return;
+    if (get().isCurrentData && get().status === 'completed' && get().jobId) return;
+    const sequence = ++trainingRecoverySequence;
+    const stillIdle = () => sequence === trainingRecoverySequence && !get().isTraining && !startRequest;
+    const sourceCurrent = () => {
+      const dataset = useDatasetStore.getState();
+      return source && stillIdle() && dataset.folderPath === source.folderPath
+        && dataset.datasetKey === `${source.folderPath}\0${source.task}`
+        && !dataset.isLoading && !dataset.isSplitting && !dataset.importError;
+    };
+    const projectMatches = (project: Awaited<ReturnType<typeof api.project.getCurrent>>) => source
+      && project.id === source.projectId && project.project_dir === source.projectDir
+      && (project.active_labelset_id || 'default') === source.labelsetId
+      && project.task === source.task && project.source_dataset_dir === source.folderPath;
     set({ isRecoveringTraining: true });
     try {
       const active = await api.training.getStatus();
-      if (!get().isTraining && !startRequest && active?.job_id
+      if (stillIdle() && active?.job_id
           && ACTIVE_STATUSES.includes(statusFromJob(active))) {
         // A recovered job remains cancellable even if its source data changed.
         // Step 4 recovers its result separately only after provenance checks.
@@ -292,12 +328,39 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
           totalSteps: active.total_steps || 0,
           trainLoss: active.current_train_loss ?? null,
           valLoss: active.current_val_loss ?? null,
+          lossHistory: polledHistory(active) || [],
         });
+        return;
       }
+      if (!sourceCurrent() || !source) return;
+      if (!projectMatches(await api.project.getCurrent()) || !sourceCurrent()) return;
+      // The catalog verifies project ownership, task and the current label/split
+      // fingerprint. It does not need an existing evaluation or run inference.
+      const catalog = await api.flowchart.modelCatalog(source.folderPath);
+      if (!sourceCurrent()) return;
+      const candidate = catalog.models.find(model => model.task === source.task);
+      if (!candidate) return;
+      const completed = await api.training.getStatus(candidate.job_id);
+      if (!sourceCurrent() || completed.job_id !== candidate.job_id
+          || completed.task !== source.task || completed.status !== 'completed') return;
+      if (!projectMatches(await api.project.getCurrent()) || !sourceCurrent()) return;
+      set({
+        jobId: completed.job_id,
+        jobComputeProfileId: completed.compute_profile_id || null,
+        jobComputeLabel: computeLabel(completed.compute_profile_id || null, completed.compute_profile_name),
+        jobDeviceName: completed.device_name || completed.remote_device_name || null,
+        jobPhase: 'completed', transferProgress: null, jobStatusError: null, startError: null,
+        isCurrentData: true, status: 'completed', isTraining: false, isStopRequestPending: false, stopError: null,
+        currentEpoch: completed.current_epoch || 0, totalEpochs: completed.total_epochs || 0,
+        currentStep: completed.current_step || 0, totalSteps: completed.total_steps || 0,
+        trainLoss: completed.current_train_loss ?? null, valLoss: completed.current_val_loss ?? null,
+        bestMetric: completed.best_metric ?? null, metrics: completed.metrics || {},
+        lossHistory: polledHistory(completed) || [], stepHistory: [],
+      });
     } catch {
       // The backend may still be starting; normal start/stop errors remain visible.
     } finally {
-      set({ isRecoveringTraining: false });
+      if (sequence === trainingRecoverySequence) set({ isRecoveringTraining: false });
     }
   },
 
@@ -337,6 +400,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         valLoss: job.current_val_loss ?? state.valLoss,
         bestMetric: job.best_metric ?? state.bestMetric,
         metrics: job.metrics || state.metrics,
+        lossHistory: polledHistory(job) ?? state.lossHistory,
+        startError: status === 'failed' ? (job.error?.message || job.result?.error || '학습 작업이 실패했습니다.') : null,
       }));
     } catch (error) {
       if (get().jobId !== jobId) return;
@@ -439,11 +504,13 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     } else if (event === 'training_error') {
       if (get().status === 'stopping') return;
       if (!get().isCurrentData) { get().resetTraining(); return; }
-      set({ status: 'failed', jobPhase: 'failed', isTraining: false });
+      set({ status: 'failed', jobPhase: 'failed', isTraining: false,
+        startError: data.message || data.error?.message || data.error || '학습 작업이 실패했습니다.' });
     }
   },
 
   invalidateForDataChange: () => {
+    trainingRecoverySequence += 1;
     const state = get();
     if (state.isTraining || ACTIVE_STATUSES.includes(state.status)) {
       // Keep the active job ID so its Stop button can still cancel the old run.
@@ -454,6 +521,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   },
 
   resetTraining: () => {
+    trainingRecoverySequence += 1;
     pendingStartEvents = [];
     set({
       jobId: null,

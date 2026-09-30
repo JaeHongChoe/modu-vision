@@ -27,7 +27,6 @@ from backend.engine.flowchart_engine import (
 )
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.patch_classification import load_patch_manifest
-from backend.engine.zero_escape_analyzer import is_defect_label
 
 
 router = APIRouter(prefix="/model-comparisons", tags=["evaluation"])
@@ -40,7 +39,8 @@ class ComparisonRequest(BaseModel):
     task: Task
     incumbent_job_id: str
     candidate_job_id: str
-    max_images: int = Field(default=4, ge=1, le=16)
+    max_images: int = Field(default=4, ge=1, le=500)
+    full_test: bool = False
 
 
 def _sha256(path: Path) -> str:
@@ -82,6 +82,17 @@ def _report_dir(project: dict[str, Any]) -> Path:
 
 
 def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> dict[str, Any] | None:
+    if task in ("ocr", "rotated_detection", "enhancement"):
+        from backend.engine.specialized_models import resolve_specialized_checkpoint
+        try:
+            checkpoint, metadata = resolve_specialized_checkpoint(_models_dir(project), job_id, task, str(source))
+            binding = metadata.get("training_provenance") or {}
+            return {"job_id": job_id, "task": task, "checkpoint_path": str(checkpoint),
+                    "training_dataset_fingerprint": binding.get("dataset_fingerprint") or metadata.get("dataset_sha256") or metadata.get("dataset_provenance", {}).get("dataset_sha256"),
+                    "created_at": checkpoint.stat().st_mtime, "preset": "specialized",
+                    "warm_start": None, "receipt_warm_start": None}
+        except Exception:
+            return None
     if not is_job_id(job_id):
         return None
     job_dir = _models_dir(project) / job_id
@@ -129,23 +140,26 @@ def _fingerprint(source: Path) -> str:
 
 
 def _ground_truth_verdict(label: Any) -> str | None:
-    if label is None or not str(label).strip():
-        return None
-    if str(label).strip().casefold() in {"정상", "양품", "합격"}:
-        return "OK"
-    return "NG" if is_defect_label(label) else "OK"
+    from backend.engine.evaluation_history import binary_verdict
+    return binary_verdict(label)
 
 
-def _test_images(source: Path, task: Task, maximum: int) -> tuple[list[dict[str, Any]], int]:
+def _test_images(source: Path, task: Task, maximum: int | None) -> tuple[list[dict[str, Any]], int]:
     if task == "patch_classification":
-        return _patch_test_images(source, maximum)
+        return _patch_test_images(source, maximum or 2**31)
     page = routes_dataset.list_dataset_images(
-        folder_path=str(source), task=task, limit=maximum, offset=0, split="test", class_name=None,
+        folder_path=str(source), task=task, limit=min(maximum or 500, 500), offset=0, split="test", class_name=None,
     )
     total = int(page["total"])
     if total == 0:
         raise HTTPException(status_code=422, detail="비교할 test 이미지가 없습니다. 1단계에서 test 분할을 저장해 주세요.")
-    images = sorted(page["items"], key=lambda item: item["file_path"])
+    images = list(page["items"])
+    if maximum is None:
+        while len(images) < total:
+            more = routes_dataset.list_dataset_images(folder_path=str(source), task=task, limit=500, offset=len(images), split="test", class_name=None)
+            if not more["items"]: raise HTTPException(409, "Test inventory changed during selection")
+            images.extend(more["items"])
+    images = sorted(images, key=lambda item: item["file_path"])
     selected: list[dict[str, Any]] = []
     for item in images:
         path = Path(item["file_path"])
@@ -293,6 +307,10 @@ def comparison_models(request: Request, source_dataset_path: str, task: Task):
 @router.post("")
 def create_comparison(payload: ComparisonRequest, request: Request):
     project, source = _scope(request, payload.source_dataset_path, payload.task)
+    return _run_comparison(payload, project, source)
+
+
+def _run_comparison(payload: ComparisonRequest, project, source, progress=None, cancelled=None):
     if payload.incumbent_job_id == payload.candidate_job_id:
         raise HTTPException(status_code=422, detail="비교 기준과 후보 모델은 서로 달라야 합니다.")
     baseline = _model(project, source, payload.task, payload.incumbent_job_id)
@@ -301,7 +319,8 @@ def create_comparison(payload: ComparisonRequest, request: Request):
         raise HTTPException(status_code=409, detail="두 모델 모두 현재 프로젝트·출처·작업 유형의 완료 checkpoint여야 합니다.")
 
     dataset_fingerprint = _fingerprint(source)
-    images, total_test_images = _test_images(source, payload.task, payload.max_images)
+    images, total_test_images = _test_images(source, payload.task, None if payload.full_test else payload.max_images)
+    if progress: progress(0, len(images))
     model_hashes = {
         "incumbent": _sha256(Path(baseline["checkpoint_path"])),
         "candidate": _sha256(Path(candidate["checkpoint_path"])),
@@ -314,7 +333,11 @@ def create_comparison(payload: ComparisonRequest, request: Request):
     pipelines = {job_id: _pipeline(payload.task, job_id) for job_id in paths}
     rows: list[dict[str, Any]] = []
     for image in images:
+        if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
         row = dict(image)
+        from backend.engine.dataset_metadata import metadata_for_path
+        metadata = metadata_for_path(Path(project["project_dir"]), source, Path(image["file_path"]), routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        row.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "product", "lot", "group", "tags")})
         for key, model in (("incumbent", baseline), ("candidate", candidate)):
             try:
                 result = engines[model["job_id"]].execute(
@@ -329,7 +352,9 @@ def create_comparison(payload: ComparisonRequest, request: Request):
             and row["incumbent"]["verdict"] != row["candidate"]["verdict"]
         )
         rows.append(row)
+        if progress: progress(len(rows), len(images))
 
+    if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
     # Reject a mixed-version comparison; the saved report must describe one
     # exact dataset, image list, and pair of checkpoint contents.
     if _fingerprint(source) != dataset_fingerprint:
@@ -354,7 +379,8 @@ def create_comparison(payload: ComparisonRequest, request: Request):
         "candidate_training_dataset_fingerprint": candidate["training_dataset_fingerprint"],
         "dataset_fingerprint": dataset_fingerprint,
         "model_sha256": model_hashes,
-        "image_selection": (
+        "full_test": payload.full_test,
+        "image_selection": "all held-out test images" if payload.full_test else (
             "patch: deterministic OK/NG balanced test sources when count exceeds limit; exact paths and SHA-256 below"
             if payload.task == "patch_classification" else
             "first N test images in dataset gallery order; exact paths and SHA-256 saved below"
@@ -363,6 +389,7 @@ def create_comparison(payload: ComparisonRequest, request: Request):
         "total_test_images": total_test_images,
         "status": "completed" if summary["error_images"] == 0 else "completed_with_errors",
         "summary": summary,
+        "grouped_errors": __import__("backend.engine.evaluation_history", fromlist=["grouped_errors"]).grouped_errors(rows, payload.task),
         "limitations": [
             "선택한 test 이미지에서 두 모델의 원판정을 비교한 결과입니다. 전체 데이터 성능을 뜻하지 않습니다.",
             "실행 순서와 CPU 환경이 같아도 지연 시간이나 FPS 비교 근거로 사용하지 않습니다.",
@@ -404,6 +431,62 @@ def list_comparisons(request: Request, source_dataset_path: str, task: Task):
                 continue
     reports.sort(key=lambda report: report["created_at"], reverse=True)
     return {"comparisons": reports, "total": len(reports)}
+
+
+class AsyncComparisonRequest(ComparisonRequest):
+    full_test: bool = True
+
+
+def _jobs(project):
+    from backend.engine.evaluation_history import ComparisonJobs
+    return ComparisonJobs(Path(project["project_dir"]) / "reports" / "comparison_jobs.sqlite3")
+
+
+@router.post("/jobs", status_code=202)
+def queue_comparison(payload: AsyncComparisonRequest, request: Request):
+    project, source = _scope(request, payload.source_dataset_path, payload.task)
+    if payload.incumbent_job_id == payload.candidate_job_id or any(_model(project, source, payload.task, job) is None for job in (payload.incumbent_job_id, payload.candidate_job_id)):
+        raise HTTPException(409, "Comparison requires two distinct completed source-bound models")
+    jobs = _jobs(project)
+    record = jobs.create(payload.model_dump())
+    def worker():
+        try:
+            if jobs.cancelled(record["job_id"]): return
+            def progress(completed, total):
+                if completed == 0: jobs.start(record["job_id"], total)
+                jobs.progress(record["job_id"], completed)
+            report = _run_comparison(payload, project, source, progress, lambda: jobs.cancelled(record["job_id"]))
+            jobs.finish(record["job_id"], report["status"], report["comparison_id"])
+        except InterruptedError: jobs.finish(record["job_id"], "cancelled")
+        except Exception as exc: jobs.finish(record["job_id"], "failed", error=str(exc))
+    import threading
+    threading.Thread(target=worker, daemon=True, name=record["job_id"]).start()
+    return record
+
+
+@router.get("/jobs")
+def list_comparison_jobs(request: Request, source_dataset_path: str, task: Task):
+    project, source = _scope(request, source_dataset_path, task)
+    jobs = [row for row in _jobs(project).list() if row["payload"]["source_dataset_path"] == str(source) and row["payload"]["task"] == task]
+    # A stale thread cannot survive process restart; mark interrupted after its last progress.
+    return {"jobs": jobs, "total": len(jobs)}
+
+
+@router.get("/jobs/{job_id}")
+def comparison_job(job_id: str, request: Request, source_dataset_path: str, task: Task):
+    project, source = _scope(request, source_dataset_path, task)
+    try: row = _jobs(project).get(job_id)
+    except KeyError: raise HTTPException(404, "Comparison job not found")
+    if row["payload"]["source_dataset_path"] != str(source) or row["payload"]["task"] != task: raise HTTPException(404, "Comparison job belongs to another source")
+    return row
+
+
+@router.post("/jobs/{job_id}/cancel")
+def cancel_comparison_job(job_id: str, request: Request, source_dataset_path: str, task: Task):
+    row = comparison_job(job_id, request, source_dataset_path, task)
+    project, _ = _scope(request, source_dataset_path, task)
+    _jobs(project).cancel(job_id)
+    return _jobs(project).get(job_id)
 
 
 @router.get("/{comparison_id}")

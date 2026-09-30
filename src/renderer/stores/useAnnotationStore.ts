@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { AnnotationItem, Category, ImageMeta, TaskType, ToolType, ViewTransform } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
+import { datasetWorkflow, type ImageReviewMetadata } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
 import { applyConvertedShape } from '../components/labeling/convertedAnnotation';
 
@@ -69,6 +70,12 @@ interface AnnotationState {
   // Actions
   setImageDimensions: (dim: { width: number; height: number }) => void;
 
+  externalSelectionPath: string | null;
+  metadata: ImageReviewMetadata | null;
+  reviewerName: string;
+  setReviewerName: (name: string) => void;
+  setMetadata: (metadata: ImageReviewMetadata | null) => void;
+
   // Persistence & History
   isDirty: boolean;
   isSaving: boolean;
@@ -126,6 +133,11 @@ interface AnnotationState {
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
+  externalSelectionPath: null,
+  metadata: null,
+  reviewerName: typeof localStorage !== 'undefined' ? localStorage.getItem('modu-reviewer-name') || '' : '',
+  setReviewerName: (name) => { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-reviewer-name', name); set({ reviewerName: name }); },
+  setMetadata: (metadata) => set({ metadata }),
   task: 'detection',
   images: [],
   currentImageIndex: -1,
@@ -171,6 +183,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = idx >= 0 ? images[idx] : null;
     set({
       images,
+      externalSelectionPath: null,
+      metadata: null,
       currentImageIndex: idx,
       currentImage: current,
       activeImage: current,
@@ -220,6 +234,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       img.image_id === activeImage.image_id && img.file_path === activeImage.file_path);
     set({
       currentImage: activeImage,
+      metadata: null,
+      externalSelectionPath: null,
       activeImage,
       currentImageIndex: idx >= 0 ? idx : get().currentImageIndex,
       annotations: [],
@@ -246,6 +262,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = images[index];
     set({
       currentImageIndex: index,
+      metadata: null,
+      externalSelectionPath: null,
       currentImage: current,
       activeImage: current,
       annotations: [],
@@ -462,7 +480,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({ annotationLoadStatus: 'loading', annotationLoadError: null });
 
     try {
-      const data = await api.annotations.get(currentImage.image_id, undefined, currentImage.file_path);
+      const data = await datasetWorkflow.annotations(currentImage.image_id, currentImage.file_path);
       if (requestSequence !== annotationLoadSequence ||
           get().currentImage !== currentImage || get().isDirty) return false;
       if (!data || !Array.isArray(data.annotations)
@@ -496,6 +514,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
       set({
         annotations: items,
+        metadata: data.metadata || null,
         categories: currentCats,
         imageDimensions: nextDimensions,
         maskUrl: data.mask_file ? annotationMaskUrl(currentImage) : null,
@@ -526,7 +545,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
     const save = async (): Promise<boolean> => {
       try {
-        const res = await api.annotations.save({
+        const res = await datasetWorkflow.saveAnnotations({
+          expected_revision: get().metadata?.revision,
+          actor: get().reviewerName.trim() || "operator",
           image_id: currentImage.image_id,
           image_path: currentImage.file_path,
           annotations: annotations.map((a) => ({
@@ -552,6 +573,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
             isDirty: get().currentImage !== currentImage || get().annotations !== annotations,
             isSaving: false,
             saveMessage: 'Saved',
+            metadata: sameImage ? (res.metadata || null) : get().metadata,
             maskUrl: sameImage ? (res.mask_generated ? annotationMaskUrl(currentImage) : null) : get().maskUrl,
           });
           setTimeout(() => {
@@ -563,7 +585,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         set({ isSaving: false, saveMessage: `Failed: unexpected save status ${res.status}` });
         return false;
       } catch (e: any) {
-        set({ isSaving: false, saveMessage: `Failed: ${e.message || e}` });
+        set({ isSaving: false, saveMessage: `Failed: ${annotationReadErrorMessage(e)}` });
         return false;
       }
     };

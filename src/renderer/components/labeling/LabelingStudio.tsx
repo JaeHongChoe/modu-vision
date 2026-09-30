@@ -21,6 +21,7 @@ import { AnnotationList } from './AnnotationList';
 import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
 import { LabelSetBar } from './LabelSetBar';
+import { ImageReviewPanel } from './ImageReviewPanel';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -41,6 +42,7 @@ export const LabelingStudio: React.FC = () => {
   // Keep the selected file when the gallery refreshes or changes page.
   useEffect(() => {
     const currentImg = useAnnotationStore.getState().currentImage;
+    if (currentImg && useAnnotationStore.getState().externalSelectionPath === currentImg.file_path) return;
     if (annotImages !== datasetImages || (datasetImages.length > 0 && !currentImg)) {
       void syncDatasetImages(datasetImages);
     }
@@ -51,6 +53,7 @@ export const LabelingStudio: React.FC = () => {
       {/* Top Action Toolbar */}
       <LabelingToolbar />
       <LabelSetBar />
+      <ImageReviewPanel />
 
       {currentImage && annotationLoadStatus === 'error' && (
         <div role="alert" className="px-4 py-2 bg-red-950/50 border-b border-red-700 text-red-200 text-xs flex items-center justify-between gap-3">

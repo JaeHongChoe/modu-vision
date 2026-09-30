@@ -221,7 +221,7 @@ export interface DefectGANCandidate {
   id: string;
   path: string;
   sha256: string;
-  status: 'synthetic_unreviewed';
+  status: 'synthetic_unreviewed' | 'synthetic_adopted' | 'synthetic_rejected';
   preview_data_url: string;
 }
 
@@ -427,7 +427,7 @@ export function resolveApiUrl(path: string, port?: number): string {
   return `http://127.0.0.1:${effectivePort}${cleanPath}`;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const base = await getApiBaseUrl();
   const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
   const response = await fetch(url, {
@@ -906,7 +906,8 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
-    run: (data: { image_path?: string; image_id?: string; pipeline?: any }) =>
+    run: (data: { image_path?: string; image_id?: string; pipeline?: any;
+      execution_target?: 'local' | 'selected_compute' | 'model_compute'; device?: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id?: string }) =>
       request<any>('/api/flowchart/run', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -925,14 +926,17 @@ export const api = {
         `/api/inspections/review-queue?${q.toString()}`
       );
     },
-    createRun: (report: BatchInspectionReport, pipeline: FlowchartPipeline) =>
+    createRun: (report: BatchInspectionReport, pipeline: FlowchartPipeline, execution?: {
+      execution_target: 'local' | 'selected_compute' | 'model_compute';
+      device: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id: string;
+    }) =>
       request<{
         run_id: string; status: string; saved_version_id: string | null;
         pipeline_hash: string; model_sha256: Record<string, string>;
       }>('/api/inspections/runs', {
         method: 'POST', body: JSON.stringify({
           source_folder: report.source_folder, task: report.task, scope: report.scope,
-          pipeline, images: report.rows.map((row) => row.image),
+          pipeline, images: report.rows.map((row) => row.image), ...execution,
         }),
       }),
     executeRow: (runId: string, imagePath: string) =>

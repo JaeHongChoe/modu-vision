@@ -144,3 +144,32 @@ def test_known_ng_to_candidate_ok_is_reported_as_possible_new_miss():
     assert summary["new_missed_ng"] == 1
     assert summary["new_overkill_ok"] == 0
     assert summary["disagreements"] == 1
+
+
+def test_full_test_async_comparison_can_reopen_complete_report(tmp_path, monkeypatch):
+    import time
+    monkeypatch.chdir(tmp_path)
+    client=_client(tmp_path)
+    source=tmp_path/'source'
+    for category,color in [('OK','white'),('NG','black')]:
+        folder=source/'test'/category;folder.mkdir(parents=True)
+        for index in range(3):Image.new('RGB',(32,32),color).save(folder/f'{index}.png')
+    project=client.post('/api/project/create',json={'name':'Full test','task':'classification'}).json()
+    client.put('/api/project/update',json={'source_dataset_dir':str(source)})
+    fingerprint=fingerprint_dataset(source,studio_root=routes_dataset.STUDIO_ANNOTATIONS_DIR,split_manifest=routes_dataset._split_manifest_file(source))
+    for job_id in ['job_baseline','job_candidate']:_checkpoint(Path(project['models_dir'])/job_id,source,fingerprint,0)
+    params={'source_dataset_path':str(source),'task':'classification'}
+    started=client.post('/api/evaluation/model-comparisons/jobs',json={**params,'incumbent_job_id':'job_baseline','candidate_job_id':'job_candidate','full_test':True,'max_images':1})
+    assert started.status_code==202,started.text
+    identifier=started.json()['job_id']
+    deadline=time.monotonic()+15
+    while time.monotonic()<deadline:
+        row=client.get(f'/api/evaluation/model-comparisons/jobs/{identifier}',params=params).json()
+        if row['status'] not in ('queued','running'):break
+        time.sleep(.05)
+    assert row['status']=='completed',row
+    assert row['total_images']==6 and row['completed_images']==6
+    assert client.get('/api/evaluation/model-comparisons/jobs',params=params).json()['jobs'][0]['job_id']==identifier
+    report=client.get('/api/evaluation/model-comparisons/'+row['report_id'],params=params).json()
+    assert report['selected_image_count']==report['total_test_images']==6
+    assert report['full_test'] is True

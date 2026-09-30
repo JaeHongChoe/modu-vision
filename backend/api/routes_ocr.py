@@ -11,8 +11,11 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse
+from backend.engine.specialized_training_jobs import start_job,require_training_source,read_job,list_jobs,cancel_job
 
 from backend.api.routes_project import get_current_project
+from backend.engine.specialized_models import require_completed_checkpoint
 from backend.engine.ocr import (
     OCRManifest,
     evaluate_ocr_checkpoint,
@@ -49,6 +52,7 @@ class OCRTrainRequest(BaseModel):
     image_width: int = Field(default=128, ge=8, le=4096)
     learning_rate: float = Field(default=1e-3, gt=0, le=1)
     device: Literal["cpu", "cuda", "mps"] = "cpu"
+    background: bool = False
     seed: int = 0
 
 
@@ -86,6 +90,8 @@ def _checkpoint(request: Request, job_id: str) -> Path:
     path = job_dir / "best_model.pt"
     if job_dir.is_symlink() or path.is_symlink() or not path.is_file():
         raise HTTPException(status_code=404, detail="OCR checkpoint not found in active project")
+    try:require_completed_checkpoint(path)
+    except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
     return path
 
 
@@ -124,23 +130,34 @@ def inspect_manifest(dataset_path: str, request: Request):
 
 @router.post("/train")
 def train(req: OCRTrainRequest, request: Request):
-    """Train a candidate in the active project; this never activates it."""
-    output_dir = _models_root(request) / uuid.uuid4().hex
+    project=get_current_project(request)
+    try:source=require_training_source(project,req.dataset_path)
+    except ValueError as exc:raise HTTPException(409,str(exc)) from exc
+    output=_models_root(request)/uuid.uuid4().hex
     try:
-        result = train_ocr(
-            req.dataset_path, output_dir, epochs=req.epochs, batch_size=req.batch_size,
-            image_size=(req.image_height, req.image_width), learning_rate=req.learning_rate,
-            device=req.device, seed=req.seed,
-        )
-    except (ValueError, OSError, RuntimeError) as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    checkpoint = output_dir / "best_model.pt"
-    return {
-        "job_id": output_dir.name,
-        "checkpoint_path": str(checkpoint),
-        "model_sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
-        "result": result,
-    }
+        result=start_job(project=project,task='ocr',source=source,output=output,options=req,
+            runner=lambda event,progress,device:train_ocr(source,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress),family_digest=lambda:load_ocr_manifest(source).provenance['dataset_sha256'])
+        return JSONResponse(result,status_code=202) if req.background else result
+    except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
+    except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+def _job_action(request,action,job_id=None):
+    try:return action(_models_root(request),job_id) if job_id is not None else action(_models_root(request))
+    except FileNotFoundError as exc:raise HTTPException(404,str(exc)) from exc
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/jobs')
+def jobs(request:Request):return {'jobs':_job_action(request,list_jobs)}
+
+
+@router.get('/jobs/{job_id}')
+def job_status(job_id:str,request:Request):return _job_action(request,read_job,job_id)
+
+
+@router.post('/jobs/{job_id}/cancel')
+def cancel(job_id:str,request:Request):return _job_action(request,cancel_job,job_id)
 
 
 @router.get("/models")
@@ -157,6 +174,7 @@ def list_models(request: Request):
         if checkpoint.is_symlink() or metadata.is_symlink() or not checkpoint.is_file() or not metadata.is_file():
             continue
         try:
+            require_completed_checkpoint(checkpoint)
             meta = json.loads(metadata.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
@@ -173,7 +191,12 @@ def list_models(request: Request):
 def evaluate(req: OCREvaluateRequest, request: Request):
     checkpoint = _checkpoint(request, req.job_id)
     try:
-        return evaluate_ocr_checkpoint(checkpoint, req.dataset_path, split=req.split, device=req.device)
+        from backend.engine.evaluation_history import archive_specialized_evaluation
+        project = get_current_project(request)
+        result = evaluate_ocr_checkpoint(checkpoint, req.dataset_path, split=req.split, device=req.device)
+        return archive_specialized_evaluation(project, checkpoint,
+            project.get('source_dataset_dir') or req.dataset_path, result,
+            task='ocr', dataset_path=req.dataset_path)
     except (ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

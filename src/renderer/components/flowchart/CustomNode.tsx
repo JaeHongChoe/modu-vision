@@ -86,6 +86,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return <Camera className="w-3.5 h-3.5 text-cyan-400" />;
       case 'detection_crop':
         return <Scan className="w-3.5 h-3.5 text-amber-400" />;
+      case 'patch_split':
+      case 'preprocess':
       case 'fixed_roi':
         return <Crop className="w-3.5 h-3.5 text-sky-400" />;
       case 'inspection':
@@ -116,6 +118,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 },
         ];
+      case 'patch_split':
+      case 'preprocess':
       case 'fixed_roi':
         return [{ id: 'in_img', name: 'Original image', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 }];
       case 'inspection':
@@ -146,6 +150,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: isDetectorOnly ? 'DEFECT BOXES' : 'ROI CROPS', pinNumber: 1 },
         ];
+      case 'patch_split':
+      case 'preprocess':
       case 'fixed_roi':
         return [{ id: 'out_roi', name: 'Fixed ROI', type: 'image', direction: 'out', label: 'ROI OUT', pinNumber: 1 }];
       case 'inspection':
@@ -247,7 +253,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
         {/* Specs Table */}
         <div className="space-y-1 text-[11px] font-mono bg-[#131822] p-2 rounded border border-[#2B3547]">
-          {(nodeType === 'inspection' || nodeType === 'detection_crop') && node.data.task && (
+          {(nodeType === 'inspection' || nodeType === 'detection_crop' || nodeType === 'preprocess') && node.data.task && (
             <div className="flex justify-between items-center">
               <span className="text-slate-400">TASK:</span>
               <span className="text-slate-300 font-semibold">{node.data.task.toUpperCase()}</span>

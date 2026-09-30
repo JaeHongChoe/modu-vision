@@ -60,6 +60,7 @@ class JobRecord:
     val_loss: Optional[float] = None
     best_metric: Optional[float] = None
     metrics: Dict[str, float] = field(default_factory=dict)
+    loss_history: List[Dict[str, Any]] = field(default_factory=list)
     preparation_cancel: threading.Event = field(default_factory=threading.Event, repr=False)
     source_dataset_path: Optional[str] = None
     dataset_fingerprint: Optional[str] = None
@@ -73,6 +74,7 @@ class JobRecord:
     launch_spec: Optional[Dict[str, Any]] = field(default=None, repr=False)
     split_manifest_root: Optional[str] = None
     warm_start: Optional[WarmStartParent] = None
+    dataset_binding: Optional[Dict[str, Any]] = None
 
 
 def _write_job_receipt(record: JobRecord) -> None:
@@ -85,10 +87,25 @@ def _write_job_receipt(record: JobRecord) -> None:
         "task": record.task,
         "dataset_path": record.dataset_path,
         "output_dir": record.output_dir,
+        "current_epoch": record.current_epoch,
+        "total_epochs": record.total_epochs,
+        "current_step": record.current_step,
+        "total_steps": record.total_steps,
+        "current_train_loss": record.train_loss,
+        "current_val_loss": record.val_loss,
+        "best_metric": record.best_metric,
+        "metrics": record.metrics,
+        "loss_history": record.loss_history,
+        "error": record.error,
     }
     if record.source_dataset_path and record.dataset_fingerprint:
         receipt["source_dataset_path"] = record.source_dataset_path
         receipt["dataset_fingerprint"] = record.dataset_fingerprint
+    if record.dataset_binding:
+        receipt["training_provenance"] = record.dataset_binding
+        from backend.engine.training_provenance import persist_model_binding
+        if record.status == "completed" and not record.remote_profile_id:
+            persist_model_binding(output_dir, record.dataset_binding)
     if record.remote_profile_id:
         receipt["compute_profile_id"] = record.remote_profile_id
     if record.warm_start is not None:
@@ -123,6 +140,30 @@ class TrainingJobManager:
         self._jobs: Dict[str, JobRecord] = {}
         self._active_job_id: Optional[str] = None
         self._remote_queue: List[str] = []
+        from backend.engine.shared_scheduler import shared_leases
+        self._leases = shared_leases()
+        self._queue_watcher = None
+
+    def _lease_host(self, profile):
+        return f"ssh:{profile.ssh_target.rsplit('@', 1)[-1].lower()}:{profile.ssh_port}"
+
+    def _watch_queue(self):
+        if self._queue_watcher is not None and self._queue_watcher.is_alive(): return
+        def watch():
+            while True:
+                time.sleep(.5)
+                with self._lock:
+                    if not self._remote_queue: return
+                    self._start_waiting_remote_jobs_locked()
+        self._queue_watcher = threading.Thread(target=watch,daemon=True,name="SharedComputeQueue")
+        self._queue_watcher.start()
+
+    def _heartbeat(self, record):
+        stop = threading.Event()
+        def heartbeat():
+            while not stop.wait(5): self._leases.heartbeat(record.job_id)
+        threading.Thread(target=heartbeat,daemon=True,name=f"Lease-{record.job_id}").start()
+        return stop
 
     @staticmethod
     def _profiles_conflict(first: ComputeProfile, second: ComputeProfile) -> bool:
@@ -146,6 +187,9 @@ class TrainingJobManager:
         return bool(set(first_devices) & set(second_devices))
 
     def _remote_slot_busy(self, profile: ComputeProfile) -> bool:
+        for lease in self._leases.list():
+            if lease["host"] == self._lease_host(profile) and self._leases.conflict(lease["selector"], profile.gpu_selector or "all"):
+                return True
         for record in self._jobs.values():
             if record.status not in self.ACTIVE_STATES or record.remote_profile_id is None:
                 continue
@@ -204,6 +248,7 @@ class TrainingJobManager:
         dataset_fingerprint: Optional[str] = None,
         split_manifest_root: Optional[str] = None,
         warm_start: Optional[WarmStartParent] = None,
+        dataset_binding: Optional[Dict[str, Any]] = None,
     ) -> JobRecord:
         with self._lock:
             active_record = next(
@@ -217,6 +262,8 @@ class TrainingJobManager:
                     detail=f"Another training job ({active}) is currently in progress.",
                 )
 
+            if not self._leases.acquire(job_id, "local-compute", "all"):
+                raise HTTPException(409, "Another application process holds the local compute lease")
             # Build telemetry callback
             cb = WebSocketTelemetryCallback(job_id=job_id, max_hz=30.0)
 
@@ -244,6 +291,8 @@ class TrainingJobManager:
                         rec.train_loss = float(train_loss)
                         rec.val_loss = float(val_loss)
                         rec.metrics = metrics
+                        rec.loss_history.append({"epoch": epoch + 1, "train_loss": float(train_loss),
+                                                 "val_loss": float(val_loss), "lr": float(lr)})
 
             cb.on_step_end = _step_end_wrapper
             cb.on_epoch_end = _epoch_end_wrapper
@@ -260,6 +309,7 @@ class TrainingJobManager:
                     warm_start=warm_start,
                 )
             except Exception as e:
+                self._leases.release(job_id)
                 err_card = classify_exception(e, details=str(e))
                 raise HTTPException(
                     status_code=422,
@@ -277,11 +327,13 @@ class TrainingJobManager:
                 source_dataset_path=source_dataset_path,
                 dataset_fingerprint=dataset_fingerprint,
                 warm_start=warm_start,
+                dataset_binding=dataset_binding,
             )
             self._jobs[job_id] = record
             self._active_job_id = job_id
 
             def _worker():
+                heartbeat = self._heartbeat(record)
                 result = None
                 error = None
                 try:
@@ -293,7 +345,10 @@ class TrainingJobManager:
                             prepare_dataset(record.preparation_cancel)
                         if record.preparation_cancel.is_set():
                             raise LabelMePreparationCancelled("Training preparation cancelled by user request")
+                        from backend.engine.training_provenance import validate_training_binding
+                        validate_training_binding(record.dataset_binding)
                         result = trainer.train(job_id=job_id)
+                        validate_training_binding(record.dataset_binding)
                 except LabelMePreparationCancelled:
                     result = {"status": "aborted"}
                     cb.on_training_aborted(0, "Training preparation cancelled by user request")
@@ -323,8 +378,13 @@ class TrainingJobManager:
                             self._refresh_active_id()
                         try:
                             _write_job_receipt(record)
-                        except OSError:
+                        except Exception as persistence_error:
                             logger.exception("Could not persist terminal receipt for job %s", job_id)
+                            record.status = "failed"
+                            record.error = {"message": f"Training provenance persistence failed: {persistence_error}"}
+                            _write_job_receipt(record)
+                    heartbeat.set()
+                    self._leases.release(job_id, terminal=True)
                     logger.info("Background training thread finished for job %s", job_id)
 
             t = threading.Thread(target=_worker, name=f"Trainer-{job_id}", daemon=True)
@@ -347,6 +407,8 @@ class TrainingJobManager:
         profile: Optional[ComputeProfile] = None,
         launch_spec: Optional[Dict[str, Any]] = None,
         recovery_state: Optional[str] = None,
+        warm_start: Optional[WarmStartParent] = None,
+        dataset_binding: Optional[Dict[str, Any]] = None,
     ) -> JobRecord:
         """Track one detached remote run through the existing training contract.
 
@@ -374,6 +436,7 @@ class TrainingJobManager:
                 dataset_fingerprint=dataset_fingerprint,
                 remote_runner=remote_runner, remote_profile=profile, launch_spec=launch_spec,
                 split_manifest_root=split_manifest_root,
+                warm_start=warm_start, dataset_binding=dataset_binding,
             )
             if profile is not None and recovery_state is None:
                 from backend.remote.coordinator import persist_queued_remote_job
@@ -382,6 +445,7 @@ class TrainingJobManager:
             self._jobs[job_id] = record
             if queued:
                 self._remote_queue.append(job_id)
+                self._watch_queue()
             else:
                 if self._active_job_id is None:
                     self._active_job_id = job_id
@@ -390,8 +454,16 @@ class TrainingJobManager:
 
     def _launch_remote_worker_locked(self, record: JobRecord) -> None:
         job_id = record.job_id
+        if record.remote_profile is not None:
+            self._leases.adopt(job_id)
+            if not self._leases.acquire(job_id, self._lease_host(record.remote_profile), record.remote_profile.gpu_selector or "all", remote=True):
+                record.status = "queued"; record.phase = "resource_reserved"
+                if job_id not in self._remote_queue: self._remote_queue.append(job_id)
+                self._watch_queue()
+                return
 
         def _worker() -> None:
+            heartbeat = self._heartbeat(record)
             try:
                 with split_root_scope(record.split_manifest_root):
                     result = record.remote_runner(record)
@@ -400,6 +472,7 @@ class TrainingJobManager:
                     raise ValueError(f"Unexpected remote job status: {state}")
                 with self._lock:
                     record.status = state
+                    record.phase = state
                     record.result = result
                     record.best_metric = result.get("best_metric")
                     if state == "failed" and result.get("error"):
@@ -409,6 +482,9 @@ class TrainingJobManager:
                 with self._lock:
                     record.status = "disconnected" if record.phase in ("running", "reconnecting", "disconnected") else "failed"
                     record.error = {"message": str(exc)}
+            heartbeat.set()
+            if record.status == "disconnected": self._leases.mark_uncertain(job_id)
+            else: self._leases.release(job_id, terminal=True)
             if record.status != "disconnected":
                 try:
                     _write_job_receipt(record)
@@ -459,6 +535,7 @@ class TrainingJobManager:
                 self._active_job_id = job_id
 
         def _worker() -> None:
+            heartbeat = self._heartbeat(record)
             try:
                 result = record.remote_runner(record)
                 state = result.get("status", "failed")
@@ -466,6 +543,7 @@ class TrainingJobManager:
                     raise ValueError(f"Unexpected remote job status: {state}")
                 with self._lock:
                     record.status = state
+                    record.phase = state
                     record.result = result
                     record.best_metric = result.get("best_metric")
                     if state == "failed" and result.get("error"):
@@ -475,6 +553,9 @@ class TrainingJobManager:
                 with self._lock:
                     record.status = "disconnected"
                     record.error = {"message": str(exc)}
+            heartbeat.set()
+            if record.status == "disconnected": self._leases.mark_uncertain(job_id)
+            else: self._leases.release(job_id, terminal=True)
             if record.status != "disconnected":
                 try:
                     _write_job_receipt(record)
@@ -548,6 +629,7 @@ class TrainingStartRequest(BaseModel):
     device: Optional[str] = None
     compute_profile_id: Optional[str] = None
     warm_start_job_id: Optional[str] = None
+    dataset_version_id: Optional[str] = None
 
 
 class TrainingStopRequest(BaseModel):
@@ -611,8 +693,11 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             detail=format_error_response("ERR_NO_DATA", details=f"Dataset folder not found: {req.dataset_path}"),
         )
 
-    if req.warm_start_job_id and req.compute_profile_id:
-        raise HTTPException(status_code=422, detail="Remote warm start needs portable parent checkpoint transfer; select this computer")
+    if request is not None:
+        from backend.api.routes_project import get_current_project
+        configured_source = get_current_project(request).get("source_dataset_dir")
+        if configured_source and Path(configured_source).expanduser().resolve() != d_path:
+            raise HTTPException(409, "Training source must match the current project's dataset")
 
     profile = None
     if req.compute_profile_id:
@@ -647,7 +732,15 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             raise HTTPException(status_code=422, detail=f"Invalid patch classification dataset: {exc}") from exc
 
     if req.task == "detection" and not local_labelme and not _detection_train_val_ready(effective_dataset_path):
-        raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
+        saved_assignments = _read_split_manifest(d_path)
+        if not {"train", "val"}.issubset(set(saved_assignments.values())):
+            raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
+        from backend.engine.grouped_dataset_views import load_manifest_dataset
+        try:
+            if any(len(load_manifest_dataset("detection", d_path, split)) == 0 for split in ("train", "val")):
+                raise ValueError("Saved detection manifest needs nonempty train and val partitions")
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
     if profile is not None and req.task == "detection" and not local_labelme:
         from backend.remote.detection_validation import validate_coco_detection_paths
 
@@ -735,9 +828,23 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             )
         except (OSError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+    dataset_binding = None
+    if request is not None:
+        from backend.api.routes_project import get_current_project, update_project, ProjectUpdateRequest
+        from backend.engine.training_provenance import bind_training_version
+        project = get_current_project(request)
+        if not project.get("source_dataset_dir"):
+            project = update_project(ProjectUpdateRequest(source_dataset_dir=str(d_path)), request)
+        dataset_binding = bind_training_version(project, d_path, req.dataset_version_id)
+        if dataset_binding["dataset_fingerprint"] != source_fingerprint:
+            raise HTTPException(409, "Training version fingerprint differs from selected source")
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
+    if dataset_binding:
+        from backend.engine.training_provenance import frozen_annotation_root
+        frozen_root = frozen_annotation_root(dataset_binding, d_path, job_dir)
+        if frozen_root: annotation_root = frozen_root
     dataset_for_training = effective_dataset_path
     prepare_dataset = None
 
@@ -787,6 +894,8 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             "annotation_root": str(annotation_root),
             "config_overrides": req.config_overrides or {},
             "device": req.device,
+            "dataset_binding": dataset_binding,
+            "warm_start": {"job_id": warm_start.job_id, "checkpoint_path": str(warm_start.checkpoint_path), "checkpoint_sha256": warm_start.checkpoint_sha256, "task": warm_start.task, "architecture": warm_start.architecture, "classes": list(warm_start.classes), "dataset_fingerprint": warm_start.dataset_fingerprint} if warm_start else None,
         }
 
         record = training_job_manager.start_remote_job(
@@ -802,6 +911,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             split_manifest_root=str(split_manifest_root),
             profile=profile,
             launch_spec=launch_spec,
+            warm_start=warm_start, dataset_binding=dataset_binding,
         )
     else:
         record = training_job_manager.start_job(
@@ -816,7 +926,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
             split_manifest_root=str(split_manifest_root),
-            warm_start=warm_start,
+            warm_start=warm_start, dataset_binding=dataset_binding,
         )
 
     return {
@@ -827,6 +937,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
         "output_dir": str(job_dir),
         "compute_profile_id": profile.id if profile is not None else None,
         "phase": record.phase if profile is not None else None,
+        "training_provenance": dataset_binding,
         "warm_start_parent_job_id": warm_start.job_id if warm_start is not None else None,
     }
 
@@ -864,11 +975,92 @@ def reconnect_training(req: TrainingStopRequest):
     return {"job_id": record.job_id, "status": record.status, "compute_profile_id": record.remote_profile_id}
 
 
+def _completed_receipt_record(job_id: str, request: Request) -> Optional[JobRecord]:
+    """Read verified project completion without creating a worker or manager entry."""
+    from backend.api.routes_project import get_current_project
+    from backend.engine.checkpoint_paths import trusted_checkpoint, completed_job_receipt, is_job_id
+    from backend.api.routes_evaluation import _matches_source_dataset
+    from backend.api.routes_dataset_versions import _read_manifest, _require_active_labelset, _file_hash
+    from backend.engine.training_provenance import validate_training_binding
+    import torch
+    try:
+        if not is_job_id(job_id):
+            return None
+        project = get_current_project(request)
+        models = Path(project['models_dir'])
+        expected = models / job_id
+        if models.is_symlink() or expected.is_symlink():
+            return None
+        checkpoint = trusted_checkpoint(job_id, project_models_dir=models)
+        if checkpoint is None or checkpoint.parent.resolve() != expected.resolve():
+            return None
+        receipt = completed_job_receipt(expected)
+        source, task = project.get('source_dataset_dir'), project['task']
+        if (not source or not receipt or receipt.get('job_id') != job_id or receipt.get('task') != task
+                or Path(receipt.get('output_dir', '')).resolve() != expected.resolve()
+                or not _matches_source_dataset(expected, source, task)):
+            return None
+        metadata_path = expected / 'model_meta.json'
+        if metadata_path.is_symlink() or not metadata_path.is_file():
+            return None
+        metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+        if (not isinstance(metadata, dict) or metadata.get('task') != task
+                or not isinstance(metadata.get('checkpoint_sha256'), str)
+                or metadata['checkpoint_sha256'] != _file_hash(checkpoint)):
+            return None
+        payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
+        if (not isinstance(payload, dict) or payload.get('task') != task
+                or not isinstance(payload.get('model_state_dict'), dict) or not payload['model_state_dict']
+                or ('classes' in metadata and payload.get('classes') != metadata['classes'])):
+            return None
+        binding = receipt.get('training_provenance')
+        original_binding = payload.get('training_provenance')
+        if (not isinstance(binding, dict) or binding != metadata.get('training_provenance')
+                or not isinstance(original_binding, dict)):
+            return None
+        directory, manifest = _read_manifest(project, binding['dataset_version_id'])
+        _require_active_labelset(project, manifest)
+        labelset = project.get('active_labelset_id', 'default')
+        if (directory.resolve() != Path(binding['version_dir']).resolve()
+                or Path(manifest['source_dataset_dir']).resolve() != Path(source).resolve()
+                or manifest['task'] != task
+                or binding.get('labelset_id') != labelset or original_binding.get('labelset_id') != labelset
+                or binding.get('dataset_fingerprint') != manifest['dataset_fingerprint']
+                or receipt['dataset_fingerprint'] != binding.get('dataset_fingerprint')):
+            return None
+        if binding != original_binding:
+            # Archives rebind metadata and version paths, while preserving the
+            # immutable checkpoint bytes. Accept only the existing verified
+            # manifest alias contract, including original pixel/backup hashes.
+            from backend.engine.specialized_models import _verify_historical_source
+            _verify_historical_source(models.resolve(), source, payload, metadata)
+        validate_training_binding(binding)
+        if receipt.get('compute_profile_id') or (expected / 'remote_job.json').exists():
+            from backend.remote.operations import verify_downloaded_checkpoint
+            verify_downloaded_checkpoint(expected, job_id)
+        return JobRecord(
+            job_id=job_id, task=task, preset=metadata.get('preset', 'fast'),
+            dataset_path=receipt['dataset_path'], output_dir=str(expected), status='completed', phase='completed',
+            source_dataset_path=source, dataset_fingerprint=receipt['dataset_fingerprint'],
+            dataset_binding=binding, remote_profile_id=receipt.get('compute_profile_id'),
+            current_epoch=receipt.get('current_epoch', 0), total_epochs=receipt.get('total_epochs', 0),
+            current_step=receipt.get('current_step', 0), total_steps=receipt.get('total_steps', 0),
+            train_loss=receipt.get('current_train_loss'), val_loss=receipt.get('current_val_loss'),
+            best_metric=receipt.get('best_metric'), metrics=receipt.get('metrics', {}),
+            loss_history=receipt.get('loss_history', []) if isinstance(receipt.get('loss_history', []), list) else [],
+        )
+    except Exception:
+        # Missing, stale or corrupt evidence never becomes completed UI state.
+        return None
+
+
 @router.get("/status")
-def get_training_status(job_id: Optional[str] = Query(None)):
+def get_training_status(job_id: Optional[str] = Query(None), request: Request = None):
     """Retrieves current training status and progress for polling fallbacks."""
     if job_id:
         record = training_job_manager.get_job(job_id)
+        if record is None and request is not None:
+            record = _completed_receipt_record(job_id, request)
     else:
         record = training_job_manager.get_active_job()
 
@@ -895,6 +1087,7 @@ def get_training_status(job_id: Optional[str] = Query(None)):
         "current_val_loss": record.val_loss,
         "best_metric": record.best_metric,
         "metrics": record.metrics,
+        "loss_history": record.loss_history,
         "duration_seconds": round(duration, 2),
         "result": record.result,
         "error": record.error,

@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 from PIL import Image
 
 from backend.api import routes_report
+
+
+def test_default_export_is_owned_by_current_project(tmp_path, monkeypatch):
+    from backend.api import routes_project
+    reports = tmp_path / 'current-project' / 'reports'
+    monkeypatch.setattr(routes_project, 'get_current_project', lambda _: {'reports_dir': str(reports)})
+    monkeypatch.setattr(routes_report, 'run_or_load_evaluation', lambda **_: {'job_id': 'job_report', 'test_predictions': []})
+    result = routes_report.export_report(routes_report.ReportExportRequest(format='json'), SimpleNamespace())
+    assert reports == Path(result['file_path']).parent
+    assert json.loads(Path(result['file_path']).read_text())['job_id'] == 'job_report'
 
 
 def test_detection_report_calls_top_class_match_only_and_explains_object_metric(tmp_path, monkeypatch):

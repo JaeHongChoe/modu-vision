@@ -178,7 +178,10 @@ def test_background_training_freezes_own_projects_annotation_root(tmp_path, monk
     rows = json.loads((Path(captured[0]["dataset_path"]) / "source_manifest.json").read_text())
     first_image_row = next(row for row in rows if row["source_image"] == str(image.resolve()))
     first_overlay = annotation_storage.dataset_annotation_dir(source, Path(first["annotations_dir"]), use_scope=False)
-    assert first_image_row["source_json"] == str(first_overlay / "sample.json")
+    frozen_label = Path(first_image_row["source_json"])
+    assert frozen_label.is_relative_to(Path(captured[0]["output_dir"]) / "bound_annotations")
+    assert frozen_label.name == "sample.json"
+    assert frozen_label.read_bytes() == (first_overlay / "sample.json").read_bytes()
     assert json.loads(Path(first_image_row["source_json"]).read_text())["annotations"][0]["label"] == "First label"
 
 

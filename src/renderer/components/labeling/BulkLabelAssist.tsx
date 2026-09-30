@@ -4,6 +4,7 @@ import { api, type LabelSuggestionBatch, type LabelSuggestionBatchEntry } from '
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import type { ImageMeta } from '../../types';
+import { datasetWorkflow } from '../../services/datasetWorkflow';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -30,12 +31,13 @@ interface Props {
   projectDir: string;
   modelId: string;
   threshold: number;
+  keywords?: string[];
   disabled: boolean;
   onOpenEntry: (entry: LabelSuggestionBatchEntry) => Promise<void>;
   onRunningChange: (running: boolean) => void;
 }
 
-export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshold, disabled, onOpenEntry, onRunningChange }) => {
+export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshold, keywords = [], disabled, onOpenEntry, onRunningChange }) => {
   const folderPath = useDatasetStore((state) => state.folderPath);
   const task = useProjectStore((state) => state.task);
   const [mode, setMode] = useState<'unlabeled' | 'selected'>('unlabeled');
@@ -121,8 +123,8 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
     setBusy('start');
     setError(null);
     try {
-      const batch = await api.labelSuggestions.startBatch({
-        job_id: modelId, threshold,
+      const batch = await datasetWorkflow.startBatch({
+        job_id: modelId, threshold, keywords,
         ...(mode === 'selected' ? { image_paths: [...selectedPaths] } : {}),
       });
       if (useProjectStore.getState().projectDir !== projectDir) return;

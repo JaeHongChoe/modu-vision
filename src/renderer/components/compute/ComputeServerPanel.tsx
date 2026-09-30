@@ -1,3 +1,4 @@
+import { ComputeReservations } from './ComputeReservations';
 import React, { useState } from 'react';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Server, Trash2, X } from 'lucide-react';
 import { useComputeStore } from '../../stores/useComputeStore';
@@ -105,6 +106,7 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
           </button>
         )}
 
+        <ComputeReservations />
         <div className="mt-4 flex items-center justify-between">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400">저장된 서버</h3>
           <button type="button" onClick={() => { setDraft(emptyProfile); setShowForm(true); }}

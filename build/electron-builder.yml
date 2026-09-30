@@ -21,6 +21,11 @@ files:
 
 # Extract Python backend into resourcesPath (unpacked from ASAR so Python interpreter can read it)
 extraResources:
+  - from: "examples"
+    to: "examples"
+    filter:
+      - "*.mjs"
+      - "*.cs"
   - from: "backend"
     to: "backend"
     filter:

@@ -20,8 +20,9 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from backend.engine.dataset_loaders import BoundingBox
-from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
+from backend.engine.dataset_loaders import BoundingBox, SUPPORTED_IMAGE_EXTENSIONS
+from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root, request_project_root
+from backend.engine import dataset_metadata as metadata_engine
 from backend.engine.labeling_ai import (
     auto_select_contour,
     bbox_to_mask,
@@ -112,6 +113,8 @@ class AnnotationSaveRequest(BaseModel):
     image_width: Optional[int] = 256
     image_height: Optional[int] = 256
     output_dir: Optional[str] = None
+    expected_revision: Optional[int] = Field(None, ge=1)
+    actor: str = Field("operator", min_length=1, max_length=100)
 
 
 class AnnotationBatchSaveRequest(BaseModel):
@@ -119,8 +122,7 @@ class AnnotationBatchSaveRequest(BaseModel):
     items: List[AnnotationSaveRequest]
 
 
-@router.post("/save")
-def save_annotations(req: AnnotationSaveRequest):
+def _save_annotations_impl(req: AnnotationSaveRequest):
     """
     Saves canvas annotations for an image.
     Automatically:
@@ -133,6 +135,11 @@ def save_annotations(req: AnnotationSaveRequest):
     target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
                   dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
                   if req.image_path else scoped_annotation_root(ANNOTATIONS_DIR))
+    if req.image_path:
+        image = Path(req.image_path)
+        peers = [p for p in image.parent.iterdir() if p.is_file() and p.stem == image.stem and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
+        if len(peers) > 1:
+            raise HTTPException(status_code=422, detail="같은 폴더에 확장자만 다른 동일 이름 이미지가 있어 라벨 저장이 모호합니다. 이미지 이름을 구분한 데이터셋을 사용하세요.")
     target_dir.mkdir(parents=True, exist_ok=True)
     masks_dir = target_dir / "masks"
     masks_dir.mkdir(parents=True, exist_ok=True)
@@ -191,8 +198,8 @@ def save_annotations(req: AnnotationSaveRequest):
                 "is_hole": False,
                 "points": pts_int,
             })
-            item_dict["polygon"] = pts_int
-            item_dict["points"] = pts_int
+            item_dict["polygon"] = [[float(pt[0]), float(pt[1])] for pt in poly_points]
+            item_dict["points"] = item_dict["polygon"]
 
         if item.type == "brush_mask" and item.mask_rle:
             try:
@@ -253,6 +260,45 @@ def save_annotations(req: AnnotationSaveRequest):
     }
 
 
+def _metadata_binding(image_path):
+    project = request_project_root()
+    if project is None or not image_path:
+        return None
+    try:
+        saved = json.loads((project / "project.json").read_text(encoding="utf-8"))
+        if not saved.get("source_dataset_dir"):
+            return None  # Legacy canvas can read before importing a project dataset.
+        source = Path(saved["source_dataset_dir"]).expanduser().resolve()
+    except (OSError, ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=422, detail="Active project has no valid dataset source.")
+    try:
+        metadata_engine._visible_path(source, image_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return project, source
+
+
+@router.post("/save")
+def save_annotations(req: AnnotationSaveRequest):
+    binding = _metadata_binding(req.image_path)
+    if binding is None:
+        return _save_annotations_impl(req)
+    project, source = binding
+    # Keep validation, image write and review invalidation under the same OS lock.
+    with metadata_engine.metadata_transaction(project, source) as ledger:
+        row = metadata_engine._ensure(ledger, project, source, req.image_path)
+        if req.expected_revision is not None and row["revision"] != req.expected_revision:
+            raise HTTPException(status_code=409, detail={"message": "다른 작업자가 수정했습니다. 최신 라벨을 다시 불러오세요.", "current": row})
+        result = _save_annotations_impl(req)
+        row["workflow_state"] = "needs_review"
+        row["reviewer"] = None
+        row["annotation_hash"] = metadata_engine._annotation_hash(project, source, Path(req.image_path))
+        row["mask_hash"] = metadata_engine._mask_hash(project, source, Path(req.image_path))
+        metadata_engine._event(row, req.actor.strip() or "operator", "annotation_changed", {"workflow_state":"needs_review"})
+        result["metadata"] = row.copy()
+        return result
+
+
 @router.post("/batch_save")
 def batch_save_annotations(req: AnnotationBatchSaveRequest):
     """Batch persists annotations across multiple images."""
@@ -267,8 +313,7 @@ def batch_save_annotations(req: AnnotationBatchSaveRequest):
     }
 
 
-@router.get("/{image_id}")
-def get_annotations(
+def _get_annotations_impl(
     image_id: str,
     dir_path: Optional[str] = Query(None),
     file_path: Optional[str] = Query(None),
@@ -386,6 +431,27 @@ def get_annotations(
         "image_height": 512,
         "mask_file": None,
     }
+
+
+@router.get("/{image_id}")
+def get_annotations(image_id: str, dir_path: Optional[str] = Query(None), file_path: Optional[str] = Query(None)):
+    result = _get_annotations_impl(image_id, dir_path, file_path)
+    binding = _metadata_binding(file_path) if isinstance(file_path, (str, Path)) else None
+    if binding:
+        project, source = binding
+        studio_json = dataset_annotation_dir(Path(file_path).parent, ANNOTATIONS_DIR) / f"{image_id}.json"
+        if not studio_json.exists() and not Path(file_path).with_suffix(".json").exists():
+            from backend.engine.annotation_formats import source_annotations_for_image
+            try:
+                imported = source_annotations_for_image(source, Path(file_path))
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                raise HTTPException(status_code=422, detail=f"Source annotation format: {exc}") from exc
+            if imported is not None:
+                result["annotations"] = imported
+        result["metadata"] = metadata_engine.metadata_for_path(*binding, file_path)
+        result["image_width"] = result["metadata"]["width"]
+        result["image_height"] = result["metadata"]["height"]
+    return result
 
 
 @router.get("/{image_id}/mask")

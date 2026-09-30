@@ -36,6 +36,7 @@ from backend.api.routes_flowchart import _FLOW_SAVE_LOCK, _recipe_file, _version
 from backend.engine.checkpoint_paths import is_job_id
 from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_nodes
 from backend.engine.flow_package import build_flow_package, verify_flow_parity
+from backend.engine.specialized_models import FLOW_TASKS, SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.remote.coordinator import ArtifactValidationError
 
@@ -58,7 +59,7 @@ class ExportFlowRequest(BaseModel):
 @router.post("/flow")
 def export_saved_flow(req: ExportFlowRequest, request: Request):
     """Export only a saved, source-matched graph and all its verified checkpoints."""
-    if req.recipe_task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
+    if req.recipe_task not in (*FLOW_TASKS, "mixed"):
         raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
     source = Path(req.source_dataset_path).expanduser().resolve()
     if not source.is_dir():
@@ -99,11 +100,11 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     checkpoints: Dict[str, Path] = {}
     job_tasks: Dict[str, str] = {}
     for node in pipeline.nodes:
-        if node.data.node_type not in ("detection_crop", "inspection"):
+        task = flow_model_task(node)
+        if task is None:
             continue
         job_id = node.data.model_job_id
-        task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if not is_job_id(job_id) or task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification"):
+        if not valid_flow_job(job_id, task) or task not in FLOW_TASKS:
             raise HTTPException(status_code=409, detail=f"Flow model is missing or invalid at {node.id}")
         if job_id in job_tasks and job_tasks[job_id] != task:
             raise HTTPException(status_code=409, detail=f"Flow model {job_id} has conflicting tasks")
@@ -111,11 +112,14 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         if job_id in checkpoints:
             continue
         try:
-            _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
-                job_id, source_dataset_path=str(source), source_task=task,
-            )
-            from backend.remote.operations import remote_job_context
-            remote_job_context(checkpoint.parent, job_id)
+            if task in SPECIALIZED_TASKS:
+                checkpoint, _ = resolve_specialized_checkpoint(project["models_dir"], job_id, task, str(source))
+            else:
+                _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
+                    job_id, source_dataset_path=str(source), source_task=task,
+                )
+                from backend.remote.operations import remote_job_context
+                remote_job_context(checkpoint.parent, job_id)
             payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
             if (not isinstance(payload, dict) or str(payload.get("task", "")).lower() != task
                     or "model_state_dict" not in payload):

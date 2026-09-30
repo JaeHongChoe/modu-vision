@@ -35,6 +35,7 @@ from backend.engine.dataset_loaders import (
 )
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.engine.trainer import infer
+from backend.engine import dataset_metadata as metadata_engine
 
 
 router = APIRouter(prefix="/api/label-suggestions", tags=["label-suggestions"])
@@ -59,18 +60,21 @@ class GenerateRequest(BaseModel):
     job_id: str = Field(..., min_length=1)
     image_path: str = Field(..., min_length=1)
     threshold: float = Field(0.5, ge=0.0, le=1.0)
+    keywords: List[str] = Field(default_factory=list, max_length=100)
 
 
 class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     decision: Literal["accept", "reject"]
     candidate_ids: List[str] = Field(default_factory=list)
+    actor: str = Field("operator", min_length=1, max_length=100)
 
 
 class BatchGenerateRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     job_id: str = Field(..., min_length=1)
     threshold: float = Field(0.5, ge=0.0, le=1.0)
+    keywords: List[str] = Field(default_factory=list, max_length=100)
     image_paths: Optional[List[str]] = Field(None, max_length=5000)
 
 
@@ -249,7 +253,8 @@ def _dataset_fingerprint(project: Dict[str, Any]) -> str:
 
 
 def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, Any],
-                       threshold: float, batch_id: Optional[str] = None) -> Dict[str, Any]:
+                       threshold: float, batch_id: Optional[str] = None, keywords: Optional[List[str]] = None) -> Dict[str, Any]:
+    metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
     checkpoint = Path(model["checkpoint_path"])
     studio = dataset_annotation_dir(image.parent, Path(project["annotations_dir"]), use_scope=False)
     labelme = image.with_suffix(".json")
@@ -281,6 +286,7 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
         "id": suggestion_id, "project_id": project["id"], "status": "pending",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "image_path": str(image), "image_id": image.stem, "image_width": width, "image_height": height,
+        "image_uuid": metadata["image_uuid"], "image_revision": metadata["revision"],
         "image_sha256": before_image, "labelme_sha256": before_labelme,
         "studio_sha256": before_studio,
         "job_id": model["job_id"], "task": project["task"], "checkpoint_sha256": before_checkpoint,
@@ -291,6 +297,10 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
                                              float(result.confidence_score), suggestion_id),
         "accepted_candidate_ids": [], "backup_version_id": None,
     }
+    from backend.engine.label_candidate_providers import filter_keywords
+    proposal["candidates"] = filter_keywords(proposal["candidates"], keywords or [])
+    proposal["keywords"] = keywords or []
+    proposal["backend"] = "trained_model"
     if batch_id:
         proposal["batch_id"] = batch_id
     _write_json(_proposal_path(project, suggestion_id), proposal)
@@ -313,7 +323,7 @@ def list_suggestion_models(request: Request):
 def generate_suggestion(req: GenerateRequest, request: Request):
     project = get_current_project(request)
     image = _image_path(project, req.image_path)
-    return _generate_proposal(project, image, _verified_model(project, req.job_id), req.threshold)
+    return _generate_proposal(project, image, _verified_model(project, req.job_id), req.threshold, keywords=req.keywords)
 
 
 @router.get("")
@@ -467,7 +477,7 @@ def _run_batch(project: Dict[str, Any], model: Dict[str, Any], live: _LiveBatch)
                 break
             try:
                 image = _image_path(project, entry["image_path"])
-                proposal = _generate_proposal(project, image, model, batch["threshold"], batch["id"])
+                proposal = _generate_proposal(project, image, model, batch["threshold"], batch["id"], batch.get("keywords", []))
                 result = {
                     "status": "generated" if proposal["candidates"] else "zero_candidates",
                     "proposal_id": proposal["id"], "candidate_count": len(proposal["candidates"]),
@@ -515,7 +525,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     batch_id = f"batch_{uuid.uuid4().hex[:24]}"
     batch = {
         "id": batch_id, "project_id": project["id"], "source_dataset_dir": str(_source_path(project)),
-        "job_id": req.job_id, "task": project["task"], "threshold": req.threshold,
+        "job_id": req.job_id, "task": project["task"], "threshold": req.threshold, "keywords": req.keywords,
         "review_fingerprint": _dataset_fingerprint(project),
         "checkpoint_sha256": checkpoint_sha256, "status": "running",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -592,14 +602,17 @@ def _restore_bytes(path: Path, previous: Optional[bytes]) -> None:
 @router.post("/{suggestion_id}/review")
 def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
     project = get_current_project(request)
-    with _REVIEW_LOCK, _VERSION_LOCK:
+    with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), _source_path(project), Path(project["annotations_dir"])):
         proposal = _read_proposal(project, suggestion_id)
         if proposal["status"] != "pending":
             raise HTTPException(status_code=409, detail="Suggestion has already been reviewed.")
         if req.decision == "reject":
-            proposal.update(status="rejected", reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+            proposal.update(status="rejected", reviewer=req.actor, reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _write_json(_proposal_path(project, suggestion_id), proposal)
             return proposal
+        if proposal.get("backend") in {"template_match", "grounding_dino"}:
+            from backend.api.routes_label_candidates import review_external_proposal
+            return review_external_proposal(project, proposal, req)
         if proposal.get("task") != project["task"]:
             raise HTTPException(status_code=409, detail="Project task changed after proposal generation.")
 
@@ -639,6 +652,9 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         if training_job_manager.get_active_job() is not None:
             raise HTTPException(status_code=409, detail="Finish or stop active training before accepting labels.")
 
+        metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
+        if proposal.get("image_revision") is not None and proposal["image_revision"] != metadata["revision"]:
+            raise HTTPException(status_code=409, detail="Another reviewer changed this image; generate candidates again.")
         current = routes_annotation.get_annotations(image.stem, file_path=str(image))
         existing = current.get("annotations", [])
         if not isinstance(existing, list):
@@ -646,7 +662,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         accepted = [item["annotation"] for item in candidates if item["id"] in selected_ids]
         annotation_request = routes_annotation.AnnotationSaveRequest(
             image_id=image.stem, image_path=str(image), annotations=[*existing, *accepted],
-            image_width=proposal["image_width"], image_height=proposal["image_height"],
+            image_width=proposal["image_width"], image_height=proposal["image_height"], actor=req.actor, expected_revision=metadata["revision"],
         )
         backup = _snapshot(project, _source_path(project),
                            f"모델 라벨 채택 전 · {image.name}",
@@ -665,7 +681,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
                 batch["review_fingerprint"] = _dataset_fingerprint(project)
                 _persist_batch(project, batch)
             proposal.update(
-                status="accepted", accepted_candidate_ids=sorted(selected_ids),
+                status="accepted", reviewer=req.actor, accepted_candidate_ids=sorted(selected_ids),
                 backup_version_id=backup["id"],
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             )

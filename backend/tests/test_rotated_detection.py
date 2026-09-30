@@ -223,6 +223,23 @@ def test_cpu_train_evaluate_and_checkpoint_predict(tmp_path: Path):
     assert prediction["model_sha256"] == receipt["checkpoint_sha256"]
 
 
+def test_explicit_corrected_box_evaluation_requires_trained_classes(tmp_path):
+    raw = _write_dataset(tmp_path)
+    output = tmp_path / "candidate"
+    receipt = train_rotated_detector(tmp_path, output, epochs=1, batch_size=2)
+    raw["samples"][-1]["box"]["angle_deg"] = 5
+    (tmp_path / "rotated_boxes.json").write_text(json.dumps(raw))
+    with pytest.raises(ValueError, match="differs"):
+        evaluate_rotated_detector(output / "best_model.pt", tmp_path)
+    result = evaluate_rotated_detector(output / "best_model.pt", tmp_path, allow_dataset_revision=True)
+    assert result["training_dataset_sha256"] == receipt["dataset_sha256"]
+    assert result["dataset_revision_changed"] is True
+    raw["samples"][-1]["label"] = "new_defect"
+    (tmp_path / "rotated_boxes.json").write_text(json.dumps(raw))
+    with pytest.raises(ValueError, match="class"):
+        evaluate_rotated_detector(output / "best_model.pt", tmp_path, allow_dataset_revision=True)
+
+
 def test_training_cancel_before_first_batch_writes_no_candidate(tmp_path: Path):
     _write_dataset(tmp_path)
     event = threading.Event()

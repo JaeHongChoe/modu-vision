@@ -23,9 +23,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api import routes_dataset
 from backend.api.routes_project import get_current_project
-from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.annotation_storage import dataset_annotation_dir, dataset_overlay_scopes
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+from backend.engine import dataset_metadata as metadata_engine
 
 router = APIRouter(prefix="/api/dataset/versions", tags=["dataset-versions"])
 _VERSION_ID = re.compile(r"v_[0-9]{8}_[0-9]{6}_[a-f0-9]{8}\Z")
@@ -181,6 +182,11 @@ def _snapshot(project: Dict[str, Any], source: Path, name: str, note: str, kind:
             record("source", path, path.relative_to(source), "label" if _is_label(path, source) else "image")
         for path in _iter_files(studio, source=False, project_dir=project_dir):
             record("studio", path, path.relative_to(studio), "label")
+        for scope in dataset_overlay_scopes(source, studio_root):
+            if scope == studio:
+                continue
+            for path in _iter_files(scope, source=False, project_dir=project_dir):
+                record("studio_scoped", path, Path(scope.name) / path.relative_to(scope), "label")
         if split.is_file():
             record("split", split, Path("manifest.json"), "label")
 
@@ -270,7 +276,7 @@ def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]
     editable: List[str] = []
     for row in manifest["files"]:
         origin = row["origin"]
-        if origin not in {"source", "studio", "split"}:
+        if origin not in {"source", "studio", "studio_scoped", "split"}:
             raise HTTPException(status_code=422, detail="Version contains an invalid file origin.")
         relative = _relative_path(row)
         if origin == "source":
@@ -279,7 +285,7 @@ def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]
                     or _file_hash(source_file, allow_symlink=True) != row["sha256"]):
                 changed.append(f"source/{relative.as_posix()}")
         else:
-            current = studio / relative if origin == "studio" else split
+            current = studio / relative if origin == "studio" else studio.parent / relative if origin == "studio_scoped" else split
             if _file_hash(current) != row["sha256"]:
                 editable.append(f"{origin}/{relative.as_posix()}")
         if row["kind"] == "label":
@@ -297,6 +303,14 @@ def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]
         relative = file.relative_to(studio).as_posix()
         if relative not in saved_studio:
             editable.append(f"studio/{relative}")
+    saved_scoped = {row["relative_path"] for row in manifest["files"] if row["origin"] == "studio_scoped"}
+    for scope in dataset_overlay_scopes(source, routes_dataset.STUDIO_ANNOTATIONS_DIR):
+        if scope == studio:
+            continue
+        for file in _iter_files(scope, source=False, project_dir=Path(project["project_dir"])):
+            relative = (Path(scope.name) / file.relative_to(scope)).as_posix()
+            if relative not in saved_scoped:
+                editable.append(f"studio_scoped/{relative}")
     if split.is_file() and not any(row["origin"] == "split" for row in manifest["files"]):
         editable.append("split/manifest.json")
     return {
@@ -309,7 +323,8 @@ def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]
 
 def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]) -> None:
     source = Path(manifest["source_dataset_dir"])
-    studio = dataset_annotation_dir(source, routes_dataset.STUDIO_ANNOTATIONS_DIR)
+    source_studio = dataset_annotation_dir(source, routes_dataset.STUDIO_ANNOTATIONS_DIR)
+    studio = source_studio.parent
     split = routes_dataset._split_manifest_file(source)
     studio.parent.mkdir(parents=True, exist_ok=True)
     split.parent.mkdir(parents=True, exist_ok=True)
@@ -318,12 +333,20 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
     backup_studio = studio.parent / f".restore-{tx}-studio-backup"
     stage_split = split.parent / f".restore-{tx}-split-stage"
     backup_split = split.parent / f".restore-{tx}-split-backup"
-    stage_studio.mkdir()
+    if studio.exists():
+        shutil.copytree(studio, stage_studio)
+    else:
+        stage_studio.mkdir()
+    for scope in dataset_overlay_scopes(source, routes_dataset.STUDIO_ANNOTATIONS_DIR):
+        staged_scope = stage_studio / scope.name
+        if staged_scope.exists():
+            shutil.rmtree(staged_scope)
     has_split_snapshot = False
     try:
         for row in manifest["files"]:
-            if row["origin"] == "studio":
-                destination = stage_studio / _relative_path(row)
+            if row["origin"] in {"studio", "studio_scoped"}:
+                relative = _relative_path(row)
+                destination = stage_studio / source_studio.name / relative if row["origin"] == "studio" else stage_studio / relative
                 if not destination.resolve().is_relative_to(stage_studio.resolve()):
                     raise HTTPException(status_code=422, detail="Invalid Studio label path in version.")
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -335,6 +358,28 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
                 if _file_hash(stage_split) != row["sha256"]:
                     raise HTTPException(status_code=409, detail="Saved split changed during restore.")
                 has_split_snapshot = True
+
+        # Restore metadata values but keep newer audit entries and monotonic revisions.
+        from backend.engine import dataset_metadata as dm
+        metadata_relative = Path(source_studio.name) / "metadata" / "workflow.json"
+        previous_ledger_path = studio / metadata_relative
+        restored_ledger_path = stage_studio / metadata_relative
+        if previous_ledger_path.is_file():
+            previous_ledger = json.loads(previous_ledger_path.read_text(encoding="utf-8"))
+            restored_ledger = json.loads(restored_ledger_path.read_text(encoding="utf-8")) if restored_ledger_path.is_file() else {"schema_version":1,"images":{}}
+            for name, old in previous_ledger.get("images", {}).items():
+                current = restored_ledger["images"].get(name, old.copy())
+                audit = {item["id"]:item for item in [*current.get("audit", []), *old.get("audit", [])]}
+                current["audit"] = sorted(audit.values(), key=lambda item:(item["revision"],item["at"]))
+                history = [*current.get("review_history", []), *old.get("review_history", [])]
+                current["review_history"] = list({json.dumps(item,sort_keys=True):item for item in history}.values())
+                current["revision"] = max(current.get("revision",0),old.get("revision",0))
+                current["workflow_state"] = "needs_review"
+                current["reviewer"] = None
+                dm._event(current,"operator","version_restored",{"version_id":manifest["id"]})
+                restored_ledger["images"][name] = current
+            restored_ledger_path.parent.mkdir(parents=True,exist_ok=True)
+            restored_ledger_path.write_text(json.dumps(restored_ledger,ensure_ascii=False,indent=2),encoding="utf-8")
 
         studio_moved = False
         studio_installed = False
@@ -431,7 +476,8 @@ def verify_version(version_id: str, request: Request):
 @router.post("/{version_id}/restore")
 def restore_version(version_id: str, request: Request):
     project = _current_project(request)
-    with _VERSION_LOCK:
+    source_for_lock = _source_path(project)
+    with _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), source_for_lock) as ledger:
         from backend.api.routes_training import training_job_manager
 
         active = training_job_manager.get_active_job()
@@ -449,6 +495,10 @@ def restore_version(version_id: str, request: Request):
         backup = _snapshot(project, source, f"복원 전 자동 백업 · {manifest['name']}",
                            f"Before restoring {version_id}", "auto_backup")
         _restore_labels(project, path, manifest)
+        restored_path = metadata_engine.ledger_path(Path(project["project_dir"]), source)
+        if restored_path.is_file():
+            restored_ledger = json.loads(restored_path.read_text(encoding="utf-8"))
+            ledger.clear(); ledger.update(restored_ledger)
         return {
             "restored_version_id": version_id, "backup_version_id": backup["id"],
             "source_dataset_dir": str(source),

@@ -523,6 +523,18 @@ def import_dataset(req: DatasetImportRequest):
         train_count = split_counts["train"]
         val_count = split_counts["val"]
 
+    # Saved group assignments select the actual source paths for every task.
+    grouped_assignments = _read_split_manifest(folder)
+    if grouped_assignments:
+        from backend.engine.grouped_dataset_views import source_image_paths
+        selected_paths = {str(path) for path in source_image_paths(folder, req.task)}
+        if flat_labelme:
+            selected_paths &= {str(path) for path in paired_images}
+        if selected_paths and selected_paths.issubset(grouped_assignments):
+            split_counts = {part:sum(grouped_assignments[path] == part for path in selected_paths) for part in ('train','val','test')}
+            train_count, val_count = split_counts['train'], split_counts['val']
+            summary.total_images = len(selected_paths)
+
     # Optional image validation scanning
     corrupted_images = []
     if req.validate_images:
@@ -722,6 +734,30 @@ def list_dataset_images(
     paired_images: set[Path] = set()
     has_labelme = False
     assignments = _read_split_manifest(target_dir)
+    if assignments and requested_task in {'detection','segmentation','anomaly'}:
+        from backend.engine.grouped_dataset_views import source_image_paths, _annotations, is_anomaly_normal
+        for image in source_image_paths(target_dir, requested_task):
+            partition = assignments.get(str(image))
+            if partition is None or (split and split != partition):
+                continue
+            if requested_task == 'anomaly':
+                label = 'good' if is_anomaly_normal(image, target_dir) else image.parent.name
+            else:
+                try:
+                    annotations, _ = _annotations(target_dir, image)
+                except (ValueError, KeyError, OSError) as exc:
+                    raise HTTPException(422, detail=f'Cannot read source labels: {exc}') from exc
+                label = next((a.get('label') for a in annotations or [] if a.get('label')), None)
+            if class_name and label != class_name:
+                continue
+            if label_status in ('labeled','unlabeled') and bool(label) != (label_status == 'labeled'):
+                continue
+            with Image.open(image) as pil:
+                width,height=pil.size
+            all_images.append(ImageMeta(image_id=image.stem,file_name=image.name,file_path=str(image),width=width,height=height,
+                split=partition,label=label,thumbnail_url=f'/api/dataset/thumbnail/{image.name}?file_path={image}'))
+        total=len(all_images)
+        return {'total':total,'limit':limit,'offset':offset,'items':[item.model_dump() for item in all_images[offset:offset+limit]]}
     # Search structured splits
     split_names = ["train", "val", "test"] if not split else [split]
     if anomaly_mode:

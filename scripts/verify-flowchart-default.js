@@ -18,6 +18,7 @@ let releaseSave = null;
 let delaySave = false;
 let releaseRun = null;
 let delayRun = false;
+let lastRunRequest = null;
 const saved = {
   id: 'updated-test-pipeline', name: 'Updated Test Pipeline', edges: [],
   nodes: [
@@ -82,10 +83,14 @@ const api = {
       saveCalls += 1;
       if (delaySave) await new Promise((resolve) => { releaseSave = resolve; });
     },
-    run: async () => {
+    run: async (request) => {
       runs += 1;
+      lastRunRequest = request;
       if (delayRun) return new Promise((resolve) => { releaseRun = resolve; });
-      return { final_verdict: 'OK' };
+      return { final_verdict: 'OK', ...(request.execution_target ? {
+        execution_target: request.execution_target, execution_device: request.device,
+        compute_profile_id: request.compute_profile_id || null,
+      } : {}) };
     },
   },
 };
@@ -99,6 +104,9 @@ item.paths = Module._nodeModulePaths(path.dirname(filename));
 const originalRequire = item.require.bind(item);
 item.require = (specifier) => {
   if (specifier === '../services/api') return { api };
+  if (specifier === '../services/flowDraft') return { flowDraft: {} };
+  if (specifier === './useProjectStore') return { useProjectStore: { getState: () => ({ project: null }) } };
+  if (specifier === '../components/flowchart/flowchartStartup') return { getFlowchartModelTask: node => node.data.task || null };
   return originalRequire(specifier);
 };
 item._compile(compiled, filename);
@@ -320,15 +328,61 @@ test('Step 5 result keeps its draft or saved-version origin after later saving',
   assert.deepEqual(flow.getState().lastRunSource, { kind: 'saved', versionId: 'active_revision' });
 });
 
+test('explicit execution options survive the store request and wrong server identity rejects the result', async () => {
+  flow.getState().invalidateForDataChange();
+  await flow.getState().loadSingleSegmentationTemplate('job_segmentation');
+  assert.equal(await flow.getState().runPipeline('/source/image.png', 'image', {
+    savedVersionId: null, executionTarget: 'selected_compute', device: 'cuda', computeProfileId: 'gpu42',
+  }), true);
+  assert.equal(lastRunRequest.execution_target, 'selected_compute');
+  assert.equal(lastRunRequest.device, 'cuda');
+  assert.equal(lastRunRequest.compute_profile_id, 'gpu42');
+  assert.equal(await flow.getState().runPipeline('/source/image.png', 'image', {
+    savedVersionId: null, executionTarget: 'local', device: 'cpu',
+  }), true);
+  assert.equal(lastRunRequest.execution_target, 'local');
+  assert.equal(lastRunRequest.device, 'cpu');
+  const previousRun = api.flowchart.run;
+  const previousError = console.error;
+  api.flowchart.run = async () => ({ final_verdict: 'OK', execution_target: 'selected_compute', execution_device: 'cuda', compute_profile_id: 'other-gpu' });
+  console.error = () => {};
+  try {
+    assert.equal(await flow.getState().runPipeline('/source/image.png', 'image', {
+      savedVersionId: null, executionTarget: 'selected_compute', device: 'cuda', computeProfileId: 'gpu42',
+    }), false);
+    assert.equal(flow.getState().executionResult, null);
+    assert.match(flow.getState().errorMessage, /요청한 위치/);
+  } finally { api.flowchart.run = previousRun; console.error = previousError; }
+});
+
 test('Step 5 verifies the source before reopening a saved flow and gates RUN on graph readiness', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/flowchart/FlowchartStudio.tsx'), 'utf8');
   assert.match(source, /recoverThenLoadFlowchart\(/);
   assert.match(source, /const canVerifyGraph = modelCheck\.status !== 'checking'/);
-  assert.match(source, /disabled=\{!canVerifyGraph \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel \|\| !!graphError\}/);
+  assert.match(source, /disabled=\{!canVerifyGraph \|\| !executionReady \|\| isVerifyingAction \|\| isRunning \|\| isLoading \|\| needsModel \|\| !!graphError\}/);
   assert.match(source, /disabled=\{!canVerifyGraph \|\| isVerifyingAction \|\| isSaving \|\| isLoading \|\| isRunning \|\| !pipeline \|\| needsModel \|\| !!graphError\}/);
   assert.match(source, /if \(modelNodes\.length === 0 \|\| models\.length !== modelNodes\.length\)/);
   assert.match(source, /loadDetectorRoiTemplate\(/);
   assert.match(source, /검출 ROI 검사/);
   assert.match(source, /verifyModels:/);
   assert.match(source, /모델 다시 확인/);
+});
+
+
+test('shared flow execution choice invalidates displayed results and legacy model compute accepts actual remote device', async () => {
+  flow.getState().invalidateForDataChange();
+  await flow.getState().loadSingleSegmentationTemplate('job_segmentation');
+  const previousRun = api.flowchart.run;
+  api.flowchart.run = async () => ({final_verdict:'OK', execution_device:'cuda', compute_profile_id:'trained-gpu'});
+  try {
+    assert.equal(await flow.getState().runPipeline('/source/image.png', 'image', {
+      savedVersionId:null, executionTarget:'model_compute',device:'cpu',
+    }),true);
+    assert.equal(flow.getState().executionResult.execution_device,'cuda');
+    flow.getState().setExecutionChoice('local_mps');
+    assert.equal(flow.getState().executionChoiceOverride,'local_mps');
+    assert.equal(flow.getState().executionResult,null);
+    flow.getState().invalidateForDataChange();
+    assert.equal(flow.getState().executionChoiceOverride,'local_mps');
+  } finally { api.flowchart.run=previousRun; }
 });

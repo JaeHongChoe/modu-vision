@@ -42,77 +42,88 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   groundTruth,
   predictedClass,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [transform, setTransform] = useState<ViewTransform>({ scale: 1.0, offsetX: 0, offsetY: 0 });
+  const rawSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const overlaySurfaceRef = useRef<HTMLDivElement | null>(null);
+  const [transforms, setTransforms] = useState<[ViewTransform, ViewTransform]>([
+    { scale: 1, offsetX: 0, offsetY: 0 }, { scale: 1, offsetX: 0, offsetY: 0 },
+  ]);
+  const [activeViewport, setActiveViewport] = useState<0 | 1>(0);
   const [isLocked, setIsLocked] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
+  const [drag, setDrag] = useState<{ viewport: 0 | 1; start: Point } | null>(null);
   const [cursorPos, setCursorPos] = useState<Point | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.70);
 
   // Raw Image Dimension tracking
   const [imgDim, setImgDim] = useState<{ w: number; h: number }>({ w: 1024, h: 1024 });
 
-  // Reset to Fit on prediction change
-  const handleFit = useCallback(() => {
-    if (!containerRef.current) return;
-    const halfWidth = containerRef.current.clientWidth / 2 - 16;
-    const height = containerRef.current.clientHeight - 80;
-    const fit = calculateFitToScreen(halfWidth, height, imgDim.w, imgDim.h, 24);
-    setTransform(fit);
-  }, [imgDim]);
-
+  const applyTransform = (viewport: 0 | 1, update: (current: ViewTransform) => ViewTransform) => {
+    setTransforms((previous) => {
+      const next = update(previous[viewport]);
+      if (isLocked) return [next, next];
+      return viewport === 0 ? [next, previous[1]] : [previous[0], next];
+    });
+  };
+  const fitSurface = useCallback((surface: HTMLDivElement | null) => surface
+    ? calculateFitToScreen(surface.clientWidth, surface.clientHeight, imgDim.w, imgDim.h, 24)
+    : null, [imgDim]);
+  const handleFit = () => {
+    const fit = fitSurface(activeViewport === 0 ? rawSurfaceRef.current : overlaySurfaceRef.current);
+    if (fit) applyTransform(activeViewport, () => fit);
+  };
   useEffect(() => {
-    handleFit();
-  }, [prediction?.image_id, handleFit]);
+    const raw = fitSurface(rawSurfaceRef.current);
+    const overlay = fitSurface(overlaySurfaceRef.current);
+    if (raw && overlay) setTransforms([raw, raw]);
+    setActiveViewport(0);
+    setDrag(null);
+    setCursorPos(null);
+  }, [prediction?.image_id, fitSurface]);
 
-  // Synchronized Mouse Wheel Zoom
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = (viewport: 0 | 1, e: React.WheelEvent) => {
     e.preventDefault();
+    setActiveViewport(viewport);
     const rect = e.currentTarget.getBoundingClientRect();
     const cursorVp = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const next = calculateZoomAtPoint(cursorVp, transform, e.deltaY < 0 ? 1 : -1, 0.1, 32.0);
-    setTransform(next);
+    applyTransform(viewport, current => calculateZoomAtPoint(cursorVp, current, e.deltaY < 0 ? 1 : -1, 0.1, 32.0));
   };
-
-  // Synchronized Pan Dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 || e.button === 1) { // Left or middle click
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - transform.offsetX, y: e.clientY - transform.offsetY });
+  const handleMouseDown = (viewport: 0 | 1, e: React.MouseEvent) => {
+    if (e.button === 0 || e.button === 1) {
+      e.preventDefault();
+      setActiveViewport(viewport);
+      setDrag({ viewport, start: { x: e.clientX - transforms[viewport].offsetX,
+        y: e.clientY - transforms[viewport].offsetY } });
     }
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (viewport: 0 | 1, e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const vpPt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const imgPt = viewportToImage(vpPt, transform);
-    setCursorPos({
-      x: Math.max(0, Math.min(imgDim.w, Math.round(imgPt.x * 10) / 10)),
-      y: Math.max(0, Math.min(imgDim.h, Math.round(imgPt.y * 10) / 10)),
-    });
-
-    if (isDragging) {
-      setTransform((prev) => ({
-        ...prev,
-        offsetX: e.clientX - dragStart.x,
-        offsetY: e.clientY - dragStart.y,
-      }));
+    const imgPt = viewportToImage({ x: e.clientX - rect.left, y: e.clientY - rect.top }, transforms[viewport]);
+    setCursorPos({ x: Math.max(0, Math.min(imgDim.w, Math.round(imgPt.x * 10) / 10)),
+      y: Math.max(0, Math.min(imgDim.h, Math.round(imgPt.y * 10) / 10)) });
+    if (drag?.viewport === viewport) {
+      applyTransform(viewport, current => ({ ...current,
+        offsetX: e.clientX - drag.start.x, offsetY: e.clientY - drag.start.y }));
     }
   };
-
-  const handleMouseUp = () => setIsDragging(false);
+  const handleMouseUp = () => setDrag(null);
+  const toggleLock = () => {
+    if (!isLocked) setTransforms(previous => [previous[activeViewport], previous[activeViewport]]);
+    setDrag(null);
+    setIsLocked(previous => !previous);
+  };
+  const rawTransform = transforms[0];
+  const overlayTransform = transforms[1];
+  const transform = transforms[activeViewport];
 
   const rawImgUrl = prediction ? resolveApiUrl(prediction.thumbnail_url) : '';
 
   return (
-    <div ref={containerRef} className="flex-1 flex flex-col bg-[#0B0E14] overflow-hidden select-none">
+    <div className="min-w-0 min-h-0 flex-1 flex flex-col bg-[#0B0E14] overflow-hidden select-none">
       {/* Top Viewport Toolbar */}
-      <div className="h-12 bg-[#131822] border-b border-[#2B3547] px-4 flex items-center justify-between text-xs">
+      <div className="min-h-12 shrink-0 bg-[#131822] border-b border-[#2B3547] px-3 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         {/* Left: Confidence Threshold Slider */}
-        <div className="flex items-center space-x-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Sliders className="w-4 h-4 text-[#3B82F6]" />
-          <span className="font-semibold text-slate-300">Confidence Threshold (τ):</span>
+          <span className="font-semibold text-slate-300">Threshold (τ):</span>
           <span className="font-mono font-bold text-[#3B82F6] tabular-nums text-sm">
             {confidenceThreshold.toFixed(2)}
           </span>
@@ -123,7 +134,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
             step="0.01"
             value={confidenceThreshold}
             onChange={(e) => onThresholdChange(parseFloat(e.target.value))}
-            className="w-48 accent-[#3B82F6] cursor-pointer"
+            className="w-28 sm:w-40 min-w-0 accent-[#3B82F6] cursor-pointer"
           />
         </div>
 
@@ -142,6 +153,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           <span className="tabular-nums">{(overlayOpacity * 100).toFixed(0)}%</span>
         </div>
 
+        {!isLocked && <span className="text-[10px] text-cyan-300">조작 대상: {activeViewport === 0 ? '원본' : '오버레이'}</span>}
         {/* Right: Zoom & Lock Controls */}
         <div className="flex items-center space-x-1.5">
           <button
@@ -154,7 +166,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </button>
           <button
             type="button"
-            onClick={() => setTransform((prev) => ({ ...prev, scale: 1.0 }))}
+            onClick={() => applyTransform(activeViewport, current => ({ ...current, scale: 1 }))}
             className="px-2 py-1 bg-[#1A212E] hover:bg-[#2B3547] text-slate-300 rounded-[4px] border border-[#2B3547] font-mono text-[11px] font-bold tabular-nums cursor-pointer transition-all"
             title="1:1 Pixel Native"
           >
@@ -162,7 +174,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </button>
           <button
             type="button"
-            onClick={() => setTransform((prev) => ({ ...prev, scale: Math.min(32.0, prev.scale * 1.25) }))}
+            onClick={() => applyTransform(activeViewport, current => ({ ...current, scale: Math.min(32, current.scale * 1.25) }))}
             className="p-1.5 bg-[#1A212E] hover:bg-[#2B3547] text-slate-300 rounded-[4px] border border-[#2B3547] cursor-pointer transition-all"
             title="Zoom In"
           >
@@ -170,7 +182,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </button>
           <button
             type="button"
-            onClick={() => setTransform((prev) => ({ ...prev, scale: Math.max(0.1, prev.scale * 0.8) }))}
+            onClick={() => applyTransform(activeViewport, current => ({ ...current, scale: Math.max(0.1, current.scale * 0.8) }))}
             className="p-1.5 bg-[#1A212E] hover:bg-[#2B3547] text-slate-300 rounded-[4px] border border-[#2B3547] cursor-pointer transition-all"
             title="Zoom Out"
           >
@@ -178,10 +190,11 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </button>
           <button
             type="button"
-            onClick={() => setIsLocked((prev) => !prev)}
+            onClick={toggleLock}
             className={`p-1.5 rounded-[4px] border cursor-pointer transition-all ${
               isLocked ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]' : 'bg-[#1A212E] border-[#2B3547] text-slate-400'
             }`}
+            aria-pressed={isLocked}
             title={isLocked ? 'Dual Viewports Synchronized' : 'Viewports Unlocked'}
           >
             {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
@@ -190,14 +203,16 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
       </div>
 
       {/* Main Dual Stage */}
-      <div className="flex-1 grid grid-cols-2 gap-2 p-3 overflow-hidden">
+      <div className="min-h-0 flex-1 grid grid-cols-2 gap-2 p-3 overflow-hidden">
         {/* Viewport 1: Raw Original Image */}
         <div
           className="relative bg-[#131822] border border-[#2B3547] rounded-[6px] overflow-hidden cursor-grab active:cursor-grabbing flex flex-col"
-          onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
+          onWheel={event => handleWheel(0, event)}
+          onMouseDown={event => handleMouseDown(0, event)}
+          onMouseMove={event => handleMouseMove(0, event)}
           onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          aria-label="원본 이미지 뷰포트"
         >
           {/* Header Tag */}
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
@@ -206,11 +221,11 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Canvas Render Surface */}
-          <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+          <div ref={rawSurfaceRef} className="min-h-0 flex-1 relative overflow-hidden flex items-center justify-center">
             {rawImgUrl ? (
               <div
                 style={{
-                  transform: `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0px) scale(${transform.scale})`,
+                  transform: `translate3d(${rawTransform.offsetX}px, ${rawTransform.offsetY}px, 0px) scale(${rawTransform.scale})`,
                   transformOrigin: '0 0',
                   willChange: 'transform',
                 }}
@@ -220,7 +235,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                   src={rawImgUrl}
                   alt="Raw Inspection"
                   onLoad={(e) => setImgDim({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-                  style={{ imageRendering: transform.scale >= 3.0 ? 'pixelated' : 'auto' }}
+                  style={{ imageRendering: rawTransform.scale >= 3.0 ? 'pixelated' : 'auto' }}
                   className="max-w-none block pointer-events-none"
                 />
               </div>
@@ -230,7 +245,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={transform.scale} />
+          <PhysicalScaleOverlay scale={rawTransform.scale} />
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
@@ -242,10 +257,12 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
         {/* Viewport 2: Defect Heatmap Overlay */}
         <div
           className="relative bg-[#131822] border border-[#2B3547] rounded-[6px] overflow-hidden cursor-grab active:cursor-grabbing flex flex-col"
-          onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
+          onWheel={event => handleWheel(1, event)}
+          onMouseDown={event => handleMouseDown(1, event)}
+          onMouseMove={event => handleMouseMove(1, event)}
           onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          aria-label="오버레이 이미지 뷰포트"
         >
           {/* Header Tag */}
           <div className="absolute top-2 left-2 z-10 px-2 py-0.5 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] text-[10px] font-mono text-slate-300 flex items-center space-x-1.5">
@@ -255,11 +272,11 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Canvas Render Surface */}
-          <div className="flex-1 relative overflow-hidden flex items-center justify-center">
+          <div ref={overlaySurfaceRef} className="min-h-0 flex-1 relative overflow-hidden flex items-center justify-center">
             {rawImgUrl ? (
               <div
                 style={{
-                  transform: `translate3d(${transform.offsetX}px, ${transform.offsetY}px, 0px) scale(${transform.scale})`,
+                  transform: `translate3d(${overlayTransform.offsetX}px, ${overlayTransform.offsetY}px, 0px) scale(${overlayTransform.scale})`,
                   transformOrigin: '0 0',
                   willChange: 'transform',
                 }}
@@ -269,7 +286,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                 <img
                   src={rawImgUrl}
                   alt="Base"
-                  style={{ imageRendering: transform.scale >= 3.0 ? 'pixelated' : 'auto' }}
+                  style={{ imageRendering: overlayTransform.scale >= 3.0 ? 'pixelated' : 'auto' }}
                   className="max-w-none block pointer-events-none filter brightness-75"
                 />
                 {/* Defect Heatmap Overlay Layer with Alpha Blending */}
@@ -279,7 +296,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
                     alt={task === 'detection' ? 'Detection boxes' : 'Heatmap'}
                     style={{
                       opacity: overlayOpacity,
-                      imageRendering: transform.scale >= 3.0 ? 'pixelated' : 'auto',
+                      imageRendering: overlayTransform.scale >= 3.0 ? 'pixelated' : 'auto',
                     }}
                     className="absolute top-0 left-0 w-full h-full max-w-none block pointer-events-none mix-blend-screen"
                   />
@@ -291,7 +308,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
           </div>
 
           {/* Physical Scale Overlay */}
-          <PhysicalScaleOverlay scale={transform.scale} />
+          <PhysicalScaleOverlay scale={overlayTransform.scale} />
 
           {/* Bottom Readout */}
           <div className="p-2 bg-[#0B0E14] border-t border-[#2B3547] text-[10px] font-mono tabular-nums text-slate-400 flex justify-between">
@@ -304,7 +321,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
       </div>
 
       {/* Bottom Reticle Telemetry Strip */}
-      <div className="h-8 bg-[#0B0E14] border-t border-[#2B3547] px-4 flex items-center justify-between text-[11px] font-mono tabular-nums text-slate-400">
+      <div className="min-h-8 shrink-0 bg-[#0B0E14] border-t border-[#2B3547] px-3 py-1 flex flex-wrap gap-2 items-center justify-between text-[11px] font-mono tabular-nums text-slate-400">
         <div className="flex items-center space-x-4">
           <span className="flex items-center space-x-1">
             <Crosshair className="w-3 h-3 text-[#3B82F6]" />

@@ -3,13 +3,14 @@ import type { FlowEdge, FlowNode, FlowNodeData, FlowchartPipeline } from '../../
 type FlowNodeType = FlowNode['data']['node_type'];
 type Branch = NonNullable<FlowEdge['isBranch']>;
 
+const operatorTypes: FlowNodeType[] = ['patch_split', 'preprocess'];
 const modelTypes: FlowNodeType[] = ['detection_crop', 'inspection'];
 const resultTypes: FlowNodeType[] = [...modelTypes, 'blob_measure', 'aggregate'];
 
 function allowedPayloads(from: FlowNodeType, to: FlowNodeType): NonNullable<FlowEdge['payload_type']>[] {
-  if (from === 'input' && (modelTypes.includes(to) || to === 'fixed_roi')) return ['image'];
-  if (from === 'fixed_roi' && modelTypes.includes(to)) return ['roi'];
-  if (modelTypes.includes(from) && modelTypes.includes(to)) return ['image', 'roi'];
+  if (from === 'input' && (modelTypes.includes(to) || operatorTypes.includes(to) || to === 'fixed_roi')) return ['image'];
+  if ((from === 'fixed_roi' || operatorTypes.includes(from)) && (modelTypes.includes(to) || operatorTypes.includes(to))) return ['roi'];
+  if (modelTypes.includes(from) && (modelTypes.includes(to) || operatorTypes.includes(to))) return ['image', 'roi'];
   if (modelTypes.includes(from) && ['blob_measure', 'aggregate', 'decision'].includes(to)) return ['result'];
   if (from === 'blob_measure' && (to === 'aggregate' || to === 'decision')) return ['result'];
   if (from === 'aggregate' && to === 'decision') return ['result'];
@@ -37,6 +38,84 @@ function graphParts(pipeline: FlowchartPipeline) {
     outgoing.get(edge.source)?.push(edge);
   }
   return { nodes, incoming, outgoing };
+}
+
+/** Optional layout for editable DAGs, including unconnected draft components. */
+export function layoutFlowchart(pipeline: FlowchartPipeline): FlowchartPipeline {
+  const { nodes, incoming, outgoing } = graphParts(pipeline);
+  if (nodes.size !== pipeline.nodes.length) throw new Error('노드 ID가 중복되어 흐름을 정렬할 수 없습니다.');
+  for (const edge of pipeline.edges) {
+    if (!nodes.has(edge.source) || !nodes.has(edge.target))
+      throw new Error('연결선의 시작 또는 끝 노드를 확인한 뒤 흐름을 정렬하세요.');
+  }
+  const ordinal = new Map(pipeline.nodes.map((node, index) => [node.id, index]));
+  const components: string[][] = [];
+  const seen = new Set<string>();
+  // Keep the image-input component above unfinished, unconnected additions.
+  const seeds = [...pipeline.nodes].sort((a, b) =>
+    Number(b.data.node_type === 'input') - Number(a.data.node_type === 'input'));
+  for (const seed of seeds) {
+    if (seen.has(seed.id)) continue;
+    const component: string[] = [];
+    const pending = [seed.id];
+    seen.add(seed.id);
+    while (pending.length) {
+      const id = pending.shift() as string;
+      component.push(id);
+      const neighbors = [...(incoming.get(id) || []).map((edge) => edge.source),
+        ...(outgoing.get(id) || []).map((edge) => edge.target)];
+      for (const neighbor of neighbors) if (!seen.has(neighbor)) { seen.add(neighbor); pending.push(neighbor); }
+    }
+    components.push(component);
+  }
+  const positions = new Map<string, { x: number; y: number }>();
+  let top = 80;
+  for (const component of components) {
+    const remaining = new Map(component.map((id) => [id, incoming.get(id)?.length || 0]));
+    const rank = new Map(component.map((id) => [id, 0]));
+    const ready = component.filter((id) => !remaining.get(id));
+    let visited = 0;
+    while (ready.length) {
+      const id = ready.shift() as string;
+      visited++;
+      for (const edge of outgoing.get(id) || []) {
+        rank.set(edge.target, Math.max(rank.get(edge.target) || 0, (rank.get(id) || 0) + 1));
+        remaining.set(edge.target, (remaining.get(edge.target) || 0) - 1);
+        if (!remaining.get(edge.target)) ready.push(edge.target);
+      }
+    }
+    if (visited !== component.length) throw new Error('순환 연결을 제거한 뒤 흐름을 정렬하세요.');
+    const layers = new Map<number, string[]>();
+    for (const id of component) {
+      const column = rank.get(id) || 0;
+      layers.set(column, [...(layers.get(column) || []), id]);
+    }
+    const rowCount = Math.max(...[...layers.values()].map((layer) => layer.length));
+    const rows = new Map<string, number>();
+    const parentRow = (id: string) => {
+      const parents = incoming.get(id) || [];
+      return parents.length ? parents.reduce((sum, edge) => sum + (rows.get(edge.source) || 0), 0) / parents.length : 0;
+    };
+    const branchRank = (id: string) => Math.min(...(incoming.get(id) || []).map((edge) =>
+      edge.isBranch === 'pass' || edge.predicate?.operator === 'present' ? 0
+        : edge.isBranch === 'fail' || edge.predicate?.operator === 'absent' ? 2 : edge.isBranch === 'review' ? 3 : 1), 4);
+    for (const [column, layer] of [...layers.entries()].sort(([a], [b]) => a - b)) {
+      layer.sort((a, b) => parentRow(a) - parentRow(b) || branchRank(a) - branchRank(b)
+        || (nodes.get(a)?.position.y || 0) - (nodes.get(b)?.position.y || 0)
+        || (ordinal.get(a) || 0) - (ordinal.get(b) || 0));
+      layer.forEach((id, index) => {
+        const row = (rowCount - layer.length) / 2 + index;
+        rows.set(id, row);
+        positions.set(id, { x: 64 + column * 360, y: top + row * 300 });
+      });
+    }
+    top += rowCount * 300 + 120;
+  }
+  const changed = pipeline.nodes.some((node) => {
+    const position = positions.get(node.id);
+    return position && (position.x !== node.position.x || position.y !== node.position.y);
+  });
+  return changed ? { ...pipeline, nodes: pipeline.nodes.map((node) => ({ ...node, position: positions.get(node.id) as { x: number; y: number } })) } : pipeline;
 }
 
 function firstUnvisitedNode(
@@ -112,6 +191,9 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     const pair = `${edge.source}\0${edge.target}`;
     if (connections.has(pair)) return '같은 노드 사이의 연결선이 중복되었습니다.';
     connections.add(pair);
+    if (edge.predicate && (!modelTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType) || !edge.predicate.class_name.trim() || !['present', 'absent'].includes(edge.predicate.operator) ||
+      !Number.isFinite(edge.predicate.min_confidence ?? 0) || (edge.predicate.min_confidence ?? 0) < 0 || (edge.predicate.min_confidence ?? 0) > 1 ||
+      (edge.isBranch && edge.isBranch !== 'default'))) return '클래스 조건과 신뢰도 범위를 확인하세요.';
     const from = nodes.get(edge.source)?.data.node_type;
     const to = nodes.get(edge.target)?.data.node_type;
     const payloads = allowedPayloads(from as FlowNodeType, to as FlowNodeType);
@@ -136,6 +218,15 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     if (parents.length !== 1 || parents[0].source !== inputId) return `${fixedRoi.data.label}: 원본 이미지 입력 연결선 하나가 필요합니다.`;
     if (!(outgoing.get(fixedRoi.id) || []).length) return `${fixedRoi.data.label}: 검사 모델로 연결하세요.`;
   }
+  for (const node of pipeline.nodes.filter((item) => operatorTypes.includes(item.data.node_type))) {
+    const params = node.data.params || {};
+    if ((incoming.get(node.id) || []).length !== 1 || !(outgoing.get(node.id) || []).length) return `${node.data.label}: 입력 하나와 다음 모델 연결이 필요합니다.`;
+    if (node.data.node_type === 'patch_split') {
+      const width=params.patch_width ?? 224, height=params.patch_height ?? 224, overlap=params.overlap ?? 0;
+      if (![width,height].every((v) => Number.isInteger(v) && v>=16 && v<=8192) || !Number.isInteger(overlap) || overlap<0 || overlap>=Math.min(width,height)) return `${node.data.label}: 패치 크기와 겹침 범위를 확인하세요.`;
+    } else if (!['rotate','align','improve','enhancement'].includes(params.operation || 'rotate')) return `${node.data.label}: 전처리 종류를 확인하세요.`;
+    if (params.operation === 'enhancement' && !node.data.model_job_id) return `${node.data.label}: 영상 개선 모델을 선택하세요.`;
+  }
   for (const node of models) {
     const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
     if (!Number.isFinite(modelThreshold) || modelThreshold < 0 || modelThreshold > 1) {
@@ -147,21 +238,26 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     const parent = incoming.get(node.id) || [];
     if (parent.length !== 1) return `${node.data.label}: 모델 입력 연결선이 정확히 하나 필요합니다.`;
     const parentType = nodes.get(parent[0].source)?.data.node_type;
-    if (parentType !== 'input' && parentType !== 'fixed_roi' && !modelTypes.includes(parentType as FlowNodeType)) {
+    if (parentType !== 'input' && parentType !== 'fixed_roi' && !operatorTypes.includes(parentType as FlowNodeType) && !modelTypes.includes(parentType as FlowNodeType)) {
       return `${node.data.label}: 지원하지 않는 상류 연결입니다.`;
     }
-    if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification'].includes(node.data.task || '')) {
+    if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification', 'ocr', 'rotated_detection'].includes(node.data.task || '')) {
       return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
     }
+    if (node.data.task === 'ocr') {
+      const params=node.data.params || {};
+      if (('expected_text' in params) === ('regex' in params) || typeof (params.expected_text ?? params.regex) !== 'string' || !(params.expected_text || params.regex)) return `${node.data.label}: 기대 문자열 또는 정규식을 입력하세요.`;
+      if (params.regex) { try { new RegExp(params.regex); } catch { return `${node.data.label}: 정규식이 올바르지 않습니다.`; } }
+    }
     const targets = outgoing.get(node.id) || [];
-    if (!targets.length || targets.some((edge) => ![...modelTypes, 'blob_measure', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
+    if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
       return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
     }
   }
   for (const node of blobs) {
     const parents = incoming.get(node.id) || [];
     const source = nodes.get(parents[0]?.source);
-    if (parents.length !== 1 || source?.data.node_type !== 'inspection' || source.data.task !== 'segmentation') {
+    if (parents.length !== 1 || source?.data.node_type !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || '')) {
       return `${node.data.label}: Blob 측정에는 분할 모델 결과 연결선 하나가 필요합니다.`;
     }
     const targets = outgoing.get(node.id) || [];
@@ -275,7 +371,7 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
   const to = target.data.node_type;
   const payloads = allowedPayloads(from, to);
   if (!payloads.length) throw new Error('이 노드 사이의 연결은 지원하지 않습니다.');
-  if (to === 'blob_measure' && (from !== 'inspection' || source.data.task !== 'segmentation')) {
+  if (to === 'blob_measure' && (from !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || ''))) {
     throw new Error('Blob 측정은 분할 모델 결과에만 연결할 수 있습니다.');
   }
   if (to !== 'decision' && to !== 'aggregate' && (incoming.get(targetId)?.length || 0) > 0) throw new Error('대상 노드에는 이미 입력 연결이 있습니다.');
@@ -318,13 +414,13 @@ export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, edgeId: string
   const sourceType = pipeline.nodes.find((node) => node.id === edge?.source)?.data.node_type;
   if (!edge || (!resultTypes.includes(sourceType as FlowNodeType) && sourceType !== 'decision')) throw new Error('결과 또는 판정 연결선만 분기를 바꿀 수 있습니다.');
   if (sourceType !== 'decision') return {
-    ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, isBranch: branch } : item),
+    ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, isBranch: branch, predicate: undefined } : item),
   };
   const previous = edge.isBranch;
   return {
     ...pipeline,
     edges: pipeline.edges.map((item) => {
-      if (item.id === edgeId) return { ...item, isBranch: branch };
+      if (item.id === edgeId) return { ...item, isBranch: branch, predicate: undefined };
       if (item.source === edge.source && item.isBranch === branch) return { ...item, isBranch: previous };
       return item;
     }),

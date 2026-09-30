@@ -73,13 +73,49 @@ def test_train_writes_atomic_status_and_checkpoint_manifest(tmp_path):
     artifacts = json.loads((run / "artifacts.json").read_text())
     assert result["status"] == status["status"] == "completed"
     assert (status["job_id"], status["operation"], status["protocol_version"]) == ("job_test_123", "train", 1)
-    assert (status["current_epoch"], status["total_epochs"], status["train_loss"], status["val_loss"]) == (0, 2, 0.8, 0.6)
+    assert (status["current_epoch"], status["total_epochs"], status["train_loss"], status["val_loss"]) == (1, 2, 0.8, 0.6)
     assert artifacts["input_manifest_sha256"] == snapshot.manifest_sha256
     assert {(item["path"], item["sha256"]) for item in artifacts["artifacts"]} == {
         ("outputs/best_model.pt", hashlib.sha256(b"checkpoint").hexdigest()),
         ("outputs/model_meta.json", hashlib.sha256(b'{"task":"classification"}').hexdigest()),
     }
     assert not list(run.glob("*.tmp"))
+
+
+def test_worker_receives_verified_portable_warmstart_parent(tmp_path):
+    from backend.engine.warm_start import WarmStartParent,portable_parent
+    run,spec,_=_spec(tmp_path)
+    parent_path=tmp_path/'source_parent.pt'
+    torch.save({'task':'classification','backbone':'resnet18','classes':['OK','NG'],
+                'model_state_dict':{'weight':torch.zeros(2,3)}},parent_path)
+    parent=WarmStartParent('job_parent_123',parent_path,hashlib.sha256(parent_path.read_bytes()).hexdigest(),
+                           'classification','classification:resnet18',('OK','NG'),'v1:source')
+    envelope=portable_parent(parent,run)
+    payload=json.loads(spec.read_text());payload['warm_start']=envelope;spec.write_text(json.dumps(payload))
+    observed=[]
+    class WarmTrainer(StubTrainer):
+        def __init__(self,*,warm_start,**kwargs):
+            observed.append(warm_start)
+            super().__init__(**kwargs)
+    assert run_train(spec,trainer_factory=WarmTrainer)['status']=='completed'
+    assert observed[0].lineage()==parent.lineage()
+    assert observed[0].checkpoint_path==run/'parent.pt'
+
+
+def test_worker_rejects_changed_portable_warmstart_before_constructing_trainer(tmp_path):
+    from backend.engine.warm_start import WarmStartParent,portable_parent
+    run,spec,_=_spec(tmp_path)
+    parent_path=tmp_path/'source_parent.pt'
+    torch.save({'task':'classification','backbone':'resnet18','classes':['OK','NG'],
+                'model_state_dict':{'weight':torch.zeros(2,3)}},parent_path)
+    parent=WarmStartParent('job_parent_123',parent_path,hashlib.sha256(parent_path.read_bytes()).hexdigest(),
+                           'classification','classification:resnet18',('OK','NG'),'v1:source')
+    payload=json.loads(spec.read_text());payload['warm_start']=portable_parent(parent,run);spec.write_text(json.dumps(payload))
+    (run/'parent.pt').write_bytes(b'changed')
+    def should_not_construct(**kwargs):pytest.fail('Invalid parent reached trainer')
+    result=run_train(spec,trainer_factory=should_not_construct)
+    assert result['status']=='failed'
+    assert 'hash' in result['error']
 
 
 def test_cli_train_accepts_spec_path_with_stubbed_trainer(tmp_path):

@@ -1,3 +1,4 @@
+import { RuntimeServicePanel } from '../runtime/RuntimeServicePanel';
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { api, type ModelComparisonRecord, type ModelDeploymentAssessment,
@@ -160,5 +161,6 @@ export const ModelDeploymentPanel: React.FC<{ taskOverride?: FlowModelTask }> = 
       {notice && <p role="status" className="mt-3 rounded border border-emerald-700/40 bg-emerald-950/20 p-2 text-emerald-200">{notice}</p>}
       {error && <p role="alert" className="mt-3 rounded border border-rose-700/40 bg-rose-950/20 p-2 text-rose-200">{error}</p>}
     </>}
+    <RuntimeServicePanel projectDir={projectDir} />
   </section>;
 };

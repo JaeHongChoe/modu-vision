@@ -14,6 +14,9 @@ loaded.filename = filename;
 loaded.paths = Module._nodeModulePaths(path.dirname(filename));
 const activationCalls = [];
 loaded.require = (name) => {
+  if (name === '../services/flowDraft') return { flowDraft: {} };
+  if (name === './useProjectStore') return { useProjectStore: { getState: () => ({ project: null }) } };
+  if (name === '../components/flowchart/flowchartStartup') return { getFlowchartModelTask: node => node.data.task || null };
   if (name === '../services/api') return {
     api: { flowchart: {
       getPipelineVersion: async () => ({ id: 'old', name: 'Other revision', nodes: [], edges: [] }),
@@ -36,4 +39,5 @@ test('opening a saved revision activates that version for the selected source be
   assert.equal(opened.name, 'Selected revision');
   assert.equal(useFlowchartStore.getState().pipeline.name, 'Selected revision');
   assert.equal(useFlowchartStore.getState().pipelineDirty, false);
+  assert.equal(useFlowchartStore.getState().pipelineIsDraft, false);
 });

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Download, History, Image as ImageIcon, Play, Save, Square, Layers } from 'lucide-react';
 import { api, getApiBaseUrl, resolveApiUrl, type SavedFlowVersion } from '../../services/api';
+import { flowExecutionOptions, type FlowExecutionChoice } from '../flowchart/flowExecution';
+import { useComputeStore } from '../../stores/useComputeStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -38,6 +40,14 @@ const stateColors: Record<string, string> = {
 let activeBatchOperation = 0;
 
 export const BatchInspectionPanel: React.FC = () => {
+  const executionChoiceOverride = useFlowchartStore(state => state.executionChoiceOverride);
+  const setExecutionChoice = useFlowchartStore(state => state.setExecutionChoice);
+  const { profiles, selectedProfileId, isLoaded: computeLoaded, load: loadCompute } = useComputeStore();
+  const executionChoice = executionChoiceOverride || (selectedProfileId ? 'selected_compute' : 'local_cpu');
+  const executionProfile = profiles.find(profile => profile.id === selectedProfileId);
+  const executionReady = (computeLoaded || executionChoiceOverride !== null)
+    && (executionChoice !== 'selected_compute' || Boolean(executionProfile));
+  useEffect(() => { void loadCompute().catch(() => {}); }, [loadCompute]);
   const task = useProjectStore((state) => state.task);
   const projectDir = useProjectStore((state) => state.projectDir);
   const project = useProjectStore((state) => state.project);
@@ -199,7 +209,10 @@ export const BatchInspectionPanel: React.FC = () => {
   const handleStart = async () => {
     const startedSource = currentBatchSource();
     const startedHistory = currentHistoryContext();
-    if (!isBatchSourceReady(startedSource) || !savedFlow || isRunning) return;
+    if (!isBatchSourceReady(startedSource) || !savedFlow || isRunning || !executionReady || !project) return;
+    const execution = flowExecutionOptions(executionChoice, selectedProfileId);
+    const executionConfig = { execution_target: execution.executionTarget, device: execution.device,
+      compute_profile_id: execution.computeProfileId, project_id: project.id };
     const sourceFolder = startedSource.folderPath;
     const sourceTask = startedSource.task;
     const selectedScope = scope;
@@ -260,7 +273,7 @@ export const BatchInspectionPanel: React.FC = () => {
         run: api.flowchart.run,
         executeRow: api.inspections.executeRow,
         createRun: async (pending, pipeline) => {
-          const created = await api.inspections.createRun(pending, pipeline);
+          const created = await api.inspections.createRun(pending, pipeline, executionConfig);
           pending.saved_version_id = created.saved_version_id;
           pending.pipeline_hash = created.pipeline_hash;
           pending.model_sha256 = created.model_sha256;
@@ -360,10 +373,21 @@ export const BatchInspectionPanel: React.FC = () => {
             <Layers className="w-4 h-4 text-cyan-400" /> 실제 이미지 일괄 검사
           </h3>
           <p className="mt-1 text-xs text-slate-400">
-            5단계에서 저장한 플로우를 선택한 데이터 분할에 순서대로 실행합니다. 원격 모델은 학습한 서버에서 검사하며, 상단 Compute 선택은 새 학습 대상입니다. 이미지별 판정과 중간 노드 기록을 확인하세요.
+            5단계에서 저장한 플로우를 선택한 실행 위치에서 이미지별로 검사합니다. 실행 위치와 모델 원판정, 중간 노드 기록을 함께 보관합니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-slate-300">실행 위치
+            <select aria-label="일괄 검사 실행 위치" value={executionChoice} disabled={isRunning}
+              onChange={event => setExecutionChoice(event.target.value as FlowExecutionChoice)}
+              className="max-w-56 rounded border border-[#364357] bg-[#0B0E14] px-2 py-1.5 text-xs text-white">
+              <option value="selected_compute" disabled={!executionProfile}>선택 서버 · {executionProfile?.name || '서버 미선택'} (CUDA{executionProfile?.gpu_selector ? ` GPU ${executionProfile.gpu_selector}` : ''})</option>
+              <option value="local_cpu">이 컴퓨터 · CPU</option>
+              <option value="local_mps">이 컴퓨터 · Apple MPS</option>
+              <option value="local_cuda">이 컴퓨터 · CUDA</option>
+              <option value="model_compute">모델 학습 서버 · 기존 방식</option>
+            </select>
+          </label>
           <label htmlFor="batch-inspection-scope" className="text-xs text-slate-300">검사 범위</label>
           <select
             id="batch-inspection-scope"
@@ -380,7 +404,7 @@ export const BatchInspectionPanel: React.FC = () => {
           <button
             type="button"
             onClick={handleStart}
-            disabled={!sourceReady || !savedFlow || savedFlowLoading || isRunning}
+            disabled={!sourceReady || !savedFlow || savedFlowLoading || !executionReady || !project || isRunning}
             className="flex items-center gap-1.5 rounded border border-cyan-600 bg-cyan-900/50 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-800/60 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Play className="w-3.5 h-3.5" /> 검사 시작
@@ -467,6 +491,14 @@ export const BatchInspectionPanel: React.FC = () => {
               <strong className="text-xs text-sky-200">선택한 검사 실행의 기록</strong>
               <span className="font-mono text-slate-400" title={report.run_id}>실행 ID {report.run_id.slice(0, 8)}</span>
             </div>
+            {report.execution_config && <p className="mb-2 text-sky-100">
+              실행 위치: {report.execution_config.execution_target === 'model_compute' ? '모델 학습 위치 · 기존 방식'
+                : report.execution_config.execution_target === 'local' ? '이 컴퓨터'
+                : report.execution_config.profile?.name || report.execution_config.compute_profile_name
+                  || report.execution_config.compute_profile_id || '선택 서버'}
+              {report.execution_config.execution_target !== 'model_compute' && ` · ${report.execution_config.device.toUpperCase()}`}
+              {report.execution_config.execution_target === 'model_compute' && ' · 실제 장치는 이미지별 기록에서 확인'}
+            </p>}
             <div className="grid gap-1.5 sm:grid-cols-2">
               <span className="break-all">저장 플로우 버전 <strong className="font-mono text-slate-100">{report.saved_version_id || '이전 기록 · 미기록'}</strong></span>
               <span className="break-all">그래프 SHA-256 <strong className="font-mono text-slate-100" title={report.pipeline_hash}>{report.pipeline_hash || '이전 기록 · 미기록'}</strong></span>
@@ -526,6 +558,11 @@ export const BatchInspectionPanel: React.FC = () => {
                     <span className={`${stateColors[selected.state]}`}>{stateNames[selected.state]}</span>
                   </div>
                   <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>
+                  <button type="button" disabled={isRunning} onClick={() => {
+                    void useProjectStore.getState().openImageForLabeling(selected.image.image_id, selected.image.file_path).then((opened) => {
+                      if (!opened) setError('선택한 이미지의 라벨 화면을 열지 못했습니다. 검사 데이터 출처와 저장 상태를 확인하세요.');
+                    }).catch((cause) => setError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
+                  }} className="rounded border border-cyan-700 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-950 disabled:opacity-40">이 이미지 라벨 수정</button>
                   {selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
                   <div className="flex h-48 items-center justify-center overflow-hidden rounded border border-[#243043] bg-black">
                     {selected.result?.annotated_image || selected.image.thumbnail_url
@@ -541,6 +578,8 @@ export const BatchInspectionPanel: React.FC = () => {
                         <span>ROI {selected.result.roi_count}</span>
                         <span>결함 ROI {selected.result.defective_roi_count}</span>
                         <span>모델 검사 {selected.result.total_latency_ms.toFixed(1)}ms</span>
+                        {selected.result.execution_device && <span>실행 {selected.result.compute_profile_name
+                          || selected.result.compute_profile_id || '이 컴퓨터'} · {selected.result.execution_device}</span>}
                       </div>
                       <div>
                         <h4 className="mb-1 text-xs font-semibold text-slate-200">중간 노드 결과</h4>

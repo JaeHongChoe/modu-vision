@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Crosshair, Loader2, RefreshCw, Square } from 'lucide-react';
 import {
-  api, type RotatedEvaluation, type RotatedJob, type RotatedModelSummary,
-  type RotatedPrediction, type RotatedSampleRow,
+  type RotatedEvaluation, type RotatedJob, type RotatedModelSummary,
+  type RotatedSampleRow,
 } from '../../services/api';
+import { specializedApi, type MultiRotatedSample, type MultiRotatedPrediction } from '../../services/specializedApi';
 import { useProjectStore } from '../../stores/useProjectStore';
 
-function parseRows(text: string): RotatedSampleRow[] {
+function parseRows(text: string): MultiRotatedSample[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   if (!lines.length) throw new Error('회전 박스 정답을 한 줄 이상 입력하세요.');
-  return lines.map((line, index) => {
+  const rows = lines.map((line, index) => {
     const [image, label, coordinates, split, ...extra] = line.split('\t');
     const values = coordinates?.split(',').map((value) => Number(value.trim())) ?? [];
     if (!image?.trim() || !label?.trim() || extra.length || values.length !== 5 ||
@@ -25,12 +26,18 @@ function parseRows(text: string): RotatedSampleRow[] {
       box: { cx, cy, width, height, angle_deg },
     };
   });
+  const groups=new Map<string, MultiRotatedSample>();
+  for (const row of rows) {
+    const existing=groups.get(row.image);
+    if (existing && existing.split!==row.split) throw new Error('같은 이미지의 객체는 같은 분할을 사용해야 합니다.');
+    if (existing) existing.objects!.push({label:row.label!,box:row.box!});
+    else groups.set(row.image,{image:row.image,split:row.split,objects:[{label:row.label!,box:row.box!}]});
+  }
+  return [...groups.values()];
 }
 
-function formatRows(rows: RotatedSampleRow[]): string {
-  return rows.map((row) => `${row.image}\t${row.label}\t${[
-    row.box.cx, row.box.cy, row.box.width, row.box.height, row.box.angle_deg,
-  ].join(',')}\t${row.split}`).join('\n');
+function formatRows(rows: MultiRotatedSample[]): string {
+  return rows.flatMap((row) => (row.objects || [{label:row.label!,box:row.box!}]).map((obj) => `${row.image}\t${obj.label}\t${[obj.box.cx,obj.box.cy,obj.box.width,obj.box.height,obj.box.angle_deg].join(',')}\t${row.split}`)).join('\n');
 }
 
 function errorText(cause: unknown): string {
@@ -49,7 +56,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   const [job, setJob] = useState<RotatedJob | null>(null);
   const [imagePath, setImagePath] = useState('');
   const [evaluation, setEvaluation] = useState<RotatedEvaluation | null>(null);
-  const [prediction, setPrediction] = useState<RotatedPrediction | null>(null);
+  const [prediction, setPrediction] = useState<MultiRotatedPrediction | null>(null);
   const [busy, setBusy] = useState<'manifest' | 'train' | 'cancel' | 'evaluate' | 'predict' | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -64,11 +71,11 @@ export const RotatedDetectionPanel: React.FC = () => {
     setEvaluation(null); setPrediction(null); setNotice(''); setError('');
     if (!projectDir) return;
     let active = true;
-    void api.rotated.models().then(({ models: items }) => {
+    void specializedApi.rotated.models().then(({ models: items }) => {
       if (!active || !sameProject()) return;
       setModels(items); setModelId(items[0]?.job_id || '');
     }).catch((cause) => { if (active && sameProject()) setError(errorText(cause)); });
-    if (datasetPath) void api.rotated.manifest(datasetPath).then((manifest) => {
+    if (datasetPath) void specializedApi.rotated.manifest(datasetPath).then((manifest) => {
       if (!active || !sameProject()) return;
       setRowsText(formatRows(manifest.samples));
       setSampleCount(manifest.sample_count);
@@ -86,11 +93,11 @@ export const RotatedDetectionPanel: React.FC = () => {
     let active = true;
     const check = async () => {
       try {
-        const status = await api.rotated.job(job.job_id);
+        const status = await specializedApi.rotated.job(job.job_id);
         if (!active || !sameProject()) return;
         setJob(status);
         if (status.status === 'completed') {
-          const refreshed = await api.rotated.models();
+          const refreshed = await specializedApi.rotated.models();
           if (!active || !sameProject()) return;
           setModels(refreshed.models); setModelId(status.job_id);
           setNotice(`회전 박스 후보 학습 완료 · ${status.job_id.slice(0, 8)}. 시험 분할 평가와 이미지 확인이 필요합니다.`);
@@ -109,7 +116,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   }, [job?.job_id, job?.status, projectDir, datasetPath]);
 
   const applyManifest = (result: {
-    sample_count: number; split_counts: Record<string, number>; samples: RotatedSampleRow[];
+    sample_count: number; split_counts: Record<string, number>; samples: MultiRotatedSample[];
   }) => {
     setRowsText(formatRows(result.samples));
     setSampleCount(result.sample_count);
@@ -122,7 +129,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || busy) return;
     setBusy('manifest'); setError(''); setNotice('');
     try {
-      const result = await api.rotated.manifest(datasetPath);
+      const result = await specializedApi.rotated.manifest(datasetPath);
       if (!sameProject()) return;
       applyManifest(result);
       setNotice(`${result.sample_count}개 회전 박스와 원본 이미지 해시를 확인했습니다.`);
@@ -132,12 +139,12 @@ export const RotatedDetectionPanel: React.FC = () => {
 
   const saveManifest = async () => {
     if (!datasetPath || busy) return;
-    let rows: RotatedSampleRow[];
+    let rows: MultiRotatedSample[];
     try { rows = parseRows(rowsText); }
     catch (cause) { setError(errorText(cause)); return; }
     setBusy('manifest'); setError(''); setNotice('');
     try {
-      const result = await api.rotated.saveManifest(datasetPath, rows);
+      const result = await specializedApi.rotated.saveManifest(datasetPath, rows);
       if (!sameProject()) return;
       applyManifest(result);
       setNotice(`${result.sample_count}개 회전 박스를 원본 해시와 함께 저장했습니다.`);
@@ -149,11 +156,11 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const started = await api.rotated.train(datasetPath, epochs);
+      const started = await specializedApi.rotated.train(datasetPath, epochs);
       if (!sameProject()) return;
       setJob(started);
       if (started.status === 'completed') {
-        const refreshed = await api.rotated.models();
+        const refreshed = await specializedApi.rotated.models();
         if (!sameProject()) return;
         setModels(refreshed.models); setModelId(started.job_id);
         setNotice(`회전 박스 후보 학습 완료 · ${started.job_id.slice(0, 8)}. 시험 분할 평가와 이미지 확인이 필요합니다.`);
@@ -172,7 +179,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!job || job.status !== 'running' || busy) return;
     setBusy('cancel'); setError('');
     try {
-      const stopped = await api.rotated.cancel(job.job_id);
+      const stopped = await specializedApi.rotated.cancel(job.job_id);
       if (sameProject()) setJob(stopped);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -182,7 +189,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !datasetPath || busy) return;
     setBusy('evaluate'); setError(''); setEvaluation(null);
     try {
-      const result = await api.rotated.evaluate(modelId, datasetPath);
+      const result = await specializedApi.rotated.evaluate(modelId, datasetPath);
       if (sameProject()) setEvaluation(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -192,7 +199,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !imagePath.trim() || busy) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await api.rotated.predict(modelId, imagePath.trim());
+      const result = await specializedApi.rotated.predict(modelId, imagePath.trim());
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -201,10 +208,10 @@ export const RotatedDetectionPanel: React.FC = () => {
   return <details className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-slate-100">
       <Crosshair className="h-4 w-4 text-amber-400" /> 회전 객체 위치 모델
-      <span className="font-normal text-slate-400">한 크롭에 객체 하나 · 방향과 위치 예측</span>
+      <span className="font-normal text-slate-400">다중 객체·클래스 · 방향과 위치 예측</span>
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
-      <p className="leading-5 text-slate-400">원본 이미지의 회전 박스 정답을 지정해 후보 모델을 학습합니다. 여러 객체 검출과 분류, 5단계 플로우 자동 적용은 아직 지원하지 않습니다.</p>
+      <p className="leading-5 text-slate-400">원본 이미지의 회전 박스 정답을 지정해 후보 모델을 학습합니다. 같은 이미지의 객체는 여러 행으로 입력하세요. 완료 후보는 5단계 검사 노드에서 회전 객체 검출 모델로 선택하고 저장할 수 있습니다.</p>
       <div className="rounded border border-[#344255] bg-[#0E1722] px-3 py-2">
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
         <div className="mt-1 break-all font-mono text-slate-200">{datasetPath || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
@@ -259,13 +266,14 @@ export const RotatedDetectionPanel: React.FC = () => {
       {prediction && <div className="grid gap-3 rounded border border-[#344255] bg-[#0E1722] p-3 md:grid-cols-[minmax(0,480px)_1fr]">
         <img src={prediction.preview_data_url} alt="원본 이미지 위에 예측된 회전 박스를 그린 미리보기" className="max-h-[320px] w-full rounded border border-slate-700 object-contain" />
         <div className="space-y-2">
-          <div className="font-semibold text-slate-100">{prediction.label} · {prediction.image_size[0]}×{prediction.image_size[1]} 원본 픽셀</div>
-          <div>중심 ({prediction.box.cx.toFixed(1)}, {prediction.box.cy.toFixed(1)})</div>
-          <div>크기 {prediction.box.width.toFixed(1)} × {prediction.box.height.toFixed(1)} px</div>
-          <div>회전 {prediction.box.angle_deg.toFixed(1)}°</div>
+          <div className="font-semibold text-slate-100">{prediction.label || `${prediction.detections?.length || 0}개 객체`} · {prediction.image_size[0]}×{prediction.image_size[1]} 원본 픽셀</div>
+          {prediction.detections?.map((d,index) => <div key={index}>{d.label} · 신뢰도 {(d.confidence*100).toFixed(1)}% · 회전 {d.box.angle_deg.toFixed(1)}°</div>)}
+          <div>중심 ({prediction.box?.cx.toFixed(1)}, {prediction.box?.cy.toFixed(1)})</div>
+          <div>크기 {prediction.box?.width.toFixed(1)} × {prediction.box?.height.toFixed(1)} px</div>
+          <div>회전 {prediction.box?.angle_deg.toFixed(1)}°</div>
           <div className="break-all font-mono text-[10px] text-slate-500">모델 SHA-256: {prediction.model_sha256}</div>
           <div className="break-all font-mono text-[10px] text-slate-500">이미지 SHA-256: {prediction.source_sha256}</div>
-          <p className="text-slate-400">한 이미지에서 박스 한 개를 예측합니다. 신뢰도 점수와 다중 객체 판정은 제공하지 않습니다.</p>
+          <p className="text-slate-400">원본 좌표의 회전 박스와 클래스·검출 신뢰도를 반환합니다.</p>
         </div>
       </div>}
     </div>

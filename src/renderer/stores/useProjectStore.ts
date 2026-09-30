@@ -5,13 +5,12 @@ import type { BackendStatus } from '../../types/electron';
 import type { ErrorCatalogItem, Language, VisionTask } from '../types';
 import { api, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
 import { useAnnotationStore } from './useAnnotationStore';
+import { datasetWorkflow, workflowError } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
 import { useFlowchartStore } from './useFlowchartStore';
 import { useTrainingStore } from './useTrainingStore';
 import { useInspectionRunStore } from './useInspectionRunStore';
 import { useModelAssistRunStore } from './useModelAssistRunStore';
-import { getFlowchartModelReferences } from '../components/flowchart/flowchartStartup';
-import { projectFlowRecipe } from './projectFlowRecipe';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -115,26 +114,13 @@ async function saveOpenEdits(): Promise<void> {
     if (!pipeline || !project || !source || !datasetReady) {
       throw new Error('플로우의 데이터 출처가 확인되지 않아 프로젝트를 전환할 수 없습니다. 5단계에서 플로우를 확인해 저장하세요.');
     }
-    let references;
-    try {
-      references = getFlowchartModelReferences(pipeline);
-    } catch {
-      throw new Error('플로우 모델 작업 유형을 확인할 수 없습니다. 5단계에서 모델 연결을 수정하세요.');
-    }
-    const modelNodes = pipeline.nodes.filter((node) =>
-      node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop');
-    if (!modelNodes.length || modelNodes.some((node) => !node.data.model_job_id) || references.length !== modelNodes.length) {
-      throw new Error('모든 검사 노드에 완료된 모델을 연결한 뒤 5단계에서 플로우를 저장하세요.');
-    }
-    await api.flowchart.verifyModels({ source_dataset_path: source, models: references });
-    if (useFlowchartStore.getState().pipeline !== pipeline ||
-        useProjectStore.getState().project?.id !== project.id ||
-        useDatasetStore.getState().folderPath !== folderPath) {
-      throw new Error('플로우 또는 데이터가 검증 중 변경되었습니다. 프로젝트 전환을 다시 시도하세요.');
-    }
-    await flow.savePipeline(undefined, projectFlowRecipe(pipeline), source);
+    // Workspace navigation preserves editable graphs independently of strict
+    // executable versions. An unfinished model connection is valid draft work.
+    const draftSaved = await flow.saveDraft();
     const saved = useFlowchartStore.getState();
-    if (saved.pipeline !== pipeline || saved.pipelineDirty || saved.errorMessage || saved.isSaving) {
+    if (!draftSaved || saved.pipeline !== pipeline || saved.pipelineDirty || saved.errorMessage || saved.isSaving
+        || useProjectStore.getState().project?.id !== project.id
+        || useDatasetStore.getState().folderPath !== folderPath) {
       throw new Error(saved.errorMessage || '수정한 플로우의 저장 성공을 확인하지 못해 프로젝트 전환을 중단했습니다.');
     }
   }
@@ -191,13 +177,39 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   openImageForLabeling: async (imageId, filePath) => {
-    const images = useDatasetStore.getState().images;
-    const index = images.findIndex((image) => image.image_id === imageId && image.file_path === filePath);
-    if (index < 0) return false;
-    const opened = await useAnnotationStore.getState().setImages(images, index);
-    if (!opened) return false;
-    await get().setStep(2);
-    return get().activeStep === 2;
+    const startedProject = get().projectDir;
+    const startedTask = get().task;
+    const startedLabelset = get().project?.active_labelset_id || 'default';
+    const dataset = useDatasetStore.getState();
+    const startedSource = dataset.folderPath;
+    const sameContext = () => get().projectDir === startedProject && get().task === startedTask
+      && (get().project?.active_labelset_id || 'default') === startedLabelset
+      && useDatasetStore.getState().folderPath === startedSource;
+    let images = dataset.images;
+    let index = images.findIndex(image => image.image_id === imageId && image.file_path === filePath);
+    try {
+      if (index < 0) {
+        const metadata = await datasetWorkflow.image(filePath);
+        if (!sameContext() || metadata.file_path !== filePath) return false;
+        const fileName = filePath.split(/[\\/]/).pop() || imageId;
+        const exactId = fileName.replace(/\.[^.]+$/, '');
+        if (exactId !== imageId) throw new Error('결과의 이미지 이름과 원본 경로가 일치하지 않습니다.');
+        images = [...images, { image_id: exactId, file_name: fileName, file_path: metadata.file_path,
+          width: metadata.width, height: metadata.height, split: 'train',
+          thumbnail_url: `/api/dataset/thumbnail/${encodeURIComponent(exactId)}?file_path=${encodeURIComponent(filePath)}&size=128` }];
+        index = images.length - 1;
+      }
+      if (!sameContext()) return false;
+      const opened = await useAnnotationStore.getState().setImages(images, index);
+      if (!opened || !sameContext()) return false;
+      // Preserve an exact result selection when its gallery page/filter excludes it.
+      useAnnotationStore.setState({ externalSelectionPath: dataset.images.some(image => image.file_path === filePath) ? null : filePath });
+      await get().setStep(2);
+      return sameContext() && get().activeStep === 2 && useAnnotationStore.getState().currentImage?.file_path === filePath;
+    } catch (error) {
+      if (sameContext()) set({ projectError: workflowError(error) });
+      return false;
+    }
   },
 
   setTask: async (task) => {

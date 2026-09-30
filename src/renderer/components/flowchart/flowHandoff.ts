@@ -21,7 +21,7 @@ export function flowRecipeLabel(
   fallbackTask: SavedFlowVersion['recipe_task'],
 ): string {
   const names: Record<string, string> = {
-    classification: '분류', detection: '검출', segmentation: '분할', anomaly: '이상 탐지',
+    ocr: '문자 인식', rotated_detection: '회전 검출', enhancement: '영상 개선', classification: '분류', detection: '검출', segmentation: '분할', anomaly: '이상 탐지',
   };
   const tasks = [...new Set(pipeline.nodes.flatMap((node) => {
     if (node.data.node_type === 'detection_crop') return ['detection'];
@@ -64,7 +64,7 @@ export async function savedFlowIdentity(
     pipelineHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
   const modelJobIds = [...new Set(pipeline.nodes
-    .filter((node) => node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop')
+    .filter((node) => node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop' || (node.data.node_type === 'preprocess' && node.data.params?.operation === 'enhancement'))
     .map((node) => node.data.model_job_id)
     .filter((jobId): jobId is string => typeof jobId === 'string' && jobId.length > 0))];
   return {

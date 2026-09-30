@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { FileText, Loader2, RefreshCw } from 'lucide-react';
 import { api, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
+import {useSpecializedTraining} from './useSpecializedTraining';
+import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 
 function parseRows(value: string): OCRLabelRow[] {
   const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -23,6 +25,8 @@ function describeError(cause: unknown): string {
 
 export const OCRWorkbench: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
+  const projectSource=useProjectStore(state=>state.project?.source_dataset_dir ?? '');
+  const activeLabelset=useProjectStore(state=>state.project?.active_labelset_id ?? 'default');
   const [datasetPath, setDatasetPath] = useState('');
   const [rowsText, setRowsText] = useState('');
   const [epochs, setEpochs] = useState(20);
@@ -36,8 +40,16 @@ export const OCRWorkbench: React.FC = () => {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<'manifest' | 'train' | 'evaluate' | 'predict' | null>(null);
 
+  const training=useSpecializedTraining('ocr',(completed)=>{
+    void api.ocr.models().then(result=>{
+      if(!sameProject())return;
+      setModels(result.models);setJobId(completed.job_id);setNotice(`학습 완료 · ${completed.job_id.slice(0,8)}. 평가 후 후보를 검토하세요.`);
+    }).catch(cause=>{if(sameProject())setError(cause.message ?? String(cause));});
+  });
+
   useEffect(() => {
-    setModels([]);
+    setBusy(null);setDatasetPath(projectSource);setRowsText('');
+    setManifestCount(null);setModels([]);
     setJobId('');
     setEvaluation(null);
     setPrediction(null);
@@ -49,9 +61,9 @@ export const OCRWorkbench: React.FC = () => {
       setJobId(result.models[0]?.job_id || '');
     }).catch((cause) => { if (active) setError(describeError(cause)); });
     return () => { active = false; };
-  }, [projectDir]);
+  }, [projectDir,projectSource,activeLabelset]);
 
-  const sameProject = () => useProjectStore.getState().projectDir === projectDir;
+  const sameProject = () => {const state=useProjectStore.getState();return state.projectDir===projectDir && (state.project?.source_dataset_dir ?? '')===projectSource && (state.project?.active_labelset_id ?? 'default')===activeLabelset;};
 
   const loadManifest = async () => {
     if (!datasetPath.trim() || !projectDir || busy) return;
@@ -85,12 +97,8 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || busy || !manifestCount) return;
     setBusy('train'); setError(''); setNotice('');
     try {
-      const trained = await api.ocr.train(datasetPath.trim(), epochs);
-      const refreshed = await api.ocr.models();
-      if (!sameProject()) return;
-      setModels(refreshed.models);
-      setJobId(trained.job_id);
-      setNotice(`OCR 후보 학습 완료 · 작업 ${trained.job_id.slice(0, 8)}. 시험 분할 평가 후 직접 검토하세요.`);
+      await training.start(datasetPath.trim(),epochs);
+      if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
@@ -131,28 +139,29 @@ export const OCRWorkbench: React.FC = () => {
           className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || !!busy} className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 정답 읽기</button>
-        <button type="button" onClick={() => void saveManifest()} disabled={!datasetPath || !rowsText.trim() || !!busy} className="rounded border border-cyan-700 bg-cyan-950/40 px-3 py-1.5 text-cyan-200 hover:bg-cyan-900/40 disabled:opacity-40">정답과 이미지 해시 저장</button>
+        <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 정답 읽기</button>
+        <button type="button" onClick={() => void saveManifest()} disabled={!datasetPath || !rowsText.trim() || (!!busy || training.active)} className="rounded border border-cyan-700 bg-cyan-950/40 px-3 py-1.5 text-cyan-200 hover:bg-cyan-900/40 disabled:opacity-40">정답과 이미지 해시 저장</button>
         {manifestCount !== null && <span className="text-emerald-300">검증된 정답 {manifestCount}개</span>}
       </div>
+      <SpecializedTrainingStatus {...training} />
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void train()} disabled={!manifestCount || !!busy} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">OCR 후보 학습</button>
+        <button type="button" onClick={() => void train()} disabled={!manifestCount || (!!busy || training.active)} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">OCR 후보 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select value={jobId} onChange={(event) => setJobId(event.target.value)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
             {models.map((item) => <option key={item.job_id} value={item.job_id}>{item.job_id.slice(0, 12)} · epoch {item.metadata.best_epoch || '?'}</option>)}
           </select>
         </label>
-        <button type="button" onClick={() => void evaluate()} disabled={!jobId || !datasetPath || !!busy} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
+        <button type="button" onClick={() => void evaluate()} disabled={!jobId || !datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
       </div>
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[260px] flex-1">한 장 시험 이미지 경로
           <input value={imagePath} onChange={(event) => setImagePath(event.target.value)} placeholder="/path/to/text-crops/test.png"
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-1.5 font-mono" />
         </label>
-        <button type="button" onClick={() => void predict()} disabled={!jobId || !imagePath || !!busy} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">문자 읽기</button>
+        <button type="button" onClick={() => void predict()} disabled={!jobId || !imagePath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">문자 읽기</button>
       </div>
       {busy && <p role="status" className="text-cyan-300"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{busy === 'train' ? '학습 중' : '처리 중'}…</p>}
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}

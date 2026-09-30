@@ -56,6 +56,17 @@ def _labeled_images(root: Path, *, test: bool = True) -> list[dict[str, str]]:
     return rows
 
 
+def test_training_cancel_reaches_real_batch_boundary_before_export(tmp_path):
+    import threading
+    rows=_labeled_images(tmp_path);write_ocr_manifest(tmp_path,rows)
+    event=threading.Event();progress=[]
+    def cancel_after_batch(values):progress.append(values);event.set()
+    with pytest.raises(InterruptedError,match='cancelled'):
+        train_ocr(tmp_path,tmp_path/'cancelled',epochs=2,batch_size=2,image_size=(32,64),cancel_event=event,on_progress=cancel_after_batch)
+    assert progress[0]['batch']==1 and progress[0]['epoch']==1
+    assert not (tmp_path/'cancelled/best_model.pt').exists()
+
+
 def test_manifest_writer_pins_explicit_text_and_source_hashes(tmp_path: Path):
     rows = _labeled_images(tmp_path)
     manifest = write_ocr_manifest(tmp_path, rows)
@@ -161,3 +172,22 @@ def test_train_evaluate_and_infer_from_source_linked_checkpoint(tmp_path: Path):
     _image(tmp_path, "test_A.png", mark="B")
     with pytest.raises(ValueError, match="SHA-256"):
         evaluate_ocr_checkpoint(checkpoint, tmp_path, split="test", device="cpu")
+
+
+def test_explicit_corrected_label_evaluation_preserves_checkpoint_alphabet(tmp_path):
+    rows = _labeled_images(tmp_path)
+    manifest = write_ocr_manifest(tmp_path, rows)
+    output = tmp_path / "candidate"
+    train_ocr(tmp_path, output, epochs=1, image_size=(32, 24))
+    rows[-1]["text"] = "A"
+    write_ocr_manifest(tmp_path, rows)
+    with pytest.raises(ValueError, match="provenance"):
+        evaluate_ocr_checkpoint(output / "best_model.pt", tmp_path)
+    result = evaluate_ocr_checkpoint(output / "best_model.pt", tmp_path, allow_dataset_revision=True)
+    assert result["training_dataset_sha256"] == manifest.provenance["dataset_sha256"]
+    assert result["dataset_revision_changed"] is True
+    rows[-1]["text"] = "C"
+    rows[0]["text"] = "AC"
+    write_ocr_manifest(tmp_path, rows)
+    with pytest.raises(ValueError, match="alphabet"):
+        evaluate_ocr_checkpoint(output / "best_model.pt", tmp_path, allow_dataset_revision=True)

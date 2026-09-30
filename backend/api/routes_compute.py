@@ -61,3 +61,11 @@ def probe_profile(profile_id: str) -> dict:
     if profile is None:
         raise HTTPException(status_code=404, detail="Compute profile not found")
     return SSHTransport().probe(profile)
+
+
+@router.get("/reservations")
+def reservations():
+    from backend.engine.shared_scheduler import shared_leases
+    import time
+    rows = shared_leases().list()
+    return {"reservations": [{**row, "expired": row["expires"] < time.time(), "requires_reconciliation": bool(row["remote"] and (row["uncertain"] or row["expires"] < time.time()))} for row in rows]}

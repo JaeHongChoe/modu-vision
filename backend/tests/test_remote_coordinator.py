@@ -127,6 +127,27 @@ def test_remote_training_transfers_snapshot_and_registers_verified_local_artifac
     assert journal["source_dataset_path"] == str(source)
 
 
+def test_remote_launch_uploads_hash_bound_warmstart_before_launch(tmp_path,monkeypatch):
+    import torch
+    from backend.engine.warm_start import WarmStartParent,restore_portable_parent
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'user_data'))
+    _,output,profile,record=_setup(tmp_path)
+    parent=tmp_path/'parent.pt'
+    torch.save({'task':'segmentation','classes':['background','defect'],'preset':'fast',
+                'model_state_dict':{'weight':torch.zeros(2,3)}},parent)
+    record.warm_start=WarmStartParent('job_parent_123',parent,_digest(parent.read_bytes()),'segmentation',
+                                     'segmentation:fast',('background','defect'),'v1:parent')
+    class WarmRemote(FakeRemote):
+        def launch(self,profile,argv,run_id):
+            remote_run=self.root/'runs'/run_id
+            spec=json.loads((remote_run/'spec.json').read_text())
+            transferred=restore_portable_parent(remote_run,spec['warm_start'],'segmentation')
+            assert transferred.lineage()==record.warm_start.lineage()
+            return super().launch(profile,argv,run_id)
+    result=run_remote_training(record,profile,transport=WarmRemote(Path(profile.remote_root)))
+    assert result['status']=='completed'
+
+
 def test_remote_preparation_is_journaled_before_local_work_starts(tmp_path, monkeypatch):
     monkeypatch.setenv("VISION_AI_STUDIO_USER_DATA_DIR", str(tmp_path / "user_data"))
     _, output, profile, record = _setup(tmp_path)

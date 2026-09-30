@@ -35,6 +35,7 @@ def test_ocr_api_requires_labels_and_scopes_models_to_project(tmp_path: Path):
     project_a = client.post("/api/project/create", json={"name": "OCR A"}).json()
     root = tmp_path / "labeled"
     rows = _dataset(root)
+    assert client.put("/api/project/update",json={"source_dataset_dir":str(root)}).status_code==200
 
     missing = client.post("/api/ocr/train", json={"dataset_path": str(root), "epochs": 1})
     assert missing.status_code == 422
@@ -54,6 +55,9 @@ def test_ocr_api_requires_labels_and_scopes_models_to_project(tmp_path: Path):
     assert trained.status_code == 200, trained.text
     job_id = trained.json()["job_id"]
     assert (Path(project_a["models_dir"]) / "ocr" / job_id / "best_model.pt").is_file()
+    import json
+    meta=json.loads((Path(project_a["models_dir"])/"ocr"/job_id/"model_meta.json").read_text())
+    assert meta["training_provenance"]["dataset_version_id"]
     assert [item["job_id"] for item in client.get("/api/ocr/models").json()["models"]] == [job_id]
 
     evaluated = client.post("/api/ocr/evaluate", json={
@@ -61,6 +65,8 @@ def test_ocr_api_requires_labels_and_scopes_models_to_project(tmp_path: Path):
     })
     assert evaluated.status_code == 200, evaluated.text
     assert evaluated.json()["sample_count"] == 2
+    assert evaluated.json()["evaluation_id"]
+    assert evaluated.json()["binding"]["checkpoint_sha256"]
     predicted = client.post("/api/ocr/predict", json={
         "job_id": job_id, "image_path": str(root / "images/val_A.png"),
     })
@@ -80,6 +86,7 @@ def test_ocr_api_rejects_duplicate_content_across_splits(tmp_path: Path):
     client.post("/api/project/create", json={"name": "OCR"})
     root = tmp_path / "labeled"
     rows = _dataset(root)
+    assert client.put("/api/project/update",json={"source_dataset_dir":str(root)}).status_code==200
     (root / "images/val_A.png").write_bytes((root / "images/train_A.png").read_bytes())
 
     response = client.post("/api/ocr/manifest", json={"dataset_path": str(root), "samples": rows})

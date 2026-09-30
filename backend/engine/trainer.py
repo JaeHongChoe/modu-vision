@@ -250,6 +250,11 @@ def _build_detection_datasets(
     dataset_path: Path, train_transform: Optional[Callable], image_size: Tuple[int, int],
 ) -> Tuple[DetectionDataset, DetectionDataset]:
     """Build both COCO partitions with one foreground class index."""
+    from backend.engine.grouped_dataset_views import load_manifest_dataset
+    grouped_train = load_manifest_dataset("detection", dataset_path, "train", train_transform, image_size)
+    if grouped_train is not None:
+        grouped_val = load_manifest_dataset("detection", dataset_path, "val", image_size=image_size, class_names=list(grouped_train.categories.values()))
+        return grouped_train, grouped_val
     train_img = (dataset_path / "images" / "train") if (dataset_path / "images" / "train").exists() else (dataset_path / "images")
     val_img = (dataset_path / "images" / "val") if (dataset_path / "images" / "val").exists() else train_img
     train_anno = (dataset_path / "annotations_train.json") if (dataset_path / "annotations_train.json").exists() else (dataset_path / "annotations.json")
@@ -381,15 +386,25 @@ class UnifiedAutoMLTrainer:
                 train_mask = (self.dataset_path / "masks" / "train") if (self.dataset_path / "masks" / "train").exists() else (self.dataset_path / "masks")
                 val_mask = (self.dataset_path / "masks" / "val") if (self.dataset_path / "masks" / "val").exists() else train_mask
 
-                train_ds = SegmentationDataset(images_dir=train_img, masks_dir=train_mask, transform=aug, image_size=optimal_size)
-                val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=optimal_size)
-                classes = ["background", "defect"]
+                from backend.engine.grouped_dataset_views import load_manifest_dataset
+                train_ds = load_manifest_dataset("segmentation", self.dataset_path, "train", aug, optimal_size)
+                if train_ds is not None:
+                    classes = train_ds.classes
+                    val_ds = load_manifest_dataset("segmentation", self.dataset_path, "val", image_size=optimal_size, class_names=classes)
+                else:
+                    train_ds = SegmentationDataset(images_dir=train_img, masks_dir=train_mask, transform=aug, image_size=optimal_size)
+                    val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=optimal_size)
+                    classes = ["background", "defect"]
                 model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key).to(self.device)
                 criterion = ComboLoss(num_classes=len(classes), dice_weight=1.0)
 
             elif self.task in ("anomaly", "anomaly_detection"):
-                train_ds = AnomalyDataset(root_dir=self.dataset_path, split="train", transform=aug, image_size=optimal_size)
-                val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
+                from backend.engine.grouped_dataset_views import load_manifest_dataset
+                train_ds = load_manifest_dataset("anomaly", self.dataset_path, "train", aug, optimal_size)
+                val_ds = load_manifest_dataset("anomaly", self.dataset_path, "val", image_size=optimal_size)
+                if train_ds is None:
+                    train_ds = AnomalyDataset(root_dir=self.dataset_path, split="train", transform=aug, image_size=optimal_size)
+                    val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
                 classes = ["good", "anomaly"]
                 if "patchcore" in self.config.backbone_anomaly:
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device)
@@ -428,20 +443,14 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_training_aborted(0, "Training aborted by user request")
                     return {"status": "aborted", "epoch": 0}
 
-                val_scores = []
-                val_labels = []
-                with torch.no_grad():
-                    for imgs, labels, masks in val_loader:
-                        if self._abort_flag.is_set():
-                            clear_device_cache(self.device)
-                            self.callback.on_training_aborted(0, "Training aborted by user request")
-                            return {"status": "aborted", "epoch": 0}
-                        imgs = imgs.to(self.device)
-                        _, scores = model(imgs)
-                        val_scores.extend(scores.cpu().tolist())
-                        val_labels.extend(labels.cpu().tolist())
-
-                anom_metrics = compute_anomaly_metrics(val_scores, val_labels)
+                from backend.engine.anomaly.evaluation import evaluate_anomaly_dataset
+                try:
+                    anom_metrics = evaluate_anomaly_dataset(model, val_ds, device=self.device, cancellation_requested=self._abort_flag.is_set)
+                except AnomalyFitCancelled:
+                    clear_device_cache(self.device)
+                    self.callback.on_training_aborted(0, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": 0}
+                self._anomaly_validation_metrics = anom_metrics
                 auroc = float(anom_metrics.get("image_auroc", 1.0))
                 val_metric = round(1.0 - auroc, 4)
                 self.callback.on_epoch_end(
@@ -450,7 +459,7 @@ class UnifiedAutoMLTrainer:
                     train_loss=0.0,
                     val_loss=val_metric,
                     lr=0.0,
-                    metrics={"image_auroc": auroc, "f1_score": float(anom_metrics.get("f1_score", 1.0))},
+                    metrics=anom_metrics,
                 )
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)
@@ -651,6 +660,7 @@ class UnifiedAutoMLTrainer:
             meta["features"] = [64, 128, 256, 512] if self.preset_key == "precision" else [32, 64, 128, 256]
         elif self.task in ("anomaly", "anomaly_detection"):
             meta["detector_type"] = "patchcore" if "patchcore" in self.config.backbone_anomaly else "padim"
+            meta["validation"] = getattr(self,"_anomaly_validation_metrics",{})
 
         if self.warm_start is not None:
             meta["warm_start"] = self.warm_start.lineage()
@@ -896,7 +906,7 @@ def infer(
         latency = (time.time() - start_time) * 1000.0
         return InferenceResult(
             task="anomaly",
-            predictions={"is_anomaly": is_anomaly, "anomaly_score": score, "threshold": effective_threshold},
+            predictions={"is_anomaly": is_anomaly, "anomaly_score": score, "threshold": effective_threshold, "anomaly_map": anom_map.tolist(), "mask": (anom_map >= effective_threshold).astype(np.uint8).tolist()},
             confidence_score=score,
             visual_overlay=overlay,
             latency_ms=round(latency, 2),

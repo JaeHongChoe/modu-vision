@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Images, Loader2, RefreshCw } from 'lucide-react';
 import { api, type DefectGANCandidate, type DefectGANCropRow, type DefectGANModelSummary } from '../../services/api';
+import { specializedApi } from '../../services/specializedApi';
+import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import {useSpecializedTraining} from './useSpecializedTraining';
+import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 
 function parseCrops(value: string): DefectGANCropRow[] {
   const lines = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -29,6 +33,8 @@ function errorText(cause: unknown): string {
 
 export const DefectGANWorkbench: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
+  const projectSource=useProjectStore(state=>state.project?.source_dataset_dir ?? '');
+  const activeLabelset=useProjectStore(state=>state.project?.active_labelset_id ?? 'default');
   const [datasetPath, setDatasetPath] = useState('');
   const [rowsText, setRowsText] = useState('');
   const [sampleCount, setSampleCount] = useState<number | null>(null);
@@ -38,13 +44,28 @@ export const DefectGANWorkbench: React.FC = () => {
   const [models, setModels] = useState<DefectGANModelSummary[]>([]);
   const [jobId, setJobId] = useState('');
   const [candidates, setCandidates] = useState<DefectGANCandidate[]>([]);
+  const [ganEvaluation,setGanEvaluation] = useState<{real_sample_count:number;generated_count:number;rgb_statistics_mmd:number;metric_backend:string;quality_status:string}|null>(null);
+  const [generationPackage,setGenerationPackage] = useState('');
+  const [adoptedPath,setAdoptedPath] = useState('');
+  const [reviewer,setReviewer] = useState('');
+  const [reviewReason,setReviewReason] = useState('');
+  const [reviewLabel,setReviewLabel] = useState('');
+  const [decisions,setDecisions] = useState<Record<string,'adopt'|'reject'>>({});
   const [reviewDir, setReviewDir] = useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState<'manifest' | 'train' | 'generate' | null>(null);
+  const [busy, setBusy] = useState<'manifest' | 'train' | 'generate' | 'adopt' | 'evaluate' | 'export' | null>(null);
+
+  const training=useSpecializedTraining('defect-gan',(completed)=>{
+    void api.defectGAN.models().then(result=>{
+      if(!sameProject())return;
+      setModels(result.models);setJobId(completed.job_id);setNotice(`학습 완료 · ${completed.job_id.slice(0,8)}. 평가 후 후보를 검토하세요.`);
+    }).catch(cause=>{if(sameProject())setError(cause.message ?? String(cause));});
+  });
 
   useEffect(() => {
-    setDatasetPath(''); setRowsText(''); setSampleCount(null);
+    setBusy(null);setDatasetPath(projectSource);setRowsText('');
+    setGenerationPackage('');setGanEvaluation(null);setAdoptedPath('');setDecisions({});setReviewer('');setReviewReason('');setReviewLabel('');setDatasetPath(projectSource); setRowsText(''); setSampleCount(null);
     setModels([]); setJobId(''); setCandidates([]); setReviewDir(''); setNotice(''); setError('');
     if (!projectDir) return;
     let active = true;
@@ -53,9 +74,9 @@ export const DefectGANWorkbench: React.FC = () => {
       setModels(items); setJobId(items[0]?.job_id || '');
     }).catch((cause) => { if (active) setError(errorText(cause)); });
     return () => { active = false; };
-  }, [projectDir]);
+  }, [projectDir,projectSource,activeLabelset]);
 
-  const sameProject = () => useProjectStore.getState().projectDir === projectDir;
+  const sameProject = () => {const state=useProjectStore.getState();return state.projectDir===projectDir && (state.project?.source_dataset_dir ?? '')===projectSource && (state.project?.active_labelset_id ?? 'default')===activeLabelset;};
   const loadManifest = async () => {
     if (!datasetPath.trim() || !projectDir || busy) return;
     setBusy('manifest'); setError(''); setNotice('');
@@ -85,11 +106,8 @@ export const DefectGANWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || !sampleCount || busy) return;
     setBusy('train'); setError(''); setNotice(''); setCandidates([]);
     try {
-      const result = await api.defectGAN.train(datasetPath.trim(), epochs);
-      const refreshed = await api.defectGAN.models();
-      if (!sameProject()) return;
-      setModels(refreshed.models); setJobId(result.job_id);
-      setNotice(`생성 후보 모델 학습 완료 · ${result.job_id.slice(0, 8)}. 생성한 이미지는 별도로 검토해야 합니다.`);
+      await training.start(datasetPath.trim(),epochs);
+      if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
@@ -105,6 +123,18 @@ export const DefectGANWorkbench: React.FC = () => {
     finally { if (sameProject()) setBusy(null); }
   };
 
+  const openLastReview = async () => { setError('');try { const history=await specializedApi.ganReviews();const latest=history.reviews.find((r) => r.job_id===jobId);if(!latest)throw new Error('저장된 생성 후보가 없습니다.');const result=await specializedApi.openGANReview(latest.job_id,latest.review_id);if(sameProject()){setReviewDir(result.review_dir);setCandidates(result.candidates);setDecisions({});setAdoptedPath('');} } catch(cause){if(sameProject())setError(errorText(cause));} };
+  const evaluateGAN = async () => { setBusy('evaluate');setError('');try {const result=await specializedApi.evaluateGAN(jobId,datasetPath);if(sameProject())setGanEvaluation(result);} catch(cause){if(sameProject())setError(errorText(cause));}finally{if(sameProject())setBusy(null);} };
+  const exportGAN = async () => { setBusy('export');setError('');try {const result=await specializedApi.exportGAN(jobId);if(sameProject())setGenerationPackage(result.package_path);} catch(cause){if(sameProject())setError(errorText(cause));}finally{if(sameProject())setBusy(null);} };
+  const adopt = async () => {
+    setBusy('adopt');setError('');
+    try {
+      const result=await specializedApi.adopt(jobId,reviewDir,Object.entries(decisions).map(([candidate_id,decision]) => ({candidate_id,decision,label:decision==='adopt'?reviewLabel:undefined,reviewer,reason:reviewReason})));
+      if (!sameProject()) return;
+      setAdoptedPath(result.dataset_path);setNotice(`검토 채택 ${result.adopted_count}장과 원본 ${result.real_image_count}장으로 학습 데이터가 준비되었습니다.`);setCandidates([]);
+    } catch(cause) { if(sameProject()) setError(errorText(cause)); }
+    finally { if(sameProject()) setBusy(null); }
+  };
   return <details className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-slate-100">
       <Images className="h-4 w-4 text-violet-400" /> 결함 이미지 생성 실험 <span className="font-normal text-slate-400">학습된 GAN · 검토 대기 후보</span>
@@ -121,14 +151,15 @@ export const DefectGANWorkbench: React.FC = () => {
           className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || !!busy} className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 영역 읽기</button>
-        <button type="button" onClick={() => void saveManifest()} disabled={!datasetPath || !rowsText.trim() || !!busy} className="rounded border border-violet-700 bg-violet-950/40 px-3 py-1.5 text-violet-200 hover:bg-violet-900/40 disabled:opacity-40">영역과 원본 해시 저장</button>
+        <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 영역 읽기</button>
+        <button type="button" onClick={() => void saveManifest()} disabled={!datasetPath || !rowsText.trim() || (!!busy || training.active)} className="rounded border border-violet-700 bg-violet-950/40 px-3 py-1.5 text-violet-200 hover:bg-violet-900/40 disabled:opacity-40">영역과 원본 해시 저장</button>
         {sampleCount !== null && <span className="text-emerald-300">검증된 영역 {sampleCount}개</span>}
       </div>
+      <SpecializedTrainingStatus {...training} />
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void train()} disabled={!sampleCount || !!busy} className="rounded bg-violet-700 px-3 py-2 font-semibold hover:bg-violet-600 disabled:opacity-40">생성 모델 학습</button>
+        <button type="button" onClick={() => void train()} disabled={!sampleCount || (!!busy || training.active)} className="rounded bg-violet-700 px-3 py-2 font-semibold hover:bg-violet-600 disabled:opacity-40">생성 모델 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select value={jobId} onChange={(event) => { setJobId(event.target.value); setCandidates([]); }} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
@@ -139,8 +170,11 @@ export const DefectGANWorkbench: React.FC = () => {
           className="mt-1 block w-16 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
         <label>생성 시드<input type="number" min="0" value={seed} onChange={(event) => setSeed(Math.max(0, Number(event.target.value) || 0))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void generate()} disabled={!jobId || !!busy} className="rounded border border-violet-600 px-3 py-2 text-violet-200 hover:bg-violet-950 disabled:opacity-40">후보 생성</button>
+        <button type="button" onClick={() => void generate()} disabled={!jobId || (!!busy || training.active)} className="rounded border border-violet-600 px-3 py-2 text-violet-200 hover:bg-violet-950 disabled:opacity-40">후보 생성</button>
       </div>
+      <div className="flex gap-2"><button disabled={!jobId || (!!busy || training.active)} onClick={() => void openLastReview()} className="rounded border border-violet-600 px-3 py-2 disabled:opacity-40">저장된 생성 후보 열기</button><button disabled={!jobId || !datasetPath || (!!busy || training.active)} onClick={() => void evaluateGAN()} className="rounded border border-violet-600 px-3 py-2 disabled:opacity-40">시험 크롭 생성 분포 비교</button><button disabled={!jobId || (!!busy || training.active)} onClick={() => void exportGAN()} className="rounded border border-violet-600 px-3 py-2 disabled:opacity-40">생성·검토 작업 패키지 내보내기</button></div>
+      {ganEvaluation && <p className="text-slate-300">원본 시험 크롭 {ganEvaluation.real_sample_count}개 · 생성 {ganEvaluation.generated_count}개 · RGB 통계 MMD {ganEvaluation.rgb_statistics_mmd.toFixed(4)}<span className="block text-slate-500">색상 평균·편차의 분포 비교 자료입니다. 결함 형태의 품질 승인은 별도 검토가 필요합니다.</span></p>}
+      {generationPackage && <p className="break-all rounded border border-violet-800 p-2">생성 작업 패키지: {generationPackage}<span className="block text-slate-500">generate.py에서 체크섬 검증 후 후보를 생성합니다. 검토 전에는 학습 데이터에 편입되지 않습니다.</span></p>}
       {busy && <p role="status" className="text-violet-300"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{busy === 'train' ? 'GAN 학습 중' : '처리 중'}…</p>}
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
@@ -149,11 +183,16 @@ export const DefectGANWorkbench: React.FC = () => {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">
           {candidates.map((candidate) => <div key={candidate.id} className="rounded border border-slate-700 bg-[#141D2B] p-1.5">
             <img src={candidate.preview_data_url} alt={`결함 생성 후보 ${candidate.id}`} className="aspect-square w-full rounded object-contain" />
-            <div className="mt-1 truncate font-mono text-[10px] text-slate-400" title={candidate.path}>{candidate.id}</div>
+            <select aria-label={`후보 ${candidate.id} 검토`} disabled={candidate.status!=='synthetic_unreviewed'} value={decisions[candidate.id] || ''} onChange={(e) => setDecisions({...decisions,[candidate.id]:e.target.value as 'adopt'|'reject'})} className="w-full rounded bg-slate-800 p-1"><option value="">검토 대기</option><option value="adopt">학습 채택</option><option value="reject">반려</option></select>
+            <div className="mt-1 truncate font-mono text-[10px] text-slate-400" title={candidate.path}>{candidate.id} · {candidate.status}</div>
           </div>)}
         </div>
+        <div className="grid grid-cols-2 gap-2"><input aria-label="검토자" placeholder="검토자" value={reviewer} onChange={(e) => setReviewer(e.target.value)} className="rounded bg-slate-800 p-2" /><input aria-label="채택 결함 클래스" placeholder="기존 결함 클래스 이름" value={reviewLabel} onChange={(e) => setReviewLabel(e.target.value)} className="rounded bg-slate-800 p-2" /><input aria-label="채택 검토 이유" placeholder="검토 이유" value={reviewReason} onChange={(e) => setReviewReason(e.target.value)} className="col-span-2 rounded bg-slate-800 p-2" /></div>
+        <p className="text-slate-400">분류 프로젝트에서 검토한 결함 크롭을 학습 데이터로 채택합니다. 원본 검증·시험 이미지는 복사하고 생성 이미지는 학습 분할에만 추가합니다.</p>
+        <button disabled={(!!busy || training.active) || !reviewer.trim() || reviewReason.trim().length<2 || !Object.keys(decisions).length || useProjectStore.getState().task!=='classification'} onClick={() => void adopt()} className="rounded bg-violet-700 px-3 py-2 disabled:opacity-40">검토 저장·학습 데이터 준비</button>
         <p className="break-all font-mono text-[10px] text-slate-400">검토 폴더: {reviewDir}</p>
       </div>}
+      {adoptedPath && <div className="rounded border border-emerald-700 p-2"><p className="break-all">{adoptedPath}</p><button onClick={() => void useDatasetStore.getState().importFolder(adoptedPath,'classification').then(() => useProjectStore.getState().setStep(3))} className="mt-2 rounded bg-emerald-700 px-3 py-2">채택 데이터로 학습 준비</button></div>}
     </div>
   </details>;
 };

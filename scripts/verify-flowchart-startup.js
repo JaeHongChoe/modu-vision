@@ -15,6 +15,20 @@ loaded.paths = Module._nodeModulePaths(path.dirname(filename));
 loaded._compile(compiled, filename);
 const { pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } = loaded.exports;
 
+test('model-node schema counts enhancement preprocessing even before model binding', () => {
+  const { getFlowchartModelTask, getFlowchartModelReferences } = loaded.exports;
+  const nodes = [
+    { data: { node_type: 'preprocess', params: { operation: 'enhancement' }, model_job_id: 'job_enhance' } },
+    { data: { node_type: 'inspection', task: 'segmentation', model_job_id: 'job_segment' } },
+    { data: { node_type: 'preprocess', params: { operation: 'rotate' } } },
+  ];
+  assert.deepEqual(nodes.map(getFlowchartModelTask), ['enhancement', 'segmentation', null]);
+  assert.equal(getFlowchartModelTask({ data: { node_type: 'preprocess', params: { operation: 'enhancement' } } }), 'enhancement');
+  assert.deepEqual(getFlowchartModelReferences({ nodes }), [
+    { job_id: 'job_enhance', task: 'enhancement' }, { job_id: 'job_segment', task: 'segmentation' },
+  ]);
+});
+
 test('a recipe change rejects the previous inspection draft', () => {
   const classification = {
     nodes: [{ data: { node_type: 'inspection', task: 'classification' } }],

@@ -5,6 +5,8 @@ const path = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 
+global.localStorage = { getItem: () => null, setItem: () => {} };
+
 const imageA = { image_id: 'a', file_name: 'a.jpg', file_path: '/test/a.jpg' };
 const imageB = { image_id: 'b', file_name: 'b.jpg', file_path: '/test/b.jpg' };
 const annotation = { id: 'ann-a', type: 'polygon', label: 'Bow', polygon: [[1, 1], [2, 1], [2, 2]] };
@@ -15,6 +17,7 @@ const mockApi = {
     autoSelect: async () => ({ result: { polygon: [[1, 1], [2, 1], [2, 2]], bbox: [1, 1, 2, 2] } }),
   },
   project: { update: async () => ({}), getCurrent: async () => null },
+  imageMetadata: async (filePath) => ({ image_uuid:'uuid-external', file_path:filePath, width:30, height:20, revision:1 }),
 };
 const datasetState = { images: [imageA, imageB], annotationsChanged: async () => {} };
 
@@ -28,10 +31,14 @@ function loadStore(relativePath, overrides = {}) {
   storeModule.paths = Module._nodeModulePaths(path.dirname(filePath));
   const originalRequire = storeModule.require.bind(storeModule);
   storeModule.require = (specifier) => {
+    if (specifier === '../services/datasetWorkflow') return { datasetWorkflow: { annotations: (...args) => mockApi.annotations.get(...args), saveAnnotations: (...args) => mockApi.annotations.save(...args), image: (...args) => mockApi.imageMetadata(...args) }, workflowError: e => e.message || String(e) };
     if (specifier === '../services/api') return { api: mockApi, getApiBaseUrl: () => '' };
     if (specifier === './useDatasetStore') {
       return { useDatasetStore: { getState: () => datasetState } };
     }
+    if (['./useFlowchartStore','./useTrainingStore','./useInspectionRunStore','./useModelAssistRunStore'].includes(specifier)) return { [specifier.slice(2)]: { getState: () => ({}) } };
+    if (specifier === '../components/flowchart/flowchartStartup') return { getFlowchartModelReferences: () => [] };
+    if (specifier === './projectFlowRecipe') return { projectFlowRecipe: () => null };
     if (specifier === '../components/labeling/convertedAnnotation') {
       return { applyConvertedShape: () => null };
     }
@@ -307,4 +314,28 @@ test('auto selection retains edits made while the request was running', async ()
   assert.equal(await selecting, true);
   assert.equal(useAnnotationStore.getState().annotations.length, 2);
   assert.equal(useAnnotationStore.getState().annotations[0].id, 'ann-a');
+});
+
+// A result can refer to an image hidden by the gallery's current page/filter.
+test('error-image navigation loads exact source absent from visible gallery', async () => {
+  resetToDirtyImage(); useAnnotationStore.setState({ isDirty:false });
+  const { useProjectStore } = loadStore('../src/renderer/stores/useProjectStore.ts', { './useAnnotationStore':{useAnnotationStore} });
+  useProjectStore.setState({ activeStep:4, projectDir:'/project', task:'detection' });
+  assert.equal(await useProjectStore.getState().openImageForLabeling('hidden', '/test/hidden.png'),true);
+  assert.equal(useAnnotationStore.getState().currentImage.file_path,'/test/hidden.png');
+  assert.equal(useProjectStore.getState().activeStep,2);
+});
+
+test('pending exact-image navigation cannot activate an image after labelset switches', async () => {
+  resetToDirtyImage(); useAnnotationStore.setState({ isDirty:false });
+  const { useProjectStore } = loadStore('../src/renderer/stores/useProjectStore.ts', { './useAnnotationStore':{useAnnotationStore} });
+  useProjectStore.setState({ activeStep:4, projectDir:'/project', task:'detection', project:{ active_labelset_id:'old' } });
+  let finishMetadata;
+  mockApi.imageMetadata = filePath => new Promise(resolve => { finishMetadata=() => resolve({ file_path:filePath,width:30,height:20 }); });
+  const pending = useProjectStore.getState().openImageForLabeling('hidden','/test/hidden.png');
+  useProjectStore.setState({ project:{ active_labelset_id:'new' } });
+  finishMetadata();
+  assert.equal(await pending,false);
+  assert.equal(useProjectStore.getState().activeStep,4);
+  assert.equal(useAnnotationStore.getState().currentImage.file_path,imageA.file_path);
 });

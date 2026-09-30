@@ -4,7 +4,7 @@
  */
 
 export type VisionTask = 'classification' | 'detection' | 'segmentation' | 'anomaly';
-export type FlowModelTask = VisionTask | 'patch_classification';
+export type FlowModelTask = VisionTask | 'patch_classification' | 'ocr' | 'rotated_detection' | 'enhancement';
 export type TaskType = VisionTask;
 export type TrainingPreset = 'fast' | 'precision';
 export type Language = 'ko' | 'en';
@@ -211,7 +211,7 @@ export interface NodePort {
 
 export interface FlowNodeData {
   label: string;
-  node_type: 'input' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'decision' | 'output';
+  node_type: 'input' | 'fixed_roi' | 'patch_split' | 'preprocess' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
@@ -240,6 +240,7 @@ export interface FlowEdge {
   label?: string;
   isBranch?: 'pass' | 'fail' | 'review' | 'default';
   payload_type?: 'image' | 'roi' | 'result';
+  predicate?: { kind: 'class'; operator: 'present' | 'absent'; class_name: string; min_confidence?: number } | null;
 }
 
 export interface FlowchartPipeline {
@@ -260,6 +261,12 @@ export interface FlowchartCrop {
   crop_thumbnail: string;
   flaw_type: string;
   confidence?: number;
+  recognized_text?: string;
+  predicted_class?: string;
+  polygon?: number[][];
+  mask?: string;
+  anomaly_map?: string;
+  source_transform?: number[][];
   defect_area_px?: number;
   blob_count?: number;
   largest_blob_area_px?: number;
@@ -277,6 +284,7 @@ export interface FlowchartExecutionStep {
   branch_verdict?: 'OK' | 'NG' | 'REVIEW' | null;
   selected_edge_ids?: string[];
   skip_reason?: string | null;
+  artifacts?: Array<{ roi_id: string; bbox: number[]; image: string; mask?: string; source_transform?: number[][]; image_size?: number[]; evidence?: Record<string, unknown> }>;
 }
 
 export interface FlowchartExecutionResult {
@@ -297,6 +305,10 @@ export interface FlowchartExecutionResult {
   image_id?: string;
   routed_output_node_id?: string;
   error_message?: string;
+  execution_target?: 'local' | 'selected_compute' | 'model_compute';
+  execution_device?: string;
+  compute_profile_id?: string | null;
+  compute_profile_name?: string;
 }
 
 export interface SelectedInspectionImage {

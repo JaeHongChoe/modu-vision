@@ -94,6 +94,7 @@ class FakeAdditionalRemote(FakeRemote):
                 "annotated_image": "outputs/preview.png", "image_path": spec["image_path"],
                 "image_sha256": spec["image_sha256"],
                 "model_job_ids": sorted(row["job_id"] for row in spec["models"]),
+                "execution_device": spec.get("device", "cpu"), "device_name": "CPU",
                 "crops": [{"roi_id": "r1", "crop_thumbnail": "outputs/crops/crop_000.png"}],
                 "execution_steps": [], "total_latency_ms": 1,
             }).encode()

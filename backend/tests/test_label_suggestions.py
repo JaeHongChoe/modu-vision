@@ -115,7 +115,7 @@ def test_generate_persists_pending_proposal_and_never_edits_labels(suggestion_wo
     assert proposal["image_sha256"] == hashlib.sha256(image.read_bytes()).hexdigest()
     assert proposal["checkpoint_sha256"] == hashlib.sha256(checkpoint.read_bytes()).hexdigest()
     assert labelme.read_bytes() == original
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
     assert (Path(project["project_dir"]) / "label_suggestions" / f"{proposal['id']}.json").is_file()
     assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["id"] == proposal["id"]
     assert len(client.get("/api/label-suggestions", params={"image_path": str(image)}).json()["suggestions"]) == 1
@@ -142,7 +142,8 @@ def test_accept_selected_candidate_snapshots_first_and_preserves_labelme(suggest
     assert client.post(f"/api/label-suggestions/{proposal['id']}/review", json={"decision": "accept", "candidate_ids": [chosen]}).status_code == 409
     version = client.get(f"/api/dataset/versions/{reviewed.json()['backup_version_id']}").json()
     assert version["kind"] == "auto_backup"
-    assert not any(row["origin"] == "studio" for row in version["files"])
+    assert not any(row["origin"] == "studio" and not row["relative_path"].startswith("metadata/") for row in version["files"])
+    assert any(row["relative_path"] == "metadata/workflow.json" for row in version["files"])
     assert Path(project["project_dir"]).is_dir()
 
 
@@ -156,7 +157,7 @@ def test_reject_keeps_source_and_overlay_unmodified(suggestion_workspace):
     assert reviewed.status_code == 200
     assert reviewed.json()["status"] == "rejected"
     assert labelme.read_bytes() == original
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
 
 
 def test_changed_image_or_checkpoint_blocks_accept_without_edit(suggestion_workspace):
@@ -169,7 +170,7 @@ def test_changed_image_or_checkpoint_blocks_accept_without_edit(suggestion_works
         "decision": "accept", "candidate_ids": [proposal["candidates"][0]["id"]],
     })
     assert rejected.status_code == 409
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
     assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "pending"
 
 
@@ -195,7 +196,7 @@ def test_changed_other_image_label_blocks_accept_without_edit(suggestion_workspa
     assert rejected.status_code == 409, rejected.text
     assert "fingerprint" in rejected.json()["detail"]
     assert labelme.read_bytes() == original_labelme
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
     assert client.get(f"/api/label-suggestions/{proposal['id']}").json()["status"] == "pending"
 
 
@@ -281,7 +282,7 @@ def test_bulk_proposals_persist_per_image_outcomes_without_auto_accept(suggestio
     proposal_id = batch["entries"][0]["proposal_id"]
     assert client.get(f"/api/label-suggestions/{proposal_id}").json()["status"] == "pending"
     assert labelme.read_bytes() == labelme_before
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
     assert any(item["id"] == batch["id"] for item in client.get("/api/label-suggestions/batches").json()["batches"])
     assert (Path(project["project_dir"]) / "label_suggestions" / "batches" / f"{batch['id']}.json").is_file()
 
@@ -418,7 +419,7 @@ def test_changed_training_fingerprint_blocks_new_single_and_bulk_proposals(sugge
     })
     assert single.status_code == 409, single.text
     assert bulk.status_code == 409, bulk.text
-    assert not studio.exists()
+    assert not list(studio.glob("*.json"))  # Identity ledger can exist without editable labels.
 
 
 def test_pending_batch_proposals_remain_reviewable_after_first_accept(suggestion_workspace, monkeypatch):

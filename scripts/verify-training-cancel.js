@@ -6,6 +6,8 @@ const test = require('node:test');
 const ts = require('typescript');
 
 const mockApi = {
+  project: { getCurrent: async () => ({ id: 'project-A', project_dir: '/projectA', active_labelset_id: 'default', task: 'segmentation', source_dataset_dir: '/test/data' }) },
+  flowchart: { modelCatalog: async () => ({ models: [] }) },
   training: {
     start: async () => ({ job_id: 'test-job' }),
     stop: async () => ({ status: 'stopping' }),
@@ -14,6 +16,7 @@ const mockApi = {
 };
 const datasetState = { isSplitting: false };
 const computeState = {
+  profiles: [],
   isLoaded: true,
   selectedProfileId: null,
   loadError: null,
@@ -39,6 +42,24 @@ storeModule.require = (specifier) => specifier === '../services/api'
     : originalRequire(specifier);
 storeModule._compile(compiled, storePath);
 const store = storeModule.exports.useTrainingStore;
+
+test('polling restores complete remote epoch curves without duplicate points', async () => {
+  store.setState({ jobId: 'remote-curve', jobComputeProfileId: 'gpu', isCurrentData: true, lossHistory: [] });
+  mockApi.training.getStatus = async () => ({ job_id: 'remote-curve', compute_profile_id: 'gpu', status: 'completed',
+    loss_history: [{ epoch: 1, train_loss: .8, val_loss: .9 }, { epoch: 2, train_loss: .6, val_loss: .7 }] });
+  await store.getState().refreshCurrentJob();
+  await store.getState().refreshCurrentJob();
+  assert.deepEqual(store.getState().lossHistory.map(p => p.epoch), [1, 2]);
+  assert.equal(store.getState().lossHistory[1].trainLoss, .6);
+});
+
+test('failed polled jobs show the concrete worker error', async () => {
+  store.setState({ jobId: 'failed-remote', jobComputeProfileId: 'gpu', isCurrentData: true });
+  mockApi.training.getStatus = async () => ({ job_id: 'failed-remote', compute_profile_id: 'gpu', status: 'failed',
+    error: { message: 'Server Python syntax error' } });
+  await store.getState().refreshCurrentJob();
+  assert.match(store.getState().startError, /Python syntax/);
+});
 
 test('cancel waits for the worker status before reporting aborted', async () => {
   let pollCount = 0;
@@ -159,9 +180,83 @@ test('renderer reload recovers an active backend job and exposes its Stop action
   assert.equal(store.getState().status, 'idle');
 });
 
+const recoverySource = { projectId: 'project-A', projectDir: '/projectA', labelsetId: 'default', folderPath: '/test/data', task: 'segmentation' };
+function readyRecoverySource() {
+  Object.assign(datasetState, { folderPath: '/test/data', datasetKey: '/test/data\0segmentation', isLoading: false });
+  mockApi.project.getCurrent = async () => ({ id: 'project-A', project_dir: '/projectA', active_labelset_id: 'default', task: 'segmentation', source_dataset_dir: '/test/data' });
+  store.getState().resetTraining();
+}
+
+test('restart restores verified same-task completed job and its recorded curves without evaluation', async () => {
+  readyRecoverySource();
+  const calls = [];
+  mockApi.flowchart.modelCatalog = async (folder) => {
+    assert.equal(folder, '/test/data');
+    return { models: [{ job_id: 'newer-detection', task: 'detection' }, { job_id: 'completed-seg', task: 'segmentation', source_dataset_path: '/test/data' }] };
+  };
+  mockApi.training.getStatus = async (jobId) => {
+    calls.push(jobId);
+    return jobId ? { job_id: 'completed-seg', task: 'segmentation', status: 'completed', current_epoch: 2, total_epochs: 5,
+      current_train_loss: .4, current_val_loss: .5, best_metric: .8, compute_profile_id: 'gpu',
+      loss_history: [{ epoch: 1, train_loss: .6, val_loss: .7 }, { epoch: 2, train_loss: .4, val_loss: .5 }] } : { status: 'idle' };
+  };
+  await store.getState().recoverActiveJob(recoverySource);
+  assert.equal(store.getState().jobId, 'completed-seg');
+  assert.equal(store.getState().status, 'completed');
+  assert.equal(store.getState().isTraining, false);
+  assert.equal(store.getState().currentEpoch, 2);
+  assert.deepEqual(store.getState().lossHistory.map(p => [p.epoch, p.trainLoss, p.valLoss]), [[1, .6, .7], [2, .4, .5]]);
+  assert.deepEqual(calls, [undefined, 'completed-seg']);
+});
+
+test('completed recovery rejects stale A-to-B-to-A context while its status is pending', async () => {
+  readyRecoverySource();
+  let finish;
+  mockApi.flowchart.modelCatalog = async () => ({ models: [{ job_id: 'old-seg', task: 'segmentation' }] });
+  mockApi.training.getStatus = async (jobId) => jobId ? new Promise(resolve => { finish = resolve; }) : { status: 'idle' };
+  const recovering = store.getState().recoverActiveJob(recoverySource);
+  for (let i = 0; i < 20 && !finish; i++) await Promise.resolve();
+  assert.equal(typeof finish, 'function');
+  store.getState().invalidateForDataChange();
+  finish({ job_id: 'old-seg', task: 'segmentation', status: 'completed', loss_history: [{ epoch: 1, train_loss: .1, val_loss: .2 }] });
+  await recovering;
+  assert.equal(store.getState().jobId, null);
+  assert.deepEqual(store.getState().lossHistory, []);
+});
+
+test('completed recovery rejects changed labelset and mismatched status task', async () => {
+  for (const damage of ['labelset', 'task']) {
+    readyRecoverySource();
+    mockApi.flowchart.modelCatalog = async () => ({ models: [{ job_id: 'seg', task: 'segmentation' }] });
+    let projectReads = 0;
+    mockApi.project.getCurrent = async () => ({ id: 'project-A', project_dir: '/projectA', active_labelset_id: damage === 'labelset' && ++projectReads > 1 ? 'other' : 'default', task: 'segmentation', source_dataset_dir: '/test/data' });
+    mockApi.training.getStatus = async (jobId) => jobId ? { job_id: 'seg', status: 'completed', task: damage === 'task' ? 'detection' : 'segmentation' } : { status: 'idle' };
+    await store.getState().recoverActiveJob(recoverySource);
+    assert.equal(store.getState().jobId, null);
+  }
+});
+
+test('a new training start owns state while completed recovery status is pending', async () => {
+  readyRecoverySource();
+  let finish;
+  mockApi.flowchart.modelCatalog = async () => ({ models: [{ job_id: 'old-seg', task: 'segmentation' }] });
+  mockApi.training.getStatus = async (jobId) => jobId ? new Promise(resolve => { finish = resolve; }) : { status: 'idle' };
+  const recovering = store.getState().recoverActiveJob(recoverySource);
+  for (let i = 0; i < 20 && !finish; i++) await Promise.resolve();
+  assert.equal(typeof finish, 'function');
+  mockApi.training.start = async () => ({ job_id: 'new-seg' });
+  await store.getState().startTraining('/test/data', 'segmentation');
+  finish({ job_id: 'old-seg', task: 'segmentation', status: 'completed', loss_history: [{ epoch: 1, train_loss: .1, val_loss: .2 }] });
+  await recovering;
+  assert.equal(store.getState().jobId, 'new-seg');
+  assert.equal(store.getState().status, 'running');
+  assert.equal(store.getState().isRecoveringTraining, false);
+  assert.deepEqual(store.getState().lossHistory, []);
+});
+
 test('Step 3 checks backend activity before enabling Start', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/training/TrainingController.tsx'), 'utf8');
-  assert.match(source, /void recoverActiveJob\(\)/);
+  assert.match(source, /void recoverActiveJob\(/);
   assert.match(source, /!isRecoveringTraining && !importError/);
 });
 

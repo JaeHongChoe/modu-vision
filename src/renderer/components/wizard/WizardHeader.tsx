@@ -31,11 +31,13 @@ import { useComputeStore } from '../../stores/useComputeStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { ComputeServerPanel } from '../compute/ComputeServerPanel';
 import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
+import { ProvenancePanel } from '../common/ProvenancePanel';
 import type { VisionTask } from '../../types';
 
 export const WizardHeader: React.FC = () => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
+  const [showProvenance, setShowProvenance] = useState(false);
   const {
     activeStep,
     setStep,
@@ -229,6 +231,7 @@ export const WizardHeader: React.FC = () => {
             </span>
           </div>
 
+          <button type="button" onClick={() => setShowProvenance(true)} className="rounded border border-[#364357] px-2.5 py-1 text-slate-200 hover:bg-[#263246]">데이터·판정 이력</button>
           {/* Industrial Bilingual Switcher */}
           <button
             type="button"
@@ -359,6 +362,7 @@ export const WizardHeader: React.FC = () => {
       </div>
       {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
       {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
+      {showProvenance && <ProvenancePanel onClose={() => setShowProvenance(false)} />}
     </header>
   );
 };

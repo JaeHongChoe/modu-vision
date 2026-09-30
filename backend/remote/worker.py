@@ -78,6 +78,7 @@ class _StatusWriter:
             "total_steps": 0,
             "train_loss": None,
             "val_loss": None,
+            "loss_history": [],
             "best_metric": None,
             "device": None,
             "error": None,
@@ -103,13 +104,16 @@ class _TrainingStatusCallback:
         self.writer.update(total_epochs=int(config.get("epochs") or 0), device=config.get("device"))
 
     def on_step_end(self, step: int, total_steps: int, current_loss: float, epoch: int) -> None:
-        self.writer.update(current_epoch=epoch, current_step=step, total_steps=total_steps,
+        self.writer.update(current_epoch=epoch + 1, current_step=step + 1, total_steps=total_steps,
                            train_loss=current_loss)
 
     def on_epoch_end(self, epoch: int, total_epochs: int, train_loss: float, val_loss: float,
                      lr: float, metrics: dict[str, float]) -> None:
-        self.writer.update(current_epoch=epoch, total_epochs=total_epochs,
-                           train_loss=train_loss, val_loss=val_loss)
+        history = [row for row in self.writer._payload["loss_history"] if row["epoch"] != epoch + 1]
+        history.append({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss, "lr": lr})
+        self.writer.update(current_epoch=epoch + 1, total_epochs=total_epochs,
+                           train_loss=train_loss, val_loss=val_loss,
+                           metrics=metrics, loss_history=history[-500:])
 
     def on_hardware_stats(self, stats: dict[str, Any]) -> None:
         self.writer.update(device_type=stats.get("device_type"), gpu_name=stats.get("gpu_name"))
@@ -120,7 +124,9 @@ class _TrainingStatusCallback:
         self.writer.update(best_metric=best_metric, duration_seconds=duration_seconds)
 
     def on_training_aborted(self, epoch: int, reason: str) -> None:
-        self.writer.update(current_epoch=epoch, status="stopping")
+        # Keep the last displayed progress: the trainer's abort epoch is zero
+        # based and can also be zero when cancelled during preparation.
+        self.writer.update(status="stopping")
 
     def on_error(self, error: Exception, stage: str) -> None:
         self.writer.update(error=f"{stage}: {error}")
@@ -313,10 +319,14 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
 
             trainer_factory = UnifiedAutoMLTrainer
         callback = _TrainingStatusCallback(status)
+        warm_start_args = {}
+        if spec.get("warm_start"):
+            from backend.engine.warm_start import restore_portable_parent
+            warm_start_args["warm_start"] = restore_portable_parent(run_dir, spec["warm_start"], spec["task"])
         trainer = trainer_factory(
             task=spec["task"], dataset_path=snapshot.data_path, output_dir=output_dir,
             preset=spec.get("preset", "fast"), device=spec.get("device"), callback=callback,
-            config_overrides=spec["config_overrides"],
+            config_overrides=spec["config_overrides"], **warm_start_args,
         )
         if cancel_path.exists():
             trainer.abort()
@@ -339,6 +349,8 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
             return status.update(status="aborted")
         if result.get("status") != "completed":
             raise RuntimeError(f"Trainer returned non-completed status: {result.get('status')}")
+        from backend.engine.training_provenance import persist_model_binding
+        persist_model_binding(output_dir, spec.get("dataset_binding"))
         manifest = _artifact_manifest(run_dir, spec)
         if cancel_path.exists():
             return status.update(status="aborted")
@@ -614,10 +626,18 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
 
 def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: Any) -> dict[str, dict[str, Any]]:
     from backend.engine.flowchart_engine import ordered_linear_nodes
+    from backend.engine.specialized_models import flow_model_task,valid_flow_job,FLOW_TASKS
 
     references = spec.get("models")
-    if not isinstance(references, list) or not 1 <= len(references) <= 8:
-        raise ValueError("Flowchart models must be a nonempty list of up to eight training jobs")
+    portable=spec.get('portable_models') is True
+    if 'portable_models' in spec and type(spec['portable_models']) is not bool:
+        raise ValueError('Invalid portable model mode')
+    if not isinstance(references, list) or not 1 <= len(references) <= (24 if portable else 8):
+        raise ValueError("Flowchart model references exceed the supported bound")
+    if portable:
+        binding=hashlib.sha256(json.dumps(references,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        if binding!=spec['input_manifest_sha256']:
+            raise SnapshotValidationError('Portable checkpoint bundle identity differs')
     by_id: dict[str, dict[str, Any]] = {}
     for reference in references:
         if not isinstance(reference, dict):
@@ -625,21 +645,22 @@ def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: An
         job_id = reference.get("job_id")
         task = reference.get("task")
         digest = reference.get("input_manifest_sha256")
-        if (not isinstance(job_id, str) or not re.fullmatch(r"job_[A-Za-z0-9][A-Za-z0-9_-]{0,119}", job_id)
-                or task not in _TASKS or not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest)
-                or job_id in by_id):
+        valid = (valid_flow_job(job_id,task) and task in FLOW_TASKS) if portable else (
+            isinstance(job_id,str) and re.fullmatch(r"job_[A-Za-z0-9][A-Za-z0-9_-]{0,119}",job_id)
+            and task in _TASKS and isinstance(digest,str) and _SHA256_RE.fullmatch(digest))
+        if not valid or job_id in by_id:
             raise ValueError("Invalid or duplicate flowchart model reference")
         by_id[job_id] = reference
     primary = by_id.get(spec["job_id"])
-    if primary is None or primary["input_manifest_sha256"] != spec["input_manifest_sha256"]:
+    if not portable and (primary is None or primary["input_manifest_sha256"] != spec["input_manifest_sha256"]):
         raise SnapshotValidationError("Primary flowchart model does not match source snapshot")
     needed: dict[str, str] = {}
     for node in ordered_linear_nodes(pipeline):
-        if node.data.node_type not in ("detection_crop", "inspection"):
+        node_task=flow_model_task(node)
+        if node_task is None:
             continue
         node_job = node.data.model_job_id
-        node_task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if not node_job or node_task not in _TASKS:
+        if not node_job or node_task not in (FLOW_TASKS if portable else _TASKS):
             raise ValueError("Flowchart node is missing a model job or task")
         if node_job in needed and needed[node_job] != node_task:
             raise ValueError("Flowchart model job has conflicting tasks")
@@ -647,11 +668,33 @@ def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: An
     if set(needed) != set(by_id):
         raise SnapshotValidationError("Flowchart pipeline models differ from verified model references")
     checkpoints = {}
+    total_size=0
     for job_id, task in needed.items():
         reference = by_id[job_id]
         if reference["task"] != task:
             raise SnapshotValidationError(f"Flowchart model task mismatch: {job_id}")
-        _, _, checkpoint, metadata = _source_training_run(run_dir, reference)
+        if portable:
+            assets={}
+            for name,limit in (('checkpoint',512*1024*1024),('metadata',4*1024*1024)):
+                relative=reference.get(name+'_path')
+                expected=f"inputs/models/{job_id}/{'best_model.pt' if name=='checkpoint' else 'model_meta.json'}"
+                if relative!=expected:raise SnapshotValidationError('Portable model asset path is invalid')
+                path=_run_relative_file(run_dir,relative,'portable model asset')
+                if any(run_dir.joinpath(*PurePosixPath(relative).parts[:index]).is_symlink() for index in range(1,len(PurePosixPath(relative).parts)+1)) or not path.is_file():
+                    raise SnapshotValidationError('Portable model asset is missing or linked')
+                size,digest=_sha256_file(path);total_size+=size
+                if (not 0<size<=limit or type(reference.get(name+'_size')) is not int or size!=reference[name+'_size']
+                        or digest!=reference.get(name+'_sha256') or total_size>2*1024*1024*1024):
+                    raise SnapshotValidationError('Portable model asset hash, size or transfer bound differs')
+                assets[name]=path
+            checkpoint=assets['checkpoint'];metadata=json.loads(assets['metadata'].read_text())
+            import torch
+            payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
+            if (not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(payload.get('model_state_dict'),dict)
+                    or not isinstance(metadata,dict) or metadata.get('checkpoint_sha256',reference['checkpoint_sha256'])!=reference['checkpoint_sha256']):
+                raise SnapshotValidationError('Portable checkpoint task or metadata hash differs')
+        else:
+            _, _, checkpoint, metadata = _source_training_run(run_dir, reference)
         if metadata.get("task") != task:
             raise SnapshotValidationError(f"Flowchart source model task mismatch: {job_id}")
         checkpoints[job_id] = {"task": task, "checkpoint": checkpoint}
@@ -685,7 +728,7 @@ def _png_data_url_bytes(value: Any, field_name: str) -> bytes:
 
 
 def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str, Any]], str | None], Any] | None = None) -> dict[str, Any]:
-    """Inspect the exact uploaded image with model jobs bound to one server."""
+    """Inspect the exact uploaded image with verified model assets."""
     spec_path = Path(spec_path).absolute()
     run_dir = spec_path.parent
     started = _start_operation(spec_path, "flowchart_run")
@@ -701,9 +744,16 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         image = _selected_image(run_dir, spec)
+        if image.stat().st_size>64*1024*1024:raise ValueError('Inspection image exceeds transfer limit')
         checkpoints = _verified_flowchart_models(run_dir, spec, pipeline)
+        if spec.get('portable_models'):
+            from backend.engine.runtime_device import resolve_runtime_device
+            actual_device=resolve_runtime_device(spec.get('device'))
+        else:
+            from backend.engine.device import get_device
+            actual_device=get_device(spec.get('device'))
         status.update(status="running")
-        engine = (engine_factory or _flowchart_engine)(checkpoints, spec.get("device"))
+        engine = (engine_factory or _flowchart_engine)(checkpoints, str(actual_device))
         result = engine.execute(pipeline=pipeline, image_path=str(image),
                                 image_id=spec.get("image_id") or image.stem)
         if (run_dir / "cancel").exists():
@@ -714,6 +764,11 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
         payload["image_path"] = spec["image_path"]
         payload["image_sha256"] = spec["image_sha256"]
         payload["model_job_ids"] = sorted(checkpoints)
+        payload['execution_device']=str(actual_device)
+        if actual_device.type=='cuda':
+            import torch
+            payload['device_name']=torch.cuda.get_device_name(actual_device)
+        else:payload['device_name']='CPU' if actual_device.type=='cpu' else 'Metal GPU'
         preview = _png_data_url_bytes(payload.get("annotated_image"), "preview")
         _atomic_bytes(run_dir / "outputs" / "preview.png", preview)
         payload["annotated_image"] = "outputs/preview.png"
@@ -730,11 +785,7 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
             files.append(path)
         _atomic_json(run_dir / "outputs" / "flowchart_result.json", payload)
         manifest = _operation_artifact_manifest(run_dir, spec, "flowchart_run", tuple(files))
-        manifest["model_refs"] = [
-            {"job_id": job_id, "task": reference["task"],
-             "input_manifest_sha256": next(row["input_manifest_sha256"] for row in spec["models"] if row["job_id"] == job_id)}
-            for job_id, reference in sorted(checkpoints.items())
-        ]
+        manifest["model_refs"] = sorted(spec['models'],key=lambda row:row['job_id'])
         manifest["selected_image_sha256"] = spec["image_sha256"]
         _atomic_json(run_dir / "artifacts.json", manifest)
         return status.update(status="completed")

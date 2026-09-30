@@ -25,6 +25,14 @@ router = APIRouter(prefix="/api/model-deployments", tags=["model-deployments"])
 _REPORT_ID = re.compile(r"comparison_[0-9a-f]{32}\Z")
 _REVISION_ID = re.compile(r"[0-9a-f]{32}\Z")
 _MIN_EACH_CLASS = 8
+DeploymentTask = Literal["classification", "patch_classification", "detection", "segmentation", "anomaly", "ocr", "rotated_detection", "enhancement"]
+
+
+def _approval_scope(request, source_dataset_path, task):
+    if task in ("ocr", "rotated_detection", "enhancement"):
+        from backend.api.routes_evaluation_history import history_scope
+        return history_scope(request, source_dataset_path, task)
+    return _scope(request, source_dataset_path, task)
 
 
 class ApprovalRequest(BaseModel):
@@ -46,7 +54,7 @@ class ApprovalRequest(BaseModel):
 
 class RollbackRequest(BaseModel):
     source_dataset_path: str
-    task: Task
+    task: DeploymentTask
     target_revision_id: str
     reviewer: str = Field(min_length=1, max_length=100)
     reason: str = Field(min_length=8, max_length=2000)
@@ -267,8 +275,8 @@ def assess_comparison(comparison_id: str, source_dataset_path: str, task: Task, 
 
 
 @router.get("/active")
-def get_active_approval(source_dataset_path: str, task: Task, request: Request):
-    project, source = _scope(request, source_dataset_path, task)
+def get_active_approval(source_dataset_path: str, task: DeploymentTask, request: Request):
+    project, source = _approval_scope(request, source_dataset_path, task)
     with _store(project) as conn:
         active = _active(conn, source, task)
     if active:
@@ -277,8 +285,8 @@ def get_active_approval(source_dataset_path: str, task: Task, request: Request):
 
 
 @router.get("/history")
-def get_approval_history(source_dataset_path: str, task: Task, request: Request):
-    project, source = _scope(request, source_dataset_path, task)
+def get_approval_history(source_dataset_path: str, task: DeploymentTask, request: Request):
+    project, source = _approval_scope(request, source_dataset_path, task)
     with _store(project) as conn:
         active = _active(conn, source, task)
         rows = conn.execute(
@@ -321,7 +329,7 @@ def approve_candidate(payload: ApprovalRequest, request: Request):
 
 @router.post("/rollback")
 def rollback_approval(payload: RollbackRequest, request: Request):
-    project, source = _scope(request, payload.source_dataset_path, payload.task)
+    project, source = _approval_scope(request, payload.source_dataset_path, payload.task)
     if not _REVISION_ID.fullmatch(payload.target_revision_id):
         raise HTTPException(status_code=422, detail="Invalid deployment revision ID.")
     with _store(project) as conn:
@@ -362,7 +370,7 @@ def verified_approval_revision(
     project: dict[str, Any], revision_id: str, *, expected_task: Task | None = None,
 ) -> dict[str, Any] | None:
     """Resolve approved weights by revision for a mixed-task package release."""
-    if not _REVISION_ID.fullmatch(revision_id):
+    if not isinstance(revision_id, str) or not _REVISION_ID.fullmatch(revision_id):
         return None
     with _store(project) as conn:
         row = conn.execute("SELECT * FROM revisions WHERE revision_id = ?", (revision_id,)).fetchone()
@@ -373,9 +381,18 @@ def verified_approval_revision(
     model = _model(project, source, row["task"], row["job_id"])
     if model is None or _sha256(Path(model["checkpoint_path"])) != row["checkpoint_sha256"]:
         return None
-    report_path = _report_dir(project) / f"{row['comparison_id']}.json"
+    if row["comparison_id"].startswith("evaluation_"):
+        report_path = Path(project["reports_dir"]) / "evaluations" / f"{row['comparison_id']}.json"
+    else:
+        report_path = _report_dir(project) / f"{row['comparison_id']}.json"
     if report_path.is_symlink() or not report_path.is_file() or _sha256(report_path) != row["comparison_sha256"]:
         return None
+    if row["comparison_id"].startswith("evaluation_"):
+        try:
+            from backend.engine.evaluation_history import EvaluationHistory,verify_specialized_evaluation_inputs
+            evidence=EvaluationHistory(report_path.parent).get(row['comparison_id'])
+            verify_specialized_evaluation_inputs(project,source,row['task'],evidence['binding'])
+        except (ValueError,OSError,KeyError,TypeError):return None
     return dict(row)
 
 
@@ -399,3 +416,79 @@ def verified_release_revision(
         "revision_id": revision_id, "job_id": job_id, "task": task,
         "checkpoint_sha256": revision["checkpoint_sha256"],
     }
+
+
+class SpecializedApprovalRequest(BaseModel):
+    source_dataset_path: str
+    task: Literal["ocr", "rotated_detection", "enhancement"]
+    evaluation_id: str
+    incumbent_evaluation_id: str | None = None
+    reviewer: str = Field(min_length=1, max_length=100)
+    reason: str = Field(min_length=8, max_length=2000)
+    holdout_reviewed: Literal[True]
+    minimum_sample_count: int = Field(default=8, ge=1, le=1000000)
+    minimum_metrics: dict[str, float] = Field(default_factory=dict)
+    maximum_metrics: dict[str, float] = Field(default_factory=dict)
+
+
+@router.post("/specialized-approve")
+def approve_specialized(payload: SpecializedApprovalRequest, request: Request):
+    from backend.api.routes_evaluation_history import history_scope, history_store
+    import math
+    project, source = history_scope(request, payload.source_dataset_path, payload.task)
+    if not payload.reviewer.strip() or len(payload.reason.strip()) < 8: raise HTTPException(422, "Reviewer and evidence reason are required")
+    allowed = {"ocr": {"exact_match_accuracy", "character_error_rate"},
+               "rotated_detection": {"precision", "recall", "mean_oriented_iou", "mean_angle_error_deg"},
+               "enhancement": {"output_mse", "output_psnr"}}[payload.task]
+    if not payload.minimum_metrics and not payload.maximum_metrics: raise HTTPException(422, "Explicit family quality bounds are required")
+    if any(key not in allowed or not math.isfinite(value) for key, value in {**payload.minimum_metrics, **payload.maximum_metrics}.items()): raise HTTPException(422, "Invalid family quality metric bounds")
+    try: record = history_store(project).get(payload.evaluation_id)
+    except (OSError, ValueError) as exc: raise HTTPException(409, str(exc)) from exc
+    result, binding = record["result"], record["binding"]
+    if result.get("task") != payload.task or binding.get("source_dataset_path") != str(source) or binding.get("dataset_fingerprint") != _fingerprint(source): raise HTTPException(409, "Evaluation is not bound to the active source and family")
+    try:
+        from backend.engine.evaluation_history import verify_specialized_evaluation_inputs
+        verify_specialized_evaluation_inputs(project,source,payload.task,binding)
+    except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
+    if result.get("split") != "test" or type(result.get("sample_count")) is not int or result["sample_count"] < payload.minimum_sample_count:
+        raise HTTPException(409, "Approval requires an independently reviewed test holdout meeting the requested sample count")
+    if payload.task == "ocr" and (len(result.get("samples", [])) != result["sample_count"] or any(not isinstance(row.get("reference_text"), str) for row in result["samples"])):
+        raise HTTPException(409, "OCR approval needs actual held-out text labels for every sample")
+    if payload.task == "enhancement" and result.get("improved") is not True: raise HTTPException(409, "Enhancement candidate did not improve held-out reconstruction against the original input")
+    model = _model(project, source, payload.task, result.get("job_id"))
+    if model is None or _sha256(Path(model["checkpoint_path"])) != binding.get("checkpoint_sha256"):
+        raise HTTPException(409, "Evaluation model is missing, changed, or belongs to another project")
+    for key, minimum in payload.minimum_metrics.items():
+        if not isinstance(result.get(key), (int, float)) or not math.isfinite(result[key]) or result[key] < minimum: raise HTTPException(409, f"Held-out {key} is below the requested quality bound")
+    for key, maximum in payload.maximum_metrics.items():
+        if not isinstance(result.get(key), (int, float)) or not math.isfinite(result[key]) or result[key] > maximum: raise HTTPException(409, f"Held-out {key} exceeds the requested quality bound")
+    with _store(project) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        active = _active(conn, source, payload.task)
+        if active and active["job_id"] != result["job_id"]:
+            try: incumbent = history_store(project).get(payload.incumbent_evaluation_id)
+            except (ValueError, OSError, TypeError) as exc: raise HTTPException(409, "A current held-out incumbent evaluation is required") from exc
+            prior = incumbent["result"]
+            prior_binding=incumbent["binding"]
+            family_identity=binding.get("family_dataset_sha256")
+            if (prior.get("job_id") != active["job_id"] or prior.get("task") != payload.task
+                    or prior_binding.get("source_dataset_path")!=str(source)
+                    or prior_binding.get("dataset_fingerprint") != binding["dataset_fingerprint"]
+                    or prior_binding.get("checkpoint_sha256")!=active["checkpoint_sha256"]
+                    or not isinstance(family_identity,str) or not family_identity
+                    or prior_binding.get("family_dataset_sha256")!=family_identity
+                    or prior.get("sample_count")!=result["sample_count"] or prior.get("split") != "test"):
+                raise HTTPException(409, "Incumbent and candidate must use the same exact test dataset")
+            if any(result[key] < prior.get(key, float("inf")) for key in payload.minimum_metrics) or any(result[key] > prior.get(key, -float("inf")) for key in payload.maximum_metrics):
+                raise HTTPException(409, "Candidate regresses against the active incumbent on the reviewed quality metrics")
+        path = Path(project["reports_dir"]) / "evaluations" / (payload.evaluation_id + ".json")
+        revision = {"revision_id": uuid.uuid4().hex, "source_dataset_path": str(source), "task": payload.task,
+                    "job_id": result["job_id"], "checkpoint_sha256": binding["checkpoint_sha256"],
+                    "training_dataset_fingerprint": model["training_dataset_fingerprint"] or "unverified",
+                    "evaluation_dataset_fingerprint": binding["dataset_fingerprint"], "comparison_id": payload.evaluation_id,
+                    "comparison_sha256": _sha256(path), "parent_revision_id": active["revision_id"] if active else None,
+                    "restored_from_revision_id": None, "action": "approve_specialized", "reviewer": payload.reviewer.strip(),
+                    "reason": payload.reason.strip() + " | quality_bounds=" + json.dumps({"minimum": payload.minimum_metrics, "maximum": payload.maximum_metrics, "minimum_sample_count": payload.minimum_sample_count}, sort_keys=True), "created_at": _now()}
+        conn.execute("INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(revision.values()))
+        conn.execute("INSERT INTO active_revisions VALUES (?, ?, ?) ON CONFLICT(source_dataset_path, task) DO UPDATE SET revision_id=excluded.revision_id", (str(source), payload.task, revision["revision_id"]))
+    return {"revision": revision, "field_runtime_applied": False}

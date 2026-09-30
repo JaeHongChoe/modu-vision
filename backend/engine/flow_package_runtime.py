@@ -10,6 +10,7 @@ from typing import Any
 
 from backend.engine.flowchart_engine import FlowchartEngine, FlowchartPipeline, ordered_linear_nodes
 from backend.engine.industrial_adapters import read_image_safely_rgb
+from backend.engine.specialized_models import flow_model_task
 
 
 def _sha256(path: Path) -> str:
@@ -58,8 +59,8 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
     pipeline = FlowchartPipeline.model_validate(json.loads((root / "pipeline.json").read_text(encoding="utf-8")))
     ordered_linear_nodes(pipeline)
     expected = {
-        (node.data.model_job_id, "detection" if node.data.node_type == "detection_crop" else node.data.task)
-        for node in pipeline.nodes if node.data.node_type in ("detection_crop", "inspection")
+        (node.data.model_job_id, flow_model_task(node))
+        for node in pipeline.nodes if flow_model_task(node) is not None
     }
     checkpoints: dict[str, Path] = {}
     found: set[tuple[str, str]] = set()
@@ -80,7 +81,9 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
     return pipeline, checkpoints
 
 
-def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None = None) -> dict[str, Any]:
+def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None = None, *, device: str = "cpu") -> dict[str, Any]:
+    from backend.engine.runtime_device import resolve_runtime_device
+    device = str(resolve_runtime_device(device))
     pipeline, checkpoints = verify_flow_package(package_dir)
     image = Path(image_path).expanduser().resolve()
     if not image.is_file():
@@ -95,7 +98,7 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     def resolve(job_id: str, task: str) -> Path | None:
         return checkpoints.get(job_id)
 
-    engine = FlowchartEngine(device="cpu", checkpoint_resolver=resolve)
+    engine = FlowchartEngine(device=device, checkpoint_resolver=resolve)
     result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
     return result.model_dump() if hasattr(result, "model_dump") else result
 
@@ -114,7 +117,7 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
         step_fields = (
             "node_id", "status", "input_payload_type", "output_payload_type",
             "input_count", "output_count", "branch_verdict",
-            "selected_edge_ids", "skip_reason",
+            "selected_edge_ids", "skip_reason", "artifacts",
         )
         for index, (left, right) in enumerate(zip(ref_steps, pkg_steps)):
             for field in step_fields:
@@ -129,7 +132,7 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
             for field in (
                 "roi_id", "source_node_id", "label", "bbox", "verdict",
                 "flaw_type", "defect_area_px", "blob_count",
-                "largest_blob_area_px", "tiles_processed",
+                "largest_blob_area_px", "tiles_processed", "recognized_text", "predicted_class", "polygon", "anomaly_map", "anomaly_values", "mask", "source_transform",
             ):
                 if left.get(field) != right.get(field):
                     mismatches.append(f"crops[{index}].{field}")
@@ -152,6 +155,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run a saved Modu Vision inspection flow offline")
     parser.add_argument("--verify-only", action="store_true", help="Verify graph, code, and model checksums")
     parser.add_argument("--image", type=Path, help="Image to inspect")
+    parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cpu", help="Explicit execution device; unavailable devices fail")
     parser.add_argument("--image-id", help="Optional source image ID")
     parser.add_argument("--output", type=Path, help="Write the complete JSON result here")
     args = parser.parse_args()
@@ -163,7 +167,7 @@ def main() -> int:
         else:
             if args.image is None:
                 parser.error("--image is required unless --verify-only is set")
-            result = run_flow_package(root, args.image, args.image_id)
+            result = run_flow_package(root, args.image, args.image_id, device=args.device)
         payload = json.dumps(result, ensure_ascii=False, indent=2)
         if args.output:
             args.output.write_text(payload + "\n", encoding="utf-8")

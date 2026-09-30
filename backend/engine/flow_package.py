@@ -15,6 +15,7 @@ import time
 from typing import Any, Mapping
 
 from backend.engine.checkpoint_paths import is_job_id
+from backend.engine.specialized_models import FLOW_TASKS, flow_model_task, valid_flow_job
 from backend.engine.flowchart_engine import FlowchartEngine, FlowchartPipeline, ordered_linear_nodes
 from backend.engine.flow_package_runtime import compare_flow_results, verify_flow_package
 from backend.engine.industrial_adapters import read_image_safely_rgb
@@ -66,7 +67,8 @@ Inspect one image and save all node evidence:
 
     python run_flow.py --image /absolute/path/to/image.jpg --output result.json
 
-The runner uses CPU for portability. Recheck image-by-image verdicts against the
+The runner defaults to CPU for portability. Use `--device cuda` or `--device mps`
+only on a compatible host; unavailable devices fail explicitly. Recheck image-by-image verdicts against the
 source app before using this package for an operational decision.
 
 Run the standalone, persistent HTTP inspection service with a private state
@@ -90,6 +92,11 @@ outside this package and start the service with
 `--require-approved-release --release-policy /absolute/path/to/release-policy.json`.
 Startup checks the
 whole package manifest and each approved checkpoint against that file.
+
+HTTP clients for Node.js 18+ and .NET 8 are included under `clients/`. Set
+`VISION_INSPECTION_TOKEN` to the service token before running a client. Uploads
+and job polling use the same HTTP API; no Python process is needed on the client
+machine. The .NET source must be built in a .NET 8 console project.
 """
 
 
@@ -104,11 +111,10 @@ def _sha256(path: Path) -> str:
 def _model_jobs(pipeline: FlowchartPipeline) -> dict[str, str]:
     jobs: dict[str, str] = {}
     for node in pipeline.nodes:
-        if node.data.node_type not in ("detection_crop", "inspection"):
-            continue
+        task = flow_model_task(node)
+        if task is None: continue
         job_id = node.data.model_job_id
-        task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if not is_job_id(job_id) or task not in ("detection", "classification", "segmentation", "anomaly", "patch_classification"):
+        if not valid_flow_job(job_id, task) or task not in FLOW_TASKS:
             raise ValueError(f"Invalid model job or task for node {node.id}")
         if job_id in jobs and jobs[job_id] != task:
             raise ValueError(f"Model job {job_id} has conflicting tasks")
@@ -132,6 +138,8 @@ def build_flow_package(
     if set(checkpoints) != set(jobs):
         raise ValueError("Checkpoint jobs do not match the saved flow")
     for job_id, checkpoint in checkpoints.items():
+        from backend.engine.specialized_models import require_completed_checkpoint
+        require_completed_checkpoint(checkpoint)
         path = Path(checkpoint)
         if path.is_symlink() or not path.is_file() or path.name != "best_model.pt":
             raise ValueError(f"Unsafe or missing checkpoint for {job_id}")
@@ -173,6 +181,12 @@ def build_flow_package(
         (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
         (staging / "requirements.txt").write_text(_REQUIREMENTS, encoding="utf-8")
         (staging / "README_DEPLOY.md").write_text(_README, encoding="utf-8")
+        for name in ("inspection-service-client.mjs", "InspectionServiceClient.cs"):
+            client = source_root / "examples" / name
+            if client.is_symlink() or not client.is_file():
+                raise ValueError(f"Missing HTTP integration client: {name}")
+            (staging / "clients").mkdir(exist_ok=True)
+            shutil.copyfile(client, staging / "clients" / name, follow_symlinks=False)
         (staging / "backend").mkdir()
         (staging / "backend" / "__init__.py").write_text(
             "\"\"\"Bundled Modu Vision runtime; do not import a host backend package.\"\"\"\n",

@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Iterable, Optional
 
-from backend.engine.annotation_storage import dataset_annotation_dir, request_project_root
+from backend.engine.annotation_storage import dataset_annotation_dir, dataset_overlay_scopes, request_project_root
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 
 
@@ -84,8 +84,13 @@ def fingerprint_dataset(
         _update_file(digest, path, f"source/{path.relative_to(folder).as_posix()}")
 
     studio_dir = dataset_annotation_dir(folder, studio_root, use_scope=use_scope)
-    for path in _files_under(studio_dir):
-        _update_file(digest, path, f"studio/{path.relative_to(studio_dir).as_posix()}")
+    for scope in dataset_overlay_scopes(folder, studio_root, use_scope=use_scope):
+        for path in _files_under(scope):
+            # Review identity/audit do not alter pixels/labels. Versions preserve them.
+            if path.relative_to(scope).parts[0] == "metadata":
+                continue
+            prefix = "studio" if scope == studio_dir else f"studio_scoped/{scope.name}"
+            _update_file(digest, path, f"{prefix}/{path.relative_to(scope).as_posix()}")
 
     if split_manifest is not None and Path(split_manifest).is_file():
         manifest = Path(split_manifest)

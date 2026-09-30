@@ -7,6 +7,8 @@ import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
 import { BulkLabelAssist } from './BulkLabelAssist';
+import { CandidateProviderControls } from './CandidateProviderControls';
+import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -51,17 +53,29 @@ function SuggestionPreview({ proposal, selectedIds }: { proposal: LabelSuggestio
   );
 }
 
+function currentAssistContext(): string {
+  const state = useProjectStore.getState();
+  return JSON.stringify([state.projectDir, useAnnotationStore.getState().currentImage?.file_path,
+    state.project?.active_labelset_id || 'default', state.project?.task, state.project?.source_dataset_dir]);
+}
+
 export const ModelAssistPanel: React.FC = () => {
   const image = useAnnotationStore((state) => state.currentImage);
   const isDirty = useAnnotationStore((state) => state.isDirty);
   const annotationLoadStatus = useAnnotationStore((state) => state.annotationLoadStatus);
   const projectDir = useProjectStore((state) => state.projectDir);
+  const labelsetId = useProjectStore((state) => state.project?.active_labelset_id || 'default');
+  const task = useProjectStore((state) => state.project?.task);
+  const sourceDatasetDir = useProjectStore((state) => state.project?.source_dataset_dir);
   const beginModelAssist = useModelAssistRunStore((state) => state.begin);
   const endModelAssist = useModelAssistRunStore((state) => state.end);
   const [open, setOpen] = useState(false);
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
   const [threshold, setThreshold] = useState(0.5);
+  const [keywords, setKeywords] = useState('');
+  const reviewerName = useAnnotationStore(state => state.reviewerName);
+  const setReviewerName = useAnnotationStore(state => state.setReviewerName);
   const [suggestions, setSuggestions] = useState<LabelSuggestion[]>([]);
   const [selectedProposalId, setSelectedProposalId] = useState('');
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
@@ -70,11 +84,14 @@ export const ModelAssistPanel: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
   const requestedProposalId = useRef('');
+  const operationId = useRef(0);
 
   const proposal = useMemo(() => suggestions.find((item) => item.id === selectedProposalId), [suggestions, selectedProposalId]);
   const pendingCount = suggestions.filter((item) => item.status === 'pending').length;
 
   useEffect(() => {
+    const token = ++operationId.current;
+    setBusy(null);
     setSuggestions([]);
     setSelectedProposalId('');
     setSelectedCandidateIds(new Set());
@@ -86,7 +103,7 @@ export const ModelAssistPanel: React.FC = () => {
     Promise.all([api.labelSuggestions.models(), image?.file_path
       ? api.labelSuggestions.list(image.file_path) : Promise.resolve({ suggestions: [] as LabelSuggestion[] })])
       .then(([modelResult, suggestionResult]) => {
-        if (cancelled) return;
+        if (cancelled || operationId.current !== token) return;
         setModels(modelResult.models);
         setModelId((previous) => modelResult.models.some((item) => item.job_id === previous) ? previous : modelResult.models[0]?.job_id || '');
         setSuggestions(suggestionResult.suggestions);
@@ -96,10 +113,10 @@ export const ModelAssistPanel: React.FC = () => {
         setSelectedProposalId(first?.id || '');
         setSelectedCandidateIds(new Set(first?.candidates.map((item) => item.id) || []));
       })
-      .catch((cause) => { if (!cancelled) setError(errorText(cause)); })
-      .finally(() => { if (!cancelled) setBusy(null); });
+      .catch((cause) => { if (!cancelled && operationId.current === token) setError(errorText(cause)); })
+      .finally(() => { if (!cancelled && operationId.current === token) setBusy(null); });
     return () => { cancelled = true; };
-  }, [open, image?.file_path, projectDir]);
+  }, [open, image?.file_path, projectDir, labelsetId, task, sourceDatasetDir]);
 
   const selectProposal = (item: LabelSuggestion) => {
     setSelectedProposalId(item.id);
@@ -143,16 +160,15 @@ export const ModelAssistPanel: React.FC = () => {
 
   const generate = async () => {
     if (!image || !modelId || !projectDir) return;
-    const startedProjectDir = projectDir;
-    const startedImage = image;
-    const sameContext = () => useProjectStore.getState().projectDir === startedProjectDir
-      && useAnnotationStore.getState().currentImage === startedImage;
+    const startedContext = currentAssistContext();
+    const token = ++operationId.current;
+    const sameContext = () => operationId.current === token && currentAssistContext() === startedContext;
     beginModelAssist();
     setBusy('generate');
     setError(null);
     setNotice(null);
     try {
-      const next = await api.labelSuggestions.generate({ job_id: modelId, image_path: image.file_path, threshold });
+      const next = await datasetWorkflow.generateModel(modelId, image.file_path, threshold, keywords.split(",").map(k => k.trim()).filter(Boolean));
       if (!sameContext()) return;
       setSuggestions((previous) => [next, ...previous]);
       selectProposal(next);
@@ -161,22 +177,24 @@ export const ModelAssistPanel: React.FC = () => {
       if (sameContext()) setError(errorText(cause));
     } finally {
       endModelAssist();
-      if (sameContext()) setBusy(null);
+      // Gallery refresh may replace the same image object; only the operation that
+      // owns the busy state may clear it, regardless of refreshed object identity.
+      if (operationId.current === token) setBusy(null);
     }
   };
 
   const review = async (decision: 'accept' | 'reject') => {
     if (!proposal || !image || !projectDir) return;
-    const startedProjectDir = projectDir;
-    const startedImage = image;
-    const sameContext = () => useProjectStore.getState().projectDir === startedProjectDir
-      && useAnnotationStore.getState().currentImage === startedImage;
+    if (!reviewerName.trim()) { setError("작업자·검토자 이름을 입력하세요."); return; }
+    const startedContext = currentAssistContext();
+    const token = ++operationId.current;
+    const sameContext = () => operationId.current === token && currentAssistContext() === startedContext;
     beginModelAssist();
     setBusy(decision);
     setError(null);
     setNotice(null);
     try {
-      const updated = await api.labelSuggestions.review(proposal.id, decision, [...selectedCandidateIds]);
+      const updated = await datasetWorkflow.review(proposal.id, decision, [...selectedCandidateIds], reviewerName);
       if (!sameContext()) return;
       setSuggestions((previous) => previous.map((item) => item.id === updated.id ? updated : item));
       if (decision === 'accept') {
@@ -192,7 +210,9 @@ export const ModelAssistPanel: React.FC = () => {
       if (sameContext()) setError(errorText(cause));
     } finally {
       endModelAssist();
-      if (sameContext()) setBusy(null);
+      // Gallery refresh may replace the same image object; only the operation that
+      // owns the busy state may clear it, regardless of refreshed object identity.
+      if (operationId.current === token) setBusy(null);
     }
   };
 
@@ -231,6 +251,8 @@ export const ModelAssistPanel: React.FC = () => {
                   {models.map((item) => <option value={item.job_id} key={item.job_id}>{item.job_id} · {item.task}</option>)}
                 </select>
               </label>
+              <label className="block text-[11px] text-slate-400">클래스 키워드 필터 (선택 사항, 쉼표 구분)<input aria-label="모델 클래스 키워드" value={keywords} onChange={event => setKeywords(event.target.value)} placeholder="scratch, crack" className="mt-1 w-full rounded border border-slate-600 bg-slate-900 p-2 text-slate-100" /></label>
+              <p className="text-[10px] text-slate-500">실제 모델이 예측한 클래스 이름에 포함되는 키워드만 남깁니다.</p>
               <div className="flex items-center gap-3">
                 <label className="grow text-[11px] text-slate-400">검출 임계값 <span className="font-mono text-cyan-300">{threshold.toFixed(2)}</span>
                   <input type="range" min="0.05" max="0.95" step="0.05" value={threshold} onChange={(event) => setThreshold(Number(event.target.value))} disabled={!!busy || !modelId} className="mt-1 block w-full accent-cyan-500" />
@@ -244,7 +266,9 @@ export const ModelAssistPanel: React.FC = () => {
               <p className="text-[11px] leading-relaxed text-slate-500">예측은 후보로만 저장됩니다. 기존 라벨과 원본 파일은 생성 시 변경되지 않습니다.</p>
             </section>
 
-            {projectDir && <BulkLabelAssist projectDir={projectDir} modelId={modelId} threshold={threshold}
+            <CandidateProviderControls disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`${next.candidates.length}개 실제 추론 후보를 만들었습니다. 검토 후 선택하세요.`); }} />
+
+            {projectDir && <BulkLabelAssist projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={keywords.split(",").map(k => k.trim()).filter(Boolean)}
               disabled={isDirty || !!busy || !useDatasetStore.getState().hasSelectedFolder}
               onOpenEntry={openBatchEntry} onRunningChange={setBatchRunning} />}
 
@@ -257,7 +281,9 @@ export const ModelAssistPanel: React.FC = () => {
               </div>
               {proposal && <>
                 <SuggestionPreview proposal={proposal} selectedIds={selectedCandidateIds} />
-                <p className="text-[11px] text-slate-400">{proposal.job_id} · {proposal.candidates.length}개 후보 · {Math.round(proposal.latency_ms)} ms</p>
+                <p className="text-[11px] text-slate-400">{({grounding_dino:"텍스트 검출 · Grounding DINO",template_match:"예시 템플릿 매칭",trained_model:"완료 학습 모델"} as Record<string,string>)[(proposal as CandidateProposal).backend || "trained_model"]} · {proposal.candidates.length}개 후보</p>
+                {(proposal as CandidateProposal).support_limits && <p className="text-[10px] text-amber-200">{(proposal as CandidateProposal).support_limits}</p>}
+                <label className="block text-[11px]">검토자<input aria-label="후보 검토자 이름" value={reviewerName} onChange={e => setReviewerName(e.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>
                 <div className="max-h-44 space-y-1 overflow-y-auto">
                   {proposal.candidates.length === 0 && <p className="rounded border border-slate-700 p-3 text-center text-slate-400">이 이미지에는 제안된 라벨이 없습니다.</p>}
                   {proposal.candidates.map((candidate) => <label key={candidate.id} className={`flex items-start gap-2 rounded border p-2 ${selectedCandidateIds.has(candidate.id) ? 'border-cyan-800 bg-cyan-950/20' : 'border-slate-700 bg-slate-800/40'}`}>

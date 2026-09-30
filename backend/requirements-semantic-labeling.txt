@@ -1,0 +1,3 @@
+# Optional CPU text grounding backend; weights must already exist locally.
+# Uses the official post_process_grounded_object_detection threshold API.
+transformers==4.57.6

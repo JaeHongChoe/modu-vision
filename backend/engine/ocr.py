@@ -305,7 +305,7 @@ def _distance(left: str, right: str) -> int:
     return previous[-1]
 
 
-def _evaluate(model: SmallCTCOCR, dataset: OCRDataset, *, device: torch.device, batch_size: int) -> dict[str, Any]:
+def _evaluate(model: SmallCTCOCR, dataset: OCRDataset, *, device: torch.device, batch_size: int, cancel_event=None) -> dict[str, Any]:
     if not dataset:
         raise ValueError("OCR evaluation split is empty")
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=_collate)
@@ -316,6 +316,7 @@ def _evaluate(model: SmallCTCOCR, dataset: OCRDataset, *, device: torch.device, 
     sample_cursor = 0
     with torch.inference_mode():
         for images, targets, target_lengths in loader:
+            if cancel_event is not None and cancel_event.is_set():raise InterruptedError('OCR validation cancelled')
             logits = model(images.to(device))
             input_lengths = torch.full((len(images),), logits.shape[1], dtype=torch.long)
             loss = criterion(logits.log_softmax(-1).transpose(0, 1), targets, input_lengths, target_lengths)
@@ -359,6 +360,8 @@ def train_ocr(
     learning_rate: float = 1e-3,
     device: str = "cpu",
     seed: int = 0,
+    cancel_event=None,
+    on_progress=None,
 ) -> dict[str, Any]:
     """Fit a scratch OCR model on train only, selecting by validation CTC loss."""
     manifest = load_ocr_manifest(dataset_root)
@@ -383,9 +386,11 @@ def train_ocr(
     best_epoch = 0
     history: list[float] = []
     for epoch in range(1, epochs + 1):
+        if cancel_event is not None and cancel_event.is_set():raise InterruptedError('OCR training cancelled')
         model.train()
         total_loss = 0.0
-        for images, targets, target_lengths in loader:
+        for batch_index, (images, targets, target_lengths) in enumerate(loader,1):
+            if cancel_event is not None and cancel_event.is_set():raise InterruptedError('OCR training cancelled')
             optimizer.zero_grad(set_to_none=True)
             logits = model(images.to(target_device))
             input_lengths = torch.full((len(images),), logits.shape[1], dtype=torch.long)
@@ -395,8 +400,10 @@ def train_ocr(
             loss.backward()
             optimizer.step()
             total_loss += float(loss.item()) * len(images)
+            if on_progress is not None:on_progress({'epoch':epoch,'batch':batch_index,'batches':len(loader),'loss':float(loss.item())})
+        if cancel_event is not None and cancel_event.is_set():raise InterruptedError('OCR training cancelled')
         history.append(total_loss / len(train))
-        validation = _evaluate(model, val, device=target_device, batch_size=batch_size)
+        validation = _evaluate(model, val, device=target_device, batch_size=batch_size, cancel_event=cancel_event)
         if validation["loss"] < best_loss:
             best_loss = validation["loss"]
             best_epoch = epoch
@@ -436,18 +443,27 @@ def _load_model(checkpoint: str | Path, device: str) -> tuple[SmallCTCOCR, dict[
 
 def evaluate_ocr_checkpoint(
     checkpoint: str | Path, dataset_root: str | Path, *, split: str = "test", device: str = "cpu", batch_size: int = 8,
+    allow_dataset_revision: bool = False,
 ) -> dict[str, Any]:
     """Evaluate only the requested held-out split of the checkpoint's dataset."""
     model, payload, model_sha = _load_model(checkpoint, device)
     manifest = load_ocr_manifest(dataset_root)
-    if manifest.provenance["dataset_sha256"] != payload["dataset_provenance"]["dataset_sha256"]:
+    training_sha = payload["dataset_provenance"]["dataset_sha256"]
+    revised = manifest.provenance["dataset_sha256"] != training_sha
+    if revised and not allow_dataset_revision:
         raise ValueError("OCR dataset provenance differs from checkpoint")
-    if manifest.alphabet != payload["alphabet"]:
+    if revised and manifest.provenance["source_sha256"] != payload["dataset_provenance"].get("source_sha256"):
+        raise ValueError("OCR source images differ from checkpoint lineage")
+    if (not set(manifest.alphabet).issubset(payload["alphabet"]) if allow_dataset_revision
+            else manifest.alphabet != payload["alphabet"]):
         raise ValueError("OCR alphabet differs from checkpoint")
     dataset = OCRDataset(manifest, split=split, image_size=tuple(payload["image_size"]))
+    dataset.alphabet = payload["alphabet"]
+    dataset.index = {character: i + 1 for i, character in enumerate(dataset.alphabet)}
     result = _evaluate(model, dataset, device=torch.device(device), batch_size=batch_size)
     return {
         "task": "ocr", "split": split, "dataset_sha256": manifest.provenance["dataset_sha256"],
+        "training_dataset_sha256": training_sha, "dataset_revision_changed": revised,
         "model_sha256": model_sha, **result,
     }
 
@@ -469,3 +485,12 @@ def predict_ocr(checkpoint: str | Path, image: str | Path, *, device: str = "cpu
         "dataset_sha256": payload["dataset_provenance"]["dataset_sha256"],
         "best_epoch": payload["best_epoch"],
     }
+
+
+def predict_ocr_array(checkpoint: str | Path, image_rgb: np.ndarray, *, device: str = "cpu") -> dict[str, Any]:
+    """Array adapter used by app and exported flow; preserves the same CTC decoder."""
+    model,payload,model_sha = _load_model(checkpoint,device)
+    tensor = _prepare_image(Image.fromarray(image_rgb),tuple(payload['image_size']))
+    with torch.inference_mode():
+        text,confidence = _decode(model(tensor.unsqueeze(0).to(torch.device(device)))[0],payload['alphabet'])
+    return {'task':'ocr','text':text,'confidence':confidence,'model_sha256':model_sha}

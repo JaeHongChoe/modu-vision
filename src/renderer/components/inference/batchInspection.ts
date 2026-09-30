@@ -1,3 +1,4 @@
+import { getFlowchartModelTask } from '../flowchart/flowchartStartup';
 import type { FlowchartExecutionResult, FlowchartPipeline, FlowModelTask, ImageMeta, VisionTask } from '../../types';
 
 export type BatchScope = 'test' | 'val' | 'train' | 'all';
@@ -35,6 +36,8 @@ export interface BatchInspectionReport {
   saved_version_id?: string | null;
   pipeline_hash?: string;
   model_sha256?: Record<string, string>;
+  execution_config?: { execution_target: 'local' | 'selected_compute' | 'model_compute'; device: string;
+    compute_profile_id?: string | null; compute_profile_name?: string | null; profile?: {name: string}; };
   status: 'running' | 'completed' | 'stopped';
   rows: BatchInspectionRow[];
 }
@@ -182,10 +185,10 @@ const PAGE_SIZE = 500;
 function modelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: FlowModelTask }> {
   const references: Array<{ job_id: string; task: FlowModelTask }> = [];
   for (const node of pipeline.nodes) {
-    if (node.data.node_type !== 'detection_crop' && node.data.node_type !== 'inspection') continue;
+    const task = getFlowchartModelTask(node);
+    if (task === null) continue;
     const jobId = node.data.model_job_id;
-    const task = node.data.node_type === 'detection_crop' ? 'detection' : node.data.task;
-    if (!jobId || !task || !['classification', 'detection', 'segmentation', 'anomaly', 'patch_classification'].includes(task)) {
+    if (!jobId) {
       throw new Error(`검사 플로우의 '${node.data.label || node.id}' 모델 연결을 확인하세요.`);
     }
     references.push({ job_id: jobId, task: task as FlowModelTask });

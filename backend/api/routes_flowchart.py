@@ -51,6 +51,7 @@ from backend.engine.flowchart_engine import (
 from backend.utils.error_catalog import format_error_response
 from backend.engine.checkpoint_paths import is_job_id, trusted_checkpoint
 from backend.engine.flow_provenance import pipeline_sha256
+from backend.engine.specialized_models import SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -65,8 +66,8 @@ _ENGINE = FlowchartEngine()
 _FLOW_SAVE_LOCK = threading.RLock()
 
 
-InspectionTask = Literal["anomaly", "segmentation", "classification", "patch_classification"]
-PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"]
+InspectionTask = Literal["anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection"]
+PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "mixed"]
 
 
 def _recipe_file(
@@ -161,6 +162,93 @@ def _active_flow_file(project_dir: Path) -> Path:
     return project_dir / "flowcharts" / "active.json"
 
 
+class FlowDraftSaveRequest(BaseModel):
+    pipeline: FlowchartPipeline
+    context: Dict[str, Any]
+
+
+def _draft_context(project: dict) -> dict:
+    source = project.get("source_dataset_dir")
+    return {"project_id": project["id"],
+            "source_dataset_path": str(Path(source).expanduser().resolve()) if source else None,
+            "labelset_id": project.get("active_labelset_id", "default")}
+
+
+def _draft_file(project: dict, context: dict) -> Path:
+    labelset = context["labelset_id"]
+    if not isinstance(labelset, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", labelset):
+        raise HTTPException(status_code=422, detail="Invalid draft labelset")
+    source_key = hashlib.sha256(context["source_dataset_path"].encode()).hexdigest()[:16] if context["source_dataset_path"] else "no_source"
+    return Path(project["project_dir"]) / "flowcharts" / "drafts" / labelset / source_key / "draft.json"
+
+
+def _draft_active_version(project: dict, context: dict, checksum: str) -> Optional[str]:
+    pointer = _active_flow_file(Path(project["project_dir"]))
+    if not pointer.is_file():
+        return None
+    try:
+        active = json.loads(pointer.read_text())
+        version_file = _version_dir(Path(project["project_dir"])) / f"{active['version_id']}.json"
+        if (active.get("project_id") != context["project_id"]
+                or active.get("source_dataset_path") != context["source_dataset_path"]
+                or active.get("labelset_id", "default") != context["labelset_id"]):
+            return None
+        version = json.loads(version_file.read_text())
+        pipeline = FlowchartPipeline.model_validate(version["pipeline"])
+        return active["version_id"] if pipeline_sha256(pipeline) == checksum else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+@router.put("/draft")
+def save_flow_draft(req: FlowDraftSaveRequest, request: Request) -> dict:
+    """Save an editable graph without resolving models or activating a version."""
+    with _FLOW_SAVE_LOCK:
+        project = get_current_project(request)
+        context = _draft_context(project)
+        if req.context != context:
+            raise HTTPException(status_code=409, detail="Draft project, source or labelset changed")
+        identifiers = [node.id for node in req.pipeline.nodes]
+        edge_ids = [edge.id for edge in req.pipeline.edges]
+        if (len(set(identifiers)) != len(identifiers) or len(set(edge_ids)) != len(edge_ids)
+                or any(edge.source not in identifiers or edge.target not in identifiers for edge in req.pipeline.edges)):
+            raise HTTPException(status_code=422, detail="Draft node/edge identifiers are invalid")
+        checksum = pipeline_sha256(req.pipeline)
+        record = {"version": 1, "context": context, "draft_sha256": checksum,
+                  "saved_at_ns": time.time_ns(), "pipeline": req.pipeline.model_dump()}
+        _write_json(_draft_file(project, context), record)
+        return {**record, "active_version_id": _draft_active_version(project, context, checksum)}
+
+
+@router.get("/draft")
+def get_flow_draft(request: Request) -> dict:
+    with _FLOW_SAVE_LOCK:
+        project = get_current_project(request)
+        context = _draft_context(project)
+        file = _draft_file(project, context)
+        if not file.is_file():
+            raise HTTPException(status_code=404, detail="No draft for this project, source and labelset")
+        try:
+            record = json.loads(file.read_text())
+            pipeline = FlowchartPipeline.model_validate(record["pipeline"])
+            checksum = pipeline_sha256(pipeline)
+            if record.get("context") != context or record.get("draft_sha256") != checksum:
+                raise ValueError("Draft context or hash differs")
+            active_file = _active_flow_file(Path(project["project_dir"]))
+            # A later explicit save/activation supersedes an earlier draft.
+            if active_file.is_file():
+                active = json.loads(active_file.read_text())
+                if (active.get("activated_at_ns", 0) > record.get("saved_at_ns", 0)
+                        and active.get("source_dataset_path") == context["source_dataset_path"]
+                        and active.get("labelset_id", "default") == context["labelset_id"]
+                        and _draft_active_version(project, context, checksum) is None):
+                    raise HTTPException(status_code=404, detail="A newer saved flow supersedes this draft")
+            return {**record, "pipeline": pipeline.model_dump(),
+                    "active_version_id": _draft_active_version(project, context, checksum)}
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(status_code=409, detail=f"Saved draft is invalid: {exc}") from exc
+
+
 def _save_version(
     pipeline: FlowchartPipeline, task: PipelineTask,
     source_dataset_path: Optional[str], project_dir: Optional[Path],
@@ -195,7 +283,7 @@ def _inferred_recipe(pipeline: FlowchartPipeline) -> PipelineTask:
         return "mixed"
     if inspections:
         task = inspections[0].data.task
-        if task in ("anomaly", "segmentation", "classification", "patch_classification"):
+        if task in ("anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection"):
             return task
     if any(node.data.node_type == "detection_crop" for node in pipeline.nodes):
         return "detection"
@@ -212,12 +300,14 @@ def _single_inspection_template(inspection_task: InspectionTask, job_id: Optiona
         "patch_classification": ("이미지 패치 분류 검사", "전체 이미지 패치 분류"),
     }
     pipeline.id = f"single_{inspection_task}"
+    labels.update({"ocr":("문자 인식 판정","문자 인식"),"rotated_detection":("회전 객체 검사","회전 객체 검출")})
     pipeline.name, inspection_label = labels[inspection_task]
     pipeline.description = "전체 이미지 검사 -> OK/NG/REVIEW 판정 -> 로컬 미리보기"
     inspection = next(node for node in pipeline.nodes if node.data.node_type == "inspection")
     inspection.data.task = inspection_task
+    if inspection_task == "ocr": inspection.data.params={"expected_text":"설정 필요"}
     inspection.data.label = inspection_label
-    inspection.data.params = {}
+    inspection.data.params = {"expected_text":"설정 필요"} if inspection_task == "ocr" else {}
     return pipeline
 
 
@@ -376,28 +466,33 @@ def get_conditional_inspection_template() -> FlowchartPipeline:
 
 class FlowchartModelReference(BaseModel):
     job_id: str
-    task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification"]
+    task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "enhancement"]
 
 
 class FlowchartModelVerificationRequest(BaseModel):
     source_dataset_path: str
-    models: List[FlowchartModelReference] = Field(min_length=1, max_length=8)
+    models: List[FlowchartModelReference] = Field(min_length=1, max_length=24)
 
 
 @router.post("/models/verify")
-def verify_flowchart_models(request: FlowchartModelVerificationRequest):
+def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_request: Request = None):
     """Verify every saved model against the selected source and its node task."""
     verified: List[str] = []
     for model in request.models:
-        if not is_job_id(model.job_id):
+        if not valid_flow_job(model.job_id, model.task):
             raise HTTPException(status_code=409, detail=f"Invalid model job ID: {model.job_id}")
         try:
+            if model.task in SPECIALIZED_TASKS:
+                project=get_current_project(http_request)
+                resolve_specialized_checkpoint(project['models_dir'],model.job_id,model.task,request.source_dataset_path)
+                verified.append(model.job_id)
+                continue
             _resolve_job_artifacts(
                 model.job_id,
                 source_dataset_path=request.source_dataset_path,
                 source_task=model.task,
             )
-        except HTTPException as exc:
+        except (HTTPException, ValueError, OSError) as exc:
             raise HTTPException(
                 status_code=409,
                 detail=f"Model {model.job_id} is not a completed {model.task} model for the selected dataset.",
@@ -450,6 +545,15 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(checkpoint.stat().st_mtime)),
             "source_dataset_path": str(source),
         })
+    if project:
+        for specialized_task in SPECIALIZED_TASKS:
+            root=Path(project['models_dir'])/specialized_task
+            if not root.is_dir() or root.is_symlink(): continue
+            for directory in root.iterdir():
+                try:
+                    checkpoint,meta=resolve_specialized_checkpoint(project['models_dir'],directory.name,specialized_task,str(source))
+                except (ValueError,OSError,KeyError,RuntimeError): continue
+                models.append({'job_id':directory.name,'task':specialized_task,'label':f"{specialized_task} · {directory.name}",'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(checkpoint.stat().st_mtime)),'source_dataset_path':str(source),'best_metric':None,'preset':None})
     models.sort(key=lambda item: item["created_at"], reverse=True)
     return {"models": models, "total": len(models)}
 
@@ -490,6 +594,8 @@ def save_pipeline(
                 _write_json(active_path, {
                     "version_id": version_id,
                     "project_id": project["id"],
+                    "labelset_id": project.get("active_labelset_id", "default"),
+                    "activated_at_ns": time.time_ns(),
                     "recipe_task": task,
                     "source_dataset_path": (
                         str(Path(effective_source).expanduser().resolve()) if effective_source else None
@@ -600,7 +706,7 @@ def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: 
                 "saved_at_ns": record.get("saved_at_ns", path.stat().st_mtime_ns),
                 "node_count": len(pipeline.nodes),
                 "model_count": sum(
-                    node.data.node_type in ("detection_crop", "inspection") for node in pipeline.nodes
+                    flow_model_task(node) is not None for node in pipeline.nodes
                 ),
                 "is_active": record["version_id"] == active_id,
             })
@@ -638,7 +744,7 @@ def activate_saved_pipeline_version(
                     or record.get("source_dataset_path") != requested_source):
                 raise ValueError("Saved flow version belongs to another dataset.")
             task = record.get("recipe_task")
-            if task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "mixed"):
+            if task not in ("detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "mixed"):
                 raise ValueError("Saved flow recipe is invalid.")
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
             ordered_linear_nodes(pipeline)
@@ -649,6 +755,8 @@ def activate_saved_pipeline_version(
         _write_json(_active_flow_file(project_dir), {
             "version_id": version_id,
             "project_id": project["id"],
+            "labelset_id": project.get("active_labelset_id", "default"),
+            "activated_at_ns": time.time_ns(),
             "recipe_task": task,
             "source_dataset_path": requested_source,
         })
@@ -734,6 +842,8 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
     """
     try:
         project = get_current_project(request) if request is not None else None
+        if req.project_id is not None and (not project or req.project_id != project["id"]):
+            raise HTTPException(status_code=409, detail="Flow execution project changed before the request was accepted.")
         if req.pipeline is not None:
             pipeline = req.pipeline
         elif request is not None:
@@ -763,7 +873,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
         local_model_jobs: set[str] = set()
         verified_checkpoints: Dict[tuple[str, str], Path] = {}
         for node in ordered_nodes:
-            if node.data.node_type not in ("detection_crop", "inspection"):
+            if flow_model_task(node) is None:
                 continue
             job_id = node.data.model_job_id
             if not job_id:
@@ -774,7 +884,14 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                     status_code=409,
                     detail=f"Model training is {known_job.status} for {node.data.label}; wait for a completed job.",
                 )
-            expected_task = "detection" if node.data.node_type == "detection_crop" else (node.data.task or "").lower()
+            expected_task = flow_model_task(node)
+            if expected_task in SPECIALIZED_TASKS:
+                if project is None: raise HTTPException(status_code=409,detail="Specialized models require an active project.")
+                try: checkpoint,_=resolve_specialized_checkpoint(project['models_dir'],job_id,expected_task,project.get('source_dataset_dir'))
+                except (ValueError,OSError) as exc: raise HTTPException(status_code=409,detail=str(exc)) from exc
+                verified_checkpoints[(job_id,expected_task)]=checkpoint.resolve()
+                local_model_jobs.add(job_id)
+                continue
             checkpoint = (
                 trusted_checkpoint(job_id, project_models_dir=project["models_dir"])
                 if project is not None else _ENGINE._resolve_checkpoint(job_id, expected_task)
@@ -798,13 +915,56 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             verified_checkpoints[(job_id, expected_task)] = checkpoint.resolve()
 
             try:
-                context = remote_job_context(checkpoint.parent, job_id)
+                if req.execution_target == "model_compute":
+                    context = remote_job_context(checkpoint.parent, job_id)
+                else:
+                    from backend.remote.operations import verify_downloaded_checkpoint
+                    verify_downloaded_checkpoint(checkpoint.parent, job_id)
+                    context = None
             except ArtifactValidationError as exc:
                 raise HTTPException(status_code=409, detail=f"Remote model provenance is invalid for {node.data.label}: {exc}") from exc
             if context is None:
                 local_model_jobs.add(job_id)
             else:
                 model_contexts[job_id] = context
+        if req.execution_target == "local":
+            from backend.engine.runtime_device import resolve_runtime_device
+            from backend.engine.shared_scheduler import compute_lease_scope
+            try:
+                device = resolve_runtime_device(req.device)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            try:
+                with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
+                    engine = FlowchartEngine(device=device)
+                    with verified_checkpoint_scope(verified_checkpoints):
+                        result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id)
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
+            return {**result, "execution_target": "local", "execution_device": str(device), "compute_profile_id": None}
+        if req.execution_target == "selected_compute":
+            if not project or not req.compute_profile_id:
+                raise HTTPException(status_code=422, detail="Choose an explicit compute profile for flow execution.")
+            from backend.remote.profiles import get_profile_store
+            from backend.remote.operations import run_verified_flowchart_on_compute, RemoteComputeBusy
+            from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
+            profile = get_profile_store().get(req.compute_profile_id)
+            if profile is None:
+                raise HTTPException(status_code=404, detail="Selected execution compute profile is unavailable.")
+            frozen_profile = getattr(getattr(request, "state", None), "frozen_execution_profile", None)
+            if frozen_profile is not None:
+                if frozen_profile.id != req.compute_profile_id or profile.model_dump() != frozen_profile.model_dump():
+                    raise HTTPException(status_code=409, detail="Execution compute profile changed after this inspection run was created.")
+                profile = frozen_profile
+            try:
+                return run_verified_flowchart_on_compute(profile, project, pipeline.model_dump(), verified_checkpoints,
+                                                         Path(req.image_path), req.image_id, device=req.device)
+            except RemoteComputeBusy as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
+            except RemoteDisconnected as exc:
+                raise HTTPException(status_code=503, detail=f"Selected flow execution connection lost: {exc}") from exc
+            except (ArtifactValidationError, ValueError) as exc:
+                raise HTTPException(status_code=502, detail=f"Selected flow execution could not be verified: {exc}") from exc
         if model_contexts:
             if local_model_jobs:
                 raise HTTPException(status_code=409, detail="Flowchart models must all be on the same compute server; train or select matching models.")
@@ -812,9 +972,12 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
 
             try:
-                return run_remote_flowchart(
+                result = run_remote_flowchart(
                     list(model_contexts.values()), pipeline.model_dump(), Path(req.image_path), req.image_id,
                 )
+                profile = next(iter(model_contexts.values())).profile
+                return {**result, "execution_target": "model_compute", "compute_profile_id": profile.id,
+                        "compute_profile_name": profile.name}
             except RemoteDisconnected as exc:
                 raise HTTPException(status_code=503, detail=f"Remote flowchart connection lost; retry the same run: {exc}") from exc
             except ArtifactValidationError as exc:
@@ -825,7 +988,8 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 image_path=req.image_path,
                 image_id=req.image_id,
             )
-        return result
+        return {**result, "execution_target": "model_compute", "execution_device": str(_ENGINE.device),
+                "compute_profile_id": None}
     except HTTPException:
         raise
     except Exception as e:

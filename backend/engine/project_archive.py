@@ -8,6 +8,9 @@ import os
 import re
 import shutil
 import sqlite3
+import secrets
+import socket
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -27,7 +30,7 @@ class ArchiveError(ValueError):
         self.status_code = status_code
 
 
-def _files(root: Path, excluded_root: Path | None = None) -> Iterable[Path]:
+def _files(root: Path, excluded_root: Path | None = None, *, skip_sqlite_journals: bool = False) -> Iterable[Path]:
     for directory, folders, files in os.walk(root, followlinks=False):
         parent = Path(directory)
         for name in folders:
@@ -38,7 +41,11 @@ def _files(root: Path, excluded_root: Path | None = None) -> Iterable[Path]:
         folders.sort()
         for name in sorted(files):
             path = parent / name
-            if path.is_symlink() or not path.is_file():
+            if path.is_symlink():
+                raise ArchiveError("Project or source contains an unsupported file or symbolic link")
+            if skip_sqlite_journals and name.endswith(("-wal", "-shm")) and _sqlite_file(path.with_name(name[:-4])):
+                continue
+            if not path.is_file():
                 raise ArchiveError("Project or source contains an unsupported file or symbolic link")
             yield path
 
@@ -95,6 +102,25 @@ def _labelset_dataset_fingerprints(project_dir: Path, source_dir: Path) -> tuple
     }
 
 
+def _sqlite_file(path: Path) -> bool:
+    if path.suffix not in {".sqlite3", ".sqlite", ".db"} or not path.is_file():
+        return False
+    with path.open("rb") as source:
+        return source.read(16) == b"SQLite format 3\x00"
+
+
+def _sqlite_snapshot(path: Path, directory: Path) -> Path:
+    snapshot = directory / f"{uuid.uuid4().hex}.sqlite3"
+    source = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+    target = sqlite3.connect(snapshot)
+    try:
+        source.backup(target)
+    finally:
+        target.close()
+        source.close()
+    return snapshot
+
+
 def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, Any]:
     project_dir = Path(project["project_dir"]).resolve()
     source_text = project.get("source_dataset_dir")
@@ -121,7 +147,8 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
         if folder is None:
             continue
         # Restored source lives inside the workspace. Archive it once under source/.
-        for path in _files(folder, excluded_root=source_dir if prefix == "project" else None):
+        for path in _files(folder, excluded_root=source_dir if prefix == "project" else None,
+                           skip_sqlite_journals=prefix == "project"):
             size = path.stat().st_size
             total_bytes += size
             if prefix == "source":
@@ -132,12 +159,21 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
             if len(inventory) > MAX_FILES:
                 raise ArchiveError("Backup exceeds the file count limit", 413)
     destination_dir.mkdir(parents=True, exist_ok=True)
-    archive = destination_dir / f"{re.sub(r'[^\w-]+', '_', project['name']).strip('_') or 'project'}-{time.strftime('%Y%m%d-%H%M%S', time.gmtime())}-{uuid.uuid4().hex[:6]}.mvision.zip"
+    archive_name = re.sub(r"[^\w-]+", "_", project["name"]).strip("_") or "project"
+    archive = destination_dir / f"{archive_name}-{time.strftime('%Y%m%d-%H%M%S', time.gmtime())}-{uuid.uuid4().hex[:6]}.mvision.zip"
     temporary = destination_dir / f".{archive.name}.{uuid.uuid4().hex}.partial"
     rows = []
+    sqlite_staging = Path(tempfile.mkdtemp(prefix=".database-snapshot-", dir=destination_dir))
     try:
         with ZipFile(temporary, "w", compression=ZIP_STORED, allowZip64=True) as output:
             for member, path, size in inventory:
+                if member.startswith("project/") and _sqlite_file(path):
+                    path = _sqlite_snapshot(path, sqlite_staging)
+                    snapshot_size = path.stat().st_size
+                    total_bytes += snapshot_size - size
+                    size = snapshot_size
+                    if total_bytes > MAX_TOTAL_BYTES:
+                        raise ArchiveError("Backup exceeds the total size limit", 413)
                 before = path.stat()
                 output.write(path, member)
                 after = path.stat()
@@ -165,6 +201,7 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
         os.replace(temporary, archive)
     finally:
         temporary.unlink(missing_ok=True)
+        shutil.rmtree(sqlite_staging)
     return {"archive_path": str(archive), "source_included": source_dir is not None,
             "file_count": len(rows), "total_bytes": total_bytes, "source_bytes": source_bytes}
 
@@ -191,42 +228,231 @@ def _rebind_value(value: Any, old_project: Path, target: Path,
     return value
 
 
+def _immutable_package_roots(project_dir: Path) -> list[Path]:
+    roots = []
+    for manifest in project_dir.rglob("manifest.json"):
+        try:
+            value = json.loads(manifest.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        if (isinstance(value, dict) and isinstance(value.get("files"), list)
+                and ("pipeline_id" in value or value.get("task") == "defect_gan")
+                and all(isinstance(row, dict) and "path" in row and "sha256" in row for row in value["files"])):
+            roots.append(manifest.parent)
+    return roots
+
+
+def _evaluation_digest(value: dict) -> str:
+    unsigned = {key: item for key, item in value.items() if key != "evidence_sha256"}
+    return hashlib.sha256(json.dumps(unsigned, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+def _rebind_evaluation(value: dict, old_project: Path, target: Path,
+                       old_source: Path | None, new_source: Path | None) -> dict:
+    if _evaluation_digest(value) != value.get("evidence_sha256"):
+        raise ArchiveError("Evaluation evidence integrity failure")
+    updated = dict(value)
+    for key in ("binding", "result"):
+        updated[key] = _rebind_value(value[key], old_project, target, old_source, new_source)
+    updated.setdefault("original_evidence_sha256", value["evidence_sha256"])
+    updated.setdefault("original_binding", value["binding"])
+    updated.setdefault("original_evidence", {key: item for key, item in value.items() if key != "evidence_sha256"})
+    updated["archive_restorations"] = [*value.get("archive_restorations", []), {
+        "previous_evidence_sha256": value["evidence_sha256"], "original_project_dir": str(old_project),
+        "restored_project_dir": str(target), "original_source_dir": str(old_source) if old_source else None,
+        "restored_source_dir": str(new_source) if new_source else None,
+    }]
+    updated["evidence_sha256"] = _evaluation_digest(updated)
+    return updated
+
+
 def _rebind_json_records(staging: Path, old_project: Path, target: Path,
                          old_source: Path | None, new_source: Path | None) -> None:
     source_roots = _restored_source_roots(staging)
+    immutable_roots = _immutable_package_roots(staging)
+    annotation_hashes: dict[str, str] = {}
+    ledgers: list[Path] = []
     for path in staging.rglob("*.json"):
         # Source files are customer data. Keep their verified bytes intact.
-        if any(path.is_relative_to(root) for root in source_roots):
+        # Version snapshots need their own hashes, paths and immutable source bytes.
+        if (path.is_relative_to(staging / "versions") or path.name == "release_policy.json"
+                or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))):
             continue
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except ValueError:
             continue
-        updated = _rebind_value(value, old_project, target, old_source, new_source)
+        if path.parent == staging / "reports" / "evaluations" and "evidence_sha256" in value:
+            updated = _rebind_evaluation(value, old_project, target, old_source, new_source)
+        else:
+            updated = _rebind_value(value, old_project, target, old_source, new_source)
         if updated != value:
+            previous_hash = _digest_file(path)
             path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+            if "by_dataset" in path.parts and "metadata" not in path.parts:
+                annotation_hashes[previous_hash] = _digest_file(path)
+        if path.name == "workflow.json" and path.parent.name == "metadata":
+            ledgers.append(path)
+    for ledger in ledgers:
+        _rebind_annotation_hashes(ledger, annotation_hashes)
 
 
-def _rebind_versions(staging: Path, old_source: Path | None, new_source: Path | None) -> None:
+def _rebind_annotation_hashes(path: Path, replacements: dict[str, str]) -> None:
+    """Relocation changes path-bearing Studio JSON, without a new review event."""
+    if not replacements:
+        return
+    value = json.loads(path.read_text(encoding="utf-8"))
+    changed = False
+    for row in value.get("images", {}).values():
+        original = row.get("annotation_hash")
+        if original in replacements:
+            row["annotation_hash"] = replacements[original]
+            changed = True
+    if changed:
+        path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _scope_replacements(members: Iterable[str], old_source: Path | None,
+                        new_source: Path | None) -> dict[str, str]:
+    """Scope identities include every image parent, not only the source root."""
+    if old_source is None or new_source is None:
+        return {}
+    from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+    parents = {Path(".")}
+    for member in members:
+        if member.startswith("source/") and Path(member).suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+            parents.add(Path(*Path(member).parts[1:]).parent)
+    return {_source_key(old_source / parent): _source_key(new_source / parent) for parent in parents}
+
+
+def _rebind_scope_path(raw: str, replacements: dict[str, str]) -> str:
+    # Hashes are entire path components; never replace a matching substring.
+    return str(Path(*(replacements.get(part, part) for part in Path(raw).parts)))
+
+
+def _rebind_versions(staging: Path, old_project: Path, target: Path,
+                     old_source: Path | None, new_source: Path | None,
+                     scopes: dict[str, str]) -> dict[str, str]:
     versions = staging / "versions"
     if not versions.is_dir():
-        return
+        return {}
+    digests = {}
     for path in versions.glob("*/manifest.json"):
         manifest = json.loads(path.read_text(encoding="utf-8"))
+        if manifest.get("content_digest") != _content_digest(manifest):
+            raise ArchiveError("Dataset version manifest digest mismatch")
+        digests[manifest["content_digest"]] = str(path.parent.relative_to(staging))
+        snapshots: dict[str, Path] = {}
+        annotation_hashes: dict[str, str] = {}
+        for row in manifest.get("files", []):
+            raw = row.get("snapshot_path")
+            if not raw:
+                continue
+            snapshot = path.parent / raw
+            if not snapshot.resolve().is_relative_to(path.parent.resolve()) or not snapshot.is_file():
+                raise ArchiveError("Dataset version snapshot path is invalid")
+            if _digest_file(snapshot) != row.get("sha256"):
+                raise ArchiveError("Dataset version snapshot checksum mismatch")
+            snapshots[raw] = snapshot
+        manifest = _rebind_value(manifest, old_project, target, old_source, new_source)
         if old_source is not None and new_source is not None:
             for row in manifest.get("files", []):
                 raw = row.get("source_path")
-                if not isinstance(raw, str):
+                origin = row.get("origin")
+                if isinstance(raw, str) and origin in {"studio", "studio_scoped"}:
+                    row["source_path"] = _rebind_scope_path(raw, scopes)
+                elif isinstance(raw, str) and origin == "split":
+                    row["source_path"] = _rebind_scope_path(raw, {f'{_split_key(old_source)}.json': f'{_split_key(new_source)}.json'})
+                if origin == "studio_scoped":
+                    row["relative_path"] = _rebind_scope_path(row["relative_path"], scopes)
+                backup = row.get("snapshot_path")
+                if not backup:
                     continue
-                if row.get("origin") == "studio":
-                    row["source_path"] = raw.replace(_source_key(old_source), _source_key(new_source))
-                elif row.get("origin") == "split":
-                    row["source_path"] = raw.replace(_split_key(old_source), _split_key(new_source))
+                snapshot = snapshots[backup]
+                if origin != "source" and snapshot.suffix.lower() == ".json":
+                    before = _digest_file(snapshot)
+                    try:
+                        value = json.loads(snapshot.read_text(encoding="utf-8"))
+                    except ValueError:
+                        continue
+                    updated = _rebind_value(value, old_project, target, old_source, new_source)
+                    if updated != value:
+                        snapshot.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+                    if origin in {"studio", "studio_scoped"} and "metadata" not in Path(backup).parts:
+                        annotation_hashes[before] = _digest_file(snapshot)
+            # Snapshot ledgers bind their own historical annotations, not today's.
+            for snapshot in snapshots.values():
+                if snapshot.name == "workflow.json" and snapshot.parent.name == "metadata":
+                    _rebind_annotation_hashes(snapshot, annotation_hashes)
+            for row in manifest.get("files", []):
+                backup = row.get("snapshot_path")
+                if backup:
+                    snapshot = snapshots[backup]
+                    row["sha256"] = _digest_file(snapshot)
+                    row["size_bytes"] = snapshot.stat().st_size
+                    if row.get("origin") == "studio_scoped":
+                        row["snapshot_path"] = _rebind_scope_path(backup, scopes)
+            snapshot_root = path.parent / "labels" / "studio_scoped"
+            _rename_scopes(snapshot_root, scopes)
         manifest["content_digest"] = _content_digest(manifest)
         path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return digests
 
 
-def _rebind_dataset_state(staging: Path, old_source: Path | None, new_source: Path | None) -> None:
+def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, str]) -> None:
+    """Metadata aliases use relocated verified versions; checkpoint bytes stay fixed."""
+    immutable = _immutable_package_roots(target)
+    for path in (target / "models").rglob("*.json"):
+        if any(path.is_relative_to(root) for root in immutable):
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        binding = value.get("training_provenance") if isinstance(value, dict) else None
+        if not isinstance(binding, dict) or binding.get("manifest_sha256") not in previous_digests:
+            continue
+        old_digest = binding["manifest_sha256"]
+        directory = target / previous_digests[old_digest]
+        if Path(binding.get("version_dir", "")).resolve() != directory.resolve():
+            raise ArchiveError("Training version alias does not match its bound manifest")
+        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+        split_rows = [row["sha256"] for row in manifest["files"] if row["origin"] == "split"]
+        split_digest = split_rows[0] if len(split_rows) == 1 else hashlib.sha256(json.dumps(
+            [{key: row[key] for key in ("origin", "relative_path", "sha256")} for row in manifest["files"]],
+            sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        binding.setdefault("archive_restored_from_manifest_sha256", old_digest)
+        binding.update(manifest_sha256=manifest["content_digest"], split_sha256=split_digest)
+        if binding.get('family_inputs'):
+            for row in binding['family_inputs']:
+                if (binding.get('family_task')=='enhancement' and row.get('relative_path')=='pairs.json'
+                        and row.get('snapshot_path')):
+                    backup=Path(row['snapshot_path']);current=Path(row['source_path'])
+                    if (not backup.resolve().is_relative_to(directory.resolve()) or _digest_file(backup)!=row['sha256']
+                            or not current.resolve().is_relative_to(target/'dataset'/'enhancement')):
+                        raise ArchiveError('Enhancement family relocation binding is invalid')
+                    from backend.engine.enhancement import load_enhancement_manifest
+                    actual=load_enhancement_manifest(current.parent)['provenance']['dataset_sha256']
+                    if actual!=binding['family_provenance']['dataset_sha256']:
+                        raise ArchiveError('Enhancement pairs changed from bound family manifest')
+                    row['restored_source_sha256']=_digest_file(current)
+            binding['family_inputs_sha256']=hashlib.sha256(json.dumps(binding['family_inputs'],sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _rename_scopes(root: Path, scopes: dict[str, str]) -> None:
+    for old_key, new_key in scopes.items():
+        if old_key == new_key:
+            continue
+        original, replacement = root / old_key, root / new_key
+        if original.exists():
+            if replacement.exists():
+                raise ArchiveError("Restored annotation key collides with an existing set")
+            original.rename(replacement)
+
+
+def _rebind_dataset_state(staging: Path, old_source: Path | None, new_source: Path | None,
+                          scopes: dict[str, str]) -> None:
     if old_source is None or new_source is None:
         return
     old_key = _source_key(old_source)
@@ -237,14 +463,12 @@ def _rebind_dataset_state(staging: Path, old_source: Path | None, new_source: Pa
             raise ArchiveError("Restored flow recipe key collides with an existing recipe")
         original.rename(replacement)
     roots = [staging / "annotations"]
+    for labelset in (staging / "flowcharts" / "drafts").glob("*"):
+        if labelset.is_dir():
+            _rename_scopes(labelset, scopes)
     roots.extend(staging.glob("labelsets/ls_*/annotations"))
     for root in roots:
-        original = root / "by_dataset" / old_key
-        replacement = root / "by_dataset" / new_key
-        if original.exists():
-            if replacement.exists():
-                raise ArchiveError("Restored annotation key collides with an existing set")
-            original.rename(replacement)
+        _rename_scopes(root / "by_dataset", scopes)
     split = staging / "dataset" / "splits" / f"{_split_key(old_source)}.json"
     if split.exists():
         replacement = split.with_name(f"{_split_key(new_source)}.json")
@@ -346,6 +570,44 @@ def _rebind_deployments(staging: Path, old_source: Path | None, new_source: Path
                              (str(new_source), str(old_source)))
 
 
+def _rebind_execution_state(staging: Path, old_project: Path, target: Path,
+                            old_source: Path | None, new_source: Path | None) -> None:
+    database = staging / "reports" / "comparison_jobs.sqlite3"
+    if database.is_file():
+        with sqlite3.connect(database) as conn, conn:
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
+            if not {"job_id", "payload", "status"}.issubset(columns):
+                raise ArchiveError("Comparison jobs have an invalid schema")
+            for identifier, payload, status in conn.execute("SELECT job_id, payload, status FROM jobs").fetchall():
+                rebound = _rebind_json_blob(payload, old_project, target, old_source, new_source)
+                fields = {"payload": rebound}
+                if status in {"queued", "running"}:
+                    fields["status"] = "interrupted"
+                    if "error" in columns:
+                        fields["error"] = "Restored comparison has no worker; rerun the bound models."
+                if "owner_pid" in columns:
+                    fields["owner_pid"] = None
+                assignments = ", ".join(f"{name} = ?" for name in fields)
+                conn.execute(f"UPDATE jobs SET {assignments} WHERE job_id = ?", (*fields.values(), identifier))
+    database = staging / "runtime_service" / "runtime_deployments.sqlite3"
+    if database.is_file():
+        with sqlite3.connect(database) as conn, conn:
+            for identifier, release, ack in conn.execute("SELECT deployment_id, release, ack FROM deployments").fetchall():
+                conn.execute("UPDATE deployments SET release = ?, ack = ? WHERE deployment_id = ?", (
+                    _rebind_json_blob(release, old_project, target, old_source, new_source),
+                    _rebind_json_blob(ack, old_project, target, old_source, new_source), identifier))
+    service_config = staging / "runtime_service" / "service.json"
+    if service_config.is_file():
+        value = json.loads(service_config.read_text(encoding="utf-8"))
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        value.update(pid=None, port=port, token=secrets.token_urlsafe(32))
+        value.pop("native_label", None)
+        service_config.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+        service_config.chmod(0o600)
+
+
 def _replace_fingerprints(value: Any, replacements: dict[str, str]) -> Any:
     if isinstance(value, str):
         return replacements.get(value, value)
@@ -389,14 +651,24 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
             raise ArchiveError("Backup label set fingerprints are ambiguous")
         replacements[old_fingerprint] = new_fingerprint
     source_roots = _restored_source_roots(target)
+    immutable_roots = _immutable_package_roots(target)
     for path in target.rglob("*.json"):
-        if any(path.is_relative_to(root) for root in source_roots):
+        if (path.name == "release_policy.json" or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))
+                or path.is_relative_to(target / "versions") and path.name != "manifest.json"):
             continue
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except ValueError:
             continue
-        updated = _replace_fingerprints(value, replacements)
+        if path.parent == target / "reports" / "evaluations" and "evidence_sha256" in value:
+            if _evaluation_digest(value) != value["evidence_sha256"]:
+                raise ArchiveError("Restored evaluation evidence integrity failure")
+            updated = dict(value)
+            for key in ("binding", "result"):
+                updated[key] = _replace_fingerprints(value[key], replacements)
+            updated["evidence_sha256"] = _evaluation_digest(updated)
+        else:
+            updated = _replace_fingerprints(value, replacements)
         if updated != value:
             if path.parent.parent == target / "versions" and path.name == "manifest.json":
                 updated["content_digest"] = _content_digest(updated)
@@ -414,7 +686,8 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
                 conn.execute(f"UPDATE revisions SET {column} = CASE {column} {cases} ELSE {column} END", parameters)
         if {"comparison_id", "comparison_sha256"}.issubset(columns):
             for (comparison_id,) in conn.execute("SELECT DISTINCT comparison_id FROM revisions"):
-                report = target / "reports" / "model_comparisons" / f"{comparison_id}.json"
+                folder = 'evaluations' if isinstance(comparison_id,str) and comparison_id.startswith('evaluation_') else 'model_comparisons'
+                report = target / "reports" / folder / f"{comparison_id}.json"
                 if report.is_file():
                     conn.execute("UPDATE revisions SET comparison_sha256 = ? WHERE comparison_id = ?",
                                  (_digest_file(report), comparison_id))
@@ -491,11 +764,13 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
                             "annotations_dir": str(target_dir / "annotations"),
                             "source_dataset_dir": str(new_source) if new_source else None})
             project_path.write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
-            _rebind_dataset_state(staging, old_source, new_source)
+            scopes = _scope_replacements(expected, old_source, new_source)
+            _rebind_dataset_state(staging, old_source, new_source, scopes)
             _rebind_json_records(staging, old_project, target_dir, old_source, new_source)
-            _rebind_versions(staging, old_source, new_source)
+            version_digests = _rebind_versions(staging, old_project, target_dir, old_source, new_source, scopes)
             _rebind_inspection_history(staging, old_project, target_dir, old_source, new_source)
             _rebind_deployments(staging, old_source, new_source)
+            _rebind_execution_state(staging, old_project, target_dir, old_source, new_source)
         if target_dir.exists():
             raise ArchiveError("Restore folder was created by another process", 409)
         os.replace(staging, target_dir)
@@ -513,6 +788,7 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
                 old_fingerprints = ({active_id: old_fingerprint}
                                     if isinstance(old_fingerprint, str) and old_fingerprint.startswith("v1:") else {})
             _rebind_fingerprint_records(target_dir, new_source, old_fingerprints)
+        _rebind_training_version_aliases(target_dir, version_digests)
         completed = True
         return target_dir
     except (OSError, KeyError, TypeError, ValueError, sqlite3.Error) as exc:

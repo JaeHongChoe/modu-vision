@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 
@@ -69,7 +70,9 @@ assert(fs.existsSync(preloadEntry), 'dist-electron/preload/index.js exists');
 
 // 3. Unpacked Application Bundle & ASAR Verification
 console.log('\n--- Step 3: Validating Unpacked Desktop Bundle (release/mac-arm64/) ---');
-const appOutDir = path.join(ROOT_DIR, 'release', 'mac-arm64');
+const appOutDir = process.env.VISION_AI_STUDIO_PACKAGE_DIR
+  ? path.resolve(process.env.VISION_AI_STUDIO_PACKAGE_DIR)
+  : path.join(ROOT_DIR, 'release', 'mac-arm64');
 assert(fs.existsSync(appOutDir), 'release/mac-arm64/ directory exists');
 
 const appBundle = path.join(appOutDir, 'Vision AI Studio.app');
@@ -87,6 +90,19 @@ const appAsar = path.join(resourcesDir, 'app.asar');
 assert(fs.existsSync(appAsar), 'Contents/Resources/app.asar exists');
 const asarStats = fs.statSync(appAsar);
 assert(asarStats.size > 1000000, `app.asar size is valid (${(asarStats.size / (1024 * 1024)).toFixed(2)} MB)`);
+const asar = require('@electron/asar');
+const compiledFiles = [
+  'dist/index.html',
+  ...assetFiles.map(name => `dist/assets/${name}`),
+  ...['main/index.js', 'main/supervisor.js', 'main/ipc.js', 'preload/index.js'].map(name => `dist-electron/${name}`),
+];
+const staleAssets = compiledFiles.filter(relative => {
+  try {
+    const expected = fs.readFileSync(path.join(ROOT_DIR, relative));
+    return !asar.extractFile(appAsar, relative).equals(expected);
+  } catch { return true; }
+});
+assert(staleAssets.length === 0, `Packaged renderer and Electron scripts match current build (stale/missing: ${staleAssets.slice(0, 5).join(', ') || 'none'})`);
 
 // 4. Backend Extraction Outside ASAR Verification
 console.log('\n--- Step 4: Validating Python Backend Extraction Outside ASAR ---');
@@ -102,6 +118,26 @@ assert(fs.existsSync(mainPy), 'Resources/backend/main.py entry point exists');
 assert(fs.existsSync(apiDir), 'Resources/backend/api/ directory exists');
 assert(fs.existsSync(engineDir), 'Resources/backend/engine/ directory exists');
 assert(fs.existsSync(utilsDir), 'Resources/backend/utils/ directory exists');
+
+function pythonSources(directory, relative = '') {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const rel = path.join(relative, entry.name);
+    if (entry.isDirectory()) {
+      return ['tests', '__pycache__', '.pytest_cache'].includes(entry.name) ? [] : pythonSources(path.join(directory, entry.name), rel);
+    }
+    return entry.isFile() && entry.name.endsWith('.py') ? [rel] : [];
+  });
+}
+const digest = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const staleBackend = pythonSources(path.join(ROOT_DIR, 'backend')).filter(relative => {
+  const packaged = path.join(backendResources, relative);
+  return !fs.existsSync(packaged) || digest(packaged) !== digest(path.join(ROOT_DIR, 'backend', relative));
+});
+assert(staleBackend.length === 0, `Packaged backend matches current source (stale/missing: ${staleBackend.slice(0, 5).join(', ') || 'none'})`);
+for (const name of ['inspection-service-client.mjs', 'InspectionServiceClient.cs']) {
+  const packaged = path.join(resourcesDir, 'examples', name);
+  assert(fs.existsSync(packaged) && digest(packaged) === digest(path.join(ROOT_DIR, 'examples', name)), `Flow export integration client packaged: ${name}`);
+}
 
 // 5. Exclusion Filters Integrity (No test files or pycaches packaged)
 console.log('\n--- Step 5: Validating Packaging Exclusion Filters ---');

@@ -3,6 +3,7 @@ import { ArrowRight, GitCompareArrows, Loader2, RefreshCw, ShieldCheck } from 'l
 import type { FlowModelTask, Language } from '../../types';
 import {
   api,
+  request,
   type ModelComparisonModel,
   type ModelComparisonRecord,
   type ModelComparisonReport,
@@ -16,6 +17,11 @@ interface Props {
   preferredJobId?: string | null;
   preferredParentJobId?: string | null;
   language: Language;
+}
+
+interface ComparisonJob {
+  job_id: string; status: string; total_images: number; completed_images: number;
+  cancel_requested: number; report_id: string | null; error: string | null;
 }
 
 function errorMessage(error: unknown): string {
@@ -53,6 +59,11 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [reportScope, setReportScope] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [fullTest, setFullTest] = useState(true);
+  const [comparisonJob, setComparisonJob] = useState<ComparisonJob | null>(null);
+  const [jobs, setJobs] = useState<ComparisonJob[]>([]);
+  const [productFilter, setProductFilter] = useState('');
+  const [lotFilter, setLotFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -66,16 +77,21 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     setError(null);
     setIsLoading(false);
     setIsRunning(false);
+    setComparisonJob(null); setJobs([]); setProductFilter(''); setLotFilter('');
     setMaxImages(task === 'segmentation' ? 1 : 4);
     if (!projectDir || !sourceFolder) return () => { active = false; };
     setIsLoading(true);
     Promise.all([
       api.evaluation.comparisonModels(sourceFolder, task),
       api.evaluation.listComparisons(sourceFolder, task),
-    ]).then(([catalog, history]) => {
+      request<{ jobs: ComparisonJob[] }>(`/api/evaluation/model-comparisons/jobs?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`),
+    ]).then(([catalog, history, jobHistory]) => {
       if (!active || currentScope.current !== scopeKey) return;
       setModels(catalog.models);
       setRecords(history.comparisons);
+      setJobs(jobHistory.jobs);
+      const running = jobHistory.jobs.find((j) => j.status === 'queued' || j.status === 'running');
+      if (running) { setComparisonJob(running); setIsRunning(true); }
       const candidate = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id || '';
       const parent = catalog.models.find((model) => model.job_id === preferredParentJobId)?.job_id || '';
       const initial = parent && candidate && parent !== candidate ? parent : candidate || catalog.models[0]?.job_id || '';
@@ -90,6 +106,33 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     return () => { active = false; };
   }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId]);
 
+  useEffect(() => {
+    if (!comparisonJob || !['queued', 'running'].includes(comparisonJob.status)) return;
+    let active = true;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const job = await request<ComparisonJob>(`/api/evaluation/model-comparisons/jobs/${comparisonJob.job_id}?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`);
+        if (!active || currentScope.current !== scopeKey) return;
+        setComparisonJob(job);
+        if (['queued', 'running'].includes(job.status)) { timer = window.setTimeout(poll, 800); return; }
+        setIsRunning(false);
+        if (job.error) setError(job.error);
+        if (job.report_id) {
+          const saved = await api.evaluation.getComparison(job.report_id, sourceFolder, task);
+          if (!active || currentScope.current !== scopeKey) return;
+          setReport(saved); setReportScope(scopeKey);
+        }
+        const history = await api.evaluation.listComparisons(sourceFolder, task);
+        if (active && currentScope.current === scopeKey) setRecords(history.comparisons);
+      } catch (cause) {
+        if (active && currentScope.current === scopeKey) { setError(errorMessage(cause)); timer = window.setTimeout(poll, 2000); }
+      }
+    };
+    void poll();
+    return () => { active = false; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [comparisonJob?.job_id, sourceFolder, task, scopeKey]);
+
   const openReport = async (comparisonId: string) => {
     if (!comparisonId || !sourceFolder) return;
     const requestedScope = scopeKey;
@@ -102,7 +145,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         setReportScope(requestedScope);
       }
     } catch (cause) {
-      if (currentScope.current === requestedScope) setError(errorMessage(cause));
+      if (currentScope.current === requestedScope) { setError(errorMessage(cause)); setIsRunning(false); }
     } finally {
       if (currentScope.current === requestedScope) setIsLoading(false);
     }
@@ -114,16 +157,16 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     setIsRunning(true);
     setError(null);
     try {
-      const created = await api.evaluation.createComparison({
+      const created = await request<ComparisonJob>('/api/evaluation/model-comparisons/jobs', { method: 'POST', body: JSON.stringify({
         source_dataset_path: sourceFolder,
         task,
         incumbent_job_id: incumbentId,
         candidate_job_id: candidateId,
         max_images: maxImages,
-      });
+        full_test: fullTest,
+      }) });
       if (currentScope.current !== requestedScope) return;
-      setReport(created);
-      setReportScope(requestedScope);
+      setComparisonJob(created); setJobs((current) => [created, ...current]);
       try {
         const history = await api.evaluation.listComparisons(sourceFolder, task);
         if (currentScope.current === requestedScope) setRecords(history.comparisons);
@@ -132,18 +175,20 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         // the next time this stage opens, without obscuring that result.
       }
     } catch (cause) {
-      if (currentScope.current === requestedScope) setError(errorMessage(cause));
+      if (currentScope.current === requestedScope) { setError(errorMessage(cause)); setIsRunning(false); }
     } finally {
-      if (currentScope.current === requestedScope) setIsRunning(false);
+      if (currentScope.current === requestedScope) setIsLoading(false);
     }
   };
 
   const visibleReport = reportScope === scopeKey ? report : null;
+  const comparisonImages = (visibleReport?.images || []) as Array<ModelComparisonReport['images'][number] & { product?: string; lot?: string }>;
+  const filteredImages = comparisonImages.filter((row) => (!productFilter || (row.product || '(미지정)') === productFilter) && (!lotFilter || (row.lot || '(미지정)') === lotFilter));
   const differentTrainingData = visibleReport
     && visibleReport.incumbent_training_dataset_fingerprint !== visibleReport.candidate_training_dataset_fingerprint;
 
   return (
-    <section className="rounded-lg border border-sky-500/30 bg-gradient-to-br from-[#162636] to-[#15202d] p-3.5 text-xs text-slate-200"
+    <section className="rounded-lg border border-[#344255] bg-[#182332] p-3.5 text-xs text-slate-200"
       aria-label={isKo ? '현행과 후보 모델 비교' : 'Baseline and candidate model comparison'} aria-busy={isRunning}>
       <div className="flex items-start gap-2.5">
         <div className="rounded-md border border-sky-400/30 bg-sky-500/10 p-1.5 text-sky-300">
@@ -188,9 +233,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <label className="space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? 'test 이미지 수' : 'Test images'}</span>
-              <select aria-label={isKo ? 'test 이미지 수' : 'Test image count'} value={maxImages}
-                onChange={(event) => setMaxImages(Number(event.target.value))} disabled={isRunning}
+              <select aria-label={isKo ? 'test 이미지 수' : 'Test image count'} value={fullTest ? 0 : maxImages}
+                onChange={(event) => { setFullTest(event.target.value === '0'); if (event.target.value !== '0') setMaxImages(Number(event.target.value)); }} disabled={isRunning}
                 className="block rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5 text-slate-100">
+                <option value={0}>{isKo ? '전체 시험 데이터' : 'All test images'}</option>
                 {[1, 4, 8, 16].map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
@@ -201,7 +247,19 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
                 : <GitCompareArrows className="h-3.5 w-3.5" aria-hidden="true" />}
               {isKo ? (isRunning ? '비교 실행 중…' : '동일 test 이미지로 비교') : (isRunning ? 'Comparing…' : 'Compare same test images')}
             </button>
+            {isRunning && comparisonJob && <button type="button" disabled={!!comparisonJob.cancel_requested} onClick={() => {
+              const expectedScope = scopeKey;
+              void request<ComparisonJob>(`/api/evaluation/model-comparisons/jobs/${comparisonJob.job_id}/cancel?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`, { method: 'POST' })
+                .then((job) => { if (currentScope.current === expectedScope) setComparisonJob(job); })
+                .catch((cause) => { if (currentScope.current === expectedScope) setError(errorMessage(cause)); });
+            }} className="rounded border border-amber-600 px-3 py-2 text-amber-200 disabled:opacity-40">{comparisonJob.cancel_requested ? '중단 요청됨' : '비교 중단'}</button>}
           </div>
+          {comparisonJob && <p role="status" className="mt-2 text-slate-200">비교 {comparisonJob.completed_images}/{comparisonJob.total_images || '?'}장 · {comparisonJob.cancel_requested && comparisonJob.status === 'running' ? '현재 이미지 완료 후 중단' : comparisonJob.status}</p>}
+          {jobs.length > 0 && <label className="mt-2 block text-slate-300">비교 작업 다시 열기<select value={comparisonJob?.job_id || ''} onChange={(e) => {
+            const job = jobs.find((j) => j.job_id === e.target.value); if (!job) return;
+            setComparisonJob(job); setIsRunning(['queued', 'running'].includes(job.status));
+            if (job.report_id) void openReport(job.report_id);
+          }} className="mt-1 block w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5"><option value="">작업 선택</option>{jobs.map((j) => <option value={j.job_id} key={j.job_id}>{j.job_id.slice(-12)} · {j.status} · {j.completed_images}/{j.total_images}</option>)}</select></label>}
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
             {isKo
               ? '선택한 수까지 test 목록 앞에서부터 사용하며 실제 이미지 수·경로·SHA-256을 기록합니다. 활성 모델은 변경하지 않습니다.'
@@ -293,7 +351,12 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             </div>
           )}
           <div className="space-y-1.5" aria-label={isKo ? '이미지별 원판정' : 'Per-image raw verdicts'}>
-            {visibleReport.images.map((row) => (
+            <div className="flex flex-wrap gap-2">
+              <label>제품<select aria-label="모델 비교 제품 필터" value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.product || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
+              <label>Lot<select aria-label="모델 비교 Lot 필터" value={lotFilter} onChange={(e) => setLotFilter(e.target.value)} className="ml-2 rounded border border-slate-600 bg-[#0F1B27] p-1"><option value="">전체</option>{Array.from(new Set(comparisonImages.map((r) => r.lot || '(미지정)'))).map((v) => <option key={v}>{v}</option>)}</select></label>
+              <span>{filteredImages.length}/{comparisonImages.length}장</span>
+            </div>
+            {filteredImages.map((row) => (
               <div key={`${row.file_path}-${row.image_sha256}`} className={`rounded border p-2 ${
                 row.ground_truth_verdict === 'NG' && row.incumbent.verdict === 'NG' && row.candidate.verdict === 'OK'
                   ? 'border-rose-500/60 bg-rose-500/10'

@@ -20,6 +20,7 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
+import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
@@ -168,6 +169,7 @@ export const DatasetStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
+      <DatasetWorkflowPanel />
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}

@@ -13,7 +13,7 @@ const projectA = {
   created_at: '', updated_at: '',
 };
 const projectB = { ...projectA, id: 'b', name: 'B', project_dir: '/tmp/project-b', source_dataset_dir: null };
-const calls = { sourceUpdates: [], flowSaves: [], verified: [], opens: 0, annotationSaves: 0, imageResets: 0 };
+const calls = { sourceUpdates: [], flowSaves: [], draftSaves: [], verified: [], opens: 0, annotationSaves: 0, imageResets: 0 };
 let backendProject = projectA;
 
 globalThis.__projectSwitchQa = {
@@ -45,6 +45,14 @@ globalThis.__projectSwitchQa = {
   flow: {
     pipeline: null, pipelineDirty: false, isRunning: false, isLoading: false, isSaving: false,
     errorMessage: null, invalidateForDataChange() {},
+    draftSuccess: true,
+    async saveDraft() {
+      calls.draftSaves.push(this.pipeline);
+      if (!this.draftSuccess) return false;
+      this.pipelineDirty = false;
+      this.errorMessage = null;
+      return true;
+    },
     async savePipeline(_, recipe, source) {
       calls.flowSaves.push({ recipe, source });
       this.pipelineDirty = false;
@@ -105,9 +113,8 @@ async function main() {
   globalThis.__projectSwitchQa.flow.pipelineDirty = true;
   const switched = await useProjectStore.getState().openProject(projectB.project_dir);
   assert.equal(switched, true, useProjectStore.getState().projectError || 'switch rejected');
-  assert.equal(calls.flowSaves.at(-1).recipe, 'mixed');
-  assert.equal(calls.flowSaves.at(-1).source, '/tmp/source-b');
-  assert.equal(calls.verified.at(-1).source_dataset_path, '/tmp/source-b');
+  assert.equal(calls.draftSaves.at(-1).id, 'mixed');
+  assert.equal(calls.flowSaves.length, 0, 'switching must not create an executable version');
   assert.equal(calls.sourceUpdates.length, 2);
 
   // An in-flight proposal must finish before the backend project changes.
@@ -131,6 +138,25 @@ async function main() {
   assert.equal(await useProjectStore.getState().openProject(projectA.project_dir), true);
   assert.equal(calls.annotationSaves, savesBeforeSync + 1);
   assert.equal(useProjectStore.getState().project.id, projectA.id);
+
+  // An enhancement model plus a still-empty inspection is a valid editable
+  // draft. Switching must preserve it without weakening executable saves.
+  const draft = { id: 'enhancement-draft', edges: [], nodes: [
+    { id: 'enhance', data: { node_type: 'preprocess', params: { operation: 'enhancement' }, model_job_id: 'job_enhance' } },
+    { id: 'inspect', data: { node_type: 'inspection', task: 'segmentation', model_job_id: null } },
+  ] };
+  const flow = globalThis.__projectSwitchQa.flow;
+  flow.pipeline = draft; flow.pipelineDirty = true;
+  useDatasetStore.setState({ folderPath: projectA.source_dataset_dir, datasetKey: `${projectA.source_dataset_dir}\0${projectA.task}`, importError: null });
+  flow.draftSuccess = false;
+  const opensBeforeDraft = calls.opens;
+  assert.equal(await useProjectStore.getState().openProject(projectB.project_dir), false);
+  assert.equal(calls.opens, opensBeforeDraft, 'failed durable save must block the switch');
+  assert.equal(flow.pipelineDirty, true);
+  flow.draftSuccess = true;
+  assert.equal(await useProjectStore.getState().openProject(projectB.project_dir), true, useProjectStore.getState().projectError);
+  assert.equal(calls.draftSaves.at(-1), draft);
+  assert.equal(calls.flowSaves.length, 0);
   console.log('Project switch regression passed: source sync, mixed flow save, async assist guard, and dirty restart recovery.');
 }
 

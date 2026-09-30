@@ -88,7 +88,7 @@ export const IntermediateCropDrawer: React.FC = () => {
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
               <h3 className="text-xs font-bold font-mono tracking-wider text-slate-100 uppercase">
-                로컬 검사 결과 (Master Annotated View)
+                검사 결과 (Master Annotated View)
               </h3>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
@@ -150,7 +150,7 @@ export const IntermediateCropDrawer: React.FC = () => {
               </strong>
             </span>
           </div>
-          <span className="text-[10px] text-slate-400">로컬 모델 결과</span>
+          <span className="text-[10px] text-slate-400">모델 판정 근거</span>
         </div>
 
         {/* =================================================================== */}
@@ -165,7 +165,7 @@ export const IntermediateCropDrawer: React.FC = () => {
               </h4>
             </div>
             <div className="text-[11px] font-mono">
-              <span className="text-slate-400">로컬 실행 시간: </span>
+              <span className="text-slate-400">모델 실행 시간: </span>
               <span className="text-white font-bold tabular-nums">{totalLatencyMs.toFixed(1)} ms</span>
             </div>
           </div>

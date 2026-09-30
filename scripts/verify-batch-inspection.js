@@ -12,6 +12,15 @@ const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
 const loaded = new Module(filename, module);
 loaded.filename = filename;
 loaded.paths = Module._nodeModulePaths(path.dirname(filename));
+loaded.require = name => {
+  if (name === '../flowchart/flowchartStartup') {
+    const file = path.resolve(__dirname, '../src/renderer/components/flowchart/flowchartStartup.ts');
+    const dependency = new Module(file, module); dependency.filename=file;
+    dependency._compile(ts.transpileModule(fs.readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);
+    return dependency.exports;
+  }
+  return Module.prototype.require.call(loaded,name);
+};
 loaded._compile(compiled, filename);
 const { runBatchInspection, summarizeBatch, filterBatchRows,
   isBatchSourceReady, isBatchSourceCurrent, isInspectionHistoryContextCurrent,
@@ -429,4 +438,21 @@ test('each completed row is durably recorded before the next image and original 
     'create', 'infer:a.jpg', 'record:a.jpg:NG',
     'infer:b.jpg', 'record:b.jpg:OK', 'finish:run-1:completed',
   ]);
+});
+
+test('batch verifies enhancement, OCR and rotated model references and blocks an unbound enhancement before inventory', async () => {
+  const specialized = { ...pipeline, nodes: [
+    {id:'enhance',data:{node_type:'preprocess',params:{operation:'enhancement'},model_job_id:'a'.repeat(32)}},
+    {id:'ocr',data:{node_type:'inspection',task:'ocr',model_job_id:'b'.repeat(32)}},
+    {id:'rotated',data:{node_type:'inspection',task:'rotated_detection',model_job_id:'c'.repeat(32)}},
+  ] };
+  const {api,calls}=fakeApi([image('a.jpg')]);
+  api.verifyModels = async request => { calls.push(['verify',request]); return {verified_job_ids:request.models.map(item=>item.job_id)}; };
+  await runBatchInspection({...baseOptions,pipeline:specialized},api);
+  assert.deepEqual(calls.find(([kind])=>kind==='verify')[1].models,specialized.nodes.map(node=>({
+    job_id:node.data.model_job_id,task:node.data.task||'enhancement'})));
+  const missing=structuredClone(specialized); delete missing.nodes[0].data.model_job_id;
+  const second=fakeApi([image('a.jpg')]);
+  await assert.rejects(runBatchInspection({...baseOptions,pipeline:missing},second.api),/모델 연결/);
+  assert.equal(second.calls.filter(([kind])=>kind==='images'||kind==='run').length,0);
 });

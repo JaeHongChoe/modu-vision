@@ -37,6 +37,7 @@ import { SynchronizedDualViewport } from './SynchronizedDualViewport';
 import { DetectionEvaluationGrains, summarizeDetectionGrains } from './DetectionEvaluationGrains';
 import { ModelComparisonPanel } from './ModelComparisonPanel';
 import { ModelDeploymentPanel } from './ModelDeploymentPanel';
+import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -109,6 +110,7 @@ export const EvaluationStudio: React.FC = () => {
     heatmapOverlayBase64,
     heatmapLoading,
     isExportingReport,
+    exportedReportPath,
     errorMessage,
     overkillAnalysis,
     sampleFilter,
@@ -373,6 +375,7 @@ export const EvaluationStudio: React.FC = () => {
         </div>
       </div>
 
+      {exportedReportPath && <p className="mx-6 mb-3 break-all text-xs text-emerald-300">보고서 저장 완료: {exportedReportPath}</p>}
       {(errorMessage || reportError) && (
         <div role="alert" className="mx-6 mt-3 rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">
           {reportError || errorMessage}
@@ -431,6 +434,7 @@ export const EvaluationStudio: React.FC = () => {
             language={language}
           />
           <ModelDeploymentPanel taskOverride={comparisonTask} />
+          <EvaluationHistoryPanel sourceFolder={sourceFolder} task={comparisonTask} jobId={jobId} />
           {/* 1-Click Zero-Escape Calibration Prominent Card */}
           <div className="p-3.5 bg-[#1A212E] rounded-[6px] border border-[#2B3547] space-y-3">
             <div className="flex items-center justify-between">
@@ -958,6 +962,12 @@ export const EvaluationStudio: React.FC = () => {
 
                   <div className="flex items-center justify-between pt-1 border-t border-[#1E2638]">
                     <SampleVerdictBadge verdict={verdict} />
+                    <button type="button" onClick={(event) => {
+                      event.stopPropagation();
+                      void useProjectStore.getState().openImageForLabeling(pred.image_id, pred.file_path).then((opened) => {
+                        if (!opened) setReportError('선택한 이미지의 라벨 화면을 열지 못했습니다. 데이터 출처와 저장 상태를 확인하세요.');
+                      }).catch((cause) => setReportError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
+                    }} className="rounded border border-cyan-700 px-2 py-1 text-[10px] text-cyan-200 hover:bg-cyan-950">라벨 수정</button>
                     <span className="text-[10px] text-slate-400 font-mono">
                       GT: {pred.ground_truth}
                     </span>

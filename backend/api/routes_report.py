@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -416,7 +416,7 @@ def _render_standalone_html(
 
 
 @router.post("/export")
-def export_report(req: ReportExportRequest):
+def export_report(req: ReportExportRequest, request: Request = None):
     """
     Exports quality evaluation summary as standalone HTML or JSON report.
     Returns { file_path: str, content?: str }.
@@ -424,12 +424,16 @@ def export_report(req: ReportExportRequest):
     requested_job_id = req.job_id or "latest"
     eval_data = run_or_load_evaluation(job_id=requested_job_id)
     job_id = str(eval_data.get("job_id") or requested_job_id)
+    reports_dir = REPORTS_DIR
+    if request is not None:
+        from backend.api.routes_project import get_current_project
+        reports_dir = Path(get_current_project(request)["reports_dir"])
 
     now_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
     now_iso = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
 
     if req.format == "json":
-        out_file = Path(req.output_path or (REPORTS_DIR / f"report_{job_id}_{now_iso}.json")).resolve()
+        out_file = Path(req.output_path or (reports_dir / f"report_{job_id}_{now_iso}.json")).resolve()
         out_file.parent.mkdir(parents=True, exist_ok=True)
         report_data = {
             "title": "Vision AI Studio Quality Evaluation Report",
@@ -448,7 +452,7 @@ def export_report(req: ReportExportRequest):
             "file_size_bytes": len(content.encode("utf-8")),
         }
     else:
-        out_file = Path(req.output_path or (REPORTS_DIR / f"report_{job_id}_{now_iso}.html")).resolve()
+        out_file = Path(req.output_path or (reports_dir / f"report_{job_id}_{now_iso}.html")).resolve()
         out_file.parent.mkdir(parents=True, exist_ok=True)
         html_content = _render_standalone_html(
             job_id=job_id,
@@ -468,11 +472,15 @@ def export_report(req: ReportExportRequest):
 
 
 @router.get("/view/{report_id}")
-def view_report(report_id: str):
+def view_report(report_id: str, request: Request = None):
     """Serves the generated HTML report directly for browser display."""
-    target_file = REPORTS_DIR / f"{report_id}.html"
+    reports_dir = REPORTS_DIR
+    if request is not None:
+        from backend.api.routes_project import get_current_project
+        reports_dir = Path(get_current_project(request)["reports_dir"])
+    target_file = reports_dir / f"{report_id}.html"
     if not target_file.exists():
-        target_file = REPORTS_DIR / report_id
+        target_file = reports_dir / report_id
     if not target_file.is_file():
         raise HTTPException(status_code=404, detail="Report file not found")
 

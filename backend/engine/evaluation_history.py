@@ -1,0 +1,210 @@
+"""Immutable evaluation evidence and durable comparison execution state."""
+from __future__ import annotations
+import hashlib
+import json
+import os
+import sqlite3
+import time
+import uuid
+from pathlib import Path
+from collections import defaultdict
+
+
+def canonical(value):
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()
+
+
+def binary_verdict(label):
+    """Normalize known manufacturing truth; absent/review truth remains unknown."""
+    if label is None or not str(label).strip() or str(label).strip().casefold() in ('review', 'unknown'):
+        return None
+    if str(label).strip().casefold() in ('정상', '양품', '합격'):
+        return 'OK'
+    from backend.engine.zero_escape_analyzer import is_defect_label
+    return 'NG' if is_defect_label(label) else 'OK'
+
+
+def grouped_errors(rows, task=None):
+    groups = {name: defaultdict(lambda: {'samples': 0, 'errors': 0, 'misses': 0, 'overkill': 0, 'unknown_truth': 0})
+              for name in ('product', 'lot', 'ground_truth')}
+    for row in rows:
+        truth = row.get('ground_truth', row.get('ground_truth_verdict'))
+        prediction = row.get('prediction', row.get('predicted_class', row.get('predicted_label')))
+        if isinstance(row.get('candidate'), dict):
+            prediction = row['candidate'].get('verdict')
+        if prediction is None:
+            prediction = row.get('final_verdict')
+        candidate = row.get('candidate') if isinstance(row.get('candidate'), dict) else {}
+        explicit_error = row.get('error') or candidate.get('error')
+        binary_task = task in (None, 'classification', 'patch_classification', 'detection', 'segmentation', 'anomaly')
+        # Flow comparisons already contain reviewed binary truth. It takes precedence
+        # over the descriptive class label, including explicit unknown truth.
+        flow_verdict = isinstance(row.get('candidate'), dict) or 'final_verdict' in row
+        truth_binary = binary_verdict(row.get('ground_truth_verdict') if 'ground_truth_verdict' in row else truth) if binary_task else None
+        prediction_binary = binary_verdict(prediction) if binary_task else None
+        unknown = truth_binary is None if binary_task and flow_verdict else truth in (None, '')
+        if flow_verdict and binary_task:
+            mismatch = not unknown and prediction_binary != truth_binary
+        elif isinstance(row.get('is_correct'), bool):
+            mismatch = not unknown and not row['is_correct']
+        else:
+            mismatch = not unknown and prediction != truth
+        error = bool(explicit_error) or mismatch
+        for name in groups:
+            value = truth if name == 'ground_truth' else row.get(name)
+            # Missing metadata is visible as unassigned; never infer product/lot from folders.
+            key = str(value) if value not in (None, '') else '(unassigned)'
+            bucket = groups[name][key]
+            bucket['samples'] += 1
+            bucket['errors'] += int(error)
+            bucket['unknown_truth'] += int(unknown)
+            bucket['misses'] += int(truth_binary == 'NG' and prediction_binary == 'OK')
+            bucket['overkill'] += int(truth_binary == 'OK' and prediction_binary == 'NG')
+    return {key: dict(value) for key, value in groups.items()}
+
+
+class EvaluationHistory:
+    def __init__(self, directory: Path):
+        self.directory = Path(directory)
+        if self.directory.is_symlink():
+            raise ValueError('Evaluation history must not be a symbolic link')
+        self.directory.mkdir(parents=True, exist_ok=True)
+
+    def append(self, result, binding):
+        evidence = {'evaluation_id': 'evaluation_' + uuid.uuid4().hex, 'created_at': time.time(),
+                    'binding': binding, 'result': result, 'grouped_errors': grouped_errors(result.get('test_predictions', []), result.get('task', binding.get('task')))}
+        record = {**evidence, 'evidence_sha256': hashlib.sha256(canonical(evidence)).hexdigest()}
+        path = self.directory / (record['evaluation_id'] + '.json')
+        with path.open('xb') as writer:
+            writer.write(canonical(record)); writer.flush(); os.fsync(writer.fileno())
+        return record
+
+    def get(self, evaluation_id):
+        if not isinstance(evaluation_id, str) or len(evaluation_id) != 43 or not evaluation_id.startswith('evaluation_') or any(c not in '0123456789abcdef' for c in evaluation_id[11:]):
+            raise ValueError('Invalid evaluation ID')
+        path = self.directory / (evaluation_id + '.json')
+        if path.is_symlink():
+            raise ValueError('Evaluation integrity failure')
+        record = json.loads(path.read_text())
+        evidence = {k: v for k, v in record.items() if k != 'evidence_sha256'}
+        if record.get('evaluation_id') != evaluation_id or hashlib.sha256(canonical(evidence)).hexdigest() != record.get('evidence_sha256'):
+            raise ValueError('Evaluation integrity failure')
+        return record
+
+    def list(self, job_id=None):
+        records = [self.get(path.stem) for path in self.directory.glob('evaluation_*.json')]
+        return sorted((row for row in records if job_id is None or row['result'].get('job_id') == job_id), key=lambda row: row['created_at'], reverse=True)
+
+
+class ComparisonJobs:
+    def __init__(self, path):
+        self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.connect() as conn:
+            conn.execute('CREATE TABLE IF NOT EXISTS jobs(job_id TEXT PRIMARY KEY, payload TEXT NOT NULL, status TEXT NOT NULL, total_images INTEGER DEFAULT 0, completed_images INTEGER DEFAULT 0, cancel_requested INTEGER DEFAULT 0, report_id TEXT, error TEXT, created_at REAL, updated_at REAL)')
+            columns = {row[1] for row in conn.execute('PRAGMA table_info(jobs)')}
+            if 'owner_pid' not in columns: conn.execute('ALTER TABLE jobs ADD COLUMN owner_pid INTEGER')
+        self.recover()
+    def connect(self):
+        conn = sqlite3.connect(self.path, timeout=10); conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA journal_mode=WAL'); return conn
+    def create(self, payload):
+        identifier = 'comparejob_' + uuid.uuid4().hex
+        with self.connect() as conn:
+            conn.execute('INSERT INTO jobs(job_id,payload,status,created_at,updated_at,owner_pid) VALUES(?,?,?,?,?,?)', (identifier, json.dumps(payload), 'queued', time.time(), time.time(), os.getpid()))
+        return self.get(identifier)
+    def get(self, identifier):
+        with self.connect() as conn:
+            row = conn.execute('SELECT * FROM jobs WHERE job_id=?', (identifier,)).fetchone()
+        if row is None: raise KeyError(identifier)
+        result = dict(row); result['payload'] = json.loads(result['payload']); return result
+    def list(self):
+        with self.connect() as conn:
+            ids = [row[0] for row in conn.execute('SELECT job_id FROM jobs ORDER BY created_at DESC')]
+        return [self.get(identifier) for identifier in ids]
+    def start(self, identifier, total):
+        with self.connect() as conn:
+            conn.execute("UPDATE jobs SET status='running',total_images=?,updated_at=? WHERE job_id=? AND status='queued'", (total,time.time(),identifier))
+    def progress(self, identifier, completed):
+        with self.connect() as conn:
+            conn.execute('UPDATE jobs SET completed_images=?,updated_at=? WHERE job_id=?', (completed,time.time(),identifier))
+    def cancel(self, identifier):
+        with self.connect() as conn:
+            conn.execute("UPDATE jobs SET cancel_requested=1, status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END,updated_at=? WHERE job_id=? AND status IN ('queued','running')", (time.time(),identifier))
+    def cancelled(self, identifier): return bool(self.get(identifier)['cancel_requested'])
+    def finish(self, identifier, status, report_id=None, error=None):
+        with self.connect() as conn:
+            conn.execute('UPDATE jobs SET status=?,report_id=?,error=?,updated_at=? WHERE job_id=?', (status,report_id,error,time.time(),identifier))
+    def recover(self):
+        with self.connect() as conn:
+            for row in conn.execute("SELECT job_id,owner_pid FROM jobs WHERE status IN ('running','queued')"):
+                try:
+                    if row['owner_pid'] is not None: os.kill(row['owner_pid'], 0); continue
+                except ProcessLookupError: pass
+                except PermissionError: continue
+                conn.execute("UPDATE jobs SET status='interrupted', error='Application stopped before completion; rerun the same bound models.',updated_at=? WHERE job_id=?", (time.time(),row['job_id']))
+
+
+def archive_specialized_evaluation(project, checkpoint, source, result, *, task=None, dataset_path=None):
+    """Archive actual family metrics without inventing OK/NG ground truth."""
+    from backend.api.routes_model_comparisons import _fingerprint, _sha256
+    from backend.engine.dataset_metadata import metadata_for_path
+    from backend.api import routes_dataset
+    checkpoint=Path(checkpoint);source=Path(source).resolve();dataset=Path(dataset_path or source).resolve()
+    task=task or result.get('task')
+    if task not in ('ocr','rotated_detection','enhancement','defect_gan'):raise ValueError('Unsupported specialized evaluation task')
+    if checkpoint.is_symlink() or not checkpoint.is_file() or not checkpoint.resolve().is_relative_to(Path(project['models_dir']).resolve()):raise ValueError('Evaluation checkpoint is outside the active project')
+    model_hash=_sha256(checkpoint)
+    reported_hash=result.get('model_sha256',result.get('checkpoint_sha256'))
+    if reported_hash is not None and reported_hash!=model_hash:raise ValueError('Evaluated model hash changed before archival')
+    payload=json.loads(json.dumps(result));payload.update(job_id=checkpoint.parent.name,task=task)
+    if task in ('ocr','rotated_detection','enhancement') and payload.get('dataset_sha256'):
+        from backend.engine.specialized_models import specialized_dataset_provenance
+        if specialized_dataset_provenance(task,dataset)['dataset_sha256']!=payload['dataset_sha256']:
+            raise ValueError('Evaluated family dataset changed before archival')
+    predictions=[]
+    if task=='ocr':
+        for sample in payload.get('samples',[]):
+            relative=sample.get('image')
+            if not isinstance(relative,str):continue
+            image=dataset/relative
+            if not image.resolve().is_relative_to(source):raise ValueError('OCR evaluation sample escaped source')
+            metadata=metadata_for_path(Path(project['project_dir']),source,image,routes_dataset.STUDIO_ANNOTATIONS_DIR)
+            predictions.append({**sample,**{key:metadata.get(key) for key in ('image_uuid','file_path','content_hash','content_version','revision','product','lot','group','tags')},
+                                'ground_truth':sample.get('reference_text'),'predicted_class':sample.get('predicted_text')})
+    else:
+        # Aggregated geometry/reconstruction/generator diagnostics have no class verdicts.
+        # Preserve their metrics as returned; grouping requires real per-image outcomes.
+        predictions=payload.get('test_predictions',[])
+    payload['test_predictions']=predictions
+    metadata_path=checkpoint.parent/'model_meta.json'
+    metadata=json.loads(metadata_path.read_text()) if metadata_path.is_file() else {}
+    binding={'source_dataset_path':str(source),'evaluation_dataset_path':str(dataset),
+             'dataset_fingerprint':_fingerprint(source),'checkpoint_sha256':_sha256(checkpoint),
+             'family_dataset_sha256':payload.get('dataset_sha256',payload.get('manifest_sha256')),
+             'training_provenance':metadata.get('training_provenance'),
+             'training_version_verified':bool(metadata.get('training_provenance'))}
+    record=EvaluationHistory(Path(project['project_dir'])/'reports'/'evaluations').append(payload,binding)
+    return {**payload,'evaluation_id':record['evaluation_id'],'binding':binding,'grouped_errors':record['grouped_errors']}
+
+
+def verify_specialized_evaluation_inputs(project,source,task,binding):
+    """Check the evaluated labels/pairs now, separately from historical training."""
+    from backend.engine.specialized_models import specialized_dataset_provenance
+    expected=binding.get('family_dataset_sha256')
+    requested=binding.get('evaluation_dataset_path')
+    if not isinstance(expected,str) or not expected or not isinstance(requested,str):
+        raise ValueError('Specialized evaluation input identity is missing')
+    dataset=Path(requested)
+    if dataset.is_symlink():raise ValueError('Specialized evaluation dataset is linked')
+    dataset=dataset.resolve()
+    if task=='enhancement':
+        owned=Path(project['dataset_dir'])
+        if owned.is_symlink() or not dataset.is_relative_to(owned.resolve()):
+            raise ValueError('Evaluated enhancement pairs belong to another project')
+    elif dataset!=Path(source).resolve():
+        raise ValueError('Evaluated family dataset differs from active source')
+    provenance=specialized_dataset_provenance(task,dataset)
+    if provenance['dataset_sha256']!=expected:
+        raise ValueError('Evaluated family inputs or labels changed after immutable evaluation')
+    if task=='enhancement' and Path(provenance['source_dataset_path']).resolve()!=Path(source).resolve():
+        raise ValueError('Evaluated enhancement pairs belong to another source')

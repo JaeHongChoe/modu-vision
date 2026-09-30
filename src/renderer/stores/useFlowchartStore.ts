@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import type { FlowExecutionChoice } from '../components/flowchart/flowExecution';
 import type {
   FlowchartCrop,
   FlowchartExecutionResult,
@@ -12,8 +13,12 @@ import type {
   FlowNodeData,
   SelectedInspectionImage,
   VisionTask,
+  FlowModelTask,
 } from '../types';
 import { api } from '../services/api';
+import { flowDraft, type FlowDraftContext } from '../services/flowDraft';
+import { useProjectStore } from './useProjectStore';
+import { getFlowchartModelTask } from '../components/flowchart/flowchartStartup';
 
 let flowchartGeneration = 0;
 let flowchartSaveGeneration = 0;
@@ -22,6 +27,8 @@ let flowchartRunSequence = 0;
 const HISTORY_LIMIT = 50;
 
 interface FlowchartState {
+  executionChoiceOverride: FlowExecutionChoice | null;
+  setExecutionChoice: (choice: FlowExecutionChoice | null) => void;
   pipeline: FlowchartPipeline | null;
   executionResult: FlowchartExecutionResult | null;
   lastRunSource: { kind: 'draft' | 'saved'; versionId: string | null } | null;
@@ -31,6 +38,7 @@ interface FlowchartState {
   activeRunningNodeId: string | null;
   selectedNodeId: string | null;
   pipelineDirty: boolean;
+  pipelineIsDraft: boolean;
   saveMessage: string | null;
   errorMessage: string | null;
   modelContextInvalidated: boolean;
@@ -54,9 +62,12 @@ interface FlowchartState {
   loadPipelineVersion: (versionId: string, sourceDatasetPath: string) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
-  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: VisionTask | 'patch_classification' | 'mixed', sourceDatasetPath?: string) => Promise<void>;
+  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => Promise<void>;
+  saveDraft: () => Promise<boolean>;
+  loadDraft: () => Promise<FlowchartPipeline | null>;
   runPipeline: (customImagePath?: string, customImageId?: string,
-    source?: { savedVersionId: string | null }) => Promise<boolean>;
+    source?: { savedVersionId: string | null; executionTarget?: 'local' | 'selected_compute' | 'model_compute';
+      device?: 'cpu' | 'mps' | 'cuda'; computeProfileId?: string }) => Promise<boolean>;
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
   addNode: (node: FlowNode) => void;
@@ -80,7 +91,19 @@ function editedHistory(state: FlowchartState): Pick<FlowchartState, 'historyPast
   return { historyPast, historyFuture: [], canUndo: historyPast.length > 0, canRedo: false };
 }
 
+function draftContext(): FlowDraftContext | null {
+  const project = useProjectStore.getState().project;
+  return project ? { project_id: project.id, source_dataset_path: project.source_dataset_dir || null,
+    labelset_id: project.active_labelset_id || 'default' } : null;
+}
+
+function sameContext(expected: FlowDraftContext | null, actual: FlowDraftContext | null): boolean {
+  return JSON.stringify(expected) === JSON.stringify(actual);
+}
+
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
+  executionChoiceOverride: null,
+  setExecutionChoice: (choice) => { get().resetExecution(); set({ executionChoiceOverride: choice }); },
   pipeline: null,
   executionResult: null,
   lastRunSource: null,
@@ -90,6 +113,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   activeRunningNodeId: null,
   selectedNodeId: null,
   pipelineDirty: false,
+  pipelineIsDraft: false,
   saveMessage: null,
   errorMessage: null,
   modelContextInvalidated: false,
@@ -111,6 +135,22 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     set({ isLoading: true, errorMessage: null });
     try {
       let data: FlowchartPipeline;
+      const context = draftContext();
+      if (context && (!sourceDatasetPath || context.source_dataset_path === sourceDatasetPath)) {
+        try {
+          const draft = await flowDraft.get();
+          if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
+          if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
+          data = draft.pipeline;
+          set({ pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
+            historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
+            pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
+            inspectedCrop: null, isLoading: false });
+          return data;
+        } catch (error) {
+          if ((error as { status?: number }).status !== 404) throw error;
+        }
+      }
       if (sourceDatasetPath) {
         try {
           data = await api.flowchart.getActivePipeline(sourceDatasetPath);
@@ -127,6 +167,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         cleanPipeline: data,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false,
+        pipelineIsDraft: false,
         selectedNodeId: null,
         executionResult: null,
         inspectedCrop: null,
@@ -141,6 +182,52 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
+  loadDraft: async () => {
+    const context = draftContext();
+    if (!context) return null;
+    const generation = ++flowchartGeneration;
+    try {
+      const draft = await flowDraft.get();
+      if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
+      if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
+      set({ pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
+        pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
+        executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: null, errorMessage: null });
+      return draft.pipeline;
+    } catch (error) {
+      if (generation === flowchartGeneration && (error as { status?: number }).status !== 404)
+        set({ errorMessage: error instanceof Error ? error.message : '초안을 불러오지 못했습니다.' });
+      return null;
+    }
+  },
+
+  saveDraft: async () => {
+    const target = get().pipeline;
+    const context = draftContext();
+    if (!target || !context || get().isSaving) return false;
+    const generation = flowchartGeneration;
+    const saveGeneration = ++flowchartSaveGeneration;
+    set({ isSaving: true, errorMessage: null, saveMessage: null });
+    try {
+      const saved = await flowDraft.save(target, context);
+      const readback = await flowDraft.get();
+      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration
+          || get().pipeline !== target || !sameContext(context, draftContext())) return false;
+      if (!sameContext(context, saved.context) || !sameContext(context, readback.context)
+          || !/^[a-f0-9]{64}$/.test(saved.draft_sha256) || saved.draft_sha256 !== readback.draft_sha256)
+        throw new Error('초안 저장 내용을 다시 확인하지 못했습니다.');
+      set({ cleanPipeline: target, pipelineDirty: false, pipelineIsDraft: !saved.active_version_id,
+        saveMessage: '편집 초안이 저장되었습니다.' });
+      return true;
+    } catch (error) {
+      if (generation === flowchartGeneration && saveGeneration === flowchartSaveGeneration)
+        set({ errorMessage: error instanceof Error ? error.message : '초안 저장 실패' });
+      return false;
+    } finally {
+      if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
+    }
+  },
+
   loadPipelineVersion: async (versionId, sourceDatasetPath) => {
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
@@ -149,7 +236,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return null;
       flowchartRunInputRevision += 1;
       set({
-        pipeline: data, cleanPipeline: data,
+        pipeline: data, cleanPipeline: data, pipelineIsDraft: false,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false, selectedNodeId: null,
         executionResult: null, inspectedCrop: null, isLoading: false,
@@ -172,7 +259,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return;
       set({
         pipeline,
-        cleanPipeline: jobId ? null : pipeline,
+        cleanPipeline: jobId ? null : pipeline, pipelineIsDraft: true,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: Boolean(jobId),
         selectedNodeId: inspectionTask === 'detection' ? 'node_crop' : 'node_inspect',
@@ -194,7 +281,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return;
       set({
         pipeline,
-        cleanPipeline: pipeline,
+        cleanPipeline: pipeline, pipelineIsDraft: true,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false,
         selectedNodeId: 'node_crop',
@@ -222,6 +309,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       set({
         cleanPipeline: currentVersionSaved ? target : get().cleanPipeline,
         pipelineDirty: currentVersionSaved ? false : get().pipelineDirty,
+        pipelineIsDraft: currentVersionSaved ? false : get().pipelineIsDraft,
         saveMessage: currentVersionSaved
           ? '파이프라인이 저장되었습니다.'
           : '이전 버전이 저장되었습니다. 새 변경 사항은 미저장입니다.',
@@ -240,6 +328,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
 
   runPipeline: async (customImagePath, customImageId, source) => {
     const { pipeline, selectedImage } = get();
+    const requestedProjectId = useProjectStore.getState().project?.id;
     const imagePath = customImagePath || selectedImage?.imagePath;
     const imageId = customImageId || selectedImage?.imageId;
     if (get().isRunning) return false;
@@ -252,13 +341,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       return false;
     }
     if (pipeline.nodes.some((node) =>
-      (node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop') && !node.data.model_job_id
+      getFlowchartModelTask(node) !== null && !node.data.model_job_id
     )) {
       set({ errorMessage: '검사를 실행하려면 검사 노드에 학습 모델 작업 ID를 지정해야 합니다.' });
       return false;
     }
 
-    const savedVersionId = !get().pipelineDirty && source?.savedVersionId ? source.savedVersionId : null;
+    const savedVersionId = !get().pipelineDirty && !get().pipelineIsDraft && source?.savedVersionId ? source.savedVersionId : null;
     const generation = ++flowchartGeneration;
     const inputRevision = flowchartRunInputRevision;
     const runSequence = ++flowchartRunSequence;
@@ -280,7 +369,19 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         image_path: imagePath,
         image_id: imageId,
         pipeline: pipeline || undefined,
+        ...(requestedProjectId ? { project_id: requestedProjectId } : {}),
+        ...(source?.executionTarget ? { execution_target: source.executionTarget, device: source.device || 'cpu',
+          ...(source.computeProfileId ? { compute_profile_id: source.computeProfileId } : {}) } : {}),
       });
+      if (source?.executionTarget && source.executionTarget !== 'model_compute') {
+        const requestedDevice = source.device || 'cpu';
+        const actualDevice = res.execution_device || '';
+        if (res.execution_target !== source.executionTarget
+            || (source.executionTarget === 'selected_compute' && res.compute_profile_id !== source.computeProfileId)
+            || (requestedDevice === 'cuda' ? !/^cuda(?::[0-9]+)?$/.test(actualDevice) : actualDevice !== requestedDevice)) {
+          throw new Error('검사 결과의 실행 서버 또는 장치가 요청한 위치와 다릅니다.');
+        }
+      }
       if (generation !== flowchartGeneration || inputRevision !== flowchartRunInputRevision) {
         discardStaleRun();
         return false;
@@ -465,6 +566,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       cleanPipeline: null,
       historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
       pipelineDirty: false,
+      pipelineIsDraft: false,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
       executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false,

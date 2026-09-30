@@ -179,6 +179,9 @@ def _copy_artifacts(
         metadata = json.loads(staged["outputs/model_meta.json"].read_text(encoding="utf-8"))
         if not isinstance(metadata, dict) or metadata.get("task") != journal["task"]:
             raise ArtifactValidationError("Remote model metadata does not match the requested task")
+        expected_binding = (journal.get("launch_spec") or {}).get("dataset_binding")
+        if expected_binding and metadata.get("training_provenance") != expected_binding:
+            raise ArtifactValidationError("Remote checkpoint provenance differs from the pinned training version")
         for relative, staged_path in staged.items():
             os.replace(staged_path, output_dir / PurePosixPath(relative).name)
         _atomic_json(output_dir / "remote_artifacts.json", manifest)
@@ -235,6 +238,10 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
                 setattr(record, attr, float(value))
         if isinstance(status.get("device"), str):
             record.remote_device_name = status["device"]
+        if isinstance(status.get("loss_history"), list):
+            record.loss_history = status["loss_history"][-500:]
+        if isinstance(status.get("metrics"), dict):
+            record.metrics = status["metrics"]
         if state == "completed":
             _copy_artifacts(transport, profile, journal, output)
             # The manager still has to publish its local provenance receipt.
@@ -295,6 +302,8 @@ def run_remote_training(
             journal["state"] = "preparing"
             _save_journal(journal)
             record.phase = "preparing"
+            from backend.engine.training_provenance import validate_training_binding
+            validate_training_binding(getattr(record, "dataset_binding", None))
             if prepare_dataset is not None:
                 prepare_dataset(record.preparation_cancel)
             if record.preparation_cancel.is_set():
@@ -306,6 +315,7 @@ def run_remote_training(
                 exclude_relative_paths=frozenset({"source_manifest.json"})
                 if record.task in ("segmentation", "detection") else frozenset(),
             )
+            validate_training_binding(getattr(record, "dataset_binding", None))
             if record.preparation_cancel.is_set():
                 journal["state"] = "aborted"
                 _save_journal(journal)
@@ -332,6 +342,12 @@ def run_remote_training(
                 "snapshot_archive": "snapshot.tar.gz",
                 "input_manifest_sha256": snapshot.manifest_sha256,
             }
+            if getattr(record, "dataset_binding", None): spec["dataset_binding"] = record.dataset_binding
+            parent_transfer = None
+            if getattr(record, "warm_start", None):
+                from backend.engine.warm_start import portable_parent
+                spec["warm_start"] = portable_parent(record.warm_start, output / "warm_start_transfer")
+                parent_transfer = (output / "warm_start_transfer" / "parent.pt", "parent.pt")
             spec_path = output / "remote_spec.json"
             _atomic_json(spec_path, spec)
             transfers = (
@@ -339,6 +355,7 @@ def run_remote_training(
                 (code_archive, "code.tar.gz"),
                 (spec_path, "spec.json"),
             )
+            if parent_transfer: transfers = transfers + (parent_transfer,)
             record.total_bytes = sum(source.stat().st_size for source, _ in transfers)
             for source, target in transfers:
                 if record.preparation_cancel.is_set():
@@ -449,6 +466,11 @@ def make_remote_runner(profile: ComputeProfile, launch_spec: Optional[dict[str, 
         elif preparation != "none":
             raise ValueError(f"Unknown remote training preparation: {preparation}")
 
+        if launch_spec.get("warm_start"):
+            from backend.engine.warm_start import WarmStartParent
+            parent = dict(launch_spec["warm_start"]); parent["checkpoint_path"] = Path(parent["checkpoint_path"]); parent["classes"] = tuple(parent["classes"])
+            record.warm_start = WarmStartParent(**parent)
+        record.dataset_binding = launch_spec.get("dataset_binding")
         return run_remote_training(
             record, profile, prepare_dataset=prepare_dataset,
             config_overrides=launch_spec.get("config_overrides") or {},
@@ -513,12 +535,20 @@ def recover_remote_jobs(manager: Any) -> None:
                 record = JobRecord(
                     job_id=journal["job_id"], task=journal["task"], preset=journal["preset"],
                     dataset_path=journal["dataset_path"], output_dir=str(output),
-                    status=journal["state"], remote_profile_id=profile.id,
+                    status=journal["state"], phase=journal["state"], remote_profile_id=profile.id,
                     remote_profile=profile,
                     source_dataset_path=journal.get("source_dataset_path"),
                     dataset_fingerprint=journal.get("dataset_fingerprint"),
                     error={"message": str(journal["error"])} if journal.get("error") else None,
                 )
+                if receipt_exists:
+                    saved = json.loads((output / "job_receipt.json").read_text())
+                    if saved.get("job_id") == record.job_id:
+                        for key in ("current_epoch", "total_epochs", "current_step", "total_steps", "best_metric", "metrics", "loss_history", "error"):
+                            if key in saved: setattr(record, key, saved[key])
+                        record.train_loss = saved.get("current_train_loss")
+                        record.val_loss = saved.get("current_val_loss")
+                        record.phase = record.status
                 if not receipt_exists:
                     _write_job_receipt(record)
                 manager.restore_terminal_job(record)
@@ -535,6 +565,7 @@ def recover_remote_jobs(manager: Any) -> None:
                 profile=profile, launch_spec=journal.get("launch_spec"),
                 split_manifest_root=journal.get("split_manifest_root"),
                 recovery_state=journal["state"],
+                dataset_binding=(journal.get("launch_spec") or {}).get("dataset_binding"),
             )
         except Exception:
             logger.exception("Could not reconnect remote training journal %s", path)

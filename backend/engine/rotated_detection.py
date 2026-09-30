@@ -11,7 +11,7 @@ The v1 ``rotated_boxes.json`` manifest uses one oriented box per image::
 
 Geometry is in original image pixels. Positive ``angle_deg`` follows image
 coordinates (clockwise on screen); angles are equivalent modulo 180 degrees.
-This deliberately does not perform multi-object detection or class prediction.
+Version 2 adds explicit per-image objects, classes and a bounded multi-slot detector; v1 models remain readable.
 """
 
 from __future__ import annotations
@@ -123,6 +123,11 @@ class RotatedBoxManifest:
     class_name: str
     records: tuple[RotatedBoxRecord, ...]
     provenance: dict[str, Any]
+    version: int = 1
+
+    @property
+    def class_names(self):
+        return tuple(sorted({record.label for record in self.records}))
 
 
 def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> RotatedBoxManifest:
@@ -134,7 +139,7 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         raw = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Invalid rotated_boxes.json: {exc}") from exc
-    if not isinstance(raw, dict) or raw.get("version") != 1:
+    if not isinstance(raw, dict) or raw.get("version") not in (1, 2):
         raise ValueError("rotated_boxes.json must use version 1")
     rows = raw.get("samples")
     if not isinstance(rows, list) or not rows:
@@ -179,14 +184,18 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         existing_split = hashes_by_split.setdefault(actual, split)
         if existing_split != split:
             raise ValueError("Byte-identical rotated source images occur in different split partitions")
-        label = row.get("label")
-        if not isinstance(label, str) or not label.strip() or label != label.strip():
-            raise ValueError(f"Rotated sample {index} needs a nonempty label")
-        labels.add(label)
-        box = _valid_box(row.get("box"), *size)
-        records.append(RotatedBoxRecord(image, path, actual, split, label, box, size))
+        objects = row.get("objects") if raw["version"] == 2 else [row]
+        if not isinstance(objects,list) or not 1 <= len(objects) <= 32:
+            raise ValueError("Rotated objects must contain 1-32 explicit boxes")
+        for obj in objects:
+            label = obj.get("label")
+            if not isinstance(label, str) or not label.strip() or label != label.strip():
+                raise ValueError(f"Rotated sample {index} needs a nonempty label")
+            labels.add(label)
+            box = _valid_box(obj.get("box"), *size)
+            records.append(RotatedBoxRecord(image, path, actual, split, label, box, size))
         counts[split] += 1
-    if len(labels) != 1:
+    if raw["version"] == 1 and len(labels) != 1:
         raise ValueError("Single-object rotated model supports exactly one label class")
     if not counts["train"] or not counts["val"]:
         raise ValueError("Rotated training requires separate nonempty train and val splits")
@@ -204,9 +213,9 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         "manifest_sha256": manifest_sha,
         "source_sha256": {row.image: row.source_sha256 for row in records},
         "split_counts": counts,
-        "source_image_count": len(records),
+        "source_image_count": len(seen_images), "object_count": len(records),
     }
-    return RotatedBoxManifest(root, next(iter(labels)), tuple(records), provenance)
+    return RotatedBoxManifest(root, sorted(labels)[0], tuple(records), provenance, raw["version"])
 
 
 def load_rotated_manifest(root: str | Path) -> RotatedBoxManifest:
@@ -238,13 +247,13 @@ def write_rotated_manifest(root: str | Path, samples: Sequence[Mapping[str, Any]
         if claimed is not None and claimed != source_sha:
             raise ValueError(f"Source SHA-256 mismatch for {image}")
         pinned.append({"image": image, "source_sha256": source_sha, "split": row.get("split"),
-                       "label": row.get("label"), "box": row.get("box")})
+                       **({"objects":row["objects"]} if "objects" in row else {"label": row.get("label"), "box": row.get("box")})})
     temporary_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=root,
                                          prefix=".rotated_boxes-", suffix=".tmp", delete=False) as temporary:
             temporary_path = Path(temporary.name)
-            json.dump({"version": 1, "samples": pinned}, temporary, ensure_ascii=False, indent=2)
+            json.dump({"version": 2 if any("objects" in row for row in pinned) else 1, "samples": pinned}, temporary, ensure_ascii=False, indent=2)
             temporary.flush()
             os.fsync(temporary.fileno())
         manifest = _load_rotated_manifest_path(root, temporary_path)
@@ -361,7 +370,13 @@ def _load_checkpoint(checkpoint: str | Path, device: str | torch.device) -> tupl
             or payload.get("class_name") != meta["class_name"]
             or payload.get("image_size") != meta["image_size"]):
         raise ValueError("Rotated checkpoint signature differs from metadata")
-    model = RotatedBoxNet()
+    if meta.get("version") == 2:
+        if (payload.get("version") != 2 or payload.get("class_names") != meta.get("class_names")
+                or payload.get("max_objects") != meta.get("max_objects")
+                or not isinstance(meta.get("class_names"),list) or not meta["class_names"]
+                or type(meta.get("max_objects")) is not int or not 1<=meta["max_objects"]<=32):
+            raise ValueError("Rotated multi-object class or capacity metadata differs from checkpoint")
+    model = RotatedMultiBoxNet(len(meta["class_names"]), meta["max_objects"]) if meta.get("version") == 2 else RotatedBoxNet()
     state = payload.get("model_state_dict")
     expected = model.state_dict()
     if (not isinstance(state, dict) or set(state) != set(expected)
@@ -374,7 +389,7 @@ def _load_checkpoint(checkpoint: str | Path, device: str | torch.device) -> tupl
 
 
 def predict_rotated_box(
-    checkpoint: str | Path, image: str | Path, *, device: str | torch.device = "cpu",
+    checkpoint: str | Path, image: str | Path, *, device: str | torch.device = "cpu", threshold: float = 0.5,
 ) -> dict[str, Any]:
     """Predict one rotated box in the supplied image's original pixel space."""
     model, meta, checksum = _load_checkpoint(checkpoint, device)
@@ -383,6 +398,11 @@ def predict_rotated_box(
         raise ValueError("Rotated inference needs a regular source image")
     source = source.resolve()
     source_bytes = source.read_bytes()
+    if meta.get("version") == 2:
+        with Image.open(io.BytesIO(source_bytes)) as opened:
+            prediction = predict_rotated_array(checkpoint,np.asarray(opened.convert("RGB")),device=device,threshold=threshold)
+        prediction.update(source_image=str(source),source_sha256=hashlib.sha256(source_bytes).hexdigest())
+        return prediction
     tensor, size = _tensor_for_image(source_bytes, meta["image_size"])
     with torch.no_grad():
         box = _decode(model(tensor.to(device))[0], *size)
@@ -426,18 +446,25 @@ def _evaluate_model(model: RotatedBoxNet, manifest: RotatedBoxManifest, split: s
 
 def evaluate_rotated_detector(
     checkpoint: str | Path, root: str | Path, *, split: str = "test",
-    device: str | torch.device = "cpu",
+    device: str | torch.device = "cpu", allow_dataset_revision: bool = False,
 ) -> dict[str, Any]:
     """Measure oriented IoU and modulo-180 angle error on a held-out split."""
     if split not in ("val", "test"):
         raise ValueError("Rotated evaluation requires a held-out val or test split")
     model, meta, checksum = _load_checkpoint(checkpoint, device)
     manifest = load_rotated_manifest(root)
-    if (meta.get("dataset_sha256") != manifest.provenance["dataset_sha256"]
-            or meta["class_name"] != manifest.class_name):
+    revised = meta.get("dataset_sha256") != manifest.provenance["dataset_sha256"]
+    if revised and not allow_dataset_revision:
         raise ValueError("Rotated evaluation dataset differs from checkpoint source")
-    result = _evaluate_model(model, manifest, split, meta["image_size"], device)
+    trained_classes = meta.get("class_names", [meta["class_name"]])
+    if not set(manifest.class_names).issubset(trained_classes):
+        raise ValueError("Rotated evaluation class differs from checkpoint")
+    if revised and manifest.provenance["source_sha256"] != meta.get("provenance", {}).get("source_sha256"):
+        raise ValueError("Rotated source images differ from checkpoint lineage")
+    result = _evaluate_multi(model,manifest,split,meta,device) if meta.get("version")==2 else _evaluate_model(model, manifest, split, meta["image_size"], device)
     result["model_sha256"] = checksum
+    result["training_dataset_sha256"] = meta.get("dataset_sha256")
+    result["dataset_revision_changed"] = revised
     return result
 
 
@@ -457,6 +484,8 @@ def train_rotated_detector(
     if cancel_event is not None and cancel_event.is_set():
         raise RotatedTrainingCancelled()
     manifest = load_rotated_manifest(root)
+    if manifest.version == 2:
+        return _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event)
     train = RotatedBoxDataset(manifest, split="train", image_size=image_size)
     loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=0)
     model = RotatedBoxNet().to(device)
@@ -500,6 +529,7 @@ def train_rotated_detector(
             "image_size": image_size, "checkpoint_sha256": checksum,
             "dataset_sha256": manifest.provenance["dataset_sha256"],
             "manifest_sha256": manifest.provenance["manifest_sha256"],
+            "dataset_path": str(manifest.root), "provenance": manifest.provenance,
             "split_counts": manifest.provenance["split_counts"],
             "validation": best_metrics}
     (output / "model_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
@@ -508,4 +538,128 @@ def train_rotated_detector(
                "dataset_sha256": manifest.provenance["dataset_sha256"],
                "validation": best_metrics}
     (output / "job_receipt.json").write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+    return receipt
+
+
+class RotatedMultiBoxNet(nn.Module):
+    """Bounded multi-object CNN with objectness, oriented geometry and class logits."""
+    def __init__(self,class_count,max_objects):
+        super().__init__()
+        self.class_count,self.max_objects=class_count,max_objects
+        self.features=RotatedBoxNet().features
+        self.head=nn.Sequential(nn.Linear(64,128),nn.ReLU(),nn.Linear(128,max_objects*(7+class_count)))
+    def forward(self,images):
+        return self.head(self.features(images)).reshape(-1,self.max_objects,7+self.class_count)
+
+
+class RotatedMultiDataset(Dataset):
+    def __init__(self,manifest,split,image_size,max_objects):
+        self.groups={}
+        for record in manifest.records:
+            if record.split==split: self.groups.setdefault(record.image,[]).append(record)
+        self.groups=list(self.groups.values());self.image_size=image_size;self.max_objects=max_objects
+        self.classes=manifest.class_names
+    def __len__(self): return len(self.groups)
+    def __getitem__(self,index):
+        records=sorted(self.groups[index],key=lambda r:(r.box['cx'],r.box['cy'],r.label))
+        first=records[0]
+        data=first.path.read_bytes()
+        if hashlib.sha256(data).hexdigest()!=first.source_sha256: raise ValueError('Rotated source changed after validation')
+        image,_=_tensor_for_image(data,self.image_size)
+        targets=torch.zeros(self.max_objects,8)
+        for slot,r in enumerate(records):
+            box=r.box; diagonal=math.hypot(*r.size); angle=math.radians(2*box['angle_deg'])
+            targets[slot]=torch.tensor([box['cx']/r.size[0],box['cy']/r.size[1],box['width']/diagonal,box['height']/diagonal,math.sin(angle),math.cos(angle),1,self.classes.index(r.label)])
+        return image[0],targets
+
+
+def _multi_loss(raw,targets):
+    present=targets[:,:,6]>0
+    objectness=nn.functional.binary_cross_entropy_with_logits(raw[:,:,6],targets[:,:,6])
+    if not present.any(): return objectness
+    geometry=_loss(raw[present][:,:6],targets[present][:,:6])
+    classes=nn.functional.cross_entropy(raw[present][:,7:],targets[present][:,7].long())
+    return objectness+geometry+classes
+
+
+def _multi_predictions(raw,size,meta,threshold):
+    detections=[]
+    for slot in raw:
+        confidence=float(torch.sigmoid(slot[6]).item())
+        if confidence<threshold: continue
+        probabilities=torch.softmax(slot[7:],dim=0)
+        index=int(probabilities.argmax().item())
+        box=_decode(slot[:6],*size); polygon=_points(box).astype(float).tolist()
+        points=np.asarray(polygon)
+        candidate={'label':meta['class_names'][index],'confidence':confidence,'class_confidence':float(probabilities[index]),'box':box,'polygon':polygon,'axis_aligned_box':[float(points[:,0].min()),float(points[:,1].min()),float(points[:,0].max()),float(points[:,1].max())]}
+        if any(d['label']==candidate['label'] and oriented_iou(d['box'],box)>0.5 for d in detections): continue
+        detections.append(candidate)
+    return detections
+
+
+def predict_rotated_array(checkpoint,image_rgb,*,device='cpu',threshold=0.5):
+    if not 0<=threshold<=1: raise ValueError('Rotated threshold must be [0,1]')
+    model,meta,checksum=_load_checkpoint(checkpoint,device)
+    height,width=image_rgb.shape[:2]
+    pixels=cv2.resize(image_rgb,(meta['image_size'],meta['image_size']))
+    tensor=torch.from_numpy(np.ascontiguousarray(pixels.transpose(2,0,1))).float().unsqueeze(0)/255
+    with torch.inference_mode(): raw=model(tensor.to(device))[0]
+    if meta.get('version')==2: detections=_multi_predictions(raw,(width,height),meta,threshold)
+    else:
+        box=_decode(raw,width,height);polygon=_points(box).astype(float).tolist();points=np.asarray(polygon)
+        detections=[{'label':meta['class_name'],'confidence':1.0,'box':box,'polygon':polygon,'axis_aligned_box':[float(points[:,0].min()),float(points[:,1].min()),float(points[:,0].max()),float(points[:,1].max())]}]
+    return {'task':'rotated_detection','detections':detections,'image_size':[width,height],'model_sha256':checksum}
+
+
+def _evaluate_multi(model,manifest,split,meta,device):
+    data=RotatedMultiDataset(manifest,split,meta['image_size'],meta['max_objects'])
+    if not len(data): raise ValueError(f'Rotated {split} split has no samples')
+    matched=predicted=truth=0;ious=[];angles=[]
+    with torch.inference_mode():
+        for records in data.groups:
+            # Evaluation truth may contain newly corrected objects beyond the
+            # old model's fixed slot count; all must count toward recall.
+            first=records[0];source_bytes=first.path.read_bytes()
+            if hashlib.sha256(source_bytes).hexdigest()!=first.source_sha256:
+                raise ValueError('Rotated source changed after validation')
+            image,_=_tensor_for_image(source_bytes,meta['image_size'])
+            predictions=_multi_predictions(model(image.to(device))[0],first.size,meta,0.5)
+            predicted+=len(predictions);truth+=len(records);available=list(records)
+            for prediction in sorted(predictions,key=lambda p:p['confidence'],reverse=True):
+                candidates=[r for r in available if r.label==prediction['label']]
+                if not candidates: continue
+                best=max(candidates,key=lambda r:oriented_iou(prediction['box'],r.box))
+                iou=oriented_iou(prediction['box'],best.box)
+                ious.append(iou);angles.append(_angle_error(prediction['box']['angle_deg'],best.box['angle_deg']))
+                if iou>=0.5: matched+=1;available.remove(best)
+    return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256']}
+
+
+def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event):
+    groups={}
+    for r in manifest.records: groups[r.image]=groups.get(r.image,0)+1
+    max_objects=max(groups.values())
+    meta={'task':'rotated_detection','version':2,'class_name':manifest.class_name,'class_names':list(manifest.class_names),'max_objects':max_objects,'image_size':image_size,'dataset_sha256':manifest.provenance['dataset_sha256'],'dataset_path':str(manifest.root),'provenance':manifest.provenance}
+    data=RotatedMultiDataset(manifest,'train',image_size,max_objects)
+    model=RotatedMultiBoxNet(len(manifest.class_names),max_objects).to(device)
+    optimizer=torch.optim.Adam(model.parameters(),lr=learning_rate)
+    output=Path(output_dir);output.mkdir(parents=True,exist_ok=True);checkpoint=output/'best_model.pt'
+    best=-1
+    try:
+        for epoch in range(epochs):
+            model.train()
+            for images,targets in DataLoader(data,batch_size=batch_size,shuffle=True):
+                if cancel_event is not None and cancel_event.is_set(): raise RotatedTrainingCancelled()
+                optimizer.zero_grad();loss=_multi_loss(model(images.to(device)),targets.to(device));loss.backward();optimizer.step()
+            model.eval();metrics=_evaluate_multi(model,manifest,'val',meta,device)
+            if metrics['mean_oriented_iou']>best:
+                best=metrics['mean_oriented_iou'];meta['validation']=metrics
+                torch.save({**meta,'model_state_dict':model.state_dict()},checkpoint)
+        if cancel_event is not None and cancel_event.is_set(): raise RotatedTrainingCancelled()
+    except RotatedTrainingCancelled:
+        checkpoint.unlink(missing_ok=True);raise
+    meta['checkpoint_sha256']=_sha256(checkpoint)
+    (output/'model_meta.json').write_text(json.dumps(meta))
+    receipt={'status':'completed','task':'rotated_detection','epochs_completed':epochs,'checkpoint_sha256':meta['checkpoint_sha256'],'dataset_sha256':meta['dataset_sha256'],'validation':meta['validation']}
+    (output/'job_receipt.json').write_text(json.dumps(receipt))
     return receipt

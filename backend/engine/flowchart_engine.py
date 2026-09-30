@@ -23,6 +23,7 @@ from contextvars import ContextVar
 from hashlib import sha256
 import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Literal, Mapping, Optional, Sequence, Tuple, Union
@@ -48,6 +49,7 @@ from backend.engine.device import get_device
 from backend.engine.industrial_adapters import read_image_safely_rgb, sanitize_file_stem
 from backend.engine.patch_classification import predict_patch_classification
 from backend.engine.segmentation.model import build_segmentation_model
+from backend.engine.flow_operators import apply_operator, validate_operator, region_artifacts, local_image, source_bbox, image_uri
 
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
 MAX_SEGMENTATION_TILES = 1024
@@ -94,7 +96,7 @@ def _normal_class_indices(classes: Sequence[str]) -> List[int]:
 class FlowNodeData(BaseModel):
     model_config = ConfigDict(extra="ignore")
     label: str
-    node_type: Literal["input", "fixed_roi", "detection_crop", "inspection", "blob_measure", "aggregate", "decision", "output"]
+    node_type: Literal["input", "fixed_roi", "patch_split", "preprocess", "detection_crop", "inspection", "blob_measure", "aggregate", "decision", "output"]
     task: Optional[str] = "anomaly"  # 'detection', 'anomaly', 'segmentation', 'classification'
     model_job_id: Optional[str] = None
     threshold: Optional[float] = 0.5
@@ -119,6 +121,7 @@ class FlowEdge(BaseModel):
     label: Optional[str] = None
     isBranch: Optional[Literal["pass", "fail", "review", "default"]] = None
     payload_type: Optional[Literal["image", "roi", "result"]] = None
+    predicate: Optional[Dict[str, Any]] = None
 
 
 class FlowchartPipeline(BaseModel):
@@ -145,7 +148,15 @@ class CropInspectionResult(BaseModel):
     blob_count: Optional[int] = None
     largest_blob_area_px: Optional[int] = None
     tiles_processed: Optional[int] = None
+    recognized_text: Optional[str] = None
+    predicted_class: Optional[str] = None
+    polygon: Optional[List[List[float]]] = None
+    anomaly_map: Optional[str] = None
+    anomaly_values: Optional[Dict[str, Any]] = None
+    mask: Optional[str] = None
+    source_transform: Optional[List[List[float]]] = None
     _defect_mask: Optional[np.ndarray] = PrivateAttr(default=None)
+    _region: Optional[Dict[str, Any]] = PrivateAttr(default=None)
 
 
 class FlowchartExecutionStep(BaseModel):
@@ -161,6 +172,7 @@ class FlowchartExecutionStep(BaseModel):
     branch_verdict: Optional[Literal["OK", "NG", "REVIEW"]] = None
     selected_edge_ids: List[str] = Field(default_factory=list)
     skip_reason: Optional[str] = None
+    artifacts: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class FlowchartExecutionResult(BaseModel):
@@ -189,6 +201,10 @@ class FlowchartRunRequest(BaseModel):
     image_path: Optional[str] = None
     image_id: Optional[str] = None
     pipeline: Optional[FlowchartPipeline] = None
+    execution_target: Literal["local", "selected_compute", "model_compute"] = "model_compute"
+    device: str = Field(default="cpu", pattern=r"^(cpu|mps|cuda(?::[0-9]+)?)$")
+    compute_profile_id: Optional[str] = None
+    project_id: Optional[str] = None
 
 
 # ============================================================================
@@ -351,7 +367,7 @@ def get_single_segmentation_flowchart(job_id: Optional[str] = None) -> Flowchart
                 label="Defect decision", node_type="decision", rule="any_defect_is_ng",
             )),
             FlowNode(id="node_output", position={"x": 1000, "y": 160}, data=FlowNodeData(
-                label="Local result", node_type="output",
+                label="Inspection result", node_type="output",
             )),
         ],
         edges=[
@@ -380,7 +396,7 @@ def get_single_detection_flowchart(job_id: Optional[str] = None) -> FlowchartPip
                 label="Defect decision", node_type="decision", rule="any_defect_is_ng",
             )),
             FlowNode(id="node_output", position={"x": 1000, "y": 160}, data=FlowNodeData(
-                label="Local result", node_type="output",
+                label="Inspection result", node_type="output",
             )),
         ],
         edges=[
@@ -539,6 +555,8 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
     decisions = [node for node in pipeline.nodes if node.data.node_type == "decision"]
     outputs = [node for node in pipeline.nodes if node.data.node_type == "output"]
     models = [node for node in pipeline.nodes if node.data.node_type in ("detection_crop", "inspection")]
+    operators = [node for node in pipeline.nodes if node.data.node_type in ("patch_split", "preprocess")]
+    if len(operators)>16: raise ValueError("Pipeline supports at most sixteen image operators.")
     fixed_rois = [node for node in pipeline.nodes if node.data.node_type == "fixed_roi"]
     blob_nodes = [node for node in pipeline.nodes if node.data.node_type == "blob_measure"]
     aggregate_nodes = [node for node in pipeline.nodes if node.data.node_type == "aggregate"]
@@ -563,15 +581,15 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         source_type = nodes[edge.source].data.node_type
         target_type = nodes[edge.target].data.node_type
         if source_type == "input":
-            if target_type not in ("fixed_roi", "detection_crop", "inspection"):
+            if target_type not in ("fixed_roi", "patch_split", "preprocess", "detection_crop", "inspection"):
                 raise ValueError("Input edge must feed a fixed ROI or model node.")
             allowed_payloads = {"image"}
-        elif source_type == "fixed_roi":
-            if target_type not in ("detection_crop", "inspection"):
+        elif source_type in ("fixed_roi", "patch_split", "preprocess"):
+            if target_type not in ("patch_split", "preprocess", "detection_crop", "inspection"):
                 raise ValueError("Fixed ROI output must feed a model node.")
             allowed_payloads = {"roi"}
         elif source_type in ("detection_crop", "inspection"):
-            if target_type in ("detection_crop", "inspection"):
+            if target_type in ("patch_split", "preprocess", "detection_crop", "inspection"):
                 allowed_payloads = {"image", "roi"}
             elif target_type in ("blob_measure", "aggregate", "decision"):
                 allowed_payloads = {"result"}
@@ -589,6 +607,16 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
             raise ValueError(f"Edge {edge.id} has an incompatible {edge.payload_type} payload type.")
         if source_type in ("input", "fixed_roi") and edge.isBranch not in (None, "default"):
             raise ValueError("Input and fixed ROI edges cannot have a conditional branch.")
+        if edge.predicate is not None:
+            predicate = edge.predicate
+            if (source_type not in ("inspection", "detection_crop") or predicate.get("kind") != "class"
+                    or predicate.get("operator") not in ("present", "absent")
+                    or not isinstance(predicate.get("class_name"), str) or not predicate["class_name"].strip()
+                    or not isinstance(predicate.get("min_confidence", 0), (int, float))
+                    or not 0 <= predicate.get("min_confidence", 0) <= 1):
+                raise ValueError("Invalid class predicate: class_name, present/absent and confidence [0,1] are required.")
+            if edge.isBranch not in (None, "default"):
+                raise ValueError("A class predicate cannot also use a verdict branch.")
         outgoing[edge.source].append(edge)
         incoming[edge.target].append(edge)
 
@@ -603,6 +631,12 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
             raise ValueError(f"Fixed ROI node {node.id} needs exactly one original-image input edge.")
         if not outgoing[node.id]:
             raise ValueError(f"Fixed ROI node {node.id} must connect to an inspection or detection model.")
+    for node in operators:
+        validate_operator(node.data.node_type, node.data.params)
+        if len(incoming[node.id]) != 1 or not outgoing[node.id]:
+            raise ValueError(f"Operator {node.id} needs one image/ROI input and connected downstream model.")
+        if node.data.params.get("operation") == "enhancement" and not node.data.model_job_id:
+            raise ValueError("Enhancement preprocessing requires a trained model.")
     for node in models:
         threshold = node.data.threshold
         if threshold is None or not 0 <= threshold <= 1:
@@ -613,21 +647,34 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         if len(parents) != 1:
             raise ValueError(f"Model node {node.id} needs exactly one incoming edge.")
         parent_type = nodes[parents[0].source].data.node_type
-        allowed = ("input", "fixed_roi", "detection_crop", "inspection")
+        allowed = ("input", "fixed_roi", "patch_split", "preprocess", "detection_crop", "inspection")
         if parent_type not in allowed:
             raise ValueError(f"Model node {node.id} has an unsupported upstream connection.")
-        if node.data.node_type == "inspection" and node.data.task not in ("anomaly", "segmentation", "classification", "patch_classification"):
+        if node.data.node_type == "inspection" and node.data.task not in ("anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection"):
             raise ValueError(f"Inspection node {node.id} has an unsupported task.")
+        if node.data.task == "ocr":
+            params = node.data.params
+            if ("expected_text" in params) == ("regex" in params):
+                raise ValueError("OCR requires exactly one expected_text or regex rule.")
+            if not isinstance(params.get("expected_text", params.get("regex")), str) or not params.get("expected_text", params.get("regex")):
+                raise ValueError("OCR requires an expected_text or regex rule.")
+            if "regex" in params:
+                if len(params["regex"]) > 512:
+                    raise ValueError("OCR regex must be at most 512 characters.")
+                try: re.compile(params["regex"])
+                except re.error as exc: raise ValueError(f"Invalid OCR regex: {exc}") from exc
+        if node.data.task == "anomaly" and node.data.params.get("anomaly_mode", "classification") not in ("classification", "region", "segmentation"):
+            raise ValueError("Anomaly mode must be classification or region.")
         targets = outgoing[node.id]
         if not targets:
             raise ValueError(f"Model node {node.id} must connect to an inspection or decision node.")
         target_types = {nodes[edge.target].data.node_type for edge in targets}
-        if not target_types.issubset({"inspection", "detection_crop", "blob_measure", "aggregate", "decision"}):
+        if not target_types.issubset({"patch_split", "preprocess", "inspection", "detection_crop", "blob_measure", "aggregate", "decision"}):
             raise ValueError(f"Model node {node.id} must connect to a model or decision node.")
     for node in blob_nodes:
         parents = incoming[node.id]
         if (len(parents) != 1 or nodes[parents[0].source].data.node_type != "inspection"
-                or nodes[parents[0].source].data.task != "segmentation"):
+                or nodes[parents[0].source].data.task not in ("segmentation", "anomaly")):
             raise ValueError(f"Blob node {node.id} needs one segmentation result input.")
         if not outgoing[node.id] or any(nodes[edge.target].data.node_type not in ("aggregate", "decision") for edge in outgoing[node.id]):
             raise ValueError(f"Blob node {node.id} must feed an aggregate or decision.")
@@ -710,7 +757,16 @@ def _edge_payload_type(edge: FlowEdge, source_type: str, target_type: str) -> Li
     return "roi"
 
 
-def _branch_matches(edge: FlowEdge, verdict: Literal["OK", "NG", "REVIEW"]) -> bool:
+def _branch_matches(edge: FlowEdge, verdict: Literal["OK", "NG", "REVIEW"], evidence: Sequence[Any] = ()) -> bool:
+    if edge.predicate:
+        if verdict == "REVIEW": return False
+        predicate = edge.predicate
+        present = any(
+            (item.get("predicted_class") or item.get("label")) == predicate["class_name"]
+            and float(item.get("confidence") if item.get("confidence") is not None else 1.0) >= predicate.get("min_confidence", 0)
+            for item in (entry.model_dump() if hasattr(entry, "model_dump") else entry for entry in evidence)
+        )
+        return present if predicate["operator"] == "present" else not present
     if edge.isBranch in (None, "default"):
         return True
     return edge.isBranch == {"OK": "pass", "NG": "fail", "REVIEW": "review"}[verdict]
@@ -1105,6 +1161,72 @@ class FlowchartEngine:
         )
         job_id = inspect_node.data.model_job_id if inspect_node else None
 
+        if any("image" in roi for roi in rois):
+            combined = []
+            for roi in rois:
+                local, transform = local_image(img_rgb, roi)
+                h, w = local.shape[:2]
+                local_roi = {**roi, "bbox": [0, 0, w, h]}
+                local_roi.pop("image", None)
+                results, _, status = self._inspect_crops(local, [local_roi], inspect_node)
+                for crop in results:
+                    x1,y1,x2,y2=crop.bbox
+                    mapped=transform@np.array([[1,0,x1],[0,1,y1],[0,0,1]],dtype=float)
+                    crop.bbox = source_bbox(mapped, x2-x1, y2-y1)
+                    crop.bbox=[max(0,crop.bbox[0]),max(0,crop.bbox[1]),min(img_rgb.shape[1],crop.bbox[2]),min(img_rgb.shape[0],crop.bbox[3])]
+                    if crop.polygon:
+                        points=np.asarray(crop.polygon)
+                        crop.polygon=(transform@np.vstack([points.T,np.ones(len(points))]))[:2].T.tolist()
+                    crop.source_transform = transform.tolist()
+                    crop._region = {**roi,'id':crop.roi_id,'image':local[max(0,y1):min(h,y2),max(0,x1):min(w,x2)].copy(),'bbox':crop.bbox,'source_transform':mapped.tolist(),'crop_padding':0}
+                    if crop.polygon and task.lower().strip() == 'rotated_detection':
+                        from backend.engine.rotated_detection import box_from_polygon
+                        local_points = np.asarray(crop.polygon)
+                        # Restore local geometry from already mapped source polygon.
+                        source_points = np.vstack([local_points.T,np.ones(len(local_points))])
+                        local_points = (np.linalg.inv(transform)@source_points)[:2].T
+                        crop._region['rotated_box'] = box_from_polygon(local_points.tolist())
+                    if crop._defect_mask is not None:
+                        mask = cv2.resize(crop._defect_mask, (w, h), interpolation=cv2.INTER_NEAREST)
+                        source = cv2.warpPerspective(mask, transform, (img_rgb.shape[1], img_rgb.shape[0]), flags=cv2.INTER_NEAREST)
+                        x1,y1,x2,y2 = crop.bbox
+                        x1,y1,x2,y2 = max(0,x1),max(0,y1),min(img_rgb.shape[1],x2),min(img_rgb.shape[0],y2)
+                        crop.bbox = [x1,y1,x2,y2]
+                        crop._defect_mask = source[y1:y2,x1:x2]
+                        crop.mask = image_uri(crop._defect_mask, mask=True)
+                    combined.append(crop)
+            return combined, (time.time()-t0)*1000, status
+
+        if task.lower().strip() == "ocr":
+            from backend.engine.ocr import predict_ocr_array
+            checkpoint = self._resolve_checkpoint(job_id, "ocr")
+            if checkpoint is None: raise FlowchartInspectionConfigurationError("OCR trained model is unavailable.")
+            result = []
+            for roi in rois:
+                pixels,bbox = safe_crop_roi(img_rgb,roi['bbox'],padding_px=0,target_size=None)
+                prediction = predict_ocr_array(checkpoint,pixels,device=str(self.device))
+                params = inspect_node.data.params
+                matched = prediction['text'] == params['expected_text'] if 'expected_text' in params else re.fullmatch(params['regex'], prediction['text']) is not None
+                result.append(CropInspectionResult(roi_id=roi['id'],label=roi['label'],bbox=bbox,
+                    defect_score=0 if matched else 1,verdict="OK" if matched else "NG",crop_thumbnail=image_uri(pixels),
+                    flaw_type="문자 일치" if matched else "문자 불일치",recognized_text=prediction['text'],confidence=prediction['confidence']))
+            return result,(time.time()-t0)*1000,"passed"
+        if task.lower().strip() == "rotated_detection":
+            from backend.engine.rotated_detection import predict_rotated_array
+            checkpoint = self._resolve_checkpoint(job_id, "rotated_detection")
+            if checkpoint is None: raise FlowchartInspectionConfigurationError("Rotated detection trained model is unavailable.")
+            result = []
+            for roi in rois:
+                pixels,bbox = safe_crop_roi(img_rgb,roi['bbox'],padding_px=0,target_size=None)
+                predictions = predict_rotated_array(checkpoint,pixels,device=str(self.device),threshold=threshold)
+                for index,prediction in enumerate(predictions['detections']):
+                    polygon = [[x+bbox[0],y+bbox[1]] for x,y in prediction['polygon']]
+                    points = np.asarray(polygon)
+                    box = [max(0,int(points[:,0].min())),max(0,int(points[:,1].min())),min(img_rgb.shape[1],int(np.ceil(points[:,0].max()))),min(img_rgb.shape[0],int(np.ceil(points[:,1].max())))]
+                    result.append(CropInspectionResult(roi_id=f"{roi['id']}:{index}",label=prediction['label'],predicted_class=prediction['label'],bbox=box,
+                        polygon=polygon,defect_score=prediction['confidence'],verdict="NG",crop_thumbnail=image_uri(pixels),flaw_type="회전 객체 검출",confidence=prediction['confidence']))
+            return result,(time.time()-t0)*1000,"passed"
+
         if task.lower().strip() == "patch_classification":
             return self._inspect_patch_crops(img_rgb, rois, inspect_node)
 
@@ -1171,8 +1293,12 @@ class FlowchartEngine:
                 if task_clean == "anomaly":
                     if is_trained:
                         # Trained PaDiM or PatchCore detector
-                        _, score = model.predict_anomaly_map(crop_tensor)
+                        anomaly_map, score = model.predict_anomaly_map(crop_tensor)
                         defect_score = float(score)
+                        probability_map = np.asarray(anomaly_map.detach().cpu() if isinstance(anomaly_map, torch.Tensor) else anomaly_map).squeeze()
+                        defect_mask = (probability_map > threshold).astype(np.uint8)
+                        defect_mask = cv2.resize(defect_mask, (raw_crop.shape[1], raw_crop.shape[0]), interpolation=cv2.INTER_NEAREST)
+                        defect_area_px = int(defect_mask.sum())
                     else:
                         # Baseline ResNet feature extractor for untrained state
                         extractor = model.feature_extractor if hasattr(model, "feature_extractor") else model
@@ -1209,11 +1335,12 @@ class FlowchartEngine:
                         raise FlowchartInspectionConfigurationError(
                             "Classification checkpoint normal/OK class index exceeds model outputs."
                         )
+                    predicted_index = int(probs[0].argmax().item())
                     defect_score = float((1.0 - probs[0, normal_indices].sum()).clamp(0, 1).item())
                     if defect_score >= threshold:
                         flaw_type = "분류 모델 결함 점수 임계값 초과"
 
-                if task_clean == "segmentation":
+                if task_clean == "segmentation" or (task_clean == "anomaly" and inspect_node.data.params.get("anomaly_mode") in ("region", "segmentation")):
                     verdict: Literal["OK", "NG"] = "NG" if defect_area_px >= min_defect_area else "OK"
                 else:
                     verdict = "NG" if defect_score >= threshold else "OK"
@@ -1232,6 +1359,21 @@ class FlowchartEngine:
                         defect_area_px=defect_area_px if defect_area_px > 0 else None,
                         tiles_processed=tiles_processed if tiles_processed else None,
                 )
+                if task_clean == "segmentation":
+                    crop_result.predicted_class = "defect" if verdict == "NG" else "background"
+                if task_clean == "anomaly":
+                    crop_result.predicted_class = "anomaly" if verdict == "NG" else "good"
+                if task_clean in ("classification", "classifier"):
+                    crop_result.predicted_class = class_names[predicted_index] if predicted_index < len(class_names) else str(predicted_index)
+                    crop_result.confidence = float(probs[0, predicted_index].item())
+                if defect_mask is not None:
+                    crop_result.mask = image_uri(defect_mask, mask=True)
+                if task_clean == "anomaly" and is_trained:
+                    values = probability_map.astype(float)
+                    normalized = np.clip(values*255,0,255).astype(np.uint8)
+                    crop_result.anomaly_map = image_uri(normalized)
+                    encoded_values = probability_map.astype('<f4')
+                    crop_result.anomaly_values = {'dtype':'float32','encoding':'base64','shape':list(encoded_values.shape),'data':base64.b64encode(encoded_values.tobytes()).decode('ascii')}
                 crop_result._defect_mask = defect_mask
                 crop_results.append(crop_result)
 
@@ -1370,6 +1512,25 @@ class FlowchartEngine:
         self, img_rgb: np.ndarray, regions: List[Dict[str, Any]], node: FlowNode,
     ) -> Tuple[List[Dict[str, Any]], float, str]:
         """Run a detector on the image or inherited ROIs and restore source coordinates."""
+        if any('image' in region for region in regions):
+            detected=[];latency=0;status='passed'
+            for region in regions:
+                local,transform=local_image(img_rgb,region)
+                local_region={**region,'bbox':[0,0,local.shape[1],local.shape[0]]}
+                local_region.pop('image',None)
+                boxes,elapsed,status=self._detect_in_regions(local,[local_region],node)
+                latency+=elapsed
+                for box in boxes:
+                    x1,y1,x2,y2=box['bbox'];pixels=local[y1:y2,x1:x2].copy()
+                    mapped=transform@np.array([[1,0,x1],[0,1,y1],[0,0,1]],dtype=float)
+                    bounds=source_bbox(mapped,pixels.shape[1],pixels.shape[0])
+                    bounds=[max(0,bounds[0]),max(0,bounds[1]),min(img_rgb.shape[1],bounds[2]),min(img_rgb.shape[0],bounds[3])]
+                    detected.append({**box,'image':pixels,'bbox':bounds,'source_transform':mapped.tolist(),'crop_padding':0})
+            return detected,latency,status
+        if node.data.task == 'rotated_detection':
+            from backend.engine.rotated_detection import box_from_polygon
+            evidence,latency,status=self._inspect_crops(img_rgb,regions,node)
+            return [{'id':crop.roi_id,'label':crop.label,'bbox':crop.bbox,'confidence':crop.confidence,'rotated_box':box_from_polygon(crop.polygon),'polygon':crop.polygon,'crop_padding':0} for crop in evidence],latency,status
         image_h, image_w = img_rgb.shape[:2]
         detected: List[Dict[str, Any]] = []
         latency_ms = 0.0
@@ -1435,11 +1596,11 @@ class FlowchartEngine:
         output_nodes = [node for node in ordered_nodes if node.data.node_type == "output"]
         model_nodes = [node for node in ordered_nodes if node.data.node_type in ("detection_crop", "inspection")]
         processing_nodes = [node for node in ordered_nodes if node.data.node_type in (
-            "fixed_roi", "detection_crop", "inspection", "blob_measure", "aggregate",
+            "fixed_roi", "patch_split", "preprocess", "detection_crop", "inspection", "blob_measure", "aggregate",
         )]
         detector_only_ids = {
             node.id for node in model_nodes
-            if node.data.node_type == "detection_crop"
+            if (node.data.node_type == "detection_crop" or node.data.task == "rotated_detection")
             and any(edge.target == decision_node.id for edge in outgoing[node.id])
         }
         if any(not nodes[node_id].data.model_job_id for node_id in detector_only_ids):
@@ -1461,9 +1622,8 @@ class FlowchartEngine:
         )
         # Fixed coordinates refer to source pixels, so never downsample input
         # before computing their intersection with the real image bounds.
-        input_max_dim = None if full_image_segmentation or any(
-            node.data.node_type == "fixed_roi" for node in processing_nodes
-        ) else 1600
+        input_max_dim = None  # Source pixels stay authoritative; individual model adapters resize.
+
 
         execution_steps: List[FlowchartExecutionStep] = []
 
@@ -1505,6 +1665,7 @@ class FlowchartEngine:
                 output_payload_type="image",
                 output_count=1,
                 selected_edge_ids=[edge.id for edge in outgoing[input_node.id]],
+                artifacts=region_artifacts(img_rgb,[{"id":"full_image","label":"Input","bbox":[0,0,img_rgb.shape[1],img_rgb.shape[0]]}]),
             )
         )
 
@@ -1584,7 +1745,7 @@ class FlowchartEngine:
                 node_rois[node.id] = []
                 node_evidence[node.id] = evidence
                 node_branch_verdict[node.id] = branch_verdict
-                selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict)]
+                selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict, [*node_evidence[node.id], *node_rois[node.id]])]
                 active_edges.update(edge.id for edge in selected)
                 execution_steps.append(FlowchartExecutionStep(
                     node_id=node.id, name=node.data.label,
@@ -1594,6 +1755,7 @@ class FlowchartEngine:
                     input_count=sum(len(node_evidence[edge.source]) for edge in parent_edges),
                     output_count=len(evidence), branch_verdict=branch_verdict,
                     selected_edge_ids=[edge.id for edge in selected],
+                    artifacts=region_artifacts(img_rgb,[],evidence),
                 ))
                 continue
             parent_edge = incoming[node.id][0]
@@ -1625,7 +1787,27 @@ class FlowchartEngine:
                 node_branch_verdict[node.id] = "REVIEW"
                 continue
 
-            if node.data.node_type == "fixed_roi":
+            step_reason = None
+            if node.data.node_type in ("patch_split", "preprocess"):
+                started = time.time()
+                enhancement = None
+                if node.data.params.get("operation") == "enhancement":
+                    from backend.engine.enhancement import predict_enhancement
+                    checkpoint = self._resolve_checkpoint(node.data.model_job_id, "enhancement")
+                    if checkpoint is None: raise FlowchartInspectionConfigurationError("Enhancement trained model is unavailable.")
+                    enhancement = lambda pixels: predict_enhancement(checkpoint, pixels, device=str(self.device))
+                try:
+                    node_rois[node.id] = apply_operator(img_rgb, rois, node.data.node_type, node.data.params, node.id, enhancement)
+                    status,branch_verdict = "passed","OK"
+                except ValueError as exc:
+                    node_rois[node.id] = []
+                    status,branch_verdict = "review_required","REVIEW"
+                    incomplete_reasons.append(str(exc))
+                    step_reason = str(exc)
+                node_evidence[node.id] = []
+                latency = (time.time()-started)*1000
+                output_count = len(node_rois[node.id])
+            elif node.data.node_type == "fixed_roi":
                 started = time.time()
                 x1, y1, x2, y2 = _fixed_roi_rectangle(node)
                 clipped = [max(0, min(w, x1)), max(0, min(h, y1)),
@@ -1660,8 +1842,9 @@ class FlowchartEngine:
                     if node.id in detector_only_ids else []
                 )
                 branch_verdict: Literal["OK", "NG", "REVIEW"] = (
+                    "REVIEW" if status != "passed" else
                     "NG" if detected and node.id in detector_only_ids else
-                    "OK" if detected else "REVIEW"
+                    "OK" if detected or status == "passed" else "REVIEW"
                 )
                 output_count = len(detected)
             else:
@@ -1671,15 +1854,23 @@ class FlowchartEngine:
                 except (FlowchartInspectionLimitError, FlowchartInspectionConfigurationError) as exc:
                     evidence, latency, status = [], (time.time() - started) * 1000.0, "skipped"
                     incomplete_reasons.append(str(exc))
-                node_rois[node.id] = rois
+                    step_reason = str(exc)
+                if node.data.task == "rotated_detection":
+                    from backend.engine.rotated_detection import box_from_polygon
+                    node_rois[node.id] = [{**(crop._region or {'id':crop.roi_id,'bbox':crop.bbox,'rotated_box':box_from_polygon(crop.polygon),'crop_padding':0}),'label':crop.label,'confidence':crop.confidence} for crop in evidence if crop.polygon]
+                else:
+                    node_rois[node.id] = rois
                 node_evidence[node.id] = evidence
                 branch_verdict = (
+                    "REVIEW" if status != "passed" else
                     "NG" if any(crop.verdict == "NG" for crop in evidence) else
-                    "OK" if evidence else "REVIEW"
+                    "OK" if evidence or node.data.task == "rotated_detection" else "REVIEW"
                 )
                 output_count = len(evidence)
 
-            selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict)]
+            # Detector ROIs are predictions; inspection ROIs are inherited inputs.
+            class_evidence = node_rois[node.id] if node.data.node_type == "detection_crop" else node_evidence[node.id]
+            selected = [edge for edge in outgoing[node.id] if _branch_matches(edge, branch_verdict, class_evidence)]
             node_branch_verdict[node.id] = branch_verdict
             active_edges.update(edge.id for edge in selected)
             output_types = {
@@ -1694,6 +1885,8 @@ class FlowchartEngine:
                 input_count=len(rois), output_count=output_count,
                 branch_verdict=branch_verdict,
                 selected_edge_ids=[edge.id for edge in selected],
+                skip_reason=step_reason,
+                artifacts=region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]),
             ))
 
         decision_edges = [edge for edge in incoming[decision_node.id] if edge.id in active_edges]

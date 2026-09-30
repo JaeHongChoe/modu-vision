@@ -165,6 +165,16 @@ def test_training_uses_active_project_models_by_default_but_honors_explicit_path
     assert explicit.status_code == 200, explicit.text
     assert Path(explicit.json()["output_dir"]).parent == explicit_dir
     assert len(captured) == 2
+    assert client.get("/api/project/current").json()["source_dataset_dir"] == str(source)
+    assert all(row["dataset_binding"]["dataset_version_id"].startswith("v_") for row in captured)
+
+    other = tmp_path / "other_classification"
+    import shutil
+    shutil.copytree(source, other)
+    rejected = client.post("/api/training/start", json={**request, "dataset_path": str(other)})
+    assert rejected.status_code == 409, rejected.text
+    assert len(captured) == 2
+    assert client.get("/api/project/current").json()["source_dataset_dir"] == str(source)
 
 
 def test_completed_checkpoint_in_active_project_is_trusted(workspace):

@@ -1,4 +1,4 @@
-import type { FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
+import type { FlowchartPipeline, FlowModelTask, FlowNode, VisionTask } from '../../types';
 
 export type FlowchartStartupResult =
   | { status: 'ready'; pipeline: FlowchartPipeline; verifiedJobId: string }
@@ -22,20 +22,25 @@ interface FlowchartStartupOptions {
   isCurrent: () => boolean;
 }
 
+/** Identify model-bearing nodes, including nodes whose model is not bound yet. */
+export function getFlowchartModelTask(node: FlowNode): FlowModelTask | null {
+  if (node.data.node_type === 'detection_crop') return 'detection';
+  if (node.data.node_type === 'preprocess' && node.data.params?.operation === 'enhancement') return 'enhancement';
+  if (node.data.node_type !== 'inspection') return null;
+  const task = node.data.task;
+  if (task !== 'anomaly' && task !== 'segmentation' && task !== 'classification' && task !== 'patch_classification' && task !== 'ocr' && task !== 'rotated_detection') {
+    throw new Error('Unsupported inspection model task');
+  }
+  return task;
+}
+
 /** Collect the model references used by an executable graph. */
 export function getFlowchartModelReferences(pipeline: FlowchartPipeline): Array<{ job_id: string; task: FlowModelTask }> {
   const models: Array<{ job_id: string; task: FlowModelTask }> = [];
   for (const node of pipeline.nodes) {
     if (!node.data.model_job_id) continue;
-    if (node.data.node_type === 'detection_crop') {
-      models.push({ job_id: node.data.model_job_id, task: 'detection' });
-    } else if (node.data.node_type === 'inspection') {
-      const task = node.data.task;
-      if (task !== 'anomaly' && task !== 'segmentation' && task !== 'classification' && task !== 'patch_classification') {
-        throw new Error('Unsupported inspection model task');
-      }
-      models.push({ job_id: node.data.model_job_id, task });
-    }
+    const task = getFlowchartModelTask(node);
+    if (task) models.push({ job_id: node.data.model_job_id, task });
   }
   return models;
 }
@@ -62,6 +67,7 @@ export function singleModelAutoBinding(
 /** A draft from another recipe must not appear under the newly selected recipe. */
 export function pipelineMatchesTask(pipeline: FlowchartPipeline | null, task: VisionTask): boolean {
   if (!pipeline) return false;
+  if (pipeline.nodes.some((node) => node.data.task === 'ocr' || node.data.task === 'rotated_detection' || node.data.params?.operation === 'enhancement')) return true;
   if (task === 'detection') return pipeline.nodes.some((node) => node.data.node_type === 'detection_crop');
   const inspections = pipeline.nodes.filter((node) => node.data.node_type === 'inspection');
   return inspections.some((node) => node.data.task === task);

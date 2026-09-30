@@ -10,6 +10,7 @@ import os
 import re
 import tempfile
 import threading
+from contextvars import copy_context
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ from PIL import Image, ImageDraw
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.routes_project import get_current_project
+from backend.engine.specialized_models import require_completed_checkpoint
 from backend.engine.rotated_detection import (
     RotatedTrainingCancelled, evaluate_rotated_detector, load_rotated_manifest,
     predict_rotated_box, train_rotated_detector, write_rotated_manifest,
@@ -39,6 +41,7 @@ class _LiveJob:
     dataset_path: Path
     output_dir: Path
     total_epochs: int
+    training_provenance: dict[str, Any] = field(default_factory=dict)
     status: str = "running"
     epochs_completed: int = 0
     result: dict[str, Any] | None = None
@@ -50,7 +53,8 @@ class _LiveJob:
     def summary(self) -> dict[str, Any]:
         return {"job_id": self.job_id, "status": self.status,
                 "epochs_completed": self.epochs_completed, "total_epochs": self.total_epochs,
-                "started_at": self.started_at, "result": self.result, "error": self.error}
+                "started_at": self.started_at, "result": self.result, "error": self.error,
+                "training_provenance": self.training_provenance}
 
 
 _JOBS: dict[tuple[str, str], _LiveJob] = {}
@@ -69,8 +73,9 @@ class RotatedSampleInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     image: str = Field(min_length=1)
     split: Literal["train", "val", "test"]
-    label: str = Field(min_length=1)
-    box: RotatedBoxInput
+    label: str | None = None
+    box: RotatedBoxInput | None = None
+    objects: list[dict[str, Any]] | None = Field(default=None, min_length=1, max_length=32)
     source_sha256: str | None = None
 
 
@@ -144,6 +149,8 @@ def _checkpoint(request: Request, job_id: str) -> Path:
     if (checkpoint.is_symlink() or metadata.is_symlink()
             or not checkpoint.is_file() or not metadata.is_file()):
         raise HTTPException(status_code=404, detail="Completed rotated checkpoint not found in active project")
+    try:require_completed_checkpoint(checkpoint)
+    except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
     return checkpoint
 
 
@@ -182,22 +189,47 @@ def _set_job(job: _LiveJob, status: str, *, result: dict[str, Any] | None = None
 
 def _run_job(job: _LiveJob, options: TrainRequest) -> None:
     try:
+        from backend.engine.training_provenance import validate_training_binding,persist_model_binding
+        validate_training_binding(job.training_provenance)
+        original_digest=load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']
         result = train_rotated_detector(
             job.dataset_path, job.output_dir, epochs=options.epochs,
             batch_size=options.batch_size, image_size=options.image_size,
             learning_rate=options.learning_rate, device="cpu", cancel_event=job.cancel,
         )
+        validate_training_binding(job.training_provenance)
+        if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
+            raise ValueError('Rotated labels/source changed during training')
         with _LOCK:
             if job.cancel.is_set():
                 for name in ("best_model.pt", "model_meta.json", "job_receipt.json"):
                     (job.output_dir / name).unlink(missing_ok=True)
                 _set_job(job, "aborted")
             else:
+                persist_model_binding(job.output_dir,job.training_provenance)
+                checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
+                meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text())
+                meta.update(checkpoint_sha256=checksum,source_dataset_path=str(job.dataset_path))
+                meta_path.write_text(json.dumps(meta))
+                receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
+                    'source_dataset_path':str(job.dataset_path),'dataset_path':str(job.dataset_path),
+                    'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
+                    'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
+                (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt))
+                result.update(checkpoint_sha256=checksum,model_sha256=checksum)
                 _set_job(job, "completed", result=result)
     except RotatedTrainingCancelled:
+        for name in ('best_model.pt','model_meta.json','job_receipt.json'):(job.output_dir/name).unlink(missing_ok=True)
         _set_job(job, "aborted")
     except Exception as exc:
+        for name in ('best_model.pt','model_meta.json','job_receipt.json'):(job.output_dir/name).unlink(missing_ok=True)
         _set_job(job, "failed", error=str(exc))
+
+
+def _manifest_groups(manifest):
+    groups={}
+    for row in manifest.records: groups.setdefault(row.image,[]).append(row)
+    return groups
 
 
 def _manifest_result(manifest) -> dict[str, Any]:
@@ -205,12 +237,12 @@ def _manifest_result(manifest) -> dict[str, Any]:
         "dataset_path": str(manifest.root),
         "sample_count": len(manifest.records),
         "class_name": manifest.class_name,
+        "class_names": list(manifest.class_names), "version": manifest.version,
         "split_counts": manifest.provenance["split_counts"],
         "dataset_sha256": manifest.provenance["dataset_sha256"],
         "samples": [
-            {"image": row.image, "source_sha256": row.source_sha256,
-             "split": row.split, "label": row.label, "box": row.box}
-            for row in manifest.records
+            {"image": image, "source_sha256": rows[0].source_sha256, "split": rows[0].split, **({"objects": [{"label": row.label,"box": row.box} for row in rows]} if manifest.version==2 else {"label": rows[0].label,"box": rows[0].box})}
+            for image, rows in _manifest_groups(manifest).items()
         ],
     }
 
@@ -242,6 +274,9 @@ def start_training(req: TrainRequest, request: Request):
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     project = get_current_project(request)
+    from backend.engine.training_provenance import bind_family_training
+    binding=bind_family_training(project,source,'rotated_detection')
+    binding.update(family_dataset_path=str(source),family_dataset_sha256=load_rotated_manifest(source).provenance['dataset_sha256'],label_kind='rotated_detection')
     root = _models_root(request)
     with _LOCK:
         for existing in _JOBS.values():
@@ -249,10 +284,11 @@ def start_training(req: TrainRequest, request: Request):
                 raise HTTPException(status_code=409, detail="Another rotated training job is already running")
         job_id = uuid.uuid4().hex
         job = _LiveJob(Path(project["project_dir"]).resolve(), job_id,
-                       source, root / job_id, req.epochs)
+                       source, root / job_id, req.epochs,training_provenance=binding)
         _JOBS[_key(job)] = job
         _write_state(job)
-        job.thread = threading.Thread(target=_run_job, args=(job, req),
+        context=copy_context()
+        job.thread = threading.Thread(target=lambda:context.run(_run_job,job,req),
                                       name=f"rotated-{job.job_id[:8]}", daemon=True)
         job.thread.start()
         return job.summary()
@@ -309,6 +345,7 @@ def list_models(request: Request):
                 or not checkpoint.is_file() or not metadata.is_file()):
             continue
         try:
+            require_completed_checkpoint(checkpoint)
             meta = json.loads(metadata.read_text(encoding="utf-8"))
             digest = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
         except (OSError, ValueError):
@@ -328,7 +365,10 @@ def evaluate(req: EvaluateRequest, request: Request):
     checkpoint = _checkpoint(request, req.job_id)
     source = _project_source(request, req.dataset_path)
     try:
-        return evaluate_rotated_detector(checkpoint, source, split=req.split, device="cpu")
+        from backend.engine.evaluation_history import archive_specialized_evaluation
+        result = evaluate_rotated_detector(checkpoint, source, split=req.split, device="cpu")
+        return archive_specialized_evaluation(get_current_project(request), checkpoint, source,
+            result, task='rotated_detection')
     except (ValueError, OSError, RuntimeError, TypeError, KeyError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -352,8 +392,9 @@ def predict(req: PredictRequest, request: Request):
             preview.thumbnail((480, 320), Image.Resampling.BILINEAR)
         scale_x = preview.width / result["image_size"][0]
         scale_y = preview.height / result["image_size"][1]
-        outline = [(float(x) * scale_x, float(y) * scale_y) for x, y in result["polygon"]]
-        ImageDraw.Draw(preview).line(outline + outline[:1], fill=(34, 211, 238), width=2)
+        for detection in result.get("detections",[result]):
+            outline = [(float(x) * scale_x, float(y) * scale_y) for x, y in detection["polygon"]]
+            ImageDraw.Draw(preview).line(outline + outline[:1], fill=(34, 211, 238), width=2)
         encoded = io.BytesIO()
         preview.save(encoded, format="PNG")
         result["preview_data_url"] = "data:image/png;base64," + base64.b64encode(encoded.getvalue()).decode("ascii")

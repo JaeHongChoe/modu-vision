@@ -15,10 +15,12 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.datastructures import State
 
 from backend.api.routes_project import _load_project, _project_root, get_current_project
 from backend.api.routes_dataset import list_dataset_images
@@ -30,6 +32,7 @@ from backend.engine.flowchart_engine import (
 )
 from backend.engine.checkpoint_paths import is_job_id
 from backend.engine.flow_provenance import canonical_pipeline_json
+from backend.engine.specialized_models import SPECIALIZED_TASKS, FLOW_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 
 
 router = APIRouter(prefix="/api/inspections", tags=["inspections"])
@@ -73,12 +76,11 @@ def _sha256(path: Path) -> str:
 def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
     references: Dict[str, str] = {}
     for node in pipeline.nodes:
-        if node.data.node_type not in ("detection_crop", "inspection"):
-            continue
+        task = flow_model_task(node)
+        if task is None: continue
         job_id = node.data.model_job_id
-        task = "detection" if node.data.node_type == "detection_crop" else node.data.task
-        if (not job_id or not is_job_id(job_id)
-                or task not in ("classification", "detection", "segmentation", "anomaly", "patch_classification")
+        if (not job_id or not valid_flow_job(job_id, task)
+                or task not in FLOW_TASKS
                 or (job_id in references and references[job_id] != task)):
             raise HTTPException(status_code=409, detail="Saved inspection flow has an invalid model reference.")
         references[job_id] = task
@@ -90,7 +92,10 @@ def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
 def _owned_checkpoint(project: Dict[str, Any], job_id: str, checkpoint: Path) -> bool:
     """Accept the active project's model or a legacy global job, never another project model root."""
     parent = checkpoint.parent.resolve()
-    return parent in {
+    from backend.engine.specialized_models import require_completed_checkpoint
+    try:require_completed_checkpoint(checkpoint)
+    except (ValueError,OSError):return False
+    return parent in {*(Path(project["models_dir"]).resolve()/task/job_id for task in SPECIALIZED_TASKS),
         Path(project["models_dir"]).resolve() / job_id,
         (Path.cwd() / "models" / job_id).resolve(),
         (Path.cwd() / "projects" / job_id / "models").resolve(),
@@ -156,7 +161,10 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any]) -> t
     model_paths: Dict[str, str] = {}
     for job_id, task in _model_references(pipeline).items():
         try:
-            _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
+            if task in SPECIALIZED_TASKS:
+                checkpoint,_ = resolve_specialized_checkpoint(project["models_dir"],job_id,task,str(source))
+            else:
+                _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
                 job_id, source_dataset_path=str(source), source_task=task,
             )
             local_job = Path(project["models_dir"]).resolve() / job_id
@@ -186,6 +194,83 @@ class CreateRun(BaseModel):
     scope: Literal["test", "val", "train", "all"]
     pipeline: Dict[str, Any]
     images: List[ImageReference] = Field(min_length=1, max_length=50000)
+    execution_target: Literal["local", "selected_compute", "model_compute"] = "model_compute"
+    device: str = Field(default="cpu", pattern=r"^(cpu|mps|cuda(?::[0-9]+)?)$")
+    compute_profile_id: Optional[str] = None
+    project_id: Optional[str] = None
+
+
+def _freeze_execution_config(payload: CreateRun, project: Dict[str, Any]) -> Dict[str, Any]:
+    if payload.execution_target != "model_compute" and not payload.project_id:
+        raise HTTPException(status_code=422, detail="Explicit inspection execution requires its project identity.")
+    if payload.project_id is not None and payload.project_id != project["id"]:
+        raise HTTPException(status_code=409, detail="Inspection project changed before the run was created.")
+    profile = None
+    if payload.execution_target == "selected_compute":
+        from backend.remote.profiles import get_profile_store
+        if not payload.compute_profile_id:
+            raise HTTPException(status_code=422, detail="Choose an explicit execution compute profile.")
+        selected = get_profile_store().get(payload.compute_profile_id)
+        if selected is None:
+            raise HTTPException(status_code=404, detail="Execution compute profile is unavailable.")
+        profile = selected.model_dump(mode="json")
+    elif payload.compute_profile_id is not None:
+        raise HTTPException(status_code=422, detail="A compute profile applies only to selected compute execution.")
+    return {"execution_target": payload.execution_target, "device": payload.device,
+            "compute_profile_id": payload.compute_profile_id, "project_id": project["id"],
+            "profile": profile}
+
+
+def _verified_execution_choice(run: Dict[str, Any], project: Dict[str, Any]):
+    """Reopen the exact choice instead of following a subsequently selected server."""
+    from backend.remote.profiles import ComputeProfile, get_profile_store
+    encoded = run.get("execution_config_json")
+    if not encoded:
+        return {"execution_target": "model_compute", "device": "cpu", "compute_profile_id": None,
+                "project_id": project["id"], "profile": None}, None
+    try:
+        config = json.loads(encoded)
+        if (hashlib.sha256(_canonical_json(config).encode()).hexdigest() != run.get("execution_config_sha256")
+                or config.get("project_id") != project["id"]):
+            raise ValueError("Stored execution identity or digest changed.")
+        validated = FlowchartRunRequest.model_validate(config)
+        if validated.execution_target != config.get("execution_target") or validated.device != config.get("device"):
+            raise ValueError("Stored execution choice is invalid.")
+        frozen_profile = None
+        if validated.execution_target == "selected_compute":
+            frozen_profile = ComputeProfile.model_validate(config["profile"])
+            current = get_profile_store().get(validated.compute_profile_id)
+            if (frozen_profile.id != validated.compute_profile_id or current is None
+                    or current.model_dump() != frozen_profile.model_dump()):
+                raise ValueError("Execution compute profile changed after this run was created.")
+        elif config.get("profile") is not None or validated.compute_profile_id is not None:
+            raise ValueError("Stored execution has an unexpected compute profile.")
+        return config, frozen_profile
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise HTTPException(status_code=409, detail=f"Inspection execution configuration is invalid: {exc}") from exc
+
+
+@contextmanager
+def _execution_request(request: Request, project: Dict[str, Any], frozen_profile):
+    """Scope nested flow execution without changing the app's active project."""
+    from backend.engine.annotation_storage import (
+        set_request_annotation_root, reset_request_annotation_root,
+        set_request_project_root, reset_request_project_root,
+    )
+    from backend.engine.dataset_loaders import set_request_split_root, reset_request_split_root
+    app_state = dict(request.app.state._state)
+    app_state["current_project"] = project
+    scope = {**request.scope, "app": SimpleNamespace(state=State(app_state)),
+             "state": {**request.scope.get("state", {}), "frozen_execution_profile": frozen_profile}}
+    project_token = set_request_project_root(Path(project["project_dir"]))
+    annotation_token = set_request_annotation_root(Path(project["annotations_dir"]))
+    split_token = set_request_split_root(Path(project["dataset_dir"]) / "splits")
+    try:
+        yield Request(scope)
+    finally:
+        reset_request_split_root(split_token)
+        reset_request_annotation_root(annotation_token)
+        reset_request_project_root(project_token)
 
 
 class UpdateRow(BaseModel):
@@ -286,6 +371,8 @@ def _store(request: Request, run_id: Optional[str] = None):
             saved_version_id TEXT,
             model_sha256_json TEXT,
             model_paths_json TEXT,
+            execution_config_json TEXT,
+            execution_config_sha256 TEXT,
             status TEXT NOT NULL,
             owner_instance TEXT,
             created_at TEXT NOT NULL,
@@ -324,6 +411,9 @@ def _store(request: Request, run_id: Optional[str] = None):
         conn.execute("ALTER TABLE runs ADD COLUMN model_sha256_json TEXT")
     if "model_paths_json" not in columns:
         conn.execute("ALTER TABLE runs ADD COLUMN model_paths_json TEXT")
+    for column in ("execution_config_json", "execution_config_sha256"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
     row_columns = {row["name"] for row in conn.execute("PRAGMA table_info(rows)")}
     if "image_sha256" not in row_columns:
         conn.execute("ALTER TABLE rows ADD COLUMN image_sha256 TEXT")
@@ -365,10 +455,11 @@ def _read_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, Any]:
     for review in reviews:
         item = {key: review[key] for key in review.keys() if key not in {"run_id", "image_path"}}
         by_image.setdefault(review["image_path"], []).append(item)
-    output = {key: run[key] for key in run.keys() if key not in {"pipeline_json", "model_sha256_json", "model_paths_json"}}
+    output = {key: run[key] for key in run.keys() if key not in {"pipeline_json", "model_sha256_json", "model_paths_json", "execution_config_json"}}
     output["canonical_source_folder"] = _source_identity(run["source_folder"])
     output["pipeline"] = json.loads(run["pipeline_json"])
     output["model_sha256"] = json.loads(run["model_sha256_json"] or "{}")
+    output["execution_config"] = json.loads(run["execution_config_json"]) if run["execution_config_json"] else None
     output["rows"] = []
     for row in rows:
         history = by_image.get(row["image_path"], [])
@@ -446,6 +537,8 @@ def create_run(payload: CreateRun, request: Request):
     if not payload.pipeline.get("id") or not payload.pipeline.get("name"):
         raise HTTPException(status_code=422, detail="A named flowchart is required for inspection provenance.")
     project = get_current_project(request)
+    execution_config = _freeze_execution_config(payload, project)
+    execution_json = _canonical_json(execution_config)
     source_folder = _source_identity(payload.source_folder)
     if source_folder is None:
         raise HTTPException(status_code=422, detail="Inspection source path cannot be resolved.")
@@ -462,12 +555,14 @@ def create_run(payload: CreateRun, request: Request):
         conn.execute(
             "INSERT INTO runs (run_id, source_folder, task, scope, pipeline_id, pipeline_name, "
             "pipeline_hash, pipeline_json, saved_version_id, model_sha256_json, model_paths_json, "
+            "execution_config_json, execution_config_sha256, "
             "status, owner_instance, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (run_id, source_folder, payload.task, payload.scope,
              str(payload.pipeline["id"]), str(payload.pipeline["name"]),
              hashlib.sha256(pipeline_json.encode("utf-8")).hexdigest(), pipeline_json,
              saved_version_id, _canonical_json(model_sha256), _canonical_json(model_paths),
+             execution_json, hashlib.sha256(execution_json.encode()).hexdigest(),
              "running", PROCESS_INSTANCE, stamp, stamp),
         )
         conn.executemany(
@@ -481,6 +576,7 @@ def create_run(payload: CreateRun, request: Request):
         "saved_version_id": saved_version_id,
         "pipeline_hash": hashlib.sha256(pipeline_json.encode("utf-8")).hexdigest(),
         "model_sha256": model_sha256,
+        "execution_config": execution_config,
     }
 
 
@@ -547,13 +643,14 @@ def list_runs(request: Request, source_folder: Optional[str] = None, task: Optio
     with _store(request) as conn:
         records = conn.execute(
             f"SELECT run_id, source_folder, task, scope, pipeline_id, pipeline_name, "
-            f"pipeline_hash, saved_version_id, model_sha256_json, status, created_at, updated_at FROM runs {where} "
+            f"pipeline_hash, saved_version_id, model_sha256_json, execution_config_json, status, created_at, updated_at FROM runs {where} "
             "ORDER BY created_at DESC, rowid DESC LIMIT 100", params,
         ).fetchall()
         runs = []
         for record in records:
             item = dict(record)
             item["model_sha256"] = json.loads(item.pop("model_sha256_json") or "{}")
+            item["execution_config"] = json.loads(item.pop("execution_config_json") or "null")
             counts = conn.execute(
                 "SELECT state, COUNT(*) AS count FROM rows WHERE run_id = ? GROUP BY state",
                 (record["run_id"],),
@@ -590,6 +687,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
         run_record = dict(run)
 
     pipeline, checkpoints = _verified_execution_context(run_record, project)
+    execution_config, frozen_profile = _verified_execution_choice(run_record, project)
     image_path = Path(payload.image_path).expanduser().resolve()
     source_path = Path(run_record["source_folder"]).expanduser().resolve()
     if (not image_path.is_file() or not image_path.is_relative_to(source_path)
@@ -608,15 +706,22 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
 
     from backend.api import routes_flowchart
     try:
-        with verified_checkpoint_scope(checkpoints):
+        with _execution_request(request, project, frozen_profile) as bound_request, verified_checkpoint_scope(checkpoints):
             raw = routes_flowchart.run_flowchart(FlowchartRunRequest(
                 image_path=payload.image_path, image_id=image["image_id"], pipeline=pipeline,
-            ), request=None)
+                execution_target=execution_config["execution_target"], device=execution_config["device"],
+                compute_profile_id=execution_config["compute_profile_id"], project_id=project["id"],
+            ), request=bound_request)
         result = FlowchartExecutionResult.model_validate(raw)
         if (result.image_path != payload.image_path or result.image_id != image["image_id"]
                 or result.status not in ("success", "review")
                 or not result.execution_steps):
             raise HTTPException(status_code=502, detail="Flowchart engine returned a result for a different image or without execution evidence.")
+        if execution_config["execution_target"] != "model_compute" and (
+                raw.get("execution_target") != execution_config["execution_target"]
+                or raw.get("execution_device") != execution_config["device"]
+                or raw.get("compute_profile_id") != execution_config["compute_profile_id"]):
+            raise HTTPException(status_code=502, detail="Flowchart result used a different execution target, device, or compute profile.")
         if _sha256(image_path) != image_sha256:
             raise HTTPException(status_code=409, detail="Inspection image changed during execution.")
         _check_checkpoint_hashes(run_record, checkpoints)
@@ -630,6 +735,9 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
         raise
 
     saved = result.model_dump(mode="json")
+    for key in ("execution_target", "execution_device", "compute_profile_id", "compute_gpu_selector", "device_name", "model_sha256"):
+        if key in raw:
+            saved[key] = raw[key]
     stamp = _now()
     with _store(request, run_id) as conn:
         run = _run_row(conn, run_id)

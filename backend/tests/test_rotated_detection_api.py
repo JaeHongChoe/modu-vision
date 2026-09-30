@@ -75,6 +75,9 @@ def test_rotated_api_trains_evaluates_predicts_and_scopes_project(tmp_path: Path
     assert started.json()["status"] in ("running", "completed")
     terminal = _await_terminal(client, job_id)
     assert terminal["status"] == "completed", terminal
+    assert terminal["training_provenance"]["dataset_version_id"]
+    from backend.engine.training_provenance import validate_training_binding
+    validate_training_binding(terminal["training_provenance"])
     assert [row["job_id"] for row in client.get("/api/rotated-detection/models").json()["models"]] == [job_id]
 
     evaluated = client.post("/api/rotated-detection/evaluate", json={
@@ -82,6 +85,8 @@ def test_rotated_api_trains_evaluates_predicts_and_scopes_project(tmp_path: Path
     })
     assert evaluated.status_code == 200, evaluated.text
     assert evaluated.json()["sample_count"] == 1
+    assert evaluated.json()["evaluation_id"]
+    assert evaluated.json()["binding"]["checkpoint_sha256"]
     predicted = client.post("/api/rotated-detection/predict", json={
         "job_id": job_id, "image_path": str(source / "images/part_3.png"),
     })

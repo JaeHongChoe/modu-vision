@@ -48,13 +48,19 @@ from backend.api.routes_annotation import router as annotation_router
 from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
 from backend.api.routes_dataset_versions import router as dataset_versions_router
+from backend.api.routes_dataset_metadata import router as dataset_metadata_router, format_router as dataset_format_router
 from backend.api.routes_evaluation import router as evaluation_router
+from backend.api.routes_evaluation_history import router as evaluation_history_router
 from backend.api.routes_export import router as export_router
 from backend.api.routes_flowchart import router as flowchart_router
 from backend.api.routes_inspections import router as inspections_router
 from backend.api.routes_label_suggestions import router as label_suggestions_router
+from backend.api.routes_label_candidates import router as label_candidates_router
+from backend.api.routes_runtime_services import router as runtime_services_router
 from backend.api.routes_model_deployments import router as model_deployments_router
 from backend.api.routes_ocr import router as ocr_router
+from backend.api.routes_enhancement import router as enhancement_router
+from backend.api.routes_provenance import router as provenance_router
 from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
 from backend.api.routes_project import get_current_project, router as project_router
@@ -214,12 +220,19 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     app.include_router(compute_router)
     app.include_router(dataset_router)
     app.include_router(dataset_versions_router)
+    app.include_router(dataset_metadata_router)
+    app.include_router(dataset_format_router)
     app.include_router(annotation_router)
     app.include_router(label_suggestions_router)
+    app.include_router(label_candidates_router)
+    app.include_router(runtime_services_router)
     app.include_router(training_router)
     app.include_router(evaluation_router)
+    app.include_router(evaluation_history_router)
     app.include_router(model_deployments_router)
     app.include_router(ocr_router)
+    app.include_router(enhancement_router)
+    app.include_router(provenance_router)
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)
     app.include_router(flowchart_router)

@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+try:
+    import fcntl
+except ImportError:  # Native Windows has byte-range locks instead.
+    fcntl = None
+import errno
 import base64
 import json
 import logging
@@ -12,6 +17,7 @@ import shutil
 import tarfile
 import tempfile
 import time
+import threading
 import urllib.parse
 import uuid
 from dataclasses import dataclass
@@ -35,6 +41,10 @@ logger = logging.getLogger("vision_ai_studio.remote_operations")
 OP_POLL_INTERVAL_SECONDS = 2.0
 
 
+class RemoteComputeBusy(RuntimeError):
+    """The selected remote resource or identical monitored operation is reserved."""
+
+
 @dataclass(frozen=True)
 class RemoteJobContext:
     job_id: str
@@ -43,9 +53,12 @@ class RemoteJobContext:
     dataset_path: Path
     profile: ComputeProfile
     input_manifest_sha256: str
+    portable: bool = False
 
 
 def _verify_local_snapshot(context: RemoteJobContext) -> None:
+    if context.portable:
+        return
     try:
         verify_snapshot_tree(
             context.dataset_path.parent, context.input_manifest_sha256, allow_archive=True,
@@ -54,11 +67,13 @@ def _verify_local_snapshot(context: RemoteJobContext) -> None:
         raise ArtifactValidationError(f"Local training snapshot verification failed: {exc}") from exc
 
 
-def remote_job_context(output_dir: Path, job_id: str) -> RemoteJobContext | None:
-    """Return a remote owner only when the local completed receipt agrees."""
+def _verified_downloaded_receipt(output_dir: Path, job_id: str):
+    """Verify downloaded weights without requiring an old training workspace."""
     output_dir = Path(output_dir).resolve()
     receipt_path = output_dir / "job_receipt.json"
     journal_path = output_dir / "remote_job.json"
+    if any(path.is_symlink() for path in (receipt_path,journal_path,output_dir/'remote_artifacts.json',output_dir/'model_meta.json',output_dir/'best_model.pt')):
+        raise ArtifactValidationError('Downloaded remote model metadata or weights are linked')
     if not journal_path.is_file():
         if receipt_path.is_file():
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
@@ -92,6 +107,19 @@ def remote_job_context(output_dir: Path, job_id: str) -> RemoteJobContext | None
         if (row is None or not local.is_file() or local.stat().st_size != row.get("size")
                 or _sha256(local) != row.get("sha256")):
             raise ArtifactValidationError(f"Local remote-model artifact has changed: {local.name}")
+    return output_dir,receipt,journal,profile
+
+
+def verify_downloaded_checkpoint(output_dir: Path, job_id: str) -> None:
+    """Explicit compute targets still require authentic completed remote artifacts."""
+    _verified_downloaded_receipt(output_dir,job_id)
+
+
+def remote_job_context(output_dir: Path, job_id: str) -> RemoteJobContext | None:
+    """Legacy execution also keeps the verified original server snapshot."""
+    verified=_verified_downloaded_receipt(output_dir,job_id)
+    if verified is None:return None
+    output_dir,receipt,journal,profile=verified
     dataset_path = Path(receipt["dataset_path"]).resolve()
     if dataset_path != Path(journal["dataset_path"]).resolve() or not dataset_path.is_dir():
         raise ArtifactValidationError("Original remote training snapshot is unavailable locally")
@@ -128,7 +156,10 @@ def _launch_or_resume(
         if (journal.get("job_id") != context.job_id or journal.get("profile") != context.profile.model_dump()
                 or journal.get("spec") != spec):
             raise ArtifactValidationError("Operation journal is bound to a different job or server")
-        if journal.get("state") == "failed" or (journal.get("state") == "completed" and force_new):
+        # preparing is durably written before any worker launch. An interrupted
+        # upload can be safely prepared afresh; launching remains ambiguous and
+        # must continue polling the same worker rather than launch a duplicate.
+        if journal.get("state") in ("failed", "preparing") or (journal.get("state") == "completed" and force_new):
             journal = None
     if journal is not None:
         return journal
@@ -177,7 +208,7 @@ def _launch_or_resume(
     return journal
 
 
-def run_remote_operation_artifacts(
+def _run_remote_operation_artifacts(
     context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
     *, transport: SSHTransport | None = None, force_new: bool = False,
     timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None,
@@ -224,6 +255,8 @@ def run_remote_operation_artifacts(
                     or status.get("operation") != operation):
                 raise ArtifactValidationError("Operation status is bound to a different job")
             if status.get("status") == "completed":
+                journal['state']='worker_completed'
+                _save_operation(journal_path,journal)
                 break
             if status.get("status") in ("failed", "aborted"):
                 journal["state"] = status["status"]
@@ -247,6 +280,8 @@ def run_remote_operation_artifacts(
     entries = manifest.get("artifacts")
     if not isinstance(entries, list) or not entries or len(entries) > 1000:
         raise ArtifactValidationError("Remote operation artifact list is missing")
+    if any(not isinstance(row,dict) or type(row.get('size')) is not int or row['size']<=0 or row['size']>256*1024*1024 for row in entries) or sum(row['size'] for row in entries)>1024*1024*1024:
+        raise ArtifactValidationError('Remote operation outputs exceed transfer limits')
     local_dir = context.output_dir / "remote_operations" / op_id
     local_dir.mkdir(parents=True, exist_ok=True)
     downloads: dict[str, Path] = {}
@@ -288,6 +323,72 @@ def run_remote_operation_artifacts(
     finally:
         for staged in staged_paths:
             staged.unlink(missing_ok=True)
+
+
+def _open_operation_lock(path: Path) -> int:
+    """Acquire a nonblocking OS lock on Unix and native Windows."""
+    if path.is_symlink():
+        raise ArtifactValidationError("Remote operation lock is linked")
+    descriptor = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0), 0o600)
+    try:
+        # O_NOFOLLOW is unavailable on Windows; reject substitution between
+        # the precheck and open before accessing any journal or worker.
+        if path.is_symlink() or not os.path.samestat(os.stat(path), os.fstat(descriptor)):
+            raise ArtifactValidationError("Remote operation lock changed while opening")
+        if fcntl is not None:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        else:
+            import msvcrt
+            if os.fstat(descriptor).st_size == 0:
+                os.write(descriptor, b"0")
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        return descriptor
+    except OSError as exc:
+        os.close(descriptor)
+        if exc.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+            raise RemoteComputeBusy("This remote operation is already being monitored") from exc
+        raise
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def run_remote_operation_artifacts(
+    context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
+    *, transport: SSHTransport | None = None, force_new: bool = False,
+    timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None,
+) -> dict[str, Path]:
+    """Reserve selected compute through execution; uncertain workers keep leases."""
+    from backend.engine.shared_scheduler import ResourceLeases,shared_leases
+    spec={'protocol_version':1,'operation':operation,'job_id':context.job_id,'task':context.task,
+          'input_manifest_sha256':context.input_manifest_sha256,**extra_spec}
+    journal_path=_operation_journal_path(context,operation,spec)
+    journal_path.parent.mkdir(parents=True,exist_ok=True)
+    lease_key='operation_'+hashlib.sha256((str(journal_path.resolve())+json.dumps(context.profile.model_dump(),sort_keys=True)).encode()).hexdigest()[:32]
+    descriptor=_open_operation_lock(journal_path.with_suffix('.lock'))
+    stop=threading.Event();thread=None;leases=None;acquired=False
+    try:
+        leases=ResourceLeases(shared_leases().path,owner=lease_key)
+        host=f"ssh:{context.profile.ssh_target.rsplit('@',1)[-1].lower()}:{context.profile.ssh_port}"
+        if not leases.acquire(lease_key,host,context.profile.gpu_selector or 'all',remote=True):
+            raise RemoteComputeBusy('The selected compute resource is reserved by another operation or training job')
+        acquired=True
+        def heartbeat():
+            while not stop.wait(5):
+                if not leases.heartbeat(lease_key):return
+        thread=threading.Thread(target=heartbeat,daemon=True,name=lease_key);thread.start()
+        return _run_remote_operation_artifacts(context,operation,extra_spec,transport=transport,force_new=force_new,
+            timeout_seconds=timeout_seconds,input_files=input_files)
+    finally:
+        stop.set()
+        if thread:thread.join(timeout=1)
+        if acquired:
+            try:state=json.loads(journal_path.read_text()).get('state') if journal_path.is_file() else 'preparing'
+            except (OSError,ValueError):state='unknown'
+            if state in ('launching','launched','unknown'):leases.mark_uncertain(lease_key)
+            else:leases.release(lease_key,terminal=True)
+        os.close(descriptor)
 
 
 def run_remote_operation(
@@ -456,6 +557,84 @@ def run_remote_flowchart(
         if not isinstance(crop, dict):
             raise ArtifactValidationError("Remote flowchart crop is invalid")
         crop["crop_thumbnail"] = _verified_preview_uri(crop.get("crop_thumbnail"), artifacts)
+    return result
+
+
+def run_verified_flowchart_on_compute(
+    profile: ComputeProfile, project: dict[str, Any], pipeline: dict[str, Any],
+    verified_checkpoints: dict[tuple[str,str],Path], image: Path, image_id: str | None = None,
+    *, device: str = 'cuda', transport: SSHTransport | None = None,
+) -> dict[str, Any]:
+    """Transfer project-owned verified models to the explicitly selected server."""
+    import torch
+    from backend.engine.flowchart_engine import FlowchartPipeline,ordered_linear_nodes
+    from backend.engine.specialized_models import flow_model_task,valid_flow_job,SPECIALIZED_TASKS
+    if not isinstance(device,str) or not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?',device):
+        raise ValueError('An explicit CPU, CUDA or MPS execution device is required')
+    if device.startswith('cuda:'):device='cuda:'+str(int(device.split(':')[1]))
+    graph=FlowchartPipeline.model_validate(pipeline)
+    needed={(node.data.model_job_id,flow_model_task(node)) for node in ordered_linear_nodes(graph) if flow_model_task(node)}
+    if needed!=set(verified_checkpoints) or not 1<=len(needed)<=24:
+        raise ArtifactValidationError('Portable model references differ from the validated flow')
+    root=Path(project['models_dir']);project_root=Path(project['project_dir'])
+    reports=Path(project['reports_dir'])
+    if any(path.is_symlink() for path in (root,project_root,reports)) or root.resolve()!=(project_root/'models').resolve() or reports.resolve()!=(project_root/'reports').resolve():
+        raise ArtifactValidationError('Portable flow project storage is invalid')
+    references=[];inputs={};total=0
+    for (job_id,task),requested in sorted(verified_checkpoints.items()):
+        if not valid_flow_job(job_id,task):raise ArtifactValidationError('Portable flow model job is invalid')
+        expected=root/task/job_id/'best_model.pt' if task in SPECIALIZED_TASKS else root/job_id/'best_model.pt'
+        checkpoint=Path(requested);metadata=checkpoint.parent/'model_meta.json'
+        if checkpoint.resolve()!=expected.resolve() or not checkpoint.resolve().is_relative_to(root.resolve()):
+            raise ArtifactValidationError('Portable checkpoint belongs to another project')
+        paths=[root,*[root.joinpath(*checkpoint.relative_to(root).parts[:index]) for index in range(1,len(checkpoint.relative_to(root).parts)+1)],metadata]
+        if any(path.is_symlink() for path in paths) or not checkpoint.is_file() or not metadata.is_file():
+            raise ArtifactValidationError('Portable checkpoint or metadata is absent or linked')
+        size=checkpoint.stat().st_size;meta_size=metadata.stat().st_size;total+=size+meta_size
+        if not 0<size<=512*1024*1024 or not 0<meta_size<=4*1024*1024 or total>2*1024*1024*1024:
+            raise ArtifactValidationError('Portable model assets exceed transfer limits')
+        payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
+        meta=json.loads(metadata.read_text())
+        digest=_sha256(checkpoint)
+        if (not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(payload.get('model_state_dict'),dict)
+                or not isinstance(meta,dict) or meta.get('task')!=task or meta.get('checkpoint_sha256',digest)!=digest):
+            raise ArtifactValidationError('Portable model task, metadata or checkpoint hash is incompatible')
+        if (checkpoint.parent/'remote_job.json').exists() or (checkpoint.parent/'job_receipt.json').exists():
+            verify_downloaded_checkpoint(checkpoint.parent,job_id)
+        relative=f'inputs/models/{job_id}'
+        row={'job_id':job_id,'task':task,'checkpoint_path':relative+'/best_model.pt',
+             'checkpoint_sha256':digest,'checkpoint_size':size,'metadata_path':relative+'/model_meta.json',
+             'metadata_sha256':_sha256(metadata),'metadata_size':meta_size}
+        references.append(row);inputs[row['checkpoint_path']]=checkpoint;inputs[row['metadata_path']]=metadata
+    image,relative,image_hash=_inspection_image_input(image)
+    if image.stat().st_size>64*1024*1024:raise ArtifactValidationError('Inspection image exceeds the transfer limit')
+    inputs[relative]=image
+    binding=hashlib.sha256(json.dumps(references,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    context=RemoteJobContext('job_flow_'+binding[:24],references[0]['task'],reports/'remote_flow',
+        Path(project.get('dataset_dir',project_root/'dataset')),profile,binding,portable=True)
+    artifacts=run_remote_operation_artifacts(context,'flowchart_run',{
+        'portable_models':True,'models':references,'pipeline':pipeline,'image_path':relative,
+        'image_sha256':image_hash,'image_id':image_id,'device':device,
+        'execution_profile_sha256':hashlib.sha256(json.dumps(profile.model_dump(),sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+    },transport=transport,input_files=inputs)
+    result_file=artifacts.get('outputs/flowchart_result.json')
+    if result_file is None:raise ArtifactValidationError('Portable flow result is missing')
+    result=json.loads(result_file.read_text())
+    if (not isinstance(result,dict) or result.get('image_path')!=relative or result.get('image_sha256')!=image_hash
+            or result.get('model_job_ids')!=sorted(job for job,_ in needed)):
+        raise ArtifactValidationError('Portable flow result has a different image or model binding')
+    if result.get('execution_device')!=device or not isinstance(result.get('device_name'),str) or not result['device_name']:
+        raise ArtifactValidationError('Portable flow execution device differs from the selected device')
+    result['annotated_image']=_verified_preview_uri(result.get('annotated_image'),artifacts)
+    if not isinstance(result.get('crops'),list):raise ArtifactValidationError('Portable flow crops are missing')
+    for crop in result['crops']:
+        if not isinstance(crop,dict):raise ArtifactValidationError('Portable flow crop is invalid')
+        crop['crop_thumbnail']=_verified_preview_uri(crop.get('crop_thumbnail'),artifacts)
+    result.update(image_path=str(image),image_id=image_id,compute_profile_id=profile.id,
+                  compute_server_name=profile.name,compute_gpu_selector=profile.gpu_selector,
+                  execution_target='selected_compute',
+                  model_sha256={row['job_id']:row['checkpoint_sha256'] for row in references})
+    result.pop('model_job_ids',None);result.pop('image_sha256',None)
     return result
 
 

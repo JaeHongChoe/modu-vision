@@ -29,6 +29,17 @@ def _source(tmp_path: Path) -> tuple[Path, list[dict]]:
     return root, rows
 
 
+def test_training_cancel_reaches_real_batch_boundary_before_export(tmp_path):
+    import threading
+    root,rows=_source(tmp_path);write_defect_gan_manifest(root,rows)
+    event=threading.Event();progress=[]
+    def cancel_after_batch(values):progress.append(values);event.set()
+    with pytest.raises(InterruptedError,match='cancelled'):
+        train_defect_gan(root,tmp_path/'cancelled',epochs=2,batch_size=2,base_channels=8,cancel_event=event,on_progress=cancel_after_batch)
+    assert progress[0]['batch']==1 and progress[0]['epoch']==1
+    assert not (tmp_path/'cancelled/best_model.pt').exists()
+
+
 def test_defect_gan_saves_a_trained_generator_and_review_only_candidates(tmp_path: Path):
     root, rows = _source(tmp_path)
     write_defect_gan_manifest(root, rows)

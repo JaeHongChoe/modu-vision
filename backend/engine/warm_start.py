@@ -146,3 +146,29 @@ def load_parent_weights(model: nn.Module, parent: WarmStartParent, classes: Sequ
                    or value.dtype != current[key].dtype for key, value in weights.items())):
         raise ValueError("Warm-start parent weights are incompatible with the selected model")
     model.load_state_dict(weights, strict=True)
+
+
+def portable_parent(parent: WarmStartParent, directory: Path) -> dict[str, Any]:
+    """Copy a verified completed parent to a job-owned portable transfer slot."""
+    import shutil
+    directory = Path(directory); directory.mkdir(parents=True, exist_ok=True)
+    if parent.checkpoint_path.is_symlink() or _sha256(parent.checkpoint_path) != parent.checkpoint_sha256:
+        raise ValueError('Warm-start parent hash changed before transfer')
+    target=directory/'parent.pt'
+    shutil.copyfile(parent.checkpoint_path,target)
+    if _sha256(target)!=parent.checkpoint_sha256: raise ValueError('Warm-start transfer hash mismatch')
+    return {'checkpoint':'parent.pt','job_id':parent.job_id,'checkpoint_sha256':parent.checkpoint_sha256,
+            'task':parent.task,'architecture':parent.architecture,'classes':list(parent.classes),'dataset_fingerprint':parent.dataset_fingerprint}
+
+
+def restore_portable_parent(directory: Path, envelope: dict[str, Any], task: str) -> WarmStartParent:
+    if envelope.get('checkpoint')!='parent.pt' or envelope.get('task')!=task or not is_job_id(envelope.get('job_id')):
+        raise ValueError('Invalid portable warm-start parent identity')
+    checkpoint=Path(directory)/'parent.pt'
+    if checkpoint.is_symlink() or not checkpoint.is_file() or _sha256(checkpoint)!=envelope.get('checkpoint_sha256'):
+        raise ValueError('Portable warm-start parent hash mismatch')
+    payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
+    classes=envelope.get('classes')
+    if not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(classes,list) or payload.get('classes')!=classes or _metadata_architecture(task,payload)!=envelope.get('architecture') or not isinstance(payload.get('model_state_dict'),dict):
+        raise ValueError('Portable parent model signature mismatch')
+    return WarmStartParent(envelope['job_id'],checkpoint,envelope['checkpoint_sha256'],task,envelope['architecture'],tuple(classes),envelope['dataset_fingerprint'])

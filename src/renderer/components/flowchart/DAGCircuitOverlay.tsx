@@ -198,7 +198,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
             <circle cx={p2.x} cy={p2.y} r="1.5" fill="#F8FAFC" />
 
             {/* Discrete Wire Label Badge */}
-            {(edge.label || edge.isBranch) && (
+            {(edge.label || edge.isBranch || edge.predicate) && (
               <g transform={`translate(${midX}, ${midY - 10})`}>
                 <rect
                   x="-60"
@@ -220,7 +220,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
                   fontFamily="monospace"
                   letterSpacing="0.05em"
                 >
-                  {edge.isBranch === 'pass' ? 'OK' : edge.isBranch === 'fail' ? 'NG' : edge.isBranch === 'review' ? 'REVIEW' : edge.label}
+                  {edge.predicate ? `${edge.predicate.class_name} ${edge.predicate.operator === 'present' ? '있음' : '없음'}` : edge.isBranch === 'pass' ? 'OK' : edge.isBranch === 'fail' ? 'NG' : edge.isBranch === 'review' ? 'REVIEW' : edge.label}
                 </text>
               </g>
             )}

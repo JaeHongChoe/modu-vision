@@ -544,9 +544,10 @@ def _evaluate_patch_classification(
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
+    allow_source_revision: bool = False,
 ) -> Dict[str, Any]:
     """Evaluate only held-out annotated patches, retaining original pixel boxes."""
-    manifest = _patch_manifest_for_checkpoint(dataset_dir, meta)
+    manifest = load_patch_manifest(dataset_dir) if allow_source_revision else _patch_manifest_for_checkpoint(dataset_dir, meta)
     selected_split = "test" if manifest.provenance["split_counts"]["test"] else "val"
     samples = [item for item in manifest.patches if item.split == selected_split]
     classes = manifest.classes
@@ -620,14 +621,23 @@ def _evaluate_patch_classification(
     }
 
 
+def _manifest_evaluation_dataset(task, source, image_size, class_names=None):
+    from backend.engine.grouped_dataset_views import load_manifest_dataset
+    try:
+        dataset = load_manifest_dataset(task, source, "test", image_size=image_size, class_names=class_names)
+        if dataset is not None and len(dataset) == 0:
+            dataset = load_manifest_dataset(task, source, "val", image_size=image_size, class_names=class_names)
+        return dataset
+    except (ValueError, OSError, KeyError) as exc:
+        raise HTTPException(422, f"Saved evaluation split is invalid: {exc}") from exc
+
+
 def _evaluate_detection(
     model_pt: Path,
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img, val_anno, _ = _paired_evaluation_paths(dataset_dir, "detection")
-
     img_size = tuple(meta.get("image_size", [256, 256]))
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
@@ -644,8 +654,10 @@ def _evaluate_detection(
             train_categories = json.loads(train_anno.read_text(encoding="utf-8")).get("categories", [])
             classes = [str(category["name"]) for category in sorted(train_categories, key=lambda category: int(category["id"]))]
     try:
-        val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno,
-                                  image_size=img_size, class_names=classes)
+        val_ds = _manifest_evaluation_dataset("detection", dataset_dir, img_size, classes)
+        if val_ds is None:
+            val_img, val_anno, _ = _paired_evaluation_paths(dataset_dir, "detection")
+            val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=img_size, class_names=classes)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Detection evaluation class mapping is incompatible: {exc}") from exc
     if len(val_ds) == 0:
@@ -746,14 +758,16 @@ def _evaluate_segmentation(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_img, val_mask, _ = _paired_evaluation_paths(dataset_dir, "segmentation")
-
     img_size = tuple(meta.get("image_size", [256, 256]))
-    val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=img_size)
+    classes = list(meta.get("classes") or ["background", "defect"])
+    if classes[0] != "background": classes = ["background", *classes]
+    val_ds = _manifest_evaluation_dataset("segmentation", dataset_dir, img_size, classes)
+    if val_ds is None:
+        val_img, val_mask, _ = _paired_evaluation_paths(dataset_dir, "segmentation")
+        val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=img_size)
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for segmentation")
 
-    classes = ["background", "defect"]
     num_classes = len(classes)
 
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
@@ -788,19 +802,18 @@ def _evaluate_segmentation(
             gt_has_defect = bool((gt_mask > 0).any())
             pred_has_defect = bool((pred_mask > 0).any())
 
-            gt_label = "defect" if gt_has_defect else "background"
-            pred_label = "defect" if pred_has_defect else "background"
-
-            gt_idx = 1 if gt_has_defect else 0
-            pred_idx = 1 if pred_has_defect else 0
+            gt_idx = int(np.bincount(gt_mask[gt_mask > 0].ravel(), minlength=num_classes).argmax()) if gt_has_defect else 0
+            pred_idx = int(np.bincount(pred_mask[pred_mask > 0].ravel(), minlength=num_classes).argmax()) if pred_has_defect else 0
+            gt_label = classes[gt_idx]
+            pred_label = classes[pred_idx]
             matrix[gt_idx][pred_idx] += 1
 
             cell_key = f"{gt_label}:{pred_label}"
             cell_samples[cell_key].append(str(img_p.resolve()))
 
             probs = torch.softmax(logits, dim=1)[0]
-            conf = float(probs[1].max().item()) if pred_has_defect else float(probs[0].mean().item())
-            defect_score = float(probs[1].max().item())
+            conf = float(probs[pred_idx].max().item()) if pred_has_defect else float(probs[0].mean().item())
+            defect_score = float(probs[1:].max().item())
 
             test_predictions.append({
                 "image_id": img_p.stem,
@@ -821,7 +834,7 @@ def _evaluate_segmentation(
             norm_matrix[i][j] = round(matrix[i][j] / r_sum, 4)
 
     seg_metrics = compute_segmentation_metrics(
-        np.array(all_preds), np.array(all_targets), num_classes=num_classes, class_names={0: "background", 1: "defect"}
+        np.array(all_preds), np.array(all_targets), num_classes=num_classes, class_names=dict(enumerate(classes))
     )
 
     return {
@@ -849,9 +862,10 @@ def _evaluate_anomaly(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_ds = AnomalyDataset(root_dir=dataset_dir, split="test")
-    if len(val_ds) == 0:
-        val_ds = AnomalyDataset(root_dir=dataset_dir, split="val")
+    val_ds = _manifest_evaluation_dataset("anomaly", dataset_dir, tuple(meta.get("image_size", [256, 256])))
+    if val_ds is None:
+        val_ds = AnomalyDataset(root_dir=dataset_dir, split="test")
+        if len(val_ds) == 0: val_ds = AnomalyDataset(root_dir=dataset_dir, split="val")
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for anomaly detection")
 
@@ -873,21 +887,55 @@ def _evaluate_anomaly(
     img_size = tuple(meta.get("image_size", [256, 256]))
     image_scores: List[float] = []
     image_labels: List[int] = []
+    maps = []
+    pixel_heatmaps = []
+    pixel_masks = []
+    mask_sources = []
+    mode = meta.get("anomaly_mode", "classification")
+    if mode not in ("classification", "segmentation"): raise HTTPException(422, "Invalid anomaly mode")
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
-            img_p, label, _ = val_ds.samples[idx]
+            img_p, label, mask_path = val_ds.samples[idx]
             rgb = _read_image_rgb(img_p)
             resized = cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             img_t = img_t.to(device)
 
-            _, score = model(img_t)
+            heatmap, score = model(img_t)
+            heatmap_np = heatmap.detach().cpu().numpy() if isinstance(heatmap, torch.Tensor) else np.asarray(heatmap)
+            heatmap_np = np.squeeze(heatmap_np).astype(np.float32)
+            if heatmap_np.ndim != 2 or not np.isfinite(heatmap_np).all(): raise HTTPException(422, "Anomaly model returned an invalid pixel map")
+            maps.append(heatmap_np)
+            mask = None
+            if mask_path and Path(mask_path).is_file():
+                with Image.open(mask_path) as original: mask = np.asarray(original.convert("L"))
+                mask = (cv2.resize(mask, (heatmap_np.shape[1], heatmap_np.shape[0]), interpolation=cv2.INTER_NEAREST) > 0).astype(np.uint8)
+                mask_sources.append({"path": str(Path(mask_path).resolve()), "sha256": hashlib.sha256(Path(mask_path).read_bytes()).hexdigest()})
+            elif label == 0:
+                mask = np.zeros_like(heatmap_np, dtype=np.uint8)
+                mask_sources.append({"path": None, "basis": "reviewed normal image label"})
+            else:
+                mask_sources.append(None)
+                if mode == "segmentation": raise HTTPException(422, "Anomaly segmentation evaluation requires masks for every defect image")
+            if mask is not None:
+                pixel_heatmaps.append(heatmap_np); pixel_masks.append(mask)
             score_f = float(score[0].item() if isinstance(score, (torch.Tensor, list)) else score)
             image_scores.append(score_f)
             image_labels.append(label)
 
-    anom_metrics = compute_anomaly_metrics(image_scores, image_labels)
+    anom_metrics = compute_anomaly_metrics(image_scores, image_labels, pixel_heatmaps=pixel_heatmaps, pixel_masks=pixel_masks)
+    import uuid
+    evidence_dir = model_pt.parent / "evaluation_maps"
+    evidence_dir.mkdir(exist_ok=True)
+    evidence_file = evidence_dir / ("anomaly_" + uuid.uuid4().hex + ".npz")
+    evidence_arrays = {f"heatmap_{index}": value for index, value in enumerate(maps)}
+    mask_index = 0
+    for index, source in enumerate(mask_sources):
+        if source is not None:
+            evidence_arrays[f"mask_{index}"] = pixel_masks[mask_index]; mask_index += 1
+    np.savez_compressed(evidence_file, **evidence_arrays)
+    evidence_hash = hashlib.sha256(evidence_file.read_bytes()).hexdigest()
     optimal_th = anom_metrics.get("active_threshold", 0.5)
 
     matrix = [[0] * num_classes for _ in range(num_classes)]
@@ -915,6 +963,10 @@ def _evaluate_anomaly(
             "predicted_class": pred_name,
             "confidence": round(score_f, 4),
             "is_correct": bool(label == pred_idx),
+            "anomaly_mode": mode,
+            "pixel_evidence": {"file_path": str(evidence_file), "sha256": evidence_hash,
+                               "heatmap_key": f"heatmap_{idx}", "mask_key": f"mask_{idx}" if mask_sources[idx] is not None else None,
+                               "source_mask": mask_sources[idx]},
             "thumbnail_url": f"/api/dataset/thumbnail/{img_p.name}?file_path={img_p.resolve()}",
         })
 
@@ -926,7 +978,11 @@ def _evaluate_anomaly(
 
     return {
         "metrics": {
-            "image_auroc": anom_metrics.get("image_auroc", 1.0),
+            "image_auroc": anom_metrics.get("image_auroc"),
+            "pixel_auroc": anom_metrics.get("pixel_auroc"),
+            "pixel_evaluated_images": len(pixel_heatmaps),
+            "pixel_missing_masks": len(maps) - len(pixel_heatmaps),
+            "anomaly_mode": mode,
             "f1_score": anom_metrics.get("f1_score", 1.0),
             "optimal_threshold": round(optimal_th, 4),
             "best_metric": meta.get("best_metric"),
@@ -948,6 +1004,7 @@ def run_or_load_evaluation(
     force_recompute: bool = False,
     source_dataset_path: Optional[str] = None,
     source_task: Optional[str] = None,
+    allow_source_revision: bool = False,
 ) -> Dict[str, Any]:
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
@@ -955,7 +1012,7 @@ def run_or_load_evaluation(
 
     out_dir, model_pt, meta, task, resolved_job_id, resolved_dataset = _resolve_job_artifacts(
         job_id=job_id_clean, dataset_path_override=ds_path_clean,
-        source_dataset_path=source_dataset_path, source_task=source_task,
+        source_dataset_path=None if allow_source_revision else source_dataset_path, source_task=source_task,
     )
 
     from backend.remote.operations import remote_job_context, run_remote_evaluation
@@ -971,8 +1028,44 @@ def run_or_load_evaluation(
             detail="Remote evaluation currently uses its original training snapshot; a different dataset path is unsupported",
         )
 
+    from backend.api import routes_dataset
+    from backend.api.routes_model_comparisons import _fingerprint, _sha256
+    from backend.engine.evaluation_history import EvaluationHistory
+    bound_source = Path(source_dataset_path).resolve() if source_dataset_path else resolved_dataset.resolve()
+    evaluation_binding = {"source_dataset_path": str(bound_source),
+                          "dataset_fingerprint": _fingerprint(bound_source),
+                          "checkpoint_sha256": _sha256(model_pt)}
+
+    def preserve_result(result):
+        if _fingerprint(bound_source) != evaluation_binding["dataset_fingerprint"] or _sha256(model_pt) != evaluation_binding["checkpoint_sha256"]:
+            raise HTTPException(409, "Evaluation inputs changed during execution")
+        from backend.engine.dataset_metadata import metadata_for_path
+        project_root = out_dir.parent.parent
+        prepared_mapping = {}
+        manifest_path = resolved_dataset / "source_manifest.json"
+        if manifest_path.is_file():
+            for item in json.loads(manifest_path.read_text()):
+                original = item.get("source_image")
+                for key in ("image", "prepared_image", "image_path", "output_image"):
+                    if item.get(key) and original: prepared_mapping[str(Path(item[key]).resolve())] = original
+        for prediction in result.get("test_predictions", []):
+            path = prediction.get("file_path")
+            original = prepared_mapping.get(str(Path(path).resolve())) if path else None
+            if original:
+                prediction["evaluation_file_path"] = path
+                prediction["file_path"] = original
+                path = original
+            if path and Path(path).is_file() and Path(path).resolve().is_relative_to(bound_source):
+                metadata = metadata_for_path(project_root, bound_source, Path(path), routes_dataset.STUDIO_ANNOTATIONS_DIR)
+                prediction.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "tags", "product", "lot", "group", "workflow_state")})
+        record = EvaluationHistory(project_root / "reports" / "evaluations").append(result, evaluation_binding)
+        result["evaluation_id"] = record["evaluation_id"]
+        result["binding"] = evaluation_binding
+        result["grouped_errors"] = record["grouped_errors"]
+        return result
+
     eval_json = out_dir / "eval_results.json"
-    if task.lower().strip() == "patch_classification":
+    if task.lower().strip() == "patch_classification" and not allow_source_revision:
         _patch_manifest_for_checkpoint(_resolve_dataset_dir(resolved_dataset, task), meta)
     if not force_clean and eval_json.is_file():
         try:
@@ -990,7 +1083,7 @@ def run_or_load_evaluation(
                             break
                     if not all_exist:
                         break
-                if all_exist and len(cached.get("test_predictions", [])) > 0:
+                if all_exist and len(cached.get("test_predictions", [])) > 0 and (not cached.get("binding") or cached["binding"] == evaluation_binding):
                     from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
                     for p in cached.get("test_predictions", []):
                         if "is_defect" not in p:
@@ -1003,7 +1096,7 @@ def run_or_load_evaluation(
 
     try:
         if remote_context is not None:
-            return run_remote_evaluation(remote_context, force_recompute=force_clean)
+            return preserve_result(run_remote_evaluation(remote_context, force_recompute=force_clean))
     except RemoteDisconnected as exc:
         raise HTTPException(status_code=503, detail=f"Remote evaluation connection lost; retry the same job: {exc}") from exc
     except ArtifactValidationError as exc:
@@ -1016,7 +1109,7 @@ def run_or_load_evaluation(
     if task_clean == "classification":
         res = _evaluate_classification(model_pt, meta, effective_data, dev)
     elif task_clean == "patch_classification":
-        res = _evaluate_patch_classification(model_pt, meta, effective_data, dev)
+        res = _evaluate_patch_classification(model_pt, meta, effective_data, dev, allow_source_revision=allow_source_revision)
     elif task_clean == "detection":
         res = _evaluate_detection(model_pt, meta, effective_data, dev)
     elif task_clean == "segmentation":
@@ -1042,6 +1135,7 @@ def run_or_load_evaluation(
     if "dataset_provenance" in res:
         payload["dataset_provenance"] = res["dataset_provenance"]
 
+    payload = preserve_result(payload)
     try:
         with _eval_file_lock:
             _atomic_write_json(eval_json, payload)

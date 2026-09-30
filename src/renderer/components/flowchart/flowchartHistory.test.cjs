@@ -26,9 +26,22 @@ const api = { flowchart: {
   getActivePipeline: async () => structuredClone(initial),
   savePipeline: async () => ({}),
 } };
-loaded.require = (name) => name === '../services/api' ? { api } : originalRequire(name);
+loaded.require = (name) => {
+  if (name === '../services/api') return { api };
+  if (name === '../services/flowDraft') return { flowDraft: {} };
+  if (name === './useProjectStore') return { useProjectStore: { getState: () => ({ project: null }) } };
+  if (name === '../components/flowchart/flowchartStartup') return { getFlowchartModelTask: node => node.data.task || null };
+  return originalRequire(name);
+};
 loaded._compile(compiled, filename);
 const store = loaded.exports.useFlowchartStore;
+const graphFilename = path.join(__dirname, 'flowchartGraph.ts');
+const graphModule = new Module(graphFilename, module);
+graphModule.filename = graphFilename;
+graphModule.paths = Module._nodeModulePaths(__dirname);
+graphModule._compile(ts.transpileModule(fs.readFileSync(graphFilename, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText, graphFilename);
 
 test.beforeEach(async () => {
   store.getState().invalidateForDataChange();
@@ -121,4 +134,26 @@ test('incomplete save recovery keeps edits dirty and explains how to reopen the 
     api.flowchart.savePipeline = previousSave;
     console.error = previousError;
   }
+});
+
+test('flow layout is one undoable edit and preserves the original connected graph', () => {
+  const pipeline = { ...store.getState().pipeline, nodes: [
+    { ...initial.nodes[0], id: 'input', position: { x: 40, y: 160 }, data: { node_type: 'input', label: 'Input' } },
+    { ...initial.nodes[0], id: 'inspect', position: { x: 360, y: 160 } },
+    { ...initial.nodes[0], id: 'roi', position: { x: 325, y: 320 }, data: { node_type: 'fixed_roi', label: 'ROI', params: { roi_bbox: [0, 0, 64, 64] } } },
+    { ...initial.nodes[0], id: 'enhance', position: { x: 670, y: 320 }, data: { node_type: 'preprocess', label: 'Enhance', model_job_id: 'enhancement_original', params: { operation: 'enhancement' } } },
+  ], edges: [{ id: 'e1', source: 'input', target: 'roi' }, { id: 'e2', source: 'roi', target: 'enhance' }, { id: 'e3', source: 'enhance', target: 'inspect' }] };
+  store.setState({ pipeline, cleanPipeline: pipeline, pipelineDirty: false });
+  const arranged = graphModule.exports.layoutFlowchart(pipeline);
+  store.getState().replacePipeline(arranged);
+  assert.equal(store.getState().historyPast.length, 1);
+  assert.equal(store.getState().pipelineDirty, true);
+  assert.deepEqual(store.getState().pipeline.edges, pipeline.edges);
+  assert.deepEqual(store.getState().pipeline.nodes.map(node => node.data), pipeline.nodes.map(node => node.data));
+  store.getState().undo();
+  assert.equal(store.getState().pipeline, pipeline);
+  assert.equal(store.getState().pipelineDirty, false);
+  assert.equal(store.getState().canUndo, false);
+  store.getState().redo();
+  assert.equal(store.getState().pipeline, arranged);
 });

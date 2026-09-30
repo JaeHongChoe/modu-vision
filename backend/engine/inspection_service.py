@@ -377,14 +377,15 @@ class InspectionStore:
             ).fetchone()[0])
 
 
-def _inspect_job(store: InspectionStore, package_dir: Path, row: dict[str, Any], require_delivery: bool) -> None:
+def _inspect_job(store: InspectionStore, package_dir: Path, row: dict[str, Any], require_delivery: bool, device: str = "cpu", runtime_identity: dict | None = None) -> None:
     path = Path(row["image_path"])
     try:
         if path.is_symlink() or not path.is_file():
             raise ValueError("Inspection image is missing")
         if _sha256(path) != row["image_sha256"]:
             raise ValueError("Inspection image changed after it was queued")
-        result = run_flow_package(package_dir, path, row["image_id"])
+        result = run_flow_package(package_dir, path, row["image_id"]) if device == "cpu" else run_flow_package(package_dir, path, row["image_id"], device=device)
+        if runtime_identity and isinstance(result, dict): result["runtime_identity"] = runtime_identity
         if not isinstance(result, dict) or result.get("final_verdict") not in VALID_VERDICTS:
             raise ValueError("Package returned no valid final verdict")
         if result.get("status") in {"error", "failed"} or result.get("error_message"):
@@ -446,6 +447,9 @@ def create_service_app(
     camera_frame_interval: float = 1.0,
     require_approved_release: bool = False,
     release_policy: Path | None = None,
+    device: str = "cpu",
+    runtime_root: Path | None = None,
+    adapter_config_path: Path | None = None,
 ) -> FastAPI:
     """Verify a package before creating mutable state or loading a checkpoint."""
     if not token:
@@ -456,7 +460,14 @@ def create_service_app(
         raise ValueError("Approved release policy is required")
     if release_policy is not None:
         _verify_release_policy(package_dir, checkpoints, release_policy)
+    from backend.engine.runtime_device import resolve_runtime_device
+    resolve_runtime_device(device)
     store = InspectionStore(Path(state_dir).expanduser().resolve())
+    from backend.engine.service_runtime import ServiceRuntime
+    from backend.engine.field_adapters import load_adapter_config, deliver_configured, ModbusTCPAdapter
+    runtime = ServiceRuntime(package_dir, store.state_dir, device, release_policy, runtime_root, _verify_release_policy)
+    field_config = load_adapter_config(adapter_config_path)
+    require_delivery = bool(result_webhook_url) or bool(field_config.enabled and (field_config.modbus or field_config.mes))
     input_root = Path(allowed_input_root).expanduser().resolve() if allowed_input_root else None
     inbox = Path(inbox_dir).expanduser().resolve() if inbox_dir else None
     if result_webhook_url and not result_webhook_url.startswith(("http://", "https://")):
@@ -466,6 +477,9 @@ def create_service_app(
     adapter_state = {
         "file_inbox": "disabled" if inbox is None else "checking",
         "camera": "disabled" if camera_source is None else "checking",
+        "modbus": "configured" if field_config.modbus else "disabled",
+        "mes": "configured" if field_config.mes else "disabled",
+        "field_enabled": field_config.enabled,
     }
     stop = threading.Event()
 
@@ -475,15 +489,35 @@ def create_service_app(
             if inbox is not None and time.monotonic() - last_scan >= 0.5:
                 adapter_state["file_inbox"] = _scan_inbox(store, inbox)
                 last_scan = time.monotonic()
+            if field_config.enabled and field_config.modbus and field_config.modbus.trigger_register is not None and field_config.modbus.trigger_image_path:
+                try:
+                    config = field_config.modbus
+                    event = ModbusTCPAdapter(config).read_register(config.trigger_register)
+                    image = Path(config.trigger_image_path).resolve(strict=True)
+                    if input_root is None or not image.is_relative_to(input_root): raise ValueError("PLC trigger image must be under configured input root")
+                    if event: store.enqueue_device_event(f"modbus:{config.host}:{config.port}", str(event), image)
+                    adapter_state["modbus"] = "connected"
+                except Exception: adapter_state["modbus"] = "disconnected"
             row = store.claim()
             if row is None:
-                delivery = store.claim_delivery() if result_webhook_url else None
+                delivery = store.claim_delivery() if require_delivery else None
                 if delivery:
-                    _deliver_job(store, delivery, result_webhook_url, result_webhook_token)
+                    if field_config.enabled and (field_config.modbus or field_config.mes):
+                        try:
+                            deliver_configured(field_config, {"job_id": delivery["job_id"], "model_verdict": delivery["model_verdict"], "image_sha256": delivery["image_sha256"], "result": json.loads(delivery["result_json"])})
+                            if result_webhook_url: _deliver_job(store, delivery, result_webhook_url, result_webhook_token)
+                            else: store.finish_delivery(delivery["job_id"], None)
+                            adapter_state["delivery"] = "acknowledged"
+                        except Exception as exc:
+                            adapter_state["delivery"] = "disconnected"
+                            store.finish_delivery(delivery["job_id"], f"{type(exc).__name__}: {exc}")
+                    else: _deliver_job(store, delivery, result_webhook_url, result_webhook_token)
                 else:
                     stop.wait(0.1)
             else:
-                _inspect_job(store, package_dir, row, bool(result_webhook_url))
+                with runtime.lock:
+                    identity = runtime.read()
+                    _inspect_job(store, Path(identity["package_path"]), row, require_delivery, identity["device"], identity)
 
     def camera_worker() -> None:
         if camera_source is None:
@@ -549,7 +583,18 @@ def create_service_app(
 
     @app.get("/health")
     def health():
-        return {"status": "ready", "pipeline_id": pipeline.id}
+        return runtime.read()
+
+    @app.get("/v1/runtime", dependencies=[Depends(authorized)])
+    def runtime_readback():
+        return runtime.read()
+
+    @app.post("/v1/runtime/apply", dependencies=[Depends(authorized)])
+    def runtime_apply(payload: dict):
+        try:
+            return runtime.apply(payload["package_path"], payload.get("release_policy"), payload.get("device", "cpu"), payload["manifest_sha256"])
+        except (KeyError, ValueError, OSError) as exc:
+            raise HTTPException(409, str(exc)) from exc
 
     @app.get("/v1/adapters", dependencies=[Depends(authorized)])
     def adapters():
@@ -651,6 +696,9 @@ def main() -> int:
     parser.add_argument("--camera-frame-interval", type=float, default=1.0)
     parser.add_argument("--require-approved-release", action="store_true")
     parser.add_argument("--release-policy", type=Path, help="Trusted approval policy outside the package")
+    parser.add_argument("--runtime-root", type=Path)
+    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--adapter-config", type=Path)
     args = parser.parse_args()
     if not args.token:
         parser.error("--token or VISION_INSPECTION_TOKEN is required")
@@ -660,6 +708,7 @@ def main() -> int:
         result_webhook_url=args.result_webhook_url, result_webhook_token=args.result_webhook_token,
         camera_source=args.camera_source, camera_frame_interval=args.camera_frame_interval,
         require_approved_release=args.require_approved_release, release_policy=args.release_policy,
+        runtime_root=args.runtime_root, device=args.device, adapter_config_path=args.adapter_config,
     )
     import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)
