@@ -1,7 +1,7 @@
 /**
  * src/renderer/components/common/JargonTooltip.tsx
  * Accessible, interactive popover tooltip for manufacturing ML jargon.
- * Adheres to Inspection Deep Steel chassis theme & Industrial industrial standards:
+ * Uses a dark steel chassis theme with industrial interface controls:
  * - Solid #131822 chassis panel (Zero blurs, zero cyan glow)
  * - 1px hairline precision borders (#2B3547)
  * - High-contrast text throughout (WCAG AAA compliant)
@@ -95,7 +95,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
         </button>
       )}
 
-      {/* Popover Card: Solid Inspection Deep Steel Enclosure */}
+      {/* Popover Card: Solid Dark Steel Enclosure */}
       {isOpen && (
         <div
           role="tooltip"

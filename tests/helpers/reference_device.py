@@ -1,7 +1,7 @@
 """
 Reference implementation of backend/engine/device.py for testing harness.
 Manages hardware discovery, memory telemetry, and tensor compatibility across
-Apple Silicon MPS, NVIDIA CUDA, and fallback CPU.
+Metal MPS, CUDA, and fallback CPU.
 """
 
 import contextlib
@@ -20,7 +20,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 @dataclass(frozen=True)
 class DeviceInfo:
     device_type: str            # "mps", "cuda", or "cpu"
-    device_name: str            # e.g., "Apple M-Series GPU", "NVIDIA GeForce...", "Intel Core..."
+    device_name: str            # e.g., "Metal GPU", "CUDA GPU", "CPU"
     is_accelerated: bool        # True if mps or cuda, False if cpu
     mps_available: bool
     cuda_available: bool
@@ -81,8 +81,8 @@ def get_device_info(device: Optional[torch.device] = None) -> DeviceInfo:
         is_accel = True
     elif device.type == "mps" and mps_avail:
         arch = platform.machine()
-        processor = platform.processor() or "Apple Silicon"
-        dev_name = f"Apple Silicon ({processor} / {arch})"
+        processor = platform.processor() or "arm64"
+        dev_name = f"Metal GPU ({processor} / {arch})"
         is_accel = True
     else:
         proc = platform.processor() or platform.machine() or "CPU"

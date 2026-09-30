@@ -1,8 +1,8 @@
 /**
  * src/renderer/components/training/HardwareTelemetryPanel.tsx
- * Industrial DEVICE SERIES / DEVICE SERIES Hardware Diagnostic Level Meter Panel.
+ * Hardware Diagnostic Level Meter Panel.
  * Features 16-segment discrete LED ladder level meters for VRAM (X.XX GB / Y.YY GB),
- * Host CPU load %, and System RAM %, plus Apple Silicon MPS / NVIDIA CUDA / CPU annunciators,
+ * Host CPU load %, and System RAM %, plus Metal MPS / CUDA / CPU annunciators,
  * and 10.0 Hz Stream Locked badge with strict tabular-nums.
  */
 
@@ -18,9 +18,9 @@ export interface HardwareTelemetryPanelProps {
 }
 
 /**
- * Industrial 16-Segment Discrete LED Ladder Level Meter Component
+ * 16-Segment Discrete LED Ladder Level Meter Component
  */
-const Industrial16SegmentMeter: React.FC<{
+const Discrete16SegmentMeter: React.FC<{
   percent: number;
   label: string;
   readout: string;
@@ -96,14 +96,14 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
     if (dt === 'mps') {
       return {
         state: 'running' as const,
-        label: 'APPLE SILICON MPS',
+        label: 'METAL GPU MPS',
         value: 'Metal 3.1 Unified',
       };
     }
     if (dt === 'cuda') {
       return {
         state: 'pass' as const,
-        label: 'NVIDIA CUDA',
+        label: 'CUDA',
         value: 'Tensor Core Active',
       };
     }
@@ -145,7 +145,7 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
       {/* Discrete 16-Segment LED Meters */}
       <div className="space-y-4">
         {/* VRAM / Unified Memory */}
-        <Industrial16SegmentMeter
+        <Discrete16SegmentMeter
           percent={vramPercent}
           label="VRAM / UNIFIED MEMORY"
           readout={`${usedGb} GB / ${totalGbEstimate.toFixed(2)} GB`}
@@ -154,7 +154,7 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
         />
 
         {/* Host CPU Utilization */}
-        <Industrial16SegmentMeter
+        <Discrete16SegmentMeter
           percent={hardware.cpu_percent}
           label="HOST CPU LOAD"
           readout={`${hardware.cpu_percent.toFixed(1)}%`}
@@ -163,7 +163,7 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
         />
 
         {/* System RAM Allocation */}
-        <Industrial16SegmentMeter
+        <Discrete16SegmentMeter
           percent={hardware.memory_percent}
           label="SYSTEM RAM ALLOCATION"
           readout={`${hardware.memory_percent.toFixed(1)}%`}

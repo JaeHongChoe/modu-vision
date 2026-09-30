@@ -1,8 +1,8 @@
 /**
  * src/renderer/components/inference/InferenceCenterStudio.tsx
  * Stage 6: Inference Center & Standalone Runtime Export.
- * Adheres to Industrial & Inspection Industrial Deployment Standards:
- * - Industrial Digital Instrument Bay: High-contrast tabular-nums digital readouts
+ * Industrial Deployment Interface:
+ * - Digital Instrument Bay: High-contrast tabular-nums digital readouts
  * - Real-time FPS gauge & PPM throughput
  * - Cycle Time Limit Gauge Bar with line-speed threshold marker (25.0 ms)
  * - Jitter indicator (±1-sigma) & P95 tail latency gauge
@@ -248,7 +248,7 @@ python infer.py --self-test`;
 
       {/* Main Grid: 2 Column Bay */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Left Column: Industrial-Style Precision Digital Instrument Panel */}
+        {/* Left Column: Precision Digital Instrument Panel */}
         <div className="bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col space-y-4">
           <div className="flex items-center justify-between pb-2.5 border-b border-[#2B3547]">
             <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono flex items-center space-x-2">

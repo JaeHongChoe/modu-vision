@@ -166,7 +166,7 @@ def test_anomaly_small_normal_only_folder_never_reuses_images(loader_module, tmp
     assert sum(map(len, paths)) == count
 
 
-def test_anomaly_reference_test_source_is_partitioned_between_val_and_test(loader_module, tmp_path):
+def test_anomaly_standard_layout_test_source_is_partitioned_between_val_and_test(loader_module, tmp_path):
     train_dir = tmp_path / "train" / "good"
     test_ok = tmp_path / "test" / "good"
     test_ng = tmp_path / "test" / "scratch"

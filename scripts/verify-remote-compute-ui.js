@@ -66,7 +66,7 @@ global.fetch = async (url, options = {}) => {
     return response(undefined, 204);
   }
   if (endpoint.endsWith('/probe') && method === 'POST') {
-    return response({ ready, device_name: ready ? 'NVIDIA L40S' : null, device_type: ready ? 'cuda' : null,
+    return response({ ready, device_name: ready ? 'L40S' : null, device_type: ready ? 'cuda' : null,
       checks: { ssh: ready, runtime: ready }, message: ready ? 'Ready' : 'SSH unavailable' });
   }
   if (endpoint === '/api/compute/selection' && method === 'GET') return response({ compute_profile_id: selected });
@@ -180,7 +180,7 @@ test('server management panel shows selected target and probe readiness', () => 
   const { renderToStaticMarkup } = require('react-dom/server');
   const { useComputeStore } = require(path.join(root, 'src/renderer/stores/useComputeStore.ts'));
   useComputeStore.setState({ selectedProfileId: server.id, probeResults: {
-    [server.id]: { ready: true, device_name: 'NVIDIA L40S', checks: { ssh: true } },
+    [server.id]: { ready: true, device_name: 'L40S', checks: { ssh: true } },
   } });
   const liveRequire = Module.prototype.require;
   Module.prototype.require = function (specifier) {
@@ -193,7 +193,7 @@ test('server management panel shows selected target and probe readiness', () => 
   Module.prototype.require = liveRequire;
   const html = renderToStaticMarkup(React.createElement(ComputeServerPanel, { onClose: () => {} }));
   assert.match(html, /Example GPU/);
-  assert.match(html, /NVIDIA L40S/);
+  assert.match(html, /L40S/);
   assert.match(html, /연결 검사/);
   assert.match(html, /서버 추가/);
 });
@@ -246,7 +246,7 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
   const { useComputeStore } = require(path.join(root, 'src/renderer/stores/useComputeStore.ts'));
   useComputeStore.setState({ selectedProfileId: null });
   useTrainingStore.setState({ status: 'disconnected', isTraining: true, jobId: 'job-remote',
-    jobComputeProfileId: server.id, jobComputeLabel: server.id, jobDeviceName: 'NVIDIA L40S',
+    jobComputeProfileId: server.id, jobComputeLabel: server.id, jobDeviceName: 'L40S',
     jobPhase: 'disconnected', jobStatusError: 'SSH unavailable' });
   const liveRequire = Module.prototype.require;
   Module.prototype.require = function (specifier) {
@@ -266,7 +266,7 @@ test('Stage 3 shows the job-bound server and reconnect state after selection cha
   Module.prototype.require = liveRequire;
   const html = renderToStaticMarkup(React.createElement(TrainingController));
   assert.match(html, /Example GPU/);
-  assert.match(html, /NVIDIA L40S/);
+  assert.match(html, /L40S/);
   assert.match(html, /원격 장치/);
   assert.match(html, /연결 끊김/);
   assert.match(html, /연결 다시 확인/);

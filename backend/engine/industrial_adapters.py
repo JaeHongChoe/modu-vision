@@ -11,7 +11,7 @@ Features:
   3. Hierarchical Classification Adapter (OK/**, NG/** with binary & multiclass regex).
   4. Native LabelMe-to-COCO Object Detection Adapter (supports microscopic flaws down to 1px).
   5. LabelMe Polygon Rasterizer Segmentation Adapter (cv2.fillPoly discrete 8-bit masks).
-  6. Flexible Industrial Anomaly Dataset Loader (arbitrary normal folders without rigid Reference AD).
+  6. Flexible Industrial Anomaly Dataset Loader (arbitrary normal folders without a rigid anomaly layout).
   7. High-resolution memory safeguard (adaptive dimension capping preventing 45MP OOM).
 """
 
@@ -830,7 +830,7 @@ class LabelMeSegmentationDataset(Dataset):
 
 class FlexibleAnomalyDataset(Dataset):
     """
-    Industrial anomaly dataset loader that removes the rigid Reference AD root/train/good requirement.
+    Industrial anomaly dataset loader that accepts normal-image folders without requiring root/train/good.
     Allows designating any directory of normal images as the training baseline,
     with an optional anomaly directory for evaluation.
     """
@@ -860,7 +860,7 @@ class FlexibleAnomalyDataset(Dataset):
         anom_dir = self.anomaly_dir
 
         if norm_dir is None and self.root_dir is not None:
-            # Check standard Reference layout first
+            # Check standard anomaly layout first
             if (self.root_dir / "train" / "good").is_dir():
                 norm_dir = self.root_dir / "train" / "good"
             elif (self.root_dir / "OK").is_dir():
@@ -881,7 +881,7 @@ class FlexibleAnomalyDataset(Dataset):
         if self.split not in ("train", "val", "test"):
             raise ValueError(f"Unknown anomaly split: {split}")
 
-        # Reference supplies a separate train/good directory. Reuse its explicit
+        # The standard anomaly layout supplies a separate train/good directory. Reuse its explicit
         # layout handling so held-out test images and masks stay associated.
         if (self.root_dir is not None and self.normal_dir is None and self.anomaly_dir is None
                 and (self.root_dir / "train" / "good").is_dir()

@@ -13,7 +13,7 @@ Focus:
      - Measures AUROC (>= 0.95), anomaly score margin (ratio >= 2.0x), and threshold calibration.
   3. Covariance Regularization & Inversion Stability:
      - Stress tests PaDiM covariance inversion with identical/duplicate normal images (zero variance patches).
-     - Confirms epsilon regularization prevents LinAlgError crashes on both CPU and Apple Silicon MPS.
+     - Confirms epsilon regularization prevents LinAlgError crashes on both CPU and Metal MPS.
      - Verifies condition of cov_inv (no NaNs, no Infs) and boundary N=1 sample rejection.
   4. Vector Polygon Extraction & Rasterization Roundtrip:
      - Evaluates complex defect contours: serpentine scratches, multi-island pits, and donut shapes.
@@ -166,10 +166,10 @@ class TestCovarianceRegularizationAndStability:
     def test_padim_zero_variance_identical_images_inversion_mps(self):
         """
         Adversarial test: Verify flattened view(-1, d, d) inversion executes safely on
-        Apple Silicon MPS without kernel crashes or deadlocks.
+        Metal MPS without kernel crashes or deadlocks.
         """
         if not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
-            pytest.skip("Apple Silicon MPS is not available on this environment")
+            pytest.skip("Metal MPS is not available on this environment")
 
         torch.manual_seed(42)
         identical_imgs = torch.ones(5, 3, 128, 128) * 0.5

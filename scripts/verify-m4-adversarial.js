@@ -470,11 +470,11 @@ assert(eRunning.isActive === true && eRunning.traceColor === '#06B6D4', 'Active 
 
 // Edge 2: Pass Branch under finalVerdict = 'OK'
 const ePassOk = getEdgeProperties({ id: 'e-pass', source: 'node_decision', target: 'node_output_pass', isBranch: 'pass' }, 'OK', null);
-assert(ePassOk.isBranchPass === true && ePassOk.traceColor === '#10B981', 'PASS branch illuminates in Industrial Emerald (#10B981) when finalVerdict is OK');
+assert(ePassOk.isBranchPass === true && ePassOk.traceColor === '#10B981', 'PASS branch illuminates in Emerald (#10B981) when finalVerdict is OK');
 
 // Edge 3: Fail Branch under finalVerdict = 'NG'
 const eFailNg = getEdgeProperties({ id: 'e-fail', source: 'node_decision', target: 'node_output_ng', isBranch: 'fail' }, 'NG', null);
-assert(eFailNg.isBranchFail === true && eFailNg.traceColor === '#EF4444', 'FAIL branch illuminates in Industrial Crimson (#EF4444) when finalVerdict is NG');
+assert(eFailNg.isBranchFail === true && eFailNg.traceColor === '#EF4444', 'FAIL branch illuminates in Crimson (#EF4444) when finalVerdict is NG');
 
 // Edge 4: Non-selected Branch De-energization (Darkened Steel)
 const eFailDuringOk = getEdgeProperties({ id: 'e-fail', source: 'node_decision', target: 'node_output_ng', isBranch: 'fail' }, 'OK', null);

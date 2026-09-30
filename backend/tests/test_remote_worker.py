@@ -201,7 +201,7 @@ def test_hardware_telemetry_keeps_exact_requested_device(tmp_path):
     class HardwareTrainer(StubTrainer):
         def train(self, job_id):
             self.callback.on_training_start({"job_id": job_id, "epochs": 2, "device": "cuda:0"})
-            self.callback.on_hardware_stats({"device_type": "cuda", "gpu_name": "NVIDIA L40S"})
+            self.callback.on_hardware_stats({"device_type": "cuda", "gpu_name": "L40S"})
             self.output_dir.joinpath("best_model.pt").write_bytes(b"checkpoint")
             self.output_dir.joinpath("model_meta.json").write_text('{"task":"classification"}')
             return {"status": "completed", "best_metric": 0.5}
@@ -209,7 +209,7 @@ def test_hardware_telemetry_keeps_exact_requested_device(tmp_path):
     assert run_train(spec, trainer_factory=HardwareTrainer)["status"] == "completed"
     status = json.loads((run / "status.json").read_text())
     assert status["device"] == "cuda:0"
-    assert status["gpu_name"] == "NVIDIA L40S"
+    assert status["gpu_name"] == "L40S"
 
 
 def test_snapshot_archive_path_cannot_escape_run(tmp_path):

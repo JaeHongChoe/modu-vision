@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Inspection Dark Steel Charcoal Design System
+        // Dark Steel Charcoal Surfaces
         chassis: {
           DEFAULT: '#0B0E14', // Main root window background
           panel: '#131822',   // Docked toolbars, sidebars, header/footer
@@ -21,11 +21,11 @@ module.exports = {
         card: '#1A212E',      // Direct alias for inner cards & widgets
         border: '#2B3547',    // Direct alias for 1px hairline border color
         
-        // Industrial Engineering LED Annunciators
+        // Discrete LED Status Indicators
         annunciator: {
-          pass: '#10B981',    // PASS / OK (Industrial Emerald)
-          fail: '#EF4444',    // FAIL / NG (Industrial Crimson)
-          standby: '#F59E0B', // STANDBY / WARN (Industrial Amber)
+          pass: '#10B981',    // PASS / OK (Emerald)
+          fail: '#EF4444',    // FAIL / NG (Crimson)
+          standby: '#F59E0B', // STANDBY / WARN (Amber)
           running: '#3B82F6', // RUNNING / ACTIVE (Electric Cobalt)
           offline: '#4B5563', // OFFLINE / DISCONNECTED (Muted Steel Gray)
         },

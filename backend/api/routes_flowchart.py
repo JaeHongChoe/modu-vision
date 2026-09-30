@@ -1,7 +1,7 @@
 """
 backend/api/routes_flowchart.py
 
-Multi-Model Chaining & Flowchart Pipeline Execution (inspired by Workflow Workflow Flowchart):
+Multi-Model Chaining & Flowchart Pipeline Execution:
 Enables visual assembly of multi-stage vision AI inspection:
   [Input Image] -> [Stage 1: Detection / ROI Crop] -> [Stage 2: Defect Inspection / Anomaly] -> [Stage 3: Rule Decision] -> [Output]
 """

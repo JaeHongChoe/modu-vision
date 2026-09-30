@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/common/LedAnnunciator.tsx
- * Industrial/Inspection-style Discrete Hardware LED Annunciator Component.
+ * Discrete Hardware LED Annunciator Component.
  * Supports PASS (#10B981), FAIL (#EF4444), STANDBY (#F59E0B), RUNNING (#3B82F6), OFFLINE (#4B5563).
  */
 

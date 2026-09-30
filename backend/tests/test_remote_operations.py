@@ -104,7 +104,7 @@ class FakeAdditionalRemote(FakeRemote):
         elif operation == "benchmark":
             outputs["outputs/benchmark.json"] = json.dumps({
                 "status": "success", "model_job_id": spec["job_id"], "task": spec["task"],
-                "device": "cuda", "device_name": "NVIDIA L40S",
+                "device": "cuda", "device_name": "L40S",
                 "mean_latency_ms": 3.1, "fps": 322.5,
             }).encode()
         elif operation == "export":
@@ -311,7 +311,7 @@ def test_remote_benchmark_reports_actual_server_and_local_model_path(tmp_path, m
     context, _ = _completed_remote(tmp_path, monkeypatch)
     fake = FakeAdditionalRemote(Path(context.profile.remote_root))
     result = run_remote_benchmark(context, 5, 64, transport=fake)
-    assert result["device_name"] == "NVIDIA L40S"
+    assert result["device_name"] == "L40S"
     assert result["compute_profile_id"] == context.profile.id
     assert result["model_path"] == str(context.output_dir / "best_model.pt")
 

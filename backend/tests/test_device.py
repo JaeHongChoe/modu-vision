@@ -1,6 +1,6 @@
 """
 Tier 1 & Tier 2 Automated Test Suite for Feature F02: Hardware Abstraction & Acceleration.
-Covers hardware discovery (Apple Silicon MPS / CUDA / CPU), memory telemetry,
+Covers hardware discovery (Metal MPS / CUDA / CPU), memory telemetry,
 MPS float64 safe downcasting, nested device transfer, AMP context, and numerical invariants.
 """
 
@@ -21,7 +21,7 @@ def test_get_device_default(device_module):
     assert isinstance(dev, torch.device)
     assert dev.type in ["cuda", "mps", "cpu"]
 
-    # On Apple Silicon macOS, verify MPS is prioritized if available
+    # On arm64 macOS, verify MPS is prioritized if available
     if platform.system() == "Darwin" and platform.machine() == "arm64":
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             assert dev.type == "mps"
@@ -98,7 +98,7 @@ def test_get_device_invalid_string_fallback(device_module):
 def test_mps_float64_auto_downcast(device_module):
     """
     Tier 2: CRITICAL MPS INVARIANT.
-    Apple Silicon MPS does not natively support float64.
+    Metal MPS does not natively support float64.
     to_device() must automatically downcast float64 to float32 when device is mps.
     """
     mps_available = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()

@@ -8,8 +8,8 @@
 
 <br />
 
-[![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20(MPS)-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com)
-[![Windows](https://img.shields.io/badge/Windows-10%2F11%20(CUDA%20%7C%20CPU)-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com)
+[![macOS](https://img.shields.io/badge/macOS-arm64%20%7C%20MPS-000000?style=for-the-badge)](#-빠른-시작-quick-start)
+[![Windows](https://img.shields.io/badge/Windows-10%2F11%20%7C%20CUDA%20%7C%20CPU-0078D6?style=for-the-badge)](#-빠른-시작-quick-start)
 [![Electron](https://img.shields.io/badge/Electron-33.x-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.4+-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
@@ -20,7 +20,7 @@
 <br />
 
 [✨ 핵심 기능](#-핵심-기능-key-features) •
-[📸 스튜디오 갤러리](#-스튜디오-갤러리-studio-gallery) •
+[🧭 작업 흐름](#-작업-흐름-workflow) •
 [🏗 아키텍처](#-시스템-아키텍처-system-architecture) •
 [⚡ 빠른 시작](#-빠른-시작-quick-start) •
 [📦 패키징](#-데스크톱-패키징-desktop-packaging)
@@ -29,12 +29,6 @@
 
 ---
 
-### 🖥️ Main Screen Preview
-<img src="assets/screenshots/02_canvas_labeling.png" width="95%" alt="Modu Vision Main Canvas" style="border-radius: 12px; border: 1px solid #2B3547; box-shadow: 0 16px 36px rgba(0,0,0,0.6);" />
-
-*이미지 라벨링 화면 예시*
-
----
 
 </div>
 
@@ -44,6 +38,7 @@
 
 **Modu Vision(모두의 비전)**은 이미지 가져오기, 라벨링, PyTorch 모델 학습·평가, 저장된 검사 플로우, 검사 이력을 연결하는 Electron/FastAPI 데스크톱 앱입니다. 분류·검출·분할·이상탐지와 출처 연결 Patch Classification 경로가 있습니다. 학습은 Fast/Precision 고정 설정으로 시작하며 구조·초매개변수 자동 탐색을 제공하지 않습니다.
 
+저장된 플로우는 단일·병렬 모델과 ROI, Blob 측정, 결과 집계를 실행할 수 있습니다. 전체 플로우 패키지와 별도 프로세스 검사 서비스도 구현돼 있습니다. 현재 QA는 제한된 실제 이미지와 CPU/한 원격 GPU 환경의 **기능 동작**을 확인한 범위입니다. 독립 검증된 정상(OK) 코호트, 현장 장비 신호, 연속 운전·택트시간, 모델 품질과 운영 승인은 별도로 필요합니다. 범위별 근거는 [기능 상태표](docs/FEATURE_STATUS_2026-09-30.md)와 [Phase 0~4 QA](docs/QA_WORKFLOW_PHASES_0_4_2026-09-30.md)에 있습니다.
 
 <br />
 
@@ -78,46 +73,18 @@
 
 ---
 
-## 📸 스튜디오 갤러리 (Studio Gallery)
+## 🧭 작업 흐름 (Workflow)
 
-<table align="center" width="100%">
-  <tr>
-    <td width="50%" align="center">
-      <b>Stage 1: 데이터 스튜디오 & 인공 결함 합성기</b><br />
-      <img src="assets/screenshots/01_data_studio.png" width="100%" alt="Data Studio" />
-      <p align="left"><sub>• 로컬 폴더 대량 로드, LabelMe 동기화, 절차적 인공 결함(균열, 쇼트, 기포) 자동 생성</sub></p>
-    </td>
-    <td width="50%" align="center">
-      <b>Stage 2: 3-Layer 정밀 라벨링 캔버스</b><br />
-      <img src="assets/screenshots/02_canvas_labeling.png" width="100%" alt="Labeling Canvas" />
-      <p align="left"><sub>• bbox·회전 bbox·polygon·brush 등 라벨 도구와 확대 화면의 원본 픽셀 확인</sub></p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <b>Stage 3: 모델 학습 & 하드웨어 텔레메트리</b><br />
-      <img src="assets/screenshots/03_automl_training.png" width="100%" alt="AutoML Training" />
-      <p align="left"><sub>• 4대 기본 작업과 Patch Classification, Fast/Precision preset, loss·메모리 표시</sub></p>
-    </td>
-    <td width="50%" align="center">
-      <b>Stage 4: 평가·판정 검토</b><br />
-      <img src="assets/screenshots/04_zero_escape_eval.png" width="100%" alt="Evaluation Studio" />
-      <p align="left"><sub>• 이미지별 결과, 모델 비교, HTML/JSON 보고서. 성능 승인은 대표 OK/NG 자료가 필요</sub></p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <b>Stage 5: 다단계 검사 플로우차트 DAG 파이프라인</b><br />
-      <img src="assets/screenshots/05_flowchart_inspection.png" width="100%" alt="Flowchart Pipeline" />
-      <p align="left"><sub>• ROI·검출·분할·패치 분류·Blob 측정·집계 노드의 제한된 DAG</sub></p>
-    </td>
-    <td width="50%" align="center">
-      <b>Stage 6: 검사 이력·패키지 내보내기</b><br />
-      <img src="assets/screenshots/06_inference_center.png" width="100%" alt="Inference Center" />
-      <p align="left"><sub>• 저장된 플로우 검사, 작업자 검토 이력, 독립 패키지·서비스. 실장비 신호는 미검증</sub></p>
-    </td>
-  </tr>
-</table>
+| 화면 | 주요 동작 |
+| --- | --- |
+| 1. 데이터 | 폴더·LabelMe 가져오기, 분할, 버전, 합성 후보 |
+| 2. 라벨링 | 도형·브러시 편집, 라벨 세트, 모델 후보 검토 |
+| 3. 학습 | 작업·preset·자원 선택, 학습 상태와 취소 |
+| 4. 평가 | 이미지별 결과, 모델 비교, 보고서와 승인 검토 |
+| 5. 플로우 | 모델·ROI·측정·집계 연결, 검증, 저장 버전 |
+| 6. 검사 | 저장된 플로우 실행, 검토 이력, CSV/JSON·패키지 |
+
+현재 실행 근거와 남은 검증 범위는 [기능 상태표](docs/FEATURE_STATUS_2026-09-30.md)에 기록한다.
 
 <br />
 
@@ -151,7 +118,7 @@
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ Hardware Direct Compute
 ┌──────────────────────────────────────▼──────────────────────────────────────┐
-│       Apple Silicon MPS         │  NVIDIA CUDA       │  CPU               │
+│       Metal / MPS               │  CUDA              │  CPU               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -166,7 +133,7 @@
 ### 필수 요구 조건
 * **Node.js**: v18.0.0 이상
 * **Python**: 3.10 이상. 설치할 PyTorch·torchvision 등 의존성이 해당 Python/OS 조합을 지원하는지 확인한다.
-* **OS**: macOS 12+ (Apple Silicon) 또는 Windows 10/11 (64-bit)
+* **OS**: macOS 12+ (arm64) 또는 Windows 10/11 (64-bit)
 
 ### 저장소 복제 및 설치
 ```bash
@@ -264,7 +231,7 @@ node scripts/verify-packaging.js
 
 ```
 modu-vision/
-├── 📂 assets/                     # 고해상도 로고 및 6단계 스튜디오 스크린샷
+├── 📂 assets/                     # 앱 로고
 ├── 📂 backend/                    # Python 3 / FastAPI 백엔드 데몬 및 PyTorch 엔진
 │   ├── 📂 api/                    # REST 엔드포인트 및 WebSocket 원격 측정
 │   ├── 📂 engine/                 # PyTorch 모델, 저장 플로우, 독립 서비스 및 합성기

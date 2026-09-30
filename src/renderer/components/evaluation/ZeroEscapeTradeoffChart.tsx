@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/evaluation/ZeroEscapeTradeoffChart.tsx
- * Industrial Oscilloscope Style Interactive Zero-Escape Calibration Curve.
+ * Oscilloscope Style Interactive Zero-Escape Calibration Curve.
  * Plots Escape Rate (Crimson) vs Overkill Rate (Amber) vs Threshold tau in [0.0, 1.0].
  */
 

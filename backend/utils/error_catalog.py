@@ -257,19 +257,19 @@ CATALOG: Dict[str, ErrorCatalogItem] = {
         title_en="Device Acceleration Fallback Warning",
         title_kr="가속기 폴백 경고",
         description_en=(
-            "Hardware acceleration (NVIDIA CUDA or Apple Silicon MPS) was unavailable or initialization failed, "
+            "Hardware acceleration (CUDA or Metal MPS) was unavailable or initialization failed, "
             "triggering transparent CPU fallback with reduced throughput."
         ),
         description_kr=(
-            "요청된 하드웨어 가속기(CUDA 또는 Apple Silicon MPS)를 초기화할 수 없어 CPU로 자동 폴백되었습니다. "
+            "요청된 하드웨어 가속기(CUDA 또는 Metal MPS)를 초기화할 수 없어 CPU로 자동 폴백되었습니다. "
             "학습 속도가 저하될 수 있습니다."
         ),
         remediation_en=(
-            "Verify GPU drivers (NVIDIA driver & CUDA toolkit) or Apple Silicon macOS compatibility. "
+            "Verify GPU drivers (GPU driver & CUDA toolkit) or Metal GPU compatibility on macOS. "
             "Training will proceed normally on CPU."
         ),
         remediation_kr=(
-            "GPU 드라이버(NVIDIA 드라이버/CUDA 툴킷) 설치 상태를 확인하거나 CPU 모드로 계속 진행하십시오. "
+            "GPU 드라이버(GPU 드라이버/CUDA 툴킷) 설치 상태를 확인하거나 CPU 모드로 계속 진행하십시오. "
             "(CPU 모드에서도 모든 기능은 정상 동작합니다.)"
         ),
         cause_en="Requested compute device was not detected by PyTorch runtime, defaulting to host CPU.",

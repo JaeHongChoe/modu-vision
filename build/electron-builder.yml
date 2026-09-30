@@ -37,7 +37,7 @@ asarUnpack:
   - "**/*.node"
 
 # -----------------------------------------------------------------------------
-# macOS Configuration (arm64 Apple Silicon)
+# macOS Configuration (arm64)
 # -----------------------------------------------------------------------------
 mac:
   appId: com.visionaistudio.app

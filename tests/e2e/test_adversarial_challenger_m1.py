@@ -2,7 +2,7 @@
 Milestone M1 Adversarial Stress Test Suite (Challenger 1).
 Validates:
 1. Deep nested nn.Module (submodule within submodule) registering float64 buffers and parameters,
-   transferred to Apple Silicon mps:0 via to_device(m, 'mps'), followed by live forward/backward pass.
+   transferred to Metal mps:0 via to_device(m, 'mps'), followed by live forward/backward pass.
 2. generate_synthetic_dataset() with individual task flags:
    - task="classification" -> only classification directory generated
    - task="detection" -> only detection directory generated
@@ -69,7 +69,7 @@ def test_adversarial_deep_nested_module_mps(device_module):
     Adversarial Challenge 1:
     Deep nested nn.Module (root -> intermediate -> leaf) registering float64 buffers and parameters.
     Transferred via to_device(m, 'mps'), followed by live forward pass, backward pass,
-    and optimizer step on Apple Silicon MPS.
+    and optimizer step on Metal MPS.
     """
     mps_available = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
     target_device_str = "mps:0" if mps_available else "cpu"

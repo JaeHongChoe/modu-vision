@@ -3,10 +3,10 @@
  * scripts/verify-design-system.js
  *
  * Vision AI Studio — Comprehensive Commercial Machine Vision E2E Verification Suite.
- * Benchmarking Inspection Inspection Runtime / Inspection Engine, Industrial DEVICE SERIES / DEVICE SERIES, and Reference VISION RUNTIME Standards.
+ * Verifying industrial design tokens, workflow coverage, and operator guidance.
  *
  * Verification Tiers:
- * - Tier 1: Feature Coverage (Inspection Chassis, Industrial Annunciators, 6 Stages, 16 AI Terms)
+ * - Tier 1: Feature Coverage (Dark Steel Surfaces, Discrete LED Indicators, 6 Stages, 16 AI Terms)
  * - Tier 2: Boundary & Anti-AI Corner Cases (Zero Gradients, Zero Blurs, Zero 28px Glows, Contrast Compliance)
  * - Tier 3: Cross-Feature Combinations & Typography (Tabular Numbers, Standardized Units: ms, FPS, px, μm, °)
  * - Tier 4: Real-World Application Workflows (M5 100/100 Checks, TypeScript Strict Typecheck, Production Build)
@@ -107,7 +107,7 @@ function findFiles(dir, extensions = ['.ts', '.tsx', '.css', '.js']) {
 if (!jsonOutput) {
   console.log(`${BOLD}${CYAN}========================================================================${RESET}`);
   console.log(`${BOLD}${CYAN}   Vision AI Studio — Commercial Machine Vision E2E Verification Suite   ${RESET}`);
-  console.log(`${BOLD}${CYAN}   Inspection Inspection Runtime / Industrial DEVICE SERIES / Reference VISION RUNTIME Standard Benchmark    ${RESET}`);
+  console.log(`${BOLD}${CYAN}   Industrial Design Tokens and Workflow Coverage Verification    ${RESET}`);
   console.log(`${BOLD}${CYAN}========================================================================${RESET}`);
   console.log(`${GRAY}Root: ${ROOT}${RESET}\n`);
 }
@@ -119,8 +119,8 @@ function runTier1() {
   if (!jsonOutput) console.log(`${BOLD}--- Tier 1: Feature Coverage ---${RESET}`);
   const tier = 'tier1';
 
-  // 1.1 Inspection Chassis Tokens
-  if (!jsonOutput) console.log(`\n${CYAN}1.1 Inspection Chassis Tokens Definition (#0B0E14, #131822, #1A212E, #2B3547)${RESET}`);
+  // 1.1 Dark Steel Surface Tokens
+  if (!jsonOutput) console.log(`\n${CYAN}1.1 Dark Steel Surface Tokens Definition (#0B0E14, #131822, #1A212E, #2B3547)${RESET}`);
   const tailwindPath = path.join(ROOT, 'tailwind.config.js');
   const indexCssPath = path.join(RENDERER_ROOT, 'index.css');
 
@@ -128,34 +128,34 @@ function runTier1() {
   const indexCssContent = fs.existsSync(indexCssPath) ? fs.readFileSync(indexCssPath, 'utf8') : '';
   const combinedStylingConfig = (tailwindContent + '\n' + indexCssContent).toLowerCase();
 
-  const inspectionTokens = [
+  const surfaceTokens = [
     { code: '#0b0e14', role: 'chassis background (deep steel charcoal)' },
     { code: '#131822', role: 'panel background (intermediate steel)' },
     { code: '#1a212e', role: 'card / surface container' },
     { code: '#2b3547', role: 'hairline border (1px precision border)' },
   ];
 
-  for (const token of inspectionTokens) {
+  for (const token of surfaceTokens) {
     if (combinedStylingConfig.includes(token.code)) {
-      recordPass(tier, `Inspection token ${token.code.toUpperCase()} (${token.role}) is defined in Tailwind/CSS`);
+      recordPass(tier, `Surface token ${token.code.toUpperCase()} (${token.role}) is defined in Tailwind/CSS`);
     } else {
-      recordFail(tier, `Inspection token ${token.code.toUpperCase()} (${token.role}) is NOT defined in tailwind.config.js or src/renderer/index.css`);
+      recordFail(tier, `Surface token ${token.code.toUpperCase()} (${token.role}) is NOT defined in tailwind.config.js or src/renderer/index.css`);
     }
   }
 
-  // 1.2 Industrial LED Annunciators
-  if (!jsonOutput) console.log(`\n${CYAN}1.2 Industrial Discrete LED Annunciators (#10B981, #EF4444, #F59E0B)${RESET}`);
-  const industrialTokens = [
+  // 1.2 Discrete LED Status Indicators
+  if (!jsonOutput) console.log(`\n${CYAN}1.2 Discrete LED Status Indicators (#10B981, #EF4444, #F59E0B)${RESET}`);
+  const indicatorTokens = [
     { code: '#10b981', role: 'PASS / OK green LED indicator' },
     { code: '#ef4444', role: 'FAIL / NG red LED indicator' },
     { code: '#f59e0b', role: 'STANDBY / WARNING amber LED indicator' },
   ];
 
-  for (const token of industrialTokens) {
+  for (const token of indicatorTokens) {
     if (combinedStylingConfig.includes(token.code)) {
-      recordPass(tier, `Industrial LED token ${token.code.toUpperCase()} (${token.role}) is defined`);
+      recordPass(tier, `LED indicator token ${token.code.toUpperCase()} (${token.role}) is defined`);
     } else {
-      recordFail(tier, `Industrial LED token ${token.code.toUpperCase()} (${token.role}) is NOT defined`);
+      recordFail(tier, `LED indicator token ${token.code.toUpperCase()} (${token.role}) is NOT defined`);
     }
   }
 

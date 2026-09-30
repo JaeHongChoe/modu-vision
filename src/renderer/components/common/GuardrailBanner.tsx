@@ -57,7 +57,7 @@ export const GuardrailBanner: React.FC<GuardrailBannerProps> = ({
     }
   };
 
-  // Solid industrial color schemes (Industrial / Inspection standards)
+  // Solid industrial color schemes
   const colorMap = {
     warning: {
       container: 'bg-[#18140E] border-[#F59E0B]/60 text-amber-200',

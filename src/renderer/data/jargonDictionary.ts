@@ -96,7 +96,7 @@ export const JARGON_DICTIONARY: Record<string, JargonEntry> = {
     categoryLabelKo: '학습 파라미터',
     definitionKo: 'GPU가 한 번에 모아서 동시에 연산하고 모델 가중치를 갱신하는 이미지의 묶음 수량입니다.',
     shopFloorMeaningKo: '너무 크면 GPU 비디오 메모리(VRAM)가 꽉 차서 프로그램이 튕기고(CUDA OOM), 너무 작으면 학습 진동이 심해져 학습 시간이 오래 걸립니다.',
-    recommendedValueKo: '본 시스템은 45MP 고해상도 이미지 및 하드웨어(Apple Silicon MPS / NVIDIA CUDA)에 맞춰 8~16개 단위로 자동 조율됩니다.',
+    recommendedValueKo: '본 시스템은 45MP 고해상도 이미지 및 하드웨어(Metal MPS / CUDA)에 맞춰 8~16개 단위로 자동 조율됩니다.',
     tag: '메모리안정성',
   },
   learning_rate: {

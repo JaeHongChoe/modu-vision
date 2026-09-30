@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/labeling/LabelingTool.tsx
- * Canonical alias for Step 2 Inspection / Industrial Labeling Studio.
+ * Canonical alias for Step 2 Labeling Studio.
  */
 
 export { LabelingStudio as LabelingTool, default } from './LabelingStudio';

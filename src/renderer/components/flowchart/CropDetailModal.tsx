@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/flowchart/CropDetailModal.tsx
- * Inspection / Industrial Style Single ROI Detailed Inspection Modal.
+ * Single ROI Detailed Inspection Modal.
  * Solid dark steel chassis (#1A212E, border #2B3547), zero backdrop blur,
  * strict tabular-nums font-mono, and operator paging controls.
  */

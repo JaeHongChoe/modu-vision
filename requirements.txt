@@ -1,5 +1,5 @@
 # Vision AI Studio - Python Backend Dependencies
-# Supports Python 3.10, 3.11, 3.12, 3.13 on Windows (CUDA/CPU) and macOS (Apple Silicon MPS)
+# Supports Python 3.10, 3.11, 3.12, 3.13 on Windows (CUDA/CPU) and macOS (Metal GPU)
 
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0

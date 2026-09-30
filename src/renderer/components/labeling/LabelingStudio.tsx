@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/labeling/LabelingStudio.tsx
- * Step 2: Inspection / Industrial Industrial Labeling Studio Component.
+ * Step 2: Industrial Labeling Studio Component.
  * Features:
  *   - Dark steel chassis layout (bg-[#0B0E14] text-slate-200)
  *   - 3-Layer Interactive Canvas

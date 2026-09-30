@@ -1,7 +1,7 @@
 """
-backend/tests/test_workflow_features.py
+backend/tests/test_labeling_workflow_features.py
 
-Comprehensive Verification Suite for Workflow Workflow Parity Features:
+Comprehensive Verification Suite for Labeling Workflow Features:
 1. AI Auto-Selector (Smart Magic Wand)
 2. Shape Converter (BBox to Polygon)
 3. Rotated Bounding Box (OBB)

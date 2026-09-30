@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/evaluation/EvaluationStudio.tsx
- * Step 4: Quality Evaluation & Overkill Studio adhering to Inspection & Reference VISION RUNTIME standards.
+ * Step 4: Quality Evaluation & Overkill Studio.
  * Features High-Contrast Heatmap Confusion Matrix with marginal metrics, 4-tab industrial sample filtering,
  * interactive Zero-Escape tau* tradeoff curve, and synchronized dual-viewport defect heatmap.
  */

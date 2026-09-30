@@ -11,7 +11,7 @@ Synchronizes ground-truth representations across all 4 industrial vision tasks:
   1. Multi-Class Classification (train/OK, train/NG_*, val/OK, val/NG_*)
   2. Object Detection (COCO instances JSON + VOC pixel coordinates)
   3. Semantic Segmentation (Paired RGB images + single-channel 8-bit PNG masks)
-  4. Unsupervised Anomaly Detection (Reference AD layout: strict normal-only train split)
+  4. Unsupervised Anomaly Detection (standard anomaly layout: strict normal-only train split)
 """
 
 from __future__ import annotations
@@ -700,7 +700,7 @@ def generate_synthetic_dataset(
             cv2.imwrite(str(s_img_dir / file_name), cv2.cvtColor(sample.image, cv2.COLOR_RGB2BGR))
             cv2.imwrite(str(s_mask_dir / file_name), sample.mask)
 
-        # 4. Anomaly Detection export (Reference AD convention)
+        # 4. Anomaly Detection export (standard anomaly layout)
         if gen_anomaly:
             if is_train:
                 # Train split MUST be 100% normal

@@ -188,7 +188,7 @@ class SegmentationDataset(Dataset):
 
 class AnomalyDataset(Dataset):
     """
-    Reference AD style unsupervised anomaly dataset.
+    Standard layout for an unsupervised anomaly dataset.
     Train split: root_dir/train/good/*.png (100% normal)
     Test split: root_dir/test/good/*.png, root_dir/test/{defect}/*.png
     Yields:

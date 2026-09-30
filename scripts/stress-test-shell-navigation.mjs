@@ -104,8 +104,8 @@ if (stepsDefinitionMatch) {
 // Check WizardHeader hardware LED annunciator
 if (
   headerContent.includes('hwDisplayName') &&
-  headerContent.includes('APPLE SILICON MPS') &&
-  headerContent.includes('NVIDIA CUDA') &&
+  headerContent.includes('METAL GPU MPS') &&
+  headerContent.includes('CUDA') &&
   headerContent.includes('CPU FALLBACK')
 ) {
   recordPass('WizardHeader hardware acceleration telemetry', 'Detects MPS, CUDA, CPU fallback');

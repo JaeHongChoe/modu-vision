@@ -10,7 +10,7 @@ Validates:
   5. Hierarchical classification adapter on real and synthetic manufacturing trees.
   6. LabelMe-to-COCO object detection adapter with microscopic flaw precision.
   7. LabelMe polygon rasterization into 8-bit discrete segmentation masks.
-  8. Flexible industrial anomaly dataset loader (non-Reference normal folders).
+  8. Flexible industrial anomaly dataset loader (arbitrary normal-image folders).
   9. Single-class evaluation crash fix (avoiding IndexError when len(classes) == 1).
   10. REST API endpoint /api/dataset/import-industrial conforming to SCOPE.md.
 """

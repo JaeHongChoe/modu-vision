@@ -1375,7 +1375,7 @@ def run_inference_benchmark(req: BenchmarkRequest):
         raise HTTPException(status_code=502, detail=f"Remote benchmark result could not be verified: {exc}") from exc
 
     device = get_device()
-    dev_name = "Apple Silicon MPS" if device.type == "mps" else ("NVIDIA CUDA" if device.type == "cuda" else "Intel/Apple CPU")
+    dev_name = "Metal MPS" if device.type == "mps" else ("CUDA" if device.type == "cuda" else "CPU")
     try:
         model, meta, _ = load_checkpoint_and_reconstruct_model(model_file)
         model = model.to(device).eval()

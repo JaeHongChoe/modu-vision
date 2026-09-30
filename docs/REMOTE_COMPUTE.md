@@ -62,6 +62,6 @@ Cleanup should name a specific completed or abandoned `runs/<job_id>` directory 
 
 ## Verification boundary
 
-An isolated remote workspace and image staging directory were verified with owner-only permissions. Live read-only probes returned `ready: true` for CPU-only and one selected NVIDIA L40S GPU profile, including runtime imports and cached-weight hash checks. This is a point-in-time result; operators must check GPU allocation and repeat the probe before another job.
+An isolated remote workspace and image staging directory were verified with owner-only permissions. Live read-only probes returned `ready: true` for CPU-only and one selected L40S GPU profile, including runtime imports and cached-weight hash checks. This is a point-in-time result; operators must check GPU allocation and repeat the probe before another job.
 
 A portable snapshot of 80 paired LabelMe examples was verified by matching local and remote SHA-256 digests. An eight-pair subset completed a one-epoch CPU smoke run, returning a hash-verified checkpoint and passing evaluation, single-model flow execution, inference, benchmark, TorchScript export, and ONNX export. A second capped run was canceled after entering `running`; both receipts ended `aborted` with no checkpoint. Detailed workspace names, profile identifiers, job IDs, and digests remain in private QA receipts. This early CPU smoke pass does not establish model quality or GPU training behavior.

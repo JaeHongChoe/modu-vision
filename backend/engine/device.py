@@ -2,9 +2,9 @@
 backend/engine/device.py (Proposed Remediation)
 
 Universal Hardware Abstraction and Acceleration Layer.
-Supports Apple Silicon MPS (Metal Performance Shaders), NVIDIA CUDA,
+Supports Metal MPS (Metal Performance Shaders), CUDA,
 and transparent CPU fallback with unified telemetry, mixed precision management,
-and Apple Silicon float64 safe downcasting.
+and Metal MPS float64 safe downcasting.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ logger = logging.getLogger("vision_ai_studio.device")
 class DeviceInfo:
     """Comprehensive hardware device status and capabilities."""
     device_type: str            # "mps", "cuda", or "cpu"
-    device_name: str            # e.g., "Apple M3 Pro", "NVIDIA GeForce RTX 4090", "x86_64 CPU"
+    device_name: str            # e.g., "Metal GPU", "CUDA GPU", "x86_64 CPU"
     is_accelerated: bool        # True if mps or cuda, False if cpu
     mps_available: bool
     cuda_available: bool
@@ -170,12 +170,12 @@ def get_device(requested: Optional[Union[str, torch.device]] = None) -> torch.de
             else:
                 logger.warning("Unrecognized device preference '%s'. Falling back to auto-detection.", requested)
 
-    # 1. NVIDIA CUDA
+    # 1. CUDA
     if torch.cuda.is_available():
         idx = torch.cuda.current_device() if torch.cuda.device_count() > 0 else 0
         return torch.device(f"cuda:{idx}")
 
-    # 2. Apple Silicon MPS
+    # 2. Metal MPS
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         return torch.device("mps")
 
@@ -213,7 +213,7 @@ def get_device_info(device: Optional[Union[torch.device, str]] = None) -> Device
     elif device.type == "mps" and mps_avail:
         arch = platform.machine()
         chip_name = _get_cpu_brand()
-        dev_name = f"Apple Silicon ({chip_name} / {arch})"
+        dev_name = f"Metal GPU ({chip_name} / {arch})"
         total_mem = psutil.virtual_memory().total / (1024.0 * 1024.0)
         if hasattr(torch.mps, "recommended_max_memory"):
             try:
@@ -403,7 +403,7 @@ def clear_device_cache(device: Optional[Union[torch.device, str]] = None) -> Non
 
 
 # ============================================================================
-# Apple Silicon MPS Compatibility & Recursive Device Transfer
+# Metal MPS Compatibility & Recursive Device Transfer
 # ============================================================================
 
 def to_device(
@@ -412,7 +412,7 @@ def to_device(
 ) -> Any:
     """
     Recursively moves tensors, neural network modules, or nested collection structures to target device.
-    CRITICAL MPS INVARIANT: If target device is Apple Silicon MPS ('mps'), automatically
+    CRITICAL MPS INVARIANT: If target device is Metal MPS ('mps'), automatically
     downcasts float64 (double) tensors to float32 to prevent MPS TypeError runtime crashes.
     Accepts either torch.device or str (e.g. 'mps', 'cpu', 'cuda').
     """

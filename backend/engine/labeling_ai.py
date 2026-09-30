@@ -1,7 +1,7 @@
 """
 backend/engine/labeling_ai.py
 
-Industrial AI-Assisted Auto-Labeling Engines (inspired by Workflow Workflow):
+Industrial AI-Assisted Auto-Labeling Engines:
 1. Auto-Selector (Smart Magic Wand / Click-to-Segment):
    Extracts high-precision object/defect contour polygons from a single seed click.
 2. Shape Converter (BBox to Polygon):
@@ -135,7 +135,7 @@ def shape_converter_bbox_to_polygon(
     min_area: float = 8.0,
 ) -> Dict[str, Any]:
     """
-    Shape Converter (Workflow BBox-to-Polygon):
+    Shape Converter (BBox-to-Polygon):
     Takes a coarse bounding box [xmin, ymin, xmax, ymax] and snaps it to the
     precise defect/object boundary contour inside that region.
     """

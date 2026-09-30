@@ -6,7 +6,7 @@ Supports:
   1. Multi-Class Classification (Folder-based OK/NG with automatic stratified splitting)
   2. Object Detection (COCO instances JSON & Pascal VOC XML with box sanitization)
   3. Semantic Segmentation (Paired RGB images & single-channel 8-bit PNG masks with NEAREST interpolation)
-  4. Unsupervised Anomaly Detection (Reference AD layout: strict normal-only train split)
+  4. Unsupervised Anomaly Detection (standard anomaly layout: strict normal-only train split)
   5. Image Health Validation (0-byte, corrupt headers, truncated streams)
   6. Robust Stratified Split Engine with single-sample fallback
 """

@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/labeling/LabelingToolbar.tsx
- * Inspection / Industrial Benchmark: Industrial Toolset & Labeling Toolbar.
+ * Industrial Toolset & Labeling Toolbar.
  * Features:
  *   - 7 Industrial Tools (Select, BBox, Rotated OBB, Polygon, Brush, Eraser, AutoSelector)
  *   - Integrated Mask Layer Opacity Slider with strict tabular-nums

@@ -64,7 +64,7 @@ export const DatasetStudio: React.FC = () => {
     generateSynthetic,
   } = useDatasetStore();
 
-  // Inspection Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
+  // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
@@ -173,7 +173,7 @@ export const DatasetStudio: React.FC = () => {
           {sourceSaveError}
         </div>
       )}
-      {/* Top Action Toolbar (Inspection Deep Steel Panel #131822) */}
+      {/* Top Action Toolbar (Dark Steel Panel #131822) */}
       <div className="p-3 bg-[#131822] border-b border-[#2B3547] flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
@@ -457,7 +457,7 @@ export const DatasetStudio: React.FC = () => {
             )}
           </div>
 
-          {/* Industrial Digital Class Gauges */}
+          {/* Digital Class Gauges */}
           <div className="p-3 bg-[#1A212E] rounded-[4px] border border-[#2B3547] flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-[#2B3547]">
               <div className="flex items-center space-x-1.5">
@@ -545,7 +545,7 @@ export const DatasetStudio: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Middle row: Industrial Linear Level Meter */}
+                      {/* Middle row: Linear Level Meter */}
                       <div className="w-full bg-[#0B0E14] h-1.5 rounded-[2px] border border-[#2B3547] overflow-hidden my-1">
                         <div
                           className={`h-full transition-all duration-300 ${
@@ -699,7 +699,7 @@ export const DatasetStudio: React.FC = () => {
                 <span className="text-slate-200 tabular-nums font-semibold">Not calibrated</span>
               </div>
 
-              {/* Inspection-style Density Toggle (S: 96px, M: 144px, L: 200px) */}
+              {/* Thumbnail Density Toggle (S: 96px, M: 144px, L: 200px) */}
               <div className="flex items-center space-x-1 bg-[#0B0E14] p-0.5 rounded-[4px] border border-[#2B3547]">
                 {(['S', 'M', 'L'] as const).map((d) => (
                   <button

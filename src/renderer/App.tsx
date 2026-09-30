@@ -1,7 +1,7 @@
 /**
  * src/renderer/App.tsx
  * Vision AI Studio — Desktop 6-Step Industrial Vision AI Suite Root Orchestrator.
- * Inspection Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
+ * Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
  */
 
 import { useEffect } from 'react';

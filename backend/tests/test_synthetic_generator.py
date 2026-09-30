@@ -214,7 +214,7 @@ def test_full_dataset_generation_folder_hierarchy(synthetic_module, temp_dir):
     assert os.path.isdir(os.path.join(temp_dir, "segmentation", "masks", "train"))
     assert os.path.isfile(os.path.join(temp_dir, "segmentation", "class_map.json"))
 
-    # 4. Anomaly Detection layout (Reference AD convention)
+    # 4. Anomaly Detection layout (standard anomaly layout)
     assert os.path.isdir(os.path.join(temp_dir, "anomaly", "train", "good"))
     assert os.path.isdir(os.path.join(temp_dir, "anomaly", "test", "good"))
 

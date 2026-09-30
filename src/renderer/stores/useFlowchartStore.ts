@@ -1,6 +1,6 @@
 /**
  * src/renderer/stores/useFlowchartStore.ts
- * Multi-Model Chaining & Flowchart Pipeline State Management (Workflow Flowchart).
+ * Multi-Model Chaining & Flowchart Pipeline State Management.
  */
 
 import { create } from 'zustand';

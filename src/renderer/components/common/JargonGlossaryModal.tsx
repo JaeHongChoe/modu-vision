@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/common/JargonGlossaryModal.tsx
- * Inspection/Industrial Technical Manual Style Glossary for Manufacturing Vision AI Terminology.
+ * Technical Manual Style Glossary for Manufacturing Vision AI Terminology.
  */
 
 import React, { useState, useMemo, useEffect } from 'react';

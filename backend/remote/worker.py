@@ -775,7 +775,7 @@ def run_benchmark(spec_path: Path) -> dict[str, Any]:
         model = model.to(device).eval()
         dummy_input = torch.rand((1, 3, resolution, resolution), dtype=torch.float32, device=device)
         device_name = (torch.cuda.get_device_name(device) if device.type == "cuda"
-                       else "Apple Silicon MPS" if device.type == "mps" else "CPU")
+                       else "Metal MPS" if device.type == "mps" else "CPU")
         status.update(status="running", device=str(device), gpu_name=device_name if device.type == "cuda" else None)
 
         def synchronize() -> None:

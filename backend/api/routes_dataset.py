@@ -564,7 +564,7 @@ def import_industrial_dataset_endpoint(req: IndustrialDatasetImportRequest):
     """
     Ingests real manufacturing inspection datasets using industrial adapters.
     Handles hierarchical classification (OK/**, NG/**), LabelMe annotations,
-    polygon rasterization, and flexible anomaly datasets without strict Reference layout.
+    polygon rasterization, and flexible anomaly datasets without a strict anomaly layout.
     """
     folder = Path(req.folder_path).resolve()
     if not folder.exists() or not folder.is_dir():

@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/training/OscilloscopeLossCurve.tsx
- * Tektronix / Industrial Industrial CRT Phosphor Storage Oscilloscope (DSO).
+ * Industrial CRT Phosphor Storage Oscilloscope (DSO).
  * Dual-channel real-time loss streaming (CH1: Train Loss, CH2: Val Loss),
  * selectable Linear vs Logarithmic Decibel (dB) scale, precision graticule grid,
  * live electron beam sweep cursor, and interactive inspection reticle.

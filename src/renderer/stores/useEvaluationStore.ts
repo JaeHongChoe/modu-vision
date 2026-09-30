@@ -106,7 +106,7 @@ interface EvaluationState {
   sampleFilter: SampleFilter;
   setSampleFilter: (filter: SampleFilter) => void;
 
-  // Workflow Industrial Overkill/Underkill Analysis
+  // Industrial Overkill/Underkill Analysis
   overkillAnalysis: OverkillUnderkillAnalysis | null;
   targetMaxUnderkill: number;
   costEscape: number;

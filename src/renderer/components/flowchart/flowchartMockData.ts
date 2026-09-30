@@ -1,7 +1,7 @@
 /**
  * src/renderer/components/flowchart/flowchartMockData.ts
  * Standard 19-ROI High-Density SMT Circuit Board Benchmark Dataset.
- * Adheres to Inspection Inspection Engine & Industrial DEVICE SERIES inspection specifications.
+ * Example graph data for the inspection workflow.
  */
 
 import type { FlowchartCrop, FlowchartExecutionStep, FlowchartExecutionResult } from '../../types';

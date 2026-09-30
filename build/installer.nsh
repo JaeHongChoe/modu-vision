@@ -5,7 +5,7 @@
 !include "LogicLib.nsh"
 
 !macro customInstall
-  DetailPrint "Checking Microsoft Visual C++ 2015-2022 Redistributable (x64)..."
+  DetailPrint "Checking Visual C++ 2015-2022 Redistributable (x64)..."
   
   ; Check x64 registry entry for VC++ 2015-2022 (v14.x)
   SetRegView 64
@@ -19,13 +19,13 @@
   ${If} $0 != 1
     DetailPrint "Visual C++ Redistributable is not found. Checking bundled runtime..."
     ${If} ${FileExists} "$INSTDIR\resources\vc_redist.x64.exe"
-      DetailPrint "Installing Microsoft Visual C++ Redistributable (Silent)..."
+      DetailPrint "Installing Visual C++ Redistributable (Silent)..."
       ExecWait '"$INSTDIR\resources\vc_redist.x64.exe" /quiet /norestart' $1
       DetailPrint "Visual C++ installation finished with exit code $1."
     ${Else}
       DetailPrint "Bundled vc_redist.x64.exe not present; skipping local runtime install."
     ${EndIf}
   ${Else}
-    DetailPrint "Microsoft Visual C++ Redistributable (x64) is already installed."
+    DetailPrint "Visual C++ Redistributable (x64) is already installed."
   ${EndIf}
 !macroend

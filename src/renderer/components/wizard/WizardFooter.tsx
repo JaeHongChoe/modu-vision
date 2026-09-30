@@ -1,7 +1,7 @@
 /**
  * src/renderer/components/wizard/WizardFooter.tsx
  * 
- * Industrial Step Navigation & Guardrail Console (Industrial / Inspection Benchmark).
+ * Industrial Step Navigation & Guardrail Console.
  * Features:
  * - High-visibility steel gray typography (0% low-contrast slate-600 text)
  * - Tactile action buttons with clear physical keyboard shortcuts (Alt+← / Alt+→, [ / ])

@@ -1,11 +1,11 @@
-# Workflow benchmark and real-data functional QA · 2026-09-29
+# Real-data functional QA · 2026-09-29
 
+This is the historical full-data workflow pass. The [latest feature matrix](FEATURE_STATUS_2026-09-30.md) and [subsequent QA](QA_FEATURES_2026-09-30.md) supersede its implementation status. Detailed source paths, customer image names, checkpoint IDs, artifact digests, and receipts are stored outside Git.
 
 ## Scope
 
 The test set contained 88 inspection images, including 80 paired LabelMe annotations and eight unannotated images. The saved train/validation/test split was 56/16/8. The labeled cohort was defect-oriented without a representative normal/OK group. One-epoch models in this pass were used to verify product function, not model quality or production acceptance.
 
-The public [Historical reference removed], [Historical reference removed], and [Historical reference removed] provided the workflow comparison. They do not establish equivalent implementation in this app.
 
 ## Real-data workflow observations
 
@@ -18,7 +18,7 @@ The public [Historical reference removed], [Historical reference removed], and [
 | 5 Flowchart | Detector ROI inspection and a parallel detector plus full-image segmentation graph executed with real-derived data. A native run on one original test image returned NG with four ROIs and node trace. | This pass did not prove five distinct model checkpoints or unrestricted graph types. |
 | 6 Inference | The native app completed an eight-image batch, displayed per-image ROI/node evidence and filters, and exported single-model TorchScript and ONNX packages with successful smoke inference. | The standalone single-model exports did not contain the whole graph. |
 
-The historical eight-image batch produced six NG and two OK decisions. Because ground truth here is NG-oriented, those results must not be interpreted as model-quality approval. Current saved-flow inspection and durable review behavior are documented in the [subsequent QA](QA_WORKFLOW_PARITY_2026-09-30.md).
+The historical eight-image batch produced six NG and two OK decisions. Because ground truth here is NG-oriented, those results must not be interpreted as model-quality approval. Current saved-flow inspection and durable review behavior are documented in the [subsequent QA](QA_FEATURES_2026-09-30.md).
 
 ## Corrections established by this pass
 
@@ -31,4 +31,4 @@ The historical eight-image batch produced six NG and two OK decisions. Because g
 
 ## Verification boundary
 
-The historical full backend suite reported 587 passed and two skipped, and focused frontend scripts, typecheck, renderer build, and isolated macOS packaging completed. The latest suite results and current implementation limits are in the [subsequent QA](QA_WORKFLOW_PARITY_2026-09-30.md). Customer data and full receipts remain outside Git.
+The historical full backend suite reported 587 passed and two skipped, and focused frontend scripts, typecheck, renderer build, and isolated macOS packaging completed. The latest suite results and current implementation limits are in the [subsequent QA](QA_FEATURES_2026-09-30.md). Customer data and full receipts remain outside Git.

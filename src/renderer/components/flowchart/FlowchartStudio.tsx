@@ -679,7 +679,7 @@ export const FlowchartStudio: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-hidden select-none">
-      {/* Top Flowchart Toolbar (Inspection Deep Steel Panel) */}
+      {/* Top Flowchart Toolbar (Dark Steel Panel) */}
       <div className="min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-8 h-8 shrink-0 rounded-md bg-cyan-950/40 border border-cyan-800/70 flex items-center justify-center">
@@ -1142,7 +1142,7 @@ export const FlowchartStudio: React.FC = () => {
             </div>
           </div>
 
-          {/* Node Property Inspector Sidebar (Inspection Deep Steel Panel) */}
+          {/* Node Property Inspector Sidebar (Dark Steel Panel) */}
           <div className="shrink-0 bg-[#131822] border-l border-[#2B3547] p-5 flex flex-col gap-4 overflow-y-auto" style={{ width: 'clamp(300px, 26vw, 380px)' }}>
             <div className="border-b border-[#2B3547] pb-3">
               <h3 className="text-sm font-bold text-[#F8FAFC] flex items-center gap-2">

@@ -1,9 +1,9 @@
 /**
  * src/renderer/components/flowchart/CustomNode.tsx
- * Industrial DAG Circuit Node (Inspection Inspection Runtime / Industrial DEVICE SERIES Physical Standard).
+ * Industrial DAG Circuit Node.
  * Features:
- *  - Inspection Deep Steel chassis theme (#1A212E card, #131822 header, 1px #2B3547 hairline border).
- *  - Industrial physical-style circular LED annunciators (Amber Standby, Pulsing Cyan Active, Emerald Pass, Crimson Fail)
+ *  - Dark steel chassis theme (#1A212E card, #131822 header, 1px #2B3547 hairline border).
+ *  - Circular LED annunciators (Amber Standby, Pulsing Cyan Active, Emerald Pass, Crimson Fail)
  *    housed in a machined metallic bezel ring.
  *  - Discrete tabular-nums font-mono latency badge.
  *  - Discrete physical input/output connection terminal blocks with color-coded connector pins.
@@ -213,7 +213,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           </span>
         </div>
 
-        {/* Industrial Physical Metallic Circular LED Annunciator + Latency Badge */}
+        {/* Metallic Circular LED Annunciator + Latency Badge */}
         <div className="flex items-center space-x-2">
           {latencyMs !== undefined && (
             <div className="bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547] flex items-center space-x-1">

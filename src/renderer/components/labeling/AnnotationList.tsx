@@ -1,6 +1,6 @@
 /**
  * src/renderer/components/labeling/AnnotationList.tsx
- * Inspection / Industrial Benchmark: Geometric Measurement Inspector Panel.
+ * Geometric Measurement Inspector Panel.
  * Features:
  *   - Precision geometric readouts: X, Y, W, H, θ, Area with strict tabular-nums
  *   - Real-time optical calibration in physical units: px, °, px², μm

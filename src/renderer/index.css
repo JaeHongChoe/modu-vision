@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Inspection Dark Steel Charcoal Surfaces */
+    /* Dark Steel Charcoal Surfaces */
     --color-chassis: #0B0E14;
     --color-panel: #131822;
     --color-card: #1A212E;
@@ -12,7 +12,7 @@
     --color-hover: #222B3D;
     --color-active: #2A364D;
 
-    /* Industrial Optical LED Annunciators */
+    /* Optical LED Annunciators */
     --color-annunciator-pass: #10B981;
     --color-annunciator-fail: #EF4444;
     --color-annunciator-standby: #F59E0B;

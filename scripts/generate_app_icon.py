@@ -2,7 +2,7 @@
 """
 scripts/generate_app_icon.py
 Generates a high-resolution, industrial-grade macOS App Icon for Vision AI Studio
-conforming to Apple Human Interface Guidelines and Inspection/Industrial aesthetic.
+using an industrial optical inspection motif.
 Generates build/icon.icns and build/icon.png.
 """
 
@@ -17,7 +17,7 @@ def create_icon_1024():
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # 1. macOS Squircle Bounds (Apple 1024x1024 icon grid standard: 824x824 inner area, r=185)
+    # 1. macOS Squircle Bounds (1024x1024 icon grid: 824x824 inner area, r=185)
     pad = 100
     box = [pad, pad, size - pad, size - pad]
     radius = 185
@@ -29,7 +29,7 @@ def create_icon_1024():
     shadow = shadow.filter(ImageFilter.GaussianBlur(25))
     img.paste(shadow, (0, 0), shadow)
 
-    # Base chassis plate (Dark steel / Inspection charcoal #0B0E14 ~ #131822)
+    # Base chassis plate (Dark steel charcoal #0B0E14 ~ #131822)
     chassis = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     c_draw = ImageDraw.Draw(chassis)
     
@@ -51,7 +51,7 @@ def create_icon_1024():
     draw.rounded_rectangle(box, radius=radius, outline=(43, 53, 71, 255), width=4)
     draw.rounded_rectangle([pad + 3, pad + 3, size - pad - 3, size - pad - 3], radius=radius - 3, outline=(20, 26, 38, 255), width=2)
 
-    # 2. Industrial Optical Lens Barrel (Industrial / Inspection telecentric lens motif)
+    # 2. Industrial Optical Lens Barrel (telecentric lens motif)
     center_x, center_y = size // 2, size // 2
 
     # Outer metallic knurled ring
@@ -90,7 +90,7 @@ def create_icon_1024():
     img.paste(refl, (0, 0), refl)
 
     # 3. Machine Vision Inspection Reticle & Crosshair Grid
-    # 4 corner bounding brackets (Inspection ROI bracket style)
+    # 4 corner bounding brackets (ROI bracket motif)
     b_len = 50
     b_r = 160
     # Top-Left
@@ -157,7 +157,7 @@ def create_icon_1024():
     draw.ellipse([center_x - 16, v_bottom_y - 28, center_x + 16, v_bottom_y + 4],
                  fill=(248, 250, 252, 255), outline=(16, 185, 129, 255), width=3)
 
-    # 5. Top Status Annunciator LED (Industrial hardware style: Emerald Green = ONLINE/PASS)
+    # 5. Top Status Annunciator LED (Emerald Green = ONLINE/PASS)
     led_x, led_y = center_x, pad + 45
     led_r = 14
     # Bezel
@@ -212,7 +212,7 @@ def main():
     # Convert to icns using macOS native iconutil
     icns_path = build_dir / "icon.icns"
     subprocess.run(["iconutil", "-c", "icns", str(iconset_dir), "-o", str(icns_path)], check=True)
-    print(f"[3/3] Successfully generated native Apple ICNS: {icns_path}")
+    print(f"[3/3] Successfully generated native macOS ICNS: {icns_path}")
 
 if __name__ == "__main__":
     main()

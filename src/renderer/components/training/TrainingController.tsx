@@ -1,8 +1,8 @@
 /**
  * src/renderer/components/training/TrainingController.tsx
- * Step 3: AutoML Training Controller adhering to Inspection Inspection Runtime & Industrial standards.
- * Features CRT Phosphor Oscilloscope loss curves, Industrial discrete 16-segment LED telemetry,
- * factory line recipe presets, and Inspection Deep Steel chassis theme.
+ * Step 3: AutoML Training Controller.
+ * Features CRT Phosphor Oscilloscope loss curves, discrete 16-segment LED telemetry,
+ * factory line recipe presets, and a dark steel chassis theme.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -293,7 +293,7 @@ export const TrainingController: React.FC = () => {
           </button>}
         </div>}
 
-        {/* Inspection Deep Steel Execution Control Toolbar */}
+        {/* Dark Steel Execution Control Toolbar */}
         <div className="p-3 bg-[#131822] rounded-[4px] border border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-4">
             {!isTraining ? (
@@ -365,7 +365,7 @@ export const TrainingController: React.FC = () => {
           </div>
         )}
 
-        {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Industrial Telemetry (34%) */}
+        {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Hardware Telemetry (34%) */}
         <div className="grid grid-cols-12 gap-5">
           {/* Left Column: CRT Phosphor Oscilloscope Loss Curve */}
           <div className="col-span-8">
@@ -383,7 +383,7 @@ export const TrainingController: React.FC = () => {
             />
           </div>
 
-          {/* Right Column: Industrial Hardware Telemetry Panel */}
+          {/* Right Column: Hardware Telemetry Panel */}
           <div className="col-span-4">
             {jobId && jobComputeProfileId ? (
               <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-xs">

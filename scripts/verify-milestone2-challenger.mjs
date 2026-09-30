@@ -335,9 +335,9 @@ assert(
 );
 
 // ----------------------------------------------------------------------------
-// TEST SECTION 5: INSPECTION CHASSIS AND COMPONENT EXPORTS
+// TEST SECTION 5: DARK STEEL SURFACES AND COMPONENT EXPORTS
 // ----------------------------------------------------------------------------
-console.log(`\n${BOLD}--- Section 5: Inspection Chassis & Component Exports ---${RESET}`);
+console.log(`\n${BOLD}--- Section 5: Dark Steel Surfaces & Component Exports ---${RESET}`);
 
 // Check LabelingStudio.tsx
 const studioPath = path.join(RENDERER_DIR, 'components/labeling/LabelingStudio.tsx');
@@ -345,7 +345,7 @@ assert(fs.existsSync(studioPath), 'src/renderer/components/labeling/LabelingStud
 const studioCode = fs.readFileSync(studioPath, 'utf8');
 assert(
   studioCode.includes('bg-[#0B0E14]') || studioCode.includes('bg-chassis'),
-  'LabelingStudio.tsx wraps labeling workspace in Inspection deep steel chassis (#0B0E14)'
+  'LabelingStudio.tsx wraps labeling workspace in dark steel surfaces (#0B0E14)'
 );
 assert(
   studioCode.includes('export const LabelingStudio') || studioCode.includes('export default LabelingStudio'),
@@ -357,13 +357,13 @@ const dsPath = path.join(RENDERER_DIR, 'components/dataset/DatasetStudio.tsx');
 const dsCode = fs.readFileSync(dsPath, 'utf8');
 assert(
   dsCode.includes('#0B0E14') && dsCode.includes('#131822') && dsCode.includes('#2B3547'),
-  'DatasetStudio.tsx adheres to Inspection chassis tokens (#0B0E14, #131822, #2B3547)'
+  'DatasetStudio.tsx uses dark steel surface tokens (#0B0E14, #131822, #2B3547)'
 );
 
 // Check density toggle in DatasetStudio.tsx
 assert(
   dsCode.includes("'S'") && dsCode.includes("'M'") && dsCode.includes("'L'"),
-  'DatasetStudio.tsx implements Inspection thumbnail density switching (S, M, L)'
+  'DatasetStudio.tsx implements thumbnail density switching (S, M, L)'
 );
 
 // ----------------------------------------------------------------------------

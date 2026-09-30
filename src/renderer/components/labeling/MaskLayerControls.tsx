@@ -1,11 +1,11 @@
 /**
  * src/renderer/components/labeling/MaskLayerControls.tsx
- * Inspection / Industrial Benchmark: Defect Mask / Heatmap HUD Controls.
+ * Defect Mask / Heatmap HUD Controls.
  * Features:
  *   - Solid dark steel chassis styling (zero blurs)
  *   - Strict tabular-nums for alpha opacity readout
  *   - High-contrast text styling
- *   - Industrial discrete LED status annunciator
+ *   - Discrete LED status annunciator
  */
 
 import React from 'react';

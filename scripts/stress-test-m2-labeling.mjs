@@ -551,15 +551,15 @@ console.log(`\n${CYAN}--- Section 3: Dual Digital / Optical Calibration Models -
     }
   });
 
-  // Test Machine Vision Example Sensor standard pitch (3.45 μm/px)
-  const sonyPitch = 3.45;
+  // Test machine vision sensor pixel pitch (3.45 μm/px)
+  const sensorPixelPitch = 3.45;
   const defectW_px = 24;
   const defectH_px = 15;
   const defectArea_px2 = defectW_px * defectH_px; // 360 px²
 
-  const defectW_um = defectW_px * sonyPitch; // 82.8 μm
-  const defectH_um = defectH_px * sonyPitch; // 51.75 μm
-  const defectArea_um2 = defectArea_px2 * (sonyPitch * sonyPitch); // 4284.9 px² * μm²/px²
+  const defectW_um = defectW_px * sensorPixelPitch; // 82.8 μm
+  const defectH_um = defectH_px * sensorPixelPitch; // 51.75 μm
+  const defectArea_um2 = defectArea_px2 * (sensorPixelPitch * sensorPixelPitch); // 4284.9 px² * μm²/px²
 
   if (defectW_um.toFixed(1) === '82.8' && defectH_um.toFixed(1) === '51.8' && Math.round(defectArea_um2) === 4285) {
     recordPass('Subpixel machine vision sensor pitch (3.45 μm/px) conversion', 'W=82.8μm, H=51.8μm, Area=4285μm²');

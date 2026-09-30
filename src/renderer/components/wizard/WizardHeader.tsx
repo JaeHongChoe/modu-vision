@@ -1,9 +1,9 @@
 /**
  * src/renderer/components/wizard/WizardHeader.tsx
  * 
- * Industrial Machine Vision Console Header (Inspection / Industrial Benchmark).
+ * Industrial Machine Vision Console Header.
  * Features:
- * - Industrial physical-style hardware acceleration annunciator LED (MPS / CUDA / CPU fallback)
+ * - Hardware acceleration annunciator LED (MPS / CUDA / CPU fallback)
  * - Contiguous 6-stage segmented process bar with 1px hairline dividers and tabular-nums
  * - Industrial inspection recipe dropdown (Classification, Detection, Segmentation, Anomaly)
  * - Industrial communication daemon port monitor
@@ -146,9 +146,9 @@ export const WizardHeader: React.FC = () => {
     : 'ring-2 ring-red-500/40';
 
   const hwDisplayName = isMps
-    ? 'APPLE SILICON MPS'
+    ? 'METAL GPU MPS'
     : isCuda
-    ? backendStatus.deviceName || 'NVIDIA CUDA'
+    ? backendStatus.deviceName || 'CUDA'
     : isFallback
     ? 'CPU FALLBACK'
     : 'DISCONNECTED';

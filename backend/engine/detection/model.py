@@ -39,7 +39,7 @@ def create_detection_model(
     Constructs Faster R-CNN detection model with custom classification & box regression head.
     
     CRITICAL HARDWARE INVARIANT:
-      PyTorch's Apple Silicon Metal MPS kernel for `roi_align` deadlocks when proposal counts are high (>50).
+      PyTorch's Metal MPS kernel for `roi_align` deadlocks when proposal counts are high (>50).
       This factory wraps `model.roi_heads.box_roi_pool.forward` with an `mps_safe_roi_pool` bridge that executes
       RoI extraction on CPU and transfers back to MPS in <0.08s, completely eliminating MPS deadlocks while retaining
       full MPS hardware acceleration for backbone features, RPN, and prediction heads.
@@ -79,7 +79,7 @@ def create_detection_model(
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
-    # Wrap box_roi_pool forward to bypass Apple Silicon MPS Metal kernel deadlock
+    # Wrap box_roi_pool forward to bypass MPS Metal kernel deadlock
     orig_pool = model.roi_heads.box_roi_pool.forward
 
     def mps_safe_roi_pool(x, boxes, image_shapes):

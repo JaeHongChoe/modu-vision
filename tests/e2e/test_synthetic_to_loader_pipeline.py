@@ -112,7 +112,7 @@ def test_full_segmentation_pipeline_e2e(synthetic_module, loader_module, device_
 def test_full_anomaly_detection_pipeline_e2e(synthetic_module, loader_module, device_module, temp_dir):
     """
     E2E Scenario 4: Unsupervised Normal-Only Anomaly Ingestion Pipeline.
-    Procedural generator -> Reference AD Hierarchy -> AnomalyDataset -> Device.
+    Procedural generator -> Standard Anomaly Hierarchy -> AnomalyDataset -> Device.
     Strict Invariant: Train loader batches must be 100% defect-free (label=0, mask=zeros).
     """
     dev = device_module.get_device()
