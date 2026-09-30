@@ -44,4 +44,6 @@ Files: docs/feature-completion.md and private QA evidence only outside public ro
 - [x] Independent scope/code review; fix actionable findings.
 - [x] Focused/full backend and frontend/build/package gates.
 - [x] Native real-data run/restart and complete CPU package proof.
-- [ ] Update scope documentation; commit, main fast-forward, normal push and remote HEAD readback.
+- [x] Update scope documentation; commit, main fast-forward, normal push and remote HEAD readback.
+
+Publication verification: implementation commit `0e5fc6a420eae05a7e0bb8b6ab3a6d59f23ff253` was fast-forwarded to main and its remote identity was read back after normal push. Final code gate: 1120 passed / 11 skipped. The macOS arm64 application passed 30 packaging checks and its ASAR hash matched the native-tested build. Public scope and remaining hardware/quality limitations are recorded in `docs/feature-completion.md`.
