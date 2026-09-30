@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from backend.api.websocket_telemetry import WebSocketTelemetryCallback, broadcaster
 from backend.engine.device import clear_device_cache, get_device
@@ -293,10 +293,10 @@ class TrainingJobManager:
                         rec.current_epoch = epoch + 1
                         rec.total_epochs = total_epochs
                         rec.train_loss = float(train_loss)
-                        rec.val_loss = float(val_loss)
+                        rec.val_loss = None if val_loss is None else float(val_loss)
                         rec.metrics = metrics
                         rec.loss_history.append({"epoch": epoch + 1, "train_loss": float(train_loss),
-                                                 "val_loss": float(val_loss), "lr": float(lr)})
+                                                 "val_loss": rec.val_loss, "lr": float(lr)})
 
             cb.on_step_end = _step_end_wrapper
             cb.on_epoch_end = _epoch_end_wrapper
@@ -623,10 +623,27 @@ class TrainingConfigOverrides(BaseModel):
     device: Optional[str] = None
     backbone: Optional[str] = None
     model_name: Optional[str] = None
-    anomaly_method: Optional[Literal['padim', 'patchcore']] = None
+    anomaly_method: Optional[Literal['padim', 'patchcore', 'dino_synthetic']] = None
+    anomaly_backbone: Optional[Literal['dinov3_vits16', 'dinov3_vitb16', 'dinov3_vitl16']] = None
+    patch_size: Optional[int] = Field(None, strict=True, ge=32, le=1024)
+    stride: Optional[int] = Field(None, strict=True, ge=1, le=1024)
+    patches_per_image: Optional[int] = Field(None, strict=True, ge=1, le=128)
+    inference_batch_size: Optional[int] = Field(None, strict=True, ge=1, le=128)
     pretrained: Optional[bool] = None
     pretrained_checkpoint: Optional[str] = None
     pretrained_sha256: Optional[str] = None
+
+    @model_validator(mode='after')
+    def validate_synthetic_geometry(self):
+        if self.anomaly_method == 'dino_synthetic':
+            self.anomaly_backbone = self.anomaly_backbone or 'dinov3_vits16'
+            self.patch_size = 256 if self.patch_size is None else self.patch_size
+            self.stride = 128 if self.stride is None else self.stride
+            self.patches_per_image = 8 if self.patches_per_image is None else self.patches_per_image
+            self.inference_batch_size = 32 if self.inference_batch_size is None else self.inference_batch_size
+            if self.patch_size % 16 or self.stride > self.patch_size:
+                raise ValueError('DINO synthetic patch_size must be a multiple of 16 and stride must not exceed patch_size')
+        return self
 
 
 class TrainingStartRequest(BaseModel):
@@ -667,6 +684,9 @@ def list_warm_start_parents(
     backbone: Optional[str] = None,
     model_name: Optional[str] = None,
     anomaly_method: Optional[str] = None,
+    anomaly_backbone: Optional[str] = None,
+    patch_size: Optional[int] = None,
+    stride: Optional[int] = None,
 ):
     if request is None:
         raise HTTPException(status_code=409, detail="Open a project before selecting a warm-start parent")
@@ -674,7 +694,8 @@ def list_warm_start_parents(
     models = _warm_start_scope(request, source)
     try:
         architecture = architecture_for(task, preset, {key: value for key, value in {
-            'backbone': backbone, 'model_name': model_name, 'anomaly_method': anomaly_method}.items() if value})
+            'backbone': backbone, 'model_name': model_name, 'anomaly_method': anomaly_method,
+            'anomaly_backbone': anomaly_backbone, 'patch_size': patch_size, 'stride': stride}.items() if value is not None})
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     parents = []
@@ -709,6 +730,15 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     if req.config_overrides:
         # Origin aliases are populated only by the worker after verifying its transferred input.
         req.config_overrides = {key: value for key, value in req.config_overrides.items() if key != 'pretrained_origin'}
+    synthetic_anomaly = (req.config_overrides or {}).get('anomaly_method') == 'dino_synthetic'
+    if synthetic_anomaly:
+        if req.task != 'anomaly':
+            raise HTTPException(422, 'DINO synthetic training requires the anomaly task')
+        try:
+            validated = TrainingConfigOverrides.model_validate(req.config_overrides).model_dump(exclude_none=True)
+        except ValidationError as exc:
+            raise HTTPException(422, f'Invalid DINO synthetic training options: {exc}') from exc
+        req.config_overrides = {**req.config_overrides, **validated}
     # Verify dataset path exists
     d_path = Path(req.dataset_path).resolve()
     if not d_path.is_dir():
@@ -743,6 +773,26 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     annotation_root = scoped_annotation_root(STUDIO_ANNOTATIONS_DIR)
     split_manifest_root = scoped_split_root(SPLIT_MANIFEST_DIR)
     effective_dataset_path = _resolve_task_folder(d_path, req.task)
+
+    if synthetic_anomaly:
+        from backend.engine.dataset_loaders import AnomalyDataset
+        from backend.engine.grouped_dataset_views import load_manifest_dataset, NORMAL_NAMES
+        from PIL import Image
+        try:
+            normal_train = load_manifest_dataset('anomaly', effective_dataset_path, 'train')
+            if normal_train is None:
+                normal_train = AnomalyDataset(root_dir=effective_dataset_path, split='train', image_size=None, max_dim=0)
+            if not normal_train.samples:
+                raise ValueError('DINO synthetic training requires nonempty verified normal/good training images')
+            for image, label, _ in normal_train.samples:
+                parts = image.relative_to(effective_dataset_path).parts[:-1]
+                if label != 0 or not any(part.casefold() in NORMAL_NAMES for part in parts):
+                    raise ValueError('DINO synthetic training requires explicitly labelled normal/good source images')
+                with Image.open(image) as original:
+                    if min(original.size) < req.config_overrides['patch_size']:
+                        raise ValueError('DINO synthetic source dimensions must be at least patch_size; source images are never enlarged')
+        except (OSError, ValueError) as exc:
+            raise HTTPException(422, f'Invalid normal-only training dataset: {exc}') from exc
 
     paired_images = [] if req.task == "patch_classification" else _paired_labelme_images(d_path)
     local_labelme = bool(paired_images)

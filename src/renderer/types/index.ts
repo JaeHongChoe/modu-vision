@@ -268,6 +268,8 @@ export interface FlowchartCrop {
   polygon?: number[][];
   mask?: string;
   anomaly_map?: string;
+  map_semantics?: 'patch_score' | 'pixel_score' | 'token_explanation';
+  anomaly_values?: { dtype: string; encoding: string; shape: number[]; data: string };
   source_transform?: number[][];
   defect_area_px?: number;
   blob_count?: number;

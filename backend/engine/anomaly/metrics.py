@@ -18,6 +18,7 @@ def compute_anomaly_metrics(
     pixel_heatmaps: Optional[List[np.ndarray]] = None,
     pixel_masks: Optional[List[np.ndarray]] = None,
     fixed_threshold: Optional[float] = None,
+    threshold_comparison: str = 'ge',
 ) -> Dict[str, Any]:
     """
     Computes image-level and pixel-level anomaly detection metrics.
@@ -45,7 +46,9 @@ def compute_anomaly_metrics(
         optimal_th = float(np.mean(scores_arr) + 3.0 * np.std(scores_arr)) if len(scores_arr) > 0 else 0.5
 
     chosen_th = fixed_threshold if fixed_threshold is not None else optimal_th
-    preds = (scores_arr >= chosen_th).astype(np.int64)
+    if threshold_comparison not in ('ge', 'gt'):
+        raise ValueError('Threshold comparison must be ge or gt')
+    preds = (scores_arr > chosen_th if threshold_comparison == 'gt' else scores_arr >= chosen_th).astype(np.int64)
 
     cm = confusion_matrix(labels_arr, preds, labels=[0, 1]).tolist() if len(labels_arr) > 0 else [[0, 0], [0, 0]]
     f1 = float(f1_score(labels_arr, preds, zero_division=0)) if len(labels_arr) > 0 else 0.0

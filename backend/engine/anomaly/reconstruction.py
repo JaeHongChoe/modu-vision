@@ -70,6 +70,24 @@ def reconstruct_anomaly_detector(state: Mapping[str, Any], metadata: Mapping[str
         raise ValueError('Saved anomaly state must be a dictionary')
     metadata = metadata or {}
     kind = str(metadata.get('detector_type') or '').lower().strip()
+    if kind == 'dino_synthetic' or state.get('detector_type') == 'dino_synthetic':
+        from backend.engine.anomaly.dino_synthetic import DinoSyntheticDetector
+        config = state.get('config', {})
+        backbone = state.get('backbone_name', metadata.get('anomaly_backbone', 'dinov3_vits16'))
+        for key in ('anomaly_backbone', 'feature_backbone'):
+            if metadata.get(key) and metadata[key] != backbone:
+                raise ValueError('Saved DINO anomaly backbone conflicts with metadata')
+        for key in ('patch_size', 'stride'):
+            if metadata.get(key) is not None and metadata[key] != config.get(key):
+                raise ValueError('Saved DINO anomaly geometry conflicts with metadata')
+        detector = DinoSyntheticDetector(backbone_name=backbone, device=device, pretrained=False,
+            **{key: value for key, value in config.items() if key in (
+                'patch_size', 'stride', 'epochs', 'batch_size', 'inference_batch_size',
+                'learning_rate', 'patches_per_image', 'seed')})
+        detector.load_state_dict(dict(state))
+        detector.eval()
+        detector.reconstruction_metadata = {'feature_source': 'saved_checkpoint'}
+        return detector
     if kind and kind not in ('padim', 'patchcore'):
         raise ValueError(f'Unsupported saved anomaly detector type: {kind}')
     if not kind:

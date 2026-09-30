@@ -438,10 +438,30 @@ class UnifiedAutoMLTrainer:
                     val_ds = AnomalyDataset(root_dir=self.dataset_path, split="val", image_size=optimal_size)
                 classes = ["good", "anomaly"]
                 method = self.overrides.get('anomaly_method', 'patchcore' if 'patchcore' in self.config.backbone_anomaly else 'padim')
-                if method not in ('padim', 'patchcore'):
+                if method not in ('padim', 'patchcore', 'dino_synthetic'):
                     raise ValueError('Unsupported anomaly method')
                 self._anomaly_method = method
-                if method == 'patchcore':
+                if method == 'dino_synthetic':
+                    from backend.engine.anomaly.dino_synthetic import DinoSyntheticDetector
+                    model = DinoSyntheticDetector(
+                        backbone_name=self.overrides.get('anomaly_backbone', 'dinov3_vits16'),
+                        device=self.device, pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                        pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                        pretrained_sha256=self.overrides.get('pretrained_sha256'),
+                        patch_size=int(self.overrides.get('patch_size', 256)),
+                        stride=int(self.overrides.get('stride', 128)), epochs=int(epochs),
+                        batch_size=batch_size, learning_rate=learning_rate,
+                        patches_per_image=int(self.overrides.get('patches_per_image', 8)),
+                        inference_batch_size=int(self.overrides.get('inference_batch_size', 32)),
+                    )
+                    # The fitter reads native sources; real validation must also retain
+                    # their scale rather than applying the generic anomaly resize.
+                    train_ds.transform = None
+                    train_ds.image_size = None
+                    train_ds.max_dim = 0
+                    val_ds.image_size = None
+                    val_ds.max_dim = 0
+                elif method == 'patchcore':
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device,
                         pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)))
                 else:
@@ -469,11 +489,23 @@ class UnifiedAutoMLTrainer:
                     return {"status": "aborted", "epoch": 0}
 
                 try:
-                    model.fit(train_loader, cancellation_requested=self._abort_flag.is_set)
+                    if self._anomaly_method == 'dino_synthetic':
+                        self._last_anomaly_epoch = 0
+                        def anomaly_progress(epoch, total_epochs, train_loss, val_loss, lr, metrics):
+                            self._last_anomaly_epoch = epoch
+                            self.callback.on_epoch_end(epoch - 1, total_epochs, train_loss, val_loss, lr, metrics)
+                        import copy
+                        calibration_ds = copy.copy(val_ds)
+                        calibration_ds.samples = [sample for sample in val_ds.samples if int(sample[1]) == 0]
+                        model.fit(train_loader, cancellation_requested=self._abort_flag.is_set,
+                            progress_callback=anomaly_progress, calibration_dataset=calibration_ds if calibration_ds.samples else None)
+                    else:
+                        model.fit(train_loader, cancellation_requested=self._abort_flag.is_set)
                 except AnomalyFitCancelled:
                     clear_device_cache(self.device)
-                    self.callback.on_training_aborted(0, "Training aborted by user request")
-                    return {"status": "aborted", "epoch": 0}
+                    stopped_epoch = getattr(self, '_last_anomaly_epoch', 0)
+                    self.callback.on_training_aborted(stopped_epoch, "Training aborted by user request")
+                    return {"status": "aborted", "epoch": stopped_epoch}
 
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)
@@ -488,21 +520,26 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_training_aborted(0, "Training aborted by user request")
                     return {"status": "aborted", "epoch": 0}
                 self._anomaly_validation_metrics = anom_metrics
-                auroc = float(anom_metrics.get("image_auroc", 1.0))
-                val_metric = round(1.0 - auroc, 4)
-                self.callback.on_epoch_end(
-                    epoch=0,
-                    total_epochs=1,
-                    train_loss=0.0,
-                    val_loss=val_metric,
-                    lr=0.0,
-                    metrics=anom_metrics,
-                )
+                auroc = anom_metrics.get("image_auroc")
+                val_metric = round(1.0 - float(auroc), 4) if auroc is not None else 0.0
+                if self._anomaly_method == 'dino_synthetic' and auroc is None:
+                    val_metric = float(model.training_summary['epoch_history'][-1]['train_loss'])
+                final_epoch = getattr(self, '_last_anomaly_epoch', 0)
+                if self._anomaly_method != 'dino_synthetic':
+                    self.callback.on_epoch_end(
+                        epoch=0,
+                        total_epochs=1,
+                        train_loss=0.0,
+                        val_loss=val_metric,
+                        lr=0.0,
+                        metrics=anom_metrics,
+                    )
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)
                     self.callback.on_training_aborted(0, "Training aborted by user request")
                     return {"status": "aborted", "epoch": 0}
-                self._save_checkpoint(0, model, val_metric, classes, optimal_size, time.time() - start_time)
+                saved_size = (model.patch_size, model.patch_size) if self._anomaly_method == 'dino_synthetic' else optimal_size
+                self._save_checkpoint(final_epoch, model, val_metric, classes, saved_size, time.time() - start_time)
                 if self._abort_flag.is_set():
                     clear_device_cache(self.device)
                     self.callback.on_training_aborted(0, "Training aborted by user request")
@@ -700,6 +737,18 @@ class UnifiedAutoMLTrainer:
             meta["detector_type"] = getattr(self, '_anomaly_method', 'patchcore' if 'patchcore' in self.config.backbone_anomaly else 'padim')
             meta['feature_backbone'] = model.backbone_name
             meta["validation"] = getattr(self,"_anomaly_validation_metrics",{})
+            if meta['detector_type'] == 'dino_synthetic':
+                meta.update({
+                    'anomaly_backbone': model.backbone_name,
+                    'patch_size': model.patch_size, 'stride': model.stride,
+                    'head_version': 1, 'map_semantics': 'patch_score',
+                    'inference_batch_size': model.inference_batch_size,
+                    'anomaly_threshold': model.threshold,
+                    'calibration': model.calibration,
+                    'training_summary': model.training_summary,
+                    'best_metric_basis': 'real_validation_auroc_loss' if meta['validation'].get('image_auroc') is not None else 'synthetic_training_loss',
+                    'quality_approved': False,
+                })
 
         if self.warm_start is not None:
             meta["warm_start"] = self.warm_start.lineage()
@@ -928,6 +977,9 @@ def infer(
 
     elif task_clean in ("anomaly", "anomaly_detection"):
         model = reconstruct_anomaly_detector(state_dict, meta, dev)
+        patch_scores = getattr(model, 'model_metadata', {}).get('map_semantics') == 'patch_score'
+        if patch_scores:
+            img_t = torch.from_numpy(np.ascontiguousarray(img_np.transpose(2, 0, 1))).float().unsqueeze(0) / 255.0
 
         with torch.no_grad():
             anom_map, score = model.predict_anomaly_map(img_t[0], out_size=(orig_h, orig_w))
@@ -938,16 +990,29 @@ def infer(
         cv2.addWeighted(heat_color, 0.45, overlay, 0.55, 0, overlay)
 
         effective_threshold = threshold if threshold is not None else getattr(model, "threshold", 0.5)
-        is_anomaly = score >= effective_threshold
+        is_anomaly = score > effective_threshold if patch_scores else score >= effective_threshold
         badge_text = f"{'NG (Anomaly)' if is_anomaly else 'OK (Pass)'} Score: {score:.2f}"
         badge_color = (230, 40, 40) if is_anomaly else (40, 210, 40)
         cv2.rectangle(overlay, (10, 10), (min(orig_w - 10, 280), 45), (30, 30, 30), -1)
         cv2.putText(overlay, badge_text, (16, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.65, badge_color, 2)
 
         latency = (time.time() - start_time) * 1000.0
+        predictions = {"is_anomaly": is_anomaly, "anomaly_score": score, "threshold": effective_threshold,
+                       "map_semantics": 'patch_score' if patch_scores else 'pixel_score'}
+        if patch_scores:
+            import base64
+            import zlib
+            values = np.asarray(anom_map, dtype='<f4', order='C')
+            predictions['anomaly_values'] = {
+                'dtype': 'float32', 'encoding': 'zlib_base64', 'shape': list(values.shape),
+                'data': base64.b64encode(zlib.compress(values.tobytes())).decode('ascii'),
+            }
+        else:
+            predictions.update({"anomaly_map": anom_map.tolist(),
+                                "mask": (anom_map >= effective_threshold).astype(np.uint8).tolist()})
         return InferenceResult(
             task="anomaly",
-            predictions={"is_anomaly": is_anomaly, "anomaly_score": score, "threshold": effective_threshold, "anomaly_map": anom_map.tolist(), "mask": (anom_map >= effective_threshold).astype(np.uint8).tolist()},
+            predictions=predictions,
             confidence_score=score,
             visual_overlay=overlay,
             latency_ms=round(latency, 2),

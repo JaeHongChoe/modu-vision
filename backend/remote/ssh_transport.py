@@ -53,6 +53,7 @@ if dependencies['timm']:
     supported = tuple(int(p) for p in re.findall(r'\d+', timm.__version__)[:3]) >= (1, 0, 24)
     model_dependencies['dinov3_vits16'] = supported and bool(timm.is_model('vit_small_patch16_dinov3.lvd1689m'))
     model_dependencies['dinov3_vitb16'] = supported and bool(timm.is_model('vit_base_patch16_dinov3.lvd1689m'))
+    model_dependencies['dinov3_vitl16'] = supported and bool(timm.is_model('vit_large_patch16_dinov3.lvd1689m'))
 if dependencies['ultralytics']:
     from importlib.metadata import version
     parts = tuple(int(p) for p in re.findall(r'\d+', version('ultralytics'))[:3])
@@ -141,6 +142,8 @@ def require_training_runtime(readiness, task, preset, overrides=None, *, warm_st
         model = options.get('model_name', config.backbone_segmentation)
     elif task == 'detection':
         model = options.get('backbone', config.backbone_detection)
+    elif task in ('anomaly', 'anomaly_detection') and options.get('anomaly_method') == 'dino_synthetic':
+        model = options.get('anomaly_backbone', 'dinov3_vits16')
     else:
         model = 'resnet18'
     checks = readiness.get('checks', {})

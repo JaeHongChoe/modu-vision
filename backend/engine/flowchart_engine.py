@@ -154,6 +154,7 @@ class CropInspectionResult(BaseModel):
     polygon: Optional[List[List[float]]] = None
     anomaly_map: Optional[str] = None
     anomaly_values: Optional[Dict[str, Any]] = None
+    map_semantics: Optional[str] = None
     mask: Optional[str] = None
     source_transform: Optional[List[List[float]]] = None
     _defect_mask: Optional[np.ndarray] = PrivateAttr(default=None)
@@ -882,7 +883,10 @@ class FlowchartEngine:
                     state = ckpt.get("model_state_dict", ckpt)
                     detector = reconstruct_anomaly_detector(state, ckpt, self.device)
                     self._remember_input_size(cache_key, ckpt)
-                    is_trained = detector.coreset is not None if isinstance(detector, PatchCoreDetector) else (detector.mean is not None and detector.cov_inv is not None)
+                    if getattr(detector, 'model_metadata', {}).get('detector_type') == 'dino_synthetic':
+                        is_trained = bool(detector.fitted)
+                    else:
+                        is_trained = detector.coreset is not None if isinstance(detector, PatchCoreDetector) else (detector.mean is not None and detector.cov_inv is not None)
                     if not is_trained:
                         raise ValueError("checkpoint has no fitted anomaly statistics")
                     logger.info("Loaded PaDiM anomaly checkpoint from %s", ckpt_path)
@@ -1096,9 +1100,9 @@ class FlowchartEngine:
         checkpoint = self._resolve_checkpoint(inspect_node.data.model_job_id, "patch_classification")
         if checkpoint is None:
             raise FlowchartInspectionConfigurationError("Patch classification requires a completed checkpoint.")
-        max_patches = inspect_node.data.params.get("max_patches", 256)
-        if type(max_patches) is not int or not 1 <= max_patches <= 512:
-            raise FlowchartInspectionConfigurationError("Patch max_patches must be an integer from 1 to 512.")
+        max_patches = inspect_node.data.params.get("max_patches")
+        if max_patches is not None and (type(max_patches) is not int or not 1 <= max_patches <= 100000):
+            raise FlowchartInspectionConfigurationError("Patch max_patches must be an integer from 1 to 100000.")
         threshold = inspect_node.data.threshold if inspect_node.data.threshold is not None else 0.5
         results: List[CropInspectionResult] = []
         try:
@@ -1108,7 +1112,7 @@ class FlowchartEngine:
                 )
                 prediction = predict_patch_classification(
                     checkpoint, region, threshold=threshold, device=self.device,
-                    source_id=roi["id"], max_patches=max_patches - len(results),
+                    source_id=roi["id"], max_patches=None if max_patches is None else max_patches - len(results),
                 )
                 for index, patch in enumerate(prediction["patches"]):
                     px1, py1, px2, py2 = patch["box"]
@@ -1230,6 +1234,9 @@ class FlowchartEngine:
 
         model, is_trained = self._get_inspection_model(task=task, job_id=job_id)
         task_clean = task.lower().strip()
+        patch_scores = task_clean == 'anomaly' and getattr(model, 'model_metadata', {}).get('map_semantics') == 'patch_score'
+        if patch_scores and inspect_node and inspect_node.data.params.get('anomaly_mode') in ('segmentation', 'region'):
+            raise FlowchartInspectionConfigurationError('Patch scores are explanation maps; use a trained segmentation model for pixel masks.')
         key = self._cache_key(task_clean, job_id, "fast", self._resolve_checkpoint(job_id, task_clean))
         input_size = self._model_input_sizes.get(key, (224, 224))
         class_names = self._model_classes.get(key, [])
@@ -1254,7 +1261,7 @@ class FlowchartEngine:
                         roi["bbox"],
                         padding_px=roi.get("crop_padding", padding),
                         min_size=16,
-                        target_size=input_size,
+                        target_size=None if patch_scores else input_size,
                     )
 
                 # 2. Extract unresized crop for high-fidelity thumbnail downsampled to max 160px (EC-02)
@@ -1278,8 +1285,10 @@ class FlowchartEngine:
                 crop_b64 = f"data:image/png;base64,{base64.b64encode(buf.tobytes()).decode('utf-8')}"
 
                 crop_tensor = None if tiled_full_image else (
-                    torch.from_numpy(resized_crop).permute(2, 0, 1).float().unsqueeze(0).to(self.device) / 255.0
+                    torch.from_numpy(resized_crop).permute(2, 0, 1).float().unsqueeze(0) / 255.0
                 )
+                if crop_tensor is not None and not patch_scores:
+                    crop_tensor = crop_tensor.to(self.device)
 
                 defect_score = 0.0
                 flaw_type = "설정 기준 이내"
@@ -1294,9 +1303,10 @@ class FlowchartEngine:
                         anomaly_map, score = model.predict_anomaly_map(crop_tensor)
                         defect_score = float(score)
                         probability_map = np.asarray(anomaly_map.detach().cpu() if isinstance(anomaly_map, torch.Tensor) else anomaly_map).squeeze()
-                        defect_mask = (probability_map > threshold).astype(np.uint8)
-                        defect_mask = cv2.resize(defect_mask, (raw_crop.shape[1], raw_crop.shape[0]), interpolation=cv2.INTER_NEAREST)
-                        defect_area_px = int(defect_mask.sum())
+                        if not patch_scores:
+                            defect_mask = (probability_map > threshold).astype(np.uint8)
+                            defect_mask = cv2.resize(defect_mask, (raw_crop.shape[1], raw_crop.shape[0]), interpolation=cv2.INTER_NEAREST)
+                            defect_area_px = int(defect_mask.sum())
                     else:
                         # Baseline ResNet feature extractor for untrained state
                         extractor = model.feature_extractor if hasattr(model, "feature_extractor") else model
@@ -1341,7 +1351,7 @@ class FlowchartEngine:
                 if task_clean == "segmentation" or (task_clean == "anomaly" and inspect_node.data.params.get("anomaly_mode") in ("region", "segmentation")):
                     verdict: Literal["OK", "NG"] = "NG" if defect_area_px >= min_defect_area else "OK"
                 else:
-                    verdict = "NG" if defect_score >= threshold else "OK"
+                    verdict = "NG" if (defect_score > threshold if patch_scores else defect_score >= threshold) else "OK"
                 if verdict == "OK":
                     flaw_type = "설정 기준 이내"
 
@@ -1349,7 +1359,7 @@ class FlowchartEngine:
                         roi_id=roi["id"],
                         label=roi["label"],
                         bbox=bounded_bbox,
-                        defect_score=round(defect_score, 4),
+                        defect_score=defect_score if patch_scores else round(defect_score, 4),
                         verdict=verdict,
                         crop_thumbnail=crop_b64,
                         flaw_type=flaw_type,
@@ -1367,11 +1377,20 @@ class FlowchartEngine:
                 if defect_mask is not None:
                     crop_result.mask = image_uri(defect_mask, mask=True)
                 if task_clean == "anomaly" and is_trained:
+                    crop_result.map_semantics = 'patch_score' if patch_scores else 'pixel_score'
+                    if patch_scores:
+                        crop_result.defect_area_px = None
                     values = probability_map.astype(float)
                     normalized = np.clip(values*255,0,255).astype(np.uint8)
                     crop_result.anomaly_map = image_uri(normalized)
                     encoded_values = probability_map.astype('<f4')
-                    crop_result.anomaly_values = {'dtype':'float32','encoding':'base64','shape':list(encoded_values.shape),'data':base64.b64encode(encoded_values.tobytes()).decode('ascii')}
+                    if patch_scores:
+                        import zlib
+                        data = zlib.compress(encoded_values.tobytes())
+                    else:
+                        data = encoded_values.tobytes()
+                    crop_result.anomaly_values = {'dtype':'float32','encoding':'zlib_base64' if patch_scores else 'base64',
+                        'shape':list(encoded_values.shape),'data':base64.b64encode(data).decode('ascii')}
                 crop_result._defect_mask = defect_mask
                 crop_results.append(crop_result)
 
@@ -1434,7 +1453,11 @@ class FlowchartEngine:
             rejection_reason = no_inspection_reason or "No inspection region was found; the image was not inspected. Review required."
         elif rule == "score_gt_threshold":
             max_score = max((c.defect_score for c in crops), default=0.0)
-            is_ng = max_score >= threshold
+            is_ng = any(
+                c.defect_score > threshold if c.map_semantics == 'patch_score'
+                else c.defect_score >= threshold
+                for c in crops
+            )
             final_verdict = "NG" if is_ng else "OK"
             is_ok = not is_ng
             rejection_reason = (

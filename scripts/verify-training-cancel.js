@@ -71,6 +71,20 @@ test('polling restores complete remote epoch curves without duplicate points', a
   assert.equal(store.getState().lossHistory[1].trainLoss, .6);
 });
 
+test('synthetic telemetry and polling preserve absent validation loss without inventing zero', async () => {
+  store.setState({jobId: 'synthetic', jobComputeProfileId: null, isCurrentData: true, valLoss: .7, lossHistory: []});
+  store.getState().updateFromTelemetry('epoch_progress', {job_id: 'synthetic', epoch: 1, total_epochs: 2,
+    train_loss: .4, val_loss: null, metrics: {val_image_auroc: null}});
+  assert.equal(store.getState().valLoss, null);
+  assert.deepEqual(store.getState().lossHistory, [{epoch: 1, trainLoss: .4, valLoss: null, lr: undefined}]);
+  mockApi.training.getStatus = async () => ({job_id: 'synthetic', status: 'running', current_val_loss: null,
+    loss_history: [{epoch: 1, train_loss: .4, val_loss: null}, {epoch: 2, train_loss: .3, val_loss: null}]});
+  await store.getState().refreshCurrentJob();
+  assert.equal(store.getState().lossHistory.length, 2);
+  assert.equal(store.getState().lossHistory[1].valLoss, null);
+  assert.equal(store.getState().valLoss, null);
+});
+
 test('failed polled jobs show the concrete worker error', async () => {
   store.setState({ jobId: 'failed-remote', jobComputeProfileId: 'gpu', isCurrentData: true });
   mockApi.training.getStatus = async () => ({ job_id: 'failed-remote', compute_profile_id: 'gpu', status: 'failed',

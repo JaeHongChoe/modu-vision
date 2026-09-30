@@ -65,9 +65,16 @@ def load_checkpoint_and_reconstruct_model(
     if meta_file.is_file():
         try:
             with open(meta_file, "r", encoding="utf-8") as f:
-                meta = {**meta, **json.load(f)}
-        except Exception:
+                sidecar = json.load(f)
+        except (OSError, ValueError):
             pass
+        else:
+            def canonical_task(value):
+                clean = str(value).strip().lower()
+                return 'anomaly' if clean == 'anomaly_detection' else clean
+            if meta.get('task') and sidecar.get('task') and canonical_task(meta['task']) != canonical_task(sidecar['task']):
+                raise ValueError('Checkpoint task differs from model metadata task')
+            meta = {**meta, **sidecar}
 
     task = meta.get("task", "classification").lower().strip()
     classes = meta.get("classes", ["OK", "Defect"])
@@ -102,18 +109,15 @@ def load_checkpoint_and_reconstruct_model(
 
     elif task in ("anomaly", "anomaly_detection"):
         anomaly_obj = reconstruct_anomaly_detector(state_dict, meta, 'cpu')
-        model = anomaly_obj.feature_extractor
+        if meta.get('detector_type') == 'dino_synthetic':
+            from backend.engine.anomaly.dino_export import DinoSyntheticPatchExport
+            model = DinoSyntheticPatchExport(anomaly_obj)
+        else:
+            model = anomaly_obj.feature_extractor
         model.eval()
 
     else:
-        # Fallback to classification
-        model = create_classification_model("resnet18", num_classes=2, pretrained=False)
-        if isinstance(state_dict, dict):
-            try:
-                model.load_state_dict(state_dict)
-            except Exception:
-                pass
-        model.eval()
+        raise ValueError(f'Unsupported checkpoint task: {task}')
 
     return model, meta, anomaly_obj
 
@@ -168,22 +172,23 @@ class DetectionExportAdapter(nn.Module):
 def run_smoke_test_validation(
     model_path: Path,
     export_format: str,
-    resolution: int,
+    resolution: int | tuple[int, int],
     task: str = "classification",
 ) -> None:
     """Runs a quick smoke-test inference pass to confirm exported artifact is operational."""
+    width, height = resolution if isinstance(resolution, (tuple, list)) else (resolution, resolution)
     if export_format == "onnx":
         import onnxruntime as ort
 
         sess = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
         inp_name = sess.get_inputs()[0].name
-        dummy_in_1 = np.zeros((1, 3, resolution, resolution), dtype=np.float32)
+        dummy_in_1 = np.zeros((1, 3, height, width), dtype=np.float32)
         sess.run(None, {inp_name: dummy_in_1})
 
         out_names = [o.name for o in sess.get_outputs()]
         is_detection = (task == "detection") or ("boxes" in out_names and "scores" in out_names)
         if not is_detection:
-            dummy_in_2 = np.zeros((2, 3, resolution, resolution), dtype=np.float32)
+            dummy_in_2 = np.zeros((2, 3, height, width), dtype=np.float32)
             sess.run(None, {inp_name: dummy_in_2})
 
         logger.info("ONNX smoke test passed for %s (dynamic batch verified)", model_path.name)
@@ -194,12 +199,12 @@ def run_smoke_test_validation(
             pass
         ts_model = torch.jit.load(str(model_path), map_location="cpu")
         ts_model.eval()
-        dummy_in_1 = torch.zeros((1, 3, resolution, resolution), dtype=torch.float32)
+        dummy_in_1 = torch.zeros((1, 3, height, width), dtype=torch.float32)
         with torch.no_grad():
             out = ts_model(dummy_in_1)
             is_detection = (task == "detection") or (isinstance(out, (tuple, list)) and len(out) == 3)
             if not is_detection:
-                dummy_in_2 = torch.zeros((2, 3, resolution, resolution), dtype=torch.float32)
+                dummy_in_2 = torch.zeros((2, 3, height, width), dtype=torch.float32)
                 try:
                     ts_model(dummy_in_2)
                 except Exception:
@@ -307,6 +312,9 @@ class StandaloneInspector:
         self.classes = self.cfg.get("classes", ["OK", "Defect"])
         self.resolution = tuple(self.cfg.get("image_size", [256, 256]))
         self.threshold = float(self.cfg.get("optimal_threshold", 0.50))
+        self.decision_threshold = self.threshold
+        if self.cfg.get("detector_type") == "dino_synthetic" and self.cfg.get("threshold_roundoff_ulps") == 1:
+            self.decision_threshold = float(np.nextafter(np.float32(self.threshold), np.float32(np.inf)))
         self.segmentation_mode = self.cfg.get("segmentation_mode", "resize_single")
         self.min_defect_area_px = int(self.cfg.get("min_defect_area_px", 8))
         self.max_segmentation_tiles = int(self.cfg.get("max_segmentation_tiles", 1024))
@@ -330,6 +338,94 @@ class StandaloneInspector:
 
             self.torch_model = torch.jit.load(self.model_path, map_location="cpu")
             self.torch_model.eval()
+
+    def _inspect_native_patches(self, image_input, started_at) -> dict:
+        from native_patches import native_grid, bounded_batch_size, iter_patch_batches, validate_image_size
+        if not 0.0 <= self.threshold <= 1.0:
+            raise ValueError("Patch threshold must be between 0 and 1")
+        if isinstance(image_input, (str, Path)):
+            from PIL import Image
+            with Image.open(image_input) as source:
+                validate_image_size(*source.size, self.cfg.get("max_patch_image_pixels", 100000000))
+            bgr = cv2.imread(str(image_input))
+            if bgr is None:
+                raise FileNotFoundError(f"Could not read image: {image_input}")
+        elif isinstance(image_input, np.ndarray):
+            bgr = image_input
+        else:
+            raise ValueError(f"Unsupported image input type: {type(image_input)}")
+        if bgr.ndim >= 2:
+            validate_image_size(int(bgr.shape[1]), int(bgr.shape[0]), self.cfg.get("max_patch_image_pixels", 100000000))
+        if bgr.ndim == 2:
+            bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+        elif bgr.ndim == 3 and bgr.shape[2] == 4:
+            bgr = cv2.cvtColor(bgr, cv2.COLOR_BGRA2BGR)
+        if bgr.ndim != 3 or bgr.shape[2] != 3:
+            raise ValueError("Patch input must have one, three or four image channels")
+        height, width = bgr.shape[:2]
+        normal_class = self.cfg.get("normal_class")
+        if normal_class not in self.classes or len(self.classes) < 2:
+            raise ValueError("Patch configuration needs its saved normal_class and classes")
+        patch_size = self.cfg.get("patch_size")
+        stride = self.cfg.get("stride")
+        boxes = native_grid(width, height, patch_size, stride,
+            max_patches=self.cfg.get("max_patches"),
+            max_image_pixels=self.cfg.get("max_patch_image_pixels", 100000000),
+            max_patch_count=self.cfg.get("max_patch_count", 1000000))
+        batch_size = bounded_batch_size(self.resolution, self.cfg.get("patch_batch_size", 32),
+            self.cfg.get("patch_batch_memory_bytes", 268435456))
+        normal_index = self.classes.index(normal_class)
+        mean = np.asarray(self.mean, dtype=np.float32).reshape(1, 1, 3)
+        std = np.asarray(self.std, dtype=np.float32).reshape(1, 1, 3)
+        patches = []
+        for group in iter_patch_batches(boxes, batch_size):
+            tensors = []
+            for x1, y1, x2, y2 in group:
+                source_crop = bgr[y1:y2, x1:x2]
+                if self.cfg.get("detector_type") == "dino_synthetic":
+                    resized = cv2.copyMakeBorder(source_crop, 0, patch_size-source_crop.shape[0],
+                        0, patch_size-source_crop.shape[1], cv2.BORDER_REPLICATE)
+                else:
+                    resized = cv2.resize(source_crop, self.resolution, interpolation=cv2.INTER_LINEAR)
+                crop = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+                tensors.append(((crop - mean) / std).transpose(2, 0, 1))
+            batch = np.stack(tensors)
+            if self.model_format == "onnx":
+                logits = self.session.run(None, {self.input_name: batch})[0]
+            else:
+                import torch
+                with torch.inference_mode():
+                    logits = self.torch_model(torch.from_numpy(batch)).cpu().numpy()
+            if logits.ndim != 2 or logits.shape != (len(group), len(self.classes)) or not np.isfinite(logits).all():
+                raise ValueError("Patch model returned invalid class logits")
+            binary_probability = self.cfg.get("output_semantics") == "binary_probability"
+            if binary_probability:
+                if self.classes != ["good", "anomaly"] or np.any(logits < 0) or np.any(logits > 1):
+                    raise ValueError("Synthetic anomaly model returned invalid probabilities")
+                probabilities = logits
+            else:
+                exponents = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+                probabilities = exponents / exponents.sum(axis=1, keepdims=True)
+            for box, scores in zip(group, probabilities):
+                predicted = int(scores.argmax())
+                score = float(scores[1]) if binary_probability else float(1.0 - scores[normal_index])
+                patches.append({"box": list(box), "predicted_class": self.classes[predicted],
+                    "confidence": float(scores[predicted]), "defect_score": score,
+                    "class_scores": {name: float(scores[index]) for index, name in enumerate(self.classes)},
+                    "decision": "FAIL" if (score > self.decision_threshold if self.cfg.get("threshold_comparison") == ">" else score >= self.threshold) else "PASS"})
+        strongest = max(patches, key=lambda row: row["defect_score"])
+        score = strongest["defect_score"]
+        verdict = "NG" if (score > self.decision_threshold if self.cfg.get("threshold_comparison") == ">" else score >= self.threshold) else "OK"
+        return {"status": "success", "task": self.task, "verdict": verdict,
+            "map_semantics": self.cfg.get("map_semantics", "patch_score"),
+            "decision": "FAIL" if verdict == "NG" else "PASS", "defect_score": score,
+            "max_defect_score": score, "confidence": score, "confidence_score": score,
+            "predicted_class": strongest["predicted_class"] if verdict == "NG" else normal_class,
+            "threshold": self.threshold, "optimal_threshold": self.threshold,
+            "decision_threshold": self.decision_threshold, "threshold_roundoff_ulps": self.cfg.get("threshold_roundoff_ulps", 0),
+            "image_dimensions": [width, height], "patch_size": patch_size, "stride": stride,
+            "patches_processed": len(patches), "patches": patches,
+            "latency_ms": round((time.perf_counter() - started_at) * 1000.0, 2)}
 
     def _inspect_tiled_segmentation(self, image_input, started_at) -> dict:
         if isinstance(image_input, (str, Path)):
@@ -420,6 +516,8 @@ class StandaloneInspector:
 
     def inspect(self, image_input) -> dict:
         t0 = time.perf_counter()
+        if self.task == "patch_classification" or (self.task in ("anomaly", "anomaly_detection") and self.cfg.get("detector_type") == "dino_synthetic"):
+            return self._inspect_native_patches(image_input, t0)
         if self.task == "segmentation" and self.segmentation_mode == "tiled_full_image":
             return self._inspect_tiled_segmentation(image_input, t0)
         batch, orig_w, orig_h = preprocess_image(
@@ -640,7 +738,8 @@ def export_runtime_package(
 
     model, meta, anomaly_obj = load_checkpoint_and_reconstruct_model(ckpt_path)
     task = meta.get("task", "classification").lower().strip()
-    if task in ("anomaly", "anomaly_detection"):
+    dino_anomaly = task in ("anomaly", "anomaly_detection") and meta.get('detector_type') == 'dino_synthetic'
+    if task in ("anomaly", "anomaly_detection") and not dino_anomaly:
         raise ValueError(
             "Standalone anomaly export is unavailable: the generated infer.py does not apply "
             "the trained PaDiM/PatchCore statistics or memory bank. Use the model in the app until "
@@ -649,6 +748,19 @@ def export_runtime_package(
     classes = meta.get("classes", ["OK", "Defect"])
     res = int(resolution or meta.get("image_size", [256, 256])[0])
     img_size = [res, res]
+    if task == "patch_classification" or dino_anomaly:
+        img_size = meta.get("image_size")
+        if not isinstance(img_size, list) or len(img_size) != 2 or any(type(value) is not int or value < 1 for value in img_size):
+            raise ValueError("Patch export needs its saved model input dimensions")
+        from backend.engine.native_patches import bounded_batch_size
+        bounded_batch_size(img_size)
+        if dino_anomaly:
+            from backend.engine.native_patches import validate_geometry
+            validate_geometry(meta.get('patch_size'), meta.get('stride'))
+            if img_size != [meta['patch_size'], meta['patch_size']]:
+                raise ValueError('Synthetic anomaly model input must match its saved patch_size')
+            if classes != ['good', 'anomaly']:
+                raise ValueError('Synthetic anomaly export requires saved good/anomaly classes')
 
     base_dir = (output_base_dir or EXPORTS_DIR).resolve()
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -675,7 +787,7 @@ def export_runtime_package(
     model_filename = "model.onnx" if format_clean == "onnx" else "model.pt"
     model_output_path = pkg_dir / model_filename
 
-    dummy_tensor = torch.randn(1, 3, res, res, dtype=torch.float32)
+    dummy_tensor = torch.randn(1, 3, img_size[1], img_size[0], dtype=torch.float32)
 
     if task == "detection":
         if hasattr(model, "roi_heads") and hasattr(model.roi_heads, "box_roi_pool"):
@@ -744,6 +856,10 @@ def export_runtime_package(
 
     # 4. Resolve Zero-Escape Calibrated Threshold
     optimal_th = resolve_calibrated_threshold(ckpt_path, meta)
+    if dino_anomaly:
+        optimal_th = float(meta.get('anomaly_threshold', getattr(anomaly_obj, 'threshold', .5)))
+        if not 0 <= optimal_th <= 1:
+            raise ValueError('Invalid saved DINO anomaly threshold')
     eval_file = ckpt_path.parent / "eval_results.json"
     calibration_applied = False
     if eval_file.is_file():
@@ -774,6 +890,26 @@ def export_runtime_package(
                 "input_normalization", "foreground_label_offset"):
         if key in meta:
             config_data[key] = meta[key]
+    if task == "patch_classification" or dino_anomaly:
+        from backend.engine.native_patches import bounded_batch_size, validate_geometry
+        validate_geometry(meta.get('patch_size'), meta.get('stride'))
+        if dino_anomaly:
+            meta = {**meta, 'normal_class': 'good'}
+        if meta.get('normal_class') not in classes:
+            raise ValueError('Patch export needs its saved normal_class')
+        config_data.update({key: meta[key] for key in ('normal_class', 'patch_size', 'stride')})
+        config_data.update({'max_patches': None, 'patch_batch_size': bounded_batch_size(img_size),
+            'max_patch_image_pixels': 100000000, 'max_patch_count': 1000000,
+            'patch_batch_memory_bytes': 268435456})
+        (pkg_dir / 'native_patches.py').write_text(
+            Path(__file__).with_name('native_patches.py').read_text(encoding='utf-8'), encoding='utf-8')
+        if dino_anomaly:
+            config_data.update({'detector_type': 'dino_synthetic', 'map_semantics': 'patch_score',
+                'output_semantics': 'binary_probability',
+                'optimal_threshold': optimal_th, 'threshold_comparison': '>',
+                'threshold_roundoff_ulps': 1,
+                'decision_threshold': float(np.nextafter(np.float32(optimal_th), np.float32(np.inf))),
+                'threshold_basis': 'heldout_normal_calibration' if meta.get('calibration', {}).get('normal_image_count', 0) else 'model_default'})
     if task == "segmentation":
         config_data.update({
             "segmentation_mode": "tiled_full_image",
@@ -791,6 +927,8 @@ def export_runtime_package(
         "numpy>=1.26.0",
         "opencv-python-headless>=4.10.0.84",
     ]
+    if task == "patch_classification" or dino_anomaly:
+        runtime_requirements.append("Pillow>=10.0.0")
     if format_clean == "onnx":
         runtime_requirements.append("onnxruntime>=1.19.0")
     else:
@@ -800,7 +938,15 @@ def export_runtime_package(
         encoding="utf-8",
     )
 
-    if task == "segmentation":
+    if task == "patch_classification" or dino_anomaly:
+        inspection_scope = """## Inspection Scope
+- `infer.py` scans the original image with the saved `patch_size` and `stride`, preserving source pixel boxes.
+- Each crop uses the saved model input dimensions. Patch scores are 1 minus the saved normal-class probability; image score is the maximum patch score.
+- Patch batches default to 32, bounded by the configured tensor memory guard. `max_patches` optionally sets an explicit crop limit; source pixel and total crop safety guards apply.
+- Results contain individual patch boxes and scores. The runner does not infer a dense defect mask or execute other flowchart nodes.
+
+"""
+    elif task == "segmentation":
         inspection_scope = f"""## Inspection Scope
 - `infer.py` inspects the original image with overlapping {res}×{res} tiles (batch size 4, at most 1024 tiles).
 - It averages overlapping foreground probabilities, then returns NG when more than `optimal_threshold` covers at least `min_defect_area_px` pixels (default 8). These rules match the single full-image segmentation node in Step 5.
@@ -851,7 +997,8 @@ The exported files include the model and client; a Python runtime and the listed
         f.write(readme_content)
 
     # 7. Smoke Test Verification
-    run_smoke_test_validation(model_output_path, format_clean, res, task=task)
+    run_smoke_test_validation(model_output_path, format_clean,
+        tuple(img_size) if task == 'patch_classification' or dino_anomaly else res, task=task)
 
     # 8. Build File Manifest
     manifest = []

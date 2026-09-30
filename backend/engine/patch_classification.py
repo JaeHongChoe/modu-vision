@@ -34,6 +34,11 @@ from torch.utils.data import Dataset
 
 from backend.engine.classification import create_classification_model
 from backend.engine.device import get_device
+from backend.engine.native_patches import (
+    DEFAULT_MAX_IMAGE_PIXELS, DEFAULT_MAX_PATCH_COUNT, DEFAULT_MAX_BATCH_BYTES,
+    bounded_batch_size, grid_positions, iter_patch_batches, native_grid,
+    validate_image_size, validate_patch_count,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -209,13 +214,7 @@ class PatchClassificationDataset(Dataset):
 
 
 def _grid_positions(length: int, patch_size: int, stride: int) -> list[int]:
-    if length <= patch_size:
-        return [0]
-    positions = list(range(0, length - patch_size + 1, stride))
-    last = length - patch_size
-    if positions[-1] != last:
-        positions.append(last)
-    return positions
+    return list(grid_positions(length, patch_size, stride))
 
 
 def predict_patch_classification(
@@ -226,7 +225,11 @@ def predict_patch_classification(
     threshold: float = 0.5,
     device: Optional[str | torch.device] = None,
     source_id: Optional[str] = None,
-    max_patches: int = 256,
+    max_patches: Optional[int] = None,
+    batch_size: int = 32,
+    max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS,
+    max_patch_count: int = DEFAULT_MAX_PATCH_COUNT,
+    max_batch_bytes: int = DEFAULT_MAX_BATCH_BYTES,
 ) -> dict[str, Any]:
     """Run a trained patch model on explicit ROIs or a deterministic grid.
 
@@ -252,18 +255,23 @@ def predict_patch_classification(
         raise ValueError("Patch checkpoint has invalid image_size")
     if not 0.0 <= threshold <= 1.0:
         raise ValueError("Patch threshold must be between 0 and 1")
+    batch_size = bounded_batch_size(size, batch_size, max_batch_bytes)
 
     if isinstance(image, (str, Path)):
         image_path = Path(image).expanduser().resolve()
         with Image.open(image_path) as opened:
+            validate_image_size(*opened.size, max_image_pixels)
             rgb = np.asarray(opened.convert("RGB"), dtype=np.uint8)
         source_name = str(image_path)
         source_hash = _sha256(image_path)
     elif isinstance(image, Image.Image):
+        validate_image_size(*image.size, max_image_pixels)
         rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
         source_name = source_id or "<memory>"
         source_hash = hashlib.sha256(rgb.tobytes()).hexdigest()
     elif isinstance(image, np.ndarray):
+        if image.ndim >= 2:
+            validate_image_size(int(image.shape[1]), int(image.shape[0]), max_image_pixels)
         if image.ndim == 2:
             rgb = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         elif image.ndim == 3 and image.shape[2] == 4:
@@ -278,19 +286,15 @@ def predict_patch_classification(
     else:
         raise ValueError(f"Unsupported patch image type: {type(image)}")
     height, width = rgb.shape[:2]
+    validate_image_size(width, height, max_image_pixels)
     if boxes is None:
-        xs = _grid_positions(width, patch_size, stride)
-        ys = _grid_positions(height, patch_size, stride)
-        patch_boxes = [
-            (x, y, min(x + patch_size, width), min(y + patch_size, height))
-            for y in ys for x in xs
-        ]
+        patch_boxes = native_grid(width, height, patch_size, stride, max_patches=max_patches,
+                                 max_image_pixels=max_image_pixels, max_patch_count=max_patch_count)
     else:
         patch_boxes = [_check_box(box, width, height) for box in boxes]
         if not patch_boxes:
             raise ValueError("At least one patch box is required")
-    if len(patch_boxes) > max_patches:
-        raise ValueError(f"Patch inspection needs {len(patch_boxes)} crops; limit is {max_patches}")
+        validate_patch_count(len(patch_boxes), max_patches, max_patch_count)
 
     dev = get_device(device)
     checkpoint_data = torch.load(checkpoint, map_location=dev, weights_only=True)
@@ -303,8 +307,7 @@ def predict_patch_classification(
     normal_index = classes.index(normal_class)
     results: list[dict[str, Any]] = []
     with torch.inference_mode():
-        for offset in range(0, len(patch_boxes), 32):
-            group = patch_boxes[offset:offset + 32]
+        for group in iter_patch_batches(patch_boxes, batch_size):
             tensors = []
             for x1, y1, x2, y2 in group:
                 crop = cv2.resize(rgb[y1:y2, x1:x2], tuple(size), interpolation=cv2.INTER_LINEAR)

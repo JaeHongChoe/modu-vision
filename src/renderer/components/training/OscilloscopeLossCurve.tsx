@@ -57,11 +57,11 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
 
   // Compute min/max loss across history
   const { minLoss, maxLoss, initialLoss } = useMemo(() => {
-    const validPoints = lossHistory.filter((p) => !isNaN(p.trainLoss) && !isNaN(p.valLoss));
+    const validPoints = lossHistory.filter((p) => Number.isFinite(p.trainLoss));
     if (validPoints.length === 0) {
       return { minLoss: 0.0, maxLoss: 1.0, initialLoss: 1.0 };
     }
-    const all = validPoints.flatMap((p) => [p.trainLoss, p.valLoss]).filter((v) => v > 0);
+    const all = validPoints.flatMap((p) => p.valLoss === null ? [p.trainLoss] : [p.trainLoss, p.valLoss]).filter((v) => Number.isFinite(v) && v > 0);
     const minVal = Math.min(...all, 0.001);
     const maxVal = Math.max(...all, 1.0);
     const initVal = validPoints[0]?.trainLoss || 1.0;
@@ -102,7 +102,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
       return { trainPolyline: '', valPolyline: '' };
     }
     const trainPts = lossHistory.map((p) => `${getX(p.epoch).toFixed(1)},${getY(p.trainLoss).toFixed(1)}`).join(' ');
-    const valPts = lossHistory.map((p) => `${getX(p.epoch).toFixed(1)},${getY(p.valLoss).toFixed(1)}`).join(' ');
+    const valPts = lossHistory.filter((p) => p.valLoss !== null).map((p) => `${getX(p.epoch).toFixed(1)},${getY(p.valLoss!).toFixed(1)}`).join(' ');
     return { trainPolyline: trainPts, valPolyline: valPts };
   }, [lossHistory, getX, getY]);
 
@@ -445,9 +445,9 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                 points={valPolyline}
               />
               {/* Validation Epoch Markers */}
-              {lossHistory.map((p) => {
+              {lossHistory.filter((p) => p.valLoss !== null).map((p) => {
                 const px = getX(p.epoch);
-                const py = getY(p.valLoss);
+                const py = getY(p.valLoss!);
                 return (
                   <circle
                     key={`val-dot-${p.epoch}`}
@@ -496,14 +496,14 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                 strokeWidth="1.5"
               />
               {/* Marker on Val Loss */}
-              <circle
+              {hoverPoint.valLoss !== null && <circle
                 cx={getX(hoverPoint.epoch)}
                 cy={getY(hoverPoint.valLoss)}
                 r="4"
                 fill="#F59E0B"
                 stroke="#FFFFFF"
                 strokeWidth="1.5"
-              />
+              />}
             </g>
           )}
 
@@ -577,7 +577,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
               </div>
               <div className="flex justify-between space-x-3">
                 <span className="text-amber-400">Val Loss:</span>
-                <span className="font-bold text-slate-100">{hoverPoint.valLoss.toFixed(4)}</span>
+                <span className="font-bold text-slate-100">{hoverPoint.valLoss !== null ? hoverPoint.valLoss.toFixed(4) : '--'}</span>
               </div>
               {hoverPoint.lr && (
                 <div className="flex justify-between space-x-3 text-slate-400 text-[9px]">

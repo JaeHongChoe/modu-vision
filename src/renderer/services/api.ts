@@ -65,6 +65,17 @@ export interface ComputeProbeResult {
   free_space_bytes?: number | null;
 }
 
+export interface TrainingConfigOverrides extends Record<string, unknown> {
+  anomaly_method?: 'padim' | 'patchcore' | 'dino_synthetic';
+  anomaly_backbone?: 'dinov3_vits16' | 'dinov3_vitb16' | 'dinov3_vitl16';
+  patch_size?: number;
+  stride?: number;
+  patches_per_image?: number;
+  inference_batch_size?: number;
+  pretrained_checkpoint?: string;
+  pretrained_sha256?: string;
+}
+
 export interface ProjectConfig {
   id: string;
   name: string;
@@ -699,9 +710,9 @@ export const api = {
   training: {
     warmStartParents: (datasetPath: string, task: VisionTask, preset: 'fast' | 'precision', modelOverrides: Record<string, unknown> = {}) => {
       const query = new URLSearchParams({ dataset_path: datasetPath, task, preset });
-      for (const name of ['backbone', 'model_name', 'anomaly_method']) {
+      for (const name of ['backbone', 'model_name', 'anomaly_method', 'anomaly_backbone', 'patch_size', 'stride']) {
         const value = modelOverrides[name];
-        if (typeof value === 'string') query.set(name, value);
+        if (typeof value === 'string' || (typeof value === 'number' && Number.isInteger(value))) query.set(name, String(value));
       }
       return request<{ parents: Array<{
         job_id: string; classes: string[]; architecture: string;
@@ -713,7 +724,7 @@ export const api = {
       preset: 'fast' | 'precision';
       dataset_path: string;
       output_dir?: string;
-      config_overrides?: any;
+      config_overrides?: TrainingConfigOverrides;
       compute_profile_id?: string;
       warm_start_job_id?: string;
     }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {

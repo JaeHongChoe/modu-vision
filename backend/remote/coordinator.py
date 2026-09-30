@@ -120,9 +120,12 @@ def _local_pretrained_weights(task, preset, overrides):
     config = PRESET_CONFIGS[preset]
     model = overrides.get('model_name', config.backbone_segmentation) if task == 'segmentation' else overrides.get(
         'backbone', config.backbone_detection if task == 'detection' else config.backbone_classification)
+    synthetic_anomaly = task in ('anomaly', 'anomaly_detection') and overrides.get('anomaly_method') == 'dino_synthetic'
+    if synthetic_anomaly:
+        model = overrides.get('anomaly_backbone', 'dinov3_vits16')
     explicit = overrides.get('pretrained_checkpoint')
     expected = overrides.get('pretrained_sha256')
-    if task in ('classification', 'patch_classification', 'segmentation') and is_dino_backbone(str(model)):
+    if (task in ('classification', 'patch_classification', 'segmentation') or synthetic_anomaly) and is_dino_backbone(str(model)):
         path, digest, origin = _dino_weights(canonical_dino_name(str(model)), explicit, expected)
         return path, digest, origin, canonical_dino_name(str(model))
     if task == 'detection' and str(model) in ('yolo26n', 'yolo26s'):

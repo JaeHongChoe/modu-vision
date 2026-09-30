@@ -51,10 +51,31 @@ def architecture_for(task: str, preset: str, overrides: Mapping[str, Any] | None
         return f"detection:{backbone}"
     if task in ("anomaly", "anomaly_detection"):
         kind = overrides.get('anomaly_method', 'patchcore' if 'patchcore' in config.backbone_anomaly else 'padim')
+        if kind == 'dino_synthetic':
+            return _synthetic_architecture(task, overrides)
         if kind not in ('padim', 'patchcore'):
             raise ValueError('Unsupported anomaly method')
         return f"{task}:{kind}:resnet18"
     raise ValueError(f"Warm start is unsupported for task {task}")
+
+
+def _synthetic_architecture(task: str, options: Mapping[str, Any], *, recorded: bool = False) -> str:
+    from backend.engine.model_backbones import canonical_dino_name
+    backbone = canonical_dino_name(str(options.get('anomaly_backbone', options.get('feature_backbone', 'dinov3_vits16'))))
+    if backbone not in ('dinov3_vits16', 'dinov3_vitb16', 'dinov3_vitl16'):
+        raise ValueError('Synthetic anomaly requires a supported DINOv3 backbone')
+    if recorded and options.get('feature_backbone') and canonical_dino_name(str(options['feature_backbone'])) != backbone:
+        raise ValueError('Synthetic anomaly backbone metadata disagrees')
+    if recorded and options.get('map_semantics') != 'patch_score':
+        raise ValueError('Synthetic anomaly requires recorded patch_score semantics')
+    patch = options.get('patch_size', None if recorded else 256)
+    stride = options.get('stride', None if recorded else 128)
+    version = options.get('head_version', None if recorded else 1)
+    if (type(patch) is not int or not 32 <= patch <= 1024 or patch % 16
+            or type(stride) is not int or not 1 <= stride <= patch
+            or type(version) is not int or version != 1):
+        raise ValueError('Synthetic anomaly patch geometry or head version is invalid')
+    return f'{task}:dino_synthetic:{backbone}:p{patch}:s{stride}:head_v{version}'
 
 
 def _metadata_architecture(task: str, metadata: Mapping[str, Any]) -> str | None:
@@ -79,6 +100,11 @@ def _metadata_architecture(task: str, metadata: Mapping[str, Any]) -> str | None
         return None
     if task in ('anomaly', 'anomaly_detection'):
         kind = metadata.get('detector_type')
+        if kind == 'dino_synthetic':
+            try:
+                return _synthetic_architecture(task, metadata, recorded=True)
+            except ValueError:
+                return None
         backbone = metadata.get('feature_backbone', metadata.get('model_state_dict', {}).get('backbone_name'))
         return f"{task}:{kind}:{backbone}" if kind and backbone else None
     return None
@@ -204,7 +230,8 @@ def resolve_warm_start_parent(
             or not isinstance(payload.get("model_state_dict"), dict)
             or not payload["model_state_dict"]):
         raise ValueError("Warm-start parent checkpoint conflicts with its model metadata")
-    if task in ('anomaly', 'anomaly_detection') and not payload['model_state_dict'].get('feature_extractor_state_dict'):
+    statistical_refit = task in ('anomaly', 'anomaly_detection') and metadata.get('detector_type') != 'dino_synthetic'
+    if statistical_refit and not payload['model_state_dict'].get('feature_extractor_state_dict'):
         raise ValueError('Statistical refit needs a parent with saved feature extractor weights; train a fresh candidate first')
     if payload.get('training_provenance'):
         from backend.engine.specialized_models import _verify_historical_source
@@ -212,7 +239,7 @@ def resolve_warm_start_parent(
     return WarmStartParent(
         job_id=job_id, checkpoint_path=checkpoint.resolve(), checkpoint_sha256=digest,
         task=task, architecture=architecture, classes=tuple(classes), dataset_fingerprint=fingerprint,
-        semantics='statistical_refit' if task in ('anomaly', 'anomaly_detection') else 'weight_initialization',
+        semantics='statistical_refit' if statistical_refit else 'weight_initialization',
     )
 
 
@@ -247,13 +274,43 @@ def load_parent_weights(model: nn.Module, parent: WarmStartParent, classes: Sequ
         if hasattr(model, 'sub_dims'):
             model.sub_dims = dims.to(model.device)
         return
-    _strict_state(model, weights)
-    model.load_state_dict(weights, strict=True)
+    if parent.task in ('anomaly', 'anomaly_detection') and payload.get('detector_type') == 'dino_synthetic':
+        _load_synthetic_weights(model, weights)
+    else:
+        _strict_state(model, weights)
+        model.load_state_dict(weights, strict=True)
     if isinstance(getattr(model, 'model_metadata', None), dict):
         for key in ('pretrained', 'pretrained_source', 'pretrained_sha256', 'encoder_architecture',
                     'encoder_frozen', 'adapter_version', 'input_normalization'):
             if key in payload:
                 model.model_metadata[key] = payload[key]
+
+
+def _load_synthetic_weights(model, weights) -> None:
+    """Initialize the encoder and head without restoring the parent's fitting settings."""
+    if (not isinstance(weights, dict) or weights.get('format_version') != 1
+            or weights.get('detector_type') != 'dino_synthetic'
+            or weights.get('backbone_name') != model.backbone_name):
+        raise ValueError('Synthetic parent state format or backbone differs')
+    config = weights.get('config')
+    if (not isinstance(config, dict) or config.get('patch_size') != model.patch_size
+            or config.get('stride') != model.stride):
+        raise ValueError('Synthetic parent native patch geometry differs')
+    _strict_state(model.feature_extractor, weights.get('feature_extractor_state_dict'))
+    _strict_state(model.head, weights.get('head_state_dict'))
+    for name in ('input_mean', 'input_std'):
+        tensor = weights.get(name)
+        current = getattr(model.model, name)
+        if (not isinstance(tensor, torch.Tensor) or tensor.shape != current.shape
+                or tensor.dtype != current.dtype or not torch.isfinite(tensor).all()
+                or (name == 'input_std' and (tensor <= 0).any())):
+            raise ValueError('Synthetic parent input normalization differs')
+    model.feature_extractor.load_state_dict(weights['feature_extractor_state_dict'], strict=True)
+    model.head.load_state_dict(weights['head_state_dict'], strict=True)
+    with torch.no_grad():
+        for name in ('input_mean', 'input_std'):
+            current = getattr(model.model, name)
+            current.copy_(weights[name].to(current.device))
 
 
 def verify_parent_status(parent: WarmStartParent) -> None:
@@ -307,7 +364,8 @@ def restore_portable_parent(directory: Path, envelope: dict[str, Any], task: str
     classes=envelope.get('classes')
     if not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(classes,list) or payload.get('classes')!=classes or _metadata_architecture(task,payload)!=envelope.get('architecture') or not isinstance(payload.get('model_state_dict'),dict):
         raise ValueError('Portable parent model signature mismatch')
-    semantics = 'statistical_refit' if task in ('anomaly', 'anomaly_detection') else 'weight_initialization'
+    semantics = ('statistical_refit' if task in ('anomaly', 'anomaly_detection')
+                 and payload.get('detector_type') != 'dino_synthetic' else 'weight_initialization')
     if envelope.get('semantics', semantics) != semantics:
         raise ValueError('Portable parent training semantics mismatch')
     if semantics == 'statistical_refit' and not payload['model_state_dict'].get('feature_extractor_state_dict'):

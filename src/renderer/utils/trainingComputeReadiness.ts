@@ -11,7 +11,8 @@ export function trainingComputeReadiness(probe: ComputeProbeResult | undefined |
   if (!probe || !(probe.runtime_ready ?? probe.ready)) return {ready: false, reason: probe?.message || '서버 연결 검사를 완료하세요.'};
   const checks = record(probe.checks), dependencies = record(checks.runtime_dependencies);
   const model = String(task === 'segmentation' ? options.model_name || 'dinov3_vits16'
-    : task === 'anomaly' ? 'resnet18' : options.backbone || (task === 'detection' ? 'yolo26n' : 'dinov3_vits16'));
+    : task === 'anomaly' ? options.anomaly_method === 'dino_synthetic' ? options.anomaly_backbone || 'dinov3_vits16' : 'resnet18'
+      : options.backbone || (task === 'detection' ? 'yolo26n' : 'dinov3_vits16'));
   const required = model.startsWith('dinov3_') ? ['timm', 'safetensors', 'huggingface_hub'] : model.startsWith('yolo') ? ['ultralytics'] : [];
   const missing = required.filter(name => dependencies[name] !== true);
   if (missing.length) return {ready: false, reason: `선택한 모델에 필요한 서버 패키지: ${missing.join(', ')}`};

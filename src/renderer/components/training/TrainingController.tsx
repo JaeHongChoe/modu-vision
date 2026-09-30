@@ -33,7 +33,8 @@ import { EnhancementWorkbench } from './EnhancementWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { api } from '../../services/api';
 import { ModelFamilyCatalog } from './ModelFamilyCatalog';
-import { modelChoices, trainingModelOverrides } from './modelTrainingOptions';
+import { dinoSyntheticDefaults, modelChoices, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
+import { DinoSyntheticOptions } from './DinoSyntheticOptions';
 import { trainingComputeReadiness } from '../../utils/trainingComputeReadiness';
 
 export const TrainingController: React.FC = () => {
@@ -44,7 +45,15 @@ export const TrainingController: React.FC = () => {
   const { task, language, setStep, projectDir, project } = useProjectStore();
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
+  const [syntheticOptions, setSyntheticOptions] = useState<DinoSyntheticTrainingOptions>({...dinoSyntheticDefaults});
   const selectedBackbone = modelChoices[task].some(choice => choice.value === trainingBackbone) ? trainingBackbone : modelChoices[task][0].value;
+  const syntheticAnomaly = task === 'anomaly' && selectedBackbone === 'dino_synthetic';
+  const statisticalRefit = task === 'anomaly' && !syntheticAnomaly;
+  let modelOptions: Record<string, unknown> = {};
+  let modelOptionsError: string | null = null;
+  try { modelOptions = trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions); }
+  catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
+  const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
     splitSupported, splitUnavailableReason, applySplit, datasetKey } = useDatasetStore();
   const {
@@ -90,7 +99,8 @@ export const TrainingController: React.FC = () => {
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
   const jobProfile = profiles.find((profile) => profile.id === jobComputeProfileId);
   const jobGpuSelector = jobProfile?.gpu_selector?.trim();
-  const selectedReadiness = trainingComputeReadiness(selectedProbe, task, preset, trainingModelOverrides(task, selectedBackbone), !!warmParentId);
+  const selectedReadiness = modelOptionsError ? {ready: false, reason: modelOptionsError}
+    : trainingComputeReadiness(selectedProbe, task, preset, modelOptions, !!warmParentId);
   const completedJobId = status === 'completed' ? jobId : null;
   const displayedJobLabel = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
     ? jobProfile?.name || jobComputeLabel
@@ -103,6 +113,7 @@ export const TrainingController: React.FC = () => {
   useEffect(() => {
     setTrainingBackbone(modelChoices[task][0].value);
     setPretrainedCheckpoint('');
+    setSyntheticOptions({...dinoSyntheticDefaults});
   }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
   useEffect(() => {
@@ -110,14 +121,14 @@ export const TrainingController: React.FC = () => {
     setWarmParents([]);
     setWarmParentId('');
     setWarmParentsError(null);
-    if (!sourceReady || !warmStartSupported) return () => { valid = false; };
-    api.training.warmStartParents(folderPath, task, preset, trainingModelOverrides(task, selectedBackbone)).then((result) => {
+    if (!sourceReady || !warmStartSupported || modelOptionsError) return () => { valid = false; };
+    api.training.warmStartParents(folderPath, task, preset, modelOptions).then((result) => {
       if (valid) setWarmParents(result.parents);
     }).catch((error) => {
       if (valid) setWarmParentsError(error instanceof Error ? error.message : String(error));
     });
     return () => { valid = false; };
-  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId]);
+  }, [sourceReady, folderPath, task, preset, selectedProfileId, warmStartSupported, projectDir, project?.active_labelset_id, selectedBackbone, completedJobId, modelOptionsKey, modelOptionsError]);
 
   useEffect(() => {
     void recoverActiveJob(sourceReady && !isLoading && !importError && project && projectDir ? {
@@ -132,13 +143,13 @@ export const TrainingController: React.FC = () => {
   }, [jobId, isTraining, refreshCurrentJob]);
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
-    !isLoading && !isSplitting && !isRecoveringTraining && !importError && computeReady;
+    !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && computeReady;
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
     if (!canStart) return;
     setActionError(null);
-    try { await startTraining(folderPath, task, warmParentId || undefined, trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint)); }
+    try { await startTraining(folderPath, task, warmParentId || undefined, modelOptions); }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
 
@@ -299,20 +310,23 @@ export const TrainingController: React.FC = () => {
           </label>
           {selectedBackbone.startsWith('dinov3') && <p className="mt-2 text-slate-300">DINOv3 사전학습 특징을 사용하고 현재 라벨에 맞는 분류·분할 헤드를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p>}
           {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
-          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo')) && <label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
+          {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
+            onChange={options => { setSyntheticOptions(options); setWarmParentId(''); }} />}
+          {modelOptionsError && <p role="alert" className="mt-2 text-amber-300">{modelOptionsError}</p>}
+          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || syntheticAnomaly) && <label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
             <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
               placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
               className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />
           </label>}
-          {task === 'anomaly' && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
+          {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
         </div>
 
         {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <div className="font-semibold text-white">이전 모델에서 재학습</div>
-          <p className="mt-1 text-slate-400">{task === 'anomaly' ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
+          <p className="mt-1 text-slate-400">{statisticalRefit ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : syntheticAnomaly ? '같은 백본·원본 패치 크기·패치 간격·헤드 구조의 완료 모델 전체 가중치에서 다시 학습합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
           <label className="mt-2 block text-slate-300">시작 모델
               <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
-                disabled={!sourceReady || isTraining} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
+                disabled={!sourceReady || isTraining || !!modelOptionsError} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
                 <option value="">새 모델로 학습</option>
                 {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parent.job_id} · SHA {parent.checkpoint_sha256.slice(0, 12)}</option>)}
               </select>
@@ -384,7 +398,8 @@ export const TrainingController: React.FC = () => {
           {/* Metric Summary Badge if completed */}
           {bestMetric !== null && (
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold font-mono">BEST VAL LOSS:</span>
+              <span title={task === 'anomaly' ? '저장된 모델 선택 지표 · 검증 수치와 학습 손실은 아래 기록에서 확인' : undefined}
+                className="text-[10px] text-slate-400 uppercase font-semibold font-mono">{task === 'anomaly' ? '저장 지표' : 'BEST VAL LOSS:'}</span>
               <span className="text-sm font-mono tabular-nums font-bold text-emerald-400 bg-[#0B0E14] px-2.5 py-1 rounded-[3px] border border-[#2B3547]">
                 {bestMetric.toFixed(4)}
               </span>

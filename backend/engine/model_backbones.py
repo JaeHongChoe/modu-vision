@@ -19,10 +19,12 @@ from torch.nn import functional as F
 DINO_MODELS = {
     'dinov3_vits16': 'vit_small_patch16_dinov3.lvd1689m',
     'dinov3_vitb16': 'vit_base_patch16_dinov3.lvd1689m',
+    'dinov3_vitl16': 'vit_large_patch16_dinov3.lvd1689m',
 }
 DINO_ALIASES = {
     'dinov3': 'dinov3_vits16', 'dinov3_small': 'dinov3_vits16',
     'dinov3_base': 'dinov3_vitb16',
+    'dinov3_large': 'dinov3_vitl16',
     **{value: key for key, value in DINO_MODELS.items()},
 }
 YOLO_MODELS = ('yolo26n', 'yolo26s')

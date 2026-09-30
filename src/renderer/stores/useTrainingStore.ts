@@ -50,7 +50,7 @@ function polledHistory(job: any): LossPoint[] | null {
   const rows = new Map<number, LossPoint>();
   for (const row of job.loss_history) {
     if (!Number.isInteger(row?.epoch) || row.epoch < 1
-        || !Number.isFinite(row.train_loss) || !Number.isFinite(row.val_loss)) continue;
+        || !Number.isFinite(row.train_loss) || (row.val_loss !== null && !Number.isFinite(row.val_loss))) continue;
     rows.set(row.epoch, { epoch: row.epoch, trainLoss: row.train_loss, valLoss: row.val_loss,
       ...(Number.isFinite(row.lr) ? { lr: row.lr } : {}) });
   }
@@ -60,7 +60,7 @@ function polledHistory(job: any): LossPoint[] | null {
 export interface LossPoint {
   epoch: number;
   trainLoss: number;
-  valLoss: number;
+  valLoss: number | null;
   lr?: number;
 }
 
@@ -103,7 +103,7 @@ interface TrainingState {
   epochEtaSeconds: number | null;
   totalEtaSeconds: number | null;
   bestMetric: number | null;
-  metrics: Record<string, number>;
+  metrics: Record<string, number | null>;
   lossHistory: LossPoint[];
   stepHistory: StepLossPoint[];
   hardware: HardwareStats;
@@ -400,7 +400,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         currentStep: job.current_step ?? state.currentStep,
         totalSteps: job.total_steps ?? state.totalSteps,
         trainLoss: job.current_train_loss ?? state.trainLoss,
-        valLoss: job.current_val_loss ?? state.valLoss,
+        valLoss: job.current_val_loss !== undefined ? job.current_val_loss : state.valLoss,
         bestMetric: job.best_metric ?? state.bestMetric,
         metrics: job.metrics || state.metrics,
         lossHistory: polledHistory(job) ?? state.lossHistory,
@@ -478,7 +478,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     } else if (event === 'epoch_progress') {
       const ep = data.epoch || 0;
       const tLoss = data.train_loss || 0;
-      const vLoss = data.val_loss || 0;
+      const vLoss = typeof data.val_loss === 'number' && Number.isFinite(data.val_loss) ? data.val_loss : null;
       set((s) => ({
         currentEpoch: ep,
         totalEpochs: data.total_epochs || s.totalEpochs,

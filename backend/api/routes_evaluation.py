@@ -878,6 +878,8 @@ def _evaluate_anomaly(
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
     model = reconstruct_anomaly_detector(state_dict, {**ckpt, **meta}, device)
+    map_semantics = getattr(model, 'model_metadata', {}).get('map_semantics', 'pixel_score')
+    patch_scores = map_semantics == 'patch_score'
 
     img_size = tuple(meta.get("image_size", [256, 256]))
     image_scores: List[float] = []
@@ -888,14 +890,17 @@ def _evaluate_anomaly(
     mask_sources = []
     mode = meta.get("anomaly_mode", "classification")
     if mode not in ("classification", "segmentation"): raise HTTPException(422, "Invalid anomaly mode")
+    if patch_scores and mode == 'segmentation':
+        raise HTTPException(422, 'Patch score maps do not provide trained segmentation masks')
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
             img_p, label, mask_path = val_ds.samples[idx]
             rgb = _read_image_rgb(img_p)
-            resized = cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
+            resized = rgb if patch_scores else cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
-            img_t = img_t.to(device)
+            if not patch_scores:
+                img_t = img_t.to(device)
 
             heatmap, score = model(img_t)
             heatmap_np = heatmap.detach().cpu().numpy() if isinstance(heatmap, torch.Tensor) else np.asarray(heatmap)
@@ -903,7 +908,9 @@ def _evaluate_anomaly(
             if heatmap_np.ndim != 2 or not np.isfinite(heatmap_np).all(): raise HTTPException(422, "Anomaly model returned an invalid pixel map")
             maps.append(heatmap_np)
             mask = None
-            if mask_path and Path(mask_path).is_file():
+            if patch_scores:
+                mask_sources.append(None)
+            elif mask_path and Path(mask_path).is_file():
                 with Image.open(mask_path) as original: mask = np.asarray(original.convert("L"))
                 mask = (cv2.resize(mask, (heatmap_np.shape[1], heatmap_np.shape[0]), interpolation=cv2.INTER_NEAREST) > 0).astype(np.uint8)
                 mask_sources.append({"path": str(Path(mask_path).resolve()), "sha256": hashlib.sha256(Path(mask_path).read_bytes()).hexdigest()})
@@ -919,7 +926,11 @@ def _evaluate_anomaly(
             image_scores.append(score_f)
             image_labels.append(label)
 
-    anom_metrics = compute_anomaly_metrics(image_scores, image_labels, pixel_heatmaps=pixel_heatmaps, pixel_masks=pixel_masks)
+    anom_metrics = compute_anomaly_metrics(image_scores, image_labels, pixel_heatmaps=pixel_heatmaps, pixel_masks=pixel_masks,
+        fixed_threshold=float(model.threshold) if patch_scores else None,
+        threshold_comparison='gt' if patch_scores else 'ge')
+    if patch_scores and len(set(image_labels)) < 2:
+        anom_metrics['image_auroc'] = None
     import uuid
     evidence_dir = model_pt.parent / "evaluation_maps"
     evidence_dir.mkdir(exist_ok=True)
@@ -931,7 +942,7 @@ def _evaluate_anomaly(
             evidence_arrays[f"mask_{index}"] = pixel_masks[mask_index]; mask_index += 1
     np.savez_compressed(evidence_file, **evidence_arrays)
     evidence_hash = hashlib.sha256(evidence_file.read_bytes()).hexdigest()
-    optimal_th = anom_metrics.get("active_threshold", 0.5)
+    optimal_th = float(model.threshold) if patch_scores else anom_metrics.get("active_threshold", 0.5)
 
     matrix = [[0] * num_classes for _ in range(num_classes)]
     cell_samples: Dict[str, List[str]] = {
@@ -942,7 +953,7 @@ def _evaluate_anomaly(
     for idx in range(len(val_ds)):
         img_p, label, _ = val_ds.samples[idx]
         score_f = image_scores[idx]
-        pred_idx = 1 if score_f >= optimal_th else 0
+        pred_idx = int(score_f > optimal_th if patch_scores else score_f >= optimal_th)
         matrix[label][pred_idx] += 1
 
         gt_name = classes[label]
@@ -959,6 +970,7 @@ def _evaluate_anomaly(
             "confidence": round(score_f, 4),
             "is_correct": bool(label == pred_idx),
             "anomaly_mode": mode,
+            "map_semantics": map_semantics,
             "pixel_evidence": {"file_path": str(evidence_file), "sha256": evidence_hash,
                                "heatmap_key": f"heatmap_{idx}", "mask_key": f"mask_{idx}" if mask_sources[idx] is not None else None,
                                "source_mask": mask_sources[idx]},
@@ -978,6 +990,8 @@ def _evaluate_anomaly(
             "pixel_evaluated_images": len(pixel_heatmaps),
             "pixel_missing_masks": len(maps) - len(pixel_heatmaps),
             "anomaly_mode": mode,
+            "map_semantics": map_semantics,
+            "threshold_basis": 'heldout_normal_calibration' if patch_scores and getattr(model, 'calibration', {}).get('normal_image_count', 0) else 'model_default' if patch_scores else 'evaluation_threshold_search',
             "f1_score": anom_metrics.get("f1_score", 1.0),
             "optimal_threshold": round(optimal_th, 4),
             "best_metric": meta.get("best_metric"),

@@ -316,7 +316,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
         epoch: int,
         total_epochs: int,
         train_loss: float,
-        val_loss: float,
+        val_loss: Optional[float],
         lr: float,
         metrics: Dict[str, float],
     ) -> None:
@@ -334,9 +334,9 @@ class WebSocketTelemetryCallback(TrainingCallback):
             "epoch": epoch + 1,
             "total_epochs": total_epochs,
             "train_loss": round(float(train_loss), 5),
-            "val_loss": round(float(val_loss), 5),
+            "val_loss": None if val_loss is None else round(float(val_loss), 5),
             "lr": float(lr),
-            "metrics": {k: round(float(v), 5) for k, v in metrics.items()},
+            "metrics": {k: None if v is None else round(float(v), 5) for k, v in metrics.items()},
             "eta_seconds": round(total_eta, 1),
         })
 

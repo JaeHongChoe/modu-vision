@@ -134,7 +134,7 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
             for field in (
                 "roi_id", "source_node_id", "label", "bbox", "verdict",
                 "flaw_type", "defect_area_px", "blob_count",
-                "largest_blob_area_px", "tiles_processed", "recognized_text", "predicted_class", "polygon", "anomaly_map", "anomaly_values", "mask", "source_transform",
+                "largest_blob_area_px", "tiles_processed", "recognized_text", "predicted_class", "polygon", "anomaly_map", "anomaly_values", "map_semantics", "mask", "source_transform",
             ):
                 if left.get(field) != right.get(field):
                     mismatches.append(f"crops[{index}].{field}")

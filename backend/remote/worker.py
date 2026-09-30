@@ -190,8 +190,13 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         from backend.engine.trainer import PRESET_CONFIGS
         from backend.engine.model_backbones import canonical_dino_name
         config = PRESET_CONFIGS[data.get('preset', 'fast')]
-        selected = overrides.get('model_name', config.backbone_segmentation) if data['task'] == 'segmentation' else overrides.get(
-            'backbone', config.backbone_detection if data['task'] == 'detection' else config.backbone_classification)
+        if data['task'] == 'anomaly':
+            if overrides.get('anomaly_method') != 'dino_synthetic':
+                raise ValueError('Pretrained transfer is unsupported for this anomaly method')
+            selected = overrides.get('anomaly_backbone', 'dinov3_vits16')
+        else:
+            selected = overrides.get('model_name', config.backbone_segmentation) if data['task'] == 'segmentation' else overrides.get(
+                'backbone', config.backbone_detection if data['task'] == 'detection' else config.backbone_classification)
         if weights.get('model') != canonical_dino_name(str(selected)):
             raise ValueError('Pretrained transfer architecture differs from the selected model')
         overrides['pretrained_checkpoint'] = str(path)

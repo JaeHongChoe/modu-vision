@@ -136,6 +136,14 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
               </div>
             </div>
 
+            {crop.anomaly_map && <figure className="mt-3 w-full rounded border border-slate-700 bg-[#101A28] p-2">
+              <img src={crop.anomaly_map} alt="이상 점수 분포" className="max-h-40 w-full object-contain" />
+              <figcaption className="mt-2 text-center text-[11px] text-slate-300">
+                {crop.map_semantics === 'patch_score' ? '패치별 이상 점수 · 결함 위치를 검토하는 참고 자료' : '이상 점수 분포'}
+              </figcaption>
+              {crop.map_semantics === 'patch_score' && <p className="mt-1 text-center text-[10px] text-amber-200">결함의 정확한 면적과 개수는 영역 분할 모델로 확인하세요.</p>}
+            </figure>}
+
             <div className="w-full mt-3 pt-2.5 border-t border-[#2B3547] flex items-center justify-between text-[11px] font-mono text-slate-300">
               <span>검사 이미지 영역: <strong className="text-white tabular-nums">{width} × {height} px</strong></span>
               <span>면적: <strong className="text-white tabular-nums">{areaPx.toLocaleString()} px²</strong></span>
