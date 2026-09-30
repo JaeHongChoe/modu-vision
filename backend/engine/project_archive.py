@@ -27,12 +27,14 @@ class ArchiveError(ValueError):
         self.status_code = status_code
 
 
-def _files(root: Path) -> Iterable[Path]:
+def _files(root: Path, excluded_root: Path | None = None) -> Iterable[Path]:
     for directory, folders, files in os.walk(root, followlinks=False):
         parent = Path(directory)
         for name in folders:
             if (parent / name).is_symlink():
                 raise ArchiveError("Project or source contains a symbolic link")
+        if excluded_root is not None:
+            folders[:] = [name for name in folders if parent / name != excluded_root]
         folders.sort()
         for name in sorted(files):
             path = parent / name
@@ -70,17 +72,27 @@ def _content_digest(value: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _dataset_fingerprint(project_dir: Path, source_dir: Path) -> str:
-    """Use the same active labels and split as project-scoped training verification."""
+def _dataset_fingerprint(project_dir: Path, source_dir: Path, labelset_id: str | None = None) -> str:
+    """Use the selected labels and split from project-scoped training verification."""
     from backend.engine.dataset_fingerprint import fingerprint_dataset
     from backend.engine.project_labelsets import labelset_root, load_labelsets
 
-    active_id = load_labelsets(project_dir)["active_id"]
+    selected_id = labelset_id if labelset_id is not None else load_labelsets(project_dir)["active_id"]
     return fingerprint_dataset(
-        source_dir, studio_root=labelset_root(project_dir, active_id),
+        source_dir, studio_root=labelset_root(project_dir, selected_id),
         split_manifest=project_dir / "dataset" / "splits" / f"{_split_key(source_dir)}.json",
         use_scope=False,
     )
+
+
+def _labelset_dataset_fingerprints(project_dir: Path, source_dir: Path) -> tuple[str, dict[str, str]]:
+    from backend.engine.project_labelsets import load_labelsets
+
+    registry = load_labelsets(project_dir)
+    return registry["active_id"], {
+        row["id"]: _dataset_fingerprint(project_dir, source_dir, row["id"])
+        for row in registry["labelsets"]
+    }
 
 
 def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, Any]:
@@ -95,17 +107,21 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
         raise ArchiveError("Project manifest is missing")
     if source_dir is not None and not source_dir.is_dir():
         raise ArchiveError("Source dataset is unavailable; backup cannot include it")
-    if source_dir is not None and source_dir.is_relative_to(project_dir):
-        raise ArchiveError("A source dataset inside the workspace is not supported by this backup format")
+    if source_dir is not None and project_dir.is_relative_to(source_dir):
+        raise ArchiveError("Source dataset must not contain the project workspace")
 
-    source_fingerprint = _dataset_fingerprint(project_dir, source_dir) if source_dir else None
+    source_active_set, source_fingerprints = (
+        _labelset_dataset_fingerprints(project_dir, source_dir) if source_dir else (None, {})
+    )
+    source_fingerprint = source_fingerprints.get(source_active_set)
 
     inventory: list[tuple[str, Path, int]] = []
     source_bytes = total_bytes = 0
     for prefix, folder in (("project", project_dir), ("source", source_dir)):
         if folder is None:
             continue
-        for path in _files(folder):
+        # Restored source lives inside the workspace. Archive it once under source/.
+        for path in _files(folder, excluded_root=source_dir if prefix == "project" else None):
             size = path.stat().st_size
             total_bytes += size
             if prefix == "source":
@@ -137,10 +153,13 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
                 "original_project_dir": str(project_dir),
                 "original_source_dir": str(source_dir) if source_dir else None,
                 "source_dataset_fingerprint": source_fingerprint,
+                "source_active_labelset_id": source_active_set,
+                "source_dataset_fingerprints_by_labelset": source_fingerprints,
                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "files": rows,
             }
-            if source_dir is not None and _dataset_fingerprint(project_dir, source_dir) != source_fingerprint:
+            if (source_dir is not None and _labelset_dataset_fingerprints(project_dir, source_dir)
+                    != (source_active_set, source_fingerprints)):
                 raise ArchiveError("Source dataset changed during backup", 409)
             output.writestr("backup-manifest.json", json.dumps(manifest, ensure_ascii=False, sort_keys=True))
         os.replace(temporary, archive)
@@ -174,10 +193,10 @@ def _rebind_value(value: Any, old_project: Path, target: Path,
 
 def _rebind_json_records(staging: Path, old_project: Path, target: Path,
                          old_source: Path | None, new_source: Path | None) -> None:
-    restored_source = staging / "dataset" / "restored_source"
+    source_roots = _restored_source_roots(staging)
     for path in staging.rglob("*.json"):
         # Source files are customer data. Keep their verified bytes intact.
-        if path.is_relative_to(restored_source):
+        if any(path.is_relative_to(root) for root in source_roots):
             continue
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
@@ -212,6 +231,11 @@ def _rebind_dataset_state(staging: Path, old_source: Path | None, new_source: Pa
         return
     old_key = _source_key(old_source)
     new_key = _source_key(new_source)
+    for original in (staging / "flowcharts").glob(f"pipeline_*_{old_key}.json"):
+        replacement = original.with_name(original.name.removesuffix(f"{old_key}.json") + f"{new_key}.json")
+        if replacement.exists():
+            raise ArchiveError("Restored flow recipe key collides with an existing recipe")
+        original.rename(replacement)
     roots = [staging / "annotations"]
     roots.extend(staging.glob("labelsets/ls_*/annotations"))
     for root in roots:
@@ -322,27 +346,57 @@ def _rebind_deployments(staging: Path, old_source: Path | None, new_source: Path
                              (str(new_source), str(old_source)))
 
 
-def _replace_exact(value: Any, old: str, new: str) -> Any:
+def _replace_fingerprints(value: Any, replacements: dict[str, str]) -> Any:
     if isinstance(value, str):
-        return new if value == old else value
+        return replacements.get(value, value)
     if isinstance(value, list):
-        return [_replace_exact(item, old, new) for item in value]
+        return [_replace_fingerprints(item, replacements) for item in value]
     if isinstance(value, dict):
-        return {key: _replace_exact(item, old, new) for key, item in value.items()}
+        return {key: _replace_fingerprints(item, replacements) for key, item in value.items()}
     return value
 
 
-def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprint: str) -> None:
-    new_fingerprint = _dataset_fingerprint(target, source)
-    restored_source = target / "dataset" / "restored_source"
+def _restored_source_roots(project_dir: Path) -> list[Path]:
+    return [path for path in (project_dir / "dataset").glob("restored_source*")
+            if path.is_dir() and re.fullmatch(r"restored_source(?:_[0-9]+)?", path.name)]
+
+
+def _restore_source_location(members: Iterable[str]) -> Path:
+    """Keep a retained previous source separate when the active source changes."""
+    project_files = {Path(*Path(member).parts[1:]) for member in members if member.startswith("project/")}
+    candidate = Path("dataset/restored_source")
+    suffix = 2
+    while any(path == candidate or path.is_relative_to(candidate) for path in project_files):
+        candidate = Path(f"dataset/restored_source_{suffix}")
+        suffix += 1
+    if any(parent in project_files for parent in candidate.parents if parent != Path(".")):
+        raise ArchiveError("Backup project file collides with the source directory")
+    return candidate
+
+
+def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: dict[str, str]) -> None:
+    from backend.engine.project_labelsets import load_labelsets
+
+    registry = load_labelsets(target)
+    registered_ids = {row["id"] for row in registry["labelsets"]}
+    replacements: dict[str, str] = {}
+    for set_id, old_fingerprint in old_fingerprints.items():
+        if (set_id not in registered_ids or not isinstance(old_fingerprint, str)
+                or not re.fullmatch(r"v1:[0-9a-f]{64}", old_fingerprint)):
+            raise ArchiveError("Backup contains an invalid label set fingerprint")
+        new_fingerprint = _dataset_fingerprint(target, source, set_id)
+        if old_fingerprint in replacements and replacements[old_fingerprint] != new_fingerprint:
+            raise ArchiveError("Backup label set fingerprints are ambiguous")
+        replacements[old_fingerprint] = new_fingerprint
+    source_roots = _restored_source_roots(target)
     for path in target.rglob("*.json"):
-        if path.is_relative_to(restored_source):
+        if any(path.is_relative_to(root) for root in source_roots):
             continue
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except ValueError:
             continue
-        updated = _replace_exact(value, old_fingerprint, new_fingerprint)
+        updated = _replace_fingerprints(value, replacements)
         if updated != value:
             if path.parent.parent == target / "versions" and path.name == "manifest.json":
                 updated["content_digest"] = _content_digest(updated)
@@ -353,12 +407,11 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprint: str
         return
     with sqlite3.connect(database) as conn, conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(revisions)")}
-        if "training_dataset_fingerprint" in columns:
-            conn.execute("UPDATE revisions SET training_dataset_fingerprint = ? WHERE training_dataset_fingerprint = ?",
-                         (new_fingerprint, old_fingerprint))
-        if "evaluation_dataset_fingerprint" in columns:
-            conn.execute("UPDATE revisions SET evaluation_dataset_fingerprint = ? WHERE evaluation_dataset_fingerprint = ?",
-                         (new_fingerprint, old_fingerprint))
+        for column in ("training_dataset_fingerprint", "evaluation_dataset_fingerprint"):
+            if column in columns and replacements:
+                cases = " ".join("WHEN ? THEN ?" for _ in replacements)
+                parameters = [item for pair in replacements.items() for item in pair]
+                conn.execute(f"UPDATE revisions SET {column} = CASE {column} {cases} ELSE {column} END", parameters)
         if {"comparison_id", "comparison_sha256"}.issubset(columns):
             for (comparison_id,) in conn.execute("SELECT DISTINCT comparison_id FROM revisions"):
                 report = target / "reports" / "model_comparisons" / f"{comparison_id}.json"
@@ -403,8 +456,11 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
             source_size = sum(int(row["size"]) for row in rows if row["member"].startswith("source/"))
             if source_size > MAX_SOURCE_BYTES:
                 raise ArchiveError("Backup source exceeds the size limit", 413)
-            new_source = target_dir / "dataset" / "restored_source" if old_source else None
+            source_relative = _restore_source_location(expected) if old_source else None
+            new_source = target_dir / source_relative if source_relative is not None else None
             staging.mkdir()
+            if source_relative is not None:
+                (staging / source_relative).mkdir(parents=True)
             for info in infos:
                 if info.filename == "backup-manifest.json":
                     continue
@@ -413,7 +469,9 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
                         or (info.external_attr >> 16) & 0o170000 == 0o120000):
                     raise ArchiveError("Backup contains an invalid file member")
                 relative = Path(*Path(info.filename).parts[1:])
-                destination = staging / relative if info.filename.startswith("project/") else staging / "dataset" / "restored_source" / relative
+                destination = staging / relative if info.filename.startswith("project/") else staging / source_relative / relative
+                if destination.exists():
+                    raise ArchiveError("Backup members collide at the restore destination")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 digest = hashlib.sha256()
                 with source.open(info) as input_file, destination.open("wb") as output:
@@ -442,10 +500,19 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
             raise ArchiveError("Restore folder was created by another process", 409)
         os.replace(staging, target_dir)
         installed = True
-        old_fingerprint = manifest.get("source_dataset_fingerprint")
-        if (new_source is not None and isinstance(old_fingerprint, str)
-                and old_fingerprint.startswith("v1:")):
-            _rebind_fingerprint_records(target_dir, new_source, old_fingerprint)
+        if new_source is not None:
+            old_fingerprints = manifest.get("source_dataset_fingerprints_by_labelset")
+            if old_fingerprints is not None:
+                if not isinstance(old_fingerprints, dict):
+                    raise ArchiveError("Backup contains an invalid label set fingerprint map")
+            else:
+                # Existing v1 backups recorded only the label set active at backup.
+                from backend.engine.project_labelsets import load_labelsets
+                old_fingerprint = manifest.get("source_dataset_fingerprint")
+                active_id = load_labelsets(target_dir)["active_id"]
+                old_fingerprints = ({active_id: old_fingerprint}
+                                    if isinstance(old_fingerprint, str) and old_fingerprint.startswith("v1:") else {})
+            _rebind_fingerprint_records(target_dir, new_source, old_fingerprints)
         completed = True
         return target_dir
     except (OSError, KeyError, TypeError, ValueError, sqlite3.Error) as exc:

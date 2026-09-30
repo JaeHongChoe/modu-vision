@@ -15,6 +15,7 @@ loaded.paths = Module._nodeModulePaths(path.dirname(filename));
 loaded._compile(compiled, filename);
 const { runBatchInspection, summarizeBatch, filterBatchRows,
   isBatchSourceReady, isBatchSourceCurrent, isInspectionHistoryContextCurrent,
+  inspectionRunMatchesSource, createInspectionHistoryContext,
   batchSourceResetKey, stopInspectionRunKeepalive, createInspectionRunExitGuard } = loaded.exports;
 
 const image = (name, split = 'test') => ({
@@ -221,6 +222,75 @@ test('inspection history response requires the same project even when source and
   assert.equal(isInspectionHistoryContextCurrent(source({ folderPath: '/data/other' }), started), false);
   assert.equal(isInspectionHistoryContextCurrent(source({ task: 'detection' }), started), false);
   assert.equal(isInspectionHistoryContextCurrent(source({ contextRevision: 5 }), started), true);
+});
+
+test('history opening accepts legacy source spellings through the server canonical identity', () => {
+  assert.equal(typeof inspectionRunMatchesSource, 'function');
+  for (const spelling of ['/data/project/', '/data/project/../project', '/data/project_alias']) {
+    const run = { source_folder: spelling, canonical_source_folder: '/data/project', task: 'segmentation' };
+    assert.equal(inspectionRunMatchesSource(run, { ...source(), canonicalSourceFolder: '/data/project' }), true);
+    assert.equal(inspectionRunMatchesSource(run, { ...source(), canonicalSourceFolder: '/data/other' }), false);
+    assert.equal(inspectionRunMatchesSource(run, { ...source({ task: 'detection' }), canonicalSourceFolder: '/data/project' }), false);
+  }
+  assert.equal(inspectionRunMatchesSource({
+    source_folder: '/data/project', canonical_source_folder: '/data/other', task: 'segmentation',
+  }, { ...source(), canonicalSourceFolder: '/data/project' }), false);
+});
+
+test('history source comparison accepts aliases on either side using both canonical identities', () => {
+  for (const [selected, canonical] of [
+    ['/data/project/', '/data/project'], ['/data/./project', '/data/project'],
+    ['/data/project_alias', '/data/project'], ['/var/tmp/project', '/private/var/tmp/project'],
+  ]) {
+    const context = { ...source({ folderPath: selected }), canonicalSourceFolder: canonical };
+    for (const spelling of [canonical, selected, canonical + '/']) {
+      const run = { source_folder: spelling, canonical_source_folder: canonical, task: 'segmentation' };
+      assert.equal(inspectionRunMatchesSource(run, context), true);
+      assert.equal(inspectionRunMatchesSource({ ...run, canonical_source_folder: '/data/other' }, context), false);
+      assert.equal(inspectionRunMatchesSource({ ...run, task: 'detection' }, context), false);
+    }
+  }
+});
+
+test('history canonical source is trusted only after the current import and source save succeed', () => {
+  assert.equal(typeof createInspectionHistoryContext, 'function');
+  const selected = source({ folderPath: '/data/project_alias', datasetKey: '/data/project_alias\0segmentation' });
+  const project = { project_dir: '/workspaces/project-a', source_dataset_dir: '/data/project', task: 'segmentation' };
+  const ready = createInspectionHistoryContext(selected, project);
+  assert.equal(ready.folderPath, '/data/project_alias');
+  assert.equal(ready.canonicalSourceFolder, '/data/project');
+  assert.equal(ready.sourceReady, true);
+  for (const override of [
+    { isLoading: true }, { isSplitting: true }, { importError: 'Import failed' },
+    { datasetKey: null }, { sourceSaveError: 'Source save failed' },
+  ]) {
+    assert.equal(createInspectionHistoryContext({ ...selected, ...override }, project).canonicalSourceFolder, null);
+  }
+  for (const invalidProject of [null, { ...project, project_dir: '/workspaces/project-b' }, { ...project, task: 'detection' }]) {
+    const context = createInspectionHistoryContext(selected, invalidProject);
+    assert.equal(context.canonicalSourceFolder, null);
+    assert.equal(inspectionRunMatchesSource({
+      source_folder: '/data/project', canonical_source_folder: '/data/project', task: 'segmentation',
+    }, context), false);
+  }
+});
+
+test('history response is stale when canonical source or import readiness changes', () => {
+  const started = { ...source(), canonicalSourceFolder: '/data/project', sourceReady: true };
+  assert.equal(isInspectionHistoryContextCurrent({ ...started }, started), true);
+  assert.equal(isInspectionHistoryContextCurrent({ ...started, canonicalSourceFolder: '/data/other' }, started), false);
+  assert.equal(isInspectionHistoryContextCurrent({ ...started, sourceReady: false }, started), false);
+  assert.equal(isInspectionHistoryContextCurrent({ ...started, projectDir: '/workspaces/project-b' }, started), false);
+});
+
+test('history opening retains exact-source compatibility with older backend responses', () => {
+  assert.equal(typeof inspectionRunMatchesSource, 'function');
+  const old = { source_folder: '/data/project', task: 'segmentation' };
+  assert.equal(inspectionRunMatchesSource(old, source()), true);
+  assert.equal(inspectionRunMatchesSource({ ...old, source_folder: '/data/project/' }, source()), false);
+  assert.equal(inspectionRunMatchesSource({ ...old, task: 'detection' }, source()), false);
+  const legacyAlias = { ...old, source_folder: '/data/project/', canonical_source_folder: '/data/project' };
+  assert.equal(inspectionRunMatchesSource(legacyAlias, source({ folderPath: '/data/project/' })), true);
 });
 
 test('stale model provenance is rejected before batch image inventory or remote inference', async () => {

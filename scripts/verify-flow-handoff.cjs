@@ -64,6 +64,26 @@ test('saved flow identity includes the exact graph hash and model jobs', async (
   assert.equal(identity.pipelineHash, 'f85b13c3acd63151ec97b73e1e84a96bf1bb20dab61f99471773810aea8b7730');
 });
 
+test('saved flow identity prefers the server graph hash for exponent-formatted numbers', async () => {
+  const { savedFlowIdentity } = loadHandoff();
+  const exponentGraph = structuredClone(pipeline);
+  exponentGraph.nodes[0].position = { x: 1e-7, y: 1e-6 };
+  const serverHash = 'a1'.repeat(32);
+  const local = await savedFlowIdentity(versions[1], exponentGraph);
+  assert.notEqual(local.pipelineHash, serverHash);
+  const identity = await savedFlowIdentity({ ...versions[1], pipeline_hash: serverHash }, exponentGraph);
+  assert.equal(identity.pipelineHash, serverHash);
+  assert.deepEqual(identity.modelJobIds, ['job_a', 'job_b']);
+});
+
+test('invalid server graph hash falls back to the existing browser hash', async () => {
+  const { savedFlowIdentity } = loadHandoff();
+  for (const value of ['bad', 'g'.repeat(64), 'a'.repeat(63), 42]) {
+    const identity = await savedFlowIdentity({ ...versions[1], pipeline_hash: value }, pipeline);
+    assert.equal(identity.pipelineHash, 'f85b13c3acd63151ec97b73e1e84a96bf1bb20dab61f99471773810aea8b7730');
+  }
+});
+
 test('a detector feeding segmentation is labeled by its graph, not its recipe task', () => {
   const { flowRecipeLabel } = loadHandoff();
   assert.equal(typeof flowRecipeLabel, 'function');

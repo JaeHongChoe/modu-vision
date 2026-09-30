@@ -25,6 +25,8 @@ export interface InspectionReview {
 export interface BatchInspectionReport {
   run_id?: string;
   source_folder: string;
+  /** Server-resolved identity; source_folder retains the original run evidence. */
+  canonical_source_folder?: string | null;
   task: VisionTask;
   scope: BatchScope;
   pipeline_id: string;
@@ -89,8 +91,28 @@ export interface BatchSourceState {
   contextRevision: number;
   hasSelectedFolder: boolean;
   importError: string | null;
+  sourceSaveError?: string | null;
   isLoading: boolean;
   isSplitting: boolean;
+}
+
+export interface InspectionHistoryContext extends Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'> {
+  canonicalSourceFolder?: string | null;
+  sourceReady?: boolean;
+}
+
+export function createInspectionHistoryContext(
+  source: BatchSourceState,
+  project: { project_dir: string; source_dataset_dir: string | null; task: VisionTask } | null,
+): InspectionHistoryContext {
+  const sourceReady = isBatchSourceReady(source);
+  const canonicalTrusted = sourceReady && !source.sourceSaveError
+    && project?.project_dir === source.projectDir && project?.task === source.task;
+  return {
+    folderPath: source.folderPath, projectDir: source.projectDir, task: source.task,
+    canonicalSourceFolder: canonicalTrusted ? project?.source_dataset_dir || null : null,
+    sourceReady,
+  };
 }
 
 export function isBatchSourceReady(source: BatchSourceState): boolean {
@@ -107,12 +129,26 @@ export function isBatchSourceCurrent(current: BatchSourceState, started: BatchSo
 }
 
 export function isInspectionHistoryContextCurrent(
-  current: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>,
-  started: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>,
+  current: InspectionHistoryContext,
+  started: InspectionHistoryContext,
 ): boolean {
   return current.folderPath === started.folderPath
     && current.projectDir === started.projectDir
-    && current.task === started.task;
+    && current.task === started.task
+    && current.canonicalSourceFolder === started.canonicalSourceFolder
+    && current.sourceReady === started.sourceReady;
+}
+
+export function inspectionRunMatchesSource(
+  run: Pick<BatchInspectionReport, 'source_folder' | 'canonical_source_folder' | 'task'>,
+  source: Pick<InspectionHistoryContext, 'folderPath' | 'task' | 'canonicalSourceFolder'>,
+): boolean {
+  const runCanonical = run.canonical_source_folder;
+  const sourceCanonical = source.canonicalSourceFolder;
+  const canonicalTrusted = typeof runCanonical === 'string' && runCanonical.length > 0
+    && typeof sourceCanonical === 'string' && sourceCanonical.length > 0;
+  return run.task === source.task && (canonicalTrusted
+    ? runCanonical === sourceCanonical : run.source_folder === source.folderPath);
 }
 
 export function batchSourceResetKey(source: BatchSourceState): string {

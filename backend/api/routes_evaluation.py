@@ -133,11 +133,26 @@ def _find_image_file(image_id: str, file_path: Optional[str] = None) -> Optional
     return None
 
 
+def _record_for_selected_checkpoint(job_id: str):
+    """A restored project retains job IDs, but has its own receipts and files."""
+    record = training_job_manager.get_job(job_id)
+    project_models = active_project_models_dir()
+    if record is not None and project_models is not None:
+        checkpoint = trusted_checkpoint(job_id)
+        selected_job = (project_models / job_id).resolve()
+        if (checkpoint is not None and checkpoint.parent == selected_job
+                and Path(record.output_dir).expanduser().resolve() != selected_job):
+            # A live record from the original project must not override the
+            # completed checkpoint copied into the selected project.
+            return None
+    return record
+
+
 def _find_model_file(job_id: Optional[str] = None) -> Optional[Path]:
     """Locates only the explicitly selected training job's checkpoint."""
     if not job_id:
         return None
-    rec = training_job_manager.get_job(job_id)
+    rec = _record_for_selected_checkpoint(job_id)
     if rec and rec.status != "completed":
         return None
     return trusted_checkpoint(job_id, rec.output_dir if rec else None)
@@ -258,9 +273,9 @@ def _resolve_job_artifacts(
     if job_id and job_id not in ("latest", "current", "default"):
         if not is_job_id(job_id):
             raise HTTPException(status_code=404, detail=f"Evaluation data or model checkpoint not found for job: {job_id}")
-        rec = training_job_manager.get_job(job_id)
+        rec = _record_for_selected_checkpoint(job_id)
         if rec:
-            if rec.status in ("running", "stopping", "disconnected"):
+            if rec.status in ("queued", "running", "stopping", "disconnected"):
                 raise HTTPException(status_code=400, detail=f"Training job '{job_id}' is still in progress")
             if rec.status in ("failed", "aborted"):
                 raise HTTPException(
@@ -298,7 +313,8 @@ def _resolve_job_artifacts(
         )
         latest_rec = next(
             (r for r in completed_jobs
-             if trusted_checkpoint(r.job_id, r.output_dir) is not None
+             if _record_for_selected_checkpoint(r.job_id) is r
+             and trusted_checkpoint(r.job_id, r.output_dir) is not None
              and _matches_source_dataset(
                  Path(r.output_dir), source_dataset_path, source_task, r.dataset_path,
                  getattr(r, "source_dataset_path", None), getattr(r, "dataset_fingerprint", None),
@@ -328,8 +344,9 @@ def _resolve_job_artifacts(
                 and _matches_source_dataset(p.parent, source_dataset_path, source_task)
             ]
             active = training_job_manager.get_active_job()
-            if active and active.status in ("running", "stopping", "disconnected"):
-                candidates = [p for p in candidates if p.parent.name != active.job_id]
+            if active and active.status in ("queued", "running", "stopping", "disconnected"):
+                active_output = Path(active.output_dir).expanduser().resolve()
+                candidates = [p for p in candidates if p.parent.resolve() != active_output]
             if not candidates:
                 raise HTTPException(status_code=404, detail="No completed training job has been selected")
             newest = max(candidates, key=lambda p: p.stat().st_mtime)

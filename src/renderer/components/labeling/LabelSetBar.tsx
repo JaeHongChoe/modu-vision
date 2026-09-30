@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CopyPlus, Layers3, RefreshCw } from 'lucide-react';
 import { api, type ProjectLabelSet } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -13,22 +13,34 @@ export const LabelSetBar: React.FC = () => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const projectKey = project ? `${project.id}\0${project.project_dir}\0${project.active_labelset_id}` : null;
+  const currentProjectKey = useRef(projectKey);
+  currentProjectKey.current = projectKey;
+  const requestSequence = useRef(0);
 
   const load = async () => {
-    if (!project) return;
+    if (!project || projectKey !== currentProjectKey.current) return;
+    const requestId = ++requestSequence.current;
+    const isCurrent = () => requestId === requestSequence.current && projectKey === currentProjectKey.current;
     setLoading(true);
     setError(null);
     try {
       const response = await api.project.listLabelsets();
-      setSets(response.labelsets);
+      if (isCurrent()) setSets(response.labelsets);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      if (isCurrent()) setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
-  useEffect(() => { void load(); }, [project?.project_dir, project?.active_labelset_id]);
+  useEffect(() => {
+    setSets([]);
+    setError(null);
+    setLoading(false);
+    void load();
+    return () => { requestSequence.current += 1; };
+  }, [projectKey]);
 
   const select = async (id: string) => {
     if (!project || id === project.active_labelset_id || busy) return;

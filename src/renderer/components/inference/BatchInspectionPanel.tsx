@@ -11,11 +11,12 @@ import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
-  isInspectionHistoryContextCurrent, createInspectionRunExitGuard,
+  isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
   runBatchInspection, stopInspectionRunKeepalive, summarizeBatch,
   type BatchSourceState,
   type BatchFilter, type BatchInspectionReport, type BatchScope, type BatchStopReason,
   type InspectionHistoryRun, type InspectionRunSummary,
+  type InspectionHistoryContext,
 } from './batchInspection';
 
 const scopeNames: Record<BatchScope, string> = {
@@ -39,9 +40,10 @@ let activeBatchOperation = 0;
 export const BatchInspectionPanel: React.FC = () => {
   const task = useProjectStore((state) => state.task);
   const projectDir = useProjectStore((state) => state.projectDir);
+  const project = useProjectStore((state) => state.project);
   const setStep = useProjectStore((state) => state.setStep);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
-  const { folderPath, datasetKey, hasSelectedFolder, importError, isLoading: datasetIsLoading,
+  const { folderPath, datasetKey, hasSelectedFolder, importError, sourceSaveError, isLoading: datasetIsLoading,
     isSplitting, split, sourceImages } = useDatasetStore();
   const contextRevision = useFlowchartStore((state) => state.contextRevision);
   const [scope, setScope] = useState<BatchScope>('test');
@@ -76,22 +78,21 @@ export const BatchInspectionPanel: React.FC = () => {
       contextRevision: useFlowchartStore.getState().contextRevision,
       hasSelectedFolder: dataset.hasSelectedFolder,
       importError: dataset.importError,
+      sourceSaveError: dataset.sourceSaveError,
       isLoading: dataset.isLoading,
       isSplitting: dataset.isSplitting,
     };
   };
   const renderedSource: BatchSourceState = {
     folderPath, projectDir, task, datasetKey, contextRevision, hasSelectedFolder,
-    importError, isLoading: datasetIsLoading, isSplitting,
+    importError, sourceSaveError, isLoading: datasetIsLoading, isSplitting,
   };
   const sourceReady = isBatchSourceReady(renderedSource);
   const resetKey = batchSourceResetKey(renderedSource);
-  const historyContext = { folderPath, projectDir, task };
-  const currentHistoryContext = () => {
-    const dataset = useDatasetStore.getState();
-    const project = useProjectStore.getState();
-    return { folderPath: dataset.folderPath, projectDir: project.projectDir, task: project.task };
-  };
+  const historyContext = createInspectionHistoryContext(renderedSource, project);
+  const currentHistoryContext = () => createInspectionHistoryContext(
+    currentBatchSource(), useProjectStore.getState().project,
+  );
 
   useEffect(() => {
     const stopOwnedRun = () => {
@@ -143,26 +144,30 @@ export const BatchInspectionPanel: React.FC = () => {
   }, [resetKey]);
 
   useEffect(() => {
-    if (!folderPath) { setHistory([]); return; }
+    setReport(null);
+    setSelectedPath(null);
+    if (!sourceReady) { setHistory([]); setHistoryLoading(false); return; }
+    const started = historyContext;
     let active = true;
+    const isCurrent = () => active && isInspectionHistoryContextCurrent(currentHistoryContext(), started);
     setHistoryLoading(true);
     setHistoryError(null);
     api.inspections.listRuns(folderPath, task).then(async ({ runs }) => {
-      if (!active) return;
+      if (!isCurrent()) return;
       setHistory(runs);
       if (runs.length > 0) {
         const latest = await api.inspections.getRun(runs[0].run_id);
-        if (active && latest.source_folder === folderPath && latest.task === task) {
+        if (isCurrent() && inspectionRunMatchesSource(latest, started)) {
           setReport(latest);
           setScope(latest.scope);
           setSelectedPath(latest.rows.find((row) => row.result)?.image.file_path ?? latest.rows[0]?.image.file_path ?? null);
         }
       }
     }).catch((cause) => {
-      if (active) setHistoryError(cause instanceof Error ? cause.message : String(cause));
-    }).finally(() => { if (active) setHistoryLoading(false); });
+      if (isCurrent()) setHistoryError(cause instanceof Error ? cause.message : String(cause));
+    }).finally(() => { if (isCurrent()) setHistoryLoading(false); });
     return () => { active = false; };
-  }, [folderPath, task, projectDir]);
+  }, [folderPath, task, projectDir, historyContext.canonicalSourceFolder, sourceReady]);
 
   const openHistoryRun = async (runId: string, preferredImagePath?: string) => {
     const started = historyContext;
@@ -172,7 +177,7 @@ export const BatchInspectionPanel: React.FC = () => {
     try {
       setHistoryError(null);
       const previous = await api.inspections.getRun(runId);
-      if (!isCurrent() || previous.source_folder !== started.folderPath || previous.task !== started.task) return;
+      if (!isCurrent() || !inspectionRunMatchesSource(previous, started)) return;
       setReport(previous);
       setScope(previous.scope);
       setFilter('all');
@@ -184,7 +189,7 @@ export const BatchInspectionPanel: React.FC = () => {
     }
   };
 
-  const refreshHistory = async (started: Pick<BatchSourceState, 'folderPath' | 'projectDir' | 'task'>) => {
+  const refreshHistory = async (started: InspectionHistoryContext) => {
     const { runs } = await api.inspections.listRuns(started.folderPath, started.task);
     if (isInspectionHistoryContextCurrent(currentHistoryContext(), started)) {
       setHistory(runs);
@@ -193,6 +198,7 @@ export const BatchInspectionPanel: React.FC = () => {
 
   const handleStart = async () => {
     const startedSource = currentBatchSource();
+    const startedHistory = currentHistoryContext();
     if (!isBatchSourceReady(startedSource) || !savedFlow || isRunning) return;
     const sourceFolder = startedSource.folderPath;
     const sourceTask = startedSource.task;
@@ -267,7 +273,7 @@ export const BatchInspectionPanel: React.FC = () => {
         const persisted = finished.run_id ? await api.inspections.getRun(finished.run_id) : finished;
         if (!currentSource()) return;
         setReport(persisted);
-        await refreshHistory(startedSource);
+        await refreshHistory(startedHistory);
         setReviewQueueRevision((value) => value + 1);
       }
     } catch (cause) {
@@ -314,7 +320,7 @@ export const BatchInspectionPanel: React.FC = () => {
       if (!isCurrent()) return;
       localStorage.setItem('inspection-reviewer', reviewer.trim());
       const refreshed: InspectionHistoryRun = await api.inspections.getRun(runId);
-      if (!isCurrent() || refreshed.source_folder !== started.folderPath || refreshed.task !== started.task) return;
+      if (!isCurrent() || !inspectionRunMatchesSource(refreshed, started)) return;
       setReport(refreshed);
       setSelectedPath(imagePath);
       setReviewReason('');

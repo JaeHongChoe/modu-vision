@@ -314,6 +314,9 @@ export const IntermediateCropDrawer: React.FC = () => {
             processedCrops.map((crop) => {
               const isNg = crop.verdict === 'NG';
               const isHovered = hoveredRoiId === crop.roi_id;
+              const hasDefectArea = typeof crop.defect_area_px === 'number' && Number.isFinite(crop.defect_area_px);
+              const hasBlobCount = typeof crop.blob_count === 'number' && Number.isFinite(crop.blob_count);
+              const hasLargestBlobArea = typeof crop.largest_blob_area_px === 'number' && Number.isFinite(crop.largest_blob_area_px);
               const [x1, y1, x2, y2] = crop.bbox;
               const w = x2 - x1;
               const h = y2 - y1;
@@ -361,7 +364,7 @@ export const IntermediateCropDrawer: React.FC = () => {
                     {/* Defect Score Readout & Mini-Gauge */}
                     <div className="mt-1 flex items-center justify-between text-[11px] font-mono">
                       <span className="text-slate-400">
-                        {crop.roi_id === 'full_image' && crop.defect_area_px !== undefined
+                        {crop.roi_id === 'full_image' && hasDefectArea
                           ? '최고 결함 픽셀 확률:'
                           : '결함 점수:'}
                       </span>
@@ -379,14 +382,16 @@ export const IntermediateCropDrawer: React.FC = () => {
                     <div className="text-[10px] text-slate-300 truncate mt-0.5">
                       {crop.flaw_type}
                     </div>
-                    {crop.defect_area_px !== undefined && (
+                    {hasDefectArea && (
                       <div className="text-[10px] text-slate-400 mt-0.5">
                         임계값 초과 픽셀: {crop.defect_area_px} px
                       </div>
                     )}
-                    {crop.blob_count !== undefined && (
+                    {(hasBlobCount || hasLargestBlobArea) && (
                       <div className="text-[10px] text-teal-300 mt-0.5 tabular-nums">
-                        Blob {crop.blob_count}개 · 최대 면적 {crop.largest_blob_area_px ?? 0} px²
+                        {hasBlobCount && <>Blob {crop.blob_count}개</>}
+                        {hasBlobCount && hasLargestBlobArea && ' · '}
+                        {hasLargestBlobArea && <>최대 면적 {crop.largest_blob_area_px} px²</>}
                       </div>
                     )}
 

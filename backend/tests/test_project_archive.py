@@ -128,6 +128,94 @@ def test_archive_rebinds_model_receipt_and_saved_flow_to_relocated_source(tmp_pa
     assert json.loads((Path(project["models_dir"]) / job_id / "job_receipt.json").read_text(encoding="utf-8"))["source_dataset_path"] == str(source)
 
 
+def test_restored_project_can_be_backed_up_and_restored_again(tmp_path: Path):
+    client, project, _source, image, job_id, _version_id, _run_id = _project_with_model_flow_and_run(tmp_path)
+    image_bytes = image.read_bytes()
+    checkpoint_bytes = (Path(project["models_dir"]) / job_id / "best_model.pt").read_bytes()
+    first = client.post("/api/project/backup", json={"destination_dir": str(tmp_path / "backups")})
+    assert first.status_code == 200, first.text
+    restored = client.post("/api/project/restore", json={
+        "archive_path": first.json()["archive_path"], "target_dir": str(tmp_path / "restored"),
+    })
+    assert restored.status_code == 200, restored.text
+
+    second = client.post("/api/project/backup", json={"destination_dir": str(tmp_path / "backups")})
+    assert second.status_code == 200, second.text
+    with ZipFile(second.json()["archive_path"]) as archive:
+        names = archive.namelist()
+        assert "source/test/part.png" in names
+        assert not any(name.startswith("project/dataset/restored_source/") for name in names)
+        assert archive.read("source/test/part.png") == image_bytes
+    repeated = client.post("/api/project/restore", json={
+        "archive_path": second.json()["archive_path"], "target_dir": str(tmp_path / "restored_again"),
+    })
+    assert repeated.status_code == 200, repeated.text
+    repeat_project = repeated.json()
+    assert (Path(repeat_project["source_dataset_dir"]) / "test" / "part.png").read_bytes() == image_bytes
+    assert (Path(repeat_project["models_dir"]) / job_id / "best_model.pt").read_bytes() == checkpoint_bytes
+    assert client.post("/api/flowchart/models/verify", json={
+        "source_dataset_path": repeat_project["source_dataset_dir"],
+        "models": [{"job_id": job_id, "task": "segmentation"}],
+    }).status_code == 200
+
+
+def test_archive_rebinds_source_key_for_saved_recipe_lookup(tmp_path: Path):
+    client, _project, source, _image, _job_id, _version_id, _run_id = _project_with_model_flow_and_run(tmp_path)
+    original = client.get("/api/flowchart/pipeline", params={
+        "inspection_task": "segmentation", "source_dataset_path": str(source),
+    })
+    assert original.status_code == 200, original.text
+    backed = client.post("/api/project/backup", json={"destination_dir": str(tmp_path / "backups")})
+    assert backed.status_code == 200, backed.text
+    restored = client.post("/api/project/restore", json={
+        "archive_path": backed.json()["archive_path"], "target_dir": str(tmp_path / "restored"),
+    })
+    assert restored.status_code == 200, restored.text
+    recipe = client.get("/api/flowchart/pipeline", params={
+        "inspection_task": "segmentation", "source_dataset_path": restored.json()["source_dataset_dir"],
+    })
+    assert recipe.status_code == 200, recipe.text
+    assert recipe.json() == original.json()
+    assert recipe.json() == client.get("/api/flowchart/pipeline/active").json()
+
+
+def test_rearchive_after_source_change_keeps_old_and_active_source_separate(tmp_path: Path):
+    client = _client(tmp_path / "projects")
+    client.post("/api/project/create", json={"name": "Changed source", "task": "classification"})
+    old_source = tmp_path / "old_source"
+    old_source.mkdir()
+    (old_source / "shared.png").write_bytes(b"original shared image")
+    (old_source / "old_only.png").write_bytes(b"old image")
+    original_label_bytes = json.dumps({"source": str(old_source), "labels": ["old"]}).encode()
+    (old_source / "labels.json").write_bytes(original_label_bytes)
+    client.put("/api/project/update", json={"source_dataset_dir": str(old_source)})
+    first = client.post("/api/project/backup", json={"destination_dir": str(tmp_path / "backups")}).json()
+    first_project = client.post("/api/project/restore", json={
+        "archive_path": first["archive_path"], "target_dir": str(tmp_path / "restored"),
+    }).json()
+    retained_source = Path(first_project["source_dataset_dir"])
+    new_source = tmp_path / "new_source"
+    new_source.mkdir()
+    (new_source / "shared.png").write_bytes(b"new shared image")
+    (new_source / "new_only.png").write_bytes(b"new image")
+    client.put("/api/project/update", json={"source_dataset_dir": str(new_source)})
+
+    second = client.post("/api/project/backup", json={"destination_dir": str(tmp_path / "backups")})
+    assert second.status_code == 200, second.text
+    repeated = client.post("/api/project/restore", json={
+        "archive_path": second.json()["archive_path"], "target_dir": str(tmp_path / "restored_again"),
+    })
+    assert repeated.status_code == 200, repeated.text
+    active_source = Path(repeated.json()["source_dataset_dir"])
+    assert {path.name for path in active_source.iterdir()} == {"shared.png", "new_only.png"}
+    assert (active_source / "shared.png").read_bytes() == (new_source / "shared.png").read_bytes()
+    old_copy = Path(repeated.json()["project_dir"]) / retained_source.relative_to(Path(first_project["project_dir"]))
+    assert old_copy != active_source
+    assert (old_copy / "shared.png").read_bytes() == (old_source / "shared.png").read_bytes()
+    assert (old_copy / "old_only.png").read_bytes() == b"old image"
+    assert (old_copy / "labels.json").read_bytes() == original_label_bytes
+
+
 def test_archive_remaps_inspection_runs_and_keeps_reviews_in_their_project(tmp_path: Path):
     client, project, _source, image, job_id, _version_id, original_run_id = _project_with_model_flow_and_run(tmp_path)
     original_db = Path(project["project_dir"]) / "inspection_history.sqlite3"

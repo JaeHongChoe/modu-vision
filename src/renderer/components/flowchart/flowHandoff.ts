@@ -40,8 +40,8 @@ export function flowRunSourceLabel(
     : '미저장 초안 검사 결과 · 6단계에서 사용하려면 플로우를 저장하세요';
 }
 
-// Match the inspection history's json.dumps(sort_keys=True, separators=(",", ":"))
-// after a saved graph has been decoded from JSON and sent back to the API.
+// Older backends do not publish graph hashes. Keep their browser-side identity
+// available while newer backends supply the authoritative canonical graph hash.
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -58,7 +58,11 @@ export async function savedFlowIdentity(
   version: SavedFlowVersion,
   pipeline: FlowchartPipeline,
 ): Promise<SavedFlowIdentity> {
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalJson(pipeline)));
+  let pipelineHash = version.pipeline_hash;
+  if (typeof pipelineHash !== 'string' || !/^[a-f0-9]{64}$/.test(pipelineHash)) {
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalJson(pipeline)));
+    pipelineHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
   const modelJobIds = [...new Set(pipeline.nodes
     .filter((node) => node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop')
     .map((node) => node.data.model_job_id)
@@ -67,7 +71,7 @@ export async function savedFlowIdentity(
     versionId: version.version_id,
     pipelineId: pipeline.id,
     pipelineName: pipeline.name,
-    pipelineHash: Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(''),
+    pipelineHash,
     modelJobIds,
     recipeTask: version.recipe_task,
   };

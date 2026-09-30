@@ -11,8 +11,95 @@ from fastapi.testclient import TestClient
 
 from backend.api import routes_evaluation
 from backend.engine import exporter
+from backend.engine import checkpoint_paths
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.main import create_app
+
+
+def _relocated_job_with_original_record(monkeypatch, tmp_path, status):
+    """A backup keeps its job ID, while its completed artifacts move."""
+    monkeypatch.chdir(tmp_path)
+    job_id = "job_123_relocated"
+    original_job = tmp_path / "original" / "models" / job_id
+    restored_job = tmp_path / "restored" / "models" / job_id
+    restored_source = tmp_path / "restored" / "dataset" / "restored_source"
+    restored_source.mkdir(parents=True)
+    (restored_source / "part.png").write_bytes(b"source image")
+    (restored_job / "dataset").mkdir(parents=True)
+    (restored_job / "best_model.pt").write_bytes(b"restored checkpoint")
+    (restored_job / "model_meta.json").write_text(json.dumps({"task": "segmentation"}))
+    (restored_job / "job_receipt.json").write_text(json.dumps({
+        "job_id": job_id, "status": "completed", "task": "segmentation",
+        "output_dir": str(restored_job), "dataset_path": str(restored_job / "dataset"),
+        "source_dataset_path": str(restored_source),
+        "dataset_fingerprint": fingerprint_dataset(restored_source),
+    }))
+    record = SimpleNamespace(
+        job_id=job_id, status=status, task="segmentation", output_dir=str(original_job),
+        dataset_path=str(tmp_path / "original_source"), source_dataset_path=str(tmp_path / "original_source"),
+        dataset_fingerprint="v1:" + "0" * 64, start_time=1,
+    )
+    monkeypatch.setattr(routes_evaluation.training_job_manager, "_jobs", {job_id: record})
+    monkeypatch.setattr(routes_evaluation.training_job_manager, "_active_job_id", job_id)
+    monkeypatch.setattr(checkpoint_paths, "_ACTIVE_PROJECT_MODELS_DIR", restored_job.parent)
+    return job_id, restored_job, restored_source, record
+
+
+@pytest.mark.parametrize("status", ["completed", "running", "stopping", "disconnected", "queued", "failed", "aborted"])
+def test_relocated_checkpoint_uses_receipt_when_original_job_id_is_still_in_memory(monkeypatch, tmp_path, status):
+    job_id, restored_job, source, _record = _relocated_job_with_original_record(monkeypatch, tmp_path, status)
+
+    output_dir, checkpoint, _meta, task, resolved_id, dataset = routes_evaluation._resolve_job_artifacts(
+        job_id, source_dataset_path=str(source), source_task="segmentation",
+    )
+
+    assert output_dir == restored_job
+    assert checkpoint.read_bytes() == b"restored checkpoint"
+    assert task == "segmentation" and resolved_id == job_id
+    assert dataset == restored_job / "dataset"
+    assert routes_evaluation._find_model_file(job_id) == checkpoint
+
+
+@pytest.mark.parametrize("status", ["running", "stopping", "disconnected", "queued"])
+def test_latest_relocated_checkpoint_is_not_hidden_by_original_projects_active_job(monkeypatch, tmp_path, status):
+    job_id, restored_job, source, _record = _relocated_job_with_original_record(monkeypatch, tmp_path, status)
+
+    output_dir, checkpoint, _meta, _task, resolved_id, _dataset = routes_evaluation._resolve_job_artifacts(
+        source_dataset_path=str(source), source_task="segmentation",
+    )
+
+    assert output_dir == restored_job
+    assert checkpoint == restored_job / "best_model.pt"
+    assert resolved_id == job_id
+
+
+def test_latest_prefers_restored_project_over_original_legacy_record(monkeypatch, tmp_path):
+    job_id, restored_job, _source, record = _relocated_job_with_original_record(monkeypatch, tmp_path, "completed")
+    legacy_job = tmp_path / "models" / job_id
+    (legacy_job / "dataset").mkdir(parents=True)
+    (legacy_job / "best_model.pt").write_bytes(b"original checkpoint")
+    (legacy_job / "model_meta.json").write_text(json.dumps({"task": "classification"}))
+    record.output_dir = str(legacy_job)
+    record.dataset_path = str(legacy_job / "dataset")
+    record.task = "classification"
+
+    output_dir, checkpoint, _meta, task, resolved_id, _dataset = routes_evaluation._resolve_job_artifacts()
+
+    assert output_dir == restored_job
+    assert checkpoint.read_bytes() == b"restored checkpoint"
+    assert task == "segmentation" and resolved_id == job_id
+
+
+@pytest.mark.parametrize("status", ["running", "stopping", "disconnected", "queued"])
+def test_selected_projects_active_job_still_blocks_completed_artifacts(monkeypatch, tmp_path, status):
+    job_id, restored_job, source, record = _relocated_job_with_original_record(monkeypatch, tmp_path, status)
+    record.output_dir = str(restored_job)
+
+    with pytest.raises(HTTPException) as error:
+        routes_evaluation._resolve_job_artifacts(job_id, source_dataset_path=str(source), source_task="segmentation")
+
+    assert error.value.status_code == 400
+    assert routes_evaluation._find_model_file(job_id) is None
 
 
 def test_latest_completed_model_on_disk_resolves_with_its_prepared_dataset(monkeypatch, tmp_path):

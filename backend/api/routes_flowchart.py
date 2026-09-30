@@ -50,6 +50,7 @@ from backend.engine.flowchart_engine import (
 )
 from backend.utils.error_catalog import format_error_response
 from backend.engine.checkpoint_paths import is_job_id, trusted_checkpoint
+from backend.engine.flow_provenance import pipeline_sha256
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -590,6 +591,7 @@ def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: 
             rows.append({
                 "version_id": record["version_id"],
                 "pipeline_id": pipeline.id,
+                "pipeline_hash": pipeline_sha256(pipeline),
                 "name": pipeline.name,
                 "recipe_task": record["recipe_task"],
                 "source_dataset_path": record.get("source_dataset_path"),

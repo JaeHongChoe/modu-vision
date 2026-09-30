@@ -41,6 +41,7 @@ export interface FlowModelCatalogItem {
 export interface SavedFlowVersion {
   version_id: string;
   pipeline_id: string;
+  pipeline_hash?: string;
   name: string;
   recipe_task: FlowModelTask | 'mixed';
   source_dataset_path: string;

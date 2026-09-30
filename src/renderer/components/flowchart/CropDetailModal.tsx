@@ -85,7 +85,11 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   // Read the threshold from the model that produced this ROI, including detector-only flows.
   const inspectNode = modelNodeForCrop(pipeline, crop);
   const threshold = inspectNode?.data.threshold;
-  const isSegmentation = inspectNode?.data.task === 'segmentation' || crop.blob_count !== undefined;
+  const hasDefectArea = typeof crop.defect_area_px === 'number' && Number.isFinite(crop.defect_area_px);
+  const hasBlobCount = typeof crop.blob_count === 'number' && Number.isFinite(crop.blob_count);
+  const hasLargestBlobArea = typeof crop.largest_blob_area_px === 'number' && Number.isFinite(crop.largest_blob_area_px);
+  const confidence = typeof crop.confidence === 'number' && Number.isFinite(crop.confidence) ? crop.confidence : null;
+  const isSegmentation = inspectNode?.data.task === 'segmentation' || hasBlobCount || hasLargestBlobArea;
   const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
   const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
   const scorePercent = crop.defect_score * 100;
@@ -152,7 +156,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 <div className="flex items-center space-x-2">
                   {isNg ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span className="font-mono font-bold text-xs uppercase">
-                    {crop.blob_count !== undefined ? 'Blob 측정 판정' : '로컬 모델 판정'}: {crop.verdict}
+                    {hasBlobCount || hasLargestBlobArea ? 'Blob 측정 판정' : '로컬 모델 판정'}: {crop.verdict}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0E14]/60 border border-current">
@@ -226,30 +230,30 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                   <span className="text-slate-400">바운딩 박스 (BBox):</span>
                   <span className="text-[#3B82F6] font-bold tabular-nums">[{x1}, {y1}, {x2}, {y2}]</span>
                 </div>
-                {isSegmentation && inspectNode && (
+                {isSegmentation && inspectNode && hasDefectArea && (
                   <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
                     <span className="text-slate-400">
                       임계값 초과 픽셀 / NG 최소 면적 ({isFullImageSegmentation ? '검사 이미지' : '모델 입력'}):
                     </span>
-                    <span className="text-slate-100 font-bold tabular-nums">{crop.defect_area_px ?? 0} / {minimumDefectArea} px</span>
+                    <span className="text-slate-100 font-bold tabular-nums">{crop.defect_area_px} / {minimumDefectArea} px</span>
                   </div>
                 )}
-                {crop.blob_count !== undefined && (
-                  <>
-                    <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
-                      <span className="text-slate-400">측정 Blob 개수:</span>
-                      <span className="text-teal-300 font-bold tabular-nums">{crop.blob_count}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">최대 Blob 면적:</span>
-                      <span className="text-teal-300 font-bold tabular-nums">{crop.largest_blob_area_px ?? 0} px²</span>
-                    </div>
-                  </>
+                {hasBlobCount && (
+                  <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
+                    <span className="text-slate-400">측정 Blob 개수:</span>
+                    <span className="text-teal-300 font-bold tabular-nums">{crop.blob_count}</span>
+                  </div>
                 )}
-                {!isFullImageSegmentation && crop.confidence !== undefined && (
+                {hasLargestBlobArea && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">검출 신뢰도 (Confidence):</span>
-                    <span className="text-[#10B981] font-bold tabular-nums">{(crop.confidence * 100).toFixed(1)}%</span>
+                    <span className="text-slate-400">최대 Blob 면적:</span>
+                    <span className="text-teal-300 font-bold tabular-nums">{crop.largest_blob_area_px} px²</span>
+                  </div>
+                )}
+                {!isFullImageSegmentation && confidence !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">모델 신뢰도 (Confidence):</span>
+                    <span className="text-[#10B981] font-bold tabular-nums">{(confidence * 100).toFixed(1)}%</span>
                   </div>
                 )}
               </div>

@@ -148,10 +148,18 @@ async function saveOpenEdits(): Promise<void> {
 }
 
 async function applyProject(project: ProjectConfig, previous: ProjectConfig | null, forceReset = false): Promise<void> {
-  if (forceReset || previous?.id !== project.id || previous?.project_dir !== project.project_dir) {
+  const contextChanged = previous?.id !== project.id || previous?.project_dir !== project.project_dir
+    || (previous?.active_labelset_id || 'default') !== (project.active_labelset_id || 'default');
+  if (forceReset || contextChanged) {
     const cleared = await useAnnotationStore.getState().setImages([]);
     if (!cleared) throw new Error('라벨 화면을 정리하지 못했습니다.');
     useAnnotationStore.getState().setTask(project.task);
+    if (contextChanged) {
+      // Import/edit history belongs to one workspace and label set. A new
+      // context may use the same source folder; recover its model through the
+      // backend's source, task, ownership, and fingerprint checks.
+      useDatasetStore.setState({ lastImportedKey: null, staleDatasetKeys: [] });
+    }
     useDatasetStore.getState().setFolderPath('');
     if (project.source_dataset_dir) {
       useDatasetStore.getState().setFolderPath(project.source_dataset_dir);

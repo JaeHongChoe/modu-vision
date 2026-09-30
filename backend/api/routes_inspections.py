@@ -29,6 +29,7 @@ from backend.engine.flowchart_engine import (
     ordered_linear_nodes, verified_checkpoint_scope,
 )
 from backend.engine.checkpoint_paths import is_job_id
+from backend.engine.flow_provenance import canonical_pipeline_json
 
 
 router = APIRouter(prefix="/api/inspections", tags=["inspections"])
@@ -50,6 +51,15 @@ def _csv_cell(value: Any) -> Any:
 
 def _canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _source_identity(source_folder: str) -> Optional[str]:
+    """Compare source aliases without rewriting older run evidence or listing directories."""
+    try:
+        return str(Path(source_folder).expanduser().resolve())
+    except (OSError, RuntimeError, ValueError, TypeError):
+        # An unavailable or malformed legacy alias must not hide other runs.
+        return None
 
 
 def _sha256(path: Path) -> str:
@@ -258,6 +268,9 @@ def _store(request: Request, run_id: Optional[str] = None):
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
+    # Queries stay inside this project's database; legacy rows may have been
+    # saved with a trailing slash, parent segment, or symlink source spelling.
+    conn.create_function("source_identity", 1, _source_identity)
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript("""
@@ -353,6 +366,7 @@ def _read_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, Any]:
         item = {key: review[key] for key in review.keys() if key not in {"run_id", "image_path"}}
         by_image.setdefault(review["image_path"], []).append(item)
     output = {key: run[key] for key in run.keys() if key not in {"pipeline_json", "model_sha256_json", "model_paths_json"}}
+    output["canonical_source_folder"] = _source_identity(run["source_folder"])
     output["pipeline"] = json.loads(run["pipeline_json"])
     output["model_sha256"] = json.loads(run["model_sha256_json"] or "{}")
     output["rows"] = []
@@ -432,8 +446,14 @@ def create_run(payload: CreateRun, request: Request):
     if not payload.pipeline.get("id") or not payload.pipeline.get("name"):
         raise HTTPException(status_code=422, detail="A named flowchart is required for inspection provenance.")
     project = get_current_project(request)
+    source_folder = _source_identity(payload.source_folder)
+    if source_folder is None:
+        raise HTTPException(status_code=422, detail="Inspection source path cannot be resolved.")
+    try:
+        pipeline_json = canonical_pipeline_json(payload.pipeline)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=f"Inspection graph is invalid: {exc}") from exc
     saved_version_id, model_sha256, model_paths = _verified_run_provenance(payload, project)
-    pipeline_json = _canonical_json(payload.pipeline)
     run_id, stamp = str(uuid.uuid4()), _now()
     with _run_index(request) as index:
         index.execute("INSERT INTO run_projects VALUES (?, ?, ?)",
@@ -444,7 +464,7 @@ def create_run(payload: CreateRun, request: Request):
             "pipeline_hash, pipeline_json, saved_version_id, model_sha256_json, model_paths_json, "
             "status, owner_instance, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (run_id, payload.source_folder, payload.task, payload.scope,
+            (run_id, source_folder, payload.task, payload.scope,
              str(payload.pipeline["id"]), str(payload.pipeline["name"]),
              hashlib.sha256(pipeline_json.encode("utf-8")).hexdigest(), pipeline_json,
              saved_version_id, _canonical_json(model_sha256), _canonical_json(model_paths),
@@ -470,13 +490,14 @@ def review_queue(request: Request, source_folder: str, task: Literal["classifica
     """Surface unresolved model REVIEW results and diagnostic errors across this project's runs."""
     project = get_current_project(request)
     configured = project.get("source_dataset_dir")
-    if (not configured or Path(configured).expanduser().resolve() != Path(source_folder).expanduser().resolve()
+    source_folder = _source_identity(source_folder)
+    if (not configured or source_folder is None or _source_identity(configured) != source_folder
             or project.get("task") != task):
         raise HTTPException(status_code=409, detail="Review queue source or task differs from the active project.")
     latest_review = """(SELECT reviews.final_verdict FROM reviews
         WHERE reviews.run_id = rows.run_id AND reviews.image_path = rows.image_path
         ORDER BY reviews.created_at DESC, reviews.rowid DESC LIMIT 1)"""
-    where = f"""runs.source_folder = ? AND runs.task = ? AND
+    where = f"""source_identity(runs.source_folder) = ? AND runs.task = ? AND
         (rows.state = 'error' OR (rows.state IN ('OK', 'NG', 'REVIEW') AND
         ({latest_review} = 'REVIEW' OR (rows.state = 'REVIEW' AND {latest_review} IS NULL))))"""
     with _store(request) as conn:
@@ -517,8 +538,8 @@ def review_queue(request: Request, source_folder: str, task: Literal["classifica
 def list_runs(request: Request, source_folder: Optional[str] = None, task: Optional[str] = None):
     conditions, params = [], []
     if source_folder:
-        conditions.append("source_folder = ?")
-        params.append(source_folder)
+        conditions.append("source_identity(source_folder) = ?")
+        params.append(_source_identity(source_folder))
     if task:
         conditions.append("task = ?")
         params.append(task)

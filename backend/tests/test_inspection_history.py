@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 
+import pytest
 from PIL import Image
 
 from fastapi.testclient import TestClient
@@ -96,8 +97,11 @@ def test_configured_run_binds_active_saved_flow_and_checkpoint_hash(monkeypatch,
     run = client.get(f"/api/inspections/runs/{run_id}").json()
     assert run["saved_version_id"] == second_id
     assert run["model_sha256"] == {"job_12345678_abcd": expected_hash}
+    browser_graph = json.loads(json.dumps(payload["pipeline"]))
+    for node in browser_graph["nodes"]:
+        node["position"] = {key: int(value) for key, value in node["position"].items()}
     assert run["pipeline_hash"] == hashlib.sha256(json.dumps(
-        payload["pipeline"], sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+        browser_graph, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
     ).encode()).hexdigest()
     assert client.get("/api/inspections/runs").json()["runs"][0]["saved_version_id"] == second_id
     switched = client.put(f"/api/flowchart/pipelines/{first_id}/activate", params={
@@ -139,6 +143,84 @@ def test_configured_run_rejects_other_project_source_task_image_and_stale_graph(
     assert second_project.status_code == 200
     assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
     assert client.post("/api/inspections/runs", json=payload).status_code == 409
+
+
+@pytest.mark.parametrize("alias", ["trailing_slash", "parent_segment", "symlink"])
+def test_configured_run_stores_canonical_source_identity(monkeypatch, tmp_path, alias):
+    client, _project, source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    spellings = {
+        "trailing_slash": str(source) + "/",
+        "parent_segment": str(source / ".." / "source"),
+        "symlink": str(tmp_path / "source_alias"),
+    }
+    (tmp_path / "source_alias").symlink_to(source, target_is_directory=True)
+    created = client.post("/api/inspections/runs", json={**payload, "source_folder": spellings[alias]})
+    assert created.status_code == 200, created.text
+    saved = client.get(f"/api/inspections/runs/{created.json()['run_id']}")
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["source_folder"] == str(source)
+
+
+@pytest.mark.parametrize("legacy_alias", [False, True])
+def test_inspection_source_alias_queries_keep_history_and_review_queue(monkeypatch, tmp_path, legacy_alias):
+    client, project, source, image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    created = client.post("/api/inspections/runs", json=payload)
+    assert created.status_code == 200, created.text
+    run_id = created.json()["run_id"]
+    seed_old_result(project["project_dir"], run_id, str(image), "REVIEW", {
+        "image_id": image.stem, "image_path": str(image), "final_verdict": "REVIEW",
+    })
+    assert client.put(f"/api/inspections/runs/{run_id}/finish", json={"status": "completed"}).status_code == 200
+    if legacy_alias:
+        with sqlite3.connect(Path(project["project_dir"]) / "inspection_history.sqlite3") as conn:
+            conn.execute("UPDATE runs SET source_folder = ? WHERE run_id = ?", (str(source) + "/", run_id))
+    link = tmp_path / "source_alias"
+    link.symlink_to(source, target_is_directory=True)
+    for spelling in (str(source), str(source) + "/", str(source / ".." / "source"), str(link)):
+        params = {"source_folder": spelling, "task": "segmentation"}
+        queued = client.get("/api/inspections/review-queue", params=params)
+        assert queued.status_code == 200, queued.text
+        assert queued.json()["total"] == 1
+        assert queued.json()["items"][0]["run_id"] == run_id
+        history = client.get("/api/inspections/runs", params=params)
+        assert history.status_code == 200, history.text
+        assert [run["run_id"] for run in history.json()["runs"]] == [run_id]
+
+    assert client.get("/api/inspections/review-queue", params={
+        "source_folder": str(tmp_path), "task": "segmentation",
+    }).status_code == 409
+    other = client.post("/api/project/create", json={"name": "other", "task": "segmentation"})
+    assert other.status_code == 200, other.text
+    assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
+    params = {"source_folder": str(source) + "/", "task": "segmentation"}
+    assert client.get("/api/inspections/review-queue", params=params).json()["total"] == 0
+    assert client.get("/api/inspections/runs", params=params).json()["runs"] == []
+
+
+@pytest.mark.parametrize("alias", ["trailing_slash", "parent_segment", "symlink"])
+def test_legacy_run_readback_exposes_canonical_source_without_rewriting_evidence(monkeypatch, tmp_path, alias):
+    client, project, source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    created = client.post("/api/inspections/runs", json=payload)
+    assert created.status_code == 200, created.text
+    run_id = created.json()["run_id"]
+    link = tmp_path / "source_alias"
+    link.symlink_to(source, target_is_directory=True)
+    spellings = {
+        "trailing_slash": str(source) + "/",
+        "parent_segment": str(source / ".." / "source"),
+        "symlink": str(link),
+    }
+    database = Path(project["project_dir"]) / "inspection_history.sqlite3"
+    with sqlite3.connect(database) as conn:
+        conn.execute("UPDATE runs SET source_folder = ? WHERE run_id = ?", (spellings[alias], run_id))
+        original = conn.execute("SELECT source_folder, pipeline_json, pipeline_hash FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+    response = client.get(f"/api/inspections/runs/{run_id}")
+    assert response.status_code == 200, response.text
+    assert response.json()["source_folder"] == spellings[alias]
+    assert response.json()["canonical_source_folder"] == str(source)
+    assert response.json()["pipeline_hash"] == original[2]
+    with sqlite3.connect(database) as conn:
+        assert conn.execute("SELECT source_folder, pipeline_json, pipeline_hash FROM runs WHERE run_id = ?", (run_id,)).fetchone() == original
 
 
 def test_legacy_run_schema_migrates_without_inventing_flow_or_model_provenance(tmp_path):
@@ -255,6 +337,117 @@ def test_browser_numeric_roundtrip_keeps_saved_flow_identity_and_execution(monke
     executed = client.post(f"/api/inspections/runs/{run_id}/execute", json={"image_path": str(image)})
     assert executed.status_code == 200, executed.text
     assert client.get(f"/api/inspections/runs/{run_id}").json()["pipeline_hash"] == expected_hash
+
+
+def test_new_run_hash_matches_api_browser_numbers_and_omitted_schema_defaults(monkeypatch, tmp_path):
+    client, _project, _source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    browser_graph = json.loads(json.dumps(payload["pipeline"]))
+    for node in browser_graph["nodes"]:
+        node["position"] = {key: int(value) for key, value in node["position"].items()}
+    expected_hash = hashlib.sha256(json.dumps(
+        browser_graph, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode()).hexdigest()
+    omitted = json.loads(json.dumps(browser_graph))
+    for node in omitted["nodes"]:
+        node.pop("type")
+        if node["data"]["params"] == {}:
+            node["data"].pop("params")
+        if node["data"]["model_job_id"] is None:
+            node["data"].pop("model_job_id")
+    for edge in omitted["edges"]:
+        for key in ("label", "isBranch", "payload_type"):
+            if edge[key] is None:
+                edge.pop(key)
+    for graph in (payload["pipeline"], browser_graph, omitted):
+        created = client.post("/api/inspections/runs", json={**payload, "pipeline": graph})
+        assert created.status_code == 200, created.text
+        assert created.json()["pipeline_hash"] == expected_hash
+        run = client.get(f"/api/inspections/runs/{created.json()['run_id']}").json()
+        assert run["pipeline"] == browser_graph
+        assert all(type(node["position"]["x"]) is int for node in run["pipeline"]["nodes"])
+
+
+@pytest.mark.parametrize("coordinate", [1e-7, 1e-6, 1e21])
+def test_saved_flow_metadata_and_new_run_share_authoritative_numeric_hash(monkeypatch, tmp_path, coordinate):
+    client, _project, source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    graph = json.loads(json.dumps(payload["pipeline"]))
+    graph["nodes"][0]["position"]["x"] = coordinate
+    saved = client.post("/api/flowchart/pipeline", params={"source_dataset_path": str(source)}, json=graph)
+    assert saved.status_code == 200, saved.text
+    version_id = saved.json()["version_id"]
+    listing = client.get("/api/flowchart/pipelines", params={"source_dataset_path": str(source)})
+    assert listing.status_code == 200, listing.text
+    version = next(row for row in listing.json()["pipelines"] if row["version_id"] == version_id)
+    created = client.post("/api/inspections/runs", json={**payload, "pipeline": graph})
+    assert created.status_code == 200, created.text
+    assert version["pipeline_hash"] == created.json()["pipeline_hash"]
+    assert len(version["pipeline_hash"]) == 64
+
+
+@pytest.mark.parametrize("change", ["fractional_position", "fractional_threshold"])
+def test_new_run_hash_distinguishes_fractional_graph_changes(monkeypatch, tmp_path, change):
+    client, _project, source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    original = client.post("/api/inspections/runs", json=payload)
+    assert original.status_code == 200, original.text
+    changed = json.loads(json.dumps(payload["pipeline"]))
+    if change == "fractional_position":
+        changed["nodes"][0]["position"]["x"] += 0.25
+    else:
+        inspection = next(node for node in changed["nodes"] if node["data"]["node_type"] == "inspection")
+        inspection["data"]["threshold"] += 0.0001
+    assert client.post("/api/inspections/runs", json={**payload, "pipeline": changed}).status_code == 409
+    saved = client.post("/api/flowchart/pipeline", params={"source_dataset_path": str(source)}, json=changed)
+    assert saved.status_code == 200, saved.text
+    created = client.post("/api/inspections/runs", json={**payload, "pipeline": changed})
+    assert created.status_code == 200, created.text
+    assert created.json()["pipeline_hash"] != original.json()["pipeline_hash"]
+
+
+def test_legacy_raw_graph_hash_is_preserved_and_still_checked_before_execution(monkeypatch, tmp_path):
+    client, project, _source, image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    created = client.post("/api/inspections/runs", json=payload)
+    assert created.status_code == 200, created.text
+    run_id = created.json()["run_id"]
+    raw_json = json.dumps(payload["pipeline"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    raw_hash = hashlib.sha256(raw_json.encode()).hexdigest()
+    another = client.post("/api/inspections/runs", json=payload)
+    assert another.status_code == 200, another.text
+    tampered_id = another.json()["run_id"]
+    database = Path(project["project_dir"]) / "inspection_history.sqlite3"
+    with sqlite3.connect(database) as conn:
+        conn.executemany("UPDATE runs SET pipeline_json = ?, pipeline_hash = ? WHERE run_id = ?", [
+            (raw_json, raw_hash, run_id), (raw_json, raw_hash, tampered_id),
+        ])
+
+    def trusted_run(req, request):
+        return {
+            "status": "success", "final_verdict": "OK", "is_ok": True, "rejection_reason": "",
+            "roi_count": 1, "defective_roi_count": 0, "crops": [],
+            "execution_steps": [{"node_id": "inspection", "name": "Inspection", "status": "passed", "latency_ms": 1}],
+            "total_latency_ms": 1, "image_path": str(image), "image_id": image.stem,
+        }
+
+    monkeypatch.setattr(routes_flowchart, "run_flowchart", trusted_run)
+    executed = client.post(f"/api/inspections/runs/{run_id}/execute", json={"image_path": str(image)})
+    assert executed.status_code == 200, executed.text
+    assert client.get(f"/api/inspections/runs/{run_id}").json()["pipeline_hash"] == raw_hash
+    with sqlite3.connect(database) as conn:
+        assert conn.execute("SELECT pipeline_json FROM runs WHERE run_id = ?", (run_id,)).fetchone()[0] == raw_json
+        changed = json.loads(raw_json)
+        changed["nodes"][0]["position"]["x"] = int(changed["nodes"][0]["position"]["x"])
+        conn.execute("UPDATE runs SET pipeline_json = ? WHERE run_id = ?", (
+            json.dumps(changed, ensure_ascii=False, sort_keys=True, separators=(",", ":")), tampered_id,
+        ))
+    assert client.post(f"/api/inspections/runs/{tampered_id}/execute", json={"image_path": str(image)}).status_code == 409
+
+
+@pytest.mark.parametrize("number", [float("nan"), float("inf"), float("-inf")])
+def test_new_run_rejects_nonfinite_graph_numbers(monkeypatch, tmp_path, number):
+    client, _project, _source, _image, _checkpoint, _first, _second, payload = configured_flow(monkeypatch, tmp_path)
+    changed = json.loads(json.dumps(payload))
+    changed["pipeline"]["nodes"][0]["data"]["params"]["scale"] = number
+    response = client.post("/api/inspections/runs", content=json.dumps(changed), headers={"Content-Type": "application/json"})
+    assert response.status_code == 422, response.text
 
 
 def test_server_execution_rejects_modified_flow_or_checkpoint(monkeypatch, tmp_path):
