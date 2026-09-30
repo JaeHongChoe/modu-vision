@@ -5,14 +5,14 @@ type Branch = NonNullable<FlowEdge['isBranch']>;
 
 const operatorTypes: FlowNodeType[] = ['patch_split', 'preprocess'];
 const modelTypes: FlowNodeType[] = ['detection_crop', 'inspection'];
-const resultTypes: FlowNodeType[] = [...modelTypes, 'blob_measure', 'aggregate'];
+const resultTypes: FlowNodeType[] = [...modelTypes, 'blob_measure', 'measurement', 'aggregate'];
 
 function allowedPayloads(from: FlowNodeType, to: FlowNodeType): NonNullable<FlowEdge['payload_type']>[] {
   if (from === 'input' && (modelTypes.includes(to) || operatorTypes.includes(to) || to === 'fixed_roi')) return ['image'];
   if ((from === 'fixed_roi' || operatorTypes.includes(from)) && (modelTypes.includes(to) || operatorTypes.includes(to))) return ['roi'];
   if (modelTypes.includes(from) && (modelTypes.includes(to) || operatorTypes.includes(to))) return ['image', 'roi'];
-  if (modelTypes.includes(from) && ['blob_measure', 'aggregate', 'decision'].includes(to)) return ['result'];
-  if (from === 'blob_measure' && (to === 'aggregate' || to === 'decision')) return ['result'];
+  if (modelTypes.includes(from) && ['blob_measure', 'measurement', 'aggregate', 'decision'].includes(to)) return ['result'];
+  if ((from === 'blob_measure' || from === 'measurement') && (to === 'aggregate' || to === 'decision')) return ['result'];
   if (from === 'aggregate' && to === 'decision') return ['result'];
   if (from === 'decision' && to === 'output') return ['result'];
   return [];
@@ -166,6 +166,7 @@ function firstUnvisitedNode(
 
 /** Mirrors the backend's supported executable graph, including saved linear flows. */
 export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | null {
+  if (pipeline.execution_config && Object.values(pipeline.execution_config).some((v)=>!Number.isInteger(v)||v<1||v>8)) return '병렬 실행 작업 수와 장치 슬롯은 1~8의 정수여야 합니다.';
   const { nodes, incoming, outgoing } = graphParts(pipeline);
   if (nodes.size !== pipeline.nodes.length) return '노드 ID가 중복되었습니다.';
   const inputs = pipeline.nodes.filter((node) => node.data.node_type === 'input');
@@ -174,13 +175,14 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   const models = pipeline.nodes.filter((node) => modelTypes.includes(node.data.node_type));
   const fixedRois = pipeline.nodes.filter((node) => node.data.node_type === 'fixed_roi');
   const blobs = pipeline.nodes.filter((node) => node.data.node_type === 'blob_measure');
+  const measurements = pipeline.nodes.filter((node) => node.data.node_type === 'measurement');
   const aggregates = pipeline.nodes.filter((node) => node.data.node_type === 'aggregate');
   if (inputs.length !== 1) return '입력 노드는 하나여야 합니다.';
   if (decisions.length !== 1) return '판정 노드는 하나여야 합니다.';
   if (outputs.length < 1 || outputs.length > 3) return '출력 노드는 1~3개가 필요합니다.';
   if (models.length < 1 || models.length > 8) return '모델 노드는 1~8개가 필요합니다.';
   if (fixedRois.length > 8) return '고정 ROI 노드는 최대 8개입니다.';
-  if (blobs.length > 8) return 'Blob 측정 노드는 최대 8개입니다.';
+  if (blobs.length + measurements.length > 8) return 'Blob·기하 측정 노드는 합계 최대 8개입니다.';
   if (aggregates.length > 4) return '결과 집계 노드는 최대 4개입니다.';
   const edgeIds = new Set<string>();
   const connections = new Set<string>();
@@ -224,8 +226,9 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
     if (node.data.node_type === 'patch_split') {
       const width=params.patch_width ?? 224, height=params.patch_height ?? 224, overlap=params.overlap ?? 0;
       if (![width,height].every((v) => Number.isInteger(v) && v>=16 && v<=8192) || !Number.isInteger(overlap) || overlap<0 || overlap>=Math.min(width,height)) return `${node.data.label}: 패치 크기와 겹침 범위를 확인하세요.`;
-    } else if (!['rotate','align','improve','enhancement'].includes(params.operation || 'rotate')) return `${node.data.label}: 전처리 종류를 확인하세요.`;
+    } else if (!['rotate','align','improve','enhancement','learned_rotation','fitted_roi'].includes(params.operation || 'rotate')) return `${node.data.label}: 전처리 종류를 확인하세요.`;
     if (params.operation === 'enhancement' && !node.data.model_job_id) return `${node.data.label}: 영상 개선 모델을 선택하세요.`;
+    if (params.operation === 'learned_rotation' && !node.data.model_job_id) return `${node.data.label}: 회전 학습 모델을 선택하세요.`;
   }
   for (const node of models) {
     const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
@@ -245,16 +248,16 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
       return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
     }
     if (node.data.task === 'ocr') {
-      const params=node.data.params || {};
-      if (('expected_text' in params) === ('regex' in params) || typeof (params.expected_text ?? params.regex) !== 'string' || !(params.expected_text || params.regex)) return `${node.data.label}: 기대 문자열 또는 정규식을 입력하세요.`;
-      if (params.regex) { try { new RegExp(params.regex); } catch { return `${node.data.label}: 정규식이 올바르지 않습니다.`; } }
+      const issue=ocrRuleIssue(node.data.params || {});if(issue)return `${node.data.label}: ${issue}`;
     }
+    if(node.data.task==='segmentation'){const issue=classRuleIssue(node.data.params || {},false);if(issue)return `${node.data.label}: ${issue}`;}
     const targets = outgoing.get(node.id) || [];
-    if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
+    if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'measurement', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
       return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
     }
   }
   for (const node of blobs) {
+    const issue=classRuleIssue(node.data.params || {},true);if(issue)return `${node.data.label}: ${issue}`;
     const parents = incoming.get(node.id) || [];
     const source = nodes.get(parents[0]?.source);
     if (parents.length !== 1 || source?.data.node_type !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || '')) {
@@ -269,10 +272,17 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
       if (!Number.isInteger(value) || value < 1) return `${node.data.label}: Blob 면적과 개수 기준은 1 이상의 정수여야 합니다.`;
     }
   }
+  for (const node of measurements) {
+    const parents=incoming.get(node.id)||[];
+    if(parents.length!==1||!modelTypes.includes(nodes.get(parents[0]?.source)?.data.node_type as FlowNodeType))return `${node.data.label}: 기하 측정에는 모델 결과 하나가 필요합니다.`;
+    const targets=outgoing.get(node.id)||[];
+    if(!targets.length||targets.some(edge=>!['aggregate','decision'].includes(nodes.get(edge.target)?.data.node_type || '')))return `${node.data.label}: 측정 결과를 집계 또는 판정 노드로 연결하세요.`;
+    const issue=measurementIssue(node.data.params||{});if(issue)return `${node.data.label}: ${issue}`;
+  }
   for (const node of aggregates) {
     const parents = incoming.get(node.id) || [];
     if (parents.length < 1 || parents.length > 8 || parents.some((edge) =>
-      ![...modelTypes, 'blob_measure'].includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
+      ![...modelTypes, 'blob_measure', 'measurement'].includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
       return `${node.data.label}: 집계 노드에는 모델 또는 Blob 결과 연결선 1~8개가 필요합니다.`;
     }
     const targets = outgoing.get(node.id) || [];
@@ -436,4 +446,52 @@ export function updateFlowEdgePayload(pipeline: FlowchartPipeline, edgeId: strin
     throw new Error('이 노드 연결에서 지원하지 않는 데이터 형식입니다.');
   }
   return { ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, payload_type: payload } : item) };
+}
+
+const finite=(value: unknown): value is number => typeof value==='number' && Number.isFinite(value);
+const whole=(value:unknown,minimum=0):value is number => finite(value)&&Number.isInteger(value)&&value>=minimum;
+const point=(value:unknown):value is [number,number]=>Array.isArray(value)&&value.length===2&&value.every(finite);
+export function measurementIssue(params:Record<string,any>):string|null {
+  const cal=params.calibration;
+  if(cal && (cal.unit!=='mm'||!finite(cal.mm_per_pixel_x)||cal.mm_per_pixel_x<=0||!finite(cal.mm_per_pixel_y)||cal.mm_per_pixel_y<=0||!Array.isArray(cal.source_size)||cal.source_size.length!==2||!cal.source_size.every((n:unknown)=>whole(n,1)))) return '원본 크기와 양수 mm/px 교정값을 입력하세요.';
+  const paths=params.paths ?? [];
+  if(!Array.isArray(paths)||paths.length>64) return '측정 경로는 최대 64개입니다.';
+  const ids=new Set();
+  for(const path of paths) {
+    if(!path||typeof path.id!=='string'||!path.id.trim()||ids.has(path.id)) return '측정 경로 이름은 중복 없이 입력하세요.';
+    ids.add(path.id);
+    if(!['polyline','bezier'].includes(path.interpolation ?? 'polyline')||!Array.isArray(path.points)||path.points.length<2||path.points.length>10000||!path.points.every(point)||(path.interpolation==='bezier'&&path.points.length!==4)) return '다각선은 2점 이상, 곡선은 제어점 4개가 필요합니다.';
+    if(cal && path.points.some(([x,y]:number[])=>x<0||y<0||x>cal.source_size[0]||y>cal.source_size[1])) return '측정점은 교정된 원본 이미지 범위 안에 있어야 합니다.';
+  }
+  for(const kind of ['length','area']) {
+    for(const bound of ['min','max']) if(params[`${bound}_${kind}`]!==undefined && (!finite(params[`${bound}_${kind}`])||params[`${bound}_${kind}`]<0)) return '측정 기준은 유한한 0 이상 값이어야 합니다.';
+    if(params[`min_${kind}`]!==undefined&&params[`max_${kind}`]!==undefined&&params[`min_${kind}`]>params[`max_${kind}`]) return '최대 측정 기준은 최소 기준 이상이어야 합니다.';
+  }
+  return null;
+}
+export function classRuleIssue(params:Record<string,any>,blob:boolean):string|null {
+  const ids=params.class_ids;
+  if(ids!==undefined&&(!Array.isArray(ids)||!ids.length||ids.some((id:unknown)=>!whole(id,1))||new Set(ids).size!==ids.length)) return '클래스 ID는 중복 없는 1 이상의 정수여야 합니다.';
+  if(blob&&!['defect_presence','required_structure'].includes(params.rule_mode ?? 'defect_presence')) return 'Blob 판정 방식을 확인하세요.';
+  const rows=params.class_rules ?? [];
+  if(!Array.isArray(rows)) return '클래스별 기준 목록을 확인하세요.';
+  const seen=new Set();
+  for(const row of rows) {
+    if(!row||!whole(row.class_id,1)||seen.has(row.class_id)) return '클래스별 기준 ID가 중복되었거나 올바르지 않습니다.';
+    seen.add(row.class_id);
+    for(const key of (blob?['min_count','max_count','min_area_px','max_area_px']:['min_area_px','max_area_px'])) if(row[key]!==undefined&&!whole(row[key],blob?0:1)) return '클래스 개수·면적 기준은 허용 범위의 정수여야 합니다.';
+    for(const key of (blob?['min_mean_grayscale','max_mean_grayscale']:['probability_threshold'])) if(row[key]!==undefined&&(!finite(row[key])||row[key]<0||row[key]>(blob?255:1))) return '확률 또는 평균 회색값 기준의 범위를 확인하세요.';
+    for(const kind of (blob?['count','area_px','mean_grayscale']:['area_px'])) if(row[`min_${kind}`]!==undefined&&row[`max_${kind}`]!==undefined&&row[`min_${kind}`]>row[`max_${kind}`]) return '최대 클래스 기준은 최소 기준 이상이어야 합니다.';
+  }
+  return null;
+}
+export function ocrRuleIssue(params:Record<string,any>):string|null {
+  if(('expected_text' in params)===('regex' in params)||typeof(params.expected_text ?? params.regex)!=='string'||!(params.expected_text||params.regex))return '기대 문자열 또는 정규식을 입력하세요.';
+  if(params.regex) {try{if(params.regex.length>512)throw new Error();new RegExp(params.regex);}catch{return '정규식이 올바르지 않습니다.';}}
+  if(params.correction_map!==undefined && (!params.correction_map||Array.isArray(params.correction_map)||typeof params.correction_map!=='object'||Object.entries(params.correction_map).some(([from,to])=>Array.from(from).length!==1||typeof to!=='string'||Array.from(to).length!==1)))return '문자 교정은 한 글자씩 지정하세요.';
+  const seen=new Set();if(params.position_rules!==undefined&&!Array.isArray(params.position_rules))return '문자 위치 기준을 확인하세요.';
+  for(const row of params.position_rules ?? []){
+    if(!row||!whole(row.index)||seen.has(row.index)||(!row.fixed_char&&!row.allowed_chars)||(row.fixed_char!==undefined&&(typeof row.fixed_char!=='string'||Array.from(row.fixed_char).length!==1))||(row.allowed_chars!==undefined&&(typeof row.allowed_chars!=='string'||!row.allowed_chars)))return '문자 위치는 중복 없는 0 이상 인덱스와 허용·고정 문자가 필요합니다.';
+    seen.add(row.index);
+  }return null;
 }

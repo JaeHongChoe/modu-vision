@@ -1,17 +1,17 @@
-export type FlowDeploymentProfile = 'standard' | 'edge_cpu';
+export type FlowDeploymentProfile = 'standard' | 'edge_cpu' | 'edge_cuda';
 export interface EdgeTarget {
   os: 'linux' | 'windows' | 'macos';
   architecture: 'x86_64' | 'arm64';
 }
 
 export function flowDeploymentOptions(profile: FlowDeploymentProfile, target: EdgeTarget) {
-  return profile === 'edge_cpu'
+  return profile !== 'standard'
     ? { deployment_profile: profile, target_os: target.os, target_arch: target.architecture }
     : {};
 }
 
 export function canVerifyFlowOnHost(profile: FlowDeploymentProfile, target: EdgeTarget, host: EdgeTarget | null): boolean {
-  return profile === 'standard' || (host !== null && target.os === host.os && target.architecture === host.architecture);
+  return profile === 'standard' || (profile==='edge_cpu' && host !== null && target.os === host.os && target.architecture === host.architecture);
 }
 
 export function edgeDeploymentCommands(target: EdgeTarget) {

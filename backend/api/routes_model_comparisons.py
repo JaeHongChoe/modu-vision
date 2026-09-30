@@ -41,6 +41,10 @@ class ComparisonRequest(BaseModel):
     candidate_job_id: str
     max_images: int = Field(default=4, ge=1, le=500)
     full_test: bool = False
+    incumbent_task:Literal['classification','detection','segmentation','anomaly','patch_classification','rotated_detection','ocr']|None=None
+    candidate_task:Literal['classification','detection','segmentation','anomaly','patch_classification','rotated_detection','ocr']|None=None
+    incumbent_params:dict[str,Any]=Field(default_factory=dict)
+    candidate_params:dict[str,Any]=Field(default_factory=dict)
 
 
 def _sha256(path: Path) -> str:
@@ -82,7 +86,7 @@ def _report_dir(project: dict[str, Any]) -> Path:
 
 
 def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> dict[str, Any] | None:
-    if task in ("ocr", "rotated_detection", "enhancement"):
+    if task in ("ocr", "rotated_detection", "enhancement", "rotation"):
         from backend.engine.specialized_models import resolve_specialized_checkpoint
         try:
             checkpoint, metadata = resolve_specialized_checkpoint(_models_dir(project), job_id, task, str(source))
@@ -128,6 +132,7 @@ def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> di
         "preset": meta.get("preset"),
         "warm_start": meta.get("warm_start"),
         "receipt_warm_start": receipt.get("warm_start"),
+        "family_dataset_path": meta.get("dataset_path") or receipt.get("dataset_path"),
     }
 
 
@@ -167,6 +172,9 @@ def _test_images(source: Path, task: Task, maximum: int | None) -> tuple[list[di
         # dataset inventory must still be lexically beneath the selected source.
         if not Path(os.path.abspath(path)).is_relative_to(source) or not path.is_file():
             raise HTTPException(status_code=409, detail="test 이미지 경로가 원본 데이터 폴더를 벗어났습니다.")
+        from backend.engine.annotation_storage import request_shared_scope
+        if request_shared_scope() and (path.is_symlink() or not path.resolve().is_relative_to(source)):
+            raise HTTPException(409,'Shared comparison image escaped its authorized source')
         try:
             # The flow engine substitutes a synthetic example if decoding
             # fails. Validate with its own reader so comparison never does so.
@@ -233,9 +241,58 @@ def _patch_test_images(source: Path, maximum: int) -> tuple[list[dict[str, Any]]
     return selected, len(test_sources)
 
 
+def _owned_patch_test_images(project, source, models, maximum):
+    """Use one full, agreeing prepared holdout without editing original inputs."""
+    if (source / 'patches.json').is_file():
+        return _patch_test_images(source, maximum)
+    cohorts = []
+    for model in models:
+        if model['task'] != 'patch_classification':
+            continue
+        requested = model.get('family_dataset_path')
+        if not requested:
+            raise HTTPException(409, 'Patch model has no prepared dataset identity')
+        dataset = Path(requested)
+        allowed = (Path(project['dataset_dir']).resolve(), Path(project['models_dir']).resolve())
+        if dataset.is_symlink() or not any(dataset.resolve().is_relative_to(root) for root in allowed):
+            raise HTTPException(409, 'Patch comparison inputs belong to another project')
+        try:
+            manifest = load_patch_manifest(dataset)
+            raw = json.loads((dataset / 'patches.json').read_text())
+            if Path(manifest.provenance.get('source_dataset_path', '')).resolve() != source:
+                raise ValueError('Patch model source differs')
+            copied, total = _patch_test_images(dataset, 2**31)
+            mapping = manifest.provenance.get('source_map') or {}
+            cohort = []
+            for row in copied:
+                relative = Path(row['file_path']).relative_to(dataset.resolve()).as_posix()
+                original = source / mapping[relative]['source_relative_path']
+                cohort.append({**row, 'file_path': str(original), 'image_id': original.stem,
+                               'file_name': original.name})
+            cohorts.append(sorted(cohort, key=lambda row: row['file_path']))
+        except (OSError, ValueError, KeyError) as exc:
+            raise HTTPException(409, f'Prepared patch holdout is invalid: {exc}') from exc
+    if not cohorts:
+        raise HTTPException(422, 'Choose a patch model with a reviewed prepared test holdout')
+    identity = lambda rows: [(r['file_path'], r['image_sha256'], r['ground_truth_verdict']) for r in rows]
+    if any(identity(rows) != identity(cohorts[0]) for rows in cohorts[1:]):
+        raise HTTPException(409, 'Patch models have different test images or reviewed image truth')
+    rows = cohorts[0]
+    if len(rows) > maximum:
+        quota = maximum // 2
+        chosen = [r for r in rows if r['ground_truth_verdict'] == 'OK'][:quota]
+        chosen += [r for r in rows if r['ground_truth_verdict'] == 'NG'][:quota]
+        paths = {r['file_path'] for r in chosen}
+        chosen += [r for r in rows if r['file_path'] not in paths][:maximum-len(chosen)]
+        return sorted(chosen, key=lambda row: row['file_path']), len(rows)
+    return rows, len(rows)
+
+
 def _pipeline(task: Task, job_id: str):
-    if task == "detection":
-        return get_single_detection_flowchart(job_id=job_id)
+    if task in ("detection","rotated_detection"):
+        pipeline=get_single_detection_flowchart(job_id=job_id)
+        if task=='rotated_detection':next(node for node in pipeline.nodes if node.data.node_type=='detection_crop').data.task=task
+        return pipeline
     pipeline = get_single_segmentation_flowchart(job_id=job_id)
     if task != "segmentation":
         next(node for node in pipeline.nodes if node.data.node_type == "inspection").data.task = task
@@ -304,6 +361,20 @@ def comparison_models(request: Request, source_dataset_path: str, task: Task):
     return {"models": models, "total": len(models)}
 
 
+@router.get('/models/all')
+def all_comparison_models(request:Request,source_dataset_path:str):
+    project=get_current_project(request);source=Path(source_dataset_path).expanduser().resolve()
+    if not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():raise HTTPException(409,'Comparison source differs from active project')
+    models=[];root=_models_dir(project)
+    for task in ('classification','detection','segmentation','anomaly','patch_classification','rotated_detection','ocr'):
+        directories=(root/task).iterdir() if task in ('rotated_detection','ocr') and (root/task).is_dir() else root.iterdir()
+        for directory in directories:
+            if directory.is_dir():
+                model=_model(project,source,task,directory.name)
+                if model:models.append({key:value for key,value in model.items() if key!='checkpoint_path'})
+    return {'models':models,'total':len(models),'verdict_semantics':'same held-out image OK/NG/REVIEW; task-specific localization/text metrics remain separate'}
+
+
 @router.post("")
 def create_comparison(payload: ComparisonRequest, request: Request):
     project, source = _scope(request, payload.source_dataset_path, payload.task)
@@ -313,13 +384,16 @@ def create_comparison(payload: ComparisonRequest, request: Request):
 def _run_comparison(payload: ComparisonRequest, project, source, progress=None, cancelled=None):
     if payload.incumbent_job_id == payload.candidate_job_id:
         raise HTTPException(status_code=422, detail="비교 기준과 후보 모델은 서로 달라야 합니다.")
-    baseline = _model(project, source, payload.task, payload.incumbent_job_id)
-    candidate = _model(project, source, payload.task, payload.candidate_job_id)
+    baseline_task=payload.incumbent_task or payload.task;candidate_task=payload.candidate_task or payload.task
+    baseline = _model(project, source, baseline_task, payload.incumbent_job_id)
+    candidate = _model(project, source, candidate_task, payload.candidate_job_id)
     if baseline is None or candidate is None:
         raise HTTPException(status_code=409, detail="두 모델 모두 현재 프로젝트·출처·작업 유형의 완료 checkpoint여야 합니다.")
 
     dataset_fingerprint = _fingerprint(source)
-    images, total_test_images = _test_images(source, payload.task, None if payload.full_test else payload.max_images)
+    images, total_test_images = (_owned_patch_test_images(project, source, [baseline, candidate], 2**31 if payload.full_test else payload.max_images)
+                                if payload.task == 'patch_classification' else
+                                _test_images(source, payload.task, None if payload.full_test else payload.max_images))
     if progress: progress(0, len(images))
     model_hashes = {
         "incumbent": _sha256(Path(baseline["checkpoint_path"])),
@@ -330,7 +404,20 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         job_id: FlowchartEngine(device="cpu", checkpoint_resolver=lambda requested, _task, paths=paths: paths.get(requested))
         for job_id in paths
     }
-    pipelines = {job_id: _pipeline(payload.task, job_id) for job_id in paths}
+    pipelines={baseline['job_id']:_pipeline(baseline_task,baseline['job_id']),candidate['job_id']:_pipeline(candidate_task,candidate['job_id'])}
+    from backend.engine.flowchart_engine import ordered_linear_nodes
+    for model,params in ((baseline,payload.incumbent_params),(candidate,payload.candidate_params)):
+        pipeline=pipelines[model['job_id']]
+        if params:
+            node=next(n for n in pipeline.nodes if n.data.node_type in ('inspection','detection_crop'))
+            node.data.params.update({key:value for key,value in params.items() if key!='threshold'})
+            if 'threshold' in params:
+                try:threshold=float(params['threshold'])
+                except (ValueError,TypeError):raise HTTPException(422,'Model threshold requires [0,1]')
+                if not 0<=threshold<=1:raise HTTPException(422,'Model threshold requires [0,1]')
+                node.data.threshold=threshold
+        try:ordered_linear_nodes(pipeline)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from exc
     rows: list[dict[str, Any]] = []
     for image in images:
         if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
@@ -375,6 +462,9 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         "task": payload.task,
         "incumbent_job_id": baseline["job_id"],
         "candidate_job_id": candidate["job_id"],
+        'incumbent_task':baseline_task,'candidate_task':candidate_task,
+        'labelset_id':project.get('active_labelset_id','default'),
+        'comparison_parameters':{'incumbent':payload.incumbent_params,'candidate':payload.candidate_params},
         "incumbent_training_dataset_fingerprint": baseline["training_dataset_fingerprint"],
         "candidate_training_dataset_fingerprint": candidate["training_dataset_fingerprint"],
         "dataset_fingerprint": dataset_fingerprint,
@@ -445,7 +535,7 @@ def _jobs(project):
 @router.post("/jobs", status_code=202)
 def queue_comparison(payload: AsyncComparisonRequest, request: Request):
     project, source = _scope(request, payload.source_dataset_path, payload.task)
-    if payload.incumbent_job_id == payload.candidate_job_id or any(_model(project, source, payload.task, job) is None for job in (payload.incumbent_job_id, payload.candidate_job_id)):
+    if payload.incumbent_job_id == payload.candidate_job_id or any(_model(project, source, model_task, job) is None for model_task,job in ((payload.incumbent_task or payload.task,payload.incumbent_job_id),(payload.candidate_task or payload.task,payload.candidate_job_id))):
         raise HTTPException(409, "Comparison requires two distinct completed source-bound models")
     jobs = _jobs(project)
     record = jobs.create(payload.model_dump())
@@ -460,7 +550,9 @@ def queue_comparison(payload: AsyncComparisonRequest, request: Request):
         except InterruptedError: jobs.finish(record["job_id"], "cancelled")
         except Exception as exc: jobs.finish(record["job_id"], "failed", error=str(exc))
     import threading
-    threading.Thread(target=worker, daemon=True, name=record["job_id"]).start()
+    from contextvars import copy_context
+    context=copy_context()
+    threading.Thread(target=context.run,args=(worker,), daemon=True, name=record["job_id"]).start()
     return record
 
 

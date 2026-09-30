@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from PIL import Image
+from backend.engine.dicom_input import open_source_image
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_loaders import (
@@ -101,6 +102,7 @@ class ImageMeta(BaseModel):
     height: Optional[int] = None
     split: str = "train"
     label: Optional[str] = None
+    labels: List[str] = Field(default_factory=list)
     thumbnail_url: str
 
 
@@ -231,7 +233,7 @@ def _has_flat_labelme_annotations(folder: Path) -> bool:
     return studio_dir.is_dir() and any(path.is_file() for path in studio_dir.glob("*.json"))
 
 
-def _flat_labelme_class_counts(folder: Path, paired_images: set[Path]) -> Dict[str, int]:
+def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_images: bool = False) -> Dict[str, int]:
     """Count the active source or Studio regions without parsing LabelMe as COCO."""
     source_annotations = {
         match.resolve(): path for path in folder.glob("*.json")
@@ -248,6 +250,7 @@ def _flat_labelme_class_counts(folder: Path, paired_images: set[Path]) -> Dict[s
         data = json.loads(annotation.read_text(encoding="utf-8"))
         shapes = data.get("annotations", []) if annotation == studio_json else data.get("shapes", [])
         found = False
+        image_labels = set()
         for shape in shapes:
             if not isinstance(shape, dict) or shape.get("is_normal") or shape.get("label") == "OK":
                 continue
@@ -255,7 +258,9 @@ def _flat_labelme_class_counts(folder: Path, paired_images: set[Path]) -> Dict[s
                     or len(shape.get("bbox") or []) == 4):
                 continue
             label = str(shape.get("label") or "defect").strip() or "defect"
-            classes[label] = classes.get(label, 0) + 1
+            if not count_images or label not in image_labels:
+                classes[label] = classes.get(label, 0) + 1
+            image_labels.add(label)
             found = True
         if not found and annotation == studio_json and data.get("mask_file"):
             classes["defect"] = classes.get("defect", 0) + 1
@@ -509,7 +514,7 @@ def import_dataset(req: DatasetImportRequest):
     if flat_labelme:
         summary.total_images = len(paired_images)
         if req.task == "segmentation":
-            summary.classes = {"defect_mask": len(paired_images)}
+            summary.classes = _flat_labelme_class_counts(folder, paired_images, count_images=True)
         assignments = _read_split_manifest(folder)
         # Paired LabelMe discovery resolves image symlinks to their source,
         # while the saved manifest names files inside the selected folder.
@@ -699,10 +704,11 @@ def _class_split_counts(images: List[ImageMeta]) -> dict[str, dict[str, int]]:
     """Count saved image partitions across the complete, unfiltered gallery."""
     counts: dict[str, dict[str, int]] = {}
     for item in images:
-        if item.label is None or item.split not in ("train", "val", "test"):
+        if item.split not in ("train", "val", "test"):
             continue
-        partitions = counts.setdefault(item.label, {"train": 0, "val": 0, "test": 0})
-        partitions[item.split] += 1
+        for label in dict.fromkeys(item.labels or ([item.label] if item.label else [])):
+            partitions = counts.setdefault(label, {"train": 0, "val": 0, "test": 0})
+            partitions[item.split] += 1
     return counts
 
 
@@ -717,12 +723,37 @@ def list_dataset_images(
     label_status: Optional[Literal["labeled", "unlabeled"]] = Query(None, description="Filter by active project annotation status"),
 ):
     """Return image metadata and unfiltered class partition counts before pagination."""
+    # Internal task adapters call this function directly, so FastAPI Query
+    # defaults must not become active filters outside HTTP dependency parsing.
+    split=split if isinstance(split,str) and split!='all' else None
+    class_name=class_name if isinstance(class_name,str) and class_name else None
+    label_status=label_status if isinstance(label_status,str) and label_status in {'labeled','unlabeled'} else None
     target_dir = Path(folder_path).resolve() if folder_path else Path("./datasets/synthetic").resolve()
     if not target_dir.exists():
         return {"total": 0, "limit": limit, "offset": offset, "items": []}
 
     requested_task = task if isinstance(task, str) else None
     include_class_splits = requested_task in ("classification", "anomaly") and not (split or class_name or label_status)
+    from backend.engine.annotation_storage import request_project_root,scoped_annotation_root
+    selected_project=request_project_root()
+    if selected_project and (selected_project/'project.json').is_file():
+        project=json.loads((selected_project/'project.json').read_text())
+        if project.get('source_dataset_dir') and Path(project['source_dataset_dir']).resolve()==target_dir and requested_task:
+            from backend.engine.dataset_summary import dataset_summary
+            from backend.engine.dataset_metadata import list_metadata
+            metadata={r['file_path']:r for r in list_metadata(selected_project,target_dir,scoped_annotation_root(STUDIO_ANNOTATIONS_DIR))}
+            summary=dataset_summary(target_dir,requested_task,assignments=_read_split_manifest(target_dir),metadata=metadata)
+            all_rows=summary['items']
+            filtered=[r for r in all_rows if (not split or r['split']==split)
+                      and (not class_name or class_name in r['labels'])
+                      and (not label_status or r['label_status']==label_status)]
+            paged=[]
+            for row in filtered[offset:offset+limit]:
+                item=ImageMeta(**row)
+                with open_source_image(item.file_path) as opened:item.width,item.height=opened.size
+                paged.append(item.model_dump())
+            return {'total':len(filtered),'limit':limit,'offset':offset,'items':paged,
+                    'class_split_counts':_class_split_counts([ImageMeta(**r) for r in all_rows]) if include_class_splits else None}
     effective_dir = _resolve_task_folder(target_dir, requested_task) if requested_task else target_dir
     if not requested_task and not (target_dir / "train").is_dir():
         for sub in target_dir.iterdir():
@@ -754,20 +785,22 @@ def list_dataset_images(
                 continue
             if requested_task == 'anomaly':
                 label = 'good' if is_anomaly_normal(image, target_dir) else image.parent.name
+                labels = [label]
             else:
                 try:
                     annotations, _ = _annotations(target_dir, image)
                 except (ValueError, KeyError, OSError) as exc:
                     raise HTTPException(422, detail=f'Cannot read source labels: {exc}') from exc
-                label = next((a.get('label') for a in annotations or [] if a.get('label')), None)
-            if class_name and label != class_name:
+                labels = list(dict.fromkeys(a['label'] for a in annotations or [] if a.get('label')))
+                label = labels[0] if labels else None
+            if class_name and class_name not in labels:
                 continue
             if label_status in ('labeled','unlabeled') and bool(label) != (label_status == 'labeled'):
                 continue
-            with Image.open(image) as pil:
+            with open_source_image(image) as pil:
                 width,height=pil.size
             all_images.append(ImageMeta(image_id=image.stem,file_name=image.name,file_path=str(image),width=width,height=height,
-                split=partition,label=label,thumbnail_url=f'/api/dataset/thumbnail/{image.name}?file_path={image}'))
+                split=partition,label=label,labels=labels,thumbnail_url=f'/api/dataset/thumbnail/{image.name}?file_path={image}'))
         total=len(all_images)
         return {'total':total,'limit':limit,'offset':offset,
                 'class_split_counts': _class_split_counts(all_images) if include_class_splits else None,
@@ -846,6 +879,7 @@ def list_dataset_images(
                 if split and (assigned_split != split or (has_labelme and f.resolve() not in paired_images)):
                     continue
                 c_label = None if has_labelme else f.parent.name
+                c_labels = [] if c_label is None else [c_label]
                 img_w = None
                 img_h = None
                 studio_json = studio_dir / f"{f.stem}.json"
@@ -857,14 +891,16 @@ def list_dataset_images(
                             img_w = jd.get("image_width", jd.get("imageWidth"))
                             img_h = jd.get("image_height", jd.get("imageHeight"))
                             shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
-                            if shapes and isinstance(shapes[0], dict) and "label" in shapes[0]:
-                                c_label = shapes[0]["label"]
+                            c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
+                                if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
+                            c_label = c_labels[0] if c_labels else None
                     except Exception:
                         pass
                 if has_labelme and f.resolve() not in paired_images:
                     # A project edit can intentionally clear source LabelMe.
                     c_label = None
-                if class_name and c_label != class_name:
+                    c_labels = []
+                if class_name and class_name not in c_labels:
                     continue
                 all_images.append(
                     ImageMeta(
@@ -875,6 +911,7 @@ def list_dataset_images(
                         height=img_h,
                         split=("unlabeled" if has_labelme and f.resolve() not in paired_images else assigned_split or "all"),
                         label=c_label,
+                        labels=c_labels,
                         thumbnail_url=f"/api/dataset/thumbnail/{f.name}?file_path={f}",
                     )
                 )
@@ -907,7 +944,7 @@ def list_dataset_images(
     for item in paged:
         if item.width is None or item.height is None:
             try:
-                with Image.open(item.file_path) as source_image:
+                with open_source_image(item.file_path) as source_image:
                     item.width, item.height = source_image.size
             except (OSError, ValueError):
                 pass
@@ -948,6 +985,14 @@ def get_raw_image(
             detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Image file is empty (0 bytes): {candidate_path}"),
         )
 
+    from backend.engine.dicom_input import is_dicom, normalized_view
+    if is_dicom(candidate_path):
+        from backend.engine.annotation_storage import request_project_root
+        project_root=request_project_root()
+        if project_root is None:raise HTTPException(422,detail='DICOM display requires an active project')
+        try:receipt=normalized_view(candidate_path,project_root/'dicom_views')
+        except (ValueError,OSError) as exc:raise HTTPException(422,detail=str(exc)) from exc
+        return FileResponse(receipt['view_path'],media_type='image/png',headers={'X-Source-SHA256':receipt['source_sha256']})
     ext = candidate_path.suffix.lower()
     media_types = {
         ".png": "image/png",
@@ -1009,7 +1054,7 @@ def get_thumbnail(
         )
 
     try:
-        with Image.open(candidate_path) as img:
+        with open_source_image(candidate_path) as img:
             img = img.convert("RGB")
             img.thumbnail((size, size), Image.Resampling.LANCZOS)
             img.save(cached_thumb, format="JPEG", quality=85)

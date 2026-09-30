@@ -42,21 +42,27 @@ def normalize_target(target_os: str | None, target_arch: str | None) -> dict[str
     return {"os": os_name, "architecture": arch}
 
 
-def create_edge_profile(target_os: str | None, target_arch: str | None, requirements: str) -> dict[str, Any]:
+def create_edge_profile(target_os: str | None, target_arch: str | None, requirements: str, *,device: str='cpu') -> dict[str, Any]:
+    target=normalize_target(target_os,target_arch)
+    if device!='cpu' and not re.fullmatch(r'cuda(?::[0-9]+)?|openvino:(?:CPU|GPU(?:\.[0-9]+)?|NPU(?:\.[0-9]+)?)',device):
+        raise ValueError('Unsupported explicit Edge execution device')
+    if device.startswith('cuda') and target['os']!='linux':raise ValueError('CUDA Edge deployment requires Linux and a compatible vendor GPU runtime')
     dependencies = []
     for line in requirements.splitlines():
         match = re.fullmatch(r"([A-Za-z0-9_.-]+)>=([0-9]+(?:\.[0-9]+)*)", line.strip())
         if not match:
             raise ValueError("CPU Edge requirements must declare distribution minimum versions")
         dependencies.append({"distribution": match[1], "minimum": match[2]})
-    return {
-        "schema_version": 1, "profile": "edge_cpu", "device": "cpu",
-        "target": normalize_target(target_os, target_arch),
+    profile={
+        "schema_version": 1, "profile": "edge_cpu" if device=='cpu' else 'edge_cuda' if device.startswith('cuda') else 'edge_openvino', "device": device,
+        "target": target,
         "python": {"minimum": "3.10", "maximum_exclusive": "3.14"},
         "dependencies": dependencies,
         "entrypoints": {"install": "edge.py install", "preflight": "edge.py preflight",
                         "run": "edge.py run", "serve": "edge.py serve"},
     }
+    if device.startswith('cuda'):profile['torch_provisioning']='vendor_preinstalled'
+    return profile
 
 
 def _file(root: Path, relative: str) -> Path:
@@ -107,7 +113,7 @@ def _load_profile(root: Path) -> dict[str, Any]:
     if not isinstance(profile, dict) or profile != manifest.get("deployment"):
         raise ValueError("CPU Edge deployment profile does not match the package manifest")
     expected = create_edge_profile(profile.get("target", {}).get("os"), profile.get("target", {}).get("architecture"),
-                                   (root / "requirements.txt").read_text(encoding="utf-8"))
+                                   (root / "requirements.txt").read_text(encoding="utf-8"),device=profile.get('device','cpu'))
     if profile != expected:
         raise ValueError("Unsupported CPU Edge deployment profile")
     return profile
@@ -163,7 +169,12 @@ def preflight_edge_package(package_dir: Path, *, check_dependencies: bool = True
     if check_dependencies:
         runtime = importlib.import_module("backend.engine.flow_package_runtime")
         runtime.verify_flow_package(root)
-    return {"status": "ready" if check_dependencies else "verified", "profile": "edge_cpu", "device": "cpu",
+    if check_dependencies:
+        from backend.engine.runtime_device import resolve_package_device
+        resolved=resolve_package_device(profile['device'])
+        if str(resolved).startswith('cuda'):
+            importlib.import_module('torch').ones(1,device=resolved).cpu()
+    return {"status": "ready" if check_dependencies else "verified", "profile": profile['profile'], "device": profile['device'],
             "target": profile["target"], "python": platform.python_version(),
             "manifest_sha256": _sha256(root / "manifest.json"),
             "dependencies": versions, "dependencies_checked": check_dependencies}
@@ -175,8 +186,9 @@ def enforce_edge_device(package_dir: Path, device: str) -> None:
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
     if "deployment" not in manifest:
         return
-    if device != "cpu":
-        raise ValueError("CPU Edge deployment only supports device cpu; GPU fallback and overrides are disabled")
+    declared=manifest['deployment'].get('device','cpu')
+    if device != declared:
+        raise ValueError(f"CPU Edge deployment only supports declared device {declared}; fallback and overrides are disabled")
     preflight_edge_package(root, check_dependencies=True)
 
 
@@ -189,19 +201,25 @@ def install_edge_package(package_dir: Path, environment: Path) -> dict[str, Any]
     if target.exists():
         raise ValueError("CPU Edge environment already exists; select a new --venv directory")
     target = target.resolve()
-    venv.EnvBuilder(with_pip=True).create(target)
+    cuda=checked['device'].startswith('cuda')
+    if cuda:
+        # Jetson's CUDA/PyTorch wheel is tied to the board's JetPack release;
+        # installing a generic PyPI torch wheel can silently replace it.
+        from backend.engine.runtime_device import resolve_package_device
+        resolve_package_device(checked['device'])
+    venv.EnvBuilder(with_pip=True,system_site_packages=cuda).create(target)
     python = target / ("Scripts/python.exe" if checked["target"]["os"] == "windows" else "bin/python")
     try:
         # Linux/Windows explicitly install CPU wheels; macOS has no CUDA wheel.
         torch_args = [str(python), "-m", "pip", "install", "torch>=2.4", "torchvision>=0.19"]
         if checked["target"]["os"] in ("linux", "windows"):
             torch_args.extend(("--index-url", "https://download.pytorch.org/whl/cpu"))
-        subprocess.run(torch_args, check=True)
+        if not cuda:subprocess.run(torch_args, check=True)
         subprocess.run([str(python), "-m", "pip", "install", "-r", str(root / "requirements.txt")], check=True)
         subprocess.run([str(python), str(root / "edge.py"), "preflight"], check=True)
     except subprocess.CalledProcessError as exc:
         raise ValueError("CPU Edge installation failed. A compatible Python/PyTorch CPU wheel and dependency wheels are required for the declared target. Inspect pip output, resolve access or wheel support, and retry with a new --venv directory.") from exc
-    return {"status": "installed", "environment": str(target), "python": str(python), "device": "cpu",
+    return {"status": "installed", "environment": str(target), "python": str(python), "device": checked['device'],
             "preflight_command": [str(python), str(root / "edge.py"), "preflight"]}
 
 
@@ -223,13 +241,13 @@ def main() -> int:
         elif args.command == "preflight":
             result = preflight_edge_package(root, check_dependencies=not args.skip_dependencies)
         else:
-            preflight_edge_package(root)
+            checked=preflight_edge_package(root)
             arguments = args.arguments[1:] if args.arguments[:1] == ["--"] else args.arguments
             # Passing another package would bypass this package's declared target.
             if any(arg in ("--device", "--package") or arg.startswith(("--device=", "--package=")) for arg in arguments):
                 raise ValueError("CPU Edge launch fixes package and device cpu; do not pass --device or --package")
             runner = "run_flow.py" if args.command == "run" else "serve_flow.py"
-            return subprocess.run([sys.executable, str(root / runner), "--device", "cpu", *arguments],
+            return subprocess.run([sys.executable, str(root / runner), "--device", checked['device'], *arguments],
                                   env={**os.environ, "PYTHONPATH": ""}, check=False).returncode
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0

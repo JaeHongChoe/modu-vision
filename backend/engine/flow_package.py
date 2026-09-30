@@ -212,16 +212,23 @@ def build_flow_package(
     deployment_profile: str = "standard",
     target_os: str | None = None,
     target_arch: str | None = None,
+    runtime_config: dict | None = None,
 ) -> dict[str, Any]:
     """Create a new package, never overwriting an existing release."""
+    from backend.engine.runtime_configuration import runtime_options
+    configured_runtime=runtime_options(runtime_config)
+    if deployment_profile=='edge_cpu' and configured_runtime['device']!='cpu':
+        raise ValueError('CPU Edge packages require the CPU runtime device')
     if not isinstance(package_name, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,95}", package_name):
         raise ValueError("Invalid package name")
-    if deployment_profile not in ("standard", "edge_cpu"):
+    if deployment_profile not in ("standard", "edge_cpu",'edge_cuda'):
         raise ValueError("Unsupported flow deployment profile")
     if deployment_profile == "standard" and (target_os is not None or target_arch is not None):
         raise ValueError("Target OS/architecture requires the edge_cpu deployment profile")
     # Validate the declaration before reserving a directory or reading models.
-    deployment = create_edge_profile(target_os, target_arch, _REQUIREMENTS) if deployment_profile == "edge_cpu" else None
+    if deployment_profile=='edge_cuda' and not configured_runtime['device'].startswith('cuda'):
+        configured_runtime['device']='cuda:0'
+    deployment = create_edge_profile(target_os, target_arch, _REQUIREMENTS,device=configured_runtime['device']) if deployment_profile in ('edge_cpu','edge_cuda') else None
     ordered_linear_nodes(pipeline)
     jobs = _model_jobs(pipeline)
     if set(checkpoints) != set(jobs):
@@ -235,7 +242,7 @@ def build_flow_package(
 
     requirements = _runtime_requirements(checkpoints)
     if deployment is not None:
-        deployment = create_edge_profile(target_os, target_arch, requirements)
+        deployment = create_edge_profile(target_os, target_arch, requirements,device=configured_runtime['device'])
 
     release_revisions: list[dict[str, str]] | None = None
     if approved_revisions is not None:
@@ -273,6 +280,9 @@ def build_flow_package(
         (staging / "run_flow.py").write_text(_RUNNER, encoding="utf-8")
         (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
         (staging / "requirements.txt").write_text(requirements, encoding="utf-8")
+        (staging / 'runtime_config.json').write_text(json.dumps(configured_runtime,indent=2)+'\n',encoding='utf-8')
+        from backend.engine.native_sdk import copy_native_sdk
+        copy_native_sdk(source_root/'native_runtime', staging/'native_runtime')
         (staging / "README_DEPLOY.md").write_text(_README, encoding="utf-8")
         if deployment is not None:
             (staging / "edge.py").write_text(_EDGE_RUNNER, encoding="utf-8")
@@ -280,7 +290,8 @@ def build_flow_package(
             (staging / "edge_deployment.json").write_text(
                 json.dumps(deployment, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
             )
-            (staging / "README_DEPLOY.md").write_text(_EDGE_README + _README, encoding="utf-8")
+            readme=_EDGE_README if deployment['device']=='cpu' else '# Edge target runtime\n\nThe declared device and native architecture are enforced by edge.py preflight. CUDA/Jetson requires vendor PyTorch matched to the installed JetPack/CUDA release before edge.py install. The installer preserves that vendor runtime in an isolated environment. No board acceptance or latency claim is implied.\n\n'
+            (staging / "README_DEPLOY.md").write_text(readme + _README, encoding="utf-8")
         for name in ("inspection-service-client.mjs", "InspectionServiceClient.cs"):
             client = source_root / "examples" / name
             if client.is_symlink() or not client.is_file():
@@ -337,6 +348,7 @@ def build_flow_package(
             manifest["release"] = {"approval_revisions": release_revisions}
         if deployment is not None:
             manifest["deployment"] = deployment
+        manifest['runtime']=configured_runtime
         (staging / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )

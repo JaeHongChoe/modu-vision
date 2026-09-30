@@ -16,7 +16,9 @@ import psutil
 from backend.engine.flow_package_runtime import verify_flow_package
 from backend.engine.inspection_service import _verify_release_policy
 from backend.engine.runtime_deployment import DeploymentLedger
-from backend.engine.runtime_device import resolve_runtime_device
+from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
+from backend.engine.runtime_process_control import (atomic_private_json,
+    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle)
 
 
 class ManagedService:
@@ -35,14 +37,14 @@ class ManagedService:
         self.releases.mkdir(exist_ok=True)
         self.config_path=self.root/'service.json'
         if not self.config_path.exists():
-            with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
-            self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
+            with runtime_state_lock(self.root):
+                if not self.config_path.exists():
+                    with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
+                    self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
         self.config=json.loads(self.config_path.read_text())
         self.ledger=DeploymentLedger(self.root)
     def save(self,config):
-        temporary=self.config_path.with_suffix('.tmp')
-        with temporary.open('w') as writer:json.dump(config,writer);writer.flush();os.fsync(writer.fileno())
-        temporary.chmod(0o600);os.replace(temporary,self.config_path)
+        atomic_private_json(self.config_path,config)
     def client(self):
         return httpx.Client(base_url=f'http://127.0.0.1:{self.config["port"]}',headers={'X-Vision-Token':self.config['token']},timeout=30)
     def native_identity(self):
@@ -51,20 +53,22 @@ class ManagedService:
         if label and label!=expected:raise ValueError('Native service identity does not match this project')
         return expected
     def owned_process(self):
-        pid=self.config.get('pid')
+        if self.config_path.is_symlink():raise ValueError('Managed service state is linked')
+        self.config=json.loads(self.config_path.read_text())
         if self.config.get('native_label'):
             label=self.native_identity()
             result=subprocess.run(['launchctl','print',f'gui/{os.getuid()}/{label}'],capture_output=True,text=True,timeout=5)
             import re
             match=re.search(r'\bpid = ([0-9]+)',result.stdout)
             pid=int(match[1]) if match else None
-        if not pid:return None
-        try:
-            process=psutil.Process(pid);arguments=process.cmdline()
-            if 'backend.engine.inspection_service' in arguments and '--state-dir' in arguments and arguments[arguments.index('--state-dir')+1]==str(self.root/'state'):
-                return process
-        except (psutil.NoSuchProcess,psutil.AccessDenied):pass
-        return None
+            if not pid:return None
+            try:
+                # The operating system's exact app-owned label supplies the
+                # current PID after login/restart; commands still bind storage.
+                process=psutil.Process(pid);identity=process_identity(process,self.root/'state')
+                return owned_inspection_process(identity,self.root/'state')
+            except (psutil.Error,ValueError):return None
+        return owned_inspection_process(self.config,self.root/'state')
     def readback(self):
         if self.owned_process() is None:return {'status':'stopped','port':self.config['port']}
         try:
@@ -73,6 +77,15 @@ class ManagedService:
         except (httpx.HTTPError,ValueError):return {'status':'disconnected','port':self.config['port']}
     def state(self):
         return {'runtime':self.readback(),'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config()}
+    @staticmethod
+    def validate_accepted_device(package,device):
+        verify_flow_package(Path(package))
+        manifest=json.loads((Path(package)/'manifest.json').read_text())
+        if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
+            raise ValueError('OpenVINO execution requires a verified package with openvino_models.json')
+        if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
+            raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
+    @serialized_lifecycle
     def stage(self,package_path,project):
         package=Path(package_path).expanduser()
         if package.is_symlink():raise ValueError('Linked release package is unsupported')
@@ -110,6 +123,7 @@ class ManagedService:
         policy=self.releases/(digest+'.policy.json')
         if policy.is_symlink():raise ValueError('Staged release policy is linked')
         policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals}
+        if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
         if policy.exists() and json.loads(policy.read_text())!=policy_payload:raise ValueError('Existing release policy differs')
         if not policy.exists():
             with policy.open('x') as writer:json.dump(policy_payload,writer)
@@ -117,10 +131,12 @@ class ManagedService:
         _verify_release_policy(destination,verify_flow_package(destination)[1],policy)
         return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,
                 'approval_revisions':approvals,'input_root':project.get('source_dataset_dir')}
+    @serialized_lifecycle
     def start(self,release=None):
         if self.owned_process():return self.readback()
         release=release or (self.ledger.active() or {}).get('release')
         if release is None:raise ValueError('Apply an approved package before starting the service')
+        self.validate_accepted_device(release['package_path'],release.get('device','cpu'))
         resolve_runtime_device(release.get('device','cpu'))
         arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])]
         if release.get('input_root'):arguments+=['--input-root',release['input_root']]
@@ -132,7 +148,9 @@ class ManagedService:
         log=(self.root/'service.log').open('ab')
         try:process=subprocess.Popen(arguments,cwd=checkout,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         finally:log.close()
-        self.config['pid']=process.pid;self.save(self.config)
+        try:self.config.update(process_identity(process,self.root/'state'));self.save(self.config)
+        except Exception:
+            process.terminate();process.wait(timeout=10);raise
         deadline=time.monotonic()+20
         while time.monotonic()<deadline:
             if process.poll() is not None:raise RuntimeError('Managed service exited; inspect its local service.log')
@@ -140,6 +158,7 @@ class ManagedService:
             if result.get('status')=='ready':return result
             time.sleep(.1)
         self.stop();raise TimeoutError('Managed service readiness timed out')
+    @serialized_lifecycle
     def stop(self):
         process=self.owned_process()
         if self.config.get('native_label'):
@@ -148,8 +167,9 @@ class ManagedService:
             process.terminate()
             try:process.wait(timeout=12)
             except psutil.TimeoutExpired:raise RuntimeError('Service is stopping; jobs remain recoverable')
-        self.config['pid']=None;self.save(self.config)
+        self.config.update(pid=None,process_created_at=None,process_command_sha256=None);self.save(self.config)
         return {'status':'stopped'}
+    @serialized_lifecycle
     def apply_runtime(self,release):
         _,checkpoints=verify_flow_package(Path(release['package_path']))
         _verify_release_policy(Path(release['package_path']),checkpoints,Path(release['release_policy']))
@@ -157,13 +177,16 @@ class ManagedService:
         with self.client() as client:
             response=client.post('/v1/runtime/apply',json=release);response.raise_for_status()
             ack=client.get('/v1/runtime');ack.raise_for_status();return ack.json()
+    @serialized_lifecycle
     def apply(self,package,device,reviewer,project):
+        self.validate_accepted_device(package,device)
         release={**self.stage(package,project),'device':str(resolve_runtime_device(device))}
         previous = self.ledger.active()
         try: return self.ledger.apply(release,self.apply_runtime,reviewer=reviewer)
         except Exception:
             if previous is None: self.stop()
             raise
+    @serialized_lifecycle
     def rollback(self,deployment_id,reviewer):
         return self.ledger.rollback(deployment_id,self.apply_runtime,reviewer=reviewer)
     def read_adapter_config(self):
@@ -172,6 +195,7 @@ class ManagedService:
         if config.get('mes'):config['mes']['token']=None
         config['clear_mes_token']=False
         return config
+    @serialized_lifecycle
     def configure_adapters(self,config):
         from backend.engine.field_adapters import FieldAdapterConfig,ModbusTCPAdapter,HTTPMESAdapter
         checked=FieldAdapterConfig.model_validate(config)
@@ -187,10 +211,9 @@ class ManagedService:
         if checked.modbus:ModbusTCPAdapter(checked.modbus)
         if checked.mes:HTTPMESAdapter(checked.mes)
         # Configuration is saved without network calls. Apply by explicit service restart.
-        path=self.root/'adapters.json';temporary=path.with_suffix('.tmp')
-        with temporary.open('w') as writer:writer.write(checked.model_dump_json());writer.flush();os.fsync(writer.fileno())
-        temporary.chmod(0o600);os.replace(temporary,path)
+        atomic_private_json(self.root/'adapters.json',checked.model_dump())
         return {'saved':True,'restart_required':self.owned_process() is not None}
+    @serialized_lifecycle
     def install_files(self):
         """Prepare native launch files; installation/activation is an explicit user control."""
         import plistlib
@@ -210,6 +233,7 @@ class ManagedService:
         launcher=directory/'start-service.sh';launcher.write_text('#!/bin/sh\ncd '+shlex.quote(str(Path(__file__).resolve().parents[2]))+'\nexport VISION_INSPECTION_TOKEN='+shlex.quote(self.config['token'])+'\nexec '+shlex.join(arguments)+'\n');launcher.chmod(0o700)
         return {'files':[str(plist),str(launcher)],'macos_install_command':f'launchctl bootstrap gui/{os.getuid()} '+shlex.quote(str(plist)),'macos_uninstall_command':f'launchctl bootout gui/{os.getuid()}/'+label,'status':'prepared'}
 
+    @serialized_lifecycle
     def activate_install(self):
         """Activate only this app-owned login service after explicit UI action."""
         import platform
@@ -223,6 +247,7 @@ class ManagedService:
         if result.returncode:raise RuntimeError('Native login-service installation failed: '+result.stderr.strip())
         self.config['native_label']=label;self.save(self.config)
         return {'status':'installed','label':label,'readiness':'pending native service start','files':prepared['files']}
+    @serialized_lifecycle
     def uninstall_native(self):
         label=self.config.get('native_label')
         if not label:raise ValueError('No app-owned native service installation is recorded')

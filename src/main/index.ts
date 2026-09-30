@@ -4,6 +4,7 @@ import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
 import { registerIpcHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
+import {sharedHeaders} from './sharedSession';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -53,10 +54,14 @@ async function createWindow(): Promise<BrowserWindow> {
   // Keep the capability in the main process. This covers fetch, <img>, canvas
   // image loads, and WebSocket handshakes without exposing it to page scripts.
   win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    if (win.isDestroyed() || win.webContents.isDestroyed()) {
+      callback({ requestHeaders: details.requestHeaders });
+      return;
+    }
     const port = supervisor.getPort();
     const token = supervisor.getApiToken();
     const frameUrl = details.frame?.url;
-    if (!port || !token || details.method === 'OPTIONS'
+    if (details.method === 'OPTIONS'
       || details.webContentsId !== win.webContents.id
       || !frameUrl || !trustedRendererUrl(frameUrl, packagedUrl)
       || !trustedRendererUrl(win.webContents.getURL(), packagedUrl)) {
@@ -65,7 +70,11 @@ async function createWindow(): Promise<BrowserWindow> {
     }
     try {
       const target = new URL(details.url);
-      if (['http:', 'ws:'].includes(target.protocol)
+      const remoteHeaders=sharedHeaders(details.url);
+      if(Object.keys(remoteHeaders).length){
+        callback({requestHeaders:{...details.requestHeaders,...remoteHeaders}});return;
+      }
+      if (port && token && ['http:', 'ws:'].includes(target.protocol)
         && target.hostname === '127.0.0.1' && Number(target.port) === port) {
         callback({ requestHeaders: { ...details.requestHeaders, 'X-Vision-Token': token } });
         return;

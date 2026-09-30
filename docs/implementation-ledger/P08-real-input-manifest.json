@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "evidence_scope": "real_native_crop_functional_CPU_not_manufacturing_quality_approval",
+  "original_file_count": 171,
+  "original_image_count": 88,
+  "original_annotation_count": 83,
+  "originals_unchanged": true,
+  "original_tree_manifest_sha256_before": "270aca3b97c1021760a4cb7839234cfd0cbd7a9676bbd4de0b535468eb2179a8",
+  "original_tree_manifest_sha256_after": "270aca3b97c1021760a4cb7839234cfd0cbd7a9676bbd4de0b535468eb2179a8",
+  "original_images_selected": 6,
+  "native_crop_count": 12,
+  "native_crop_size": [
+    64,
+    64
+  ],
+  "pixel_transform": "native crop; no resize",
+  "crop_source_manifest_sha256": "1cae066a42b9725d91eee818170d42b0765f5c926b0e73eb7dd54d23e541c6f7",
+  "private_acceptance_receipt_sha256": "1c20bd4472169f729ae2a252726794e286b6814b4f0e500ef01fecd8dd4acfbb",
+  "controls": {
+    "OK": "background proxy; healthy truth unverified",
+    "OCR": "controlled A text; natural glyph accuracy unverified",
+    "rotation": "controlled identity correction; physical orientation unverified"
+  },
+  "quality_approval": false,
+  "families": [
+    {
+      "task": "classification",
+      "project_relative_path": "projects/classification",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "job_1790778736_dd7c5d",
+      "run_id": "3ed38891bf394a77ba3bac2572b95fd1",
+      "pretrained": true,
+      "pretrained_sha256": "2a1ec16ae28ffa07bc0ead0241ee7df9fc26451fe6f9f839b7b3afa0a906b040",
+      "model_sha256": "ae5d0408b860eb7b341ec8d1f0354aba355f0283e89cd6dfb7482b5398f9180e",
+      "metadata_sha256": "f4039bbe422dda3967a8df18701518532270ac49a490f2ef9139696346e993f4",
+      "configuration_sha256": "5d9d90e59e73654fe3b717bf80cf710c75256548c129ad6e86561c039d99874d",
+      "dataset_version_id": "v_20260930_143216_e164cf3b",
+      "metrics": {
+        "val_loss": 0.5140607059001923
+      },
+      "evaluation_id": "evaluation_a4ed24158e804a72aefdffef38c19a48",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "121553ec63f4a51611e45e97aace66aaf3c78b868f745de17c3dc89e240f1f98",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "detection",
+      "project_relative_path": "projects/detection",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "job_1790778742_8d6fdd",
+      "run_id": "1b977ba79aea47128ccc8daf664b156d",
+      "pretrained": true,
+      "pretrained_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+      "model_sha256": "6cad61753ed9e7b16c5aa66cea161dbb0ff0126fe2d3b2345ec2b879b655636a",
+      "metadata_sha256": "6338fa89eaa4d1efe169bca7853e555e5141238877a67afcec9f7d7e2d828749",
+      "configuration_sha256": "881c2a9519ad5d4b79de68860c030dffbd2485c85c6d1ef98237c90c2577a5f6",
+      "dataset_version_id": "v_20260930_143222_3a61c59a",
+      "metrics": {
+        "val_loss": 15.286519050598145
+      },
+      "evaluation_id": "evaluation_cc4f13d8d57a4719ab07462e3a9ef585",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "4a5963103b17c1c48d0777a2d477f1446e9d090025585f88f9fbcf6aaa4c4259",
+        "final_verdict": "OK"
+      }
+    },
+    {
+      "task": "segmentation",
+      "project_relative_path": "projects/segmentation",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "job_1790778743_3f85bf",
+      "run_id": "01ffd62824d447a8b2a0c84ef47b6ebc",
+      "pretrained": true,
+      "pretrained_sha256": "2a1ec16ae28ffa07bc0ead0241ee7df9fc26451fe6f9f839b7b3afa0a906b040",
+      "model_sha256": "e42ba14916f88fab764345b1e048052f1a317b0f314eeef970d54b118f4cec51",
+      "metadata_sha256": "2fdb6b17d09b05d76c86ed6a54e9222bd2609360062fca37ee06debe562611db",
+      "configuration_sha256": "39c8a0ac09157870e8b823e4baf3e172738d92ba68ce5bf9d5518dd81f28e344",
+      "dataset_version_id": "v_20260930_143223_848f9f49",
+      "metrics": {
+        "val_loss": 0.9819148480892181
+      },
+      "evaluation_id": "evaluation_023a746d20da4c5e94278eab5f37756e",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "02cb87bb298b6a38440625cb20d1c131ed45430a23cbc7d68f831e59fa2cc42e",
+        "final_verdict": "OK"
+      }
+    },
+    {
+      "task": "anomaly",
+      "project_relative_path": "projects/anomaly",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "job_1790778749_2f4543",
+      "run_id": "16ae125858174fa7913bfacc405e4295",
+      "pretrained": true,
+      "pretrained_sha256": "2a1ec16ae28ffa07bc0ead0241ee7df9fc26451fe6f9f839b7b3afa0a906b040",
+      "model_sha256": "fa2f3a824651700b2fee63a872f75068dfc75084815d9e070cdea696f4eb18e4",
+      "metadata_sha256": "17d92bc07533df1f8bf074a659bc0c8853973343e6abb0e68d817a98fc25e319",
+      "configuration_sha256": "efae1d3592bb959c13ee8cd2e50eb36908c6167d8ab62897d481da9210601414",
+      "dataset_version_id": "v_20260930_143229_2747d7f6",
+      "metrics": {
+        "image_auroc": 1.0
+      },
+      "evaluation_id": "evaluation_509ee4c542314a1e8c38dc123630982b",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "a0484b2c7b688250e892842ff61a1e8eac46020da3151252ccc927f1b1ddc397",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "patch_classification",
+      "project_relative_path": "projects/patch_classification",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "job_1790778754_45f66b",
+      "run_id": "6af0cd785d9c4363851241a198a5b553",
+      "pretrained": true,
+      "pretrained_sha256": "2a1ec16ae28ffa07bc0ead0241ee7df9fc26451fe6f9f839b7b3afa0a906b040",
+      "model_sha256": "351e4c41e121b58abfed00bae8afb0497fce7a65211476e5e2e7b7e46216b66f",
+      "metadata_sha256": "745eb6e4a101807621e62a423f914f469b83d4f0225e584133a3f04c01bf50dd",
+      "configuration_sha256": "a1e9aa10f9fdbc3504abef1d7b558b721c812a536bd8354aa388f34b0c7a6e0e",
+      "dataset_version_id": "v_20260930_143234_37e43e51",
+      "metrics": {
+        "val_loss": 0.6997357606887817
+      },
+      "evaluation_id": "evaluation_70334e020a3a47869280997fb44ab3a0",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "95f7fdb1c0af191ac931fc9e0591d8a43c27b5ff6bc0917bd712241c713178a7",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "rotation",
+      "project_relative_path": "projects/rotation",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "4f1e78c2bba2466cb1976b6c69cd9343",
+      "run_id": "17b27e48d2124f25ab998ba9d70925b5",
+      "pretrained": null,
+      "pretrained_sha256": null,
+      "model_sha256": "dc6dbc25d1472cdd0effb7061f06f0d069b56a383fdb7fcaae479b3eae2abf28",
+      "metadata_sha256": "7cb973f30a5978730647c29fe97afec7f5c41359ad1ea8b4190b68361842ea92",
+      "configuration_sha256": "8852699aa0505fd21bc87db0b9688d33691e28e40368706fcd00b6df5eba6542",
+      "dataset_version_id": "v_20260930_143239_9c002112",
+      "metrics": {
+        "loss": 0.6408506631851196,
+        "angular_mae_deg": 142.11420822143555,
+        "within_10_deg": 0.0
+      },
+      "evaluation_id": "evaluation_a3ed529b86694627ac88541cebe3978b",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "ade6ff4f945c107e1e3bcbee339695a28b39a630c13289e8a7c5e30c6c700568",
+        "final_verdict": "OK"
+      }
+    },
+    {
+      "task": "ocr",
+      "project_relative_path": "projects/ocr",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "b77ae520d3054b26b71218fefcf6f302",
+      "run_id": "2758d72e79f745569365b7ecf21d27a2",
+      "pretrained": null,
+      "pretrained_sha256": null,
+      "model_sha256": "ab14703add1cc9f24424955806269eb3eb038340d1b6ab148de761f6d16e0b2d",
+      "metadata_sha256": "408dc9d48465d4f19d9d7643746bb9842a9c138e9af2f70ffd03cd2c4c649ca3",
+      "configuration_sha256": "4ce97a347e6c915fe915f359c7a07f465135ff55b32dfa10ac0e0bf31d56f63c",
+      "dataset_version_id": "v_20260930_143241_0d0e5ed6",
+      "metrics": {
+        "loss": 6.337637424468994,
+        "character_error_rate": 3.0,
+        "exact_match_accuracy": 0.0
+      },
+      "evaluation_id": "evaluation_6f656666bd34488c9f89e73bd911a005",
+      "source_image_predictions": 1,
+      "generated_output_files": 0,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "5a9ab3292ab49929f090ebb96f264ae270a171f232e3e0fb1d1d18752926394a",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "rotated_detection",
+      "project_relative_path": "projects/rotated_detection",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "7966728c7f674287bd4589483a0d7b32",
+      "run_id": "fa90945bb02f4b8ea27484cbc6fd9fd5",
+      "pretrained": null,
+      "pretrained_sha256": null,
+      "model_sha256": "b9f71fc61e1cf28fa0a2857940e1f7203b77d68ef451ae7a9e568b738b97449a",
+      "metadata_sha256": "044d796da47284ec8034483e308fcac97cbdf4a06afc70d05b3aa62d053e9400",
+      "configuration_sha256": "0a0eb992171fb86192b92cc55d9686a88d350e5f1f25bd14f7fd68650f891c7e",
+      "dataset_version_id": "v_20260930_143241_c17ec623",
+      "metrics": {
+        "mean_oriented_iou": 0.5626551234623827,
+        "mean_angle_error_deg": 0.8613333888974921
+      },
+      "evaluation_id": "evaluation_309c1b48a9094366a4193847d6026360",
+      "source_image_predictions": 1,
+      "generated_output_files": 0,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "12bddea98e8dfe2921ffcd6b6886869fc5ca2eca0fcdf9a46ec8423ae627670d",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "enhancement",
+      "project_relative_path": "projects/enhancement",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "3414f9f39145444680deffe61a69e1a6",
+      "run_id": "d82400e18d164d5885dfa21cf229c8da",
+      "pretrained": null,
+      "pretrained_sha256": null,
+      "model_sha256": "bf91c56f32e34a58ae006c3876217a6e978b64d4c2231716474f0935ce72f801",
+      "metadata_sha256": "a2e5580edc043699a8a86b4100fdb8220b9fc2a25352e318fa74f06bfa1d4988",
+      "configuration_sha256": "53c28e42ba35cc8b98bbd37f9877ffca52ae4dc2d214579bd93274657fcddad9",
+      "dataset_version_id": "v_20260930_143241_da4cbd4d",
+      "metrics": {
+        "input_mse": 0.0030507614137604833,
+        "output_mse": 0.0035090738674625754,
+        "input_psnr": 25.155917552349678,
+        "output_psnr": 24.548074896091205
+      },
+      "evaluation_id": "evaluation_851f32fc56314d74b295d8606b101f6d",
+      "source_image_predictions": 1,
+      "generated_output_files": 1,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "actual_packaged_CPU_execution",
+        "package_manifest_sha256": "8fa692540e9a24f640598032941fc8f00a81c9d41e2ee0aed5b0a34fdefe93bf",
+        "final_verdict": "NG"
+      }
+    },
+    {
+      "task": "defect_gan",
+      "project_relative_path": "projects/defect_gan",
+      "status": "completed",
+      "device": "cpu",
+      "job_id": "48e06f492c264bfd8da55150f5cb660b",
+      "run_id": "382e9b47152a47b7890dca8d020b5990",
+      "pretrained": null,
+      "pretrained_sha256": null,
+      "model_sha256": "11ac5bf262279d8cd91c4e7405a21def797c1898722d900115b1e90daac796a1",
+      "metadata_sha256": "26e5d009d1cc443bcc2f0503ba02e3a606fc2734226544876ff566f8fedfd1aa",
+      "configuration_sha256": "3f88bce58e86cc5a218e45c2b008fa234cc8a58f69b1582d1848da5ae71de4d6",
+      "dataset_version_id": "v_20260930_143242_9429bea6",
+      "metrics": {
+        "rgb_statistics_mmd": 1.4951739311218262
+      },
+      "evaluation_id": "evaluation_60f93c5d1d42435d900979f900649dfe",
+      "source_image_predictions": 1,
+      "generated_output_files": 5,
+      "native_project_open_http": 200,
+      "REST_readback_http": 200,
+      "flow": {
+        "state": "generation_for_human_review",
+        "checkpoint_usage": "actual composited source-linked candidate in prediction; no GAN verdict node"
+      }
+    }
+  ],
+  "cancel": {
+    "task": "rotation",
+    "status": "cancelled",
+    "winner": null,
+    "delivery": false
+  }
+}

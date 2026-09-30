@@ -138,6 +138,12 @@ for (const name of ['inspection-service-client.mjs', 'InspectionServiceClient.cs
   const packaged = path.join(resourcesDir, 'examples', name);
   assert(fs.existsSync(packaged) && digest(packaged) === digest(path.join(ROOT_DIR, 'examples', name)), `Flow export integration client packaged: ${name}`);
 }
+for (const name of ['CMakeLists.txt', 'vision_runtime.cpp', 'vision_runtime.h', 'vision_runtime.hpp',
+  'VisionRuntime.cs', 'VisionRuntime.csproj', 'build_native.py', 'predict.cpp', 'execute.cpp', 'README.md']) {
+  const packaged = path.join(resourcesDir, 'native_runtime', name);
+  assert(fs.existsSync(packaged) && digest(packaged) === digest(path.join(ROOT_DIR, 'native_runtime', name)),
+    `Native flow SDK source packaged with current content: ${name}`);
+}
 
 // 5. Exclusion Filters Integrity (No test files or pycaches packaged)
 console.log('\n--- Step 5: Validating Packaging Exclusion Filters ---');

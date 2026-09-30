@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { request } from '../../services/api';
+import type { ModelFamily } from '../../services/modelTrainingProgram';
 
 type Method = {method: string; architectures: string[]; continuation: string; prerequisite: string; missing_dependencies: string[]};
-type Family = {task: string; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]};
+type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]};
 const stageNames: Record<string, string> = {label: '정답 준비', train: '학습', evaluate: '평가', flow: '플로우 검사', generate: '생성', review: '검토·채택', export: '내보내기'};
 
-export function ModelFamilyCatalog() {
+export function ModelFamilyCatalog({selectedFamily, onSelect}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void}) {
   const [families, setFamilies] = useState<Family[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -16,12 +17,18 @@ export function ModelFamilyCatalog() {
     }).catch(cause => { if (current) setError(String(cause.message || cause)); });
     return () => { current = false; };
   }, []);
-  return <details className="rounded border border-[#344255] bg-[#131D2B] text-xs text-slate-200">
-    <summary className="flex cursor-pointer items-center gap-2 p-3 font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />모델 종류와 필요한 데이터</summary>
-    <div className="border-t border-[#344255] p-3">
-      <p className="mb-3 text-slate-300">분류·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. 기존 모델의 구조와 가중치는 그대로 읽습니다. 사전학습 백본 뒤의 검사 헤드는 현재 라벨로 학습해야 합니다.</p>
+  return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-4 text-xs text-slate-200" aria-label="모델 학습 허브">
+    <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />모델 학습 허브</h2>
+    <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>
+    {onSelect && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(family => <button type="button" key={family.task} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
+      className={`rounded-lg border p-3 text-left transition-colors ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
+      <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
+    </button>)}</div>}
+    <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>
+    <div className="mt-3">
+      <p className="mb-3 text-slate-300">분류·패치·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. 사전학습 백본 뒤의 검사 헤드는 현재 라벨로 학습합니다.</p>
       {error && <p role="alert" className="text-amber-300">모델 종류 확인 실패: {error}</p>}
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{families.map(family => <article key={family.task} className="rounded border border-[#314155] bg-[#0D1622] p-3">
+      <div className="grid gap-2">{families.filter(family => !onSelect || !selectedFamily || family.task === selectedFamily).map(family => <article key={family.task} className="rounded border border-[#314155] bg-[#0D1622] p-3">
         <h3 className="font-semibold text-white">{family.label}<span className="ml-2 font-normal text-cyan-300">{family.model}</span></h3>
         <p className="mt-2 leading-5 text-slate-300">{family.prerequisite}</p>
         <p className="mt-2 break-words text-slate-400">구조: {family.architectures.join(' · ')} · 기본 {family.default_architecture}</p>
@@ -37,6 +44,7 @@ export function ModelFamilyCatalog() {
         </div>)}
         {!!family.missing_dependencies.length && <p className="mt-2 text-amber-300">추가 설치 필요: {family.missing_dependencies.join(', ')}</p>}
       </article>)}</div>
-    </div>
-  </details>;
+    </div></details>
+    {error && <p role="alert" className="mt-3 text-amber-300">모델 종류 확인 실패: {error}</p>}
+  </section>;
 }

@@ -6,7 +6,7 @@ import os
 import threading
 from pathlib import Path
 from backend.engine.flow_package_runtime import verify_flow_package
-from backend.engine.runtime_device import resolve_runtime_device
+from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
 
 
 class ServiceRuntime:
@@ -32,6 +32,11 @@ class ServiceRuntime:
             if self.runtime_root is None or not package.is_relative_to(self.runtime_root) or policy is None or not policy.is_relative_to(self.runtime_root):
                 raise ValueError('Runtime apply requires a release and policy under the managed root')
         pipeline,checkpoints=verify_flow_package(package)
+        manifest=json.loads((package/'manifest.json').read_text())
+        if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
+            raise ValueError('OpenVINO requires a verified converted package')
+        if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
+            raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
         from backend.engine.edge_runtime import enforce_edge_device
         enforce_edge_device(package,device)
         if policy:self.verify_policy(package,checkpoints,policy)

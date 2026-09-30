@@ -6,6 +6,7 @@ import hashlib
 import base64
 import io
 import json
+import math
 import os
 import re
 import tempfile
@@ -41,6 +42,8 @@ class _LiveJob:
     dataset_path: Path
     output_dir: Path
     total_epochs: int
+    source_dataset_path: str = ''
+    device: str = 'cpu'
     training_provenance: dict[str, Any] = field(default_factory=dict)
     status: str = "running"
     epochs_completed: int = 0
@@ -56,6 +59,8 @@ class _LiveJob:
                 "epochs_completed": self.epochs_completed, "total_epochs": self.total_epochs,
                 "started_at": self.started_at, "result": self.result, "error": self.error,
                 "training_provenance": self.training_provenance,
+                "dataset_path":str(self.dataset_path),"source_dataset_path":self.source_dataset_path,
+                "device":self.device,
                 "warm_start": self.warm_start.lineage() if self.warm_start else None}
 
 
@@ -86,6 +91,66 @@ class ManifestRequest(BaseModel):
     dataset_path: str = Field(min_length=1)
     samples: list[RotatedSampleInput] = Field(min_length=1)
 
+class PrepareRequest(BaseModel):
+    source_dataset_path: str
+    samples: list[RotatedSampleInput] = Field(min_length=1)
+
+
+class FitBoxRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    image_path:str
+    mode:Literal['center','face','irregular']
+    points:list[tuple[float,float]]=Field(min_length=3,max_length=128)
+    source_sha256:str|None=Field(default=None,pattern=r'^[0-9a-f]{64}$')
+
+
+def _fitting_source(image_path,request):
+    project=get_current_project(request);configured=project.get('source_dataset_dir')
+    path=Path(image_path).expanduser()
+    if (not configured or not path.is_absolute() or path.is_symlink() or not path.is_file()
+            or not path.resolve().is_relative_to(Path(configured).resolve())
+            or any(parent.is_symlink() for parent in path.parents if parent!=Path(configured).parent)):
+        raise ValueError('Rotated fitting image must be a regular file in the active source dataset')
+    return path
+
+
+@router.get('/fit-source')
+def fit_source(image_path:str,request:Request):
+    try:
+        path=_fitting_source(image_path,request)
+        with Image.open(path) as opened:
+            size=list(opened.size);preview=opened.convert('RGB');preview.thumbnail((800,600),Image.Resampling.BILINEAR)
+        stream=io.BytesIO();preview.save(stream,format='PNG')
+        return {'source_size':size,'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+                'preview_data_url':'data:image/png;base64,'+base64.b64encode(stream.getvalue()).decode()}
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.post('/fit-box')
+def fit_box(req:FitBoxRequest,request:Request):
+    try:
+        from backend.engine.rotated_detection import box_from_polygon,_valid_box,_points
+        path=_fitting_source(req.image_path,request)
+        digest=hashlib.sha256(path.read_bytes()).hexdigest()
+        if req.source_sha256 and req.source_sha256!=digest:raise ValueError('Fitting source changed after preview')
+        with Image.open(path) as opened:width,height=opened.size
+        if any(not math.isfinite(v) for point in req.points for v in point):raise ValueError('Fitting coordinates must be finite')
+        if any(x<0 or x>width or y<0 or y>height for x,y in req.points):raise ValueError('Fitting point escaped source image bounds')
+        if req.mode=='irregular':box=box_from_polygon(req.points)
+        else:
+            if len(req.points)!=3:raise ValueError('Center and face modes require exactly three points')
+            first,second,third=req.points
+            dx,dy=second[0]-first[0],second[1]-first[1];length=math.hypot(dx,dy)
+            if length<=0:raise ValueError('Fitting edge must have positive length')
+            nx,ny=-dy/length,dx/length;depth=(third[0]-first[0])*nx+(third[1]-first[1])*ny
+            if req.mode=='center':cx,cy=first;box_width=2*length;box_height=2*abs(depth)
+            else:cx=(first[0]+second[0])/2+nx*depth/2;cy=(first[1]+second[1])/2+ny*depth/2;box_width=length;box_height=abs(depth)
+            box={'cx':cx,'cy':cy,'width':box_width,'height':box_height,'angle_deg':(math.degrees(math.atan2(dy,dx))+90)%180-90}
+        box=_valid_box(box,width,height)
+        return {'box':box,'polygon':_points(box).tolist(),'source_size':[width,height],
+                'source_sha256':digest,'mode':req.mode}
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
 
 class TrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -94,6 +159,7 @@ class TrainRequest(BaseModel):
     batch_size: int = Field(default=8, ge=1, le=64)
     image_size: int = Field(default=64, ge=16, le=512)
     learning_rate: float = Field(default=1e-3, gt=0, le=1)
+    device:Literal['cpu','mps','cuda']='cpu'
     warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
@@ -102,12 +168,14 @@ class EvaluateRequest(BaseModel):
     job_id: str = Field(pattern=r"^[0-9a-f]{32}$")
     dataset_path: str = Field(min_length=1)
     split: Literal["val", "test"] = "test"
+    device:Literal['cpu','mps','cuda']='cpu'
 
 
 class PredictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     job_id: str = Field(pattern=r"^[0-9a-f]{32}$")
     image_path: str = Field(min_length=1)
+    device:Literal['cpu','mps','cuda']='cpu'
 
 
 def _project_source(request: Request, requested: str) -> Path:
@@ -115,12 +183,10 @@ def _project_source(request: Request, requested: str) -> Path:
     configured = project.get("source_dataset_dir")
     if not isinstance(configured, str) or not configured:
         raise HTTPException(status_code=422, detail="Select this project's source dataset before rotated training")
-    source = Path(configured).expanduser().resolve()
-    target = Path(requested).expanduser()
-    if (not target.is_absolute() or target.is_symlink() or target.resolve() != source
-            or not source.is_dir()):
-        raise HTTPException(status_code=422, detail="Rotated dataset must be the active project's source directory")
-    return source
+    try:
+        from backend.engine.prepared_family_datasets import resolve_family_dataset
+        return resolve_family_dataset(project,'rotated_detection',requested).root
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
 
 
 def _models_root(request: Request) -> Path:
@@ -195,11 +261,13 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
         from backend.engine.training_provenance import validate_training_binding,persist_model_binding
         validate_training_binding(job.training_provenance)
         original_digest=load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']
-        result = train_rotated_detector(
-            job.dataset_path, job.output_dir, epochs=options.epochs,
-            batch_size=options.batch_size, image_size=options.image_size,
-            learning_rate=options.learning_rate, device="cpu", cancel_event=job.cancel, warm_start=job.warm_start,
-        )
+        from backend.engine.shared_scheduler import compute_lease_scope
+        with compute_lease_scope(job.job_id,options.device):
+            result = train_rotated_detector(
+                job.dataset_path, job.output_dir, epochs=options.epochs,
+                batch_size=options.batch_size, image_size=options.image_size,
+                learning_rate=options.learning_rate, device=options.device, cancel_event=job.cancel, warm_start=job.warm_start,
+            )
         validate_training_binding(job.training_provenance)
         if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
             raise ValueError('Rotated labels/source changed during training')
@@ -210,12 +278,15 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                 _set_job(job, "aborted")
             else:
                 persist_model_binding(job.output_dir,job.training_provenance)
+                from backend.engine.specialized_training_jobs import persist_training_configuration
+                persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
                 checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
                 meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text())
-                meta.update(checkpoint_sha256=checksum,source_dataset_path=str(job.dataset_path))
+                meta.update(checkpoint_sha256=checksum,source_dataset_path=job.source_dataset_path,dataset_path=str(job.dataset_path),
+                            training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
                 meta_path.write_text(json.dumps(meta))
                 receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
-                    'source_dataset_path':str(job.dataset_path),'dataset_path':str(job.dataset_path),
+                    'source_dataset_path':job.source_dataset_path,'dataset_path':str(job.dataset_path),
                     'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
                     'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
                 if job.warm_start:
@@ -245,6 +316,7 @@ def _manifest_result(manifest) -> dict[str, Any]:
         "class_names": list(manifest.class_names), "version": manifest.version,
         "split_counts": manifest.provenance["split_counts"],
         "dataset_sha256": manifest.provenance["dataset_sha256"],
+        "provenance":manifest.provenance,
         "samples": [
             {"image": image, "source_sha256": rows[0].source_sha256, "split": rows[0].split, **({"objects": [{"label": row.label,"box": row.box} for row in rows]} if manifest.version==2 else {"label": rows[0].label,"box": rows[0].box})}
             for image, rows in _manifest_groups(manifest).items()
@@ -254,12 +326,31 @@ def _manifest_result(manifest) -> dict[str, Any]:
 
 @router.post("/manifest")
 def save_manifest(req: ManifestRequest, request: Request):
-    source = _project_source(request, req.dataset_path)
+    project=get_current_project(request);configured=project.get('source_dataset_dir')
+    if not configured:raise HTTPException(422,'Select original source first')
+    source=Path(configured).resolve()
     try:
-        manifest = write_rotated_manifest(source, [row.model_dump(exclude_none=True) for row in req.samples])
+        from backend.engine.prepared_family_datasets import prepare_family_dataset,resolve_family_dataset
+        if Path(req.dataset_path).resolve()!=source:resolve_family_dataset(project,'rotated_detection',req.dataset_path)
+        manifest=prepare_family_dataset('rotated_detection',source,Path(project['dataset_dir'])/'rotated_detection'/uuid.uuid4().hex,[row.model_dump(exclude_none=True) for row in req.samples])
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _manifest_result(manifest)
+
+@router.post('/prepare')
+def prepare(req:PrepareRequest,request:Request):
+    project=get_current_project(request);configured=project.get('source_dataset_dir')
+    if not configured or Path(configured).resolve()!=Path(req.source_dataset_path).resolve():raise HTTPException(422,'Rotated original source must match active project')
+    try:
+        from backend.engine.prepared_family_datasets import prepare_family_dataset
+        data=prepare_family_dataset('rotated_detection',configured,Path(project['dataset_dir'])/'rotated_detection'/uuid.uuid4().hex,[row.model_dump(exclude_none=True) for row in req.samples])
+        return _manifest_result(data)
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+@router.get('/datasets')
+def datasets(request:Request):
+    from backend.engine.prepared_family_datasets import list_prepared_family_datasets
+    return {'datasets':list_prepared_family_datasets(get_current_project(request),'rotated_detection')}
 
 
 @router.get("/manifest")
@@ -282,7 +373,7 @@ def start_training(req: TrainRequest, request: Request):
     from backend.engine.specialized_warm_start import resolve_family_parent
     _models_root(request)
     try:
-        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'rotated_detection', source, source, req.model_dump()) if req.warm_start_job_id else None
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'rotated_detection', project['source_dataset_dir'], source, req.model_dump()) if req.warm_start_job_id else None
     except (ValueError, OSError, RuntimeError) as exc:
         raise HTTPException(422, str(exc)) from exc
     from backend.engine.training_provenance import bind_family_training
@@ -295,7 +386,7 @@ def start_training(req: TrainRequest, request: Request):
                 raise HTTPException(status_code=409, detail="Another rotated training job is already running")
         job_id = uuid.uuid4().hex
         job = _LiveJob(Path(project["project_dir"]).resolve(), job_id,
-                       source, root / job_id, req.epochs,training_provenance=binding, warm_start=parent)
+                       source, root / job_id, req.epochs,source_dataset_path=project['source_dataset_dir'],device=req.device,training_provenance=binding, warm_start=parent)
         _JOBS[_key(job)] = job
         _write_state(job)
         context=copy_context()
@@ -312,10 +403,19 @@ def warm_start_parents(dataset_path: str, request: Request, image_size: int = 64
     project = get_current_project(request)
     _models_root(request)
     try:
-        return list_family_parents(project['models_dir'], 'rotated_detection', source, source, {'image_size': image_size})
+        return list_family_parents(project['models_dir'], 'rotated_detection', project['source_dataset_dir'], source, {'image_size': image_size})
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
+
+@router.get('/jobs')
+def list_training_jobs(request:Request):
+    root=_models_root(request);rows=[]
+    for directory in sorted(root.iterdir()) if root.is_dir() else []:
+        try:
+            if _JOB_ID.fullmatch(directory.name):rows.append(get_job(directory.name,request))
+        except HTTPException:continue
+    return {'jobs':rows}
 
 @router.get("/jobs/{job_id}")
 def get_job(job_id: str, request: Request):
@@ -377,6 +477,7 @@ def list_models(request: Request):
                 or meta.get("checkpoint_sha256") != digest):
             continue
         models.append({"job_id": directory.name, "model_sha256": digest,
+                       "dataset_path":meta.get('dataset_path'),"source_dataset_path":meta.get('source_dataset_path'),
                        "dataset_sha256": meta.get("dataset_sha256"),
                        "validation": meta.get("validation"),
                        "class_name": meta.get("class_name")})
@@ -389,9 +490,10 @@ def evaluate(req: EvaluateRequest, request: Request):
     source = _project_source(request, req.dataset_path)
     try:
         from backend.engine.evaluation_history import archive_specialized_evaluation
-        result = evaluate_rotated_detector(checkpoint, source, split=req.split, device="cpu")
-        return archive_specialized_evaluation(get_current_project(request), checkpoint, source,
-            result, task='rotated_detection')
+        result = evaluate_rotated_detector(checkpoint, source, split=req.split, device=req.device)
+        project=get_current_project(request)
+        return archive_specialized_evaluation(project, checkpoint, project['source_dataset_dir'],
+            result, task='rotated_detection',dataset_path=str(source))
     except (ValueError, OSError, RuntimeError, TypeError, KeyError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -409,7 +511,7 @@ def predict(req: PredictRequest, request: Request):
             or not image.is_file()):
         raise HTTPException(status_code=422, detail="Rotated test image must be in the active source dataset")
     try:
-        result = predict_rotated_box(checkpoint, image, device="cpu")
+        result = predict_rotated_box(checkpoint, image, device=req.device)
         with Image.open(image) as opened:
             preview = opened.convert("RGB")
             preview.thumbnail((480, 320), Image.Resampling.BILINEAR)

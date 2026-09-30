@@ -76,7 +76,7 @@ def persist_queued_remote_job(record: Any, profile: ComputeProfile, launch_spec:
     _save_journal({
         "protocol_version": PROTOCOL_VERSION,
         "job_id": record.job_id,
-        "operation": "train",
+        "operation": launch_spec.get('operation','train'),
         "state": "queued",
         "enqueued_at": record.start_time,
         "profile": profile.model_dump(),
@@ -196,14 +196,14 @@ def _copy_artifacts(
         raise ArtifactValidationError("Remote worker completed without an artifact manifest")
     if (manifest.get("protocol_version") != PROTOCOL_VERSION
             or manifest.get("job_id") != job_id
-            or manifest.get("operation") != "train"
+            or manifest.get("operation") != journal.get('operation','train')
             or manifest.get("input_manifest_sha256") != journal["input_manifest_sha256"]):
         raise ArtifactValidationError("Remote artifact manifest does not match this training run")
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
         raise ArtifactValidationError("Remote artifact list is missing")
     by_name = {entry.get("path"): entry for entry in artifacts if isinstance(entry, dict)}
-    required = {"outputs/best_model.pt", "outputs/model_meta.json"}
+    required = {'outputs/label_results.json'} if journal.get('operation')=='label' else {"outputs/best_model.pt", "outputs/model_meta.json"}
     if not required.issubset(by_name):
         raise ArtifactValidationError("Remote checkpoint or model metadata is missing")
 
@@ -225,14 +225,38 @@ def _copy_artifacts(
                 raise RemoteDisconnected(f"Could not download {relative}: {exc}") from exc
             if staged_path.stat().st_size != expected_size or _sha256(staged_path) != expected_hash:
                 raise ArtifactValidationError(f"Remote artifact hash mismatch: {relative}")
-        metadata = json.loads(staged["outputs/model_meta.json"].read_text(encoding="utf-8"))
-        if not isinstance(metadata, dict) or metadata.get("task") != journal["task"]:
-            raise ArtifactValidationError("Remote model metadata does not match the requested task")
-        expected_binding = (journal.get("launch_spec") or {}).get("dataset_binding")
-        if expected_binding and metadata.get("training_provenance") != expected_binding:
-            raise ArtifactValidationError("Remote checkpoint provenance differs from the pinned training version")
+        if journal.get('operation')=='label':
+            labels=json.loads(staged['outputs/label_results.json'].read_text())
+            if labels.get('job_id')!=job_id or labels.get('input_manifest_sha256')!=journal['input_manifest_sha256'] or labels.get('automatically_approved') is not False:
+                raise ArtifactValidationError('Remote label candidates differ from the owned snapshot')
+        else:
+            metadata = json.loads(staged["outputs/model_meta.json"].read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict) or metadata.get("task") != journal["task"]:
+                raise ArtifactValidationError("Remote model metadata does not match the requested task")
+            expected_binding = (journal.get("launch_spec") or {}).get("dataset_binding")
+            if expected_binding and metadata.get("training_provenance") != expected_binding:
+                raise ArtifactValidationError("Remote checkpoint provenance differs from the pinned training version")
         for relative, staged_path in staged.items():
             os.replace(staged_path, output_dir / PurePosixPath(relative).name)
+        if journal['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan','patch_classification'}:
+            # Verify the received bytes first, then record the deterministic
+            # relocation separately so reopened native engines can read them.
+            remote_root=f'{profile.remote_root}/runs/{job_id}/input/data'
+            local_root=str(output_dir/'remote_snapshot'/'data')
+            def relocate(value):
+                if isinstance(value,dict):return {key:relocate(child) for key,child in value.items()}
+                if isinstance(value,list):return [relocate(child) for child in value]
+                if isinstance(value,str) and (value==remote_root or value.startswith(remote_root+'/')):return local_root+value[len(remote_root):]
+                return value
+            metadata_path=output_dir/'model_meta.json';metadata=relocate(json.loads(metadata_path.read_text()))
+            import torch
+            checkpoint=output_dir/'best_model.pt';payload=relocate(torch.load(checkpoint,map_location='cpu',weights_only=True))
+            temporary=checkpoint.with_suffix('.relocated');torch.save(payload,temporary);os.replace(temporary,checkpoint)
+            metadata['checkpoint_sha256']=_sha256(checkpoint);_atomic_json(metadata_path,metadata)
+            _atomic_json(output_dir/'remote_received_artifacts.json',manifest)
+            manifest={**manifest,'artifacts':[{'path':row['path'],'size':(output_dir/PurePosixPath(row['path']).name).stat().st_size,
+                'sha256':_sha256(output_dir/PurePosixPath(row['path']).name),'received_sha256':row['sha256']} for row in manifest['artifacts']],
+                'relocation':{'remote_dataset_root':remote_root,'local_dataset_root':local_root}}
         _atomic_json(output_dir / "remote_artifacts.json", manifest)
     finally:
         for staged_path in staged.values():
@@ -271,7 +295,7 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
                 raise RuntimeError("Remote worker did not publish its status in time")
             time.sleep(POLL_INTERVAL_SECONDS)
             continue
-        if status.get("protocol_version") != PROTOCOL_VERSION or status.get("job_id") != job_id or status.get("operation") != "train":
+        if status.get("protocol_version") != PROTOCOL_VERSION or status.get("job_id") != job_id or status.get("operation") != journal.get('operation','train'):
             raise ValueError("Remote status belongs to a different run or protocol")
         state = status.get("status")
         if state not in {"queued", "preparing", "running", "stopping", "syncing", "completed", "aborted", "failed"}:
@@ -325,21 +349,21 @@ def run_remote_training(
     try:
         if resume:
             journal = json.loads(journal_path.read_text(encoding="utf-8"))
-            if journal.get("job_id") != record.job_id or journal.get("profile") != profile.model_dump():
+            if journal.get("job_id") != record.job_id or ComputeProfile.model_validate(journal['profile']) != profile:
                 raise ValueError("Remote journal does not match this job and server")
             record.dataset_path = journal["dataset_path"]
         else:
             if journal_path.is_file():
                 journal = json.loads(journal_path.read_text(encoding="utf-8"))
                 if (journal.get("job_id") != record.job_id
-                        or journal.get("profile") != profile.model_dump()
+                        or ComputeProfile.model_validate(journal['profile']) != profile
                         or journal.get("state") != "queued"):
                     raise ValueError("Remote launch intent does not match this job and server")
             else:
                 journal = {
                     "protocol_version": PROTOCOL_VERSION,
                     "job_id": record.job_id,
-                    "operation": "train",
+                    "operation": (getattr(record,'launch_spec',None) or {}).get('operation','train'),
                     "profile": profile.model_dump(),
                     "task": record.task,
                     "preset": record.preset,
@@ -365,6 +389,9 @@ def run_remote_training(
                 if record.task in ("segmentation", "detection") else frozenset(),
             )
             validate_training_binding(getattr(record, "dataset_binding", None))
+            source_snapshot=None
+            if record.task in {'patch_classification','rotation','ocr','rotated_detection','enhancement','defect_gan'} and record.source_dataset_path and Path(record.source_dataset_path).resolve()!=Path(record.dataset_path).resolve():
+                source_snapshot=build_snapshot(Path(record.source_dataset_path),output/'remote_source_snapshot',record.preparation_cancel)
             if record.preparation_cancel.is_set():
                 journal["state"] = "aborted"
                 _save_journal(journal)
@@ -376,16 +403,18 @@ def run_remote_training(
                 "dataset_path": record.dataset_path,
                 "input_manifest_sha256": snapshot.manifest_sha256,
                 "snapshot_archive_sha256": snapshot.archive_sha256,
+                'source_snapshot_manifest_sha256':source_snapshot.manifest_sha256 if source_snapshot else None,
             })
             _save_journal(journal)
             record.phase = "transferring"
             job_id = record.job_id
+            operation=journal.get('operation','train')
             remote_overrides, pretrained_envelope, pretrained_transfer = _pretrained_transfer(
-                output, record.task, record.preset, config_overrides, getattr(record, 'warm_start', None))
+                output, record.task, record.preset, config_overrides, getattr(record, 'warm_start', None)) if operation=='train' else ({},None,None)
             spec = {
                 "protocol_version": PROTOCOL_VERSION,
                 "job_id": job_id,
-                "operation": "train",
+                "operation": operation,
                 "task": record.task,
                 "preset": record.preset,
                 "config_overrides": remote_overrides,
@@ -394,6 +423,15 @@ def run_remote_training(
                 "input_manifest_sha256": snapshot.manifest_sha256,
             }
             if getattr(record, "dataset_binding", None): spec["dataset_binding"] = record.dataset_binding
+            local_model_id=(getattr(record,'launch_spec',None) or {}).get('local_model_id')
+            if local_model_id:spec['local_model_id']=local_model_id
+            if source_snapshot:
+                spec['source_snapshot']={'archive':'source.tar.gz','manifest_sha256':source_snapshot.manifest_sha256,'canonical_root':record.source_dataset_path}
+            if operation=='label':
+                spec['labeling']=(getattr(record,'launch_spec',None) or {}).get('labeling',{})
+                spec['images']=(getattr(record,'launch_spec',None) or {}).get('label_images')
+            if profile.distributed_processes>1:spec['distributed']={'processes':profile.distributed_processes}
+            if profile.memory_budget_mb:spec['resources']={'memory_budget_mb':profile.memory_budget_mb,'allow_sharing':profile.allow_sharing}
             if pretrained_envelope:
                 spec['pretrained_weights'] = pretrained_envelope
             parent_transfer = None
@@ -410,6 +448,7 @@ def run_remote_training(
             )
             if parent_transfer: transfers = transfers + (parent_transfer,)
             if pretrained_transfer: transfers = transfers + (pretrained_transfer,)
+            if source_snapshot:transfers=transfers+((source_snapshot.archive_path,'source.tar.gz'),)
             record.total_bytes = sum(source.stat().st_size for source, _ in transfers)
             for source, target in transfers:
                 if record.preparation_cancel.is_set():
@@ -436,7 +475,7 @@ def run_remote_training(
             # An SSH timeout here cannot prove whether the detached worker
             # started. Never schedule a duplicate run after this point.
             launched = True
-            handle = transport.launch(profile, ["-m", "backend.remote.worker", "train", "--spec", spec_remote], job_id)
+            handle = transport.launch(profile, ["-m", "backend.remote.worker", operation, "--spec", spec_remote], job_id)
             journal["state"] = "launched"
             journal["remote_handle"] = handle
             _save_journal(journal)
@@ -555,7 +594,7 @@ def recover_remote_jobs(manager: Any) -> None:
     for path in paths:
         try:
             journal = json.loads(path.read_text(encoding="utf-8"))
-            if journal.get("operation") == "train":
+            if journal.get("operation") in {'train','label'}:
                 journals.append((path, journal))
         except (OSError, ValueError):
             logger.exception("Could not read remote training journal %s", path)
@@ -591,6 +630,7 @@ def recover_remote_jobs(manager: Any) -> None:
                     dataset_path=journal["dataset_path"], output_dir=str(output),
                     status=journal["state"], phase=journal["state"], remote_profile_id=profile.id,
                     remote_profile=profile,
+                    launch_spec=journal.get('launch_spec'),
                     source_dataset_path=journal.get("source_dataset_path"),
                     dataset_fingerprint=journal.get("dataset_fingerprint"),
                     error={"message": str(journal["error"])} if journal.get("error") else None,

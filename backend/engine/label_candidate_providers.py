@@ -8,15 +8,43 @@ from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image
+from backend.engine.dicom_input import open_source_image
 
 _MODEL_LOCK=threading.RLock()
 _MODEL_CACHE={}
+
+# The real model provider is deliberately separate from deterministic tools.
+from backend.engine.foundation_labeling import foundation_candidates
 
 def filter_keywords(candidates,keywords):
     if not keywords: return candidates
     words=[word.strip().casefold() for word in keywords]
     if any(not word for word in words): raise ValueError('Enter nonempty class keywords')
     return [c for c in candidates if any(word in c['annotation']['label'].casefold() for word in words)]
+
+def filter_candidate_sizes(candidates,min_area=0,max_area=None,min_width=0,max_width=None,min_height=0,max_height=None):
+    for lower,upper in [(min_area,max_area),(min_width,max_width),(min_height,max_height)]:
+        if lower<0 or upper is not None and upper<lower: raise ValueError('Maximum candidate size must be at least its minimum')
+    result=[]
+    for candidate in candidates:
+        annotation=candidate['annotation'];box=annotation.get('bbox');polygon=annotation.get('polygon') or annotation.get('points')
+        if polygon:
+            points=np.asarray(polygon,dtype=np.float32)
+            area=float(cv2.contourArea(points));x1,y1=points.min(0);x2,y2=points.max(0)
+            width=float(x2-x1);height=float(y2-y1)
+            if box:width=float(box[2]-box[0]);height=float(box[3]-box[1])
+        elif box:
+            width=float(box[2]-box[0]);height=float(box[3]-box[1]);area=width*height
+        else:
+            # Image tags have no object region and are not invented as boxes.
+            if min_area or max_area is not None or min_width or max_width is not None or min_height or max_height is not None: continue
+            result.append(candidate);continue
+        area=candidate.get('area',area)
+        if area<min_area or max_area is not None and area>max_area:continue
+        if width<min_width or max_width is not None and width>max_width:continue
+        if height<min_height or max_height is not None and height>max_height:continue
+        result.append(candidate)
+    return result
 
 def template_candidates(image_path,exemplar_path,label,threshold=.8,max_candidates=20,exemplar_roi=None):
     if not label.strip(): raise ValueError('An exemplar candidate needs a class label')
@@ -54,7 +82,7 @@ def semantic_readiness(model_dir):
     elif not configured: error='Choose a local Grounding DINO model directory'
     return {'backend':'grounding_dino','ready':bool(dependency and configured and valid),'dependency_available':dependency,
             'model_dir':str(path) if path else None,'error':error,
-            'limits':'English object phrases; visual grounding may miss microscopic defects. CPU inference, local weights only; each box requires human review.'}
+            'limits':'English object phrases; complex relations and microscopic defects may be missed. CPU or an available GPU; local weights only; each box requires human review.'}
 
 def model_directory_hash(model_dir):
     root=Path(model_dir).resolve(); digest=hashlib.sha256()
@@ -66,26 +94,41 @@ def model_directory_hash(model_dir):
             for block in iter(lambda:handle.read(1024*1024),b''): digest.update(block)
     return digest.hexdigest()
 
-def grounded_candidates(image_path,model_dir,prompt,threshold=.3,text_threshold=.25):
+def grounded_candidates(image_path,model_dir,prompt,threshold=.3,text_threshold=.25,device='cpu',cancel=None):
     ready=semantic_readiness(model_dir)
     if not ready['ready']: raise ValueError(ready['error'])
-    if not prompt.strip() or len(prompt)>1000: raise ValueError('Enter 1–1000 characters of English object phrases')
+    if not prompt.strip(): raise ValueError('Enter nonempty object phrases')
+    from backend.engine.foundation_labeling import prompt_chunks,resolve_device,check_cancel
+    device=resolve_device(device)
     import torch
     from transformers import AutoProcessor,AutoModelForZeroShotObjectDetection
     directory=str(Path(model_dir).resolve()); signature=model_directory_hash(directory)
     with _MODEL_LOCK:
-        if (directory,signature) not in _MODEL_CACHE:
+        if (directory,signature,device) not in _MODEL_CACHE:
             processor=AutoProcessor.from_pretrained(directory,local_files_only=True,trust_remote_code=False)
-            model=AutoModelForZeroShotObjectDetection.from_pretrained(directory,local_files_only=True,trust_remote_code=False).to('cpu').eval()
-            _MODEL_CACHE.clear();_MODEL_CACHE[(directory,signature)]=(processor,model)
-        processor,model=_MODEL_CACHE[(directory,signature)]
-        image=Image.open(image_path).convert('RGB')
-        inputs=processor(images=image,text=prompt.strip().lower(),return_tensors='pt')
-        with torch.inference_mode(): outputs=model(**inputs)
-        result=processor.post_process_grounded_object_detection(outputs,inputs.input_ids,threshold=threshold,text_threshold=text_threshold,target_sizes=[(image.height,image.width)])[0]
-        labels=result.get('text_labels',result.get('labels',[]));candidates=[]
-        for score,label,box in zip(result['scores'],labels,result['boxes']):
-            coords=[float(v) for v in box.tolist()]; coords=[max(0,min(v,image.width if i%2==0 else image.height)) for i,v in enumerate(coords)]
-            if coords[2]<=coords[0] or coords[3]<=coords[1]: continue
-            candidates.append({'confidence':float(score),'annotation':{'type':'bbox','label':str(label),'category_id':1,'bbox':coords,'color':'#22d3ee'}})
+            model=AutoModelForZeroShotObjectDetection.from_pretrained(directory,local_files_only=True,trust_remote_code=False).to(device).eval()
+            _MODEL_CACHE.clear();_MODEL_CACHE[(directory,signature,device)]=(processor,model)
+        processor,model=_MODEL_CACHE[(directory,signature,device)]
+        image=open_source_image(image_path).convert('RGB')
+        candidates=[]
+        pending=list(prompt_chunks(prompt,max_words=40))
+        while pending:
+            check_cancel(cancel)
+            chunk=pending.pop(0)
+            # Model token capacity is the actual bound, never a character UI cap.
+            token_ids=processor.tokenizer(chunk,add_special_tokens=True)['input_ids']
+            if len(token_ids)>model.config.max_text_len:
+                if len(chunk)<2: raise ValueError('Text cannot fit the configured grounding model token capacity')
+                middle=len(chunk)//2
+                pending[:0]=[chunk[:middle],chunk[middle:]]
+                continue
+            inputs=processor(images=image,text=chunk.strip().lower(),return_tensors='pt').to(device)
+            with torch.inference_mode(): outputs=model(**inputs)
+            check_cancel(cancel)
+            result=processor.post_process_grounded_object_detection(outputs,inputs.input_ids,threshold=threshold,text_threshold=text_threshold,target_sizes=[(image.height,image.width)])[0]
+            labels=result.get('text_labels',result.get('labels',[]))
+            for score,label,box in zip(result['scores'],labels,result['boxes']):
+                coords=[float(v) for v in box.tolist()]; coords=[max(0,min(v,image.width if i%2==0 else image.height)) for i,v in enumerate(coords)]
+                if coords[2]<=coords[0] or coords[3]<=coords[1]: continue
+                candidates.append({'confidence':float(score),'annotation':{'type':'bbox','label':str(label),'category_id':1,'bbox':coords,'color':'#22d3ee'}})
         return candidates

@@ -185,6 +185,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         list = list.filter(
           (item) =>
             allowedPaths.has(item.file_path) ||
+            (!!item.evaluation_file_path && allowedPaths.has(item.evaluation_file_path)) ||
             allowedPaths.has(item.image_id) ||
             allowedPaths.has(item.file_name)
         );

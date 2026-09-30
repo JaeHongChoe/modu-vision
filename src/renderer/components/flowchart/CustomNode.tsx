@@ -92,6 +92,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return <Crop className="w-3.5 h-3.5 text-sky-400" />;
       case 'inspection':
         return <Microscope className="w-3.5 h-3.5 text-purple-400" />;
+      case 'measurement':
       case 'blob_measure':
         return <Scan className="w-3.5 h-3.5 text-teal-400" />;
       case 'aggregate':
@@ -126,6 +127,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
         ];
+      case 'measurement':
       case 'blob_measure':
       case 'aggregate':
         return [{ id: 'in_result', name: 'Result In', type: 'data', direction: 'in', label: 'RESULT IN', pinNumber: 1 }];
@@ -158,6 +160,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
         return [
           { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
         ];
+      case 'measurement':
       case 'blob_measure':
       case 'aggregate':
         return [{ id: 'out_result', name: 'Result Out', type: 'data', direction: 'out', label: 'RESULT OUT', pinNumber: 1 }];
@@ -282,6 +285,8 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
               </div>
             </div>
           )}
+          {nodeType === 'measurement' && <div className="space-y-1 text-teal-200"><div>SOURCE LENGTH / AREA</div><div>{node.data.params?.paths?.length || 0} 경로 · {node.data.params?.calibration?'mm / mm²':'px / px²'}</div></div>}
+          {nodeType === 'preprocess' && <div className="text-sky-200">{({learned_rotation:'학습 회전 보정',fitted_roi:'원본 회전 ROI 맞춤',enhancement:'학습 영상 개선',rotate:'회전',align:'방향 정렬',improve:'영상 개선'} as Record<string,string>)[node.data.params?.operation||'rotate']}</div>}
           {nodeType === 'blob_measure' && <>
             <div className="flex justify-between items-center">
               <span className="text-slate-400">MIN AREA:</span>

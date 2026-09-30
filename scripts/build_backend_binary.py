@@ -6,8 +6,8 @@ Compiles the entire Vision AI Studio Python backend into a standalone native exe
 (vision_ai_backend.exe on Windows, vision_ai_backend on macOS/Linux).
 
 Benefits:
-  - 100% Standalone: End-users do not need Python, Anaconda, or libraries installed.
-  - IP Protection: Python source code (.py) is compiled and encrypted, not exposed in plain text.
+  - Bundles the configured Python runtime and its detected dependencies.
+  - Optional model, hardware and SDK dependencies require separate target validation.
   - Native Integration: Electron supervisor automatically detects and executes this binary.
 
 Usage:
@@ -26,6 +26,30 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = ROOT_DIR / "backend"
 OUTPUT_DIR = ROOT_DIR / "dist-backend"
 ENTRY_POINT = BACKEND_DIR / "main.py"
+
+NATIVE_EXPORT_SOURCES = (
+    "build_native.py", "vision_runtime.h", "vision_runtime.hpp", "vision_runtime.cpp",
+    "predict.cpp", "execute.cpp", "VisionRuntime.cs", "VisionRuntime.csproj",
+    "CMakeLists.txt", "README.md",
+)
+HTTP_EXPORT_CLIENTS = ("inspection-service-client.mjs", "InspectionServiceClient.cs")
+
+
+def export_resource_files(root: Path) -> list[tuple[Path, str]]:
+    """Preserve the source tree read by flow/GAN export inside the frozen root."""
+    root = Path(root)
+    resources = [(root / "native_runtime" / name, "native_runtime") for name in NATIVE_EXPORT_SOURCES]
+    resources.extend((root / "examples" / name, "examples") for name in HTTP_EXPORT_CLIENTS)
+    engine = root / "backend" / "engine"
+    sources = sorted(source for source in engine.rglob("*.py")
+                     if not {"tests", "__pycache__", ".pytest_cache"}.intersection(source.relative_to(engine).parts))
+    if not sources:
+        raise ValueError("Flow export Python engine sources are missing")
+    resources.extend((source, (Path("backend/engine") / source.relative_to(engine).parent).as_posix()) for source in sources)
+    for source, _ in resources:
+        if not source.is_file() or source.is_symlink() or any(parent.is_symlink() for parent in source.parents if parent != root and root in parent.parents):
+            raise ValueError(f"Missing or unsafe export resource: {source.relative_to(root)}")
+    return resources
 
 def check_pyinstaller():
     try:
@@ -48,6 +72,7 @@ def build_binary():
         print("    pip install pyinstaller")
         sys.exit(1)
 
+    resources = export_resource_files(ROOT_DIR)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     is_win = platform.system() == "Windows"
@@ -90,8 +115,11 @@ def build_binary():
         "--hidden-import=api",
         "--hidden-import=utils",
         f"--paths={BACKEND_DIR}",
-        str(ENTRY_POINT),
     ]
+    separator = ";" if is_win else ":"
+    for source, destination in resources:
+        cmd.extend(["--add-data", f"{source}{separator}{destination}"])
+    cmd.append(str(ENTRY_POINT))
 
     print("\n[INFO] Executing PyInstaller command:")
     print(" ".join(cmd))

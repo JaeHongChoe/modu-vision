@@ -29,13 +29,14 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 from PIL import Image
+from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENSIONS
 import torch
 from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms.functional as TF
 
 logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
-SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
+SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"} | DICOM_EXTENSIONS
 SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
 _REQUEST_SPLIT_ROOT: ContextVar[Optional[Path]] = ContextVar("project_split_root", default=None)
 
@@ -83,7 +84,9 @@ def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
                 if path.is_absolute() or ".." in path.parts or partition not in {"train", "val", "test"}:
                     raise ValueError("an image path or partition is invalid")
                 assignments[str(selected_root / path)] = partition
-            return assignments
+            from backend.engine.dataset_usage import unused_image_paths
+            unused=unused_image_paths(selected_root)
+            return {path:partition for path,partition in assignments.items() if path not in unused}
         except (OSError, ValueError, TypeError, AttributeError) as exc:
             raise ValueError(f"Saved split is invalid for {selected_root}; apply the split again: {exc}") from exc
     return None
@@ -202,6 +205,13 @@ def validate_image_file(file_path: Union[str, Path]) -> ValidationResult:
     if size == 0:
         return ValidationResult(valid=False, error_code="ZERO_BYTE", details="File size is 0 bytes")
 
+    if is_dicom(p):
+        try:
+            with open_source_image(p) as image: dimensions = image.size
+            return ValidationResult(valid=True, error_code="OK", dimensions=dimensions, details="Valid DICOM native frame")
+        except (ValueError, OSError) as exc:
+            return ValidationResult(valid=False, error_code="DICOM_DECODE_ERROR", details=str(exc))
+
     # Magic byte checks
     try:
         with open(p, "rb") as f:
@@ -314,7 +324,7 @@ def _read_image_rgb(path: Union[str, Path], bg_color: str = "white") -> np.ndarr
       4. Always returns uint8 RGB ndarray of shape (H, W, 3).
     """
     p_str = str(path)
-    with Image.open(p_str) as im:
+    with open_source_image(p_str) as im:
         # Check for 16-bit / 32-bit single-channel modes (e.g. industrial TIFF/AOI)
         if im.mode in ("I;16", "I;16L", "I;16B", "I", "F"):
             arr = np.array(im)
@@ -430,6 +440,8 @@ class ClassificationDataset(Dataset):
 
     @staticmethod
     def _load_from_folder(folder: Path) -> Tuple[List[Tuple[Path, int]], List[str], Dict[str, int]]:
+        from backend.engine.dataset_usage import unused_image_paths
+        unused=unused_image_paths(folder)
         class_names = [d.name for d in folder.iterdir() if d.is_dir() and not d.name.startswith(".")]
 
         # Deterministic sort: 'OK', 'good', 'normal', 'pass' sorted first (index 0)
@@ -447,7 +459,7 @@ class ClassificationDataset(Dataset):
             cidx = class_to_idx[cname]
             cdir = folder / cname
             for p in sorted(cdir.glob("*")):
-                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                if p.is_file() and str(p.resolve()) not in unused and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                     samples.append((p, cidx))
 
         return samples, class_names, class_to_idx
@@ -585,7 +597,10 @@ class DetectionDataset(Dataset):
         self.categories = {
             dense_id: name for name, dense_id in name_to_dense.items()
         }
-        self.images = {img["id"]: img for img in coco_data.get("images", [])}
+        from backend.engine.dataset_usage import unused_image_paths
+        unused=unused_image_paths(self.images_dir)
+        self.images = {img["id"]: img for img in coco_data.get("images", [])
+                       if str((self.images_dir/img['file_name']).resolve()) not in unused}
 
         self.img_to_annos: Dict[int, List[Dict[str, Any]]] = {img_id: [] for img_id in self.images}
         for anno in coco_data.get("annotations", []):
@@ -728,7 +743,10 @@ class SegmentationDataset(Dataset):
         self.masks_dir = Path(masks_dir)
 
         self.samples: List[Tuple[Path, Path]] = []
+        from backend.engine.dataset_usage import unused_image_paths
+        unused=unused_image_paths(self.images_dir)
         for img_p in sorted(self.images_dir.glob("*")):
+            if str(img_p.resolve()) in unused:continue
             if img_p.is_file() and (img_p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS or img_p.name.lower().endswith(".jpg.jpg")):
                 clean_stem = sanitize_file_stem(img_p)
                 raw_stem = img_p.stem
@@ -823,10 +841,12 @@ class AnomalyDataset(Dataset):
         from backend.engine.anomaly_split import partition_evaluation_images, partition_normal_images
 
         def image_paths(directory: Path, recursive: bool = True) -> List[Path]:
+            from backend.engine.dataset_usage import unused_image_paths
+            unused=unused_image_paths(directory)
             paths = directory.rglob("*") if recursive else directory.glob("*")
             return [
                 p for p in paths
-                if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                if p.is_file() and str(p.resolve()) not in unused and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                 and not (directory.name == "test_crop_output" and p.name.startswith("mask_"))
             ]
 

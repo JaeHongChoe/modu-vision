@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -170,6 +171,25 @@ class TelemetryBroadcaster:
             len(self._active_connections),
         )
 
+    def _can_receive(self, websocket, payload) -> bool:
+        """Recheck session and job ownership before every shared-server frame."""
+        scope=getattr(websocket,'scope',{})
+        state=scope.get('state',{}) if isinstance(scope,dict) else {}
+        if not state.get('account_user'):return True
+        try:
+            store=scope['app'].state.accounts
+            user=store.authenticate(state['account_session_token'])
+            project=state['scoped_project']
+            if not store.project_role(user['id'],project['id']):return False
+            if payload.get('event',payload.get('type'))=='hardware_stats':return True
+            data=payload.get('data',payload)
+            job_id=data.get('job_id')
+            if not job_id:return False
+            from backend.api.routes_training import training_job_manager
+            record=training_job_manager.get_job(job_id)
+            return bool(record and Path(record.output_dir).resolve().is_relative_to(Path(project['models_dir']).resolve()))
+        except (ValueError,KeyError,TypeError,OSError,AttributeError):return False
+
     def broadcast_sync(self, event_type: str, data: Dict[str, Any]) -> None:
         """
         Thread-safe entry point called by PyTorch TrainingCallback from worker thread.
@@ -203,6 +223,7 @@ class TelemetryBroadcaster:
         text = json.dumps(payload)
         dead = []
         for ws in list(self._active_connections):
+            if not self._can_receive(ws,payload):continue
             try:
                 await ws.send_text(text)
             except Exception:
@@ -225,6 +246,7 @@ class TelemetryBroadcaster:
                 text = json.dumps(msg)
                 stale = []
                 for ws in list(self._active_connections):
+                    if not self._can_receive(ws,msg):continue
                     try:
                         await ws.send_text(text)
                     except Exception:

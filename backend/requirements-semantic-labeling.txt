@@ -1,3 +1,5 @@
-# Optional CPU text grounding backend; weights must already exist locally.
+# Optional SAM2 masks and Grounding DINO text grounding (CPU / available GPU).
+# Install into the same interpreter/venv used by the backend; no import-time
+# model acquisition occurs. Configure local model directories in Labeling setup.
 # Uses the official post_process_grounded_object_detection threshold API.
 transformers==4.57.6

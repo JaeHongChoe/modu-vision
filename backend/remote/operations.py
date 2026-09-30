@@ -85,18 +85,20 @@ def _verified_downloaded_receipt(output_dir: Path, job_id: str):
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     journal = json.loads(journal_path.read_text(encoding="utf-8"))
     profile = ComputeProfile.model_validate(journal["profile"])
-    if (receipt.get("job_id") != job_id or journal.get("job_id") != job_id
+    if (receipt.get("job_id") != job_id or journal.get("job_id") != receipt.get('remote_job_id',job_id)
             or receipt.get("status") != "completed"
             or receipt.get("compute_profile_id") != profile.id
             or receipt.get("dataset_fingerprint") != journal.get("dataset_fingerprint")
             or receipt.get("source_dataset_path") != journal.get("source_dataset_path")
             or journal.get("state") != "completed"):
         raise ArtifactValidationError("Remote model provenance does not match its completed receipt")
+    if receipt.get('remote_job_id') and (receipt.get('task') not in {'rotation','ocr','rotated_detection','enhancement','defect_gan'} or not re.fullmatch('[0-9a-f]{32}',job_id) or receipt['remote_job_id']!='job_'+job_id or output_dir.name!=job_id):
+        raise ArtifactValidationError('Native and remote specialist identity pair changed')
     artifact_file = output_dir / "remote_artifacts.json"
     if not artifact_file.is_file():
         raise ArtifactValidationError("Remote model artifact hashes are unavailable")
     artifact_manifest = json.loads(artifact_file.read_text(encoding="utf-8"))
-    if (artifact_manifest.get("job_id") != job_id
+    if (artifact_manifest.get("job_id") != journal.get("job_id")
             or artifact_manifest.get("input_manifest_sha256") != journal.get("input_manifest_sha256")):
         raise ArtifactValidationError("Remote model artifact manifest belongs to a different snapshot")
     rows = artifact_manifest.get("artifacts")
@@ -127,7 +129,7 @@ def remote_job_context(output_dir: Path, job_id: str) -> RemoteJobContext | None
     if not isinstance(digest, str) or len(digest) != 64:
         raise ArtifactValidationError("Remote snapshot identity is invalid")
     context = RemoteJobContext(
-        job_id=job_id, task=str(journal["task"]), output_dir=output_dir,
+        job_id=journal['job_id'], task=str(journal["task"]), output_dir=output_dir,
         dataset_path=dataset_path, profile=profile,
         input_manifest_sha256=digest,
     )
@@ -153,7 +155,7 @@ def _launch_or_resume(
     journal: dict[str, Any] | None = None
     if journal_path.is_file():
         journal = json.loads(journal_path.read_text(encoding="utf-8"))
-        if (journal.get("job_id") != context.job_id or journal.get("profile") != context.profile.model_dump()
+        if (journal.get("job_id") != context.job_id or ComputeProfile.model_validate(journal["profile"]) != context.profile
                 or journal.get("spec") != spec):
             raise ArtifactValidationError("Operation journal is bound to a different job or server")
         # preparing is durably written before any worker launch. An interrupted
@@ -363,6 +365,9 @@ def run_remote_operation_artifacts(
     from backend.engine.shared_scheduler import ResourceLeases,shared_leases
     spec={'protocol_version':1,'operation':operation,'job_id':context.job_id,'task':context.task,
           'input_manifest_sha256':context.input_manifest_sha256,**extra_spec}
+    if context.profile.memory_budget_mb:
+        extra_spec={**extra_spec,'resources':{'memory_budget_mb':context.profile.memory_budget_mb,'allow_sharing':context.profile.allow_sharing}}
+        spec.update(resources=extra_spec['resources'])
     journal_path=_operation_journal_path(context,operation,spec)
     journal_path.parent.mkdir(parents=True,exist_ok=True)
     lease_key='operation_'+hashlib.sha256((str(journal_path.resolve())+json.dumps(context.profile.model_dump(),sort_keys=True)).encode()).hexdigest()[:32]
@@ -371,7 +376,12 @@ def run_remote_operation_artifacts(
     try:
         leases=ResourceLeases(shared_leases().path,owner=lease_key)
         host=f"ssh:{context.profile.ssh_target.rsplit('@',1)[-1].lower()}:{context.profile.ssh_port}"
-        if not leases.acquire(lease_key,host,context.profile.gpu_selector or 'all',remote=True):
+        from backend.engine.annotation_storage import request_project_root
+        project=request_project_root();project_id=None
+        if project and (project/'project.json').is_file():project_id=json.loads((project/'project.json').read_text()).get('id')
+        if not leases.acquire(lease_key,host,context.profile.gpu_selector or 'all',remote=True,
+                memory_budget_mb=context.profile.memory_budget_mb or 0,allow_sharing=context.profile.allow_sharing,
+                task=operation,project_id=project_id):
             raise RemoteComputeBusy('The selected compute resource is reserved by another operation or training job')
         acquired=True
         def heartbeat():
@@ -453,7 +463,7 @@ def run_remote_evaluation(
 
 def run_remote_inference(
     context: RemoteJobContext, image: Path, threshold: float, image_id: str,
-    *, transport: SSHTransport | None = None,
+    *, transport: SSHTransport | None = None,device:str|None=None,
 ) -> tuple[dict[str, Any], bytes]:
     image = Path(image).resolve(strict=True)
     if not image.is_file():
@@ -466,7 +476,7 @@ def run_remote_inference(
     artifacts = run_remote_operation_artifacts(
         context, "infer", {
             "image_path": relative, "image_sha256": image_hash,
-            "threshold": float(threshold), "image_id": image_id,
+            "threshold": float(threshold), "image_id": image_id,**({'device':device} if device is not None else {}),
         }, transport=transport, input_files={relative: image},
     )
     result_file = artifacts.get("outputs/result.json")

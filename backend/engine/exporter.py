@@ -40,6 +40,12 @@ EXPORTS_DIR = Path("./release/runtime_packages")
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def optimize_verified_flow_package(package_dir, **options):
+    """Convert the saved full DAG with real calibration and retained source weights."""
+    from backend.engine.openvino_runtime import optimize_flow_package
+    return optimize_flow_package(package_dir, **options)
+
+
 def locate_checkpoint(job_id: Optional[str] = None) -> Optional[Path]:
     """Accept a completed local job ID, never an arbitrary checkpoint path."""
     if not job_id:

@@ -11,8 +11,8 @@ from backend.api.routes_evaluation import run_or_load_evaluation
 from backend.engine.evaluation_history import EvaluationHistory,archive_specialized_evaluation
 
 router=APIRouter(prefix='/api/evaluation',tags=['evaluation-history'])
-HistoryTask=Literal['classification','patch_classification','detection','segmentation','anomaly','ocr','rotated_detection','enhancement','defect_gan']
-SPECIALIZED=('ocr','rotated_detection','enhancement','defect_gan')
+HistoryTask=Literal['classification','patch_classification','detection','segmentation','anomaly','ocr','rotated_detection','enhancement','defect_gan','rotation']
+SPECIALIZED=('ocr','rotated_detection','enhancement','defect_gan','rotation')
 class ReevaluateRequest(BaseModel):
     source_dataset_path:str
     task:HistoryTask
@@ -24,7 +24,6 @@ def history_store(project):return EvaluationHistory(Path(project['project_dir'])
 
 
 def history_scope(request,source_dataset_path,task):
-    if task not in SPECIALIZED:return _scope(request,source_dataset_path,task)
     project=get_current_project(request)
     source=Path(source_dataset_path).expanduser().resolve()
     if not source.is_dir() or not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():
@@ -42,7 +41,8 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
         from backend.api import routes_dataset
         fingerprint = _fingerprint(source)
         dataset = source
-        if payload.task in ('detection','segmentation') and routes_dataset._paired_labelme_images(source):
+        if (payload.task in ('detection','segmentation') and routes_dataset._paired_labelme_images(source)
+                and not routes_dataset._read_split_manifest(source)):
             import uuid
             dataset = Path(project['reports_dir']) / 'reevaluation_inputs' / uuid.uuid4().hex
             assignments = routes_dataset._read_split_manifest(source)
@@ -60,7 +60,12 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
             from backend.api.routes_defect_gan import _checkpoint
             from backend.engine.defect_gan import evaluate_defect_generator
             checkpoint=_checkpoint(request,payload.job_id)
-            dataset=source
+            from backend.engine.defect_gan import load_defect_gan_manifest
+            metadata=json.loads(checkpoint.with_name('model_meta.json').read_text())
+            dataset=Path(payload.dataset_path or metadata.get('dataset_path') or source).resolve()
+            if dataset!=source and not dataset.is_relative_to(Path(project['dataset_dir']).resolve()):raise ValueError('GAN evaluation inputs belong to another project')
+            manifest=load_defect_gan_manifest(dataset)
+            if dataset!=source and Path(manifest.get('source_dataset_path','')).resolve()!=source:raise ValueError('GAN evaluation inputs differ from active source')
             execute=lambda:evaluate_defect_generator(checkpoint,dataset,split='test',count=8,seed=0)
         else:
             from backend.engine.specialized_models import resolve_specialized_checkpoint
@@ -88,7 +93,7 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
                 # Legacy weights without source lineage retain the original exact
                 # family provenance guard; a changed-label evaluation needs lineage.
                 checkpoint,metadata=resolve_specialized_checkpoint(project['models_dir'],payload.job_id,payload.task,str(source))
-            requested_dataset=Path(payload.dataset_path or (metadata.get('dataset_path') if payload.task=='enhancement' else source))
+            requested_dataset=Path(payload.dataset_path or metadata.get('dataset_path') or source)
             if requested_dataset.is_symlink():raise ValueError('Evaluation dataset cannot be linked')
             dataset=requested_dataset.resolve()
             if payload.task=='enhancement':
@@ -97,12 +102,19 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
                 manifest=load_enhancement_manifest(dataset)
                 if Path(manifest['provenance']['source_dataset_path']).resolve()!=source:raise ValueError('Enhancement pairs belong to another source')
                 execute=lambda:evaluate_enhancement(checkpoint,dataset,split='test',device='cpu',allow_dataset_revision=True)
+            elif payload.task=='rotation':
+                from backend.api.routes_rotation import _owned_dataset
+                from backend.engine.rotation import evaluate_rotation_checkpoint
+                dataset=_owned_dataset(project,str(dataset)).root
+                execute=lambda:evaluate_rotation_checkpoint(checkpoint,dataset,split='test',device='cpu',allow_dataset_revision=True)
             elif payload.task=='ocr':
-                if dataset!=source:raise ValueError('OCR evaluation must use the active source')
+                from backend.engine.prepared_family_datasets import resolve_family_dataset
+                dataset=resolve_family_dataset(project,payload.task,dataset).root
                 from backend.engine.ocr import evaluate_ocr_checkpoint
                 execute=lambda:evaluate_ocr_checkpoint(checkpoint,dataset,split='test',device='cpu',allow_dataset_revision=True)
             else:
-                if dataset!=source:raise ValueError('Rotated evaluation must use the active source')
+                from backend.engine.prepared_family_datasets import resolve_family_dataset
+                dataset=resolve_family_dataset(project,payload.task,dataset).root
                 from backend.engine.rotated_detection import evaluate_rotated_detector
                 execute=lambda:evaluate_rotated_detector(checkpoint,dataset,split='test',device='cpu',allow_dataset_revision=True)
         fingerprint=_fingerprint(source);model_hash=_sha256(checkpoint)
@@ -112,9 +124,11 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
     except (ValueError,OSError,RuntimeError,KeyError,TypeError) as exc:raise HTTPException(422,str(exc)) from exc
 
 @router.get('/history')
-def history(request:Request,source_dataset_path:str,task:HistoryTask,job_id:str|None=None,product:str|None=None,lot:str|None=None):
+def history(request:Request,source_dataset_path:str,task:HistoryTask,job_id:str|None=None,product:str|None=None,lot:str|None=None,labelset_id:str|None=None):
     project,source=history_scope(request,source_dataset_path,task)
-    try:items=[row for row in history_store(project).list(job_id) if row['binding']['source_dataset_path']==str(source) and row['result']['task']==task]
+    from backend.engine.project_labelsets import load_labelsets
+    if labelset_id and labelset_id not in {row['id'] for row in load_labelsets(Path(project['project_dir']))['labelsets']}:raise HTTPException(404,'Label set not found in this project')
+    try:items=[row for row in history_store(project).list(job_id,labelset_id) if row['binding']['source_dataset_path']==str(source) and row['result']['task']==task]
     except ValueError as exc:raise HTTPException(409,str(exc))
     if product is not None or lot is not None:
         items=[row for row in items if any((product is None or sample.get('product')==product) and (lot is None or sample.get('lot')==lot) for sample in row['result'].get('test_predictions',[]))]

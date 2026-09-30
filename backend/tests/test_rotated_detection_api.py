@@ -9,6 +9,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -47,6 +48,26 @@ def _await_terminal(client: TestClient, job_id: str) -> dict:
             return job
         time.sleep(0.02)
     raise AssertionError("Rotated job did not reach a terminal state")
+
+
+def test_three_box_fitting_modes_preserve_native_coordinates_and_source(tmp_path):
+    client=_client(tmp_path);client.post('/api/project/create',json={'name':'OBB modes','task':'detection'})
+    source=tmp_path/'source';_source(source);image=source/'images/part_0.png';before=image.read_bytes()
+    client.put('/api/project/update',json={'source_dataset_dir':str(source)})
+    preview=client.get('/api/rotated-detection/fit-source',params={'image_path':str(image)})
+    assert preview.status_code==200,preview.text
+    assert preview.json()['source_size']==[96,72]
+    cases={'center':[[40,30],[50,30],[40,35]],'face':[[30,25],[50,25],[35,35]],'irregular':[[30,25],[50,25],[50,35],[30,35]]}
+    for mode,points in cases.items():
+        fitted=client.post('/api/rotated-detection/fit-box',json={'image_path':str(image),'mode':mode,'points':points})
+        assert fitted.status_code==200,fitted.text
+        box=fitted.json()['box'];assert (box['cx'],box['cy'],box['width'],box['height'],box['angle_deg'])==pytest.approx((40,30,20,10,0))
+        assert fitted.json()['source_sha256']==hashlib.sha256(before).hexdigest()
+    assert image.read_bytes()==before
+    outside=client.post('/api/rotated-detection/fit-box',json={'image_path':str(image),'mode':'center','points':[[2,2],[20,2],[2,20]]})
+    assert outside.status_code==422
+    foreign=client.get('/api/rotated-detection/fit-source',params={'image_path':str(tmp_path/'other.png')})
+    assert foreign.status_code==422
 
 
 def test_rotated_api_trains_evaluates_predicts_and_scopes_project(tmp_path: Path):

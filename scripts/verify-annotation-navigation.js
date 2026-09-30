@@ -33,6 +33,7 @@ function loadStore(relativePath, overrides = {}) {
   storeModule.require = (specifier) => {
     if (specifier === '../services/datasetWorkflow') return { datasetWorkflow: { annotations: (...args) => mockApi.annotations.get(...args), saveAnnotations: (...args) => mockApi.annotations.save(...args), image: (...args) => mockApi.imageMetadata(...args) }, workflowError: e => e.message || String(e) };
     if (specifier === '../services/api') return { api: mockApi, getApiBaseUrl: () => '' };
+    if (specifier === '../components/labeling/foundationRequest') return loadStore('../src/renderer/components/labeling/foundationRequest.ts');
     if (specifier === './useDatasetStore') {
       return { useDatasetStore: { getState: () => datasetState } };
     }

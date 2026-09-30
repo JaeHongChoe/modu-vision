@@ -229,8 +229,13 @@ def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epoch
     loader = DataLoader(_Pairs(manifest, "train"), batch_size=batch_size, shuffle=True,
                         generator=torch.Generator().manual_seed(seed))
     output = Path(output_dir).expanduser().resolve()
-    if output.exists() and any(p.name != "job.json" for p in output.iterdir()):
+    if output.exists() and any(p.name not in ("job.json","job_receipt.json") for p in output.iterdir()):
         raise ValueError("Enhancement output must be a new candidate directory")
+    receipt=output/'job_receipt.json'
+    if receipt.exists():
+        reserved=json.loads(receipt.read_text())
+        if receipt.is_symlink() or reserved.get('task')!='enhancement' or reserved.get('job_id')!=output.name or reserved.get('status') not in ('queued','running'):
+            raise ValueError('Enhancement candidate reservation differs from this run')
     output.mkdir(parents=True, exist_ok=True)
     best_loss, history, best_epoch = float("inf"), [], 0
     for epoch in range(epochs):

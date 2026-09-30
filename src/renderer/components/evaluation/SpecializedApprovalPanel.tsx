@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { request } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
-type Family = 'ocr' | 'rotated_detection' | 'enhancement';
+type Family = 'ocr' | 'rotated_detection' | 'enhancement' | 'rotation';
 type Evidence = { evaluation_id: string; created_at: number; result: { job_id: string; sample_count?: number; split?: string; [key: string]: unknown }; binding: { checkpoint_sha256: string; dataset_fingerprint: string } };
-const defaults = { ocr: { minimum: { exact_match_accuracy: 1 }, maximum: { character_error_rate: 0 } }, rotated_detection: { minimum: { precision: 1, recall: 1, mean_oriented_iou: .5 }, maximum: { mean_angle_error_deg: 10 } }, enhancement: { minimum: { output_psnr: 20 }, maximum: { output_mse: .01 } } };
+const defaults = { ocr: { minimum: { exact_match_accuracy: 1 }, maximum: { character_error_rate: 0 } }, rotated_detection: { minimum: { precision: 1, recall: 1, mean_oriented_iou: .5 }, maximum: { mean_angle_error_deg: 10 } }, enhancement: { minimum: { output_psnr: 20 }, maximum: { output_mse: .01 } }, rotation: {minimum:{within_10_deg:.95},maximum:{angular_mae_deg:5}} };
 export const SpecializedApprovalPanel: React.FC = () => {
   const projectDir = useProjectStore(state => state.projectDir);
   const source = useDatasetStore(state => state.folderPath);
@@ -33,7 +33,7 @@ export const SpecializedApprovalPanel: React.FC = () => {
   const evidence = records.find(row => row.evaluation_id === selected);
   if (!projectDir || !source) return null;
   return <details className="mt-3 rounded border border-slate-700 p-3 text-xs"><summary className="cursor-pointer font-semibold">OCR · 회전 검출 · 이미지 개선 승인</summary>
-    <label className="mt-2 block">모델 유형<select aria-label="특수 모델 승인 유형" className="ml-2 rounded bg-slate-800 p-1" value={family} onChange={event => setFamily(event.target.value as Family)}><option value="ocr">OCR</option><option value="rotated_detection">회전 검출</option><option value="enhancement">이미지 개선</option></select></label>
+    <label className="mt-2 block">모델 유형<select aria-label="특수 모델 승인 유형" className="ml-2 rounded bg-slate-800 p-1" value={family} onChange={event => setFamily(event.target.value as Family)}><option value="ocr">OCR</option><option value="rotated_detection">회전 검출</option><option value="enhancement">이미지 개선</option><option value="rotation">회전·정렬</option></select></label>
     <label className="mt-2 block">변경 불가 test 평가<select aria-label="특수 모델 평가 승인" className="mt-1 w-full rounded bg-slate-800 p-2" value={selected} onChange={event => { setSelected(event.target.value); setReviewed(false); }}><option value="">평가 기록 선택</option>{records.map(row => <option key={row.evaluation_id} value={row.evaluation_id}>{row.result.job_id} · {row.result.split} · {row.result.sample_count ?? 0}장 · {new Date(row.created_at * 1000).toLocaleString()}</option>)}</select></label>
     {evidence && <p className="mt-2 break-all font-mono text-[10px]">{JSON.stringify(Object.fromEntries(Object.entries(evidence.result).filter(([key, value]) => typeof value === 'number' || ['split', 'improved'].includes(key))))} · SHA {evidence.binding.checkpoint_sha256}</p>}
     <div className="mt-2 grid grid-cols-2 gap-2"><label>검토자<input aria-label="특수 모델 검토자" value={reviewer} onChange={event => setReviewer(event.target.value)} className="mt-1 w-full rounded bg-slate-800 p-2" /></label><label>최소 test 표본<input aria-label="특수 모델 최소 표본" type="number" min={1} value={minimumCount} onChange={event => setMinimumCount(Number(event.target.value))} className="mt-1 w-full rounded bg-slate-800 p-2" /></label></div>

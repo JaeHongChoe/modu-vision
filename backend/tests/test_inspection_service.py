@@ -48,10 +48,10 @@ def test_service_requires_token_and_records_packaged_verdict(package: Path, tmp_
 
     image = tmp_path / "source.png"
     Image.new("RGB", (32, 32), (25, 50, 75)).save(image)
-    observed: list[Path] = []
+    observed = []
 
-    def inspect(_package: Path, image_path: Path, image_id=None):
-        observed.append(image_path)
+    def inspect(_package: Path, image_path: Path, image_id=None,*,device=None,**_options):
+        observed.append((image_path,device))
         return {"final_verdict": "NG", "roi_count": 1, "crops": [], "execution_steps": []}
 
     monkeypatch.setattr(inspection_service, "run_flow_package", inspect)
@@ -65,7 +65,7 @@ def test_service_requires_token_and_records_packaged_verdict(package: Path, tmp_
         row = _wait(client, job_id, "completed")
         assert row["verdict"] == "NG"
         assert row["result"]["roi_count"] == 1
-        assert observed == [image.resolve()]
+        assert observed == [(image.resolve(),'cpu')]
         assert [item["state"] for item in client.get(f"/v1/jobs/{job_id}/events").json()["events"]] == [
             "queued", "running", "completed",
         ]
@@ -183,7 +183,7 @@ def test_http_image_upload_is_queued_and_invalid_image_is_rejected(package: Path
     from backend.engine import inspection_service
 
     observed: list[Path] = []
-    monkeypatch.setattr(inspection_service, "run_flow_package", lambda _pkg, image_path, image_id=None: (
+    monkeypatch.setattr(inspection_service, "run_flow_package", lambda _pkg, image_path, image_id=None, **_options: (
         observed.append(image_path) or {"final_verdict": "REVIEW", "roi_count": 0, "crops": [], "execution_steps": []}
     ))
     image = tmp_path / "source.png"

@@ -67,6 +67,10 @@ def test_ocr_api_requires_labels_and_scopes_models_to_project(tmp_path: Path):
     assert evaluated.json()["sample_count"] == 2
     assert evaluated.json()["evaluation_id"]
     assert evaluated.json()["binding"]["checkpoint_sha256"]
+    prediction = evaluated.json()["test_predictions"][0]
+    assert Path(prediction["file_path"]).is_relative_to(root)
+    assert Path(prediction["evaluation_file_path"]).is_relative_to(Path(project_a["dataset_dir"]))
+    assert prediction["content_hash"] == hashlib.sha256(Path(prediction["file_path"]).read_bytes()).hexdigest()
     predicted = client.post("/api/ocr/predict", json={
         "job_id": job_id, "image_path": str(root / "images/val_A.png"),
     })

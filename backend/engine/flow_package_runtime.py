@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
+import sys
+import tempfile
 from typing import Any
 
 from backend.engine.flowchart_engine import FlowchartEngine, FlowchartPipeline, ordered_linear_nodes
@@ -56,6 +59,12 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
             raise ValueError(f"Package checksum mismatch: {row['path']}")
     if "pipeline.json" not in seen or "run_flow.py" not in seen:
         raise ValueError("Flow package has no graph or runner")
+    if any(path.relative_to(root).as_posix() not in seen for path in (root/'backend').rglob('*.py')):
+        raise ValueError('Flow package contains unlisted runtime code')
+    if 'runtime' in manifest:
+        from backend.engine.runtime_configuration import runtime_options
+        if 'runtime_config.json' not in seen or runtime_options(json.loads((root/'runtime_config.json').read_text()))!=manifest['runtime']:
+            raise ValueError('Runtime configuration differs from the verified manifest')
     pipeline = FlowchartPipeline.model_validate(json.loads((root / "pipeline.json").read_text(encoding="utf-8")))
     ordered_linear_nodes(pipeline)
     expected = {
@@ -78,15 +87,53 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
         found.add((job_id, task))
     if found != expected:
         raise ValueError("Packaged model jobs do not match the saved graph")
+    if 'openvino_models.json' in seen:
+        converted=json.loads((root/'openvino_models.json').read_text())
+        records=converted.get('models',[]) if isinstance(converted,dict) else []
+        if len(records)!=len(models) or {(row.get('job_id'),row.get('task')) for row in records}!=found:
+            raise ValueError('OpenVINO model artifacts do not cover the complete saved graph')
+        for row in records:
+            directory=row.get('directory')
+            if directory!=f"models/{row['job_id']}/openvino" or row.get('checkpoint')!=f"models/{row['job_id']}/best_model.pt":
+                raise ValueError('OpenVINO artifact leaves its owned model directory')
+            if any(directory+'/'+name not in seen for name in ('model.xml','model.bin','conversion.json')):
+                raise ValueError('OpenVINO artifact is absent from the package manifest')
+        if 'release' in manifest:
+            if 'runtime_acceptance.json' not in seen or _sha256(root/'runtime_acceptance.json')!=manifest.get('runtime_acceptance_sha256'):
+                raise ValueError('Approved OpenVINO release requires explicit verified precision acceptance')
+            acceptance=json.loads((root/'runtime_acceptance.json').read_text())
+            if (acceptance.get('holdout_reviewed') is not True or acceptance.get('models')!=records
+                or acceptance.get('input_receipt')!=converted.get('input_receipt')
+                or acceptance.get('heldout_flow_results_sha256')!=converted.get('heldout_flow_results_sha256')
+                or 'heldout_flow_results.json' not in seen or _sha256(root/'heldout_flow_results.json')!=acceptance.get('heldout_flow_results_sha256')
+                or acceptance.get('runtime_configuration')!=manifest['runtime']
+                or acceptance.get('approval_revisions')!=manifest['release']['approval_revisions']):
+                raise ValueError('Precision acceptance differs from this exact runtime release')
     return pipeline, checkpoints
 
 
-def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None = None, *, device: str = "cpu") -> dict[str, Any]:
+def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None = None, *, device: str | None = None, deadline_ms: int | None = None, cpu_threads: int | None = None, _owned_worker: bool = False) -> dict[str, Any]:
+    from backend.engine.runtime_configuration import runtime_options
+    root=Path(package_dir).expanduser().resolve()
+    config=root/'runtime_config.json'
+    saved=json.loads(config.read_text(encoding='utf-8')) if config.is_file() else {}
+    manifest=json.loads((root/'manifest.json').read_text())
+    if manifest.get('runtime_acceptance_sha256') and device is not None and device!=saved.get('device'):
+        raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
+    for key,value in [('device',device),('deadline_ms',deadline_ms),('cpu_threads',cpu_threads)]:
+        if value is not None: saved[key]=value
+    options=runtime_options(saved)
+    device=options['device']
+    if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
+        raise ValueError('OpenVINO requires a verified converted package')
+    if options['deadline_ms'] is not None and not _owned_worker:
+        return _run_isolated(package_dir,image_path,image_id,options)
     from backend.engine.edge_runtime import enforce_edge_device
     pipeline, checkpoints = verify_flow_package(package_dir)
     enforce_edge_device(package_dir, device)
     from backend.engine.runtime_device import resolve_runtime_device
-    device = str(resolve_runtime_device(device))
+    openvino_device=device.split(':',1)[1] if device.startswith('openvino:') else None
+    if openvino_device is None:device = str(resolve_runtime_device(device))
     image = Path(image_path).expanduser().resolve()
     if not image.is_file():
         raise FileNotFoundError(f"Inspection image not found: {image}")
@@ -100,16 +147,128 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     def resolve(job_id: str, task: str) -> Path | None:
         return checkpoints.get(job_id)
 
-    engine = FlowchartEngine(device=device, checkpoint_resolver=resolve)
-    result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
+    engine = FlowchartEngine(device='cpu' if openvino_device else device, checkpoint_resolver=resolve)
+    if openvino_device:
+        from backend.engine.openvino_runtime import OpenVINOSession
+        with OpenVINOSession(root,openvino_device,options['cpu_threads']) as session:
+            result=engine.execute(pipeline=pipeline,image_path=image,image_id=image_id)
+            result['model_runtime']=session.receipt()
+    else:result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
     return result.model_dump() if hasattr(result, "model_dump") else result
+
+
+def _run_isolated(package_dir, image_path, image_id, options):
+    from backend.engine.runtime_deadline import execute_owned_process
+    root=Path(package_dir).expanduser().resolve()
+    # Validate graph and content before executing a packaged Python entry point.
+    verify_flow_package(root)
+    manifest=json.loads((root/'manifest.json').read_text())
+    if options['device'].startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
+        raise ValueError('OpenVINO requires a verified converted package')
+    if manifest.get('runtime_acceptance_sha256') and options['device']!=manifest['runtime']['device']:
+        raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
+    with tempfile.TemporaryDirectory(prefix='vision-inference-') as temporary:
+        request=Path(temporary)/'request.json';output=Path(temporary)/'result.json'
+        request.write_text(json.dumps({'image_path':str(Path(image_path).expanduser().resolve()),'image_id':image_id,
+                                       'options':options}),encoding='utf-8')
+        bootstrap="import sys;sys.modules['pyarrow']=None;from backend.engine.flow_package_runtime import worker_main;worker_main()"
+        python=os.environ.get('VISION_OPENVINO_PYTHON',sys.executable) if options['device'].startswith('openvino:') else sys.executable
+        command=[python,'-c',bootstrap,str(root),str(request),str(output)]
+        env={**os.environ,'PYTHONPATH':str(root),'PYTHONNOUSERSITE':'1',
+             'OMP_NUM_THREADS':str(options['cpu_threads']),'MKL_NUM_THREADS':str(options['cpu_threads'])}
+        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root)
+        if outcome['status']=='timeout':
+            outcome['image_id']=image_id
+            return outcome
+        if outcome['returncode']!=0:
+            raise RuntimeError(f"Owned inference failed: {outcome['stderr'] or outcome['stdout']}")
+        if not output.is_file() or output.stat().st_size>128*1024*1024:
+            raise RuntimeError('Owned inference returned no bounded result')
+        result=json.loads(output.read_text(encoding='utf-8'))
+        result['runtime_execution']={**options,'isolated_process':True,'pid':outcome['pid'],'elapsed_ms':outcome['elapsed_ms']}
+        return result
+
+
+def worker_main():
+    root,request,output=map(Path,sys.argv[1:4])
+    raw=json.loads(request.read_text(encoding='utf-8'))
+    from backend.engine.runtime_configuration import runtime_options
+    options=runtime_options(raw['options'])
+    import torch
+    torch.set_num_threads(options['cpu_threads'])
+    result=run_flow_package(root,Path(raw['image_path']),raw.get('image_id'),device=options['device'],cpu_threads=options['cpu_threads'],_owned_worker=True)
+    output.write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
+
+
+class Predictor:
+    """File input, complete graph result; initialization is part of the budget."""
+    def __init__(self,package_dir,*,device=None,deadline_ms=None,cpu_threads=None):
+        from backend.engine.runtime_configuration import runtime_options
+        self.package_dir=Path(package_dir).expanduser().resolve()
+        verify_flow_package(self.package_dir)
+        config=self.package_dir/'runtime_config.json'
+        saved=json.loads(config.read_text(encoding='utf-8')) if config.is_file() else {}
+        for key,value in [('device',device),('deadline_ms',deadline_ms),('cpu_threads',cpu_threads)]:
+            if value is not None:saved[key]=value
+        if saved.get('deadline_ms') is None:saved['deadline_ms']=300000
+        self.options=runtime_options(saved)
+
+    def predict(self,image_path,image_id=None):
+        if image_id is not None and (not isinstance(image_id,str) or len(image_id)>512):
+            raise ValueError('image_id must be a string of at most 512 characters')
+        return _run_isolated(self.package_dir,image_path,image_id,self.options)
+
+
+class Executor(Predictor):
+    """Predictor contract with an explicit JSON request for native interop."""
+    def execute(self,request):
+        if not isinstance(request,dict) or set(request)-{'image_path','image_id'}:
+            raise ValueError('Unknown executor input fields')
+        if not isinstance(request.get('image_path'),str) or not request['image_path']:
+            raise ValueError('Executor requires image_path')
+        return self.predict(request['image_path'],request.get('image_id'))
+
+
+def native_create(package_dir,options_json):
+    options=json.loads(options_json or '{}')
+    from backend.engine.runtime_configuration import runtime_options
+    runtime_options(options)
+    return Executor(package_dir,**options)
+
+
+def native_execute(executor,input_json):
+    return json.dumps(executor.execute(json.loads(input_json)),ensure_ascii=False)
+
+
+def _semantic_equal(left,right):
+    if isinstance(left,dict) and isinstance(right,dict):
+        if left.get('dtype')==right.get('dtype')=='float32' and left.get('encoding')==right.get('encoding')=='zlib_base64':
+            # Compression magnifies tiny CPU accumulation differences into unrelated
+            # strings. Compare finite raster values; uint8 masks remain exact.
+            if left.keys()!=right.keys() or set(left)!={'dtype','encoding','shape','data'} or left['shape']!=right['shape']:
+                return False
+            import numpy as np
+            import zlib
+            from backend.engine.segmentation_evidence import decoded_array
+            try:
+                a,b=decoded_array(left),decoded_array(right)
+                return bool(np.isfinite(a).all() and np.isfinite(b).all() and np.max(np.abs(a.astype(np.float64)-b.astype(np.float64)))<=1e-6)
+            except (ValueError,TypeError,KeyError,zlib.error):
+                return False
+        return left.keys()==right.keys() and all(_semantic_equal(left[key],right[key]) for key in left)
+    if isinstance(left,list) and isinstance(right,list):
+        return len(left)==len(right) and all(_semantic_equal(a,b) for a,b in zip(left,right))
+    if type(left) in (int,float) and type(right) in (int,float) and (type(left)is float or type(right)is float):
+        import math
+        return math.isfinite(left) and math.isfinite(right) and abs(left-right)<=1e-4
+    return left==right
 
 
 def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) -> dict[str, Any]:
     """Compare decisions and spatial evidence, excluding machine-dependent timing."""
     fields = (
         "final_verdict", "roi_count", "defective_roi_count", "routed_output_node_id",
-        "rejection_reason", "inspected_image_size",
+        "rejection_reason", "inspected_image_size", "execution_resources",
     )
     mismatches = [field for field in fields if reference.get(field) != packaged.get(field)]
     ref_steps, pkg_steps = reference.get("execution_steps", []), packaged.get("execution_steps", [])
@@ -123,7 +282,7 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
         )
         for index, (left, right) in enumerate(zip(ref_steps, pkg_steps)):
             for field in step_fields:
-                if left.get(field) != right.get(field):
+                if not _semantic_equal(left.get(field),right.get(field)):
                     mismatches.append(f"execution_steps[{index}].{field}")
 
     ref_crops, pkg_crops = reference.get("crops", []), packaged.get("crops", [])
@@ -135,8 +294,9 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
                 "roi_id", "source_node_id", "label", "bbox", "verdict",
                 "flaw_type", "defect_area_px", "blob_count",
                 "largest_blob_area_px", "tiles_processed", "recognized_text", "predicted_class", "polygon", "anomaly_map", "anomaly_values", "map_semantics", "mask", "source_transform",
+                "segmentation_classes", "blob_measurements", "original_text", "corrected_text", "correction_applied", "rule_violations", "measurements", "execution_resources",
             ):
-                if left.get(field) != right.get(field):
+                if not _semantic_equal(left.get(field),right.get(field)):
                     mismatches.append(f"crops[{index}].{field}")
             try:
                 score_gap = abs(float(left.get("defect_score")) - float(right.get("defect_score")))
@@ -157,8 +317,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run a saved Modu Vision inspection flow offline")
     parser.add_argument("--verify-only", action="store_true", help="Verify graph, code, and model checksums")
     parser.add_argument("--image", type=Path, help="Image to inspect")
-    parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cpu", help="Explicit execution device; unavailable devices fail")
+    parser.add_argument("--device", default=None, help="Explicit execution device; unavailable devices fail")
     parser.add_argument("--image-id", help="Optional source image ID")
+    parser.add_argument("--deadline-ms",type=int,help="Hard wall time budget including model initialization")
+    parser.add_argument("--cpu-threads",type=int)
     parser.add_argument("--output", type=Path, help="Write the complete JSON result here")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -169,13 +331,13 @@ def main() -> int:
         else:
             if args.image is None:
                 parser.error("--image is required unless --verify-only is set")
-            result = run_flow_package(root, args.image, args.image_id, device=args.device)
+            result = run_flow_package(root, args.image, args.image_id, device=args.device,deadline_ms=args.deadline_ms,cpu_threads=args.cpu_threads)
         payload = json.dumps(result, ensure_ascii=False, indent=2)
         if args.output:
             args.output.write_text(payload + "\n", encoding="utf-8")
         else:
             print(payload)
-        return 0
+        return 3 if result.get('status')=='timeout' else 0
     except (ValueError, FileNotFoundError, OSError, json.JSONDecodeError) as exc:
         parser.exit(2, f"Flow package error: {exc}\n")
 

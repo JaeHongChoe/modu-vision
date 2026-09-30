@@ -129,6 +129,8 @@ def _parse_manifest(root: Path, raw: Any, manifest_bytes: bytes) -> OCRManifest:
         "split_counts": split_counts,
         "source_image_count": len(records),
     }
+    from backend.engine.prepared_family_datasets import prepared_source_provenance
+    provenance.update(prepared_source_provenance(root, raw, provenance['source_sha256']))
     return OCRManifest(root, records, alphabet, provenance)
 
 

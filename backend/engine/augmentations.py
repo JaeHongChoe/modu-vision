@@ -244,13 +244,18 @@ def create_industrial_transforms(
     task: str = "classification",
     is_training: bool = True,
     preset: str = "fast",
+    profile: str = "industrial",
 ) -> IndustrialAugmentationPipeline:
     """Factory helper constructing task-optimized industrial augmentation pipeline."""
     cutout_prob = 0.2 if preset == "fast" else 0.35
     max_rot = 5.0 if preset == "fast" else 10.0
+    if profile not in ('none', 'photometric', 'industrial'):
+        raise ValueError('Unsupported augmentation profile')
     return IndustrialAugmentationPipeline(
         task=task,
-        max_rotation_deg=max_rot,
-        cutout_prob=cutout_prob,
-        is_training=is_training,
+        max_rotation_deg=max_rot if profile == 'industrial' else 0,
+        flip_horizontal=profile == 'industrial',
+        flip_vertical=profile == 'industrial',
+        cutout_prob=cutout_prob if profile == 'industrial' else 0,
+        is_training=is_training and profile != 'none',
     )

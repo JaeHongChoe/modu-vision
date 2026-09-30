@@ -17,6 +17,9 @@ import type {
 import type { BatchInspectionRow, BatchInspectionReport, InspectionHistoryRun, InspectionRunSummary } from '../components/inference/batchInspection';
 
 export interface ComputeProfile {
+  memory_budget_mb?:number|null;
+  allow_sharing?:boolean;
+  distributed_processes?:number;
   id: string;
   name: string;
   ssh_target: string;
@@ -37,6 +40,10 @@ export interface FlowModelCatalogItem {
   created_at: string | null;
   best_metric: number | null;
   source_dataset_path: string;
+  capabilities?: { role: 'preprocess' | 'inspection'; operation?: 'learned_rotation' | 'enhancement'; task?: FlowModelTask; native_source_coordinates?: boolean };
+  threshold_settings?: Partial<Record<'optimal_threshold' | 'threshold' | 'probability_threshold' | 'size_threshold' | 'min_defect_area_px', number>>;
+  training_labelset_id?: string | null;
+  parent_job_id?: string | null;
 }
 
 export interface SavedFlowVersion {
@@ -396,6 +403,8 @@ export interface ModelDeploymentRevision {
 }
 
 let cachedPort: number | null = null;
+let sharedBase:string|null=null;
+export function setSharedApiBase(base:string|null):void {sharedBase=base;}
 
 export async function getBackendPort(): Promise<number> {
   if (cachedPort) return cachedPort;
@@ -426,6 +435,7 @@ export function setCachedPort(port: number | null): void {
 }
 
 export async function getApiBaseUrl(): Promise<string> {
+  if(sharedBase)return sharedBase;
   const port = await getBackendPort();
   return `http://127.0.0.1:${port}`;
 }
@@ -437,6 +447,7 @@ export function resolveApiUrl(path: string, port?: number): string {
   }
   const effectivePort = port || cachedPort || 8000;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if(sharedBase)return `${sharedBase}${cleanPath}`;
   return `http://127.0.0.1:${effectivePort}${cleanPath}`;
 }
 

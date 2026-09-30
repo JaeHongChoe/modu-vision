@@ -184,7 +184,7 @@ export const LabelingToolbar: React.FC = () => {
         {/* Tool 7: Color/boundary based auto selection */}
         <button
           onClick={() => setActiveTool('auto_select')}
-          title="오토 셀렉터: 클릭한 지점의 색상·경계로 외곽선 자동 추출 (Wand)"
+          title="OpenCV 외곽선 추출: 클릭한 지점의 색상·경계로 선택 (SAM2는 모델 보조 패널 사용)"
           className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all border cursor-pointer ${
             activeTool === 'auto_select'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'

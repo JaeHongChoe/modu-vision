@@ -57,6 +57,9 @@ from backend.api.routes_inspections import router as inspections_router
 from backend.api.routes_label_suggestions import router as label_suggestions_router
 from backend.api.routes_label_candidates import router as label_candidates_router
 from backend.api.routes_runtime_services import router as runtime_services_router
+from backend.api.routes_model_operations import router as model_operations_router
+from backend.api.routes_fleet import router as fleet_router
+from backend.api.routes_training_engine import router as training_engine_router
 from backend.api.routes_model_deployments import router as model_deployments_router
 from backend.api.routes_ocr import router as ocr_router
 from backend.api.routes_enhancement import router as enhancement_router
@@ -65,6 +68,14 @@ from backend.api.routes_provenance import router as provenance_router
 from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
 from backend.api.routes_project import get_current_project, router as project_router
+from backend.api.routes_project_preferences import router as project_preferences_router
+from backend.api.routes_patch_classification import router as patch_classification_router
+from backend.api.routes_rotation import router as rotation_router
+from backend.api.routes_automated_training import router as automated_training_router
+from backend.api.routes_geometry import router as geometry_router
+from backend.api.routes_accounts import router as accounts_router
+from backend.api.routes_mask_exchange import router as mask_exchange_router
+from backend.api.routes_dicom import router as dicom_router
 from backend.api.routes_report import router as report_router
 from backend.api.routes_training import router as training_router, training_job_manager
 from backend.api.websocket_telemetry import broadcaster, router as telemetry_router
@@ -122,7 +133,7 @@ class ProjectStorageScopeMiddleware:
         self.project_app = project_app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope.get("path") in {
+        if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
         }:
             await self.app(scope, receive, send)
@@ -130,6 +141,8 @@ class ProjectStorageScopeMiddleware:
         scope.setdefault("app", self.project_app)
         project = get_current_project(Request(scope))
         project_token = set_request_project_root(Path(project["project_dir"]))
+        from backend.engine.annotation_storage import set_request_shared_scope,reset_request_shared_scope
+        shared_token=set_request_shared_scope(bool(scope.get('state',{}).get('account_user')))
         annotation_token = set_request_annotation_root(Path(project["annotations_dir"]))
         split_token = set_request_split_root(Path(project["dataset_dir"]) / "splits")
         try:
@@ -138,6 +151,7 @@ class ProjectStorageScopeMiddleware:
             reset_request_split_root(split_token)
             reset_request_annotation_root(annotation_token)
             reset_request_project_root(project_token)
+            reset_request_shared_scope(shared_token)
 
 
 @asynccontextmanager
@@ -158,7 +172,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown cleanup complete.")
 
 
-def create_app(project_dir: Optional[str] = None) -> FastAPI:
+def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str] = None) -> FastAPI:
     """Factory creating and configuring the FastAPI application."""
     app = FastAPI(
         title="Vision AI Studio Backend",
@@ -175,8 +189,14 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     # Standalone invocations generate one too, so a missing environment variable
     # never silently disables API authorization.
     app.state.api_token = os.environ.get("VISION_AI_STUDIO_API_TOKEN") or secrets.token_urlsafe(32)
+    from backend.engine.shared_accounts import AccountStore
+    app.state.accounts=AccountStore(Path(shared_auth_dir)/'accounts.sqlite') if shared_auth_dir else None
     app.add_middleware(ProjectStorageScopeMiddleware, project_app=app)
-    app.add_middleware(DesktopApiAuthMiddleware, api_token=app.state.api_token)
+    if app.state.accounts is not None:
+        from backend.api.shared_authorization import SharedAuthorizationMiddleware
+        app.add_middleware(SharedAuthorizationMiddleware,project_app=app)
+    else:
+        app.add_middleware(DesktopApiAuthMiddleware, api_token=app.state.api_token)
 
     # CORS is outermost so permitted renderers can read authentication errors.
     # "null" is needed by packaged file://, but the process token still gates it.
@@ -185,7 +205,7 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
         allow_origins=["http://127.0.0.1:5173", "http://localhost:5173", "null"],
         allow_credentials=False,
         allow_methods=["*"],
-        allow_headers=["Content-Type", "X-Vision-Token"],
+        allow_headers=["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project"],
     )
 
     # Health check endpoint strictly conforming to PROJECT.md line 144
@@ -218,6 +238,10 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
 
     # Register all modular routers
     app.include_router(project_router)
+    app.include_router(project_preferences_router)
+    app.include_router(accounts_router)
+    app.include_router(mask_exchange_router)
+    app.include_router(dicom_router)
     app.include_router(compute_router)
     app.include_router(dataset_router)
     app.include_router(dataset_versions_router)
@@ -227,11 +251,18 @@ def create_app(project_dir: Optional[str] = None) -> FastAPI:
     app.include_router(label_suggestions_router)
     app.include_router(label_candidates_router)
     app.include_router(runtime_services_router)
+    app.include_router(model_operations_router)
+    app.include_router(fleet_router)
+    app.include_router(training_engine_router)
     app.include_router(training_router)
     app.include_router(evaluation_router)
     app.include_router(evaluation_history_router)
     app.include_router(model_deployments_router)
     app.include_router(ocr_router)
+    app.include_router(patch_classification_router)
+    app.include_router(rotation_router)
+    app.include_router(automated_training_router)
+    app.include_router(geometry_router)
     app.include_router(enhancement_router)
     app.include_router(model_catalog_router)
     app.include_router(provenance_router)
@@ -250,6 +281,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Vision AI Studio Backend Daemon")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface to bind")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind (0 for ephemeral)")
+    parser.add_argument('--shared-auth-dir',type=str,default=None,help='Enable authenticated shared-project server using owned account storage')
     parser.add_argument(
         "--project-dir",
         type=str,
@@ -269,7 +301,7 @@ def run_server():
     args = parse_args()
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO))
 
-    app = create_app(project_dir=args.project_dir)
+    app = create_app(project_dir=args.project_dir,shared_auth_dir=args.shared_auth_dir)
 
     # Ephemeral or Static Port Socket Allocation
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

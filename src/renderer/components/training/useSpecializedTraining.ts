@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {specializedApi,type SpecializedTrainingFamily,type SpecializedTrainingJob} from '../../services/specializedApi';
 import {useProjectStore} from '../../stores/useProjectStore';
+import {scopedTrainingJob,type JobSnapshot} from './scopedTrainingJob';
 
 export const isActiveSpecializedJob=(job:SpecializedTrainingJob|null) => !!job && ['queued','running','stopping'].includes(job.status);
 
@@ -10,7 +11,10 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
   const source=project?.source_dataset_dir ?? '';
   const labelset=project?.active_labelset_id ?? 'default';
   const [jobs,setJobs]=useState<SpecializedTrainingJob[]>([]);
-  const [job,setJob]=useState<SpecializedTrainingJob|null>(null);
+  const scope=`${family}\n${projectDir}\n${source}\n${labelset}`;
+  const [snapshot,setSnapshot]=useState<JobSnapshot<SpecializedTrainingJob>|null>(null);
+  const job=scopedTrainingJob(snapshot,scope,source,labelset,family==='defect-gan'?'defect_gan':family);
+  const setJob=(row:SpecializedTrainingJob|null)=>setSnapshot(row?{scope,job:row}:null);
   const [error,setError]=useState('');
   const complete=useRef(onComplete);complete.current=onComplete;
   const completed=useRef(new Set<string>());
@@ -35,8 +39,8 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     }).catch(cause=>{if(active&&current())setError(String(cause.message ?? cause));});},600);
     return()=>{active=false;clearTimeout(timer);};
   },[family,job,projectDir,source,labelset]);
-  const start=async(path:string,epochs:number,warmStartJobId?:string)=>{
-    setError('');const record=await specializedApi.startTraining(family,path,epochs,warmStartJobId);
+  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu')=>{
+    setError('');const record=await specializedApi.startTraining(family,path,epochs,warmStartJobId,device);
     if(current()){setJob(record);setJobs(rows=>[record,...rows.filter(item=>item.job_id!==record.job_id)]);}
   };
   const cancel=async()=>{

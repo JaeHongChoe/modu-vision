@@ -55,7 +55,7 @@ function projectErrorMessage(error: unknown): string {
   return '프로젝트를 열지 못했습니다.';
 }
 
-async function saveOpenEdits(): Promise<void> {
+export async function saveOpenEdits(): Promise<void> {
   if (useModelAssistRunStore.getState().activeOperations > 0) {
     throw new Error('모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
   }

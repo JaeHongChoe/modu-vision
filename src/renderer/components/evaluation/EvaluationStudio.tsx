@@ -38,6 +38,7 @@ import { DetectionEvaluationGrains, summarizeDetectionGrains } from './Detection
 import { ModelComparisonPanel } from './ModelComparisonPanel';
 import { ModelDeploymentPanel } from './ModelDeploymentPanel';
 import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
+import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
 
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
@@ -435,6 +436,7 @@ export const EvaluationStudio: React.FC = () => {
           />
           <ModelDeploymentPanel taskOverride={comparisonTask} />
           <EvaluationHistoryPanel sourceFolder={sourceFolder} task={comparisonTask} jobId={jobId} />
+          <EvaluationEvidencePanel samples={testPredictions} onSelect={path=>{const sample=testPredictions.find(item=>item.file_path===path);if(sample)void selectPrediction(sample);}}/>
           {/* 1-Click Zero-Escape Calibration Prominent Card */}
           <div className="p-3.5 bg-[#1A212E] rounded-[6px] border border-[#2B3547] space-y-3">
             <div className="flex items-center justify-between">

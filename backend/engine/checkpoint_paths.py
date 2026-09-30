@@ -26,6 +26,10 @@ def set_active_project_models_dir(path: Optional[str | Path]) -> None:
 
 def active_project_models_dir() -> Optional[Path]:
     """Return the models root registered by the currently open project."""
+    from backend.engine.annotation_storage import request_project_root
+    project=request_project_root()
+    if project is not None:
+        return project/'models'
     return _ACTIVE_PROJECT_MODELS_DIR
 
 
@@ -56,15 +60,17 @@ def trusted_job_dir(
         return None
     cwd = Path.cwd()
     candidates = []
-    selected_models_dir = Path(project_models_dir) if project_models_dir is not None else _ACTIVE_PROJECT_MODELS_DIR
+    selected_models_dir = Path(project_models_dir) if project_models_dir is not None else active_project_models_dir()
     if selected_models_dir is not None:
         # A project can import a job with an ID already present in the legacy
         # global models directory. Its own model must win for project workflows.
         candidates.append((selected_models_dir, selected_models_dir / job_id))
-    candidates.extend([
-        (cwd / "models", cwd / "models" / job_id),
-        (cwd / "projects", cwd / "projects" / job_id / "models"),
-    ])
+    from backend.engine.annotation_storage import request_shared_scope
+    if not request_shared_scope():
+        candidates.extend([
+            (cwd / "models", cwd / "models" / job_id),
+            (cwd / "projects", cwd / "projects" / job_id / "models"),
+        ])
     recorded = Path(recorded_output_dir).expanduser().resolve() if recorded_output_dir else None
     for root, candidate in candidates:
         if root.is_symlink() or (root / job_id).is_symlink() or candidate.is_symlink():

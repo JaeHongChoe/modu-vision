@@ -40,6 +40,7 @@ from backend.engine.labeling_ai import (
     shape_converter_bbox_to_polygon,
 )
 from backend.engine.segmentation.contours import polygons_to_mask
+from backend.engine.label_candidate_providers import foundation_candidates
 from backend.utils.error_catalog import format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_annotation")
@@ -115,6 +116,7 @@ class AnnotationSaveRequest(BaseModel):
     output_dir: Optional[str] = None
     expected_revision: Optional[int] = Field(None, ge=1)
     actor: str = Field("operator", min_length=1, max_length=100)
+    mask_classes: Optional[List[Dict[str, Any]]] = None
 
 
 class AnnotationBatchSaveRequest(BaseModel):
@@ -216,6 +218,14 @@ def _save_annotations_impl(req: AnnotationSaveRequest):
 
         sanitized_items.append(item_dict)
 
+    # A mixed mask/vector label set must train all its accepted regions.
+    if brush_masks:
+        for item in sanitized_items:
+            if item.get("type") == "bbox" and item.get("bbox"):
+                x1,y1,x2,y2=item["bbox"]
+                polygons_for_mask.append({"class_id":item.get("category_id") or 1,"class_name":item["label"],
+                    "is_hole":False,"points":[[int(x1),int(y1)],[int(x2),int(y1)],[int(x2),int(y2)],[int(x1),int(y2)]]})
+
     # If polygon contours provided, auto-rasterize mask PNG
     mask_file_path = None
     if polygons_for_mask or brush_masks:
@@ -240,6 +250,21 @@ def _save_annotations_impl(req: AnnotationSaveRequest):
         "image_height": img_h,
         "mask_file": mask_file_path,
     }
+    # Preserve explicit external palette entries, including classes with no pixels.
+    mapping = req.mask_classes
+    if mapping is None and json_path.is_file():
+        try: mapping = json.loads(json_path.read_text(encoding="utf-8")).get("mask_classes")
+        except (OSError, ValueError): mapping = None
+    if mapping is not None:
+        from backend.engine.mask_exchange import _classes
+        try:
+            classes = _classes(mapping)
+            for item in sanitized_items:
+                if item["type"] != "tag":
+                    cid = item.get("category_id") or 1
+                    classes[cid] = {"id": cid, "name": item["label"], "color": item.get("color") or "#22d3ee"}
+            data["mask_classes"] = list(_classes(list(classes.values())).values())
+        except ValueError as exc: raise HTTPException(422, detail=str(exc)) from exc
 
     try:
         with open(json_path, "w", encoding="utf-8") as f:
@@ -555,6 +580,9 @@ class AutoSelectRequest(BaseModel):
     seed_x: float
     seed_y: float
     tolerance: Optional[int] = 25
+    backend: Literal['opencv','foundation'] = 'opencv'
+    device: str = 'cpu'
+    points: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class ShapeConverterRequest(BaseModel):
@@ -570,6 +598,23 @@ class ShapeConverterRequest(BaseModel):
     image_id: Optional[str] = None
     bbox: Optional[List[float]] = None
     sensitivity: Optional[float] = 0.5
+    backend: Literal['opencv','foundation'] = 'opencv'
+    device: str = 'cpu'
+
+
+def _foundation_selection_setup():
+    root = request_project_root()
+    if root is None: return {}
+    path = Path(root) / 'semantic_labeling.json'
+    return json.loads(path.read_text()) if path.is_file() else {}
+
+
+def _foundation_selection_result(path, req, points=None, boxes=None):
+    candidates = foundation_candidates(path, _foundation_selection_setup(), points=points, boxes=boxes,
+                                       device=req.device, threshold=0, output_geometry='polygon', max_candidates=1)
+    if not candidates: raise ValueError('The foundation model returned no nonempty object mask; refine the prompt')
+    candidate = candidates[0]
+    return {**candidate, 'bbox':candidate['annotation']['bbox']}
 
 
 def _extract_bbox_from_data(data: Any) -> List[float]:
@@ -658,18 +703,23 @@ def _encode_mask_result(mask: np.ndarray, color: str) -> Dict[str, Any]:
 @router.post("/auto-select")
 def api_auto_select(req: AutoSelectRequest):
     """
-    AI Auto-Selector (Smart Magic Wand / Click-to-Segment):
-    Extracts precise defect contour from a seed click point.
+    Select a model mask or the explicitly named OpenCV flood-fill alternative.
     """
     resolved_path = _resolve_image_path(req.image_path, req.image_id)
     try:
+        if req.backend == 'foundation':
+            result = _foundation_selection_result(resolved_path,req,
+                points=[{'x':req.seed_x,'y':req.seed_y,'label':1}, *req.points])
+            return {'status':'success','result':result}
         res = auto_select_contour(
             resolved_path,
             seed_x=req.seed_x,
             seed_y=req.seed_y,
             tolerance=req.tolerance or 25,
         )
-        return {"status": "success", "result": res}
+        return {"status": "success", "result": {**res,'source':'opencv_flood_fill','is_foundation':False}}
+    except (ValueError,ImportError,RuntimeError) as e:
+        raise HTTPException(422,detail=str(e)) from e
     except Exception as e:
         logger.exception("Auto-selector failed: %s", e)
         raise HTTPException(
@@ -684,6 +734,16 @@ def api_shape_converter(req: ShapeConverterRequest):
     Unified Bidirectional Shape Converter & Snapping API:
     Supports converting between bbox, polygon, mask, and rotated_bbox.
     """
+    if req.backend == 'foundation':
+        if req.target_type not in (None,'polygon','mask') or req.source_type not in (None,'bbox'):
+            raise HTTPException(422,detail='Foundation conversion accepts a source image and box, producing an object mask or polygon')
+        try:
+            box = req.bbox or _extract_bbox_from_data(req.data)
+            resolved_path = _resolve_image_path(req.image_path,req.image_id)
+            result = _foundation_selection_result(resolved_path,req,boxes=[box])
+            return {'status':'success','target_type':req.target_type or 'polygon','converted_data':result,'result':result}
+        except (ValueError,ImportError,RuntimeError) as e:
+            raise HTTPException(422,detail=str(e)) from e
     # 1. Legacy fallback if source_type is omitted but bbox is passed
     if req.source_type is None and req.bbox is not None:
         if len(req.bbox) != 4:
@@ -695,6 +755,7 @@ def api_shape_converter(req: ShapeConverterRequest):
                 bbox=req.bbox,
                 sensitivity=req.sensitivity if req.sensitivity is not None else 0.5,
             )
+            res.update(source='opencv_edges',is_foundation=False)
             return {
                 "status": "success",
                 "target_type": "polygon",

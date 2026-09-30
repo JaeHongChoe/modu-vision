@@ -31,6 +31,7 @@ import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { api, resolveApiUrl, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
 import type { FlowNode, FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
+import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} from './FlowGeometryEditors';
 import { CustomNode } from './CustomNode';
 import { DAGCircuitOverlay } from './DAGCircuitOverlay';
 import { ImagePickerModal } from './ImagePickerModal';
@@ -291,7 +292,7 @@ export const FlowchartStudio: React.FC = () => {
   const missingInspectionModel = pipeline?.nodes.some((node) =>
     node.data.node_type === 'inspection' && !node.data.model_job_id
   ) ?? false;
-  const needsModel = !pipeline || missingDetectionModel || missingInspectionModel;
+  const needsModel = !pipeline || missingDetectionModel || missingInspectionModel || pipeline.nodes.some(node=>getFlowchartModelTask(node)!==null&&!node.data.model_job_id);
   const graphError = pipeline ? validateFlowchartGraph(pipeline) : null;
   const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError) : null;
   const canVerifyGraph = modelCheck.status !== 'checking' && hasSelectedFolder && !datasetIsLoading
@@ -490,7 +491,7 @@ export const FlowchartStudio: React.FC = () => {
     updateNodeData(selectedNode.id, { params: { ...selectedNode.data.params, roi_bbox: rectangle } });
   };
 
-  const addEditableNode = (nodeType: 'patch_split' | 'preprocess' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'output') => {
+  const addEditableNode = (nodeType: 'patch_split' | 'preprocess' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'output') => {
     if (!pipeline || isRunning || isSaving) return;
     if (nodeType === 'output' && pipeline.nodes.filter((node) => node.data.node_type === 'output').length >= 3) {
       setEditorError('출력 분기는 최대 세 개입니다.'); return;
@@ -498,8 +499,8 @@ export const FlowchartStudio: React.FC = () => {
     if (nodeType === 'fixed_roi' && pipeline.nodes.filter((node) => node.data.node_type === 'fixed_roi').length >= 8) {
       setEditorError('고정 ROI 노드는 최대 여덟 개입니다.'); return;
     }
-    if (nodeType === 'blob_measure' && pipeline.nodes.filter((node) => node.data.node_type === 'blob_measure').length >= 8) {
-      setEditorError('Blob 측정 노드는 최대 여덟 개입니다.'); return;
+    if (['blob_measure','measurement'].includes(nodeType) && pipeline.nodes.filter((node) => ['blob_measure','measurement'].includes(node.data.node_type)).length >= 8) {
+      setEditorError('Blob·기하 측정 노드는 합계 최대 여덟 개입니다.'); return;
     }
     if (nodeType === 'aggregate' && pipeline.nodes.filter((node) => node.data.node_type === 'aggregate').length >= 4) {
       setEditorError('결과 집계 노드는 최대 네 개입니다.'); return;
@@ -513,9 +514,9 @@ export const FlowchartStudio: React.FC = () => {
     const outputCount = pipeline.nodes.filter((node) => node.data.node_type === 'output').length;
     const blobCount = pipeline.nodes.filter((node) => node.data.node_type === 'blob_measure').length;
     const aggregateCount = pipeline.nodes.filter((node) => node.data.node_type === 'aggregate').length;
-    const resultNode = nodeType === 'blob_measure' || nodeType === 'aggregate';
-    const resultSourceTypes = nodeType === 'blob_measure'
-      ? ['inspection'] : ['inspection', 'detection_crop', 'blob_measure'];
+    const resultNode = ['blob_measure','measurement','aggregate'].includes(nodeType);
+    const resultSourceTypes = nodeType === 'blob_measure' || nodeType === 'measurement'
+      ? ['inspection'] : ['inspection', 'detection_crop', 'blob_measure', 'measurement'];
     const resultX = resultNode ? Math.max(340, ...pipeline.nodes
       .filter((item) => resultSourceTypes.includes(item.data.node_type))
       .map((item) => item.position.x)) + 300 : 0;
@@ -530,7 +531,7 @@ export const FlowchartStudio: React.FC = () => {
           : nodeType === 'fixed_roi' ? `고정 ROI ${pipeline.nodes.filter((item) => item.data.node_type === 'fixed_roi').length + 1}`
             : nodeType === 'detection_crop' ? `검출 모델 ${modelCount + 1}`
               : nodeType === 'blob_measure' ? `Blob 측정 ${blobCount + 1}`
-                : nodeType === 'aggregate' ? `결과 집계 ${aggregateCount + 1}` : `검사 모델 ${modelCount + 1}`,
+                : nodeType === 'measurement' ? '원본 기하 측정' : nodeType === 'aggregate' ? `결과 집계 ${aggregateCount + 1}` : `검사 모델 ${modelCount + 1}`,
         node_type: nodeType,
         task: nodeType === 'detection_crop' ? 'detection' : nodeType === 'inspection' ? (task === 'detection' ? 'segmentation' : task) : undefined,
         model_job_id: undefined,
@@ -539,7 +540,7 @@ export const FlowchartStudio: React.FC = () => {
         rule: nodeType === 'aggregate' ? 'any_ng' : undefined,
         params: nodeType === 'patch_split' ? { patch_width: 224, patch_height: 224, overlap: 0 } : nodeType === 'preprocess' ? { operation: 'rotate', angle_deg: 0 } : nodeType === 'inspection' ? { min_defect_area_px: 8 }
           : nodeType === 'fixed_roi' ? { roi_bbox: [0, 0, 512, 512] }
-            : nodeType === 'blob_measure' ? { min_blob_area_px: 1, min_blob_count_for_ng: 1 } : {},
+            : nodeType === 'blob_measure' ? { min_blob_area_px: 1, min_blob_count_for_ng: 1 } : nodeType === 'measurement' ? {paths:[]} : {},
       },
     };
     const existingNodes = resultNode ? pipeline.nodes.map((item) => {
@@ -830,6 +831,7 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       </div>
 
+      {pipeline && <div className="border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||isSaving||isLoading}/></div>}
       <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
         <span className="mr-1 text-[11px] font-bold tracking-wider text-slate-400">노드 추가</span>
         <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
@@ -850,6 +852,7 @@ export const FlowchartStudio: React.FC = () => {
           className="px-2 py-1 border border-teal-700 rounded text-teal-200 hover:bg-teal-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> Blob 측정
         </button>
+        <button onClick={() => addEditableNode('measurement')} disabled={!pipeline || isLoading || isSaving || isRunning} className="rounded border border-teal-700 px-2 py-1 text-teal-200 disabled:opacity-50">길이·면적 측정</button>
         <button onClick={() => addEditableNode('aggregate')} disabled={!pipeline || isLoading || isSaving || isRunning}
           className="px-2 py-1 border border-indigo-700 rounded text-indigo-200 hover:bg-indigo-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 결과 집계
@@ -1220,7 +1223,7 @@ export const FlowchartStudio: React.FC = () => {
                     className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
                 </div>
                 {['detection_crop','inspection'].includes(pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.node_type || '') && <div className="space-y-2"><label className="block">클래스 조건<select value={selectedEdge.predicate?.operator || ''} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,isBranch:undefined,predicate:e.target.value?{kind:'class',operator:e.target.value as 'present'|'absent',class_name:edge.predicate?.class_name || '',min_confidence:edge.predicate?.min_confidence || 0}:undefined}:edge)})} className="ml-2 rounded bg-slate-800 p-1"><option value="">사용 안 함</option><option value="present">클래스 있음</option><option value="absent">클래스 없음</option></select></label>{selectedEdge.predicate && <><input aria-label="분기 클래스 이름" placeholder="클래스 이름" value={selectedEdge.predicate.class_name} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,class_name:e.target.value}}:edge)})} className="w-full rounded bg-slate-800 p-1" /><label>최소 신뢰도<input type="number" min="0" max="1" step="0.05" value={selectedEdge.predicate.min_confidence || 0} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,min_confidence:Number(e.target.value)}}:edge)})} className="ml-2 w-20 rounded bg-slate-800 p-1" /></label></>}</div>}
-                {(['detection_crop', 'inspection', 'blob_measure', 'aggregate'].includes(pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type || '')) && (
+                {(['detection_crop', 'inspection', 'blob_measure', 'measurement', 'aggregate'].includes(pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type || '')) && (
                   <div>
                     <label className="text-[#94A3B8] block mb-1">다음 노드 실행 조건</label>
                     <select value={selectedEdge.isBranch || 'default'}
@@ -1305,9 +1308,10 @@ export const FlowchartStudio: React.FC = () => {
                         {selectedNode.data.model_job_id && !modelCatalog.some((model) => model.job_id === selectedNode.data.model_job_id) &&
                           <option value={selectedNode.data.model_job_id}>현재 지정된 모델 · {selectedNode.data.model_job_id}</option>}
                         {modelCatalog.filter((model) => model.task === (selectedNode.data.node_type === 'detection_crop' ? 'detection' : selectedNode.data.task)).map((model) =>
-                          <option key={model.job_id} value={model.job_id}>{model.label} · {model.job_id}</option>)}
+                          <option key={model.job_id} value={model.job_id}>{model.label}{model.threshold_settings?.optimal_threshold!==undefined?` · τ ${model.threshold_settings.optimal_threshold.toFixed(3)}`:''}{model.training_labelset_id?` · 라벨 ${model.training_labelset_id}`:''}{model.parent_job_id?' · 이어 학습':''}</option>)}
                       </select>
                     </label>
+                    {(() => {const model=modelCatalog.find(m=>m.job_id===selectedNode.data.model_job_id);return model&&<div className="flex flex-wrap gap-1 text-[10px] text-teal-200">{Object.entries(model.threshold_settings||{}).map(([key,value])=><span key={key} className="rounded bg-teal-950 px-1">{({optimal_threshold:'추천 임계치',threshold:'학습 임계치',probability_threshold:'픽셀 확률',size_threshold:'크기 기준',min_defect_area_px:'최소 면적'})[key as 'threshold']} {value}</span>)}{model.training_labelset_id&&<span>라벨 {model.training_labelset_id}</span>}{model.parent_job_id&&<span title={model.parent_job_id}>부모 {model.parent_job_id}</span>}</div>;})()}
                     <p className="text-[10px] text-slate-400">{modelCatalogLoading ? '모델을 확인하는 중입니다.' : '현재 데이터와 작업이 검증된 완료 모델만 표시합니다.'}</p>
                     <details className="text-[10px] text-slate-400"><summary className="cursor-pointer hover:text-slate-200">고급: 작업 ID 직접 입력</summary>
                       <input type="text" value={selectedNode.data.model_job_id || ''}
@@ -1333,15 +1337,18 @@ export const FlowchartStudio: React.FC = () => {
                   {(['patch_width','patch_height','overlap'] as const).map((key) => <label key={key} className="block">{({patch_width:'패치 너비',patch_height:'패치 높이',overlap:'겹침 픽셀'})[key]}<input type="number" value={selectedNode.data.params?.[key] ?? (key==='overlap'?0:224)} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,[key]:Number(e.target.value)}})} className="ml-2 w-24 rounded bg-slate-800 p-1" /></label>)}
                 </div>}
                 {selectedNode.data.node_type === 'preprocess' && <div className="space-y-2">
-                  <label className="block">영상 처리<select value={selectedNode.data.params?.operation || 'rotate'} onChange={(e) => updateNodeData(selectedNode.id,{task:e.target.value==='enhancement'?'enhancement':undefined,model_job_id:undefined,params:{operation:e.target.value,...(e.target.value==='align'?{target_angle_deg:0}:{angle_deg:0})}})} className="ml-2 rounded bg-slate-800 p-1">
-                    <option value="rotate">회전</option><option value="align">방향 정렬</option><option value="improve">밝기·노이즈 개선</option><option value="enhancement">학습 모델 영상 개선</option>
+                  <label className="block">영상 처리<select value={selectedNode.data.params?.operation || 'rotate'} onChange={(e) => updateNodeData(selectedNode.id,{task:e.target.value==='enhancement'?'enhancement':e.target.value==='learned_rotation'?'rotation':undefined,model_job_id:undefined,params:{operation:e.target.value,...(e.target.value==='align'?{target_angle_deg:0}:{angle_deg:0})}})} className="ml-2 rounded bg-slate-800 p-1">
+                    <option value="rotate">회전</option><option value="align">방향 정렬</option><option value="improve">밝기·노이즈 개선</option><option value="enhancement">학습 모델 영상 개선</option><option value="learned_rotation">학습 모델 회전 보정</option><option value="fitted_roi">회전 검출 영역 맞춤·정렬</option>
                   </select></label>
                   {['rotate','align'].includes(selectedNode.data.params?.operation || 'rotate') && <label className="block">{selectedNode.data.params?.operation==='align'?'목표 방향':'회전 각도'}<input type="number" value={selectedNode.data.params?.[selectedNode.data.params?.operation==='align'?'target_angle_deg':'angle_deg'] ?? 0} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,[selectedNode.data.params?.operation==='align'?'target_angle_deg':'angle_deg']:Number(e.target.value)}})} className="ml-2 w-24 rounded bg-slate-800 p-1" /></label>}
                   {selectedNode.data.params?.operation==='improve' && <select aria-label="개선 방법" value={selectedNode.data.params.method || 'clahe'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,method:e.target.value}})} className="rounded bg-slate-800 p-1"><option value="clahe">대비 개선</option><option value="denoise">노이즈 제거</option><option value="sharpen">선명도 개선</option></select>}
                   {selectedNode.data.params?.operation==='enhancement' && <select aria-label="영상 개선 모델" value={selectedNode.data.model_job_id || ''} onChange={(e) => updateNodeData(selectedNode.id,{model_job_id:e.target.value})} className="w-full rounded bg-slate-800 p-1"><option value="">영상 개선 모델 선택</option>{modelCatalog.filter((m) => m.task==='enhancement').map((m) => <option key={m.job_id} value={m.job_id}>{m.label}</option>)}</select>}
+                  {selectedNode.data.params?.operation==='learned_rotation' && <select aria-label="회전 보정 모델" value={selectedNode.data.model_job_id || ''} onChange={(e)=>updateNodeData(selectedNode.id,{model_job_id:e.target.value})} className="w-full rounded bg-slate-800 p-1"><option value="">회전 모델 선택</option>{modelCatalog.filter(m=>m.task==='rotation').map(m=><option key={m.job_id} value={m.job_id}>{m.label}</option>)}</select>}
+                  {selectedNode.data.params?.operation==='fitted_roi' && <p className="text-[10px] text-teal-200">회전 객체 검출의 ROI 연결 뒤에 배치하세요. 검출 다각형의 최소 면적 사각형을 원본 영상에서 정렬해 자릅니다.</p>}
                   <p className="text-[10px] text-slate-400">변환 결과와 원본 좌표를 검사 결과에서 확인할 수 있습니다. 방향 정렬은 회전 검출 결과의 방향을 사용합니다.</p>
                 </div>}
-                {selectedNode.data.task==='ocr' && <div className="space-y-2"><label className="block">문자 판정 방식<select value={selectedNode.data.params?.regex !== undefined ? 'regex' : 'expected_text'} onChange={(e) => updateNodeData(selectedNode.id,{params:{[e.target.value]:''}})} className="ml-2 rounded bg-slate-800 p-1"><option value="expected_text">문자열 정확 일치</option><option value="regex">정규식 전체 일치</option></select></label><input aria-label="기대 문자 또는 정규식" value={selectedNode.data.params?.regex ?? selectedNode.data.params?.expected_text ?? ''} onChange={(e) => updateNodeData(selectedNode.id,{params:{[selectedNode.data.params?.regex !== undefined ? 'regex' : 'expected_text']:e.target.value}})} className="w-full rounded bg-slate-800 p-2" /></div>}
+                {selectedNode.data.task==='ocr' && <OCRRulesEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
+                {selectedNode.data.node_type==='measurement' && <MeasurementEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})} imagePath={selectedImage?.imagePath} sourcePreview={selectedImage?.thumbnailUrl?resolveApiUrl(selectedImage.thumbnailUrl):undefined} sourceSize={executionResult?.inspected_image_size}/>}
                 {selectedNode.data.task==='anomaly' && <label className="block">이상 검사 방식<select value={selectedNode.data.params?.anomaly_mode || 'classification'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,anomaly_mode:e.target.value}})} className="ml-2 rounded bg-slate-800 p-1"><option value="classification">이미지 점수 분류</option><option value="segmentation">결함 영역 검사·마스크</option></select></label>}
                 {executionResult?.execution_steps.find((step) => step.node_id===selectedNode.id) && <details className="rounded border border-slate-700 p-2" open><summary>노드 실행 근거</summary><p className="text-slate-400">{executionResult.execution_steps.find((step) => step.node_id===selectedNode.id)?.skip_reason}</p><div className="grid grid-cols-2 gap-2">{executionResult.execution_steps.find((step) => step.node_id===selectedNode.id)?.artifacts?.map((artifact) => <div key={artifact.roi_id}><img src={artifact.image} alt="노드 중간 이미지" className="w-full object-contain" />{artifact.mask && <img src={artifact.mask} alt="결함 마스크" className="w-full object-contain" />}<p className="text-[10px]">원본 영역 {artifact.bbox.join(', ')}</p>{artifact.evidence?.recognized_text != null && <p>인식 문자: {String(artifact.evidence.recognized_text)}</p>}</div>)}</div></details>}
                 {selectedNode.data.node_type === 'fixed_roi' && (() => {
@@ -1392,8 +1399,7 @@ export const FlowchartStudio: React.FC = () => {
                 {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && (
                   <div>
                     <label className="text-[#94A3B8] block mb-1">
-                      최소 결함 면적 ({pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop' || node.data.node_type === 'fixed_roi')
-                        ? '모델 입력 픽셀' : '검사 이미지 픽셀'})
+                      최소 결함 면적 (원본 이미지 px²)
                     </label>
                     <input
                       type="number"
@@ -1406,6 +1412,8 @@ export const FlowchartStudio: React.FC = () => {
                     />
                   </div>
                 )}
+
+                {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && <ClassRulesEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
 
                 {selectedNode.data.node_type === 'detection_crop' && selectedNode.data.crop_padding !== undefined && (
                   <div>
@@ -1440,6 +1448,7 @@ export const FlowchartStudio: React.FC = () => {
                         })}
                         className="mt-1 w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] tabular-nums" />
                     </label>
+                    <ClassRulesEditor key={selectedNode.id} blob params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>
                     <p className="text-[10px] text-slate-400">분할 검사 결과 하나를 입력받아 측정하고, 결과를 집계 또는 판정에 연결합니다.</p>
                   </div>
                 )}

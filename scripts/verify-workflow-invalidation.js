@@ -10,6 +10,7 @@ let runCalls = 0;
 let templateCalls = 0;
 let labelMutated = false;
 let nextJob = 'job_A';
+let savedDraft = null;
 const oldPipeline = {
   id: 'saved-flow', name: 'Old saved flow', edges: [],
   nodes: [{ id: 'inspect', position: { x: 0, y: 0 },
@@ -39,6 +40,7 @@ const api = {
     getOverkillUnderkill: async () => ({ sample_details: [] }),
   },
   flowchart: {
+    getActivePipeline: async () => structuredClone(savedPipeline),
     getPipeline: async () => structuredClone(savedPipeline),
     getSingleSegmentationTemplate: async (jobId) => {
       templateCalls += 1;
@@ -55,12 +57,16 @@ const api = {
     },
   },
   annotations: { save: async () => ({ status: 'saved' }) },
-  project: { update: async () => ({ status: 'ok' }) },
+  project: { getCurrent: async () => project.getState().project,
+    update: async (changes) => ({ ...project.getState().project, ...changes }) },
 };
 
 const cache = new Map();
 function loadStore(name) {
   const filename = path.resolve(__dirname, '../src/renderer/stores', name);
+  return loadModule(filename);
+}
+function loadModule(filename) {
   if (cache.has(filename)) return cache.get(filename).exports;
   const source = fs.readFileSync(filename, 'utf8');
   const compiled = ts.transpileModule(source, {
@@ -72,14 +78,28 @@ function loadStore(name) {
   cache.set(filename, item);
   const originalRequire = item.require.bind(item);
   item.require = (specifier) => {
-    if (specifier === '../services/api') {
-      return { api, getApiBaseUrl: async () => 'http://localhost', setCachedPort: () => {} };
+    if (specifier === '../services/api' || specifier === './api') {
+      return { api, getApiBaseUrl: async () => 'http://localhost', setCachedPort: () => {},
+        request: async (url, options) => {
+          if (url === '/api/annotations/save') return api.annotations.save();
+          if (url === '/api/flowchart/draft') {
+            if (options?.method === 'PUT') {
+              savedDraft = { ...JSON.parse(options.body), draft_sha256: 'a'.repeat(64), active_version_id: null };
+            }
+            if (savedDraft) return structuredClone(savedDraft);
+          }
+          throw Object.assign(new Error('No optional saved resource in this fixture'), { status: 404 });
+        } };
     }
     if (specifier.startsWith('./use') && specifier.endsWith('Store')) {
       return loadStore(`${specifier.slice(2)}.ts`);
     }
     if (specifier === '../components/labeling/convertedAnnotation') {
       return { applyConvertedShape: () => null };
+    }
+    if (specifier.startsWith('.')) {
+      const dependency = path.resolve(path.dirname(filename), `${specifier}.ts`);
+      if (fs.existsSync(dependency)) return loadModule(dependency);
     }
     return originalRequire(specifier);
   };
@@ -96,6 +116,10 @@ const project = loadStore('useProjectStore.ts').useProjectStore;
 const compute = loadStore('useComputeStore.ts').useComputeStore;
 
 async function completedA() {
+  savedDraft = null;
+  project.setState({ project: { id: 'project-A', name: 'Project A', project_dir: '/project/A',
+    source_dataset_dir: '/dataset/A', task: 'segmentation', active_labelset_id: 'default' },
+    projectDir: '/project/A', task: 'segmentation' });
   compute.setState({ isLoaded: true, loadError: null, selectedProfileId: null });
   savedPipeline = oldPipeline;
   labelMutated = false;
@@ -190,7 +214,7 @@ test('label save and new split each invalidate a completed model', async () => {
   annotation.setState({
     currentImage: { image_id: 'new', file_path: '/dataset/A/new.jpg', width: 32, height: 32 },
     annotations: [{ id: 'defect', type: 'polygon', label: 'defect', polygon: [[0, 0], [3, 0], [3, 3]] }],
-    imageDimensions: { width: 32, height: 32 }, isDirty: true,
+    imageDimensions: { width: 32, height: 32 }, isDirty: true, annotationLoadStatus: 'ready',
   });
   labelMutated = true;
   assert.equal(await annotation.getState().saveAnnotations(), true);

@@ -61,6 +61,13 @@ class GenerateRequest(BaseModel):
     image_path: str = Field(..., min_length=1)
     threshold: float = Field(0.5, ge=0.0, le=1.0)
     keywords: List[str] = Field(default_factory=list, max_length=100)
+    device: str = 'cpu'
+    min_area: float = Field(0,ge=0)
+    max_area: Optional[float] = Field(None,ge=0)
+    min_width: float = Field(0,ge=0)
+    max_width: Optional[float] = Field(None,ge=0)
+    min_height: float = Field(0,ge=0)
+    max_height: Optional[float] = Field(None,ge=0)
 
 
 class ReviewRequest(BaseModel):
@@ -76,6 +83,60 @@ class BatchGenerateRequest(BaseModel):
     threshold: float = Field(0.5, ge=0.0, le=1.0)
     keywords: List[str] = Field(default_factory=list, max_length=100)
     image_paths: Optional[List[str]] = Field(None, max_length=5000)
+    device: str = 'cpu'
+    min_area: float = Field(0,ge=0)
+    max_area: Optional[float] = Field(None,ge=0)
+    min_width: float = Field(0,ge=0)
+    max_width: Optional[float] = Field(None,ge=0)
+    min_height: float = Field(0,ge=0)
+    max_height: Optional[float] = Field(None,ge=0)
+
+class FeatureTrainRequest(BaseModel):
+    device: str = 'cpu'
+    backbone: str = 'dinov3_vits16'
+    pretrained_checkpoint: Optional[str] = None
+    pretrained_sha256: Optional[str] = None
+    parent_model_id: Optional[str] = None
+    epochs: int = Field(100, ge=1, le=1000)
+    learning_rate: float = Field(.05, gt=0, le=1)
+    image_paths: Optional[List[str]] = Field(None, min_length=1, max_length=5000)
+
+@router.get('/feature-jobs')
+def list_feature_training_jobs(request: Request):
+    from backend.engine import labeling_tasks
+    project=get_current_project(request)
+    return {'jobs': [job for job in labeling_tasks.list_jobs(project, 'feature_train') if job.get('labelset_id')==project.get('active_labelset_id','default')]}
+
+@router.post('/feature-train')
+def start_feature_training(req: FeatureTrainRequest, request: Request):
+    from backend.engine import labeling_tasks
+    from backend.engine.feature_labeling_jobs import train_feature_model
+    from backend.engine.foundation_labeling import resolve_device
+    project = dict(get_current_project(request))
+    try:
+        resolve_device(req.device)
+        return labeling_tasks.start(project, 'feature_train', {'options':req.model_dump()},
+            lambda job,cancel: train_feature_model(project,req.model_dump(),job,cancel))
+    except ValueError as exc: raise HTTPException(422, detail=str(exc)) from exc
+
+@router.get('/feature-models')
+def list_feature_suggestion_models(request: Request):
+    from backend.engine.feature_labeling_jobs import list_feature_models
+    return {'models': list_feature_models(get_current_project(request))}
+
+@router.get('/feature-train/{job_id}')
+def get_feature_training(job_id: str, request: Request):
+    from backend.engine import labeling_tasks
+    try: return labeling_tasks.read(get_current_project(request),job_id)
+    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
+
+@router.post('/feature-train/{job_id}/cancel')
+def cancel_feature_training(job_id: str, request: Request):
+    from backend.engine import labeling_tasks
+    try: return labeling_tasks.cancel(get_current_project(request),job_id)
+    except FileNotFoundError as exc: raise HTTPException(404,detail='Feature training job not found') from exc
+    except ValueError as exc: raise HTTPException(422,detail=str(exc)) from exc
 
 
 def _sha256(path: Path) -> Optional[str]:
@@ -186,6 +247,13 @@ def _candidate_annotations(task: str, predictions: Any, score: float, suggestion
                     "category_id": 1, "color": "#22d3ee",
                 }, float(item.get("score", score))))
     elif task == "segmentation":
+        masks = predictions.get('mask_candidates') if isinstance(predictions, dict) else None
+        if isinstance(masks, list):
+            return [{'id':f'{suggestion_id}_c{index}', 'confidence':float(item['confidence']),
+                     'annotation':{'id':f'{suggestion_id}_c{index}', 'type':'brush_mask',
+                                   'label':item['class_name'], 'category_id':item['class_id'],
+                                   'mask_rle':item['mask_rle'], 'color':'#22d3ee'}}
+                    for index,item in enumerate(masks,1)]
         contours = predictions.get("polygon_contours", []) if isinstance(predictions, dict) else []
         for item in contours:
             if not isinstance(item, dict) or item.get("is_hole"):
@@ -253,7 +321,11 @@ def _dataset_fingerprint(project: Dict[str, Any]) -> str:
 
 
 def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, Any],
-                       threshold: float, batch_id: Optional[str] = None, keywords: Optional[List[str]] = None) -> Dict[str, Any]:
+                       threshold: float, batch_id: Optional[str] = None, keywords: Optional[List[str]] = None,
+                       device: str = 'cpu', size_bounds=None) -> Dict[str, Any]:
+    from backend.engine.foundation_labeling import resolve_device
+    try: device=resolve_device(device)
+    except ValueError as exc:raise HTTPException(422,detail=str(exc)) from exc
     metadata = metadata_engine.metadata_for_path(Path(project["project_dir"]), _source_path(project), image, Path(project["annotations_dir"]))
     checkpoint = Path(model["checkpoint_path"])
     studio = dataset_annotation_dir(image.parent, Path(project["annotations_dir"]), use_scope=False)
@@ -269,7 +341,7 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
     with Image.open(image) as pil:
         width, height = pil.size
     result = infer(task=project["task"], model_path=checkpoint, image_input=image,
-                   threshold=threshold, device="cpu")
+                   threshold=threshold, device=device)
     if (_sha256(image) != before_image or _sha256(checkpoint) != before_checkpoint
             or _sha256(labelme) != before_labelme or _sha256(studio_json) != before_studio):
         raise HTTPException(status_code=409, detail="Image, labels, or checkpoint changed during inference.")
@@ -297,8 +369,11 @@ def _generate_proposal(project: Dict[str, Any], image: Path, model: Dict[str, An
                                              float(result.confidence_score), suggestion_id),
         "accepted_candidate_ids": [], "backup_version_id": None,
     }
-    from backend.engine.label_candidate_providers import filter_keywords
+    from backend.engine.label_candidate_providers import filter_keywords,filter_candidate_sizes
     proposal["candidates"] = filter_keywords(proposal["candidates"], keywords or [])
+    try: proposal['candidates']=filter_candidate_sizes(proposal['candidates'],**(size_bounds or {}))
+    except ValueError as exc:raise HTTPException(422,detail=str(exc)) from exc
+    proposal['device']=device;proposal['size_bounds']=size_bounds or {}
     proposal["keywords"] = keywords or []
     proposal["backend"] = "trained_model"
     if batch_id:
@@ -323,7 +398,8 @@ def list_suggestion_models(request: Request):
 def generate_suggestion(req: GenerateRequest, request: Request):
     project = get_current_project(request)
     image = _image_path(project, req.image_path)
-    return _generate_proposal(project, image, _verified_model(project, req.job_id), req.threshold, keywords=req.keywords)
+    return _generate_proposal(project, image, _verified_model(project, req.job_id), req.threshold, keywords=req.keywords,
+        device=req.device,size_bounds={k:getattr(req,k) for k in ('min_area','max_area','min_width','max_width','min_height','max_height')})
 
 
 @router.get("")
@@ -477,7 +553,8 @@ def _run_batch(project: Dict[str, Any], model: Dict[str, Any], live: _LiveBatch)
                 break
             try:
                 image = _image_path(project, entry["image_path"])
-                proposal = _generate_proposal(project, image, model, batch["threshold"], batch["id"], batch.get("keywords", []))
+                proposal = _generate_proposal(project, image, model, batch["threshold"], batch["id"], batch.get("keywords", []),
+                    device=batch.get('device','cpu'),size_bounds=batch.get('size_bounds'))
                 result = {
                     "status": "generated" if proposal["candidates"] else "zero_candidates",
                     "proposal_id": proposal["id"], "candidate_count": len(proposal["candidates"]),
@@ -526,6 +603,7 @@ def start_batch(req: BatchGenerateRequest, request: Request):
     batch = {
         "id": batch_id, "project_id": project["id"], "source_dataset_dir": str(_source_path(project)),
         "job_id": req.job_id, "task": project["task"], "threshold": req.threshold, "keywords": req.keywords,
+        'device':req.device,'size_bounds':{k:getattr(req,k) for k in ('min_area','max_area','min_width','max_width','min_height','max_height')},
         "review_fingerprint": _dataset_fingerprint(project),
         "checkpoint_sha256": checkpoint_sha256, "status": "running",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -610,7 +688,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             proposal.update(status="rejected", reviewer=req.actor, reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _write_json(_proposal_path(project, suggestion_id), proposal)
             return proposal
-        if proposal.get("backend") in {"template_match", "grounding_dino"}:
+        if proposal.get("backend") in {"template_match", "grounding_dino", "foundation"}:
             from backend.api.routes_label_candidates import review_external_proposal
             return review_external_proposal(project, proposal, req)
         if proposal.get("task") != project["task"]:

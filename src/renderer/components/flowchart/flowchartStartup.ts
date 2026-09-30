@@ -26,6 +26,7 @@ interface FlowchartStartupOptions {
 export function getFlowchartModelTask(node: FlowNode): FlowModelTask | null {
   if (node.data.node_type === 'detection_crop') return 'detection';
   if (node.data.node_type === 'preprocess' && node.data.params?.operation === 'enhancement') return 'enhancement';
+  if (node.data.node_type === 'preprocess' && node.data.params?.operation === 'learned_rotation') return 'rotation';
   if (node.data.node_type !== 'inspection') return null;
   const task = node.data.task;
   if (task !== 'anomaly' && task !== 'segmentation' && task !== 'classification' && task !== 'patch_classification' && task !== 'ocr' && task !== 'rotated_detection') {
@@ -67,7 +68,7 @@ export function singleModelAutoBinding(
 /** A draft from another recipe must not appear under the newly selected recipe. */
 export function pipelineMatchesTask(pipeline: FlowchartPipeline | null, task: VisionTask): boolean {
   if (!pipeline) return false;
-  if (pipeline.nodes.some((node) => node.data.task === 'ocr' || node.data.task === 'rotated_detection' || node.data.params?.operation === 'enhancement')) return true;
+  if (pipeline.nodes.some((node) => node.data.task === 'ocr' || node.data.task === 'rotated_detection' || ['enhancement','learned_rotation'].includes(node.data.params?.operation))) return true;
   if (task === 'detection') return pipeline.nodes.some((node) => node.data.node_type === 'detection_crop');
   const inspections = pipeline.nodes.filter((node) => node.data.node_type === 'inspection');
   return inspections.some((node) => node.data.task === task);

@@ -10,6 +10,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AnnotationItem, BBox, HandleType, Point } from '../../types';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useFoundationPromptStore } from '../../stores/useFoundationPromptStore';
+import { brushEditTarget } from './foundationRequest';
 import { resolveApiUrl } from '../../services/api';
 import { resolveLabelingShortcut } from './labelingShortcuts';
 import {
@@ -42,6 +44,8 @@ export const LabelingCanvas: React.FC = () => {
 
   const baseImageRef = useRef<HTMLImageElement | null>(null);
   const maskImageRef = useRef<HTMLImageElement | null>(null);
+  const otherBrushCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const foundationPrompt = useFoundationPromptStore();
 
   const {
     currentImage,
@@ -68,6 +72,7 @@ export const LabelingCanvas: React.FC = () => {
     triggerAutoSelect,
   } = useAnnotationStore();
   const { backendPort } = useProjectStore();
+  useEffect(()=>{useFoundationPromptStore.getState().bind(currentImage?.file_path||'');},[currentImage?.file_path]);
 
   // Interaction State
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -191,6 +196,8 @@ export const LabelingCanvas: React.FC = () => {
       ctx.drawImage(maskImageRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
     }
 
+    if (otherBrushCanvasRef.current) ctx.drawImage(otherBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
+
     // Blit offscreen brush canvas
     if (offscreenBrushCanvasRef.current) {
       ctx.drawImage(offscreenBrushCanvasRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
@@ -198,6 +205,9 @@ export const LabelingCanvas: React.FC = () => {
 
     ctx.restore();
   }, [viewTransform, imgDimensions, maskOpacity, maskVisible]);
+
+  const redrawMaskRef=useRef(redrawLayer2);
+  useEffect(()=>{redrawMaskRef.current=redrawLayer2;},[redrawLayer2]);
 
   // -------------------------------------------------------------
   // RENDER LAYER 3: Vector UI (BBoxes, 8 Handles, Polygons, Cursor)
@@ -429,6 +439,11 @@ export const LabelingCanvas: React.FC = () => {
       }
     }
 
+    for (const point of foundationPrompt.points) {
+      const vp=imageToViewport(point,viewTransform);ctx.beginPath();ctx.arc(vp.x,vp.y,5,0,Math.PI*2);
+      ctx.fillStyle=point.label===1?'#22d3ee':'#ef4444';ctx.fill();ctx.strokeStyle='#ffffff';ctx.stroke();
+    }
+    for(const box of foundationPrompt.boxes){const a=imageToViewport({x:box[0],y:box[1]},viewTransform);const b=imageToViewport({x:box[2],y:box[3]},viewTransform);ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);}
     // 4. Brush Cursor Diameter Preview
     if (cursorPos && (activeTool === 'brush' || activeTool === 'eraser')) {
       const radiusVp = brushRadius * viewTransform.scale;
@@ -450,6 +465,8 @@ export const LabelingCanvas: React.FC = () => {
     activeCategory,
     brushRadius,
     viewTransform,
+    foundationPrompt.points,
+    foundationPrompt.boxes,
   ]);
 
   const redrawAllLayers = useCallback(() => {
@@ -490,7 +507,7 @@ export const LabelingCanvas: React.FC = () => {
     const encodedPath = encodeURIComponent(currentImage.file_path || '');
     const encodedName = encodeURIComponent(currentImage.file_name || 'image.png');
     // Prefer uncompressed raw image for pixel-accurate machine vision inspection
-    const rawUrl = resolveApiUrl(`/api/dataset/raw/${encodedName}?file_path=${encodedPath}`);
+    const rawUrl = resolveApiUrl(foundationPrompt.displaySourcePath === currentImage.file_path && foundationPrompt.displaySource ? foundationPrompt.displaySource : `/api/dataset/raw/${encodedName}?file_path=${encodedPath}`);
     const thumbUrl = resolveApiUrl(`/api/dataset/thumbnail/${encodedName}?file_path=${encodedPath}&size=1024`);
 
     img.crossOrigin = 'anonymous';
@@ -527,13 +544,13 @@ export const LabelingCanvas: React.FC = () => {
 
     img.src = rawUrl;
   // Redraw callbacks change on every pan/zoom; reloading here would reset the view to Fit.
-  }, [currentImage, backendPort, setViewTransform]);
+  }, [currentImage, backendPort, setViewTransform, foundationPrompt.displaySource, foundationPrompt.displaySourcePath]);
 
   // -------------------------------------------------------------
   // Load Mask / Heatmap Image
   // -------------------------------------------------------------
   useEffect(() => {
-    const overlaySrc = heatmapUrl || maskUrl;
+    const overlaySrc = heatmapUrl || (annotations.some(a=>a.type==='brush_mask') ? null : maskUrl);
     if (!overlaySrc) {
       maskImageRef.current = null;
       redrawLayer2();
@@ -546,9 +563,10 @@ export const LabelingCanvas: React.FC = () => {
       maskImageRef.current = maskImg;
       redrawLayer2();
     };
-  }, [maskUrl, heatmapUrl, redrawLayer2]);
+  }, [maskUrl, heatmapUrl, annotations, redrawLayer2]);
 
-  const storedBrushMask = annotations.find((item) => item.type === 'brush_mask')?.mask_rle;
+  const editableBrush = brushEditTarget(annotations,selectedAnnotationId,activeCategory.id);
+  const storedBrushMask = editableBrush?.mask_rle;
   useEffect(() => {
     const canvas = offscreenBrushCanvasRef.current;
     if (!canvas || canvas.width !== imgDimensions.width || canvas.height !== imgDimensions.height) return;
@@ -556,7 +574,7 @@ export const LabelingCanvas: React.FC = () => {
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
     if (!storedBrushMask) {
-      redrawLayer2();
+      redrawMaskRef.current();
       return;
     }
     let active = true;
@@ -564,11 +582,22 @@ export const LabelingCanvas: React.FC = () => {
     storedImage.onload = () => {
       if (!active) return;
       context.drawImage(storedImage, 0, 0);
-      redrawLayer2();
+      redrawMaskRef.current();
     };
     storedImage.src = storedBrushMask;
     return () => { active = false; };
-  }, [storedBrushMask, currentImage?.image_id, imgDimensions.width, imgDimensions.height, redrawLayer2]);
+  }, [storedBrushMask, currentImage?.image_id, imgDimensions.width, imgDimensions.height]);
+
+  useEffect(()=>{
+    const other=document.createElement('canvas');other.width=imgDimensions.width;other.height=imgDimensions.height;
+    otherBrushCanvasRef.current=other;let active=true;
+    const context=other.getContext('2d');
+    void (async()=>{for(const annotation of annotations.filter(a=>a.type==='brush_mask'&&a.id!==editableBrush?.id&&a.mask_rle)){
+      if(!active)return;const image=await new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=annotation.mask_rle!;});
+      if(active&&context)context.drawImage(image,0,0);
+    }if(active)redrawMaskRef.current();})().catch(()=>{if(active)redrawMaskRef.current();});
+    return()=>{active=false;};
+  },[annotations,editableBrush?.id,imgDimensions.width,imgDimensions.height]);
 
   useEffect(() => {
     resizeCanvases();
@@ -586,7 +615,7 @@ export const LabelingCanvas: React.FC = () => {
 
   useEffect(() => {
     redrawLayer3();
-  }, [redrawLayer3]);
+  }, [redrawLayer3, foundationPrompt.points, foundationPrompt.boxes]);
 
   // -------------------------------------------------------------
   // Mouse Wheel & Trackpad: Smooth Zoom & Pan Centered on Cursor
@@ -974,7 +1003,7 @@ export const LabelingCanvas: React.FC = () => {
     }
 
     // 2. Tool: BBox & Rotated BBox Draw
-    else if (activeTool === 'bbox' || activeTool === 'rotated_bbox') {
+    else if (activeTool === 'bbox' || activeTool === 'rotated_bbox' || activeTool === 'foundation_box') {
       const clamped = clampPointToImage(imgPt, imgDimensions.width, imgDimensions.height);
       dragModeRef.current = 'create_bbox';
       bboxDraftRef.current = { p1: clamped, p2: clamped };
@@ -982,6 +1011,10 @@ export const LabelingCanvas: React.FC = () => {
     }
 
     // 2.5 Tool: AI Auto-Selector (Smart Magic Wand)
+    else if (activeTool === 'foundation_point') {
+      const point=clampPointToImage(imgPt,imgDimensions.width,imgDimensions.height);
+      useFoundationPromptStore.getState().addPoint({...point,label:useFoundationPromptStore.getState().pointLabel});
+    }
     else if (activeTool === 'auto_select') {
       const clamped = clampPointToImage(imgPt, imgDimensions.width, imgDimensions.height);
       triggerAutoSelect(clamped.x, clamped.y);
@@ -1203,7 +1236,9 @@ export const LabelingCanvas: React.FC = () => {
         imgDimensions.height,
         1
       );
-      if (valid) {
+      if (valid && activeTool === 'foundation_box') {
+        useFoundationPromptStore.getState().addBox([valid.xmin,valid.ymin,valid.xmax,valid.ymax]);
+      } else if (valid) {
         const isRotated = activeTool === 'rotated_bbox';
         const cx = (valid.xmin + valid.xmax) / 2;
         const cy = (valid.ymin + valid.ymax) / 2;

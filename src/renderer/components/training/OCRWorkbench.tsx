@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Loader2, RefreshCw } from 'lucide-react';
-import { api, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from '../../services/api';
+import { api, request, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 import {useSpecializedTraining} from './useSpecializedTraining';
 import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 import {WarmStartSelector} from './WarmStartSelector';
+import {AutoDLWorkbench} from './AutoDLWorkbench';
+import {TrainingDeviceSelector,programButton} from './ProgramWorkbenchControls';
+import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
 
 function parseRows(value: string): OCRLabelRow[] {
   const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -29,10 +32,12 @@ export const OCRWorkbench: React.FC = () => {
   const projectSource=useProjectStore(state=>state.project?.source_dataset_dir ?? '');
   const activeLabelset=useProjectStore(state=>state.project?.active_labelset_id ?? 'default');
   const [datasetPath, setDatasetPath] = useState('');
+  const [datasets,setDatasets] = useState<PreparedDataset[]>([]);
+  const [device,setDevice] = useState<LocalTrainingDevice>('cpu');
   const [rowsText, setRowsText] = useState('');
   const [epochs, setEpochs] = useState(20);
   const [warmParentId, setWarmParentId] = useState('');
-  const [models, setModels] = useState<OCRModelSummary[]>([]);
+  const [models, setModels] = useState<Array<OCRModelSummary & {metadata:OCRModelSummary['metadata'] & {dataset_path?:string}}>>([]);
   const [jobId, setJobId] = useState('');
   const [imagePath, setImagePath] = useState('');
   const [manifestCount, setManifestCount] = useState<number | null>(null);
@@ -50,13 +55,17 @@ export const OCRWorkbench: React.FC = () => {
   });
 
   useEffect(() => {
-    setBusy(null);setDatasetPath(projectSource);setRowsText('');
+    setBusy(null);setDatasetPath(projectSource);setDatasets([]);setRowsText('');
     setManifestCount(null);setModels([]);
     setJobId('');
     setEvaluation(null);
     setPrediction(null);
     if (!projectDir) return;
     let active = true;
+    void request<{datasets:PreparedDataset[]}>('/api/ocr/datasets').then(result=>{
+      if(!active||!sameProject())return;setDatasets(result.datasets);
+      const latest=result.datasets.at(-1);if(latest){setDatasetPath(latest.dataset_path);setManifestCount(latest.sample_count||null);}
+    }).catch(cause=>{if(active&&sameProject())setError(describeError(cause));});
     void api.ocr.models().then((result) => {
       if (!active || useProjectStore.getState().projectDir !== projectDir) return;
       setModels(result.models);
@@ -87,9 +96,10 @@ export const OCRWorkbench: React.FC = () => {
     catch (cause) { setError(describeError(cause)); return; }
     setBusy('manifest'); setError(''); setNotice('');
     try {
-      const result = await api.ocr.saveManifest(datasetPath.trim(), rows);
+      const result = await request<PreparedDataset & {sample_count:number}>('/api/ocr/prepare',{method:'POST',body:JSON.stringify({source_dataset_path:projectSource,samples:rows})});
       if (!sameProject()) return;
       setManifestCount(result.sample_count);
+      setDatasetPath(result.dataset_path);setDatasets(old=>[...old,result]);
       setNotice(`${result.sample_count}개 문자 정답을 이미지 해시와 함께 저장했습니다.`);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -99,7 +109,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || busy || !manifestCount) return;
     setBusy('train'); setError(''); setNotice('');
     try {
-      await training.start(datasetPath.trim(),epochs,warmParentId || undefined);
+      await training.start(datasetPath.trim(),epochs,warmParentId || undefined,device);
       if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -109,7 +119,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !jobId || busy) return;
     setBusy('evaluate'); setError(''); setEvaluation(null);
     try {
-      const result = await api.ocr.evaluate(jobId, datasetPath.trim());
+      const result = await request<OCREvaluation>('/api/ocr/evaluate',{method:'POST',body:JSON.stringify({job_id:jobId,dataset_path:datasetPath.trim(),device})});
       if (sameProject()) setEvaluation(result);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -119,18 +129,19 @@ export const OCRWorkbench: React.FC = () => {
     if (!imagePath.trim() || !jobId || busy) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await api.ocr.predict(jobId, imagePath.trim());
+      const result = await request<{text:string;confidence:number;model_sha256:string}>('/api/ocr/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:imagePath.trim(),device})});
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
 
-  return <details className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
+  return <details open className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-slate-100">
       <FileText className="h-4 w-4 text-cyan-400" /> 문자 인식 모델 실험 <span className="font-normal text-slate-400">단일 행 텍스트 이미지</span>
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <p className="leading-5 text-slate-400">문자가 한 줄로 잘린 이미지와 실제 정답 문자열이 필요합니다. 후보 모델은 자동으로 검사 플로우에 적용되지 않습니다.</p>
+      {datasets.length>0&&<label className="block text-slate-300">프로젝트에 저장된 문자 정답<select value={datasetPath} onChange={event=>{const row=datasets.find(item=>item.dataset_path===event.target.value);setDatasetPath(event.target.value);setManifestCount(row?.sample_count||null);}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2">{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <label className="block text-slate-300">문자 이미지 폴더 경로
         <input value={datasetPath} onChange={(event) => { setDatasetPath(event.target.value); setManifestCount(null); }}
           placeholder="/path/to/text-crops" className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
@@ -148,16 +159,18 @@ export const OCRWorkbench: React.FC = () => {
       <SpecializedTrainingStatus {...training} />
       <WarmStartSelector family="ocr" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training.active} refreshKey={training.job?.status === 'completed' ? training.job.job_id : null} />
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
+        <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||training.active}/>
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
         <button type="button" onClick={() => void train()} disabled={!manifestCount || (!!busy || training.active)} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">OCR 후보 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
-          <select value={jobId} onChange={(event) => setJobId(event.target.value)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
+          <select value={jobId} onChange={(event) => {setJobId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.metadata.dataset_path;if(path)setDatasetPath(path);}} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
             {models.map((item) => <option key={item.job_id} value={item.job_id}>{item.job_id.slice(0, 12)} · epoch {item.metadata.best_epoch || '?'}</option>)}
           </select>
         </label>
         <button type="button" onClick={() => void evaluate()} disabled={!jobId || !datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
+        <button type="button" disabled={!jobId||!!busy||training.active} onClick={()=>void useProjectStore.getState().setStep(5)} className={programButton}>검사 플로우·배포 패키지</button>
       </div>
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[260px] flex-1">한 장 시험 이미지 경로
@@ -174,6 +187,7 @@ export const OCRWorkbench: React.FC = () => {
         <div className="mt-2 max-h-32 overflow-y-auto font-mono text-slate-400">{evaluation.samples.map((item) => <div key={item.image} className="truncate">{item.image}: {item.reference_text} → {item.predicted_text}</div>)}</div>
       </div>}
       {prediction && <p className="rounded border border-cyan-700 bg-cyan-950/30 p-3">인식 후보: <strong className="text-cyan-200">{prediction.text || '(빈 문자열)'}</strong> · 후보 점수 {(prediction.confidence * 100).toFixed(1)}%</p>}
+      <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(result.models[0]?.job_id||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
     </div>
   </details>;
 };

@@ -1,0 +1,7 @@
+const fs=require('node:fs');const vm=require('node:vm');const assert=require('node:assert/strict');const ts=require('typescript');
+let resolveProfiles;
+const api={compute:{listProfiles:()=>new Promise(resolve=>{resolveProfiles=resolve;}),getSelection:async()=>({compute_profile_id:'old-server'})}};
+const create=initialize=>{let state;const set=value=>{state={...state,...(typeof value==='function'?value(state):value)};};state=initialize(set,()=>state);const store=()=>state;store.getState=()=>state;store.setState=set;return store;};
+const exported={};const context={exports:exported,require:name=>name==='zustand'?{create}:name==='../services/api'?{api}:require(name),console,Promise};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/renderer/stores/useComputeStore.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,context);
+(async()=>{const pending=exported.useComputeStore.getState().load();exported.resetComputeTransportCache();resolveProfiles({profiles:[{id:'old-server',name:'private old host'}]});await pending;assert.equal(exported.useComputeStore.getState().profiles.length,0);assert.equal(exported.useComputeStore.getState().selectedProfileId,null);assert.equal(exported.useComputeStore.getState().isLoaded,false);console.log('Compute transport reset rejects stale server readback: passed');})().catch(error=>{console.error(error);process.exitCode=1;});

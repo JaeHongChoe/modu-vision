@@ -151,7 +151,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
           </div>
 
           {/* Right Column: Technical Measurement & Diagnostics */}
-          <div className="w-1/2 flex flex-col justify-between text-xs space-y-3.5">
+          <div className="w-1/2 max-h-[75vh] overflow-y-auto flex flex-col justify-between text-xs space-y-3.5">
             <div>
               {/* Verdict Annunciator Banner */}
               <div
@@ -241,7 +241,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 {isSegmentation && inspectNode && hasDefectArea && (
                   <div className="flex justify-between border-t border-[#2B3547]/60 pt-1">
                     <span className="text-slate-400">
-                      임계값 초과 픽셀 / NG 최소 면적 ({isFullImageSegmentation ? '검사 이미지' : '모델 입력'}):
+                      임계값 초과 픽셀 / NG 최소 면적 (원본 이미지):
                     </span>
                     <span className="text-slate-100 font-bold tabular-nums">{crop.defect_area_px} / {minimumDefectArea} px</span>
                   </div>
@@ -265,6 +265,20 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                   </div>
                 )}
               </div>
+              {(crop.original_text !== undefined || crop.recognized_text !== undefined) && <div className="mt-3 space-y-1 rounded border border-slate-700 bg-[#0B0E14] p-3">
+                <div className="flex justify-between"><span className="text-slate-400">원본 인식 문자</span><strong>{crop.original_text ?? crop.recognized_text}</strong></div>
+                <div className="flex justify-between"><span className="text-slate-400">교정 후 문자</span><strong>{crop.corrected_text ?? crop.recognized_text}</strong></div>
+                <p className="text-[10px] text-slate-400">{crop.correction_applied ? '문자 교정 규칙 적용' : '교정 없음'}</p>
+                {!!crop.rule_violations?.length && <p className="text-rose-300">문자 규칙 위반: {crop.rule_violations.map(row => String(row.rule ?? row.kind ?? row.index ?? JSON.stringify(row))).join(', ')}</p>}
+              </div>}
+              {!!crop.blob_measurements?.length && <div className="mt-3 space-y-2 rounded border border-teal-800 bg-[#0B0E14] p-3">
+                <h4 className="font-semibold text-teal-200">원본 클래스별 구조 측정</h4>
+                {crop.blob_measurements.map(row => <div key={row.class_id} className="border-t border-slate-700 pt-1"><strong>{row.class_name} · {row.verdict}</strong><p>{row.count}개 · {row.area_px} px² · 평균 회색값 {row.mean_grayscale === null ? '측정 영역 없음' : row.mean_grayscale.toFixed(2)}</p>{!!row.violations.length && <p className="text-rose-300">범위 위반: {row.violations.join(', ')}</p>}</div>)}
+              </div>}
+              {!!crop.measurements?.length && <div className="mt-3 space-y-2 rounded border border-teal-800 bg-[#0B0E14] p-3">
+                <h4 className="font-semibold text-teal-200">원본 좌표 길이·면적</h4>
+                {crop.measurements.map(row => <div key={row.id} className="border-t border-slate-700 pt-1"><strong>{row.id} · {row.verdict}</strong><p>{row.length !== undefined ? row.length.toFixed(2) : row.area?.toFixed(2)} {row.unit.replace('2','²')}</p><p className="text-[10px] text-slate-400">{row.source_size?.join(' × ')} px · {row.measurement_source === 'source_path' ? row.interpolation === 'bezier' ? '곡선 길이' : '다각선 길이' : row.measurement_source === 'segmentation_mask' ? '클래스 마스크 면적' : '다각형 면적'}</p>{row.calibration && <p className="text-[10px] text-slate-400">교정 X {row.calibration.mm_per_pixel_x} / Y {row.calibration.mm_per_pixel_y} mm/px</p>}</div>)}
+              </div>}
             </div>
 
             {/* Operator Quick Paging Controls & Close */}

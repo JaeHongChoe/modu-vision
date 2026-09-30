@@ -4,7 +4,7 @@
  */
 
 export type VisionTask = 'classification' | 'detection' | 'segmentation' | 'anomaly';
-export type FlowModelTask = VisionTask | 'patch_classification' | 'ocr' | 'rotated_detection' | 'enhancement';
+export type FlowModelTask = VisionTask | 'patch_classification' | 'ocr' | 'rotated_detection' | 'enhancement' | 'rotation';
 export type TaskType = VisionTask;
 export type TrainingPreset = 'fast' | 'precision';
 export type Language = 'ko' | 'en';
@@ -16,6 +16,8 @@ export type ToolType =
   | 'polygon'
   | 'brush'
   | 'eraser'
+  | 'foundation_point'
+  | 'foundation_box'
   | 'auto_select'
   | 'shape_converter';
 
@@ -70,6 +72,7 @@ export interface ImageMeta {
   height?: number;
   split: string;
   label?: string | null;
+  labels?: string[];
   thumbnail_url: string;
   has_annotation?: boolean;
 }
@@ -120,6 +123,11 @@ export interface TestPredictionItem {
   predicted_class: string;
   confidence: number;
   defect_score?: number;
+  class_scores?: Record<string,number>;
+  evaluation_file_path?: string;
+  object_evidence?: import('../services/evaluationEvidence').ObjectEvidence;
+  pixel_evidence?: import('../services/evaluationEvidence').PixelEvidence;
+  character_evidence?: import('../services/evaluationEvidence').CharacterEvidence;
   is_correct: boolean;
   thumbnail_url: string;
 }
@@ -213,7 +221,7 @@ export interface NodePort {
 
 export interface FlowNodeData {
   label: string;
-  node_type: 'input' | 'fixed_roi' | 'patch_split' | 'preprocess' | 'detection_crop' | 'inspection' | 'blob_measure' | 'aggregate' | 'decision' | 'output';
+  node_type: 'input' | 'fixed_roi' | 'patch_split' | 'preprocess' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
@@ -251,6 +259,44 @@ export interface FlowchartPipeline {
   description?: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
+  execution_config?: { max_workers: number; device_slots: number };
+}
+
+export interface GeometryPath {
+  id: string;
+  interpolation?: 'polyline' | 'bezier';
+  points: Array<[number, number]>;
+}
+export interface GeometryCalibration {
+  unit: 'mm';
+  mm_per_pixel_x: number;
+  mm_per_pixel_y: number;
+  source_size: [number, number];
+}
+export interface GeometryMeasurement {
+  id: string;
+  coordinate_space: 'original_image';
+  source_size: number[];
+  calibration?: GeometryCalibration | null;
+  measurement_source: string;
+  length?: number;
+  length_px?: number;
+  area?: number;
+  area_px?: number;
+  unit: 'px' | 'mm' | 'px2' | 'mm2';
+  points?: number[][];
+  interpolation?: 'polyline' | 'bezier';
+  class_id?: number;
+  verdict: 'OK' | 'NG';
+}
+export interface FlowExecutionResources {
+  device: string;
+  engine_device_capacity: number;
+  active_executions: number;
+  maximum_cpu_slots: number;
+  configuration_available: boolean;
+  cpu_configuration_available: boolean;
+  gpu_capacity_requires_reservation: boolean;
 }
 
 export interface FlowchartCrop {
@@ -264,6 +310,11 @@ export interface FlowchartCrop {
   flaw_type: string;
   confidence?: number;
   recognized_text?: string;
+  original_text?: string;
+  corrected_text?: string;
+  correction_applied?: boolean;
+  rule_violations?: Array<Record<string, unknown>>;
+  segmentation_classes?: Array<{ class_id: number; class_name: string; area_px: number; mean_grayscale?: number | null; coordinate_space?: string }>;
   predicted_class?: string;
   polygon?: number[][];
   mask?: string;
@@ -274,6 +325,9 @@ export interface FlowchartCrop {
   defect_area_px?: number;
   blob_count?: number;
   largest_blob_area_px?: number;
+  measurements?: GeometryMeasurement[];
+  blob_measurements?: Array<{ class_id: number; class_name: string; evidence_present: boolean; count: number; area_px: number; mean_grayscale: number | null; verdict: 'OK' | 'NG'; violations: string[] }>;
+  coordinate_space?: string;
 }
 
 export interface FlowchartExecutionStep {
@@ -313,6 +367,7 @@ export interface FlowchartExecutionResult {
   execution_device?: string;
   compute_profile_id?: string | null;
   compute_profile_name?: string;
+  execution_resources?: { requested_workers: number; requested_device_slots: number; effective_device_slots: number; device: string; engine_device_capacity: number };
 }
 
 export interface SelectedInspectionImage {

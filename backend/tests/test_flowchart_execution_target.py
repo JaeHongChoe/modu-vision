@@ -49,6 +49,7 @@ def test_explicit_local_cpu_runs_verified_mixed_location_models(tmp_path, monkey
             assert _VERIFIED_CHECKPOINTS.get() == {("a" * 32, "enhancement"): local.resolve(), ("job_123_abcdef", "segmentation"): remote.resolve()}
             return {"status": "success", "final_verdict": "REVIEW"}
     monkeypatch.setattr(routes, "FlowchartEngine", Engine)
+    monkeypatch.setattr(routes, "_CPU_ENGINE", Engine(device='cpu'))
     result = routes.run_flowchart(FlowchartRunRequest(image_path=str(image), pipeline=pipeline,
         execution_target="local", device="cpu"), SimpleNamespace())
     assert calls == ["cpu"]

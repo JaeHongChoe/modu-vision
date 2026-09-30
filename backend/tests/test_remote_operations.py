@@ -332,3 +332,15 @@ def test_remote_export_extracts_verified_local_package_and_blocks_traversal(tmp_
     with pytest.raises(ArtifactValidationError, match="unsafe"):
         run_remote_export(context, "torchscript", 64, False, "package_bad", transport=bad)
     assert not (tmp_path / "packages" / "package_bad").exists()
+
+
+def test_completed_legacy_operation_profile_defaults_resume_without_duplicate_worker(tmp_path,monkeypatch):
+    context,_=_completed_remote(tmp_path,monkeypatch)
+    fake=FakeAdditionalRemote(Path(context.profile.remote_root));image=context.dataset_path/'training_image.png'
+    run_remote_inference(context,image,.42,'selected',transport=fake)
+    journal_path=next((context.output_dir/'remote_operations').glob('infer_*.json'))
+    journal=json.loads(journal_path.read_text())
+    for field in ('memory_budget_mb','allow_sharing','distributed_processes'):journal['profile'].pop(field,None)
+    journal_path.write_text(json.dumps(journal))
+    run_remote_inference(context,image,.42,'selected',transport=fake)
+    assert fake.launches==1

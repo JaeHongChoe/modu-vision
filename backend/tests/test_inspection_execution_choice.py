@@ -43,7 +43,8 @@ def test_batch_freezes_explicit_execution_and_keeps_original_project_after_switc
         assert get_current_project(request)['id']==project['id']!=other['id']
         assert scoped_annotation_root(Path('unused'))==Path(project['annotations_dir'])
         assert req.execution_target=='selected_compute' and req.device=='cuda' and req.compute_profile_id==profile['id']
-        assert request.state.frozen_execution_profile.model_dump()==profile
+        from backend.remote.profiles import ComputeProfile
+        assert request.state.frozen_execution_profile.model_dump()==ComputeProfile.model_validate(profile).model_dump()
         calls.append(req)
         return result(image)
     monkeypatch.setattr(routes_flowchart,'run_flowchart',execute)

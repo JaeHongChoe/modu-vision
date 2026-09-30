@@ -1,0 +1,3 @@
+# Optional conversion environment; the exported IR runtime only needs OpenVINO.
+openvino>=2026.4.0
+nncf>=3.4.0

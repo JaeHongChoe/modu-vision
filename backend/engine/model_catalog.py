@@ -15,6 +15,7 @@ def model_family_catalog():
         ("rotated_detection", "회전 객체 검출", "회전 박스 검출", ["rotated_detector"], "rotated_detector", "클래스·회전 박스 또는 polygon", False, "weight_initialization", []),
         ("defect_gan", "결함 이미지 생성", "GAN", ["defect_gan"], "defect_gan", "실제 결함 crop; 생성 결과는 검토 후 train에만 채택", False, "weight_initialization", []),
         ("enhancement", "이미지 개선", "입력·정답 쌍 학습", ["enhancement"], "enhancement", "개선 전 입력과 개선 정답 이미지 쌍", False, "weight_initialization", []),
+        ("rotation", "정방향 보정", "학습형 각도 예측", ["small_cnn_angle_v1"], "small_cnn_angle_v1", "이미지와 사람이 확인한 정방향 보정각·독립 train/val/test", False, "weight_initialization", []),
     ]
     families = []
     for task, label, model, architectures, default, prerequisite, remote, continuation, dependencies in definitions:
@@ -24,10 +25,11 @@ def model_family_catalog():
             "architectures": architectures, "default_architecture": default,
             "prerequisite": prerequisite, "remote_training": remote,
             "continuation": continuation,
-            "devices": ["cpu", "cuda", "mps"] if task in ("classification", "segmentation", "detection", "anomaly", "patch_classification") else ["cpu"],
+            "devices": ["cpu", "cuda", "mps"],
             "stages": ["label", "train", "evaluate", "generate", "review", "export"] if task == "defect_gan" else ["label", "train", "evaluate", "flow", "export"],
             "dependencies": dependencies, "missing_dependencies": missing,
             "quality_approved": False,
+            "automated_training": True,
         })
         if task == 'anomaly':
             families[-1]['methods'] = [

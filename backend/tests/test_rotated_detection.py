@@ -214,6 +214,10 @@ def test_cpu_train_evaluate_and_checkpoint_predict(tmp_path: Path):
     metrics = evaluate_rotated_detector(output / "best_model.pt", tmp_path, split="test", device="cpu")
     assert metrics["sample_count"] == 1
     assert 0 <= metrics["mean_oriented_iou"] <= 1
+    assert 0 <= metrics['mAP_50'] <= 1
+    assert metrics['test_predictions'][0]['object_evidence']['coordinate_space']=='original_image'
+    assert metrics['test_predictions'][0]['source_sha256']
+    assert metrics['test_predictions'][0]['object_evidence']['per_class']
     assert 0 <= metrics["mean_angle_error_deg"] <= 90
     assert metrics["dataset_sha256"] == receipt["dataset_sha256"]
     source = tmp_path / "images" / "test.png"

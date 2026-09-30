@@ -1,0 +1,49 @@
+# P04 model hub and measured trial integration
+
+Baseline `a4d3610`; 2026-09-30. This ledger supplements `P04-model-training.md` and supersedes its prepared Patch/registry integration gaps. Implementation, generated-input proof, native UI acceptance and industrial model quality remain separate states.
+
+## Delivered paths
+
+- A ten-family model hub selects classification, Patch classification, segmentation, detection, anomaly, OCR, oriented detection, learned rotation, GAN and enhancement workbenches. The primary project `VisionTask` stays at four tasks. Specialist result panels preserve their own angle/CER/IoU/MSE/generator objectives.
+- Patch and Rotation have actual owned preparation, saved dataset discovery, device/parent controls, queued work, progress/cancellation, completed model discovery, heldout evaluation, flow navigation and independent TorchScript export. OCR/OBB use copied native images and explicit labels in owned folders; reopening source aliases resolves verified preparations without writing manifests into originals. Enhancement saved pairs and GAN owned preparation are discoverable.
+- AutoDL declares applied fields per adapter. Core DINOv3/YOLO searches vary actual architecture and optimizer/augmentation controls; Rotation varies channel width, OCR input geometry, OBB geometry/optimizer, enhancement optimizer/batch, and GAN generator channel width/batch. Unsupported dimensions are rejected. GAN does not advertise an optimizer setting its trainer ignores.
+- Measured objectives: core heldout loss; anomaly actual heldout normal/defect image AUROC; Rotation circular angle MAE; OCR CER; OBB oriented IoU; enhancement heldout MSE; GAN heldout RGB-statistics MMD. MMD is a generator diagnostic. Anomaly score maps are not pixel masks.
+- Fast retraining discovers parents from recorded structures, preserves parent bytes, loads their weights, reuses applied controls and starts a new optimizer. Reusable configuration is persisted inside the hash-bound checkpoint and metadata. Explicit primary input geometry uses OpenCV/PIL `[width,height]`; requested rectangles and Patch route arrays now retain exact sizes.
+- Automatic candidate receipts remain `running` until actual measurement and binding finish, preventing partial checkpoints from appearing as completed models. Search journals persist owner identity; orphan queued/running/stopping work reopens as `interrupted`. Cancellation has a durable marker and propagates to the real owned child. Stale project/source/labelset jobs are discarded before renderer reset effects and completion callbacks.
+- `run_measured_candidate` is the public real-adapter entry point for headless/remote dispatch. The caller owns compute allocation, canonical-source lineage and the completed receipt. It validates device, output, cancellation and measured result, and persists reusable configuration and checkpoint hash.
+- OBB drawing has native-coordinate center, face and irregular polygon fitting, preview, explicit label/split rows, image-hash binding and source bounds checks. Drawing preview geometry accounts for letterboxing and pillarboxing.
+
+## Feature mapping
+
+| IDs | Integrated implementation and evidence | Acceptance boundary |
+|---|---|---|
+| F025, F028, F039 | Existing verified pretrained DINOv3/YOLO primary training retained; hub selection and actual measured registry connected. Earlier P04 ledger contains authentic pretrained CPU receipt. | Larger-backbone/industrial quality and native UI workflow unverified. |
+| F026 | Owned Patch preparation and actual input binding; standard job receipt reopening in a classification project; model/evaluation/flow/export workbench. | API binding test uses a checkpoint boundary double; actual trainer sizing and core optimizer tests are separate. Native Patch UI acceptance pending. |
+| F029 | Owned OBB labels; multi-object pipeline; device/cancel/parent/evaluation/flow controls; three native drawing modes. | Generated native-coordinate and CPU training proof; field detection quality pending. |
+| F030 | Owned OCR text labels, actual CPU fit and CER evaluation, manual-parent AutoDL reuse, model/prediction/flow controls. | Generated text fixture; customer alphabets/industrial accuracy and UI acceptance pending. |
+| F031 | Learned circular direction model; owned preparation, CPU search across two widths, real parent reuse, native alignment and TorchScript package. | Generated angle fixture; industrial angle quality and UI acceptance pending. |
+| F032, F033 | Anomaly method selection retained; normal-only DINO synthetic adapter selects actual heldout AUROC and native map/score timing. | Encoder boundary-double test validates integration; original authentic pretrained evidence is separate. No pixel-mask accuracy or industrial approval claimed. |
+| F034 | Actual GAN train/heldout MMD/parent adapter connected; owned preparation and source composition UI provided by P06. | MMD and generated candidates are review evidence; adoption does not imply model-quality approval. |
+| F035 | Saved owned pairs, CPU fit/MSE/PSNR/parent reuse, device and AutoDL controls. | Generated paired images; industrial enhancement quality pending. |
+| F036, F037, F038, F040, F041, F042 | Actual quick/search/parent runs, structures and applied search fields, immutable configs/parents, measured latency objective, persistent lifecycle and scope guards. | Cooperative training budgets; latency scope is declared and does not establish full inspection deadline compliance. |
+| F112 | Actual core augmentation profiles and corresponding search fields retained; specialist controls expose applied parameters only. | No unsupported specialist augmentation claimed. |
+| F043, F044 | Whole-DAG device/runtime options and authentic FP32/FP16-weight IR/calibrated INT8 are implemented and integrated by P09. | Actual CPU conversion/runtime and approval-boundary evidence is in `P09-runtime-device-sdk.md`; industrial accuracy and target boards remain unverified. |
+
+## Verification
+
+1. Independent original P04 regression: **79 passed** (29.61 s), covering learned Rotation, trial coordinator, API, specialist lifecycle, parents and primary trainer.
+2. Real CPU generated-input integration: **8 passed** in `test_specialist_automated_trials.py` (5.92 s): Rotation two widths, OCR/OBB/enhancement/GAN quick plus immutable parent reuse, public measured wrapper and actual anomaly AUROC/map timing with a declared encoder boundary double.
+3. Trainer/Patch/trial focused regression after exact input-size repair: **64 passed** (28.12 s).
+4. Full backend gate `/private/tmp/p04_integration_backend_gate.log`: **1327 passed, 15 skipped, 1 failed** (264.37 s). The failure was a concurrently edited GAN preview expectation: collected test expected 32×32 for a native 64×64 fixture. Current test asserts 64×64; its focused rerun passed.
+5. Latest reviewed lifecycle/owned-family gate: **62 passed** (11.74 s). Orphan queued/running/stopping API regression and receipt recovery passed; saved manual OCR configuration was reused by a real AutoDL fit and its evaluation archived.
+6. Renderer contract tests `node scripts/verify-training-hub-contracts.cjs`: **2 passed**. They cover native click geometry and stale completed-job exclusion across projects sharing a source, changed sources, labelsets and tasks. These are logic tests, not observed UI interaction.
+7. `npm run typecheck` passed. Production `npm run build` passed with existing bundle-size/dynamic-import warnings. Final broad gate and build are being refreshed after review repairs; the root consolidation ledger records their final output.
+8. Refreshed full backend gate `/private/tmp/p04_integration_final_backend_gate.log`: **1356 passed, 15 skipped, 2 failed** (283.98 s). P07 added profile defaults required normalizing the frozen-profile test expectation; the specialist finalization regression exposed a missing immediate cancellation check before reusable-config persistence. Both were repaired. Fresh combined P08/independent-review gate includes both regressions and passed **25/25**; the root consolidation ledger owns the final full gate.
+9. Actual native-pixel acceptance now supersedes the family tables' earlier generated/boundary-double limits for functional training: **all ten** real CPU families completed prepare→fit→heldout evaluation→prediction→REST/native project reopen; nine applicable fitted flow packages executed a real crop, while GAN remains actual source-linked generation for human review. `P08-real-input-manifest.json` records public hashes/status; `P08-training-engine.md` documents controlled background/OCR/rotation truth and unchanged original files. No manufacturing quality approval follows from these runs.
+10. Independent P08/P10/shared-security final focused gate: **21 passed, 96.12 s**. Native review found a completed CPU job displaying the live host Metal device; receipt/metadata device readback and a distinct completed-job device panel repaired it. Actual genuine pretrained primary/Patch reopen status gate: **4 passed, 19.84 s**, all returning CPU. VM test harnesses now load new relative TS dependencies and current dataset/labelset contracts: training model options **14 passed**, workflow scope **7 original assertions passed**. Native UI observation remains root-owned.
+
+## Remaining acceptance
+
+- Native app model-hub interactions, reopening each downstream stage and persisted inspection history have not been observed in this increment. No app/service restart was performed.
+- Actual CUDA/MPS specialist runs, authentic larger-backbone architecture search, remote/MIG/DDP execution, multi-OS packaging and embedded/quantized deployment require their own evidence. Hardware availability changes verification status, not implementation scope.
+- No commits, pushes, remote GPU jobs or model-quality approvals were performed. Source images and compatible parent checkpoints remained unchanged in CPU tests.

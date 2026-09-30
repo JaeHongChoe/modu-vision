@@ -21,6 +21,17 @@ files:
 
 # Extract Python backend into resourcesPath (unpacked from ASAR so Python interpreter can read it)
 extraResources:
+  - from: "native_runtime"
+    to: "native_runtime"
+    filter:
+      - "*.cpp"
+      - "*.h"
+      - "*.hpp"
+      - "*.cs"
+      - "*.csproj"
+      - "*.py"
+      - "*.md"
+      - "CMakeLists.txt"
   - from: "examples"
     to: "examples"
     filter:

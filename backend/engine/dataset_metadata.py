@@ -24,6 +24,7 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 from PIL import Image
+from backend.engine.dicom_input import open_source_image
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 
@@ -137,17 +138,17 @@ def _ensure(ledger, project_root, dataset_root, image_path, annotation_root=None
     mask = _mask_hash(project_root,source,image,annotation_root)
     row = ledger['images'].get(relative)
     if row is None:
-        with Image.open(image) as pil: width,height=pil.size
+        with open_source_image(image) as pil: width,height=pil.size
         row={'image_uuid':str(uuid.uuid5(uuid.NAMESPACE_URL,f'{Path(project_root).resolve()}\0{source}\0{relative}')),
              'file_path':str(image),'relative_path':relative,'content_hash':content,'content_version':1,
              'width':width,'height':height,'revision':0,'tags':[], 'product':'','lot':'','group':'',
-             'workflow_state':'unworked','reviewer':None,'review_history':[],'audit':[],
+             'workflow_state':'unworked','usage_state':'active','reviewer':None,'review_history':[],'audit':[],
              'annotation_hash':annotation,'mask_hash':mask}
         _event(row,'system','registered',{'content_hash':content}); ledger['images'][relative]=row
     else:
         changes={}
         if row['content_hash'] != content:
-            with Image.open(image) as pil: row['width'],row['height']=pil.size
+            with open_source_image(image) as pil: row['width'],row['height']=pil.size
             row['content_hash']=content; row['content_version']+=1; changes['content_hash']=content
         if row.get('annotation_hash') != annotation:
             row['annotation_hash']=annotation; changes['annotation_hash']=annotation
@@ -182,7 +183,7 @@ def _find(ledger,image_uuid):
 def update_metadata(project_root,dataset_root,image_uuid,expected_revision,actor,changes,annotation_root=None):
     actor=actor.strip()
     if not actor or len(actor)>100: raise ValueError('검토자 이름을 1~100자로 입력하세요.')
-    allowed={'tags','product','lot','group','workflow_state'}
+    allowed={'tags','product','lot','group','workflow_state','usage_state'}
     if set(changes)-allowed: raise ValueError('Unknown metadata fields')
     with metadata_transaction(project_root,dataset_root,annotation_root) as ledger:
         old=_find(ledger,image_uuid)
@@ -193,6 +194,9 @@ def update_metadata(project_root,dataset_root,image_uuid,expected_revision,actor
             if key=='tags':
                 if not isinstance(value,list) or len(value)>100 or any(not isinstance(t,str) or len(t)>100 for t in value): raise ValueError('Invalid tags')
                 clean[key]=list(dict.fromkeys(t.strip() for t in value if t.strip()))
+            elif key=='usage_state':
+                if value not in {'active','not_used'}:raise ValueError('Invalid usage state')
+                clean[key]=value
             elif key=='workflow_state':
                 if value not in {'unworked','needs_review','approved'}: raise ValueError('Invalid review state')
                 clean[key]=value

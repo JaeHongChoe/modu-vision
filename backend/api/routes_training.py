@@ -98,6 +98,13 @@ def _write_job_receipt(record: JobRecord) -> None:
         "loss_history": record.loss_history,
         "error": record.error,
     }
+    local_model_id=(record.launch_spec or {}).get('local_model_id')
+    if local_model_id:
+        import re
+        if (not record.remote_profile_id or record.task not in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}
+                or re.fullmatch('[0-9a-f]{32}',local_model_id) is None or record.job_id!='job_'+local_model_id or output_dir.name!=local_model_id):
+            raise ValueError('Remote specialist and native model identity differ')
+        receipt.update(job_id=local_model_id,remote_job_id=record.job_id)
     if record.source_dataset_path and record.dataset_fingerprint:
         receipt["source_dataset_path"] = record.source_dataset_path
         receipt["dataset_fingerprint"] = record.dataset_fingerprint
@@ -191,12 +198,13 @@ class TrainingJobManager:
         return bool(set(first_devices) & set(second_devices))
 
     def _remote_slot_busy(self, profile: ComputeProfile) -> bool:
-        for lease in self._leases.list():
-            if lease["host"] == self._lease_host(profile) and self._leases.conflict(lease["selector"], profile.gpu_selector or "all"):
-                return True
+        if not self._leases.available(self._lease_host(profile),profile.gpu_selector or 'all',
+                memory_budget_mb=profile.memory_budget_mb or 0,allow_sharing=profile.allow_sharing):return True
+        reserved={row['job_id'] for row in self._leases.list()}
         for record in self._jobs.values():
             if record.status not in self.ACTIVE_STATES or record.remote_profile_id is None:
                 continue
+            if record.job_id in reserved:continue
             if record.remote_profile is None or self._profiles_conflict(profile, record.remote_profile):
                 return True
         return False
@@ -460,7 +468,10 @@ class TrainingJobManager:
         job_id = record.job_id
         if record.remote_profile is not None:
             self._leases.adopt(job_id)
-            if not self._leases.acquire(job_id, self._lease_host(record.remote_profile), record.remote_profile.gpu_selector or "all", remote=True):
+            profile=record.remote_profile;launch=record.launch_spec or {}
+            if not self._leases.acquire(job_id, self._lease_host(profile), profile.gpu_selector or "all", remote=True,
+                    memory_budget_mb=profile.memory_budget_mb or 0,allow_sharing=profile.allow_sharing,task=record.task,
+                    project_id=launch.get('project_id'),account_id=launch.get('account_id')):
                 record.status = "queued"; record.phase = "resource_reserved"
                 if job_id not in self._remote_queue: self._remote_queue.append(job_id)
                 self._watch_queue()
@@ -1022,8 +1033,15 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     }
 
 
+def _record_in_request_project(record,request):
+    if record is None:return False
+    if request is None or getattr(request.state,'account_user',None) is None:return True
+    from backend.api.routes_project import get_current_project
+    return Path(record.output_dir).resolve().is_relative_to(Path(get_current_project(request)['models_dir']).resolve())
+
+
 @router.post("/stop")
-def stop_training(req: TrainingStopRequest):
+def stop_training(req: TrainingStopRequest,request:Request=None):
     """Aborts the specified or currently active training job."""
     job_id = req.job_id or (
         training_job_manager.get_active_job().job_id
@@ -1035,6 +1053,8 @@ def stop_training(req: TrainingStopRequest):
         return {"status": "not_running", "job_id": None}
 
     previous = training_job_manager.get_job(job_id)
+    if not _record_in_request_project(previous,request):
+        return {'status':'not_running','job_id':None}
     disconnected = previous is not None and previous.status == "disconnected"
     success = training_job_manager.abort_job(job_id)
     if success and disconnected:
@@ -1046,9 +1066,10 @@ def stop_training(req: TrainingStopRequest):
 
 
 @router.post("/reconnect")
-def reconnect_training(req: TrainingStopRequest):
+def reconnect_training(req: TrainingStopRequest,request:Request=None):
     if not req.job_id:
         raise HTTPException(status_code=422, detail="job_id is required to reconnect a remote run")
+    if not _record_in_request_project(training_job_manager.get_job(req.job_id),request):raise HTTPException(404,'Job unavailable in this project')
     record = training_job_manager.reconnect_remote_job(req.job_id)
     if record is None:
         raise HTTPException(status_code=409, detail="This job cannot be reconnected")
@@ -1075,8 +1096,9 @@ def _completed_receipt_record(job_id: str, request: Request) -> Optional[JobReco
         if checkpoint is None or checkpoint.parent.resolve() != expected.resolve():
             return None
         receipt = completed_job_receipt(expected)
-        source, task = project.get('source_dataset_dir'), project['task']
-        if (not source or not receipt or receipt.get('job_id') != job_id or receipt.get('task') != task
+        source = project.get('source_dataset_dir'); task = receipt.get('task') if receipt else None
+        if (not source or not receipt or receipt.get('job_id') != job_id
+                or task not in ('classification','segmentation','detection','anomaly','patch_classification')
                 or Path(receipt.get('output_dir', '')).resolve() != expected.resolve()
                 or not _matches_source_dataset(expected, source, task)):
             return None
@@ -1103,11 +1125,16 @@ def _completed_receipt_record(job_id: str, request: Request) -> Optional[JobReco
         labelset = project.get('active_labelset_id', 'default')
         if (directory.resolve() != Path(binding['version_dir']).resolve()
                 or Path(manifest['source_dataset_dir']).resolve() != Path(source).resolve()
-                or manifest['task'] != task
+                or (manifest['task'] != task and not (task=='patch_classification' and binding.get('family_task')==task))
                 or binding.get('labelset_id') != labelset or original_binding.get('labelset_id') != labelset
                 or binding.get('dataset_fingerprint') != manifest['dataset_fingerprint']
                 or receipt['dataset_fingerprint'] != binding.get('dataset_fingerprint')):
             return None
+        if task=='patch_classification':
+            from backend.api.routes_patch_classification import _owned
+            prepared=_owned(project,receipt['dataset_path'])
+            if tuple(prepared.classes)!=tuple(payload.get('classes',[])) or metadata.get('dataset_path')!=receipt['dataset_path']:
+                return None
         if binding != original_binding:
             # Archives rebind metadata and version paths, while preserving the
             # immutable checkpoint bytes. Accept only the existing verified
@@ -1134,6 +1161,17 @@ def _completed_receipt_record(job_id: str, request: Request) -> Optional[JobReco
         return None
 
 
+def _job_device_name(record):
+    if record.remote_device_name:return record.remote_device_name
+    if record.status!='completed':return (record.launch_spec or {}).get('device')
+    try:
+        output=Path(record.output_dir)
+        receipt=json.loads((output/'job_receipt.json').read_text())
+        metadata=json.loads((output/'model_meta.json').read_text())
+        value=receipt.get('device') or metadata.get('device')
+        return value if isinstance(value,str) and re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?',value) else None
+    except (ValueError,OSError,TypeError):return None
+
 @router.get("/status")
 def get_training_status(job_id: Optional[str] = Query(None), request: Request = None):
     """Retrieves current training status and progress for polling fallbacks."""
@@ -1144,7 +1182,7 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
     else:
         record = training_job_manager.get_active_job()
 
-    if not record:
+    if not _record_in_request_project(record,request):
         return {
             "job_id": None,
             "status": "idle",
@@ -1175,16 +1213,17 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
         "phase": record.phase,
         "transferred_bytes": record.transferred_bytes,
         "total_bytes": record.total_bytes,
-        "device_name": record.remote_device_name,
+        "device_name": _job_device_name(record),
     }
 
 
 @router.get("/jobs")
-def list_training_jobs():
+def list_training_jobs(request:Request=None):
     """Expose active and queued jobs so clients can reconnect by original ID."""
     queue_position = 0
     jobs = []
     for record in training_job_manager.list_jobs():
+        if not _record_in_request_project(record,request):continue
         position = None
         if record.status == "queued":
             queue_position += 1

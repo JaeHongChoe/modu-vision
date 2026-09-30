@@ -42,6 +42,10 @@ class OCRManifestRequest(BaseModel):
     dataset_path: str = Field(min_length=1)
     samples: list[OCRLabelRow] = Field(min_length=1)
 
+class OCRPrepareRequest(BaseModel):
+    source_dataset_path: str
+    samples: list[OCRLabelRow] = Field(min_length=1)
+
 
 class OCRTrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -112,19 +116,40 @@ def _manifest_response(manifest: OCRManifest) -> dict:
 @router.post("/manifest")
 def create_manifest(req: OCRManifestRequest, request: Request):
     """Pin caller-supplied text labels to image hashes; never guess labels."""
-    get_current_project(request)
+    project=get_current_project(request)
     try:
-        manifest = write_ocr_manifest(req.dataset_path, [row.model_dump() for row in req.samples])
+        from backend.engine.prepared_family_datasets import prepare_family_dataset,resolve_family_dataset
+        source=require_training_source(project,project.get('source_dataset_dir',''))
+        if Path(req.dataset_path).resolve()==source:
+            manifest=prepare_family_dataset('ocr',source,Path(project['dataset_dir'])/'ocr'/uuid.uuid4().hex,[row.model_dump() for row in req.samples])
+        else:
+            dataset=resolve_family_dataset(project,'ocr',req.dataset_path).root
+            manifest=prepare_family_dataset('ocr',source,Path(project['dataset_dir'])/'ocr'/uuid.uuid4().hex,[row.model_dump() for row in req.samples])
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _manifest_response(manifest)
 
+@router.post('/prepare')
+def prepare(req: OCRPrepareRequest,request: Request):
+    project=get_current_project(request)
+    try:
+        source=require_training_source(project,req.source_dataset_path)
+        from backend.engine.prepared_family_datasets import prepare_family_dataset
+        return _manifest_response(prepare_family_dataset('ocr',source,Path(project['dataset_dir'])/'ocr'/uuid.uuid4().hex,[row.model_dump() for row in req.samples]))
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+@router.get('/datasets')
+def datasets(request: Request):
+    from backend.engine.prepared_family_datasets import list_prepared_family_datasets
+    return {'datasets':list_prepared_family_datasets(get_current_project(request),'ocr')}
+
 
 @router.get("/manifest")
 def inspect_manifest(dataset_path: str, request: Request):
-    get_current_project(request)
+    project=get_current_project(request)
     try:
-        return _manifest_response(load_ocr_manifest(dataset_path))
+        from backend.engine.prepared_family_datasets import resolve_family_dataset
+        return _manifest_response(resolve_family_dataset(project,'ocr',dataset_path))
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -132,14 +157,18 @@ def inspect_manifest(dataset_path: str, request: Request):
 @router.post("/train")
 def train(req: OCRTrainRequest, request: Request):
     project=get_current_project(request)
-    try:source=require_training_source(project,req.dataset_path)
-    except ValueError as exc:raise HTTPException(409,str(exc)) from exc
+    if not project.get('source_dataset_dir'):raise HTTPException(409,'Select the active project source before OCR training')
+    try:
+        source=require_training_source(project,project.get('source_dataset_dir',''))
+        from backend.engine.prepared_family_datasets import resolve_family_dataset
+        dataset=resolve_family_dataset(project,'ocr',req.dataset_path).root
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
     try:
         from backend.engine.specialized_warm_start import resolve_family_parent
-        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'ocr', source, source, req.model_dump()) if req.warm_start_job_id else None
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'ocr', source, dataset, req.model_dump()) if req.warm_start_job_id else None
         output=_models_root(request)/uuid.uuid4().hex
-        result=start_job(project=project,task='ocr',source=source,output=output,options=req,
-            runner=lambda event,progress,device:train_ocr(source,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:load_ocr_manifest(source).provenance['dataset_sha256'],warm_start=parent)
+        result=start_job(project=project,task='ocr',source=source,family_dataset=dataset,output=output,options=req,
+            runner=lambda event,progress,device:train_ocr(dataset,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:load_ocr_manifest(dataset).provenance['dataset_sha256'],warm_start=parent)
         return JSONResponse(result,status_code=202) if req.background else result
     except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
@@ -151,8 +180,10 @@ def warm_start_parents(dataset_path: str, request: Request, image_height: int = 
     project = get_current_project(request)
     _models_root(request)
     try:
-        source = require_training_source(project, dataset_path)
-        return list_family_parents(project['models_dir'], 'ocr', source, source, {'image_height': image_height, 'image_width': image_width})
+        source = require_training_source(project, project.get('source_dataset_dir',''))
+        from backend.engine.prepared_family_datasets import resolve_family_dataset
+        dataset=resolve_family_dataset(project,'ocr',dataset_path).root
+        return list_family_parents(project['models_dir'], 'ocr', source, dataset, {'image_height': image_height, 'image_width': image_width})
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -208,10 +239,12 @@ def evaluate(req: OCREvaluateRequest, request: Request):
     try:
         from backend.engine.evaluation_history import archive_specialized_evaluation
         project = get_current_project(request)
-        result = evaluate_ocr_checkpoint(checkpoint, req.dataset_path, split=req.split, device=req.device)
+        from backend.engine.prepared_family_datasets import resolve_family_dataset
+        dataset=resolve_family_dataset(project,'ocr',req.dataset_path).root
+        result = evaluate_ocr_checkpoint(checkpoint, dataset, split=req.split, device=req.device)
         return archive_specialized_evaluation(project, checkpoint,
             project.get('source_dataset_dir') or req.dataset_path, result,
-            task='ocr', dataset_path=req.dataset_path)
+            task='ocr', dataset_path=str(dataset))
     except (ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -219,6 +252,8 @@ def evaluate(req: OCREvaluateRequest, request: Request):
 @router.post("/predict")
 def predict(req: OCRPredictRequest, request: Request):
     checkpoint = _checkpoint(request, req.job_id)
+    source=get_current_project(request).get('source_dataset_dir'); image=Path(req.image_path)
+    if not source or image.is_symlink() or not image.resolve().is_relative_to(Path(source).resolve()):raise HTTPException(422,'OCR image must belong to active original source')
     try:
         return predict_ocr(checkpoint, req.image_path, device=req.device)
     except (ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:

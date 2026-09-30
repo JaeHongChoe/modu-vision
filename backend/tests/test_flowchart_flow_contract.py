@@ -138,6 +138,8 @@ def test_segmentation_minimum_area_controls_crop_verdict(monkeypatch):
     engine = FlowchartEngine(device="cpu")
     monkeypatch.setattr(engine, "_get_inspection_model", lambda **kwargs: (_OnePixelSegmentation(), True))
     node = _single_segmentation_pipeline().nodes[1]
+    # One model pixel is one original-image pixel for this area boundary fixture.
+    engine._model_input_sizes[("segmentation", "trained_segmentation", "fast")] = (60, 40)
 
     crops, _, _ = engine._inspect_crops(
         np.zeros((40, 60, 3), dtype=np.uint8),

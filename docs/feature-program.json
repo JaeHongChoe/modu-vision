@@ -1,0 +1,3939 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "a4d3610cc9e462d5718418d3e34598f45c2727c2",
+  "scope_count": 123,
+  "completion_rule": "구현·회귀검증·UI 연결·실제 입력 검증을 각각 기록. 구현만으로 전체 완료로 처리하지 않는다.",
+  "phases": {
+    "P01": {
+      "title": "판정·데이터 정확성",
+      "goal": "클래스별 mask를 타일·ROI·Blob·패키지까지 유지하고 필수 개수·면적 범위·평균 밝기 규칙을 검증한다."
+    },
+    "P02": {
+      "title": "AI 라벨링",
+      "goal": "점·박스 mask, 이미지 positive/negative, 텍스트 결합, 크기·장치 필터, 배치·few-label 추천·검토를 연결한다."
+    },
+    "P03": {
+      "title": "데이터·권한·결과 버전",
+      "goal": "태그 색상·플래그·상태 통계·라벨 버전·계정과 역할·공유 프로젝트·외부 mask·DICOM을 연결한다."
+    },
+    "P04": {
+      "title": "모델과 자동 학습",
+      "goal": "모든 모델군의 데이터 준비·학습·취소·평가·플로우·export를 연결하고 구조·HPO·증강·속도 목표 탐색을 추가한다."
+    },
+    "P05": {
+      "title": "평가와 비교",
+      "goal": "객체·픽셀·문자 단위 오류, 분포·ROC, 이종 모델 비교, OBB 지표·산점도를 제공한다."
+    },
+    "P06": {
+      "title": "플로우·측정·생성 UI",
+      "goal": "실행 가능한 DAG·ROI·정렬·패치·병렬 노드·측정·OBB 그리기·GAN 합성을 완성한다."
+    },
+    "P07": {
+      "title": "서버와 GPU 배분",
+      "goal": "모든 작업군의 원격 실행·예약·동시 배치·MIG·다중 GPU 학습·취소 복구를 연결한다."
+    },
+    "P08": {
+      "title": "독립 학습 Engine",
+      "goal": "통합 CLI·REST의 폴더 입력·출력·옵션·진행률·취소·재현 설정을 제공한다."
+    },
+    "P09": {
+      "title": "배포 Runtime와 장치",
+      "goal": "검사 deadline·Python/C++/C# SDK·OpenVINO·양자화·CPU/GPU/Edge 패키지를 완성한다."
+    },
+    "P10": {
+      "title": "운영 자동화",
+      "goal": "수집→후보 라벨→검수/정책→재학습→동일 holdout 비교→승인→적용→rollback을 자동 작업으로 연결한다."
+    }
+  },
+  "features": [
+    {
+      "id": "F001",
+      "feature": "자연어 조건으로 대상 영역 찾기",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/label_candidate_providers.py",
+        "backend/api/routes_label_candidates.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F002",
+      "feature": "이미지 예시로 대상 찾기",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/label_candidate_providers.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F003",
+      "feature": "이미지 프롬프트의 제외 영역 지정",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_candidates.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F004",
+      "feature": "이미지와 텍스트 조건을 결합한 프롬프트",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_candidates.py",
+        "backend/engine/label_candidate_providers.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F005",
+      "feature": "긴 텍스트 프롬프트 입력",
+      "phase": "P02",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/label_candidate_providers.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F006",
+      "feature": "프롬프트에서 다각형 라벨 생성",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/label_candidate_providers.py",
+        "backend/api/routes_label_candidates.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F007",
+      "feature": "클릭으로 객체 영역 선택",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/labeling_ai.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F008",
+      "feature": "드래그한 박스 안에서 객체 선택",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/labeling/LabelingCanvas.tsx",
+        "backend/api/routes_annotation.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F009",
+      "feature": "박스 라벨을 객체 다각형으로 변환",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/labeling_ai.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F010",
+      "feature": "소량 수동 라벨로 자동 추천기를 학습·갱신",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_suggestions.py",
+        "backend/api/routes_label_suggestions.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F011",
+      "feature": "완료 모델로 여러 이미지의 라벨 제안",
+      "phase": "P02",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_suggestions.py",
+        "backend/api/routes_label_suggestions.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F012",
+      "feature": "키워드로 여러 이미지 일괄 라벨링",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_candidates.py",
+        "backend/api/routes_label_suggestions.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F013",
+      "feature": "라벨 후보를 객체 크기로 필터링",
+      "phase": "P02",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_suggestions.py",
+        "backend/api/routes_label_candidates.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F014",
+      "feature": "AI 라벨링 CPU·GPU 선택",
+      "phase": "P02",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_label_suggestions.py",
+        "backend/engine/label_candidate_providers.py",
+        "src/renderer/components/labeling/CandidateProviderControls.tsx",
+        "src/renderer/services/foundationLabelingApi.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F015",
+      "feature": "여러 이름 있는 라벨 세트",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F016",
+      "feature": "이미지별 색상 태그",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/project_preferences.py",
+        "src/renderer/components/dataset/ProjectPreferencePanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F017",
+      "feature": "라벨 세트에 사용자 플래그",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/project_labelsets.py",
+        "backend/api/routes_project_preferences.py",
+        "src/renderer/components/dataset/ProjectPreferencePanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F018",
+      "feature": "모델에 Best·Important 플래그",
+      "phase": "P03",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/model_catalog.py",
+        "src/renderer/components/evaluation/ModelDeploymentPanel.tsx",
+        "backend/api/routes_project_preferences.py",
+        "src/renderer/components/dataset/ProjectPreferencePanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F019",
+      "feature": "라벨링 완료·미완료 수와 비율",
+      "phase": "P03",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/dataset/DatasetStudio.tsx",
+        "backend/engine/dataset_summary.py",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F020",
+      "feature": "상태 통계를 눌러 이미지 필터링",
+      "phase": "P03",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/dataset/DatasetStudio.tsx",
+        "backend/engine/dataset_summary.py",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F021",
+      "feature": "클래스별 데이터 분포",
+      "phase": "P01",
+      "priority": "P0",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "하나의 이미지에 서로 다른 두 클래스가 있을 때 두 클래스 필터 모두 같은 이미지를 포함하고 라벨 세트별 개수를 정확히 보여야 한다.",
+      "source_files": [
+        "backend/api/routes_dataset.py",
+        "backend/engine/dataset_summary.py",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F022",
+      "feature": "Train·Test·미사용·미분할 분포",
+      "phase": "P03",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/dataset/DatasetStudio.tsx",
+        "backend/engine/dataset_usage.py",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F023",
+      "feature": "모델 결과를 라벨 세트별로 선택",
+      "phase": "P03",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_model_comparisons.py",
+        "backend/api/routes_evaluation_history.py",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+        "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F024",
+      "feature": "여러 작업자의 데이터 정리",
+      "phase": "P03",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F025",
+      "feature": "이미지 Classification",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "backend/engine/model_backbones.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F026",
+      "feature": "고해상도 Patch Classification",
+      "phase": "P04",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "앱에서 패치 크기·간격·라벨을 준비해 DINOv3 학습을 시작·취소하고 완료 모델로 평가·플로우·패키지를 실행할 수 있어야 한다.",
+      "source_files": [
+        "backend/engine/patch_classification.py",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "src/renderer/components/training/TrainingController.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F027",
+      "feature": "Segmentation의 여러 결함 클래스",
+      "phase": "P01",
+      "priority": "P0",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "결함 클래스2만 존재하는 입력도 앱·타일·ROI·Blob·패키지에서 같은 클래스와 마스크를 유지하며 NG여야 한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/grouped_dataset_views.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F028",
+      "feature": "일반 Object Detection",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F029",
+      "feature": "Oriented Object Detection",
+      "phase": "P04",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/rotated_detection.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F030",
+      "feature": "OCR 문자 인식",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/ocr.py",
+        "src/renderer/components/training/OCRWorkbench.tsx",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F031",
+      "feature": "학습형 정방향 Rotation 모델",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_operators.py",
+        "backend/engine/model_catalog.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F032",
+      "feature": "정상 데이터 기반 Anomaly Classification",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/anomaly/dino_synthetic.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F033",
+      "feature": "Anomaly Segmentation 영역 검사",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/anomaly/dino_synthetic.py",
+        "backend/engine/flowchart_engine.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F034",
+      "feature": "GAN Defect Generator",
+      "phase": "P04",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/defect_gan.py",
+        "backend/api/routes_defect_gan.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F035",
+      "feature": "학습형 Image Enhancement",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/enhancement.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F036",
+      "feature": "빠른 초기 모델 학습",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F037",
+      "feature": "모델 구조 자동 탐색",
+      "phase": "P04",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F038",
+      "feature": "초매개변수 자동 탐색",
+      "phase": "P04",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F039",
+      "feature": "사전학습 모델을 활용한 Transfer Learning",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/model_backbones.py",
+        "src/renderer/components/training/modelTrainingOptions.ts",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F040",
+      "feature": "기존 모델에서 추가 데이터 재학습",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/warm_start.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F041",
+      "feature": "최적화된 설정을 재사용하는 Fast Retraining",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/warm_start.py",
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F042",
+      "feature": "추론 속도 목표를 반영한 학습 최적화",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F043",
+      "feature": "Embedded 장치에 맞춘 모델 최적화",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/edge_runtime.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+        "backend/engine/model_runtime.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native UI, production task accuracy and target-board hardware acceptance remain unverified."
+      ]
+    },
+    {
+      "id": "F044",
+      "feature": "양자화 모델 생성",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/exporter.py",
+        "src/renderer/components/inference/InferenceCenterStudio.tsx",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+        "backend/engine/model_runtime.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native UI, production task accuracy and target-board hardware acceptance remain unverified."
+      ]
+    },
+    {
+      "id": "F045",
+      "feature": "GUI 없이 폴더 입력으로 학습 REST API",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_training.py",
+        "backend/api/routes_project.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F046",
+      "feature": "하나의 CLI로 quick·AutoDL 학습",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "backend/remote/worker.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F047",
+      "feature": "이미지와 분석 결과를 같은 화면에서 확인",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F048",
+      "feature": "정확도·정밀도·재현율·F1",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F049",
+      "feature": "클래스별 지표 표시",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F050",
+      "feature": "Confusion Matrix 셀로 이미지 필터",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F051",
+      "feature": "분할 클래스별 미검·과검 이미지 찾기",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F052",
+      "feature": "검출 클래스별 누락·추가 박스 이미지 찾기",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F053",
+      "feature": "OCR 문자별 누락·추가 결과 찾기",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "backend/engine/ocr.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+        "src/renderer/components/training/OCRWorkbench.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F054",
+      "feature": "결과 확률 분포 분석",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F055",
+      "feature": "결함 크기 분포 분석",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "backend/engine/flowchart_engine.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F056",
+      "feature": "ROC 곡선·임계값 검토",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationStudio.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F057",
+      "feature": "같은 종류 모델 두 개 비교",
+      "phase": "P05",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F058",
+      "feature": "서로 다른 종류 모델 비교",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F059",
+      "feature": "재평가 이력 보관",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/engine/evaluation_history.py",
+        "backend/api/routes_evaluation_history.py",
+        "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F060",
+      "feature": "재평가 결과를 부모 모델 아래 묶어 표시",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F061",
+      "feature": "모델 목록의 임계값 설정 정보",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F062",
+      "feature": "회전 검출 mAP·IoU 평가",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "backend/engine/rotated_detection.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F063",
+      "feature": "회전 박스 IoU·각도 오류 분포",
+      "phase": "P05",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_evaluation.py",
+        "backend/api/routes_evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/evaluation_evidence.py",
+        "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+        "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+        "src/renderer/components/training/RotatedDetectionPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P05-evaluation.md",
+          "result": "actual class/object/pixel/Unicode/OBB evidence, same fixed cohort sync/async/reopen comparison; native acceptance recorded separately"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F064",
+      "feature": "여러 모델을 잇는 플로우 편집",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/flowchart/FlowchartStudio.tsx",
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F065",
+      "feature": "모델 뒤에 모델을 잇는 다단계 검사",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F066",
+      "feature": "클래스에 따라 후속 검사 분기",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F067",
+      "feature": "한 모델을 여러 클래스에서 공유",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/flow_package.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F068",
+      "feature": "여러 모델 결과를 합쳐 최종 판정",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F069",
+      "feature": "고정 ROI 검사",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F070",
+      "feature": "검출 객체의 ROI로 후속 검사",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F071",
+      "feature": "회전 객체의 Fitted ROI와 정방향 후속 검사",
+      "phase": "P06",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_operators.py",
+        "backend/engine/flowchart_engine.py",
+        "src/renderer/components/flowchart/FlowGeometryEditors.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F072",
+      "feature": "ROI를 원해상도 패치로 분할",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_operators.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F073",
+      "feature": "Blob 크기·개수와 누락 판정",
+      "phase": "P01",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F074",
+      "feature": "분할 영역의 평균 밝기로 임계값 판정",
+      "phase": "P01",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F075",
+      "feature": "곡선·자유 경로 길이 측정",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/evaluation/PhysicalScaleOverlay.tsx",
+        "backend/engine/geometry_measurement.py",
+        "backend/api/routes_geometry.py",
+        "src/renderer/components/flowchart/FlowGeometryEditors.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F076",
+      "feature": "검출 영역 넓이 측정",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "src/renderer/components/evaluation/PhysicalScaleOverlay.tsx",
+        "backend/engine/geometry_measurement.py",
+        "src/renderer/components/flowchart/CropDetailModal.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F077",
+      "feature": "GAN 원본 이미지의 생성 위치 지정",
+      "phase": "P06",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/defect_gan.py",
+        "backend/api/routes_defect_gan.py",
+        "src/renderer/components/training/GANCompositionEditor.tsx",
+        "src/renderer/components/training/DefectGANWorkbench.tsx",
+        "backend/engine/gan_package_runtime.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger.",
+        "Generated image quality needs explicit human review; synthetic candidates are never autoapproved."
+      ]
+    },
+    {
+      "id": "F078",
+      "feature": "GAN 여러 생성 영역 지정",
+      "phase": "P06",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/defect_gan.py",
+        "src/renderer/components/training/GANCompositionEditor.tsx",
+        "backend/api/routes_defect_gan.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger.",
+        "Generated image quality needs explicit human review; synthetic candidates are never autoapproved."
+      ]
+    },
+    {
+      "id": "F079",
+      "feature": "OCR 문자 규칙과 오인식 교정",
+      "phase": "P01",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/ocr.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F080",
+      "feature": "OBB 중심 대칭 방식 라벨링",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/labeling/LabelingCanvas.tsx",
+        "src/renderer/components/training/RotatedBoxFitting.tsx",
+        "backend/api/routes_rotated_detection.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F081",
+      "feature": "OBB 한쪽 면을 기준으로 라벨링",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/labeling/LabelingCanvas.tsx",
+        "src/renderer/components/training/RotatedBoxFitting.tsx",
+        "backend/api/routes_rotated_detection.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F082",
+      "feature": "OBB 비정형 객체용 라벨링",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/labeling/LabelingCanvas.tsx",
+        "src/renderer/components/training/RotatedBoxFitting.tsx",
+        "backend/api/routes_rotated_detection.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F083",
+      "feature": "여러 GPU에서 서로 다른 학습 작업 동시 실행",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/shared_scheduler.py",
+        "backend/api/routes_training.py",
+        "src/renderer/components/compute/ComputeJobsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched."
+      ]
+    },
+    {
+      "id": "F084",
+      "feature": "같은 GPU에 가벼운 모델 여러 개 동시 배치",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/shared_scheduler.py",
+        "backend/engine/compute_inventory.py",
+        "backend/remote/worker.py",
+        "backend/remote/profiles.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched."
+      ]
+    },
+    {
+      "id": "F085",
+      "feature": "학습·AI 라벨링·추론 작업을 GPU별 배분",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/shared_scheduler.py",
+        "backend/remote/operations.py",
+        "backend/remote/specialist_inference.py",
+        "backend/engine/compute_label_results.py",
+        "backend/api/routes_compute.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched."
+      ]
+    },
+    {
+      "id": "F086",
+      "feature": "하나의 큰 모델을 여러 GPU로 학습",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/distributed_training.py",
+        "backend/engine/trainer.py",
+        "backend/remote/distributed.py",
+        "backend/remote/distributed_worker.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched.",
+        "Actual two-rank CPU gloo is verified; Classification/Patch/Segmentation are the declared DDP adapters, others use independent allocated workers."
+      ]
+    },
+    {
+      "id": "F087",
+      "feature": "MIG 논리 GPU 할당",
+      "phase": "P07",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/compute_inventory.py",
+        "backend/engine/shared_scheduler.py",
+        "backend/remote/ssh_transport.py",
+        "src/renderer/components/compute/ComputeServerPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched."
+      ]
+    },
+    {
+      "id": "F088",
+      "feature": "학습 작업 등록·상태·대기열 API",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_compute.py",
+        "backend/api/routes_training.py",
+        "backend/remote/coordinator.py",
+        "src/renderer/components/compute/ComputeJobsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched."
+      ]
+    },
+    {
+      "id": "F089",
+      "feature": "AI 라벨링·전문 모델의 서버 자원 사용",
+      "phase": "P07",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/remote/worker.py",
+        "backend/remote/specialist_inference.py",
+        "backend/remote/coordinator.py",
+        "backend/engine/source_aliases.py",
+        "backend/engine/compute_label_results.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "detail": "215-test final remote/allocation gate passed (55.10s); actual CPU specialist fit/infer, two-rank gloo/cancel, native shared OCR API/model readback and genuine SAM2 mask are recorded separately from pending physical hardware acceptance."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P07-compute.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Physical multi-GPU/NCCL, GPU memory-sharing pressure, MIG, external SSH and current native UI/field acceptance remain unperformed; no costly GPU jobs launched.",
+        "Actual CPU family fit/infer and genuine SAM2 point-mask worker verified. Text/example providers require configured optional worker weights/dependencies; industrial quality and operational approval are not claimed."
+      ]
+    },
+    {
+      "id": "F090",
+      "feature": "전체 플로우를 하나의 호출로 실행",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_package.py",
+        "backend/engine/flow_package_runtime.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Read-only 8192x5464 source with preserved SHA; native fitted pixels/measurements/GAN composition and whole-flow subprocess parity. Integration fixture model quality remains unvalidated."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F091",
+      "feature": "여러 모델의 순차·병렬 추론",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/flow_executor.py",
+        "backend/api/routes_flowchart.py",
+        "src/renderer/components/flowchart/FlowGeometryEditors.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger.",
+        "GPU reservation and owned hardware measurement remain pending in P07; GPU concurrency defaults to1."
+      ]
+    },
+    {
+      "id": "F092",
+      "feature": "추론 최대 시간 제한",
+      "phase": "P09",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/inspection_service.py",
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F093",
+      "feature": "C++ 네이티브 Runtime 연동",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/inspection_service.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F094",
+      "feature": "C# 네이티브 Runtime 연동",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "examples/InspectionServiceClient.cs",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F095",
+      "feature": "Python Runtime 연동",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F096",
+      "feature": "Predictor·Executor 호출 구조",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F097",
+      "feature": "CPU 추론",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/edge_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F098",
+      "feature": "CUDA GPU 추론",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/remote/coordinator.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F099",
+      "feature": "Intel OpenVINO CPU·GPU·iGPU·NPU",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/edge_runtime.py",
+        "backend/engine/exporter.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F100",
+      "feature": "Jetson 등 Embedded 보드 실행",
+      "phase": "P09",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "unit",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/edge_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F101",
+      "feature": "추가 변환 작업 없이 하드웨어에 적용",
+      "phase": "P09",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/exporter.py",
+        "backend/engine/edge_runtime.py",
+        "backend/engine/runtime_deadline.py",
+        "backend/engine/runtime_configuration.py",
+        "backend/engine/flow_package_runtime.py",
+        "backend/engine/openvino_runtime.py",
+        "backend/engine/runtime_precision_approval.py",
+        "backend/api/routes_export.py",
+        "native_runtime/vision_runtime.cpp",
+        "native_runtime/VisionRuntime.cs",
+        "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "summary": "Actual CPU native C++/C# full-flow, hard termination, OpenVINO conversion/INT8, immutable approval and saved holdout evidence; hardware acceptance separate."
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P09-runtime-device-sdk.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and industrial model quality approval remain separate.",
+        "CUDA/Jetson and Intel GPU/iGPU/NPU target hardware execution remain pending.",
+        "Windows/Linux native ABI builds and Windows process-tree deadline require target verification."
+      ]
+    },
+    {
+      "id": "F102",
+      "feature": "학습 모델 파일 출력",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/exporter.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F103",
+      "feature": "학습 설정 JSON 출력·재사용",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/training_provenance.py",
+        "backend/engine/trainer.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F104",
+      "feature": "평가 지표 JSON 출력",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/evaluation_history.py",
+        "backend/api/routes_model_comparisons.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F105",
+      "feature": "이미지별 예측 JSON 출력",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_inspections.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F106",
+      "feature": "외부 UI에 학습 기능을 통합",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_training.py",
+        "backend/api/routes_ocr.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F107",
+      "feature": "외부 JSON 라벨로 현장 재학습",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/annotation_formats.py",
+        "backend/engine/grouped_dataset_views.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F108",
+      "feature": "높은 신뢰도 예측을 자동 라벨로 사용",
+      "phase": "P10",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_fleet.py",
+        "backend/api/routes_label_suggestions.py",
+        "backend/api/routes_model_operations.py",
+        "backend/engine/fleet.py",
+        "backend/engine/fleet_agent.py",
+        "backend/engine/model_operations.py",
+        "backend/engine/operations_worker.py",
+        "src/renderer/components/runtime/FleetPanel.tsx",
+        "src/renderer/components/runtime/ModelOperationsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F109",
+      "feature": "새 데이터에서 자동 재학습·재배포",
+      "phase": "P10",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_fleet.py",
+        "backend/api/routes_model_deployments.py",
+        "backend/api/routes_model_operations.py",
+        "backend/engine/fleet.py",
+        "backend/engine/fleet_agent.py",
+        "backend/engine/managed_service.py",
+        "backend/engine/model_operations.py",
+        "backend/engine/operations_worker.py",
+        "src/renderer/components/runtime/FleetPanel.tsx",
+        "src/renderer/components/runtime/ModelOperationsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F110",
+      "feature": "현장과 중앙 서버를 묶어 모델 관리",
+      "phase": "P10",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_fleet.py",
+        "backend/api/routes_model_deployments.py",
+        "backend/api/routes_model_operations.py",
+        "backend/engine/fleet.py",
+        "backend/engine/fleet_agent.py",
+        "backend/engine/model_operations.py",
+        "backend/engine/operations_worker.py",
+        "backend/remote/coordinator.py",
+        "src/renderer/components/runtime/FleetPanel.tsx",
+        "src/renderer/components/runtime/ModelOperationsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F111",
+      "feature": "장비에서 학습과 추론 동시 운용",
+      "phase": "P10",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_fleet.py",
+        "backend/api/routes_model_operations.py",
+        "backend/engine/fleet.py",
+        "backend/engine/fleet_agent.py",
+        "backend/engine/managed_service.py",
+        "backend/engine/model_operations.py",
+        "backend/engine/operations_worker.py",
+        "backend/engine/shared_scheduler.py",
+        "src/renderer/components/runtime/FleetPanel.tsx",
+        "src/renderer/components/runtime/ModelOperationsPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P10-operations.md",
+          "result": "actual pretrained parent retrain, fixed holdout comparison, simultaneous independent inference, authenticated real CPU field apply/reopen/rollback; hardware and quality acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F112",
+      "feature": "데이터 증강 방법 자동 선택",
+      "phase": "P04",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/augmentations.py",
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "backend/engine/automated_trials.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P04-integration.md",
+          "summary": "Generated CPU/API, real optimizer and measured specialist regression evidence recorded separately from native UI acceptance."
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F113",
+      "feature": "권한을 가진 client-server 공동 프로젝트",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/main.py",
+        "backend/engine/project_labelsets.py",
+        "backend/api/shared_authorization.py",
+        "backend/engine/shared_accounts.py",
+        "src/renderer/components/compute/SharedProjectPanel.tsx",
+        "src/main/sharedSession.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "docs/implementation-ledger/P03-data-accounts.md"
+        },
+        {
+          "kind": "workflow",
+          "reference": "docs/implementation-ledger/P02-P03-integration.md"
+        }
+      ],
+      "limitations": [
+        "Additional native control acceptance and physical shared-server installation remain separate from passed API and independent authorization review."
+      ]
+    },
+    {
+      "id": "F114",
+      "feature": "원본·수정 데이터와 처리 이력 관리",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_archive.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F115",
+      "feature": "JPG·PNG·BMP·TIFF 이미지 입력",
+      "phase": "P03",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/industrial_adapters.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F116",
+      "feature": "DCM·DICOM 이미지 입력",
+      "phase": "P03",
+      "priority": "P3",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/industrial_adapters.py",
+        "backend/engine/dicom_input.py",
+        "backend/api/routes_dicom.py",
+        "src/renderer/components/labeling/DicomPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending.",
+        "Optional pydicom and compressed-pixel decoder required; synthetic CPU DICOM fixtures verified; multi-frame default import requires explicit frame selection."
+      ]
+    },
+    {
+      "id": "F117",
+      "feature": "외부 JSON 라벨 입력",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/shared_authorization.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/dataset_metadata.py",
+        "backend/engine/model_catalog.py",
+        "backend/engine/project_labelsets.py",
+        "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P03-data-accounts.md",
+          "result": "named labelsets clone/switch/reopen, revisions/audit/role checks, native source formats/JSON interchange and catalog thresholds verified; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F118",
+      "feature": "외부 mask 라벨 이미지 입력",
+      "phase": "P03",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/grouped_dataset_views.py",
+        "backend/engine/annotation_formats.py",
+        "backend/engine/mask_exchange.py",
+        "backend/api/routes_mask_exchange.py",
+        "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P02-labeling.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P02-P03-integration.md",
+          "result": "118 focused backend + 10 renderer contracts; native UI acceptance pending"
+        }
+      ],
+      "limitations": [
+        "Native UI acceptance, hardware execution and manufacturing/heldout quality approval remain pending."
+      ]
+    },
+    {
+      "id": "F119",
+      "feature": "저장 플로우로 사전 단일·일괄 검사",
+      "phase": "P06",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "src/renderer/components/inference/InferenceCenterStudio.tsx",
+        "backend/api/routes_inspections.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "31 focused geometry/GAN/catalog backend,18 shared/catalog/execution/OBB backend,30 flow+3 GAN renderer contracts; typecheck/build passed"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P06-geometry-flow.md",
+          "result": "Integrated execution path and recorded functional workflow. Physical hardware, all native controls and manufacturing quality acceptance remain separate; see the ledger for the exact observed scope."
+        }
+      ],
+      "limitations": [
+        "Native desktop interaction and stored downstream result acceptance remain pending; see per-ID ledger."
+      ]
+    },
+    {
+      "id": "F120",
+      "feature": "학습 CLI의 지정 출력 폴더",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/trainer.py",
+        "backend/api/routes_export.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F121",
+      "feature": "학습 CLI help·진행률·지표 출력",
+      "phase": "P08",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "real_input",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/api/routes_training.py",
+        "backend/remote/worker.py",
+        "backend/engine/training_engine.py",
+        "backend/training_cli.py",
+        "backend/api/routes_training_engine.py",
+        "scripts/verify-real-family-cpu.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "ref": "docs/implementation-ledger/P08-training-engine.md"
+        },
+        {
+          "kind": "workflow",
+          "ref": "docs/implementation-ledger/P08-real-input-manifest.json",
+          "summary": "Native crops from supplied real images: all ten actual CPU family fits/evaluation/prediction/reopen, nine applicable packaged flows, unchanged171original files. Controlled background/OCR/rotation truth and industrial quality are explicitly unapproved."
+        }
+      ],
+      "limitations": [
+        "Actual native-pixel functional CPU proof; background OK, OCR text and rotation targets are controlled proxies. Manufacturing quality remains unapproved.",
+        "Native UI interaction, deployed external UI, installed multi-OS CLI and hardware acceptance remain independently gated."
+      ]
+    },
+    {
+      "id": "F122",
+      "feature": "Probability Threshold로 예측 필터",
+      "phase": "P01",
+      "priority": "P2",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    },
+    {
+      "id": "F123",
+      "feature": "Size Threshold로 영역 필터",
+      "phase": "P01",
+      "priority": "P1",
+      "implementation": "integrated",
+      "verification": "api",
+      "acceptance": "실제 입력에서 동작·오류·취소·저장·재열기·후속 단계·독립 실행 결과를 확인한다.",
+      "source_files": [
+        "backend/engine/flowchart_engine.py",
+        "backend/engine/rule_evaluation.py",
+        "backend/engine/segmentation_evidence.py",
+        "backend/engine/trainer.py"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        },
+        {
+          "kind": "workflow",
+          "path": "docs/implementation-ledger/P01-flow.md",
+          "result": "multiclass native masks/class2 confidence, class Blob/count/area/gray/absence, OCR correction/position and probability/size gates tested; native acceptance separate"
+        }
+      ],
+      "limitations": [
+        "Native desktop acceptance and manufacturing model quality are recorded separately; applicable physical hardware acceptance remains pending."
+      ]
+    }
+  ]
+}

@@ -80,6 +80,12 @@ def _project_root(request: Request) -> Path:
 
 
 def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
+    account=getattr(request.state,'account_user',None)
+    accounts=getattr(request.app.state,'accounts',None)
+    if account and accounts:
+        accounts.register_project(project['id'],project['project_dir'],account['id'])
+        request.state.scoped_project=project
+        return project
     try:
         set_active_project_models_dir(project["models_dir"])
     except ValueError as exc:
@@ -228,6 +234,10 @@ def open_project(req: ProjectOpenRequest, request: Request):
 
 @router.get("/current", response_model=ProjectConfigResponse)
 def get_current_project(request: Request):
+    scoped=getattr(request.state,'scoped_project',None)
+    if scoped is not None:return scoped
+    if getattr(request.state,'account_user',None) is not None:
+        raise HTTPException(409,'Select an authorized shared project first')
     project = getattr(request.app.state, "current_project", None)
     if project is not None:
         return project
@@ -266,6 +276,9 @@ def update_project(req: ProjectUpdateRequest, request: Request):
 
 @router.get("/list")
 def list_projects(request: Request):
+    account=getattr(request.state,'account_user',None)
+    if account:
+        return {'projects':[_load_project(Path(row['path'])) for row in request.app.state.accounts.projects_for(account['id'])]}
     return {"projects": _load_history(request)}
 
 

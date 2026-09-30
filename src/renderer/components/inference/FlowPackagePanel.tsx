@@ -8,6 +8,8 @@ import type { ImageMeta, VisionTask } from '../../types';
 import { savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import { canVerifyFlowOnHost, edgeDeploymentCommands, flowDeploymentOptions, type EdgeTarget, type FlowDeploymentProfile } from './edgeDeployment';
+import {runtimeDeploymentApi} from '../../services/runtimeDeploymentApi';
+import {RuntimeOptimizationPanel} from './RuntimeOptimizationPanel';
 
 interface FlowExportResult {
   package_path: string;
@@ -15,7 +17,7 @@ interface FlowExportResult {
   pipeline_id: string;
   model_job_ids: string[];
   total_files: number;
-  deployment?: { profile: 'edge_cpu'; device: 'cpu'; target: EdgeTarget };
+  deployment?: { profile: 'edge_cpu'|'edge_cuda'; device: string; target: EdgeTarget };
   parity: {
     status: 'not_run' | 'passed';
     image_path?: string;
@@ -49,9 +51,12 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     linux: ['x86_64', 'arm64'], windows: ['x86_64'], macos: ['arm64'],
   });
   const [edgeTargetError, setEdgeTargetError] = useState<string | null>(null);
+  const [deadlineMs,setDeadlineMs]=useState(30000),[cpuThreads,setCPUThreads]=useState(1),[runtimeDevice,setRuntimeDevice]=useState('cpu');
+  const [runtimeDevices,setRuntimeDevices]=useState<string[]>(['cpu']);
   const canVerify = canVerifyFlowOnHost(deploymentProfile, edgeTarget, hostTarget);
   useEffect(() => {
     let active = true;
+    runtimeDeploymentApi.capabilities().then(value=>{if(active)setRuntimeDevices(value.torch_devices);}).catch(()=>{});
     api.export.edgeTargets().then((available) => {
       if (!active) return;
       setHostTarget(available.host);
@@ -120,12 +125,13 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     setFailedExport(null);
     setIsExporting(true);
     try {
-      const exported = await api.export.flow({
+      const exported = await runtimeDeploymentApi.exportFlow({
         source_dataset_path: sourceFolder,
         recipe_task: selectedVersion.recipe_task,
         version_id: selectedVersion.version_id,
         package_name: `modu_flow_${selectedVersion.version_id.slice(0, 8)}_${Date.now()}`,
         ...flowDeploymentOptions(deploymentProfile, edgeTarget),
+        runtime_config:{deadline_ms:deadlineMs,cpu_threads:cpuThreads,device:deploymentProfile==='edge_cpu'?'cpu':deploymentProfile==='edge_cuda'?'cuda:0':runtimeDevice},
         ...(verifyOnImage && canVerify && selectedImage ? {
           verification_image_path: selectedImage.file_path,
           verification_image_id: selectedImage.image_id,
@@ -177,19 +183,21 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       <label className="grid gap-1.5 text-xs font-medium text-slate-300">배포 프로필
         <select value={deploymentProfile} disabled={isExporting} onChange={(event) => {
           setDeploymentProfile(event.target.value as FlowDeploymentProfile); setResult(null); setFailedExport(null); setError(null);
+          if(event.target.value==='edge_cuda')setEdgeTarget({os:'linux',architecture:edgeTarget.architecture});
         }} className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100">
           <option value="standard">표준 Python 패키지 (CPU / CUDA / MPS)</option>
           <option value="edge_cpu">CPU Edge (설치·사전 점검·실행)</option>
+          <option value="edge_cuda">CUDA Edge / Jetson (벤더 Runtime 필요)</option>
         </select>
       </label>
-      {deploymentProfile === 'edge_cpu' && <>
+      {deploymentProfile !== 'standard' && <>
         <label className="grid gap-1.5 text-xs font-medium text-slate-300">대상 운영체제
           <select value={edgeTarget.os} disabled={isExporting} onChange={(event) => {
             const os = event.target.value as EdgeTarget['os'];
             setEdgeTarget({ os, architecture: edgeTargets[os].includes(edgeTarget.architecture) ? edgeTarget.architecture : edgeTargets[os][0] });
             setResult(null); setFailedExport(null); setError(null);
           }} className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100">
-            <option value="linux">Linux</option><option value="windows">Windows</option><option value="macos">macOS</option>
+            <option value="linux">Linux</option>{deploymentProfile!=='edge_cuda'&&<><option value="windows">Windows</option><option value="macos">macOS</option></>}
           </select>
         </label>
         <label className="grid gap-1.5 text-xs font-medium text-slate-300">대상 CPU 아키텍처
@@ -202,6 +210,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         </label>
       </>}
     </div>
+    <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-300"><label>추론 최대 시간 (ms) <input type="number" min={1} max={86400000} value={deadlineMs} disabled={isExporting} onChange={e=>setDeadlineMs(Math.max(1,Math.min(86400000,Math.round(Number(e.target.value)))))} className="w-24 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label><label>CPU 스레드 <input type="number" min={1} max={64} value={cpuThreads} disabled={isExporting} onChange={e=>setCPUThreads(Math.max(1,Math.min(64,Math.round(Number(e.target.value)))))} className="w-16 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label>{deploymentProfile==='standard'&&<label>실행 장치 <select value={runtimeDevice} disabled={isExporting} onChange={e=>setRuntimeDevice(e.target.value)} className="bg-slate-900">{runtimeDevices.map(device=><option key={device}>{device}</option>)}</select></label>}<span className="text-slate-500">시간 초과 시 실행 프로세스를 종료하고 REVIEW로 기록합니다.</span></div>
     {deploymentProfile === 'edge_cpu' && <p className="mt-2 text-xs leading-5 text-slate-400">
       전체 플로우를 CPU로 실행합니다. 대상에 Python 3.10–3.13과 호환 패키지가 필요하며 설치·사전 점검 CLI를 포함합니다. 특정 보드·벤더 SDK·양자화·현장 성능은 검증하지 않았습니다.
     </p>}
@@ -255,11 +264,13 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       {result.parity.status === 'passed' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
       <p className="mt-2 break-all font-mono text-slate-400">{result.package_path}</p>
       {result.deployment && <div className="mt-3 rounded border border-sky-800 bg-sky-950/20 p-3">
-        <p className="font-semibold text-sky-200">CPU Edge · {result.deployment.target.os} / {result.deployment.target.architecture} · CPU 고정</p>
+        <p className="font-semibold text-sky-200">{result.deployment.profile} · {result.deployment.target.os} / {result.deployment.target.architecture} · {result.deployment.device}</p>
         <p className="mt-2 text-slate-400">패키지 폴더를 대상 장비로 복사한 뒤 아래 순서로 실행하세요.</p>
         <pre className="mt-2 overflow-x-auto whitespace-pre text-[11px] text-slate-300">{Object.values(edgeDeploymentCommands(result.deployment.target)).join('\n')}</pre>
       </div>}
       <p className="mt-2 text-slate-500">이 결과는 선택한 이미지 1장의 동일성 검증입니다. 현장 서비스 적용 여부는 별도로 확인하세요.</p>
+      <div className="mt-3 rounded border border-slate-700 p-3"><h4 className="font-semibold">Python · C++ · C# Predictor / Executor</h4><p className="mt-1 text-slate-400">전체 DAG와 모든 연결 모델의 원본 좌표·판정·측정 결과를 같은 JSON으로 제공합니다.</p><pre className="mt-2 overflow-auto text-[11px]">{'python native_runtime/build_native.py --output native-build\nnative-build/vision_predict /absolute/package /absolute/image.png 30000\ndotnet build native_runtime/VisionRuntime.csproj -o native-build/csharp'}</pre><p className="mt-1 text-slate-500">C# 출력 폴더에 빌드한 네이티브 라이브러리를 복사하세요. CPython 개발 헤더와 대상 아키텍처의 의존성이 필요합니다.</p></div>
+      <RuntimeOptimizationPanel packagePath={result.package_path} sourceFolder={sourceFolder} task={task}/>
     </div>}
   </section>;
 };

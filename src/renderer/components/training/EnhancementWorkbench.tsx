@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { request } from '../../services/api';
-import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { WarmStartSelector } from './WarmStartSelector';
+import {AutoDLWorkbench} from './AutoDLWorkbench';
+import {TrainingDeviceSelector} from './ProgramWorkbenchControls';
+import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
 
 interface EnhancementModel { job_id: string; metadata: { best_epoch: number; dataset_path: string; source_dataset_path: string } }
 interface EnhancementMetrics { sample_count: number; input_psnr: number; output_psnr: number; improved: boolean }
@@ -11,10 +13,12 @@ interface EnhancementJob { job_id: string; status: string; epoch: number; epochs
 const activeStatus = (status: string) => ['queued', 'running', 'stopping'].includes(status);
 
 export function EnhancementWorkbench() {
-  const source = useDatasetStore((s) => s.folderPath);
+  const source = useProjectStore((s) => s.project?.source_dataset_dir || '');
   const projectId = useProjectStore((s) => s.project?.id);
   const labelsetId = useProjectStore((s) => s.project?.active_labelset_id || 'default');
   const [datasetPath, setDatasetPath] = useState('');
+  const [datasets,setDatasets] = useState<PreparedDataset[]>([]);
+  const [device,setDevice] = useState<LocalTrainingDevice>('cpu');
   const [models, setModels] = useState<EnhancementModel[]>([]);
   const [jobId, setJobId] = useState('');
   const [epochs, setEpochs] = useState(1);
@@ -40,7 +44,11 @@ export function EnhancementWorkbench() {
   };
   useEffect(() => {
     let current = true;
-    setDatasetPath(''); setModels([]); setJobId(''); setJob(null); setJobs([]); setBusy(''); setSampleCount(null); setMetrics(null); setError(''); setNotice('');
+    setDatasetPath('');setDatasets([]); setModels([]); setJobId(''); setJob(null); setJobs([]); setBusy(''); setSampleCount(null); setMetrics(null); setError(''); setNotice('');
+    void request<{datasets:PreparedDataset[]}>('/api/enhancement/datasets').then(result=>{
+      if(!current||currentScope.current!==scope)return;setDatasets(result.datasets);
+      const latest=result.datasets.at(-1);if(latest){setDatasetPath(latest.dataset_path);setSampleCount(latest.sample_count||null);}
+    }).catch(e=>{if(current)setError(e instanceof Error?e.message:'준비된 데이터 목록을 읽지 못했습니다.');});
     void request<{ models: EnhancementModel[] }>('/api/enhancement/models').then((result) => {
       if (current) setModels(result.models.filter((m) => !source || m.metadata.source_dataset_path === source));
     }).catch((e) => { if (current) setError(e instanceof Error ? e.message : '모델 목록을 읽지 못했습니다.'); });
@@ -83,11 +91,12 @@ export function EnhancementWorkbench() {
     finally { if (currentScope.current === expected) setBusy(''); }
   };
   const prepare = () => action('학습 이미지 준비', async () => {
-    const result = await request<{ dataset_path: string; records: unknown[] }>('/api/enhancement/prepare', {
+    const result = await request<{ dataset_path: string; records: unknown[]; provenance:PreparedDataset['provenance'] }>('/api/enhancement/prepare', {
       method: 'POST', body: JSON.stringify({ source_dataset_path: source, noise_sigma: sigma, ...(imageLimit ? { image_limit: imageLimit } : {}) }),
     });
     if (currentScope.current !== scope) return;
     setDatasetPath(result.dataset_path); setSampleCount(result.records.length); setMetrics(null);
+    setDatasets(old=>[...old,{dataset_path:result.dataset_path,sample_count:result.records.length,provenance:result.provenance}]);
     setNotice(`원본을 보존하고 ${result.records.length}쌍을 별도 폴더에 준비했습니다.`);
   });
   const load = () => action('정답 쌍 확인', async () => {
@@ -97,7 +106,7 @@ export function EnhancementWorkbench() {
   });
   const train = () => action('이미지 개선 학습', async () => {
     const result = await request<EnhancementJob>('/api/enhancement/train', {
-      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs, device: 'cpu', background: true, ...(warmParentId ? {warm_start_job_id: warmParentId} : {}) }),
+      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs, device, background: true, ...(warmParentId ? {warm_start_job_id: warmParentId} : {}) }),
     });
     if (currentScope.current !== scope) return;
     setJob(result); setJobs((old) => [result, ...old.filter((item) => item.job_id !== result.job_id)]);
@@ -105,7 +114,7 @@ export function EnhancementWorkbench() {
   });
   const evaluate = () => action('시험 평가', async () => {
     const result = await request<EnhancementMetrics>('/api/enhancement/evaluate', {
-      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, job_id: jobId }),
+      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, job_id: jobId, device }),
     });
     if (currentScope.current === scope) setMetrics(result);
   });
@@ -123,7 +132,7 @@ export function EnhancementWorkbench() {
 
   const input = 'mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 text-slate-100';
   const button = 'rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40';
-  return <details className="rounded border border-[#344255] bg-[#182332] text-sm text-slate-200">
+  return <details open className="rounded border border-[#344255] bg-[#182332] text-sm text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold"><ImagePlus className="h-4 w-4 text-cyan-400" />이미지 개선 모델</summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <p className="leading-5 text-slate-300">입력 이미지와 개선 정답 쌍으로 학습합니다. 현재 데이터의 원본을 정답으로 두고 노이즈 입력을 별도로 준비하거나, 준비된 정답 쌍을 불러올 수 있습니다.</p>
@@ -133,10 +142,12 @@ export function EnhancementWorkbench() {
         <button type="button" disabled={!source || !!busy || training} onClick={() => void prepare()} className={button}>현재 데이터로 정답 쌍 준비</button>
       </div>
       {imageLimit > 0 && <p className="text-slate-400">경로 순서의 처음 {imageLimit}장을 준비합니다. 학습·검증·시험에는 서로 다른 원본을 배치하며 실제 선택 목록은 정답 쌍에 기록됩니다. 최소 3장의 서로 다른 이미지가 필요합니다.</p>}
+      {datasets.length>0&&<label className="block">저장된 학습 이미지 쌍<select value={datasetPath} onChange={e=>{setDatasetPath(e.target.value);setSampleCount(datasets.find(row=>row.dataset_path===e.target.value)?.sample_count||null);setMetrics(null);}} className={input}>{datasets.map((row,index)=><option value={row.dataset_path} key={row.dataset_path}>정답 쌍 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <label className="block">정답 쌍 폴더<input value={datasetPath} onChange={(e) => { setDatasetPath(e.target.value); setSampleCount(null); setMetrics(null); }} className={input} placeholder="pairs.json이 있는 폴더" /></label>
       <button type="button" disabled={!datasetPath || !!busy} onClick={() => void load()} className={button}>정답 쌍 확인</button>
       {sampleCount !== null && <span className="ml-3 text-emerald-300">검증된 이미지 쌍 {sampleCount}개</span>}
       <div className="flex flex-wrap items-end gap-3 border-t border-[#344255] pt-4">
+        <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||training}/>
         <WarmStartSelector family="enhancement" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input aria-label="이미지 개선 학습 epoch" type="number" min={1} max={500} value={epochs} onChange={(e) => setEpochs(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className={`${input} max-w-24`} /></label>
         <button type="button" disabled={!sampleCount || !!busy || training} onClick={() => void train()} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">이미지 개선 후보 학습</button>
@@ -163,6 +174,8 @@ export function EnhancementWorkbench() {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-3 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {metrics && <div className="rounded border border-[#344255] p-3">시험 {metrics.sample_count}장 · 입력 PSNR {metrics.input_psnr.toFixed(2)} → 출력 {metrics.output_psnr.toFixed(2)} dB<br /><span className={metrics.improved ? 'text-emerald-300' : 'text-amber-300'}>{metrics.improved ? '시험 정답 대비 오차가 감소했습니다.' : '시험 정답 대비 개선이 확인되지 않았습니다.'}</span></div>}
+      <button type="button" disabled={!jobId} onClick={()=>void useProjectStore.getState().setStep(5)} className={button}>검사 플로우·배포 패키지</button>
+      <AutoDLWorkbench task="enhancement" familyDatasetPath={sampleCount?datasetPath:undefined} onComplete={()=>void refresh().catch(e=>{if(currentScope.current===scope)setError(e instanceof Error?e.message:String(e));})}/>
     </div>
   </details>;
 }

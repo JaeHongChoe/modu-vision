@@ -310,6 +310,12 @@ class UnifiedAutoMLTrainer:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.device = get_device(device)
         self.callback = callback or TrainingCallback()
+        from backend.engine.distributed_training import current_distributed_context,is_primary
+        context=current_distributed_context()
+        if context.world_size>1:
+            if self.task not in ('classification','patch_classification','segmentation'):raise ValueError('Distributed training supports classification, patch classification and segmentation')
+            self.device=torch.device(context.device)
+            if not is_primary():self.callback=TrainingCallback()
         self._abort_flag = threading.Event()
 
         preset_key = preset.lower().strip()
@@ -323,6 +329,10 @@ class UnifiedAutoMLTrainer:
         logger.info("Trainer abort requested.")
         self._abort_flag.set()
 
+    def _cancel_requested(self)->bool:
+        from backend.engine.distributed_training import synchronize_cancel
+        return synchronize_cancel(self._abort_flag)
+
     def train(self, job_id: str = "job_default") -> Dict[str, Any]:
         """Executes full AutoML training workflow with telemetry streaming."""
         start_time = time.time()
@@ -333,7 +343,15 @@ class UnifiedAutoMLTrainer:
         patience = int(self.overrides.get("patience", self.config.patience))
         if batch_size < 1 or learning_rate <= 0 or patience < 1:
             raise ValueError("Training batch size, learning rate, and patience must be positive")
-        optimal_size = calculate_optimal_image_size((target_size, target_size), target_max=target_size)
+        if 'image_size' in self.overrides:
+            # Dataset loaders use OpenCV/PIL (width, height) geometry. Explicit
+            # controls must stay exact, including rectangular parent settings.
+            dimensions=tuple(target_size) if isinstance(target_size,(list,tuple)) else (target_size,target_size)
+            if len(dimensions)!=2 or any(type(value)is not int or not 32<=value<=4096 or value%16 for value in dimensions):
+                raise ValueError('Training image_size must be a scalar or [width,height] of bounded multiples of 16')
+            optimal_size=dimensions
+        else:
+            optimal_size = calculate_optimal_image_size((target_size, target_size), target_max=target_size)
 
         self.callback.on_training_start({
             "job_id": job_id,
@@ -346,7 +364,8 @@ class UnifiedAutoMLTrainer:
 
         try:
             # 1. Setup Data Augmentation & Datasets
-            aug = create_industrial_transforms(task=self.task, preset=self.preset_key, is_training=True)
+            aug = create_industrial_transforms(task=self.task, preset=self.preset_key, is_training=True,
+                                               profile=self.overrides.get('augmentation_profile', 'industrial'))
 
             if self.task == "classification":
                 train_ds = ClassificationDataset(
@@ -478,8 +497,17 @@ class UnifiedAutoMLTrainer:
                     raise ValueError("Warm-start parent architecture differs from current training model")
                 load_parent_weights(model, self.warm_start, classes)
 
-            train_loader = create_dataloader(train_ds, batch_size=batch_size, shuffle=True, task=self.task)
-            val_loader = create_dataloader(val_ds, batch_size=batch_size, shuffle=False, task=self.task)
+            if self.task not in ('anomaly', 'anomaly_detection') and (len(train_ds) == 0 or len(val_ds) == 0):
+                raise ValueError('Supervised training requires nonempty train and validation splits')
+            from backend.engine.distributed_training import current_distributed_context,distributed_loader,wrap_model,set_sampler_epoch,distributed_mean
+            distributed=current_distributed_context().world_size>1
+            if distributed:
+                train_loader=distributed_loader(train_ds,batch_size=batch_size,shuffle=True,num_workers=0)
+                val_loader=distributed_loader(val_ds,batch_size=batch_size,shuffle=False,partition=False,num_workers=0)
+                model=wrap_model(model)
+            else:
+                train_loader = create_dataloader(train_ds, batch_size=batch_size, shuffle=True, task=self.task)
+                val_loader = create_dataloader(val_ds, batch_size=batch_size, shuffle=False, task=self.task)
 
             # 2. Task 4 Anomaly Workflow (OK-Only Embedding Fit)
             if self.task in ("anomaly", "anomaly_detection"):
@@ -553,6 +581,7 @@ class UnifiedAutoMLTrainer:
             optimizer, scheduler = create_optimizer_and_scheduler(
                 model=model,
                 lr=learning_rate,
+                weight_decay=float(self.overrides.get('weight_decay', 1e-4)),
                 total_epochs=epochs,
                 warmup_epochs=min(3, max(1, epochs // 4)),
             )
@@ -561,7 +590,8 @@ class UnifiedAutoMLTrainer:
             global_step = 0
 
             for epoch in range(epochs):
-                if self._abort_flag.is_set():
+                set_sampler_epoch(train_loader,epoch)
+                if self._cancel_requested():
                     clear_device_cache(self.device)
                     self.callback.on_training_aborted(epoch, "Training aborted by user request")
                     return {"status": "aborted", "epoch": epoch}
@@ -570,7 +600,7 @@ class UnifiedAutoMLTrainer:
                 train_losses = []
 
                 for step, batch in enumerate(train_loader):
-                    if self._abort_flag.is_set():
+                    if self._cancel_requested():
                         clear_device_cache(self.device)
                         self.callback.on_training_aborted(epoch, "Training aborted by user request")
                         return {"status": "aborted", "epoch": epoch}
@@ -604,7 +634,7 @@ class UnifiedAutoMLTrainer:
                     self.callback.on_step_end(global_step, total_steps, loss_val, epoch)
                     global_step += 1
 
-                if self._abort_flag.is_set():
+                if self._cancel_requested():
                     clear_device_cache(self.device)
                     self.callback.on_training_aborted(epoch, "Training aborted by user request")
                     return {"status": "aborted", "epoch": epoch}
@@ -614,7 +644,7 @@ class UnifiedAutoMLTrainer:
                 val_losses = []
                 with torch.no_grad():
                     for batch in val_loader:
-                        if self._abort_flag.is_set():
+                        if self._cancel_requested():
                             clear_device_cache(self.device)
                             self.callback.on_training_aborted(epoch, "Training aborted by user request")
                             return {"status": "aborted", "epoch": epoch}
@@ -636,13 +666,15 @@ class UnifiedAutoMLTrainer:
                                 loss = criterion(model(imgs), masks)
                         val_losses.append(float(loss.item()))
 
-                if self._abort_flag.is_set():
+                if self._cancel_requested():
                     clear_device_cache(self.device)
                     self.callback.on_training_aborted(epoch, "Training aborted by user request")
                     return {"status": "aborted", "epoch": epoch}
 
                 mean_train_loss = float(np.mean(train_losses)) if train_losses else 0.0
                 mean_val_loss = float(np.mean(val_losses)) if val_losses else 0.0
+                mean_train_loss=distributed_mean(mean_train_loss,weight=len(train_losses))
+                mean_val_loss=distributed_mean(mean_val_loss,weight=len(val_losses))
                 curr_lr = float(optimizer.param_groups[0]["lr"])
 
                 improved = early_stopping.step(mean_val_loss, epoch)
@@ -674,7 +706,7 @@ class UnifiedAutoMLTrainer:
                     break
 
             elapsed = time.time() - start_time
-            if self._abort_flag.is_set():
+            if self._cancel_requested():
                 clear_device_cache(self.device)
                 self.callback.on_training_aborted(epoch, "Training aborted by user request")
                 return {"status": "aborted", "epoch": epoch}
@@ -682,7 +714,7 @@ class UnifiedAutoMLTrainer:
             if not (self.output_dir / "best_model.pt").exists():
                 fallback_loss = mean_val_loss if (val_losses and not np.isnan(mean_val_loss)) else 0.0
                 self._save_checkpoint(epochs - 1, model, fallback_loss, classes, optimal_size, elapsed)
-            if self._abort_flag.is_set():
+            if self._cancel_requested():
                 clear_device_cache(self.device)
                 self.callback.on_training_aborted(epoch, "Training aborted by user request")
                 return {"status": "aborted", "epoch": epoch}
@@ -698,6 +730,9 @@ class UnifiedAutoMLTrainer:
         self, epoch: int, model: Any, metric: float, classes: List[str], img_size: Tuple[int, int], elapsed: float
     ) -> None:
         """Atomically saves best_model.pt and generates model_meta.json."""
+        from backend.engine.distributed_training import is_primary,unwrap_model,current_distributed_context
+        if not is_primary():return
+        model=unwrap_model(model)
         tmp_pt = self.output_dir / "best_model.pt.tmp"
 
         meta = {
@@ -711,6 +746,15 @@ class UnifiedAutoMLTrainer:
             "device": str(self.device),
             "training_duration_seconds": round(elapsed, 2),
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "distributed_world_size":current_distributed_context().world_size,
+            "training_config": {"epochs": self.overrides.get('epochs', self.config.target_epochs),
+                "batch_size": self.overrides.get('batch_size', self.config.batch_size),
+                "learning_rate": self.overrides.get('learning_rate', self.config.learning_rate),
+                "weight_decay": self.overrides.get('weight_decay', 1e-4),
+                "image_size": self.overrides.get('image_size', self.config.image_size),
+                "patience": self.overrides.get('patience', self.config.patience),
+                "augmentation_profile": self.overrides.get('augmentation_profile', 'industrial'),
+                **self.overrides},
         }
 
         if self.task == "classification":
@@ -948,7 +992,7 @@ def infer(
         color_mask[mask_orig > 0] = [255, 40, 40]
         cv2.addWeighted(color_mask, 0.4, overlay, 0.6, 0, overlay)
 
-        polygons = extract_polygons(mask_orig, class_names={1: "defect"})
+        polygons = extract_polygons(mask_orig, class_names={index:name for index,name in enumerate(classes)})
 
         coverage = float(np.count_nonzero(mask_orig)) / float(orig_w * orig_h)
 
@@ -959,16 +1003,30 @@ def infer(
         else:
             probs_spatial = probs
 
-        if (mask_orig > 0).any():
-            confidence = float(probs_spatial[1][mask_dev > 0].mean().item())
-        else:
-            confidence = float(probs_spatial[0].mean().item())
+        predicted_probabilities = probs_spatial.gather(0, mask_dev.long().unsqueeze(0))[0]
+        confidence = float(predicted_probabilities.mean().item())
+        import base64, io
+        mask_candidates = []
+        for class_id in np.unique(mask_orig):
+            if class_id == 0:
+                continue
+            selected = mask_orig == class_id
+            rgba = np.zeros((orig_h, orig_w, 4), dtype=np.uint8)
+            rgba[..., :3] = [34, 211, 238]
+            rgba[..., 3] = selected.astype(np.uint8) * 255
+            stream = io.BytesIO()
+            Image.fromarray(rgba).save(stream, format='PNG')
+            class_confidence = float(probs_spatial[int(class_id)][mask_dev == int(class_id)].mean().item())
+            mask_candidates.append({'class_id':int(class_id), 'class_name':classes[int(class_id)],
+                                    'confidence':class_confidence,
+                                    'mask_rle':'data:image/png;base64,'+base64.b64encode(stream.getvalue()).decode('ascii')})
+
         confidence = round(max(0.0, min(1.0, confidence)), 4)
 
         latency = (time.time() - start_time) * 1000.0
         return InferenceResult(
             task="segmentation",
-            predictions={"mask_coverage_percent": round(coverage * 100.0, 3), "polygon_contours": polygons},
+            predictions={"mask_coverage_percent": round(coverage * 100.0, 3), "polygon_contours": polygons, "mask_candidates": mask_candidates},
             confidence_score=confidence,
             visual_overlay=overlay,
             latency_ms=round(latency, 2),

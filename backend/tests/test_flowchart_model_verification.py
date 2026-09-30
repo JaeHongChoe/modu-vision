@@ -113,6 +113,19 @@ def test_model_catalog_only_lists_completed_models_for_current_source(monkeypatc
     assert client.get("/api/flowchart/models/catalog", params={"source_dataset_path": str(source)}).json()["models"] == []
 
 
+def test_catalog_reports_checkpoint_thresholds_label_revision_and_parent(monkeypatch, tmp_path):
+    client, source = _client_with_models(monkeypatch, tmp_path)
+    meta = tmp_path / 'models' / 'job_456_inspector' / 'model_meta.json'
+    meta.write_text(json.dumps({'task': 'segmentation', 'optimal_threshold': .65, 'probability_threshold': .7,
+        'min_defect_area_px': 9, 'training_labelset_id': 'revision-a',
+        'warm_start': {'parent_job_id': 'job_parent'}}))
+    models = client.get('/api/flowchart/models/catalog', params={'source_dataset_path': str(source)}).json()['models']
+    model = next(row for row in models if row['job_id'] == 'job_456_inspector')
+    assert model['threshold_settings'] == {'optimal_threshold': .65, 'probability_threshold': .7, 'min_defect_area_px': 9}
+    assert model['training_labelset_id'] == 'revision-a'
+    assert model['parent_job_id'] == 'job_parent'
+
+
 def test_project_model_wins_when_legacy_global_job_has_same_id(monkeypatch, tmp_path):
     client, source = _client_with_models(monkeypatch, tmp_path)
     project = client.get("/api/project/current").json()

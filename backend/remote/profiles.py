@@ -10,7 +10,7 @@ import threading
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator,model_validator
 
 
 _STORE_LOCK = threading.RLock()
@@ -43,6 +43,20 @@ class ComputeProfile(BaseModel):
     runtime_kind: Literal["python", "docker"]
     runtime_value: str
     gpu_selector: str | None = None
+    memory_budget_mb:int|None=Field(None,strict=True,ge=1,le=1048576)
+    allow_sharing:bool=False
+    distributed_processes:int=Field(1,strict=True,ge=1,le=16)
+
+    @model_validator(mode='after')
+    def valid_allocation(self):
+        if self.allow_sharing and not self.memory_budget_mb:raise ValueError('GPU sharing requires an explicit memory budget')
+        selected=(self.gpu_selector or '').split(',')
+        if self.allow_sharing and (not self.gpu_selector or len(selected)!=1 or self.gpu_selector=='all'):
+            raise ValueError('GPU sharing requires one explicit device selector')
+        if self.distributed_processes>1:
+            if self.allow_sharing:raise ValueError('Distributed training and GPU sharing are separate allocation modes')
+            if self.gpu_selector!='all' and len(selected)<self.distributed_processes:raise ValueError('Distributed process count exceeds selected GPU count')
+        return self
 
     @field_validator("id")
     @classmethod
@@ -109,8 +123,13 @@ class ProfileStore:
 
     def _write(self, data: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        def serialize(profile):
+            row=profile.model_dump()
+            for name,default in {'memory_budget_mb':None,'allow_sharing':False,'distributed_processes':1}.items():
+                if row[name]==default:row.pop(name)
+            return row
         payload = {
-            "profiles": [profile.model_dump() for profile in data["profiles"]],
+            "profiles": [serialize(profile) for profile in data["profiles"]],
             "selected": data["selected"],
         }
         temporary: str | None = None

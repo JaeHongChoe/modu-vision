@@ -6,9 +6,11 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 import base64
+import io
 import json
 import re
 import uuid
+from PIL import Image
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,9 +19,11 @@ from backend.engine.specialized_training_jobs import start_job,require_training_
 
 from backend.api.routes_project import get_current_project
 from backend.engine.specialized_models import require_completed_checkpoint
+from backend.engine.annotation_storage import request_shared_scope
+from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.defect_gan import (
-    generate_defect_candidates, load_defect_gan_manifest,
-    train_defect_gan, write_defect_gan_manifest,
+    generate_defect_candidates, generate_composited_candidates, validate_composition_source, load_defect_gan_manifest,
+    train_defect_gan, write_defect_gan_manifest, prepare_defect_gan_dataset,
 )
 
 
@@ -32,12 +36,20 @@ class DefectCropRow(BaseModel):
     image: str = Field(min_length=1)
     bbox: list[int] = Field(min_length=4, max_length=4)
     split: Literal["train", "val", "test"]
+    label: str | None = Field(default=None, min_length=1)
+    source_sha256: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$')
 
 
 class GANManifestRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     dataset_path: str = Field(min_length=1)
     samples: list[DefectCropRow] = Field(min_length=1)
+
+
+class GANPrepareRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    source_dataset_path: str = Field(min_length=1)
+    samples: list[DefectCropRow] = Field(min_length=1, max_length=100000)
 
 
 class GANTrainRequest(BaseModel):
@@ -52,12 +64,24 @@ class GANTrainRequest(BaseModel):
     warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
 
 
+class GANCompositionRegion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1, max_length=100)
+    bbox: list[int] = Field(min_length=4, max_length=4)
+    opacity: float = Field(default=1, gt=0, le=1, allow_inf_nan=False)
+    feather_px: int = Field(default=0, ge=0, le=1024, strict=True)
+    mask_polygon: list[list[float]] | None = None
+
+
 class GANGenerateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     job_id: str = Field(pattern=r"^[0-9a-f]{32}$")
     count: int = Field(default=8, ge=1, le=20)
     seed: int = 0
     device: Literal["cpu", "cuda", "mps"] = "cpu"
+    source_image_path: str | None = None
+    source_sha256: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$')
+    regions: list[GANCompositionRegion] = Field(default_factory=list, max_length=32)
 
 
 def _models_root(request: Request) -> Path:
@@ -109,8 +133,81 @@ def inspect_manifest(dataset_path: str, request: Request):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"manifest_path": str(path), "manifest_sha256": sha256(path.read_bytes()).hexdigest(),
             "sample_count": len(manifest["samples"]), "samples": manifest["samples"],
+            "source_dataset_path": manifest.get('source_dataset_path'), "provenance": manifest.get('provenance', {}),
             "split_counts": {split: sum(row["split"] == split for row in manifest["samples"])
                              for split in ("train", "val", "test")}}
+
+
+@router.post('/prepare')
+def prepare(req: GANPrepareRequest, request: Request):
+    project = get_current_project(request)
+    try:
+        source = require_training_source(project, req.source_dataset_path)
+        owned = Path(project['dataset_dir'])
+        if owned.is_symlink() or (owned / 'defect_gan').is_symlink(): raise ValueError('GAN preparation storage is invalid')
+        output = owned / 'defect_gan' / uuid.uuid4().hex
+        dataset = prepare_defect_gan_dataset(source, output, [row.model_dump(exclude_none=True) for row in req.samples])
+        manifest = load_defect_gan_manifest(dataset); path = dataset / 'defect_gan.json'
+        return {'dataset_path': str(dataset), 'source_dataset_path': str(source), 'manifest_path': str(path),
+            'manifest_sha256': sha256(path.read_bytes()).hexdigest(), 'samples': manifest['samples'],
+            'sample_count': len(manifest['samples']), 'provenance': manifest['provenance'],
+            'split_counts': {split: sum(row['split'] == split for row in manifest['samples']) for split in ('train','val','test')}}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+def _family_dataset(project, requested):
+    raw = Path(requested).expanduser(); dataset = raw.resolve()
+    manifest = load_defect_gan_manifest(dataset)
+    canonical = manifest.get('source_dataset_path') or dataset
+    source = require_training_source(project, canonical)
+    if dataset != source:
+        owned = Path(project['dataset_dir'])
+        if raw.is_symlink() or owned.is_symlink() or not dataset.is_relative_to(owned.resolve()):
+            raise ValueError('GAN prepared family dataset must belong to the active project')
+    return source, dataset
+
+
+@router.get('/datasets')
+def datasets(request: Request):
+    project = get_current_project(request)
+    root = Path(project['dataset_dir']) / 'defect_gan'
+    rows = []
+    if root.is_dir() and not root.is_symlink():
+        for path in sorted(root.iterdir(), key=lambda p: p.stat().st_mtime_ns):
+            if not path.is_dir() or path.is_symlink(): continue
+            try:
+                source, dataset = _family_dataset(project, path)
+                manifest = load_defect_gan_manifest(dataset)
+            except (ValueError, OSError): continue
+            rows.append({'dataset_path': str(dataset), 'source_dataset_path': str(source),
+                'sample_count': len(manifest['samples']), 'provenance': manifest.get('provenance', {}),
+                'split_counts': {split: sum(row['split'] == split for row in manifest['samples']) for split in ('train','val','test')}})
+    return {'datasets': rows}
+
+
+def _source_image(project, image_path):
+    path = Path(image_path).expanduser()
+    if path.is_symlink() or not path.is_file(): raise ValueError('GAN source image is missing or symlinked')
+    path = path.resolve()
+    if request_shared_scope():
+        source = project.get('source_dataset_dir')
+        if not source or not path.is_relative_to(Path(source).resolve()):
+            raise ValueError('GAN composition source must belong to the active project source')
+    return path
+
+
+@router.get('/source-preview')
+def source_preview(image_path: str, request: Request):
+    try:
+        path = _source_image(get_current_project(request), image_path)
+        pixels = read_image_safely_rgb(path, max_dim=768)
+        with Image.open(path) as source: size = list(source.size)
+        data = io.BytesIO(); Image.fromarray(pixels).save(data, format='PNG')
+        return {'source_size': size, 'source_sha256': sha256(path.read_bytes()).hexdigest(),
+            'preview_data_url': 'data:image/png;base64,' + base64.b64encode(data.getvalue()).decode('ascii')}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def _family_digest(source):
@@ -121,14 +218,14 @@ def _family_digest(source):
 @router.post("/train")
 def train(req: GANTrainRequest, request: Request):
     project=get_current_project(request)
-    try:source=require_training_source(project,req.dataset_path)
+    try:source,dataset=_family_dataset(project,req.dataset_path)
     except ValueError as exc:raise HTTPException(409,str(exc)) from exc
     try:
         from backend.engine.specialized_warm_start import resolve_family_parent
-        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'defect_gan', source, source, req.model_dump()) if req.warm_start_job_id else None
+        parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'defect_gan', source, dataset, req.model_dump()) if req.warm_start_job_id else None
         output=_models_root(request)/uuid.uuid4().hex
         result=start_job(project=project,task='defect_gan',source=source,output=output,options=req,
-            runner=lambda event,progress,device:train_defect_gan(source,output,epochs=req.epochs,batch_size=req.batch_size,seed=req.seed,base_channels=req.base_channels,device=device,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:_family_digest(source),warm_start=parent)
+            runner=lambda event,progress,device:train_defect_gan(dataset,output,epochs=req.epochs,batch_size=req.batch_size,seed=req.seed,base_channels=req.base_channels,device=device,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:_family_digest(dataset),warm_start=parent,family_dataset=dataset)
         return JSONResponse(result,status_code=202) if req.background else result
     except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
@@ -140,8 +237,8 @@ def warm_start_parents(dataset_path: str, request: Request, base_channels: int =
     project = get_current_project(request)
     _models_root(request)
     try:
-        source = require_training_source(project, dataset_path)
-        return list_family_parents(project['models_dir'], 'defect_gan', source, source, {'base_channels': base_channels})
+        source, dataset = _family_dataset(project, dataset_path)
+        return list_family_parents(project['models_dir'], 'defect_gan', source, dataset, {'base_channels': base_channels})
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -199,8 +296,13 @@ def generate(req: GANGenerateRequest, request: Request):
         raise HTTPException(status_code=422, detail="Synthetic review storage is invalid")
     output = review_root / req.job_id / uuid.uuid4().hex
     try:
-        result = generate_defect_candidates(checkpoint, output, count=req.count,
-                                            seed=req.seed, device=req.device)
+        if req.source_image_path:
+            result = generate_composited_candidates(checkpoint, _source_image(project, req.source_image_path), output,
+                regions=[row.model_dump() for row in req.regions], count=req.count, seed=req.seed,
+                device=req.device, source_sha256=req.source_sha256)
+        else:
+            if req.regions or req.source_sha256: raise ValueError('Selected GAN regions require their original source image')
+            result = generate_defect_candidates(checkpoint, output, count=req.count, seed=req.seed, device=req.device)
     except (ValueError, OSError, RuntimeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     for item in result["candidates"]:
@@ -309,6 +411,7 @@ def open_review(job_id:str,review_id:str,request:Request):
     if root.is_symlink() or manifest.is_symlink() or not manifest.is_file():raise HTTPException(status_code=404,detail='Review group is unavailable')
     try:
         result=json.loads(manifest.read_text())
+        validate_composition_source(root, result)
         for row in result['candidates']:
             path=Path(row['path'])
             if path.is_symlink() or path.parent.resolve()!=root.resolve() or sha256(path.read_bytes()).hexdigest()!=row['sha256']:

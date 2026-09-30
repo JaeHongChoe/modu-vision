@@ -63,9 +63,11 @@ root_exists = os.path.isdir(root)
 free_bytes = shutil.disk_usage(root).free if root_exists else 0
 device_type = 'cpu'
 device_name = 'CPU'
+cuda_device_count=0
 if dependencies['torch']:
     import torch
     if torch.cuda.is_available():
+        cuda_device_count=torch.cuda.device_count()
         device_type = 'cuda'
         device_name = torch.cuda.get_device_name(0)
 pretrained_weights = {}
@@ -116,8 +118,11 @@ print(json.dumps({
     'free_bytes': free_bytes,
     'device_type': device_type,
     'device_name': device_name,
+    'device_inventory':device_inventory(),
+    'cuda_device_count':cuda_device_count,
 }))
 """
+_PROBE_SCRIPT=(Path(__file__).resolve().parents[1]/'engine'/'compute_inventory.py').read_text()+'\n'+_PROBE_SCRIPT
 
 
 class SSHTransportError(RuntimeError):
@@ -132,6 +137,8 @@ def require_training_runtime(readiness, task, preset, overrides=None, *, warm_st
     """Gate only the selected architecture; run-owned weights are transferred separately."""
     if not readiness.get('runtime_ready', readiness.get('ready', False)):
         raise ValueError(readiness.get('message') or 'Compute runtime is unavailable')
+    if task in {'rotation','ocr','rotated_detection','enhancement','defect_gan','labeling'}:
+        return
     from backend.engine.trainer import PRESET_CONFIGS
     from backend.engine.model_backbones import is_dino_backbone, canonical_dino_name
     options = overrides or {}

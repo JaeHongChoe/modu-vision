@@ -32,10 +32,11 @@ from backend.remote.snapshot import (
 )
 
 
-OPERATIONS = ("train", "evaluate", "infer", "flowchart_run", "benchmark", "export")
+OPERATIONS = ("train", "evaluate", "infer", "flowchart_run", "benchmark", "export", "label")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 _TASKS = {"classification", "detection", "segmentation", "anomaly"}
+_TRAIN_TASKS = _TASKS | {'patch_classification','rotation','ocr','rotated_detection','enhancement','defect_gan'}
 _ARTIFACTS = ("outputs/best_model.pt", "outputs/model_meta.json")
 
 
@@ -154,7 +155,7 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         raise ValueError("Worker spec operation does not match train")
     if not isinstance(data.get("job_id"), str) or not _JOB_ID_RE.fullmatch(data["job_id"]):
         raise ValueError("Invalid job_id")
-    if data.get("task") not in _TASKS:
+    if data.get("task") not in _TRAIN_TASKS:
         raise ValueError("Invalid training task")
     if data.get("preset", "fast") not in ("fast", "precision"):
         raise ValueError("Invalid training preset")
@@ -173,6 +174,11 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         raise ValueError("Invalid expected_artifacts for train")
     data["expected_artifacts"] = expected
     data["config_overrides"] = overrides
+    distributed=data.get('distributed')
+    if distributed is not None:
+        if not isinstance(distributed,dict) or set(distributed)-{'processes'}:raise ValueError('Invalid distributed training configuration')
+        from backend.remote.distributed import validate_distributed_request
+        validate_distributed_request(data['task'],device or 'cuda',distributed.get('processes'))
     weights = data.get('pretrained_weights')
     if weights is not None:
         if not isinstance(weights, dict) or weights.get('checkpoint') not in ('pretrained.pt', 'pretrained.safetensors'):
@@ -294,6 +300,28 @@ class _SentinelCancel:
         return self.path.exists()
 
 
+class _FamilyTrainer:
+    """The same measured fit/heldout adapters used by native specialist training."""
+    def __init__(self,**kwargs):
+        self.kwargs=kwargs;self.cancel=threading.Event()
+    def abort(self):self.cancel.set()
+    def train(self,job_id):
+        from backend.engine.automated_trials import run_measured_candidate
+        args=self.kwargs;model_id=getattr(self,'local_model_id',job_id);output=Path(args['output_dir']);candidate=output/model_id
+        callback=args['callback']
+        callback.on_training_start({'epochs':args['config_overrides'].get('epochs',1),'device':args['device']})
+        def progress(row):
+            epoch=int(row.get('epoch',row.get('current_epoch',0)))
+            loss=row.get('loss',row.get('train_loss',0.))
+            callback.on_epoch_end(max(0,epoch-1),int(row.get('epochs',1)),loss,row.get('val_loss'),0.,{})
+        result=run_measured_candidate(task=args['task'],dataset_path=args['dataset_path'],output_dir=candidate,job_id=model_id,
+            config_overrides=args['config_overrides'],preset=args['preset'],device=args['device'] or 'auto',
+            warm_start=args.get('warm_start'),cancel_event=self.cancel,on_progress=progress)
+        for name in ('best_model.pt','model_meta.json'):
+            shutil.move(str(candidate/name),str(output/name))
+        return {**result,'model_path':str(output/'best_model.pt')}
+
+
 def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None) -> dict[str, Any]:
     """Verify input, train once, and publish a terminal run-local receipt."""
     spec_path = Path(spec_path).absolute()
@@ -333,6 +361,11 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
     watcher: threading.Thread | None = None
     try:
         spec = _read_train_spec(spec_path, run_dir)
+        if not spec.get('distributed'):apply_memory_budget(spec)
+        if spec.get('local_model_id') is not None:
+            model_id=spec['local_model_id']
+            if spec['task'] not in {'rotation','ocr','rotated_detection','enhancement','defect_gan'} or not isinstance(model_id,str) or re.fullmatch('[0-9a-f]{32}',model_id) is None or spec['job_id']!='job_'+model_id:
+                raise ValueError('Invalid native and remote specialist identity pair')
         status.update(job_id=spec["job_id"], device=spec.get("device"))
         if cancel_path.exists():
             return status.update(status="aborted")
@@ -340,10 +373,31 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
                                     spec["input_manifest_sha256"], _SentinelCancel(cancel_path))
         if snapshot.manifest_sha256 != spec["input_manifest_sha256"]:
             raise SnapshotValidationError("Input manifest hash mismatch")
+        aliases={}
+        if spec.get('source_snapshot'):
+            source_spec=spec['source_snapshot']
+            if not isinstance(source_spec,dict) or set(source_spec)!={'archive','manifest_sha256','canonical_root'}:
+                raise ValueError('Invalid portable original source identity')
+            original=Path(source_spec['canonical_root'])
+            if not original.is_absolute():raise ValueError('Canonical original root must be absolute')
+            source_snapshot=extract_snapshot(_run_relative_file(run_dir,source_spec['archive'],'source snapshot'),run_dir/'source',source_spec['manifest_sha256'],_SentinelCancel(cancel_path))
+            aliases[str(original)]=source_snapshot.data_path
         if cancel_path.exists():
             return status.update(status="aborted")
         output_dir = run_dir / "outputs"
         output_dir.mkdir(exist_ok=False)
+        if spec.get('distributed'):
+            from backend.remote.distributed import launch_distributed
+            status.update(status='running')
+            result=launch_distributed(spec_path,cancel_event=_SentinelCancel(cancel_path),status_writer=status)
+            if result.get('status')=='aborted':return status.update(status='aborted')
+            if result.get('status')!='completed':raise RuntimeError('Distributed training did not complete')
+            from backend.engine.training_provenance import persist_model_binding
+            persist_model_binding(output_dir,spec.get('dataset_binding'))
+            _atomic_json(run_dir/'artifacts.json',_artifact_manifest(run_dir,spec))
+            return status.update(status='completed',best_metric=result.get('best_metric'),distributed=result.get('distributed'))
+        if trainer_factory is None and spec['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}:
+            trainer_factory=_FamilyTrainer
         if trainer_factory is None:
             from backend.engine.trainer import UnifiedAutoMLTrainer
 
@@ -358,6 +412,7 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
             preset=spec.get("preset", "fast"), device=spec.get("device"), callback=callback,
             config_overrides=spec["config_overrides"], **warm_start_args,
         )
+        if isinstance(trainer,_FamilyTrainer):trainer.local_model_id=spec.get('local_model_id',spec['job_id'])
         if cancel_path.exists():
             trainer.abort()
             return status.update(status="aborted")
@@ -372,7 +427,8 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         watcher = threading.Thread(target=watch_cancel, name=f"Cancel-{spec['job_id']}", daemon=True)
         watcher.start()
         status.update(status="running")
-        result = trainer.train(job_id=spec["job_id"])
+        from backend.engine.source_aliases import source_alias_scope
+        with source_alias_scope(aliases):result = trainer.train(job_id=spec["job_id"])
         stop_watcher.set()
         watcher.join(timeout=1)
         if cancel_path.exists() or not isinstance(result, dict) or result.get("status") == "aborted":
@@ -388,12 +444,91 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         return status.update(status="completed", best_metric=result.get("best_metric"))
     except SnapshotCancelled:
         return status.update(status="aborted")
+    except InterruptedError:
+        return status.update(status='aborted')
     except Exception as exc:
         return _failed_status(status, exc, run_dir)
     finally:
         stop_watcher.set()
         if watcher is not None and watcher.is_alive():
             watcher.join(timeout=1)
+
+
+def apply_memory_budget(spec):
+    """Enforce the scheduler's explicit claim in this worker's CUDA allocator."""
+    resources=spec.get('resources')
+    if not resources:return
+    if not isinstance(resources,dict) or set(resources)-{'memory_budget_mb','allow_sharing'}:
+        raise ValueError('Invalid compute resources')
+    budget=resources.get('memory_budget_mb');sharing=resources.get('allow_sharing',False)
+    if type(budget) is not int or budget<=0 or type(sharing) is not bool:
+        raise ValueError('Invalid compute resources memory budget')
+    device=str(spec.get('device') or 'cuda')
+    if not device.startswith('cuda'):
+        raise ValueError('CUDA memory reservations require a CUDA worker')
+    import torch
+    if not torch.cuda.is_available():raise ValueError('CUDA memory reservation requires an available device')
+    index=int(device.split(':',1)[1]) if ':' in device else 0
+    if index>=torch.cuda.device_count():raise ValueError('CUDA worker device is unavailable')
+    observed=torch.cuda.get_device_properties(index).total_memory
+    requested=budget*1024*1024
+    if requested>observed:raise ValueError('Memory budget exceeds worker observed capacity')
+    torch.cuda.set_per_process_memory_fraction(requested/observed,index)
+
+
+def run_label(spec_path:Path)->dict[str,Any]:
+    """Generate real foundation candidates from a hash-verified image snapshot."""
+    spec_path=Path(spec_path).absolute();run=spec_path.parent
+    started=_start_operation(spec_path,'label')
+    if isinstance(started,dict):return started
+    status=started
+    try:
+        spec=_read_operation_spec(spec_path,'label')
+        status.update(device=spec.get('device'))
+        apply_memory_budget(spec)
+        archive=_run_relative_file(run,spec.get('snapshot_archive'),'snapshot_archive')
+        cancel=_SentinelCancel(run/'cancel')
+        if cancel.is_set():return status.update(status='aborted')
+        snapshot=extract_snapshot(archive,run/'input',spec['input_manifest_sha256'],cancel)
+        from backend.engine.foundation_labeling import foundation_candidates,foundation_readiness,LabelingCancelled
+        options=dict(spec.get('labeling') or {});setup=dict(options.pop('setup',{}) or {})
+        # Model paths are deployment prerequisites on the worker host. API jobs
+        # source these from worker environment; a signed run spec may also carry
+        # administrator-configured paths for direct worker installations.
+        setup={**{'mask_model_dir':os.environ.get('VISION_MASK_MODEL_DIR'),
+                  'model_dir':os.environ.get('VISION_GROUNDING_MODEL_DIR'),
+                  'feature_checkpoint':os.environ.get('VISION_DINO_CHECKPOINT'),
+                  'feature_sha256':os.environ.get('VISION_DINO_SHA256')},**setup}
+        device=spec.get('device') or 'auto'
+        readiness=foundation_readiness(setup,device)
+        if not readiness['ready']:raise ValueError(readiness['error'])
+        for group in ('positive_examples','negative_examples'):
+            if group in options:
+                options[group]=[{**item,'image_path':str(_run_relative_file(snapshot.data_path,item['image_path'],'example image_path'))} for item in options[group]]
+        selected=spec.get('images')
+        images=[_run_relative_file(snapshot.data_path,p,'image') for p in selected] if selected else sorted(p for p in snapshot.data_path.rglob('*') if p.suffix.lower() in {'.png','.jpg','.jpeg','.bmp','.tif','.tiff','.dcm','.dicom'})
+        if not images:raise ValueError('Labeling snapshot has no supported images')
+        if len(images)>10000:raise ValueError('Labeling job exceeds the 10000 image limit')
+        rows=[];status.update(status='running',total_steps=len(images))
+        def portable(value):
+            if isinstance(value,dict):return {key:portable(child) for key,child in value.items() if key not in {'model_dir','mask_model_dir','feature_model_dir','feature_checkpoint'}}
+            if isinstance(value,list):return [portable(child) for child in value]
+            if isinstance(value,str):return value.replace(str(snapshot.data_path),'input/data')
+            return value
+        for index,image in enumerate(images):
+            if cancel.is_set():return status.update(status='aborted')
+            proposals=foundation_candidates(image,setup,device=device,cancel=cancel,**options)
+            rows.append({'image_path':str(image.relative_to(snapshot.data_path)),'image_sha256':_sha256_file(image)[1],'candidates':portable(proposals),'review_state':'pending'})
+            status.update(current_step=index+1)
+        output=run/'outputs';output.mkdir(exist_ok=True)
+        _atomic_json(output/'label_results.json',{'job_id':spec['job_id'],'input_manifest_sha256':spec['input_manifest_sha256'],'results':rows,'automatically_approved':False})
+        _atomic_json(run/'artifacts.json',_operation_artifact_manifest(run,spec,'label',('outputs/label_results.json',)))
+        return status.update(status='completed',image_count=len(rows),candidate_count=sum(len(row['candidates']) for row in rows))
+    except (SnapshotCancelled,InterruptedError):return status.update(status='aborted')
+    except Exception as exc:
+        from backend.engine.foundation_labeling import LabelingCancelled
+        if isinstance(exc,LabelingCancelled):return status.update(status='aborted')
+        return _failed_status(status,exc,run)
 
 
 def _read_operation_spec(spec_path: Path, operation: str) -> dict[str, Any]:
@@ -413,7 +548,7 @@ def _read_operation_spec(spec_path: Path, operation: str) -> dict[str, Any]:
     device = data.get("device")
     if device is not None and not isinstance(device, str):
         raise ValueError("Invalid device")
-    if spec_path.parent.name.startswith("op_") is False or spec_path.parent.parent.name != "runs":
+    if operation!='label' and (spec_path.parent.name.startswith("op_") is False or spec_path.parent.parent.name != "runs"):
         raise ValueError("Operation spec must live in a runs/op_<id> directory")
     return data
 
@@ -577,6 +712,7 @@ def run_evaluate(spec_path: Path) -> dict[str, Any]:
     status = started
     try:
         spec = _read_operation_spec(spec_path, "evaluate")
+        apply_memory_budget(spec)
         if spec.get("task") not in _TASKS:
             raise ValueError("Invalid evaluation task")
         status.update(job_id=spec["job_id"], device=spec.get("device"))
@@ -608,7 +744,8 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
     status = started
     try:
         spec = _read_operation_spec(spec_path, "infer")
-        if spec.get("task") not in _TASKS:
+        apply_memory_budget(spec)
+        if spec.get("task") not in _TRAIN_TASKS:
             raise ValueError("Invalid inference task")
         threshold = spec.get("threshold", 0.5)
         if type(threshold) not in (int, float) or not 0 <= threshold <= 1:
@@ -626,8 +763,12 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
         from backend.engine.device import get_device
         from backend.engine.trainer import infer
 
-        inference = infer(task=spec["task"], model_path=checkpoint, image_input=image,
-                          threshold=float(threshold), device=get_device(spec.get("device")))
+        if spec['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}:
+            from backend.remote.specialist_inference import infer_specialist
+            inference=infer_specialist(spec['task'],checkpoint,image,threshold=float(threshold),device=str(get_device(spec.get('device'))),output_dir=run_dir/'outputs')
+        else:
+            inference = infer(task=spec["task"], model_path=checkpoint, image_input=image,
+                              threshold=float(threshold), device=get_device(spec.get("device")))
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         overlay_bgr = cv2.cvtColor(inference.visual_overlay, cv2.COLOR_RGB2BGR)
@@ -640,7 +781,7 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
             "image_path": spec["image_path"],
             "image_sha256": spec["image_sha256"],
             "threshold": float(threshold),
-            "confidence_score": round(float(inference.confidence_score), 4),
+            "confidence_score": round(float(inference.confidence_score), 4) if inference.confidence_score is not None else None,
             "predictions": inference.predictions,
             "latency_ms": round(float(inference.latency_ms), 2),
             "overlay_path": "outputs/overlay.png",
@@ -767,6 +908,7 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
     status = started
     try:
         spec = _read_operation_spec(spec_path, "flowchart_run")
+        apply_memory_budget(spec)
         from backend.engine.flowchart_engine import FlowchartPipeline
 
         pipeline = FlowchartPipeline.model_validate(spec.get("pipeline"))
@@ -833,6 +975,7 @@ def run_benchmark(spec_path: Path) -> dict[str, Any]:
     status = started
     try:
         spec = _read_operation_spec(spec_path, "benchmark")
+        apply_memory_budget(spec)
         iterations = spec.get("iterations", 25)
         resolution = spec.get("resolution", 256)
         if type(iterations) is not int or not 5 <= iterations <= 100:
@@ -968,6 +1111,7 @@ def run_export(spec_path: Path) -> dict[str, Any]:
     status = started
     try:
         spec = _read_operation_spec(spec_path, "export")
+        apply_memory_budget(spec)
         export_format = spec.get("export_format", "onnx")
         resolution = spec.get("resolution", 256)
         quantize_fp16 = spec.get("quantize_fp16", False)
@@ -1055,6 +1199,9 @@ def main(argv: list[str] | None = None, trainer_factory: Callable[..., Any] | No
     if args.operation == "train":
         result = run_train(args.spec, trainer_factory=trainer_factory)
         return 0 if result["status"] == "completed" else 3 if result["status"] == "aborted" else 1
+    if args.operation=='label':
+        result=run_label(args.spec)
+        return 0 if result['status']=='completed' else 3 if result['status']=='aborted' else 1
     if args.operation == "evaluate":
         result = run_evaluate(args.spec)
         return 0 if result["status"] == "completed" else 3 if result["status"] == "aborted" else 1

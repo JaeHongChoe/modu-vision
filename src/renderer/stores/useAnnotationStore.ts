@@ -8,6 +8,7 @@ import type { AnnotationItem, Category, ImageMeta, TaskType, ToolType, ViewTrans
 import { api, getApiBaseUrl } from '../services/api';
 import { datasetWorkflow, type ImageReviewMetadata } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
+import { brushEditTarget, labelCategoryPalette } from '../components/labeling/foundationRequest';
 import { applyConvertedShape } from '../components/labeling/convertedAnnotation';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -390,10 +391,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (get().annotationLoadStatus !== 'ready') return;
     const { annotations, history, activeCategory, currentImage } = get();
     if (!currentImage) return;
-    const existing = annotations.find((item) => item.type === 'brush_mask');
+    const existing = brushEditTarget(annotations, get().selectedAnnotationId, activeCategory.id);
     const updated: AnnotationItem = existing
       ? { ...existing, mask_rle: dataUrl }
-      : { id: `brush_${currentImage.image_id}`, type: 'brush_mask', label: activeCategory.name,
+      : { id: `brush_${currentImage.image_id}_${activeCategory.id}`, type: 'brush_mask', label: activeCategory.name,
           category_id: activeCategory.id, color: activeCategory.color, mask_rle: dataUrl };
     set({
       annotations: existing
@@ -493,20 +494,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         color: item.color || DEFAULT_CATEGORIES.find((c) => c.name === item.label)?.color || '#3b82f6',
       }));
 
-      // Auto-register any new categories found in annotations
-      const currentCats = [...get().categories];
-      const catNames = new Set(currentCats.map((c) => c.name.toLowerCase()));
-      const palette = ['#ef4444', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981', '#3b82f6', '#f97316'];
-      items.forEach((it) => {
-        if (it.label && !catNames.has(it.label.toLowerCase())) {
-          catNames.add(it.label.toLowerCase());
-          currentCats.push({
-            id: currentCats.length + 1,
-            name: it.label,
-            color: it.color || palette[currentCats.length % palette.length],
-          });
-        }
-      });
+      const currentCats=labelCategoryPalette(get().categories,items,data.mask_classes);
 
       const nextDimensions = data.image_width && data.image_height
         ? { width: data.image_width, height: data.image_height }
@@ -516,6 +504,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         annotations: items,
         metadata: data.metadata || null,
         categories: currentCats,
+        activeCategory: currentCats.find(c=>c.name===get().activeCategory.name)||currentCats[0]||get().activeCategory,
         imageDimensions: nextDimensions,
         maskUrl: data.mask_file ? annotationMaskUrl(currentImage) : null,
         isDirty: false,

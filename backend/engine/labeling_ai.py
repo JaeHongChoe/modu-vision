@@ -1,7 +1,7 @@
 """
 backend/engine/labeling_ai.py
 
-Industrial AI-Assisted Auto-Labeling Engines:
+Deterministic OpenCV labeling alternatives and geometric converters:
 1. Auto-Selector (Smart Magic Wand / Click-to-Segment):
    Extracts high-precision object/defect contour polygons from a single seed click.
 2. Shape Converter (BBox to Polygon):
@@ -30,7 +30,7 @@ def auto_select_contour(
     epsilon_ratio: float = 0.015,
 ) -> Dict[str, Any]:
     """
-    AI Auto-Selector (Smart Magic Wand):
+    OpenCV flood-fill / threshold selector (not foundation-model inference):
     Given a seed point (seed_x, seed_y) on an image, automatically extracts the
     underlying flaw or component boundary as a simplified polygon contour.
     """
@@ -436,4 +436,3 @@ def rotated_bbox_to_bbox(
     xs = [p[0] for p in corners]
     ys = [p[1] for p in corners]
     return [float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys))]
-

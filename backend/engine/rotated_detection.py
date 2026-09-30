@@ -215,6 +215,8 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         "split_counts": counts,
         "source_image_count": len(seen_images), "object_count": len(records),
     }
+    from backend.engine.prepared_family_datasets import prepared_source_provenance
+    provenance.update(prepared_source_provenance(root, raw, provenance['source_sha256']))
     return RotatedBoxManifest(root, sorted(labels)[0], tuple(records), provenance, raw["version"])
 
 
@@ -426,11 +428,13 @@ def _angle_error(predicted: float, target: float) -> float:
 
 def _evaluate_model(model: RotatedBoxNet, manifest: RotatedBoxManifest, split: str,
                     image_size: int, device: str | torch.device) -> dict[str, Any]:
+    from backend.engine.evaluation_evidence import match_objects,object_average_precision
     dataset = RotatedBoxDataset(manifest, split=split, image_size=image_size)
     if not dataset:
         raise ValueError(f"Rotated {split} split has no samples")
     ious: list[float] = []
     angles: list[float] = []
+    samples=[]
     model.eval()
     with torch.no_grad():
         for index, record in enumerate(dataset.records):
@@ -438,10 +442,15 @@ def _evaluate_model(model: RotatedBoxNet, manifest: RotatedBoxManifest, split: s
             box = _decode(model(image.unsqueeze(0).to(device))[0], *record.size)
             ious.append(oriented_iou(box, record.box))
             angles.append(_angle_error(box["angle_deg"], record.box["angle_deg"]))
+            evidence=match_objects([{'label':record.label,'box':box,'confidence':1.}], [{'label':record.label,'box':record.box}])
+            samples.append({'image':record.image,'file_path':str(record.path),'source_sha256':record.source_sha256,
+                'ground_truth':record.label,'predicted_class':record.label,'confidence':1.,'is_correct':evidence['counts']['fp']==0 and evidence['counts']['fn']==0,
+                'object_evidence':{**evidence,'coordinate_space':'original_image','source_size':list(record.size)},
+                'oriented_iou':ious[-1],'angle_error_deg':angles[-1]})
     return {"split": split, "sample_count": len(ious),
             "mean_oriented_iou": float(np.mean(ious)),
             "mean_angle_error_deg": float(np.mean(angles)),
-            "dataset_sha256": manifest.provenance["dataset_sha256"]}
+            "dataset_sha256": manifest.provenance["dataset_sha256"],'test_predictions':samples,**object_average_precision(samples)}
 
 
 def evaluate_rotated_detector(
@@ -620,9 +629,10 @@ def predict_rotated_array(checkpoint,image_rgb,*,device='cpu',threshold=0.5):
 
 
 def _evaluate_multi(model,manifest,split,meta,device):
+    from backend.engine.evaluation_evidence import match_objects,object_average_precision
     data=RotatedMultiDataset(manifest,split,meta['image_size'],meta['max_objects'])
     if not len(data): raise ValueError(f'Rotated {split} split has no samples')
-    matched=predicted=truth=0;ious=[];angles=[]
+    matched=predicted=truth=0;ious=[];angles=[];samples=[]
     with torch.inference_mode():
         for records in data.groups:
             # Evaluation truth may contain newly corrected objects beyond the
@@ -631,16 +641,16 @@ def _evaluate_multi(model,manifest,split,meta,device):
             if hashlib.sha256(source_bytes).hexdigest()!=first.source_sha256:
                 raise ValueError('Rotated source changed after validation')
             image,_=_tensor_for_image(source_bytes,meta['image_size'])
-            predictions=_multi_predictions(model(image.to(device))[0],first.size,meta,0.5)
-            predicted+=len(predictions);truth+=len(records);available=list(records)
-            for prediction in sorted(predictions,key=lambda p:p['confidence'],reverse=True):
-                candidates=[r for r in available if r.label==prediction['label']]
-                if not candidates: continue
-                best=max(candidates,key=lambda r:oriented_iou(prediction['box'],r.box))
-                iou=oriented_iou(prediction['box'],best.box)
-                ious.append(iou);angles.append(_angle_error(prediction['box']['angle_deg'],best.box['angle_deg']))
-                if iou>=0.5: matched+=1;available.remove(best)
-    return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256']}
+            predictions=_multi_predictions(model(image.to(device))[0],first.size,meta,0.)
+            targets=[{'label':r.label,'box':r.box} for r in records]
+            evidence=match_objects(predictions,targets)
+            matched+=evidence['counts']['tp'];predicted+=evidence['counts']['tp']+evidence['counts']['fp'];truth+=len(records)
+            ious.extend(row['iou'] for row in evidence['matches']);angles.extend(row['angle_error_deg'] for row in evidence['matches'])
+            samples.append({'image':first.image,'file_path':str(first.path),'source_sha256':first.source_sha256,
+                'ground_truth_classes':sorted({r.label for r in records}),'confidence':max((p['confidence'] for p in predictions),default=0),
+                'is_correct':evidence['counts']['fp']==0 and evidence['counts']['fn']==0,
+                'object_evidence':{**evidence,'coordinate_space':'original_image','source_size':list(first.size)}})
+    return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256'],'test_predictions':samples,**object_average_precision(samples)}
 
 
 def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start=None):

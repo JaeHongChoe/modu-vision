@@ -1,5 +1,7 @@
 import { ComputeReservations } from './ComputeReservations';
-import React, { useState } from 'react';
+import {ComputeJobsPanel} from './ComputeJobsPanel';
+import {SharedProjectPanel} from './SharedProjectPanel';
+import React, { useState,useEffect } from 'react';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Server, Trash2, X } from 'lucide-react';
 import { useComputeStore } from '../../stores/useComputeStore';
 import type { ComputeProfile, ComputeProfileInput, ComputeProbeResult } from '../../services/api';
@@ -46,8 +48,11 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
     profiles, selectedProfileId, isLoaded, isLoading, isSaving, probePendingId,
     loadError, error, probeResults, load, saveProfile, deleteProfile, selectTarget, probeProfile,
   } = useComputeStore();
+  const transportRevision=useComputeStore(state=>state.transportRevision);
   const [draft, setDraft] = useState<ComputeProfileInput>(emptyProfile);
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(()=>{setDraft(emptyProfile);setShowForm(false);},[transportRevision]);
 
   const edit = (profile: ComputeProfile) => {
     setDraft({ ...profile });
@@ -106,6 +111,7 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
           </button>
         )}
 
+        <SharedProjectPanel />
         <ComputeReservations />
         <div className="mt-4 flex items-center justify-between">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400">저장된 서버</h3>
@@ -176,10 +182,14 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
               <label className="block text-[11px] text-slate-400">실행 방식<select value={draft.runtime_kind} onChange={(event) => setDraft({ ...draft, runtime_kind: event.target.value as 'python' | 'docker' })} className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white"><option value="python">Python</option><option value="docker">Docker</option></select></label>
               <label className="block text-[11px] text-slate-400">{draft.runtime_kind === 'python' ? 'Python 실행 파일' : 'Docker 이미지'}<input required value={draft.runtime_value} onChange={(event) => setDraft({ ...draft, runtime_value: event.target.value })} placeholder={draft.runtime_kind === 'python' ? '/usr/bin/python3' : 'image:tag'} className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white" /></label>
             </div>
-            <label className="block text-[11px] text-slate-400">GPU 선택자 (비우면 CPU)<input value={draft.gpu_selector || ''} onChange={(event) => setDraft({ ...draft, gpu_selector: event.target.value })} placeholder="예: 2 또는 all" className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white" /></label>
+            <label className="block text-[11px] text-slate-400">GPU 선택자 (비우면 CPU)<input value={draft.gpu_selector || ''} onChange={(event) => setDraft({ ...draft, gpu_selector: event.target.value })} placeholder="0,1 · GPU UUID · MIG UUID · all" className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white" /></label>
+            <label className="flex items-center gap-2 text-[11px] text-slate-300"><input type="checkbox" checked={!!draft.allow_sharing} onChange={event=>setDraft({...draft,allow_sharing:event.target.checked,distributed_processes:1})}/>이 GPU에서 메모리 예산 안의 여러 작업 허용</label>
+            <div className="grid grid-cols-2 gap-2"><label className="text-[11px] text-slate-400">작업당 메모리 (MiB)<input aria-label="작업당 GPU 메모리 예산" type="number" min={1} max={1048576} value={draft.memory_budget_mb||''} onChange={event=>setDraft({...draft,memory_budget_mb:event.target.value?Number(event.target.value):null})} className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white"/></label><label className="text-[11px] text-slate-400">단일 모델 분산 GPU 수<input aria-label="단일 모델 분산 GPU 수" type="number" min={1} max={16} disabled={!!draft.allow_sharing} value={draft.distributed_processes||1} onChange={event=>setDraft({...draft,distributed_processes:Number(event.target.value)})} className="mt-1 w-full rounded border border-[#364357] bg-[#131822] px-2 py-1.5 text-xs text-white disabled:opacity-40"/></label></div>
+            <p className="text-[10px] text-slate-500">공유와 MIG 배분은 연결 검사에서 기기 UUID와 용량이 확인돼야 합니다. 분산 학습은 분류·패치 분류·분할에서 지원합니다.</p>
             <button type="submit" disabled={isSaving} className="rounded bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">{isSaving ? '저장 중...' : '서버 설정 저장'}</button>
           </form>
         )}
+        <ComputeJobsPanel onOpenReview={onClose}/>
       </section>
     </div>
   );

@@ -156,7 +156,7 @@ test('training screen forwards selected synthetic geometry and blocks invalid na
       split: {train: 1, val: 1}, datasetKey: '/data\0anomaly', splitSupported: false})},
     '../../stores/useComputeStore': {useComputeStore: () => ({profiles: [], probeResults: {}, isLoaded: true})},
     '../../stores/useTrainingStore': {useTrainingStore: () => ({preset: 'fast', status: 'completed', jobId: 'reopened-anomaly', bestMetric: .4,
-      hardware: {}, lossHistory: [], recoverActiveJob: noOp, refreshCurrentJob: noOp,
+      jobDeviceName: 'cpu', hardware: {device_type: 'mps'}, lossHistory: [], recoverActiveJob: noOp, refreshCurrentJob: noOp,
       startTraining: async (...args) => {starts.push(args);}})},
     '../../services/api': {api: {training: {warmStartParents: (...args) => {
       parents.push(args); return Promise.resolve({parents: []});}}}},
@@ -170,12 +170,18 @@ test('training screen forwards selected synthetic geometry and blocks invalid na
     ['./OscilloscopeLossCurve', 'OscilloscopeLossCurve'], ['./HardwareTelemetryPanel', 'HardwareTelemetryPanel'],
     ['./RecipePresetSelector', 'RecipePresetSelector'], ['./OCRWorkbench', 'OCRWorkbench'],
     ['./RotatedDetectionPanel', 'RotatedDetectionPanel'], ['./DefectGANWorkbench', 'DefectGANWorkbench'],
-    ['./EnhancementWorkbench', 'EnhancementWorkbench'], ['./ModelFamilyCatalog', 'ModelFamilyCatalog']]) {
+    ['./EnhancementWorkbench', 'EnhancementWorkbench'], ['./ModelFamilyCatalog', 'ModelFamilyCatalog'],
+    ['./PatchClassificationWorkbench', 'PatchClassificationWorkbench'], ['./RotationWorkbench', 'RotationWorkbench'],
+    ['./AutoDLWorkbench', 'AutoDLWorkbench']]) {
     stubs[relative] = {[name]: name};
   }
   const Screen = load('src/renderer/components/training/TrainingController.tsx', stubs).TrainingController;
   const render = () => {cursor = 0; const tree = Screen(); effects.splice(0).forEach(fn => fn()); return tree;};
   let tree = render();
+  assert.ok(find(tree, n => n.type === 'div' && n.props.children === '완료 작업 장치').length);
+  assert.ok(find(tree, n => n.type === 'div' && n.props.children === 'cpu').length);
+  assert.equal(find(tree, n => n.type === 'HardwareTelemetryPanel').length, 0,
+    'Completed CPU provenance must not render the current host Metal telemetry as its job device');
   assert.equal(find(tree, n => n.props?.['aria-label'] === '학습 모델 구조')[0].props.value, 'padim');
   assert.ok(find(tree, n => n.type === 'span' && n.props.children === '저장 지표')
     .some(n => n.props.title === '저장된 모델 선택 지표 · 검증 수치와 학습 손실은 아래 기록에서 확인'),

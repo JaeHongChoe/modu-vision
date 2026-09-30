@@ -204,7 +204,8 @@ def source_annotations_for_image(source,image):
     source=Path(source).resolve();image=Path(image);relative=image.relative_to(source).as_posix()
     split=next((part for part in Path(relative).parts[:-1] if part in {'train','val','test'}),None)
     files=source_annotation_files(source,image)
-    with Image.open(image) as pil: width,height=pil.size
+    from backend.engine.dicom_input import open_source_image
+    with open_source_image(image) as pil: width,height=pil.size
     matched=[]
     for path in files:
         if path.suffix!='.json':continue

@@ -34,6 +34,7 @@ function mount() {
     '../../services/datasetWorkflow': { datasetWorkflow: workflow },
     './BulkLabelAssist': { BulkLabelAssist: 'BulkLabelAssist' },
     './CandidateProviderControls': { CandidateProviderControls: 'CandidateProviderControls' },
+    './LabelAssistDeviceSizes': { LabelAssistDeviceSizes: 'LabelAssistDeviceSizes' },
   };
   const filename = path.resolve(__dirname, '../src/renderer/components/labeling/ModelAssistPanel.tsx');
   const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText;

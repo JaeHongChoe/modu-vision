@@ -109,6 +109,22 @@ def manifest(dataset_path: str, request: Request):
         raise HTTPException(422, str(exc)) from exc
 
 
+@router.get('/datasets')
+def datasets(request: Request):
+    project=get_current_project(request)
+    from backend.engine.training_provenance import bind_family_training
+    root=Path(project['dataset_dir'])/'enhancement';rows=[]
+    if root.is_dir() and not root.is_symlink():
+        for folder in sorted(root.iterdir(),key=lambda path:path.stat().st_mtime):
+            if not folder.is_dir() or folder.is_symlink():continue
+            try:
+                bind_family_training(project,folder,'enhancement')
+                row=load_enhancement_manifest(folder)
+                rows.append({'dataset_path':str(folder.resolve()),'sample_count':len(row['records']),'provenance':row['provenance']})
+            except (ValueError,OSError,KeyError):continue
+    return {'datasets':rows}
+
+
 @router.post("/train")
 def train(req: Train, request: Request):
     folder = _root(request) / uuid.uuid4().hex
@@ -158,6 +174,8 @@ def train(req: Train, request: Request):
                 validate_training_binding(binding)
                 if event.is_set(): raise InterruptedError('Enhancement training cancelled')
                 persist_model_binding(folder, binding)
+                from backend.engine.specialized_training_jobs import persist_training_configuration
+                persist_training_configuration(folder,req.model_dump(exclude={'dataset_path','warm_start_job_id','background'}))
                 path = folder / "best_model.pt"
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 with _JOB_LOCK:

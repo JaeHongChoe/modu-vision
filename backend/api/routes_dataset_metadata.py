@@ -63,13 +63,25 @@ def _context(request,folder_path=None):
 
 def _rows(project,source):
     from backend.engine.grouped_dataset_views import source_image_paths
-    allowed={str(p) for p in source_image_paths(source,project['task'])}
+    allowed={str(p) for p in source_image_paths(source,project['task'],include_unused=True)}
     return [r for r in dm.list_metadata(Path(project['project_dir']),source,Path(project['annotations_dir'])) if r['file_path'] in allowed]
 
 def _errors(exc):
     if isinstance(exc,dm.RevisionConflict): return HTTPException(409,detail={'message':str(exc),'current':exc.current})
     if isinstance(exc,KeyError): return HTTPException(404,detail='Image not found in current project')
     return HTTPException(422,detail=str(exc))
+
+@router.get('/statistics')
+def dataset_statistics(request:Request,folder_path:Optional[str]=None):
+    project,source=_context(request,folder_path)
+    from backend.engine.dataset_summary import dataset_summary
+    try:
+        metadata={r['file_path']:r for r in _rows(project,source)}
+        result=dataset_summary(source,project['task'],assignments=routes_dataset._read_split_manifest(source),metadata=metadata)
+        result['labelset_id']=project.get('active_labelset_id','default')
+        return result
+    except (ValueError,OSError) as exc:
+        raise _errors(exc) from exc
 
 @router.get('')
 def list_review_metadata(request:Request,folder_path:Optional[str]=None,state:Optional[str]=None,
@@ -92,7 +104,7 @@ def get_image_metadata(request:Request,image_path:str):
 @router.post('/bulk')
 def bulk_edit_metadata(req:BulkMetadataRequest,request:Request):
     project,source=_context(request)
-    if not req.changes or set(req.changes)-{'tags','product','lot','group'}:
+    if not req.changes or set(req.changes)-{'tags','product','lot','group','usage_state'}:
         raise HTTPException(422,detail='Bulk edits support tags, product, lot and group; approval is per image')
     if len({item.image_uuid for item in req.items})!=len(req.items): raise HTTPException(422,detail='Duplicate selected image')
     try:
@@ -120,7 +132,7 @@ def duplicates(request:Request):
 @router.post('/split')
 def grouped_split(req:SplitRequest,request:Request):
     project,source=_context(request)
-    rows=_rows(project,source)
+    rows=[r for r in _rows(project,source) if r.get('usage_state','active')!='not_used']
     # Use only trainable image inventory for LabelMe; do not mark unlabeled files trainable.
     flat=routes_dataset._has_flat_labelme_annotations(source)
     if flat and project['task'] in {'detection','segmentation'}:

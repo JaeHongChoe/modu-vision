@@ -4,7 +4,9 @@ import { api, type LabelSuggestionBatch, type LabelSuggestionBatchEntry } from '
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import type { ImageMeta } from '../../types';
+import type {LabelAssistExecution} from './LabelAssistDeviceSizes';
 import { datasetWorkflow } from '../../services/datasetWorkflow';
+import {labelingScope} from './foundationRequest';
 
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -28,6 +30,7 @@ function entryText(entry: LabelSuggestionBatchEntry): string {
 }
 
 interface Props {
+  execution?:LabelAssistExecution;
   projectDir: string;
   modelId: string;
   threshold: number;
@@ -37,9 +40,13 @@ interface Props {
   onRunningChange: (running: boolean) => void;
 }
 
-export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshold, keywords = [], disabled, onOpenEntry, onRunningChange }) => {
+export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshold, keywords = [], execution, disabled, onOpenEntry, onRunningChange }) => {
   const folderPath = useDatasetStore((state) => state.folderPath);
   const task = useProjectStore((state) => state.task);
+  const project=useProjectStore(state=>state.project);
+  const scope=labelingScope({projectDir,task,project});const [loadedScope,setLoadedScope]=useState(scope);
+  const sameProject=()=>labelingScope(useProjectStore.getState())===scope;
+  const currentScope=loadedScope===scope;
   const [mode, setMode] = useState<'unlabeled' | 'selected'>('unlabeled');
   const [gallery, setGallery] = useState<ImageMeta[]>([]);
   const [galleryBusy, setGalleryBusy] = useState(false);
@@ -50,11 +57,12 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
   const [busy, setBusy] = useState<'start' | 'cancel' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedBatch = batches.find((batch) => batch.id === selectedBatchId);
-  const activeBatch = batches.find((batch) => batch.status === 'running' || batch.status === 'cancelling');
+  const visibleBatches=currentScope?batches:[];
+  const selectedBatch = visibleBatches.find((batch) => batch.id === selectedBatchId);
+  const activeBatch = visibleBatches.find((batch) => batch.status === 'running' || batch.status === 'cancelling');
   const running = Boolean(activeBatch);
-  const filteredGallery = useMemo(() => gallery.filter((item) =>
-    item.file_name.toLowerCase().includes(search.toLowerCase())), [gallery, search]);
+  const filteredGallery = useMemo(() => currentScope?gallery.filter((item) =>
+    item.file_name.toLowerCase().includes(search.toLowerCase())):[], [gallery, search,currentScope]);
 
   useEffect(() => {
     onRunningChange(running);
@@ -63,6 +71,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
 
   useEffect(() => {
     let cancelled = false;
+    setLoadedScope(scope);setBusy(null);setGalleryBusy(false);setMode('unlabeled');setSearch('');
     setGallery([]);
     setSelectedPaths(new Set());
     setBatches([]);
@@ -70,13 +79,13 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
     setError(null);
     void api.labelSuggestions.listBatches()
       .then((result) => {
-        if (cancelled || useProjectStore.getState().projectDir !== projectDir) return;
+        if (cancelled || !sameProject()) return;
         setBatches(result.batches);
         setSelectedBatchId(result.batches[0]?.id || '');
       })
-      .catch((cause) => { if (!cancelled) setError(errorText(cause)); });
+      .catch((cause) => { if (!cancelled&&sameProject()) setError(errorText(cause)); });
     return () => { cancelled = true; };
-  }, [projectDir]);
+  }, [scope,folderPath]);
 
   useEffect(() => {
     if (!activeBatch?.id) return;
@@ -85,18 +94,18 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
     const poll = async () => {
       try {
         const next = await api.labelSuggestions.getBatch(activeBatchId);
-        if (cancelled || useProjectStore.getState().projectDir !== projectDir) return;
+        if (cancelled || !sameProject()) return;
         setBatches((previous) => previous.map((item) => item.id === next.id ? next : item));
       } catch (cause) {
-        if (!cancelled) setError(errorText(cause));
+        if (!cancelled&&sameProject()) setError(errorText(cause));
       }
     };
     const timer = window.setInterval(() => void poll(), 750);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [projectDir, activeBatch?.id]);
+  }, [scope, activeBatch?.id]);
 
   const loadGallery = async () => {
-    if (!folderPath || !projectDir) return;
+    if (!currentScope || !sameProject() || !folderPath || !projectDir) return;
     setGalleryBusy(true);
     setError(null);
     try {
@@ -104,7 +113,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
       let total = Infinity;
       while (images.length < total && images.length < 5000) {
         const page = await api.dataset.getImages({ folder_path: folderPath, task, limit: 500, offset: images.length });
-        if (useProjectStore.getState().projectDir !== projectDir) return;
+        if (!sameProject()||useDatasetStore.getState().folderPath!==folderPath) return;
         images.push(...page.items);
         total = page.total;
         if (!page.items.length) break;
@@ -112,44 +121,44 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
       setGallery(images);
       if (images.length < total) setError('최대 5,000개 이미지만 목록에 표시됩니다. 범위를 나눠 선택하세요.');
     } catch (cause) {
-      setError(errorText(cause));
+      if(sameProject())setError(errorText(cause));
     } finally {
-      if (useProjectStore.getState().projectDir === projectDir) setGalleryBusy(false);
+      if (sameProject()) setGalleryBusy(false);
     }
   };
 
   const start = async () => {
-    if (!modelId || disabled || busy || !projectDir || (mode === 'selected' && !selectedPaths.size)) return;
+    if (!currentScope || !sameProject() || !modelId || disabled || busy || !projectDir || (mode === 'selected' && !selectedPaths.size)) return;
     setBusy('start');
     setError(null);
     try {
       const batch = await datasetWorkflow.startBatch({
-        job_id: modelId, threshold, keywords,
+        job_id: modelId, threshold, keywords, ...execution,
         ...(mode === 'selected' ? { image_paths: [...selectedPaths] } : {}),
       });
-      if (useProjectStore.getState().projectDir !== projectDir) return;
+      if (!sameProject()) return;
       setBatches((previous) => [batch, ...previous]);
       setSelectedBatchId(batch.id);
     } catch (cause) {
-      if (useProjectStore.getState().projectDir === projectDir) setError(errorText(cause));
+      if (sameProject()) setError(errorText(cause));
     } finally {
-      if (useProjectStore.getState().projectDir === projectDir) setBusy(null);
+      if (sameProject()) setBusy(null);
     }
   };
 
   const cancel = async () => {
-    if (!activeBatch || busy) return;
+    if (!currentScope || !sameProject() || !activeBatch || busy) return;
     setBusy('cancel');
     setError(null);
     try {
       const next = await api.labelSuggestions.cancelBatch(activeBatch.id);
-      if (useProjectStore.getState().projectDir === projectDir) {
+      if (sameProject()) {
         setBatches((previous) => previous.map((item) => item.id === next.id ? next : item));
       }
     } catch (cause) {
-      if (useProjectStore.getState().projectDir === projectDir) setError(errorText(cause));
+      if (sameProject()) setError(errorText(cause));
     } finally {
-      if (useProjectStore.getState().projectDir === projectDir) setBusy(null);
+      if (sameProject()) setBusy(null);
     }
   };
 
@@ -203,11 +212,11 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
         {running && <button type="button" onClick={() => void cancel()} disabled={!!busy || activeBatch?.status === 'cancelling'} className="flex items-center gap-1 rounded border border-amber-600 px-3 py-2 font-semibold text-amber-200 hover:bg-amber-950/40 disabled:opacity-40"><PauseCircle className="h-3.5 w-3.5" /> 취소</button>}
       </div>
       {error && <p role="alert" className="rounded border border-red-800 bg-red-950/30 p-2 text-[11px] text-red-200">{error}</p>}
-      {batches.length > 0 && <div className="space-y-2 border-t border-slate-700 pt-3">
+      {visibleBatches.length > 0 && <div className="space-y-2 border-t border-slate-700 pt-3">
         <div className="flex items-center justify-between">
           <h5 className="font-semibold text-slate-200">검토 대기열</h5>
           <select value={selectedBatchId} onChange={(event) => setSelectedBatchId(event.target.value)} aria-label="일괄 제안 기록" className="max-w-[230px] rounded border border-slate-600 bg-[#1D2938] px-2 py-1 text-[10px] text-slate-200">
-            {batches.map((item) => <option key={item.id} value={item.id}>{new Date(item.created_at).toLocaleString('ko-KR')} · {statusText(item.status)}</option>)}
+            {visibleBatches.map((item) => <option key={item.id} value={item.id}>{new Date(item.created_at).toLocaleString('ko-KR')} · {statusText(item.status)}</option>)}
           </select>
         </div>
         {selectedBatch && <>
@@ -221,7 +230,7 @@ export const BulkLabelAssist: React.FC<Props> = ({ projectDir, modelId, threshol
             {selectedBatch.entries.map((entry, index) => <div key={`${entry.image_path}-${index}`} className="flex items-center gap-2 rounded border border-slate-700 bg-[#17202D] px-2 py-1.5 text-[11px]">
               <span className="min-w-0 grow truncate text-slate-200" title={entry.image_path}>{entry.image_path.split(/[\\/]/).pop()}</span>
               <span className={entry.status === 'failed' ? 'text-red-300' : entry.status === 'generated' ? 'text-cyan-300' : 'text-slate-400'}>{entryText(entry)}</span>
-              {entry.proposal_id && <button type="button" onClick={() => void onOpenEntry(entry)} className="rounded border border-cyan-700 px-2 py-1 font-semibold text-cyan-200 hover:bg-cyan-950">검토</button>}
+              {entry.proposal_id && <button type="button" onClick={() => {if(sameProject())void onOpenEntry(entry);}} className="rounded border border-cyan-700 px-2 py-1 font-semibold text-cyan-200 hover:bg-cyan-950">검토</button>}
               {entry.error && <span title={entry.error} className="max-w-20 truncate text-red-300">{entry.error}</span>}
             </div>)}
           </div>

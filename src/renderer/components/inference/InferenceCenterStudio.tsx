@@ -68,7 +68,6 @@ export const InferenceCenterStudio: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [maxTaktLimit, setMaxTaktLimit] = useState<number>(25.0); // Line speed threshold limit in ms
   const [exportFormat, setExportFormat] = useState<'onnx' | 'torchscript'>('onnx');
-  const quantizeFp16 = false;
   const [resolution, setResolution] = useState<number>(256);
   const flowPackageRef = useRef<HTMLDivElement>(null);
 
@@ -112,7 +111,6 @@ export const InferenceCenterStudio: React.FC = () => {
         package_name: `modu_vision_${activeJobId}_${exportFormat}_${resolution}_${Date.now()}`,
         export_format: exportFormat,
         resolution,
-        quantize_fp16: quantizeFp16,
       });
       if (currentJobId() === activeJobId) setExportResult(res);
       setIsExporting(false);
@@ -446,15 +444,7 @@ python infer.py --self-test`;
                 </select>
               </div>
 
-              <label className="flex items-center space-x-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={quantizeFp16}
-                  disabled
-                  className="rounded border-[#2B3547] bg-[#0B0E14] text-emerald-500 focus:ring-0"
-                />
-                <span className="text-slate-400 text-xs">FP16 변환 미지원</span>
-              </label>
+              <button type="button" onClick={showFlowPackage} className="text-xs text-violet-300 underline">전체 플로우 OpenVINO · FP16 · INT8</button>
             </div>
           </div>
 

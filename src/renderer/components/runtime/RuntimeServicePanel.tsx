@@ -1,6 +1,9 @@
+import { ModelOperationsPanel } from './ModelOperationsPanel';
+import { FleetPanel } from './FleetPanel';
 import { SpecializedApprovalPanel } from '../evaluation/SpecializedApprovalPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import { request } from '../../services/api';
+import { runtimeDeploymentApi } from '../../services/runtimeDeploymentApi';
 
 type RuntimeIdentity = { status: string; manifest_sha256?: string; pipeline_id?: string; device?: string };
 type Deployment = { deployment_id: string; reviewer: string; restored_from?: string; release: { manifest_sha256: string; device: string }; created_at: number };
@@ -15,6 +18,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
   const [loadedScope, setLoadedScope] = useState<ProjectScope | null>(null);
   const [packagePath, setPackagePath] = useState('');
   const [device, setDevice] = useState('cpu');
+  const [devices, setDevices] = useState<string[]>(['cpu']);
   const [reviewer, setReviewer] = useState('');
   const [target, setTarget] = useState('');
   const [config, setConfig] = useState(EMPTY_CONFIG);
@@ -38,6 +42,8 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
     const started = currentProject.current;
     setState(null); setLoadedScope(null); setConfig(EMPTY_CONFIG); setClearMesToken(false);
     setPackagePath(''); setError(''); setNotice(''); setTarget(''); setBusy(false);
+    setDevice('cpu');setDevices(['cpu']);
+    if(projectDir)void runtimeDeploymentApi.capabilities().then(cap=>{if(valid&&currentProject.current===started)setDevices([...cap.torch_devices,...cap.openvino.devices.map(value=>'openvino:'+value)]);}).catch(()=>{});
     if (projectDir) request<ServiceState>('/api/runtime-services').then(result => {
       if (valid && currentProject.current === started) { setState(result); setLoadedScope(started); setConfig(JSON.stringify(result.adapter_config, null, 2)); }
     }).catch(cause => { if (valid) setError(String(cause.message || cause)); });
@@ -65,9 +71,10 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
     <p className="mt-1 break-all font-mono text-[10px]">실행 manifest SHA-256: {state?.runtime.manifest_sha256 || '서비스 응답 없음'}</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
       <label className="col-span-2">승인된 전체 flow 패키지 폴더<input aria-label="승인 패키지 경로" className="mt-1 w-full rounded bg-slate-800 p-2" value={packagePath} onChange={event => setPackagePath(event.target.value)} /></label>
-      <label>실행 장치<select aria-label="서비스 실행 장치" className="mt-1 w-full rounded bg-slate-800 p-2" value={device} onChange={event => setDevice(event.target.value)}><option value="cpu">CPU</option><option value="cuda">CUDA</option><option value="mps">Metal MPS</option></select></label>
+      <label>실행 장치<select aria-label="서비스 실행 장치" className="mt-1 w-full rounded bg-slate-800 p-2" value={device} onChange={event => setDevice(event.target.value)}>{devices.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
       <label>적용 검토자<input aria-label="서비스 검토자" className="mt-1 w-full rounded bg-slate-800 p-2" value={reviewer} onChange={event => setReviewer(event.target.value)} /></label>
     </div>
+    <p className="mt-2 text-slate-400">응답 제한 시간과 CPU 스레드 수는 전체 flow 내보내기에서 저장합니다. 정밀도 승인 패키지는 검토한 실행 장치를 사용합니다.</p>
     <div className="mt-2 flex flex-wrap gap-2">
       <button type="button" disabled={busy || !packagePath.trim() || !reviewer.trim()} onClick={() => void action('/apply', { package_path: packagePath, device, reviewer })} className="rounded bg-blue-700 px-3 py-2 disabled:opacity-40">승인 패키지 적용</button>
       <button type="button" disabled={busy || !state?.active} onClick={() => void action('/start')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">서비스 시작</button>
@@ -78,6 +85,8 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
     </div>
     <div className="mt-3 flex gap-2"><select aria-label="서비스 복원 이력" className="min-w-0 flex-1 rounded bg-slate-800 p-2" value={target} onChange={event => setTarget(event.target.value)}><option value="">보존된 적용 이력 선택</option>{state?.history.map(item => <option value={item.deployment_id} key={item.deployment_id}>{new Date(item.created_at * 1000).toLocaleString()} · {item.release.manifest_sha256.slice(0, 12)} · {item.reviewer}</option>)}</select><button type="button" disabled={busy || !target || !reviewer.trim()} className="rounded border border-amber-600 px-3 disabled:opacity-40" onClick={() => void action('/rollback', { deployment_id: target, reviewer })}>서비스 롤백</button></div>
     <SpecializedApprovalPanel />
+    <ModelOperationsPanel />
+    <FleetPanel />
     <details className="mt-3"><summary className="cursor-pointer font-semibold">Modbus TCP · HTTP MES 설정</summary>
       <p className="my-2 text-slate-400">enabled를 켠 설정은 다음 서비스 시작 때 사용합니다. ACK 실패 시 운영 판정은 REVIEW로 보존됩니다.</p>
       <p className="my-2 text-slate-400">MES token의 null은 같은 주소에 저장된 인증값을 유지합니다. 주소를 변경하려면 새 token을 입력하거나 인증값 삭제를 선택하세요.</p>

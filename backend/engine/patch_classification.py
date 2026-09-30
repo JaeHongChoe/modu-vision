@@ -170,6 +170,23 @@ def load_patch_manifest(root: str | Path) -> PatchManifest:
         "source_image_count": len(source_hashes),
         "patch_count": len(patches),
     }
+    if raw.get('source_dataset_path') is not None:
+        from backend.engine.source_aliases import resolve_source_root
+        canonical=Path(raw['source_dataset_path']).expanduser().resolve()
+        source=resolve_source_root(canonical)
+        mapping = raw.get('source_map')
+        if not isinstance(mapping, dict) or set(mapping) != set(source_hashes):
+            raise ValueError('Prepared patch data needs a complete original source mapping')
+        for image, row in mapping.items():
+            relative = row.get('source_relative_path') if isinstance(row, dict) else None
+            if not isinstance(relative, str) or Path(relative).is_absolute() or '..' in Path(relative).parts:
+                raise ValueError('Patch original source path escaped registered dataset')
+            original = source / relative
+            if (original.is_symlink() or not original.resolve().is_relative_to(source)
+                    or not original.is_file() or _sha256(original) != source_hashes[image]
+                    or row.get('source_sha256') != source_hashes[image]):
+                raise ValueError('Patch original source bytes changed')
+        provenance.update(source_dataset_path=str(canonical), source_map=mapping)
     return PatchManifest(root, list(classes), normal_class, patch_size, stride, patches, provenance)
 
 
@@ -304,6 +321,8 @@ def predict_patch_classification(
     ).to(dev)
     model.load_state_dict(state_dict)
     model.eval()
+    from backend.engine.model_runtime import runtime_model
+    model=runtime_model(model,checkpoint)
     normal_index = classes.index(normal_class)
     results: list[dict[str, Any]] = []
     with torch.inference_mode():

@@ -18,10 +18,13 @@ import pickle
 import platform
 import re
 import subprocess
+import hashlib
+import math
+import uuid
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 import torch
 
 from backend.engine.exporter import (
@@ -67,13 +70,16 @@ class ExportFlowRequest(BaseModel):
     verification_image_path: Optional[str] = None
     verification_image_id: Optional[str] = None
     approval_revision_ids: Optional[Dict[str, str]] = None
-    deployment_profile: Literal["standard", "edge_cpu"] = "standard"
+    deployment_profile: Literal["standard", "edge_cpu",'edge_cuda'] = "standard"
     target_os: Optional[str] = None
     target_arch: Optional[str] = None
+    runtime_config: Optional[Dict[str,Any]] = None
 
     @model_validator(mode="after")
     def validate_deployment(self):
-        if self.deployment_profile == "edge_cpu":
+        from backend.engine.runtime_configuration import runtime_options
+        runtime_options(self.runtime_config)
+        if self.deployment_profile in ('edge_cpu','edge_cuda'):
             target = normalize_target(self.target_os, self.target_arch)
             self.target_os, self.target_arch = target["os"], target["architecture"]
         elif self.target_os is not None or self.target_arch is not None:
@@ -176,6 +182,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             package_name=req.package_name,
             approved_revisions=approved_revisions,
             deployment_profile=req.deployment_profile, target_os=req.target_os, target_arch=req.target_arch,
+            runtime_config=req.runtime_config,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -202,6 +209,182 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             })
         result["parity"] = report
     return result
+
+
+@router.get('/runtime-capabilities')
+def runtime_capabilities():
+    from backend.engine.openvino_runtime import available_openvino_devices
+    try:openvino={**available_openvino_devices(),'available':True}
+    except ValueError as exc:openvino={'available':False,'devices':[],'error':str(exc)}
+    cuda=[f'cuda:{index}' for index in range(torch.cuda.device_count())] if torch.cuda.is_available() else []
+    mps=['mps'] if torch.backends.mps.is_available() else []
+    return {'torch_devices':['cpu',*cuda,*mps],'openvino':openvino,'native_sdk':{'languages':['Python','C++','C#'],'transport':'embedded_cpython_c_abi'},
+            'hardware_acceptance':'requires_target_execution','optimization_precisions':['fp32','fp16','int8']}
+
+
+class OptimizeFlowRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    package_dir:str
+    source_dataset_path:str
+    precision:Literal['fp32','fp16','int8']='fp32'
+    device:str='CPU'
+    cpu_threads:int=Field(default=1,ge=1,le=64,strict=True)
+    calibration_images:List[str]=Field(default_factory=list,max_length=1024)
+    validation_images:List[str]=Field(min_length=1,max_length=1024)
+
+
+@router.post('/flow/optimize')
+def optimize_flow(req:OptimizeFlowRequest,request:Request):
+    from backend.engine.specialized_training_jobs import require_training_source
+    from backend.engine.runtime_optimization_jobs import start_job
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before optimizing a saved flow')
+    try:
+        source=require_training_source(project,req.source_dataset_path)
+        package=Path(req.package_dir).expanduser()
+        owned=Path(project['project_dir']).resolve()/'exports'/'flows'
+        if package.is_symlink() or not package.resolve().is_relative_to(owned):raise ValueError('Optimization package must belong to this project')
+        for value in [*req.calibration_images,*req.validation_images]:
+            image=Path(value).expanduser()
+            if image.is_symlink() or not image.is_file() or not image.resolve().is_relative_to(source):raise ValueError('Calibration/validation images must belong to the active canonical source')
+        from backend.engine.runtime_configuration import runtime_options
+        runtime_options({'device':'openvino:'+req.device,'cpu_threads':req.cpu_threads})
+        receipt=_optimization_input_receipt(project,source,req.calibration_images,req.validation_images)
+        return start_job(project['project_dir'],{**{key:value for key,value in req.model_dump().items() if key!='source_dataset_path'},'input_receipt':receipt})
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/flow/optimization-jobs/{job_id}')
+def optimization_job(job_id:str,request:Request):
+    from backend.engine.runtime_optimization_jobs import read_job
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before reading runtime optimization')
+    try:return read_job(project['project_dir'],job_id)
+    except (ValueError,OSError) as exc:raise HTTPException(404,str(exc)) from exc
+
+
+@router.post('/flow/optimization-jobs/{job_id}/cancel')
+def cancel_optimization(job_id:str,request:Request):
+    from backend.engine.runtime_optimization_jobs import cancel_job
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before canceling runtime optimization')
+    try:return cancel_job(project['project_dir'],job_id)
+    except (ValueError,OSError) as exc:raise HTTPException(404,str(exc)) from exc
+
+
+def _optimization_input_receipt(project,source,calibration,validation):
+    from backend.engine.flow_package_runtime import _sha256
+    from backend.api.routes_model_comparisons import _fingerprint
+    from backend.engine.dataset_loaders import split_root_scope,_classification_split_assignments
+    from backend.api.routes_dataset import _split_manifest_file
+    with split_root_scope(Path(project.get('dataset_dir',Path(project['project_dir'])/'dataset'))/'splits'):
+        assignments=_classification_split_assignments(source) or {}
+        split=_split_manifest_file(source)
+    def rows(images):
+        values=[]
+        for image in images:
+            path=Path(image).resolve();relative=path.relative_to(source)
+            partition=assignments.get(str(path))
+            if partition is None:partition=next((p for p in relative.parts[:-1] if p in ('train','val','test')),None)
+            values.append({'relative_path':relative.as_posix(),'sha256':_sha256(path),'split':partition})
+        return values
+    return {'source_dataset_path':str(source),'source_fingerprint':_fingerprint(source),
+            'split_manifest_sha256':_sha256(split) if split.is_file() else None,
+            'calibration_images':rows(calibration),'validation_images':rows(validation)}
+
+
+class PrecisionApprovalRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    reviewer:str=Field(min_length=1,max_length=100)
+    reason:str=Field(min_length=8,max_length=2000)
+    holdout_reviewed:Literal[True]
+    maximum_absolute_drift:float=Field(ge=0,allow_inf_nan=False)
+    approval_revision_ids:Dict[str,str]
+
+    @field_validator('holdout_reviewed',mode='before')
+    @classmethod
+    def explicit_review(cls,value):
+        if value is not True:raise ValueError('Holdout review requires explicit true')
+        return value
+
+    @field_validator('maximum_absolute_drift',mode='before')
+    @classmethod
+    def numeric_bound(cls,value):
+        if type(value) not in (int,float) or not math.isfinite(value):raise ValueError('Drift bound requires an explicit finite number')
+        return value
+
+
+def _optimization_approval_context(project,job_id):
+    from backend.engine.runtime_optimization_jobs import read_job
+    from backend.engine.flow_package_runtime import verify_flow_package,_sha256
+    from backend.api.routes_model_deployments import _store,_active,verified_release_revision
+    record=read_job(project['project_dir'],job_id)
+    if record['status']!='completed' or not record.get('result'):raise ValueError('Only a completed measured optimization candidate can be approved')
+    candidate=Path(record['result']['package_path']);_,checkpoints=verify_flow_package(candidate)
+    if record['result'].get('candidate_manifest_sha256')!=_sha256(candidate/'manifest.json'):raise ValueError('Completed measured optimization candidate has changed')
+    if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows'):raise ValueError('Optimization candidate leaves its owning project')
+    info=json.loads((candidate/'openvino_models.json').read_text());receipt=info['input_receipt']
+    source=Path(project['source_dataset_dir']).resolve()
+    if receipt['source_dataset_path']!=str(source):raise ValueError('Optimization source differs from this active project')
+    current=_optimization_input_receipt(project,source,[str(source/row['relative_path']) for row in receipt['calibration_images']],[str(source/row['relative_path']) for row in receipt['validation_images']])
+    if current!=receipt:raise ValueError('Optimization source, split, calibration or heldout hashes changed')
+    if any(row['split'] not in ('val','test') for row in receipt['validation_images']):raise ValueError('Validation must use saved heldout val/test images')
+    if any(row['precision']=='int8' for row in info['models']) and any(row['split']!='train' for row in receipt['calibration_images']):raise ValueError('INT8 calibration must use saved training images')
+    revisions={}
+    for row in info['models']:
+        with _store(project) as conn:active=_active(conn,source,row['task'])
+        revision=verified_release_revision(project,active['revision_id'],source=source,task=row['task'],job_id=row['job_id'],checkpoint=checkpoints[row['job_id']]) if active else None
+        if revision is None:raise ValueError(f"Model {row['task']} needs its current active checkpoint approval before precision acceptance")
+        revisions[row['job_id']]=revision
+    return candidate,info,revisions
+
+
+@router.get('/flow/optimization-jobs/{job_id}/approval-prerequisites')
+def precision_approval_prerequisites(job_id:str,request:Request):
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before reviewing runtime acceptance')
+    try:
+        candidate,info,revisions=_optimization_approval_context(project,job_id)
+        return {'status':'ready','approval_revision_ids':{job:row['revision_id'] for job,row in revisions.items()},'models':info['models'],'candidate_path':str(candidate)}
+    except (ValueError,OSError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
+
+
+@router.get('/flow/optimization-jobs/{job_id}/heldout-results/{index}')
+def precision_heldout_result(job_id:str,index:int,request:Request):
+    from backend.engine.runtime_optimization_jobs import read_job
+    from backend.engine.flow_package_runtime import verify_flow_package,_sha256
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before reviewing runtime evidence')
+    try:
+        record=read_job(project['project_dir'],job_id)
+        if record['status']!='completed' or not record.get('result'):raise ValueError('Conversion has no completed heldout evidence')
+        candidate=Path(record['result']['package_path']);verify_flow_package(candidate)
+        if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows') or _sha256(candidate/'manifest.json')!=record['result'].get('candidate_manifest_sha256'):raise ValueError('Completed optimization candidate has changed')
+        rows=json.loads((candidate/'heldout_flow_results.json').read_text())
+        if index<0 or index>=len(rows):raise ValueError('Heldout image index is out of range')
+        relative=rows[index]['result_path'];path=candidate/relative
+        if relative!=f'heldout/heldout_{index:04d}.json' or _sha256(path)!=rows[index]['result_sha256']:raise ValueError('Heldout output hash or path changed')
+        return {'index':index,'total':len(rows),**json.loads(path.read_text())}
+    except (ValueError,OSError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
+
+
+@router.post('/flow/optimization-jobs/{job_id}/approve')
+def approve_precision(job_id:str,req:PrecisionApprovalRequest,request:Request):
+    from backend.engine.runtime_precision_approval import approve_precision_package
+    project=get_current_project(request)
+    if not project:raise HTTPException(409,'Open a project before approving runtime acceptance')
+    try:
+        candidate,info,revisions=_optimization_approval_context(project,job_id)
+        if req.approval_revision_ids!={job:row['revision_id'] for job,row in revisions.items()}:raise ValueError('Active model approval changed since this review was opened')
+        output=Path(project['project_dir'])/'exports/flows'/('approved_runtime_'+uuid.uuid4().hex)
+        approved=approve_precision_package(candidate,output,revisions=revisions,reviewer=req.reviewer,reason=req.reason,
+            maximum_absolute_drift=req.maximum_absolute_drift,holdout_reviewed=req.holdout_reviewed)
+        policy=Path(project['project_dir'])/'exports/runtime_policies'/f"{approved['release_policy']['manifest_sha256']}.json"
+        policy.parent.mkdir(parents=True,exist_ok=True)
+        with policy.open('x',encoding='utf-8') as writer:json.dump(approved['release_policy'],writer,indent=2)
+        approved['release_policy_path']=str(policy)
+        return approved
+    except (ValueError,OSError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
 
 
 class ExportRuntimeRequest(BaseModel):

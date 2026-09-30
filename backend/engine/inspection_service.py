@@ -65,6 +65,8 @@ def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], poli
         raise ValueError("Invalid release policy")
     if _sha256(package_dir / "manifest.json") != policy["manifest_sha256"]:
         raise ValueError("Release policy manifest SHA-256 does not match the package")
+    if manifest.get('runtime_acceptance_sha256') and policy.get('runtime_acceptance_sha256')!=manifest['runtime_acceptance_sha256']:
+        raise ValueError('Release policy must bind the explicit precision acceptance receipt')
     revisions = policy.get("approval_revisions")
     if (not isinstance(revisions, list) or len(revisions) != len(checkpoints)
             or manifest.get("release") != {"approval_revisions": revisions}):
@@ -377,17 +379,23 @@ class InspectionStore:
             ).fetchone()[0])
 
 
-def _inspect_job(store: InspectionStore, package_dir: Path, row: dict[str, Any], require_delivery: bool, device: str = "cpu", runtime_identity: dict | None = None) -> None:
+def _inspect_job(store: InspectionStore, package_dir: Path, row: dict[str, Any], require_delivery: bool, device: str = "cpu", runtime_identity: dict | None = None, deadline_ms: int | None = None) -> None:
     path = Path(row["image_path"])
     try:
         if path.is_symlink() or not path.is_file():
             raise ValueError("Inspection image is missing")
         if _sha256(path) != row["image_sha256"]:
             raise ValueError("Inspection image changed after it was queued")
-        result = run_flow_package(package_dir, path, row["image_id"]) if device == "cpu" else run_flow_package(package_dir, path, row["image_id"], device=device)
+        if deadline_ms is not None:
+            result=run_flow_package(package_dir,path,row['image_id'],device=device,deadline_ms=deadline_ms)
+        else:
+            result = run_flow_package(package_dir, path, row["image_id"], device=device)
         if runtime_identity and isinstance(result, dict): result["runtime_identity"] = runtime_identity
         if not isinstance(result, dict) or result.get("final_verdict") not in VALID_VERDICTS:
             raise ValueError("Package returned no valid final verdict")
+        if result.get('status')=='timeout':
+            store.finish(row['job_id'],result=result,error='INFERENCE_DEADLINE_EXCEEDED')
+            return
         if result.get("status") in {"error", "failed"} or result.get("error_message"):
             raise ValueError(f"Package execution failed: {result.get('error_message') or result.get('status')}")
         store.finish(row["job_id"], result=result, require_delivery=require_delivery)
@@ -447,22 +455,26 @@ def create_service_app(
     camera_frame_interval: float = 1.0,
     require_approved_release: bool = False,
     release_policy: Path | None = None,
-    device: str = "cpu",
+    device: str | None = None,
     runtime_root: Path | None = None,
     adapter_config_path: Path | None = None,
+    deadline_ms: int | None = None,
 ) -> FastAPI:
     """Verify a package before creating mutable state or loading a checkpoint."""
     if not token:
         raise ValueError("An API token is required")
+    from backend.engine.runtime_deadline import validate_deadline
+    validate_deadline(deadline_ms)
     package_dir = Path(package_dir).expanduser().resolve()
     pipeline, checkpoints = verify_flow_package(package_dir)
+    device=device or json.loads((package_dir/'manifest.json').read_text()).get('runtime',{}).get('device','cpu')
     from backend.engine.edge_runtime import enforce_edge_device
     enforce_edge_device(package_dir, device)
     if require_approved_release and release_policy is None:
         raise ValueError("Approved release policy is required")
     if release_policy is not None:
         _verify_release_policy(package_dir, checkpoints, release_policy)
-    from backend.engine.runtime_device import resolve_runtime_device
+    from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
     resolve_runtime_device(device)
     store = InspectionStore(Path(state_dir).expanduser().resolve())
     from backend.engine.service_runtime import ServiceRuntime
@@ -519,7 +531,7 @@ def create_service_app(
             else:
                 with runtime.lock:
                     identity = runtime.read()
-                    _inspect_job(store, Path(identity["package_path"]), row, require_delivery, identity["device"], identity)
+                    _inspect_job(store, Path(identity["package_path"]), row, require_delivery, identity["device"], identity,deadline_ms)
 
     def camera_worker() -> None:
         if camera_source is None:
@@ -699,8 +711,9 @@ def main() -> int:
     parser.add_argument("--require-approved-release", action="store_true")
     parser.add_argument("--release-policy", type=Path, help="Trusted approval policy outside the package")
     parser.add_argument("--runtime-root", type=Path)
-    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--device", default=None)
     parser.add_argument("--adapter-config", type=Path)
+    parser.add_argument('--deadline-ms',type=int)
     args = parser.parse_args()
     if not args.token:
         parser.error("--token or VISION_INSPECTION_TOKEN is required")
@@ -710,7 +723,7 @@ def main() -> int:
         result_webhook_url=args.result_webhook_url, result_webhook_token=args.result_webhook_token,
         camera_source=args.camera_source, camera_frame_interval=args.camera_frame_interval,
         require_approved_release=args.require_approved_release, release_policy=args.release_policy,
-        runtime_root=args.runtime_root, device=args.device, adapter_config_path=args.adapter_config,
+        runtime_root=args.runtime_root, device=args.device, adapter_config_path=args.adapter_config,deadline_ms=args.deadline_ms,
     )
     import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)

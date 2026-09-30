@@ -99,8 +99,33 @@ def bind_family_training(project,dataset,task,supplied_version=None):
     requested=Path(dataset).expanduser()
     dataset=requested.resolve()
     if requested.is_symlink() or not dataset.is_dir():raise ValueError('Family dataset must match the active project source')
-    if task!='enhancement' and dataset!=source:raise ValueError('Family dataset must match the active project source')
-    if task=='ocr':
+    prepared_tasks={'enhancement','patch_classification','rotation','ocr','rotated_detection','defect_gan'}
+    if task not in prepared_tasks and dataset!=source:raise ValueError('Family dataset must match the active project source')
+    if task in {'patch_classification','rotation'}:
+        owned=Path(project['dataset_dir']).resolve()
+        if Path(project['dataset_dir']).is_symlink() or not dataset.is_relative_to(owned):
+            raise ValueError('Prepared family data must belong to the active project dataset storage')
+        if task=='patch_classification':
+            from backend.engine.patch_classification import load_patch_manifest
+            manifest=load_patch_manifest(dataset);paths=[row.image_path for row in manifest.patches]
+            manifest_path=dataset/'patches.json'
+        else:
+            from backend.engine.rotation import load_rotation_manifest
+            manifest=load_rotation_manifest(dataset);paths=[row.image_path for row in manifest.samples]
+            manifest_path=dataset/'rotation.json'
+        provenance=manifest.provenance
+        configured_source=provenance.get('source_dataset_path')
+        if not configured_source or Path(configured_source).resolve()!=source:
+            raise ValueError('Prepared family data must link to the active project source')
+        if task=='rotation':
+            raw=json.loads(manifest_path.read_text())
+            for row in raw.get('samples',[]):
+                relative=row.get('source_relative_path',row.get('image',''))
+                original=source/relative
+                if (original.is_symlink() or not original.resolve().is_relative_to(source)
+                        or _file_hash(original)!=row.get('source_sha256')):
+                    raise ValueError('Rotation original source image changed')
+    elif task=='ocr':
         from backend.engine.ocr import load_ocr_manifest
         manifest=load_ocr_manifest(dataset);paths=[row.image_path for row in manifest.samples]
         provenance=manifest.provenance;manifest_path=dataset/'ocr.json'
@@ -111,7 +136,7 @@ def bind_family_training(project,dataset,task,supplied_version=None):
     elif task=='defect_gan':
         from backend.engine.defect_gan import load_defect_gan_manifest,MANIFEST_NAME
         manifest=load_defect_gan_manifest(dataset);paths=[dataset/row['image'] for row in manifest['samples']]
-        manifest_path=dataset/MANIFEST_NAME;provenance={'manifest_sha256':_file_hash(manifest_path)}
+        manifest_path=dataset/MANIFEST_NAME;provenance={**manifest.get('provenance',{}),'manifest_sha256':_file_hash(manifest_path)}
     elif task=='enhancement':
         from backend.engine.enhancement import load_enhancement_manifest
         owned=Path(project['dataset_dir']).resolve()
@@ -126,6 +151,20 @@ def bind_family_training(project,dataset,task,supplied_version=None):
             if not original.resolve().is_relative_to(source) or _file_hash(original)!=row.get('source_sha256'):
                 raise ValueError('Enhancement original source image changed')
     else:raise ValueError('Unsupported family training task')
+    if dataset!=source and task in {'ocr','rotated_detection','defect_gan'}:
+        owned=Path(project['dataset_dir']).resolve()
+        if Path(project['dataset_dir']).is_symlink() or not dataset.is_relative_to(owned):
+            raise ValueError('Prepared family inputs must belong to active project storage')
+        if not provenance.get('source_dataset_path') or Path(provenance['source_dataset_path']).resolve()!=source:
+            raise ValueError('Prepared family inputs must link to the active original source')
+        mapping=provenance.get('source_map')
+        if not isinstance(mapping,dict) or not mapping:raise ValueError('Prepared family inputs require original source mapping')
+        for relative,row in mapping.items():
+            copied=dataset/relative;original=source/row.get('source_relative_path','')
+            if (copied.is_symlink() or original.is_symlink() or not copied.resolve().is_relative_to(dataset)
+                    or not original.resolve().is_relative_to(source) or _file_hash(original)!=row.get('source_sha256')
+                    or _file_hash(copied)!=row.get('source_sha256')):
+                raise ValueError('Prepared family original source image changed')
     binding=bind_training_version(project,source,supplied_version)
     directory=Path(binding['version_dir'])
     rows=[]

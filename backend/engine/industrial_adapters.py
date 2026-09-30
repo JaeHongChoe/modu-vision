@@ -27,6 +27,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 from PIL import Image
+from backend.engine.dicom_input import open_source_image
 import torch
 from torch.utils.data import Dataset
 
@@ -223,7 +224,7 @@ def read_image_safely_rgb(
       - Adaptive resolution downscaling if max_dim is specified
     """
     p_str = str(path)
-    with Image.open(p_str) as im:
+    with open_source_image(p_str) as im:
         # Check for 16-bit / 32-bit single-channel modes (e.g. industrial TIFF/AOI)
         if im.mode in ("I;16", "I;16L", "I;16B", "I", "F"):
             arr = np.array(im)
@@ -484,7 +485,7 @@ class LabelMeParser:
         if img_w <= 0 or img_h <= 0:
             cand_img = p.parent / img_name
             if cand_img.exists():
-                with Image.open(cand_img) as im:
+                with open_source_image(cand_img) as im:
                     img_w, img_h = float(im.size[0]), float(im.size[1])
             else:
                 img_w, img_h = 8192.0, 5464.0
@@ -761,7 +762,7 @@ class LabelMeRasterizer:
     @staticmethod
     def extract_alpha_mask(image_path: Union[str, Path]) -> Optional[np.ndarray]:
         """Extracts discrete binary mask from RGBA image alpha channel (alpha > 0 -> 1)."""
-        with Image.open(str(image_path)) as im:
+        with open_source_image(str(image_path)) as im:
             if im.mode not in ("RGBA", "LA"):
                 return None
             alpha = np.array(im.split()[-1], dtype=np.uint8)

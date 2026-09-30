@@ -18,6 +18,19 @@ _EVENTS={}
 ACTIVE={'queued','running','stopping'}
 
 
+def persist_training_configuration(output,config):
+    """Keep reusable controls inside the hash-bound checkpoint and metadata."""
+    import torch
+    output=Path(output);checkpoint=output/'best_model.pt'
+    payload=torch.load(checkpoint,map_location='cpu',weights_only=True);payload['training_config']=dict(config)
+    temporary=checkpoint.with_suffix('.tmp');torch.save(payload,temporary);temporary.replace(checkpoint)
+    digest=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+    for name in ('model_meta.json','metadata.json'):
+        path=output/name
+        if path.is_file():
+            metadata=json.loads(path.read_text());metadata.update(training_config=dict(config),checkpoint_sha256=digest);_write(path,metadata)
+
+
 def require_training_source(project, requested):
     source=Path(requested).expanduser().resolve()
     configured=project.get('source_dataset_dir')
@@ -66,17 +79,18 @@ def cancel_job(root,identifier):
         return record
 
 
-def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None):
+def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None,family_dataset=None):
     from backend.engine.training_provenance import bind_family_training,validate_training_binding,persist_model_binding
     from backend.engine.runtime_device import resolve_runtime_device
     source=require_training_source(project,source);output=Path(output).resolve();root=output.parent
     device=str(resolve_runtime_device(options.device))
     current_digest=family_digest()
-    binding=bind_family_training(project,source,task)
-    binding.update(family_dataset_path=str(source),family_dataset_sha256=current_digest,label_kind=task)
+    dataset=Path(family_dataset).resolve() if family_dataset is not None else source
+    binding=bind_family_training(project,dataset,task)
+    binding.update(family_dataset_path=str(dataset),family_dataset_sha256=current_digest,label_kind=task)
     event=threading.Event();key=str(output)
     record={'job_id':output.name,'task':task,'status':'queued','epoch':0,'batch':0,'batches':0,
-        'epochs':options.epochs,'dataset_path':str(source),'source_dataset_path':str(source),
+        'epochs':options.epochs,'dataset_path':str(dataset),'source_dataset_path':str(source),
         'device':device,'owner_instance':PROCESS_INSTANCE,'created_at':time.time(),'error':None,
         'training_provenance':binding,'events':[]}
     if warm_start is not None:
@@ -107,17 +121,21 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             validate_training_binding(binding)
             if family_digest()!=current_digest:raise ValueError('Family training labels or source changed during training')
             persist_model_binding(output,binding)
+            if event.is_set():raise InterruptedError('Training cancelled during finalization')
+            configuration=options.model_dump(exclude={'dataset_path','background','warm_start_job_id'}) if hasattr(options,'model_dump') else {}
+            persist_training_configuration(output,configuration)
             checkpoint=output/'best_model.pt';digest=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
             metadata=output/'model_meta.json'
-            meta=json.loads(metadata.read_text());meta.update(source_dataset_path=str(source),dataset_path=str(source))
-            if task=='defect_gan':meta['checkpoint_sha256']=digest
+            meta=json.loads(metadata.read_text());meta.update(source_dataset_path=str(source),dataset_path=str(dataset),
+                training_config=configuration)
+            meta['checkpoint_sha256']=digest
             _write(metadata,meta)
             receipt={'job_id':output.name,'task':task,'status':'completed','source_dataset_path':str(source),
-                'dataset_path':str(source),'dataset_fingerprint':binding['dataset_fingerprint'],
+                'dataset_path':str(dataset),'dataset_fingerprint':binding['dataset_fingerprint'],
                 'training_provenance':binding,'checkpoint_sha256':digest}
             if warm_start is not None:
                 receipt['warm_start'] = warm_start.lineage()
-            if task=='defect_gan':result={**result,'checkpoint_sha256':digest}
+            result={**result,'checkpoint_sha256':digest}
             response={'job_id':output.name,'checkpoint_path':str(checkpoint),'model_sha256':digest,'result':result}
             # Serialize completion with cancel acceptance. A stopping journal never
             # publishes an executable checkpoint, even if binding writes took time.

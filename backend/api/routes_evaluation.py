@@ -502,6 +502,7 @@ def _evaluate_classification(
                 "ground_truth": true_name,
                 "predicted_class": pred_name,
                 "confidence": round(conf, 4),
+                "class_scores": {name:float(probs[i].item()) for i,name in enumerate(classes)},
                 "is_correct": bool(target_idx == pred_idx),
                 "thumbnail_url": f"/api/dataset/thumbnail/{img_path.name}?file_path={img_path.resolve()}",
             })
@@ -723,9 +724,19 @@ def _evaluate_detection(
                 "ground_truth": gt_name,
                 "predicted_class": pred_name,
                 "confidence": round(high_conf, 4),
+                "defect_score": round(high_conf,4),
+                "class_scores": {name: max((float(score) for score,label in zip(out_scores,out_labels) if int(label)==index),default=0.0) for index,name in enumerate(cm_classes) if index>0},
                 "is_correct": bool(gt_name == pred_name),
                 "thumbnail_url": f"/api/dataset/thumbnail/{img_meta['file_name']}?file_path={img_path.resolve()}",
             })
+            from backend.engine.evaluation_evidence import match_objects
+            scale_x=float(img_meta.get('width',img_size[0]))/img_size[0]
+            scale_y=float(img_meta.get('height',img_size[1]))/img_size[1]
+            def original_box(box):return [float(v)*scale for v,scale in zip(box,(scale_x,scale_y,scale_x,scale_y))]
+            predictions=[{'label':cm_classes[int(label)],'box':original_box(box.cpu().tolist()),'confidence':float(score)} for box,score,label in zip(out_boxes,out_scores,out_labels) if 0<=int(label)<num_cm]
+            truth=[{'label':cm_classes[int(label)],'box':original_box(box.cpu().tolist())} for box,label in zip(target['boxes'],target['labels']) if 0<=int(label)<num_cm]
+            test_predictions[-1]['object_evidence']={**match_objects(predictions,truth),'coordinate_space':'original_image','source_size':[img_meta.get('width'),img_meta.get('height')]}
+            test_predictions[-1]['ground_truth_classes']=sorted({row['label'] for row in truth})
 
     norm_matrix = [[0.0] * num_cm for _ in range(num_cm)]
     for i in range(num_cm):
@@ -829,6 +840,16 @@ def _evaluate_segmentation(
                 "is_correct": bool(gt_label == pred_label),
                 "thumbnail_url": f"/api/dataset/thumbnail/{img_p.name}?file_path={img_p.resolve()}",
             })
+            from backend.engine.evaluation_evidence import pixel_errors
+            test_predictions[-1]['pixel_evidence']={'coordinate_space':'model_input','shape':list(gt_mask.shape),'per_class':pixel_errors(pred_mask,gt_mask,classes)}
+            import base64
+            def index_mask_png(mask):
+                from io import BytesIO
+                buffer=BytesIO();Image.fromarray(mask.astype(np.uint8)).save(buffer,format='PNG')
+                return 'data:image/png;base64,'+base64.b64encode(buffer.getvalue()).decode('ascii')
+            test_predictions[-1]['pixel_evidence'].update(prediction_mask=index_mask_png(pred_mask),truth_mask=index_mask_png(gt_mask))
+            test_predictions[-1]['class_scores']={name:float(probs[i].max().item()) for i,name in enumerate(classes)}
+            test_predictions[-1]['ground_truth_classes']=[name for i,name in enumerate(classes) if np.any(gt_mask==i)]
 
     norm_matrix = [[0.0] * num_classes for _ in range(num_classes)]
     for i in range(num_classes):
@@ -846,6 +867,8 @@ def _evaluate_segmentation(
             "mdice": seg_metrics.get("mdice", 0.0),
             "pixel_accuracy": seg_metrics.get("pixel_accuracy", 0.0),
             "foreground_iou": seg_metrics.get("foreground_iou", 0.0),
+            "per_class_iou": seg_metrics.get("per_class_iou",{}),
+            "per_class_dice": seg_metrics.get("per_class_dice",{}),
             "best_metric": meta.get("best_metric"),
         },
         "confusion_matrix": {
@@ -1044,6 +1067,8 @@ def run_or_load_evaluation(
     evaluation_binding = {"source_dataset_path": str(bound_source),
                           "dataset_fingerprint": _fingerprint(bound_source),
                           "checkpoint_sha256": _sha256(model_pt)}
+    from backend.engine.evaluation_history import evaluation_model_context
+    evaluation_binding.update(evaluation_model_context(out_dir.parent.parent,meta))
 
     def preserve_result(result):
         if _fingerprint(bound_source) != evaluation_binding["dataset_fingerprint"] or _sha256(model_pt) != evaluation_binding["checkpoint_sha256"]:
@@ -1067,6 +1092,8 @@ def run_or_load_evaluation(
             if path and Path(path).is_file() and Path(path).resolve().is_relative_to(bound_source):
                 metadata = metadata_for_path(project_root, bound_source, Path(path), routes_dataset.STUDIO_ANNOTATIONS_DIR)
                 prediction.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "tags", "product", "lot", "group", "workflow_state")})
+        from backend.engine.evaluation_evidence import evaluation_analysis
+        result['analysis']=evaluation_analysis(result.get('test_predictions',[]),task)
         record = EvaluationHistory(project_root / "reports" / "evaluations").append(result, evaluation_binding)
         result["evaluation_id"] = record["evaluation_id"]
         result["binding"] = evaluation_binding

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-01",
+  "evidence_scope": "observed_native_workflow_and_actual_CPU_flow_not_full_hardware_or_quality_acceptance",
+  "originals": {
+    "file_count": 171,
+    "image_count": 88,
+    "annotation_count": 83,
+    "all_source_sha256_unchanged": true
+  },
+  "observed": {
+    "original_import": true,
+    "labeled_image_count": 80,
+    "unlabeled_image_count": 8,
+    "owned_labelset_brush_eraser_undo_redo_save": true,
+    "zoom_in_out_fit_one_to_one": true,
+    "metadata_and_labelset_flag_saved": true,
+    "real_DINOv3_completed_training_device": "cpu",
+    "evaluation_rerun_saved": true,
+    "typed_ROI_SEG_decision_graph_saved": true,
+    "invalid_connection_guidance": true,
+    "graph_undo_redo": true,
+    "batch_test_count": 4,
+    "operator_review_reopened": true,
+    "CSV_and_JSON_rows_readback": 4,
+    "reopened_class_counts_are_image_grain": true,
+    "reopened_unlabeled_statistics_filter_gallery_count": 8,
+    "labelset_flag_restored_after_quit": true
+  },
+  "saved_run": {
+    "run_id": "838bec29-707a-4bb1-897a-ada4f2254f83",
+    "flow_version": "9bef60ee070b43339d36c787a5e0583a",
+    "graph_sha256": "d87e1b8fc1eae18e920d3284df545fe7014920046d898e7a88c451fe2bf1fe29",
+    "model_sha256": "e42ba14916f88fab764345b1e048052f1a317b0f314eeef970d54b118f4cec51",
+    "input_sha256": "19d002393c157d6d4643a068b22bf4e5374beecccc563134dd1658b922a94793",
+    "ROI_native_size": [
+      64,
+      64
+    ]
+  },
+  "export": {
+    "generated": true,
+    "app_vs_package_actual_input_parity": true,
+    "packaged_file_count": 141,
+    "native_SDK_source_file_count": 10,
+    "whole_DAG_runtime": true
+  },
+  "lifecycle": {
+    "clean_quit_exit_code": 0,
+    "destroyed_window_exception_dialog": false,
+    "project_training_evaluation_flow_inspection_restored": true
+  },
+  "quality_approved": false,
+  "all_native_control_combinations_accepted": false,
+  "private_journal_sha256": "a64a673ca3c5ebe2c2e9dd665e863526083a001d6554c2d9a2b1c3086162bb60",
+  "package_integrity_assertions_passed": 40
+}

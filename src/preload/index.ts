@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { BackendStatus, CrashEventData, ElectronAPI } from '../types/electron';
 
 const api: ElectronAPI = {
+  getSharedConnection:()=>ipcRenderer.invoke('shared:get'),
+  loginSharedServer:input=>ipcRenderer.invoke('shared:login',input),
+  selectSharedProject:id=>ipcRenderer.invoke('shared:select',id),
+  disconnectSharedServer:()=>ipcRenderer.invoke('shared:disconnect'),
   getBackendPort: (): Promise<number | null> => {
     return ipcRenderer.invoke('get-backend-port');
   },

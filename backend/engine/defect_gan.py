@@ -13,6 +13,10 @@ from typing import Any
 import json
 import os
 import uuid
+import math
+import shutil
+
+import cv2
 
 import numpy as np
 from PIL import Image
@@ -76,20 +80,29 @@ def _verified_samples(root: Path, samples: list[dict[str, Any]]) -> list[dict[st
         x1, y1, x2, y2 = bbox
         if x1 < 0 or y1 < 0 or x2 > width or y2 > height or x2 - x1 < 16 or y2 - y1 < 16:
             raise ValueError("Defect GAN crop bbox is outside the image or too small")
-        verified.append({"image": sample["image"], "bbox": bbox, "split": split,
-                         "source_sha256": fingerprint})
+        row = {"image": sample["image"], "bbox": bbox, "split": split, "source_sha256": fingerprint}
+        if sample.get('label') is not None:
+            if not isinstance(sample['label'], str) or not sample['label'].strip(): raise ValueError('GAN crop class must be an explicit nonempty label')
+            row['label'] = sample['label']
+        verified.append(row)
     return verified
 
 
-def write_defect_gan_manifest(root: str | Path, rows: list[dict[str, Any]]) -> Path:
+def write_defect_gan_manifest(root: str | Path, rows: list[dict[str, Any]], *, source_dataset_path=None, source_map=None) -> Path:
     root = Path(root).expanduser().resolve()
     samples = _verified_samples(root, rows)
     manifest = root / MANIFEST_NAME
     if manifest.is_symlink():
         raise ValueError("Defect GAN manifest cannot be a symbolic link")
     temporary = root / f".{MANIFEST_NAME}.{uuid.uuid4().hex}.tmp"
-    temporary.write_text(json.dumps({"version": 1, "image_size": IMAGE_SIZE,
-                                     "samples": samples}, indent=2), encoding="utf-8")
+    payload = {"version": 1, "image_size": IMAGE_SIZE, "samples": samples}
+    if source_dataset_path is not None:
+        canonical_source = str(Path(source_dataset_path).resolve())
+        provenance = {'source_dataset_path': canonical_source,
+            'source_map': {row['image']: {'source_relative_path': row['source_image'], 'source_sha256': row['source_sha256']}
+                           for row in source_map}}
+        payload.update(source_dataset_path=canonical_source, source_map=source_map, provenance=provenance)
+    temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     os.replace(temporary, manifest)
     return manifest
 
@@ -110,7 +123,45 @@ def load_defect_gan_manifest(root: str | Path) -> dict[str, Any]:
             not isinstance(row.get("source_sha256"), str) for row in samples):
         raise ValueError("Defect GAN manifest requires source SHA-256 for every crop")
     _verified_samples(root, samples)
+    if payload.get('source_dataset_path'):
+        from backend.engine.source_aliases import resolve_source_root
+        source=resolve_source_root(payload['source_dataset_path'])
+        source_map = payload.get('source_map')
+        if not isinstance(source_map, list) or len(source_map) != len(samples): raise ValueError('GAN prepared source map is incomplete')
+        for sample, mapping in zip(samples, source_map):
+            if (not isinstance(mapping, dict) or mapping.get('image') != sample['image']
+                    or mapping.get('source_sha256') != sample['source_sha256'] or mapping.get('source_bbox') != sample['bbox']):
+                raise ValueError('GAN prepared source map differs from its explicit crop labels')
+            original = _source_path(source, mapping['source_image'])
+            if _hash(original) != mapping['source_sha256']: raise ValueError('GAN original source image hash changed')
     return payload
+
+
+def prepare_defect_gan_dataset(source_root, output_root, rows):
+    source = Path(source_root).expanduser().resolve()
+    verified = _verified_samples(source, rows)
+    output = Path(output_root).expanduser()
+    if output.exists() or output.is_symlink() or output.resolve().is_relative_to(source):
+        raise ValueError('GAN preparation requires a new owned directory outside original source')
+    output.mkdir(parents=True)
+    prepared = []; source_map = []
+    try:
+        for index, row in enumerate(verified):
+            original = _source_path(source, row['image'])
+            relative = f"images/{index:06d}{original.suffix.lower()}"
+            destination = output / relative; destination.parent.mkdir(exist_ok=True)
+            shutil.copyfile(original, destination)
+            if _hash(destination) != row['source_sha256'] or _hash(original) != row['source_sha256']:
+                raise ValueError('GAN original source changed during preparation')
+            prepared.append({**row, 'image': relative})
+            source_map.append({'image': relative, 'source_image': row['image'], 'source_sha256': row['source_sha256'],
+                'source_bbox': row['bbox'], 'split': row['split'], 'label': row.get('label')})
+        write_defect_gan_manifest(output, prepared, source_dataset_path=source, source_map=source_map)
+        load_defect_gan_manifest(output)
+        return output.resolve()
+    except BaseException:
+        shutil.rmtree(output, ignore_errors=True)
+        raise
 
 
 class _DefectCrops(Dataset):
@@ -295,6 +346,104 @@ def generate_defect_candidates(
     return review
 
 
+def _composition_regions(regions, width, height):
+    if not isinstance(regions, list) or not 1 <= len(regions) <= 32:
+        raise ValueError('GAN composition needs between one and 32 explicit source regions')
+    seen = set(); canonical = []
+    for row in regions:
+        if not isinstance(row, dict) or not isinstance(row.get('id'), str) or not row['id'] or row['id'] in seen:
+            raise ValueError('GAN regions need unique nonempty IDs')
+        seen.add(row['id'])
+        bbox = row.get('bbox')
+        if not isinstance(bbox, list) or len(bbox) != 4 or any(type(v) is not int for v in bbox):
+            raise ValueError('GAN source region bounds must be four native pixel integers')
+        x1, y1, x2, y2 = bbox
+        if not 0 <= x1 < x2 <= width or not 0 <= y1 < y2 <= height:
+            raise ValueError('GAN source region extends outside native image bounds')
+        opacity = row.get('opacity', 1.0); feather = row.get('feather_px', 0)
+        if isinstance(opacity, bool) or not isinstance(opacity, (int, float)) or not math.isfinite(opacity) or not 0 < opacity <= 1:
+            raise ValueError('GAN blend opacity must be finite and from zero exclusive to one')
+        if type(feather) is not int or not 0 <= feather <= 1024: raise ValueError('GAN feather pixels must be an integer from 0 to 1024')
+        polygon = row.get('mask_polygon')
+        if polygon is not None:
+            from backend.engine.geometry_measurement import _points
+            points = _points(polygon, minimum=3)
+            if np.any(points < [x1, y1]) or np.any(points > [x2, y2]): raise ValueError('GAN blend polygon extends outside its region bounds')
+            if abs(cv2.contourArea(points.astype(np.float32))) < 1: raise ValueError('GAN blend polygon has no positive source area')
+        canonical.append({'id': row['id'], 'bbox': bbox, 'opacity': float(opacity), 'feather_px': feather, 'mask_polygon': polygon})
+    return canonical
+
+
+def generate_composited_candidates(checkpoint_path, source_image_path, output_dir, *, regions,
+                                   count=8, seed=0, device='cpu', source_sha256=None):
+    """Run the trained generator for each region and retain reviewed-source provenance."""
+    source = Path(source_image_path).expanduser()
+    if source.is_symlink() or not source.is_file(): raise ValueError('GAN composition source image is unavailable')
+    source = source.resolve(); original_hash = _hash(source)
+    if source_sha256 is not None and source_sha256 != original_hash: raise ValueError('GAN source image hash changed')
+    with Image.open(source) as loaded:
+        if loaded.width * loaded.height > 100_000_000: raise ValueError('GAN source exceeds native pixel work budget')
+        original = np.asarray(loaded.convert('RGB')).copy()
+    height, width = original.shape[:2]
+    regions = _composition_regions(regions, width, height)
+    if type(count) is not int or not 1 <= count <= 20 or count * len(regions) > 500:
+        raise ValueError('GAN composition exceeds the 20-image or 500-region work budget')
+    output = Path(output_dir).expanduser()
+    if output.exists() or output.is_symlink() or output.resolve() == source.parent:
+        raise ValueError('GAN composition requires a new review directory')
+    output.mkdir(parents=True)
+    try:
+        patches = generate_defect_candidates(checkpoint_path, output / 'regions', count=count * len(regions), seed=seed, device=device)
+        snapshot = output / 'source_image.png'; Image.fromarray(original).save(snapshot)
+        candidates = []
+        for index in range(count):
+            composed = original.copy(); provenance = []
+            for offset, row in enumerate(regions):
+                generated = patches['candidates'][index * len(regions) + offset]
+                x1, y1, x2, y2 = row['bbox']; rw, rh = x2 - x1, y2 - y1
+                with Image.open(generated['path']) as image: patch = np.asarray(image.convert('RGB'))
+                patch = cv2.resize(patch, (rw, rh), interpolation=cv2.INTER_LINEAR)
+                mask = np.ones((rh, rw), np.uint8)
+                if row['mask_polygon'] is not None:
+                    mask.fill(0)
+                    points = np.rint(np.asarray(row['mask_polygon']) - [x1, y1]).astype(np.int32)
+                    cv2.fillPoly(mask, [points], 1)
+                alpha = mask.astype(np.float32)
+                if row['feather_px']:
+                    padded = np.pad(mask, 1)
+                    distance = cv2.distanceTransform(padded, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)[1:-1, 1:-1]
+                    alpha *= np.clip(distance / row['feather_px'], 0, 1)
+                alpha *= row['opacity']
+                current = composed[y1:y2, x1:x2].astype(np.float32)
+                composed[y1:y2, x1:x2] = np.rint(current * (1-alpha[..., None]) + patch * alpha[..., None]).clip(0, 255).astype(np.uint8)
+                provenance.append({**row, 'coordinate_space': 'original_image', 'generated_patch_sha256': generated['sha256'],
+                                   'blend_mask_sha256': sha256(alpha.tobytes()).hexdigest(), 'generation_index': index * len(regions) + offset,
+                                   'blend_mode': 'alpha_source_over', 'mask_dtype': 'float32', 'mask_shape': [rh, rw]})
+            path = output / f'synthetic_candidate_{index+1:04d}.png'; Image.fromarray(composed).save(path)
+            candidates.append({'id': f'candidate_{index+1:04d}', 'path': str(path.resolve()), 'sha256': _hash(path),
+                               'status': 'synthetic_unreviewed', 'composition_regions': provenance})
+        if _hash(source) != original_hash: raise ValueError('GAN source image changed during composition')
+        review = {key: value for key, value in patches.items() if key != 'candidates'}
+        review.update({'generation_mode': 'source_composition', 'source_image_path': str(source), 'source_image_sha256': original_hash,
+                      'source_size': [width, height], 'source_snapshot': str(snapshot.resolve()), 'source_snapshot_sha256': _hash(snapshot),
+                      'regions': regions, 'candidates': candidates, 'seed': seed, 'quality_status': 'unvalidated'})
+        (output / 'review_manifest.json').write_text(json.dumps(review, ensure_ascii=False, indent=2))
+        return review
+    except BaseException:
+        shutil.rmtree(output, ignore_errors=True)
+        raise
+
+
+def validate_composition_source(review_dir, manifest):
+    if manifest.get('generation_mode') != 'source_composition': return
+    review = Path(review_dir).resolve()
+    original = Path(manifest['source_image_path']); snapshot = Path(manifest['source_snapshot'])
+    if (not original.is_file() or original.is_symlink() or _hash(original) != manifest['source_image_sha256']
+            or snapshot.parent.resolve() != review or snapshot.is_symlink() or not snapshot.is_file()
+            or _hash(snapshot) != manifest['source_snapshot_sha256']):
+        raise ValueError('GAN composition source or preserved snapshot hash changed before review')
+
+
 def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path,
                              output_dir: str | Path, decisions: list[dict]) -> dict:
     """Build a classification training snapshot after explicit per-image human review.
@@ -310,6 +459,7 @@ def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path
     manifest_path=review/'review_manifest.json'
     if manifest_path.is_symlink() or not manifest_path.is_file() or not decisions: raise ValueError('Reviewed candidate manifest and decisions are required')
     manifest=json.loads(manifest_path.read_text())
+    validate_composition_source(review, manifest)
     candidates={row['id']:row for row in manifest['candidates']}
     real={split:ClassificationDataset(source,split=split) for split in ('train','val','test')}
     if not len(real['train']) or not len(real['val']): raise ValueError('Adoption needs existing labeled classification train and validation samples')
@@ -343,7 +493,8 @@ def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path
         for decision,row,path in selected:
             destination=output/'train'/decision['label']/f"synthetic_{uuid.uuid4().hex}.png"
             destination.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,destination)
-            rows.append({'kind':'synthetic_reviewed','image':destination.relative_to(output).as_posix(),'split':'train','label':decision['label'],'candidate_id':row['id'],'source_sha256':row['sha256'],'generator_sha256':manifest['generator_sha256'],'reviewer':decision['reviewer'],'reason':decision['reason']})
+            rows.append({'kind':'synthetic_reviewed','image':destination.relative_to(output).as_posix(),'split':'train','label':decision['label'],'candidate_id':row['id'],'source_sha256':row['sha256'],'generator_sha256':manifest['generator_sha256'],'reviewer':decision['reviewer'],'reason':decision['reason'],
+                'source_image_sha256': manifest.get('source_image_sha256'), 'composition_regions': row.get('composition_regions', []), 'generation_seed': manifest.get('seed')})
         audit={'task':'classification','source_dataset_path':str(source),'generator_sha256':manifest['generator_sha256'],'reviewed_at':datetime.now(timezone.utc).isoformat(),'samples':rows,'decisions':decisions}
         (output/'synthetic_provenance.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
         for decision in decisions:

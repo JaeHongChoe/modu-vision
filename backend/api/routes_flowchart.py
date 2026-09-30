@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import hashlib
 import logging
+import math
 import os
 from pathlib import Path
 import re
@@ -22,12 +23,13 @@ from typing import Any, Dict, List, Literal, Optional
 import urllib.parse
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import torch
 
 from backend.api.routes_evaluation import _matches_source_dataset, _resolve_job_artifacts
 from backend.api.routes_training import training_job_manager
 from backend.api.routes_project import get_current_project
+from backend.engine.annotation_storage import request_shared_scope
 from backend.engine.flowchart_engine import (
     CropInspectionResult,
     FlowEdge,
@@ -63,11 +65,39 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 
 # Persistent cached engine instance for rapid warm execution
 _ENGINE = FlowchartEngine()
+_CPU_ENGINE = FlowchartEngine(device='cpu')
 _FLOW_SAVE_LOCK = threading.RLock()
 
 
 InspectionTask = Literal["anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection"]
 PipelineTask = Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "mixed"]
+
+
+class FlowExecutionResourcesRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    device_slots: int = Field(ge=1, le=8, strict=True)
+    device: Optional[Literal['cpu']] = None
+
+
+@router.get('/execution-resources')
+def execution_resources(device: Optional[Literal['cpu']] = None):
+    return (_CPU_ENGINE if device == 'cpu' else _ENGINE).execution_resources()
+
+
+@router.put('/execution-resources')
+def configure_execution_resources(req: FlowExecutionResourcesRequest):
+    try:
+        return (_CPU_ENGINE if req.device == 'cpu' else _ENGINE).configure_execution_resources(device_slots=req.device_slots, device=req.device)
+    except RuntimeError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+def _local_execution_engine(device):
+    # One CPU instance owns the global gate and tracks in-flight local requests.
+    # Cached models are keyed by verified checkpoint path and file identity.
+    return _CPU_ENGINE if torch.device(device).type == 'cpu' else FlowchartEngine(device=device)
 
 
 def _recipe_file(
@@ -466,7 +496,7 @@ def get_conditional_inspection_template() -> FlowchartPipeline:
 
 class FlowchartModelReference(BaseModel):
     job_id: str
-    task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "enhancement"]
+    task: Literal["detection", "anomaly", "segmentation", "classification", "patch_classification", "ocr", "rotated_detection", "enhancement", "rotation"]
 
 
 class FlowchartModelVerificationRequest(BaseModel):
@@ -501,6 +531,22 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
     return {"verified_job_ids": verified}
 
 
+def _catalog_model_settings(meta):
+    settings = {}
+    defaults = meta.get('threshold_settings', {})
+    if not isinstance(defaults, dict): defaults = {}
+    for key in ('optimal_threshold','threshold','probability_threshold','size_threshold','min_defect_area_px'):
+        value = meta.get(key, defaults.get(key))
+        if type(value) in (int, float) and math.isfinite(value): settings[key] = value
+    provenance = meta.get('training_provenance') or {}
+    parent = meta.get('warm_start') or {}
+    if not isinstance(provenance, dict): provenance = {}
+    if not isinstance(parent, dict): parent = {}
+    return {'threshold_settings': settings,
+        'training_labelset_id': meta.get('training_labelset_id') or provenance.get('labelset_id'),
+        'parent_job_id': meta.get('parent_job_id') or parent.get('parent_job_id')}
+
+
 @router.get("/models/catalog")
 def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     """List completed checkpoints whose dataset fingerprint still matches."""
@@ -511,9 +557,10 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     project = get_current_project(request) if request is not None else None
     if project:
         roots.append(Path(project["models_dir"]))
-    roots.append(Path.cwd() / "models")
+    if not request_shared_scope(): roots.append(Path.cwd() / "models")
     candidate_dirs = [path for root in roots if root.is_dir() for path in root.glob("job_*") if path.is_dir()]
-    candidate_dirs.extend(path for path in (Path.cwd() / "projects").glob("job_*/models") if path.is_dir())
+    if not request_shared_scope():
+        candidate_dirs.extend(path for path in (Path.cwd() / "projects").glob("job_*/models") if path.is_dir())
     models: List[Dict[str, Any]] = []
     seen: set[str] = set()
     for directory in candidate_dirs:
@@ -544,6 +591,7 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             "best_metric": best_metric,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(checkpoint.stat().st_mtime)),
             "source_dataset_path": str(source),
+            **_catalog_model_settings(meta),
         })
     if project:
         for specialized_task in SPECIALIZED_TASKS:
@@ -553,7 +601,11 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
                 try:
                     checkpoint,meta=resolve_specialized_checkpoint(project['models_dir'],directory.name,specialized_task,str(source))
                 except (ValueError,OSError,KeyError,RuntimeError): continue
-                models.append({'job_id':directory.name,'task':specialized_task,'label':f"{specialized_task} · {directory.name}",'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(checkpoint.stat().st_mtime)),'source_dataset_path':str(source),'best_metric':None,'preset':None})
+                models.append({'job_id':directory.name,'task':specialized_task,'label':f"{specialized_task} · {directory.name}",'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(checkpoint.stat().st_mtime)),'source_dataset_path':str(source),'best_metric':None,'preset':None, **_catalog_model_settings(meta)})
+    for model in models:
+        model['capabilities'] = ({'role': 'preprocess', 'operation': 'learned_rotation', 'native_source_coordinates': True}
+            if model['task'] == 'rotation' else {'role': 'preprocess', 'operation': 'enhancement'}
+            if model['task'] == 'enhancement' else {'role': 'inspection', 'task': model['task']})
     models.sort(key=lambda item: item["created_at"], reverse=True)
     return {"models": models, "total": len(models)}
 
@@ -936,7 +988,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             try:
                 with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
-                    engine = FlowchartEngine(device=device)
+                    engine = _local_execution_engine(device)
                     with verified_checkpoint_scope(verified_checkpoints):
                         result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id)
             except ValueError as exc:

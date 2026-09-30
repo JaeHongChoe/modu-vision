@@ -36,6 +36,11 @@ import { ModelFamilyCatalog } from './ModelFamilyCatalog';
 import { dinoSyntheticDefaults, modelChoices, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
 import { DinoSyntheticOptions } from './DinoSyntheticOptions';
 import { trainingComputeReadiness } from '../../utils/trainingComputeReadiness';
+import { PatchClassificationWorkbench } from './PatchClassificationWorkbench';
+import { RotationWorkbench } from './RotationWorkbench';
+import { AutoDLWorkbench } from './AutoDLWorkbench';
+import type { ModelFamily } from '../../services/modelTrainingProgram';
+import type { VisionTask } from '../../types';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -43,6 +48,7 @@ export const TrainingController: React.FC = () => {
   const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project } = useProjectStore();
+  const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(task);
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
   const [syntheticOptions, setSyntheticOptions] = useState<DinoSyntheticTrainingOptions>({...dinoSyntheticDefaults});
@@ -116,6 +122,14 @@ export const TrainingController: React.FC = () => {
     setSyntheticOptions({...dinoSyntheticDefaults});
   }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
+  useEffect(() => {setSelectedFamily(task);}, [task, projectDir]);
+  const chooseFamily = (family: ModelFamily) => {
+    setSelectedFamily(family);
+    if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
+      void useProjectStore.getState().setTask(family as VisionTask).catch(error => {setSelectedFamily(task);setActionError(error instanceof Error ? error.message : String(error));});
+    }
+  };
+
   useEffect(() => {
     let valid = true;
     setWarmParents([]);
@@ -186,7 +200,8 @@ export const TrainingController: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        <ModelFamilyCatalog />
+        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} />
+        {selectedFamily === task && <>
         <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -441,6 +456,12 @@ export const TrainingController: React.FC = () => {
                 <div className="mt-1 break-words font-mono text-blue-300">작업 내부 장치: {jobDeviceName || '서버 장치 확인 중'}</div>
                 <div className="mt-3 text-slate-400">CPU 및 메모리 계측 값은 이 서버에서 제공되지 않습니다.</div>
               </div>
+            ) : jobId && status === 'completed' ? (
+              <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-xs">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">완료 작업 장치</div>
+                <div className="mt-3 font-mono font-semibold text-slate-100">{jobDeviceName || '장치 기록 없음'}</div>
+                <div className="mt-3 text-slate-400">저장된 학습 작업의 장치 기록입니다.</div>
+              </div>
             ) : !jobId && selectedProfileId ? (
               <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-xs">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">선택한 원격 장치</div>
@@ -459,10 +480,14 @@ export const TrainingController: React.FC = () => {
             )}
           </div>
         </div>
-        <OCRWorkbench />
-        {task === 'detection' && <RotatedDetectionPanel />}
-        <DefectGANWorkbench />
-        <EnhancementWorkbench />
+        <AutoDLWorkbench task={task} />
+        </>}
+        {selectedFamily === 'patch_classification' && <PatchClassificationWorkbench />}
+        {selectedFamily === 'rotation' && <RotationWorkbench />}
+        {selectedFamily === 'ocr' && <OCRWorkbench />}
+        {selectedFamily === 'rotated_detection' && <RotatedDetectionPanel />}
+        {selectedFamily === 'defect_gan' && <DefectGANWorkbench />}
+        {selectedFamily === 'enhancement' && <EnhancementWorkbench />}
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ def validate_operator(kind, params):
             raise ValueError('Patch overlap must be smaller than each patch dimension')
     else:
         operation=params.get('operation','rotate')
-        if operation not in ('rotate','align','improve','enhancement'):
+        if operation not in ('rotate','align','improve','enhancement','learned_rotation','fitted_roi'):
             raise ValueError('Unknown preprocessing operation')
         angle=params.get('angle_deg',0)
         if isinstance(angle,bool) or not isinstance(angle,(int,float)) or not math.isfinite(angle):
@@ -48,7 +48,22 @@ def _starts(length, size, overlap):
     return values
 
 
-def apply_operator(image, regions, kind, params, node_id, enhancement=None):
+def fitted_roi_geometry(polygon):
+    from backend.engine.rotated_detection import box_from_polygon
+    box = box_from_polygon(polygon)
+    # OpenCV fits float32 coordinates; sub-millipixel roundoff at 8k source
+    # coordinates must not add an entire row or column to an integral box.
+    output_w = max(1, int(math.ceil(box['width'] - 0.001)))
+    output_h = max(1, int(math.ceil(box['height'] - 0.001)))
+    if output_w * output_h > 100_000_000: raise ValueError('Fitted ROI exceeds native image work budget')
+    angle = math.radians(box['angle_deg'])
+    cosine, sine = math.cos(angle), math.sin(angle)
+    transform = np.array([[cosine, -sine, box['cx'] - cosine * (output_w-1)/2 + sine * (output_h-1)/2],
+                          [sine, cosine, box['cy'] - sine * (output_w-1)/2 - cosine * (output_h-1)/2], [0, 0, 1]])
+    return {'box': box, 'source_transform': transform, 'output_size': [output_w, output_h]}
+
+
+def apply_operator(image, regions, kind, params, node_id, enhancement=None, rotation=None):
     validate_operator(kind,params)
     result=[]
     for roi in regions:
@@ -67,7 +82,31 @@ def apply_operator(image, regions, kind, params, node_id, enhancement=None):
                     result.append({**roi,'id':f'{node_id}:{roi["id"]}:{x}:{y}','image':patch,'bbox':source_bbox(mapped,patch.shape[1],patch.shape[0]),'source_transform':mapped.tolist(),'crop_padding':0})
             continue
         operation=params.get('operation','rotate')
-        if operation in ('rotate','align'):
+        metadata = {}
+        if operation == 'fitted_roi':
+            polygon = roi.get('polygon')
+            if polygon is None:
+                box = roi.get('rotated_box')
+                if box is None: raise ValueError('Fitted ROI requires an oriented detection polygon')
+                points = cv2.boxPoints(((box['cx'], box['cy']), (box['width'], box['height']), box['angle_deg']))
+                polygon = (transform @ np.vstack([points.T, np.ones(4)]))[:2].T.tolist()
+            geometry = fitted_roi_geometry(polygon)
+            box, transform = geometry['box'], geometry['source_transform']
+            output_w, output_h = geometry['output_size']
+            output = cv2.warpPerspective(image, np.linalg.inv(transform), (output_w, output_h), flags=cv2.INTER_LINEAR)
+            metadata = {'polygon': polygon, 'fitted_box': box}
+        elif operation == 'learned_rotation':
+            if rotation is None: raise ValueError('Learned rotation needs a trained angle model')
+            prediction = rotation(local)
+            output = prediction['aligned_image']
+            matrix = np.asarray(prediction['transform'], dtype=float)
+            if matrix.shape != (3, 3) or not np.isfinite(matrix).all() or abs(np.linalg.det(matrix)) < 1e-8:
+                raise ValueError('Learned rotation returned an invalid source transform')
+            if not isinstance(output, np.ndarray) or output.dtype != np.uint8 or output.ndim != 3 or output.shape[2] != 3:
+                raise ValueError('Learned rotation returned invalid native RGB pixels')
+            transform = transform @ np.linalg.inv(matrix)
+            metadata = {'rotation': {key: value for key, value in prediction.items() if key not in ('aligned_image', 'transform')}}
+        elif operation in ('rotate','align'):
             angle=float(params.get('angle_deg',0))
             if operation=='align':
                 # Alignment requires an explicit observed orientation or configured target.
@@ -95,7 +134,7 @@ def apply_operator(image, regions, kind, params, node_id, enhancement=None):
                 output=cv2.cvtColor(lab,cv2.COLOR_LAB2RGB)
             elif method=='denoise': output=cv2.fastNlMeansDenoisingColored(local,None,3,3,7,21)
             else: output=cv2.addWeighted(local,1.5,cv2.GaussianBlur(local,(0,0),1),-0.5,0)
-        result.append({**roi,'id':f'{node_id}:{roi["id"]}','image':output,'bbox':roi['bbox'],'source_transform':transform.tolist(),'crop_padding':0})
+        result.append({**roi, **metadata,'id':f'{node_id}:{roi["id"]}','image':output,'bbox':source_bbox(transform,output.shape[1],output.shape[0]),'source_transform':transform.tolist(),'crop_padding':0})
     return result
 
 
@@ -114,7 +153,7 @@ def region_artifacts(image, regions, evidence=()):
     for roi in regions[:64]:
         local,transform=local_image(image,roi)
         if local.size:
-            artifacts.append({'roi_id':roi['id'],'bbox':roi['bbox'],'image':image_uri(local),'source_transform':transform.tolist(),'image_size':[local.shape[1],local.shape[0]]})
+            artifacts.append({'roi_id':roi['id'],'bbox':roi['bbox'],'image':image_uri(local),'source_transform':transform.tolist(),'image_size':[local.shape[1],local.shape[0]], **{key:roi[key] for key in ('rotation','polygon','fitted_box') if key in roi}})
     for crop in evidence:
         match=next((r for r in artifacts if r['roi_id']==crop.roi_id),None)
         if match is None:

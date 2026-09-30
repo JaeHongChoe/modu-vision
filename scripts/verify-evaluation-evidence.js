@@ -1,0 +1,15 @@
+const fs=require('node:fs');const vm=require('node:vm');const assert=require('node:assert/strict');const ts=require('typescript');
+const source=fs.readFileSync('src/renderer/services/evaluationEvidence.ts','utf8');
+const targetModule={exports:{}};vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports:targetModule.exports,module:targetModule});const e=targetModule.exports;
+const rows=[{file_path:'second-class',defect_score:.95,ground_truth:'NG',pixel_evidence:{per_class:{spot:{tp:4,fn:2,fp:0,class_id:2},scratch:{tp:1,fn:0,fp:1,class_id:1}}}},{file_path:'normal',defect_score:.1,ground_truth:'OK',pixel_evidence:{per_class:{spot:{tp:0,fn:0,fp:2,class_id:2}}}}];
+assert.equal(e.filterEvidence(rows,'spot','fn',null)[0].file_path,'second-class');
+assert.equal(e.filterEvidence(rows,'spot','fp',null)[0].file_path,'normal');
+assert.equal(e.filterEvidence(rows,'all','all',[.9,1]).length,1);
+assert.equal(e.scoreHistogram(rows,'all').reduce((sum,b)=>sum+b.count,0),2);
+assert.equal(e.rocEvidence(rows).auc,1);
+assert.equal(e.rocEvidence(rows.slice(0,1)).available,false);
+console.log('Evaluation evidence renderer behavior: 6 passed');
+const areas=e.areaHistograms([{file_path:'a',pixel_evidence:{per_class:{spot:{class_id:2,predicted_area_px:100,truth_area_px:80}}}},{file_path:'b',object_evidence:{predicted:[{label:'spot',box:[0,0,20,10]}],truth:[],per_class:{},matches:[],missing_truth_indices:[],extra_prediction_indices:[]}}],'spot');
+assert.equal(areas.length,2);assert.equal(areas.reduce((n,g)=>n+g.bins.reduce((s,b)=>s+b.items.length,0),0),2);
+assert.equal(e.thresholdEvidence(rows,.5).fn,0);assert.equal(e.thresholdEvidence(rows,.99).fn,1);
+console.log('Area unit separation and threshold operating point: 4 passed');

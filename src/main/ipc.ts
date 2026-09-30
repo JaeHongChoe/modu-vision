@@ -1,9 +1,22 @@
-import { BrowserWindow, dialog, ipcMain, shell, type OpenDialogOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, type OpenDialogOptions,type IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import {pathToFileURL} from 'node:url';
 import type { BackendSupervisor } from './supervisor';
+import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
 
 export function registerIpcHandlers(supervisor: BackendSupervisor): void {
+  const authorizeShared=(event:IpcMainInvokeEvent)=>{
+    const url=new URL(event.senderFrame?.url||'about:blank');
+    const packaged=pathToFileURL(path.join(__dirname,'../../dist/index.html')).href;
+    const ownMainFrame=event.senderFrame===event.sender.mainFrame;
+    const trusted=ownMainFrame&&(url.href.split(/[?#]/,1)[0]===packaged||(!app.isPackaged&&url.protocol==='http:'&&['127.0.0.1','localhost'].includes(url.hostname)&&url.port==='5173'));
+    if(!trusted)throw new Error('Shared server credentials require the application main frame');
+  };
+  ipcMain.handle('shared:get',event=>{authorizeShared(event);return getSharedConnection();});
+  ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
+  ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});
+  ipcMain.handle('shared:disconnect',event=>{authorizeShared(event);return disconnectSharedServer();});
   // 1. Backend Port & Status Queries (support both hyphenated and namespaced names)
   const getPortHandler = async () => supervisor.getPort();
   const getStatusHandler = async () => supervisor.getStatus();

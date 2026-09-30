@@ -10,7 +10,7 @@ import torch
 from backend.engine.warm_start import WarmStartParent, _sha256, _strict_state, verify_parent_status
 from backend.engine.specialized_models import require_completed_checkpoint, resolve_specialized_checkpoint
 
-FAMILIES = ('ocr', 'rotated_detection', 'defect_gan', 'enhancement')
+FAMILIES = ('ocr', 'rotated_detection', 'defect_gan', 'enhancement', 'rotation')
 
 
 def _load_parent_checkpoint(path):
@@ -26,6 +26,10 @@ def _load_parent_checkpoint(path):
 
 def family_signature(task, metadata):
     """Include output identities and all shape/geometry controls in the signature."""
+    if task == 'rotation':
+        if metadata.get('architecture') != 'small_cnn_angle_v1' or metadata.get('width') not in (8,16,32) or type(metadata.get('image_size')) is not int:
+            raise ValueError('Rotation parent architecture or geometry is invalid')
+        return f"rotation:small_cnn_angle_v1:{metadata['width']}:{metadata['image_size']}:circle360", ('upright_correction',)
     if task == 'ocr':
         alphabet = metadata.get('alphabet')
         size = metadata.get('image_size')
@@ -49,6 +53,10 @@ def family_signature(task, metadata):
 
 
 def requested_signature(task, dataset, options):
+    if task == 'rotation':
+        from backend.engine.rotation import load_rotation_manifest
+        load_rotation_manifest(dataset)
+        return family_signature(task, {'architecture':'small_cnn_angle_v1','width':options.get('width',16),'image_size':options.get('image_size',64)})
     if task == 'ocr':
         from backend.engine.ocr import load_ocr_manifest
         alphabet = load_ocr_manifest(dataset).alphabet
@@ -110,8 +118,14 @@ def resolve_family_parent(models_dir, job_id, task, source, dataset, options=Non
         from backend.engine.defect_gan import MANIFEST_NAME
         if payload.get('training_provenance'):
             _verify_historical_source(root.resolve(), source, payload, metadata)
-        elif payload.get('source_manifest_sha256') != _sha256(Path(source) / MANIFEST_NAME):
-            raise ValueError('GAN parent source manifest differs without immutable lineage')
+        else:
+            from backend.engine.defect_gan import load_defect_gan_manifest
+            prepared=load_defect_gan_manifest(dataset)
+            declared=prepared.get('source_dataset_path',str(dataset))
+            if Path(declared).resolve()!=Path(source).resolve():
+                raise ValueError('GAN parent prepared source differs from the active project')
+            if payload.get('source_manifest_sha256') != _sha256(Path(dataset) / MANIFEST_NAME):
+                raise ValueError('GAN parent source manifest differs without immutable lineage')
     return WarmStartParent(job_id, checkpoint.resolve(), digest, task, signature[0], signature[1], fingerprint)
 
 

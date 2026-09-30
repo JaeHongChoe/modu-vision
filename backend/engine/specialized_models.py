@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 import torch
 
-SPECIALIZED_TASKS = ('ocr','rotated_detection','enhancement')
+SPECIALIZED_TASKS = ('ocr','rotated_detection','enhancement','rotation')
 FLOW_TASKS = ('detection','classification','segmentation','anomaly','patch_classification',*SPECIALIZED_TASKS)
 
 def require_completed_checkpoint(checkpoint):
@@ -23,6 +23,7 @@ def flow_model_task(node):
     if node.data.node_type=='detection_crop': return node.data.task if node.data.task=='rotated_detection' else 'detection'
     if node.data.node_type=='inspection': return node.data.task
     if node.data.node_type=='preprocess' and node.data.params.get('operation')=='enhancement': return 'enhancement'
+    if node.data.node_type=='preprocess' and node.data.params.get('operation')=='learned_rotation': return 'rotation'
     return None
 
 def valid_flow_job(job_id,task):
@@ -30,6 +31,14 @@ def valid_flow_job(job_id,task):
     return is_job_id(job_id) or (task in SPECIALIZED_TASKS and isinstance(job_id,str) and re.fullmatch(r'[0-9a-f]{32}',job_id) is not None)
 
 def specialized_dataset_provenance(task,source):
+    if task=='defect_gan':
+        from backend.engine.defect_gan import load_defect_gan_manifest
+        payload=load_defect_gan_manifest(source)
+        return {'dataset_sha256':hashlib.sha256((Path(source)/'defect_gan.json').read_bytes()).hexdigest(),
+                'source_dataset_path':payload.get('source_dataset_path',str(source))}
+    if task=='rotation':
+        from backend.engine.rotation import load_rotation_manifest
+        return load_rotation_manifest(source).provenance
     if task=='ocr':
         from backend.engine.ocr import load_ocr_manifest
         return load_ocr_manifest(source).provenance
@@ -103,7 +112,14 @@ def resolve_specialized_checkpoint(project_models_dir,job_id,task,source_dataset
     if source_dataset_path is not None:
         if payload.get('training_provenance'):
             _verify_historical_source(root,source_dataset_path,payload,metadata)
-        if task=='enhancement':
+        if task=='rotation':
+            from backend.engine.rotation import load_rotation_manifest
+            prepared = load_rotation_manifest(metadata.get('dataset_path', source_dataset_path))
+            if Path(prepared.provenance.get('source_dataset_path',prepared.root)).resolve()!=Path(source_dataset_path).resolve():
+                raise ValueError('Rotation source dataset differs from active project')
+            current_provenance=prepared.provenance
+            current=current_provenance['dataset_sha256']
+        elif task=='enhancement':
             from backend.engine.enhancement import load_enhancement_manifest
             manifest=load_enhancement_manifest(metadata.get('dataset_path',payload.get('dataset_path','')))
             configured=Path(source_dataset_path).resolve()
@@ -115,7 +131,10 @@ def resolve_specialized_checkpoint(project_models_dir,job_id,task,source_dataset
                     if original.is_symlink() or not original.resolve().is_relative_to(configured) or hashlib.sha256(original.read_bytes()).hexdigest()!=row['source_sha256']: raise ValueError('Enhancement original source hash changed')
             current=manifest['provenance']['dataset_sha256']
         else:
-            current_provenance=specialized_dataset_provenance(task,source_dataset_path)
+            dataset=metadata.get('dataset_path',source_dataset_path)
+            current_provenance=specialized_dataset_provenance(task,dataset)
+            if Path(dataset).resolve()!=Path(source_dataset_path).resolve() and current_provenance.get('source_dataset_path')!=str(Path(source_dataset_path).resolve()):
+                raise ValueError('Prepared specialist source differs from active project')
             current=current_provenance['dataset_sha256']
         recorded=metadata.get('dataset_sha256') or metadata.get('provenance',{}).get('dataset_sha256') or metadata.get('dataset_provenance',{}).get('dataset_sha256')
         immutable=(payload.get('dataset_sha256') or payload.get('provenance',{}).get('dataset_sha256')

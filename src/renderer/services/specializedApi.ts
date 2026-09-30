@@ -4,14 +4,14 @@ export type MultiRotatedPrediction = Partial<RotatedPrediction> & { image_size: 
 export type SpecializedTrainingJob = {job_id:string;task:string;status:'queued'|'running'|'stopping'|'stopped'|'completed'|'failed'|'interrupted';epoch:number;epochs:number;batch:number;batches:number;loss?:number;error?:string;source_dataset_path:string;training_provenance:{dataset_version_id:string;labelset_id:string};events:Array<{at:number;status:string;epoch:number;batch:number}>};
 export type SpecializedTrainingFamily = 'ocr'|'defect-gan';
 export const specializedApi = {
-  startTraining:(family:SpecializedTrainingFamily,dataset_path:string,epochs:number,warm_start_job_id?:string) => request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({dataset_path,epochs,background:true,device:'cpu',...(warm_start_job_id ? {warm_start_job_id} : {})})}),
+  startTraining:(family:SpecializedTrainingFamily,dataset_path:string,epochs:number,warm_start_job_id?:string,device:'cpu'|'cuda'|'mps'='cpu') => request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({dataset_path,epochs,background:true,device,...(warm_start_job_id ? {warm_start_job_id} : {})})}),
   trainingJobs:(family:SpecializedTrainingFamily) => request<{jobs:SpecializedTrainingJob[]}>(`/api/${family}/jobs`),
   trainingJob:(family:SpecializedTrainingFamily,job:string) => request<SpecializedTrainingJob>(`/api/${family}/jobs/${job}`),
   cancelTraining:(family:SpecializedTrainingFamily,job:string) => request<SpecializedTrainingJob>(`/api/${family}/jobs/${job}/cancel`,{method:'POST'}),
   rotated: {
     ...api.rotated,
-    manifest: (path: string) => request<{sample_count:number;split_counts:Record<string,number>;samples:MultiRotatedSample[]}>(`/api/rotated-detection/manifest?dataset_path=${encodeURIComponent(path)}`),
-    saveManifest: (path: string, samples: MultiRotatedSample[]) => request<{sample_count:number;split_counts:Record<string,number>;samples:MultiRotatedSample[]}>('/api/rotated-detection/manifest',{method:'POST',body:JSON.stringify({dataset_path:path,samples})}),
+    manifest: (path: string) => request<{dataset_path:string;sample_count:number;split_counts:Record<string,number>;samples:MultiRotatedSample[]}>(`/api/rotated-detection/manifest?dataset_path=${encodeURIComponent(path)}`),
+    saveManifest: (path: string, samples: MultiRotatedSample[]) => request<{dataset_path:string;sample_count:number;split_counts:Record<string,number>;samples:MultiRotatedSample[]}>('/api/rotated-detection/manifest',{method:'POST',body:JSON.stringify({dataset_path:path,samples})}),
     predict: (job_id: string, image_path: string) => request<MultiRotatedPrediction>('/api/rotated-detection/predict',{method:'POST',body:JSON.stringify({job_id,image_path})}),
   },
   ganReviews: () => request<{reviews:Array<{job_id:string;review_id:string;review_dir:string;unreviewed_count:number}>}>('/api/defect-gan/reviews'),

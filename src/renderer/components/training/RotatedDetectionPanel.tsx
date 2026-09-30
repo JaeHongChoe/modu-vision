@@ -3,10 +3,15 @@ import { Crosshair, Loader2, RefreshCw, Square } from 'lucide-react';
 import {
   type RotatedEvaluation, type RotatedJob, type RotatedModelSummary,
   type RotatedSampleRow,
+  request,
 } from '../../services/api';
 import { specializedApi, type MultiRotatedSample, type MultiRotatedPrediction } from '../../services/specializedApi';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { WarmStartSelector } from './WarmStartSelector';
+import {AutoDLWorkbench} from './AutoDLWorkbench';
+import {programButton,programInput,TrainingDeviceSelector} from './ProgramWorkbenchControls';
+import type {PreparedDataset,LocalTrainingDevice} from '../../services/modelTrainingProgram';
+import {RotatedBoxFitting} from './RotatedBoxFitting';
 
 function parseRows(text: string): MultiRotatedSample[] {
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -47,14 +52,17 @@ function errorText(cause: unknown): string {
 
 export const RotatedDetectionPanel: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
-  const datasetPath = useProjectStore((state) => state.project?.source_dataset_dir || '');
+  const projectSource = useProjectStore((state) => state.project?.source_dataset_dir || '');
+  const [datasetPath,setDatasetPath] = useState(projectSource);
+  const [datasets,setDatasets] = useState<PreparedDataset[]>([]);
   const labelsetId = useProjectStore((state) => state.project?.active_labelset_id || 'default');
   const [warmParentId, setWarmParentId] = useState('');
   const [rowsText, setRowsText] = useState('');
   const [sampleCount, setSampleCount] = useState<number | null>(null);
   const [splitCounts, setSplitCounts] = useState<Record<string, number> | null>(null);
   const [epochs, setEpochs] = useState(10);
-  const [models, setModels] = useState<RotatedModelSummary[]>([]);
+  const [device,setDevice] = useState<LocalTrainingDevice>('cpu');
+  const [models, setModels] = useState<Array<RotatedModelSummary & {dataset_path?:string}>>([]);
   const [modelId, setModelId] = useState('');
   const [job, setJob] = useState<RotatedJob | null>(null);
   const [imagePath, setImagePath] = useState('');
@@ -66,31 +74,40 @@ export const RotatedDetectionPanel: React.FC = () => {
   const isActive = job?.status === 'running' || job?.status === 'stopping';
 
   const sameProject = () => useProjectStore.getState().projectDir === projectDir &&
-    (useProjectStore.getState().project?.source_dataset_dir || '') === datasetPath &&
+    (useProjectStore.getState().project?.source_dataset_dir || '') === projectSource &&
     (useProjectStore.getState().project?.active_labelset_id || 'default') === labelsetId;
 
   useEffect(() => {
     setRowsText(''); setSampleCount(null); setSplitCounts(null);
+    setDatasetPath(projectSource);setDatasets([]);
     setModels([]); setModelId(''); setJob(null); setImagePath('');
     setEvaluation(null); setPrediction(null); setNotice(''); setError(''); setBusy(null); setWarmParentId('');
     if (!projectDir) return;
     let active = true;
+    void request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets').then(result=>{
+      if(!active||!sameProject())return;setDatasets(result.datasets);const latest=result.datasets.at(-1);
+      if(latest){setDatasetPath(latest.dataset_path);setSampleCount(latest.sample_count||null);}
+    }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
+    void request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs').then(result=>{
+      if(active&&sameProject())setJob(result.jobs.find(row=>row.status==='running'||row.status==='stopping')||null);
+    }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
     void specializedApi.rotated.models().then(({ models: items }) => {
       if (!active || !sameProject()) return;
       setModels(items); setModelId(items[0]?.job_id || '');
     }).catch((cause) => { if (active && sameProject()) setError(errorText(cause)); });
-    if (datasetPath) void specializedApi.rotated.manifest(datasetPath).then((manifest) => {
+    if (projectSource) void specializedApi.rotated.manifest(projectSource).then((manifest) => {
       if (!active || !sameProject()) return;
       setRowsText(formatRows(manifest.samples));
+      setDatasetPath(manifest.dataset_path);
       setSampleCount(manifest.sample_count);
       setSplitCounts(manifest.split_counts);
       const test = manifest.samples.find((row) => row.split === 'test');
-      if (test) setImagePath(`${datasetPath.replace(/\/+$/, '')}/${test.image}`);
+      if (test) setImagePath(`${projectSource.replace(/\/+$/, '')}/${test.image}`);
     }).catch(() => {
       // A newly selected source may have no rotated labels yet.
     });
     return () => { active = false; };
-  }, [projectDir, datasetPath, labelsetId]);
+  }, [projectDir, projectSource, labelsetId]);
 
   useEffect(() => {
     if (!job || !isActive || !projectDir) return;
@@ -120,13 +137,14 @@ export const RotatedDetectionPanel: React.FC = () => {
   }, [job?.job_id, job?.status, projectDir, datasetPath, labelsetId]);
 
   const applyManifest = (result: {
-    sample_count: number; split_counts: Record<string, number>; samples: MultiRotatedSample[];
+    dataset_path:string;sample_count: number; split_counts: Record<string, number>; samples: MultiRotatedSample[];
   }) => {
+    setDatasetPath(result.dataset_path);
     setRowsText(formatRows(result.samples));
     setSampleCount(result.sample_count);
     setSplitCounts(result.split_counts);
     const test = result.samples.find((row) => row.split === 'test');
-    if (test && datasetPath) setImagePath(`${datasetPath.replace(/\/+$/, '')}/${test.image}`);
+    if (test && projectSource) setImagePath(`${projectSource.replace(/\/+$/, '')}/${test.image}`);
   };
 
   const loadManifest = async () => {
@@ -136,6 +154,7 @@ export const RotatedDetectionPanel: React.FC = () => {
       const result = await specializedApi.rotated.manifest(datasetPath);
       if (!sameProject()) return;
       applyManifest(result);
+      setDatasets(old=>old.some(row=>row.dataset_path===result.dataset_path)?old:[...old,{dataset_path:result.dataset_path,sample_count:result.sample_count,provenance:{split_counts:result.split_counts}}]);
       setNotice(`${result.sample_count}개 회전 박스와 원본 이미지 해시를 확인했습니다.`);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -152,6 +171,7 @@ export const RotatedDetectionPanel: React.FC = () => {
       if (!sameProject()) return;
       applyManifest(result);
       setNotice(`${result.sample_count}개 회전 박스를 원본 해시와 함께 저장했습니다.`);
+      setDatasets(old=>old.some(row=>row.dataset_path===result.dataset_path)?old:[...old,{dataset_path:result.dataset_path,sample_count:result.sample_count,provenance:{split_counts:result.split_counts}}]);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
@@ -160,7 +180,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const started = await specializedApi.rotated.train(datasetPath, epochs, warmParentId || undefined);
+      const started = await request<RotatedJob>('/api/rotated-detection/train',{method:'POST',body:JSON.stringify({dataset_path:datasetPath,epochs,device,...(warmParentId?{warm_start_job_id:warmParentId}:{})})});
       if (!sameProject()) return;
       setJob(started);
       if (started.status === 'completed') {
@@ -193,7 +213,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !datasetPath || busy) return;
     setBusy('evaluate'); setError(''); setEvaluation(null);
     try {
-      const result = await specializedApi.rotated.evaluate(modelId, datasetPath);
+      const result = await request<RotatedEvaluation>('/api/rotated-detection/evaluate',{method:'POST',body:JSON.stringify({job_id:modelId,dataset_path:datasetPath,device})});
       if (sameProject()) setEvaluation(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -203,13 +223,13 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !imagePath.trim() || busy) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await specializedApi.rotated.predict(modelId, imagePath.trim());
+      const result = await request<MultiRotatedPrediction>('/api/rotated-detection/predict',{method:'POST',body:JSON.stringify({job_id:modelId,image_path:imagePath.trim(),device})});
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
 
-  return <details className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
+  return <details open className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-slate-100">
       <Crosshair className="h-4 w-4 text-amber-400" /> 회전 객체 위치 모델
       <span className="font-normal text-slate-400">다중 객체·클래스 · 방향과 위치 예측</span>
@@ -218,8 +238,10 @@ export const RotatedDetectionPanel: React.FC = () => {
       <p className="leading-5 text-slate-400">원본 이미지의 회전 박스 정답을 지정해 후보 모델을 학습합니다. 같은 이미지의 객체는 여러 행으로 입력하세요. 완료 후보는 5단계 검사 노드에서 회전 객체 검출 모델로 선택하고 저장할 수 있습니다.</p>
       <div className="rounded border border-[#344255] bg-[#0E1722] px-3 py-2">
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
-        <div className="mt-1 break-all font-mono text-slate-200">{datasetPath || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
+        <div className="mt-1 break-all font-mono text-slate-200">{projectSource || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
       </div>
+      {datasets.length>0&&<label>프로젝트에 저장된 회전 박스 정답<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(null);setSplitCounts(null);}} className={programInput}>{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
+      <RotatedBoxFitting source={projectSource} scope={`${projectDir}/${projectSource}/${labelsetId}`} onAppend={row=>{setRowsText(old=>old?`${old}\n${row}`:row);setSampleCount(null);setSplitCounts(null);}}/>
       <label className="block text-slate-300">정답 표 · 이미지 상대 경로 ↹ 라벨 ↹ cx,cy,너비,높이,각도 ↹ train/val/test
         <textarea value={rowsText} onChange={(event) => { setRowsText(event.target.value); setSampleCount(null); setSplitCounts(null); }} rows={5}
           placeholder={'images/part_001.png\tdefect\t42,30,18,9,25\ttrain\nimages/part_002.png\tdefect\t40,31,19,8,-12\tval\nimages/part_003.png\tdefect\t44,29,17,7,10\ttest'}
@@ -234,6 +256,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         {sampleCount !== null && splitCounts && <span className="text-emerald-300">검증 {sampleCount}개 · 학습 {splitCounts.train || 0} / 검증 {splitCounts.val || 0} / 시험 {splitCounts.test || 0}</span>}
       </div>
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
+        <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||isActive}/>
         <WarmStartSelector family="rotated-detection" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || isActive} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input type="number" min="1" max="200" value={epochs}
           onChange={(event) => setEpochs(Math.max(1, Math.min(200, Number(event.target.value) || 1)))}
@@ -243,7 +266,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         {isActive && <button type="button" onClick={() => void cancelTraining()} disabled={job?.status !== 'running' || !!busy}
           className="rounded border border-rose-700 px-3 py-2 text-rose-200 hover:bg-rose-950 disabled:opacity-40"><Square className="mr-1 inline h-3 w-3" />취소</button>}
         <label className="min-w-[220px] flex-1">완료 후보 모델
-          <select value={modelId} onChange={(event) => { setModelId(event.target.value); setEvaluation(null); setPrediction(null); }}
+          <select value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
             {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id.slice(0, 12)} · 검증 IoU {(model.validation.mean_oriented_iou * 100).toFixed(1)}%</option>)}
@@ -252,7 +275,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         <button type="button" onClick={() => void evaluate()} disabled={!modelId || !datasetPath || !!busy || !splitCounts?.test}
           className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
       </div>
-      {job && isActive && <p role="status" className="text-amber-200"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{job.status === 'stopping' ? '학습을 멈추는 중' : '로컬 CPU에서 학습 중'} · 작업 {job.job_id.slice(0, 8)}</p>}
+      {job && isActive && <p role="status" className="text-amber-200"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{job.status === 'stopping' ? '학습을 멈추는 중' : '선택한 장치에서 학습 중'} · 작업 {job.job_id.slice(0, 8)}</p>}
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[260px] flex-1">한 장 시험 이미지 경로
           <input value={imagePath} onChange={(event) => setImagePath(event.target.value)} placeholder="원본 폴더 안의 시험 이미지 절대 경로"
@@ -281,6 +304,8 @@ export const RotatedDetectionPanel: React.FC = () => {
           <p className="text-slate-400">원본 좌표의 회전 박스와 클래스·검출 신뢰도를 반환합니다.</p>
         </div>
       </div>}
+      <button type="button" className={programButton} disabled={!modelId} onClick={()=>void useProjectStore.getState().setStep(5)}>검사 플로우·배포 패키지</button>
+      <AutoDLWorkbench task="rotated_detection" familyDatasetPath={sampleCount ? datasetPath : undefined} onComplete={()=>void specializedApi.rotated.models().then(result=>{if(sameProject()){setModels(result.models);setModelId(result.models[0]?.job_id||'');}}).catch(cause=>{if(sameProject())setError(errorText(cause));})} />
     </div>
   </details>;
 };

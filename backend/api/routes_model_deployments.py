@@ -25,11 +25,11 @@ router = APIRouter(prefix="/api/model-deployments", tags=["model-deployments"])
 _REPORT_ID = re.compile(r"comparison_[0-9a-f]{32}\Z")
 _REVISION_ID = re.compile(r"[0-9a-f]{32}\Z")
 _MIN_EACH_CLASS = 8
-DeploymentTask = Literal["classification", "patch_classification", "detection", "segmentation", "anomaly", "ocr", "rotated_detection", "enhancement"]
+DeploymentTask = Literal["classification", "patch_classification", "detection", "segmentation", "anomaly", "ocr", "rotated_detection", "enhancement", "rotation"]
 
 
 def _approval_scope(request, source_dataset_path, task):
-    if task in ("ocr", "rotated_detection", "enhancement"):
+    if task in ("ocr", "rotated_detection", "enhancement", "rotation"):
         from backend.api.routes_evaluation_history import history_scope
         return history_scope(request, source_dataset_path, task)
     return _scope(request, source_dataset_path, task)
@@ -420,7 +420,7 @@ def verified_release_revision(
 
 class SpecializedApprovalRequest(BaseModel):
     source_dataset_path: str
-    task: Literal["ocr", "rotated_detection", "enhancement"]
+    task: Literal["ocr", "rotated_detection", "enhancement", "rotation"]
     evaluation_id: str
     incumbent_evaluation_id: str | None = None
     reviewer: str = Field(min_length=1, max_length=100)
@@ -439,7 +439,8 @@ def approve_specialized(payload: SpecializedApprovalRequest, request: Request):
     if not payload.reviewer.strip() or len(payload.reason.strip()) < 8: raise HTTPException(422, "Reviewer and evidence reason are required")
     allowed = {"ocr": {"exact_match_accuracy", "character_error_rate"},
                "rotated_detection": {"precision", "recall", "mean_oriented_iou", "mean_angle_error_deg"},
-               "enhancement": {"output_mse", "output_psnr"}}[payload.task]
+               "enhancement": {"output_mse", "output_psnr"},
+               "rotation": {"angular_mae_deg", "within_10_deg", "loss"}}[payload.task]
     if not payload.minimum_metrics and not payload.maximum_metrics: raise HTTPException(422, "Explicit family quality bounds are required")
     if any(key not in allowed or not math.isfinite(value) for key, value in {**payload.minimum_metrics, **payload.maximum_metrics}.items()): raise HTTPException(422, "Invalid family quality metric bounds")
     try: record = history_store(project).get(payload.evaluation_id)

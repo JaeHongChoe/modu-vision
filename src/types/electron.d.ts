@@ -16,6 +16,10 @@ export interface CrashEventData {
 }
 
 export interface ElectronAPI {
+  getSharedConnection:()=>Promise<SharedConnection|null>;
+  loginSharedServer:(input:{server_url:string;username:string;password:string})=>Promise<SharedConnection>;
+  selectSharedProject:(projectId:string)=>Promise<SharedConnection>;
+  disconnectSharedServer:()=>Promise<void>;
   getBackendPort: () => Promise<number | null>;
   getBackendStatus: () => Promise<BackendStatus>;
   selectFolder: (options?: { title?: string; defaultPath?: string }) => Promise<string | null>;
@@ -29,6 +33,8 @@ export interface ElectronAPI {
   onBackendCrashed: (callback: (data: CrashEventData) => void) => () => void;
   platform: 'darwin' | 'win32' | 'linux';
 }
+
+export interface SharedConnection {server_url:string;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}
 
 declare global {
   interface Window {

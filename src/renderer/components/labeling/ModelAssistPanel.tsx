@@ -6,8 +6,10 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
+import {LabelAssistDeviceSizes,type LabelAssistExecution} from './LabelAssistDeviceSizes';
 import { BulkLabelAssist } from './BulkLabelAssist';
 import { CandidateProviderControls } from './CandidateProviderControls';
+import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
 
 function errorText(error: unknown): string {
@@ -25,6 +27,7 @@ function candidateDetail(candidate: LabelSuggestionCandidate): string {
     const [x1, y1, x2, y2] = annotation.bbox;
     return `X ${Math.round(x1)} · Y ${Math.round(y1)} · ${Math.round(x2 - x1)} × ${Math.round(y2 - y1)} px`;
   }
+  if (annotation.type === 'brush_mask') return '원본 픽셀 mask · 브러시/지우개로 편집 가능';
   if (annotation.type === 'polygon') return `${annotation.polygon?.length || 0}개 꼭짓점`;
   return annotation.is_normal ? '정상 이미지 태그' : '이미지 전체 태그';
 }
@@ -39,6 +42,7 @@ function SuggestionPreview({ proposal, selectedIds }: { proposal: LabelSuggestio
       <svg className="absolute inset-0 h-full w-full pointer-events-none" viewBox={`0 0 ${proposal.image_width} ${proposal.image_height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         {proposal.candidates.filter((item) => selectedIds.has(item.id)).map((item) => {
           const annotation = item.annotation;
+          if (annotation.type === 'brush_mask' && annotation.mask_rle) return <image key={item.id} href={annotation.mask_rle} x={0} y={0} width={proposal.image_width} height={proposal.image_height} opacity={.55}/>;
           if (annotation.type === 'bbox' && annotation.bbox) {
             const [x1, y1, x2, y2] = annotation.bbox;
             return <rect key={item.id} x={x1} y={y1} width={x2 - x1} height={y2 - y1} fill="rgba(34,211,238,.12)" stroke="#22d3ee" strokeWidth={Math.max(2, proposal.image_width / 420)} />;
@@ -73,6 +77,7 @@ export const ModelAssistPanel: React.FC = () => {
   const [models, setModels] = useState<LabelSuggestionModel[]>([]);
   const [modelId, setModelId] = useState('');
   const [threshold, setThreshold] = useState(0.5);
+  const [execution,setExecution]=useState<LabelAssistExecution>({device:'cpu',min_area:0,min_width:0,min_height:0});
   const [keywords, setKeywords] = useState('');
   const reviewerName = useAnnotationStore(state => state.reviewerName);
   const setReviewerName = useAnnotationStore(state => state.setReviewerName);
@@ -168,7 +173,7 @@ export const ModelAssistPanel: React.FC = () => {
     setError(null);
     setNotice(null);
     try {
-      const next = await datasetWorkflow.generateModel(modelId, image.file_path, threshold, keywords.split(",").map(k => k.trim()).filter(Boolean));
+      const next = await datasetWorkflow.generateModel(modelId, image.file_path, threshold, keywords.split(",").map(k => k.trim()).filter(Boolean),execution);
       if (!sameContext()) return;
       setSuggestions((previous) => [next, ...previous]);
       selectProposal(next);
@@ -202,7 +207,7 @@ export const ModelAssistPanel: React.FC = () => {
         if (!sameContext()) return;
         await useDatasetStore.getState().annotationsChanged();
         if (!sameContext()) return;
-        setNotice(`${updated.accepted_candidate_ids.length}개 후보를 채택했습니다. 채택 전 데이터 버전 ${updated.backup_version_id}이 저장되었습니다.`);
+        setNotice(`${updated.accepted_candidate_ids.length}개 후보를 채택했습니다. mask는 브러시/지우개, 다각형은 꼭짓점으로 편집하고 저장 후 이미지 검토에서 승인하세요. 채택 전 데이터 버전 ${updated.backup_version_id}이 저장되었습니다.`);
       } else {
         setNotice('제안을 거절했습니다. 라벨은 변경되지 않았습니다.');
       }
@@ -253,6 +258,7 @@ export const ModelAssistPanel: React.FC = () => {
               </label>
               <label className="block text-[11px] text-slate-400">클래스 키워드 필터 (선택 사항, 쉼표 구분)<input aria-label="모델 클래스 키워드" value={keywords} onChange={event => setKeywords(event.target.value)} placeholder="scratch, crack" className="mt-1 w-full rounded border border-slate-600 bg-slate-900 p-2 text-slate-100" /></label>
               <p className="text-[10px] text-slate-500">실제 모델이 예측한 클래스 이름에 포함되는 키워드만 남깁니다.</p>
+              <LabelAssistDeviceSizes value={execution} onChange={setExecution} disabled={!!busy||batchRunning}/>
               <div className="flex items-center gap-3">
                 <label className="grow text-[11px] text-slate-400">검출 임계값 <span className="font-mono text-cyan-300">{threshold.toFixed(2)}</span>
                   <input type="range" min="0.05" max="0.95" step="0.05" value={threshold} onChange={(event) => setThreshold(Number(event.target.value))} disabled={!!busy || !modelId} className="mt-1 block w-full accent-cyan-500" />
@@ -266,9 +272,9 @@ export const ModelAssistPanel: React.FC = () => {
               <p className="text-[11px] leading-relaxed text-slate-500">예측은 후보로만 저장됩니다. 기존 라벨과 원본 파일은 생성 시 변경되지 않습니다.</p>
             </section>
 
-            <CandidateProviderControls disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`${next.candidates.length}개 실제 추론 후보를 만들었습니다. 검토 후 선택하세요.`); }} />
+            <CandidateProviderControls onOpenProposal={async(path,id)=>{ await openBatchEntry({image_path:path,image_id:path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/,''),proposal_id:id,status:'generated',candidate_count:0}); }} disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`${next.candidates.length}개 실제 추론 후보를 만들었습니다. 검토 후 선택하세요.`); }} />
 
-            {projectDir && <BulkLabelAssist projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={keywords.split(",").map(k => k.trim()).filter(Boolean)}
+            {projectDir && <BulkLabelAssist execution={execution} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={keywords.split(",").map(k => k.trim()).filter(Boolean)}
               disabled={isDirty || !!busy || !useDatasetStore.getState().hasSelectedFolder}
               onOpenEntry={openBatchEntry} onRunningChange={setBatchRunning} />}
 
@@ -281,8 +287,9 @@ export const ModelAssistPanel: React.FC = () => {
               </div>
               {proposal && <>
                 <SuggestionPreview proposal={proposal} selectedIds={selectedCandidateIds} />
-                <p className="text-[11px] text-slate-400">{({grounding_dino:"텍스트 검출 · Grounding DINO",template_match:"예시 템플릿 매칭",trained_model:"완료 학습 모델"} as Record<string,string>)[(proposal as CandidateProposal).backend || "trained_model"]} · {proposal.candidates.length}개 후보</p>
+                <p className="text-[11px] text-slate-400">{({foundation:"SAM2 + DINOv3 / Grounding DINO",grounding_dino:"텍스트 검출 · Grounding DINO",template_match:"예시 템플릿 매칭",trained_model:"완료 학습 모델"} as Record<string,string>)[(proposal as CandidateProposal).backend || "trained_model"]} · {proposal.candidates.length}개 후보</p>
                 {(proposal as CandidateProposal).support_limits && <p className="text-[10px] text-amber-200">{(proposal as CandidateProposal).support_limits}</p>}
+                <details className="text-[10px] text-slate-400"><summary className="cursor-pointer">후보 출처·버전</summary><p className="break-all">라벨 세트 {(proposal as FoundationProposal).labelset_id||labelsetId} · 버전 {(proposal as FoundationProposal).labelset_version||'모델 제안 기록'}</p>{(proposal as FoundationProposal).candidates.map(c=><pre key={c.id} className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify({id:c.id,source:c.source,area:c.area,provenance:c.provenance},null,2)}</pre>)}</details>
                 <label className="block text-[11px]">검토자<input aria-label="후보 검토자 이름" value={reviewerName} onChange={e => setReviewerName(e.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>
                 <div className="max-h-44 space-y-1 overflow-y-auto">
                   {proposal.candidates.length === 0 && <p className="rounded border border-slate-700 p-3 text-center text-slate-400">이 이미지에는 제안된 라벨이 없습니다.</p>}

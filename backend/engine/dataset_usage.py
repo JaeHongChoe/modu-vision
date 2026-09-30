@@ -1,0 +1,36 @@
+"""Read active-labelset usage policy without changing the original image inventory."""
+from pathlib import Path
+import json
+
+from backend.engine.annotation_storage import dataset_annotation_dir,request_project_root
+
+
+def unused_image_paths(source=None):
+    project=request_project_root()
+    if project is None:
+        return set()
+    configuration=project/'project.json'
+    if configuration.is_file():
+        configured=json.loads(configuration.read_text()).get('source_dataset_dir')
+        if configured:
+            source=Path(configured)
+    if source is None:
+        return set()
+    source=Path(source).resolve()
+    ledger=dataset_annotation_dir(source)/'metadata'/'workflow.json'
+    if ledger.is_symlink():
+        raise ValueError('Usage ledger cannot be a symbolic link')
+    if not ledger.is_file():
+        return set()
+    rows=json.loads(ledger.read_text()).get('images',{})
+    if not isinstance(rows,dict):
+        raise ValueError('Invalid image usage ledger')
+    excluded=set()
+    for relative,row in rows.items():
+        if row.get('usage_state')!='not_used':
+            continue
+        path=source/relative
+        if not path.resolve().is_relative_to(source):
+            raise ValueError('Usage image path escaped dataset')
+        excluded.add(str(path.resolve()))
+    return excluded

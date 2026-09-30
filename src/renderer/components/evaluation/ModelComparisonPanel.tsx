@@ -47,7 +47,11 @@ function Verdict({ outcome }: { outcome: ModelComparisonOutcome }) {
 
 export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, language }) => {
   const isKo = language === 'ko';
-  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}`;
+  const [crossTasks,setCrossTasks]=useState(false);
+  const [incumbentThreshold,setIncumbentThreshold]=useState(.5);
+  const [candidateThreshold,setCandidateThreshold]=useState(.5);
+  const [expectedText,setExpectedText]=useState('');
+  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}`;
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
   const [models, setModels] = useState<ModelComparisonModel[]>([]);
@@ -82,7 +86,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     if (!projectDir || !sourceFolder) return () => { active = false; };
     setIsLoading(true);
     Promise.all([
-      api.evaluation.comparisonModels(sourceFolder, task),
+      crossTasks?request<{models:ModelComparisonModel[]}>(`/api/evaluation/model-comparisons/models/all?source_dataset_path=${encodeURIComponent(sourceFolder)}`):api.evaluation.comparisonModels(sourceFolder, task),
       api.evaluation.listComparisons(sourceFolder, task),
       request<{ jobs: ComparisonJob[] }>(`/api/evaluation/model-comparisons/jobs?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`),
     ]).then(([catalog, history, jobHistory]) => {
@@ -104,7 +108,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (active && currentScope.current === scopeKey) setIsLoading(false);
     });
     return () => { active = false; };
-  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId]);
+  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId,crossTasks]);
 
   useEffect(() => {
     if (!comparisonJob || !['queued', 'running'].includes(comparisonJob.status)) return;
@@ -164,6 +168,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         candidate_job_id: candidateId,
         max_images: maxImages,
         full_test: fullTest,
+        incumbent_task:models.find(m=>m.job_id===incumbentId)?.task,
+        candidate_task:models.find(m=>m.job_id===candidateId)?.task,
+        incumbent_params:{threshold:incumbentThreshold,...(models.find(m=>m.job_id===incumbentId)?.task==='ocr'?{expected_text:expectedText}:{})},
+        candidate_params:{threshold:candidateThreshold,...(models.find(m=>m.job_id===candidateId)?.task==='ocr'?{expected_text:expectedText}:{})},
       }) });
       if (currentScope.current !== requestedScope) return;
       setComparisonJob(created); setJobs((current) => [created, ...current]);
@@ -210,6 +218,8 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         </p>
       ) : (
         <>
+          <label className="mt-3 block text-xs text-cyan-200"><input type="checkbox" checked={crossTasks} disabled={isRunning} onChange={e=>setCrossTasks(e.target.checked)}/> 서로 다른 모델 종류도 같은 test 이미지에서 비교</label>
+          {crossTasks&&<p className="mt-1 text-xs text-slate-400">두 모델의 OK/NG/REVIEW를 비교합니다. 영역·문자 지표와 모델 승인 조건은 각각의 평가에서 확인하세요.</p>}
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="min-w-0 space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? '비교 기준 모델 (수동 선택)' : 'Baseline model (manual)'}</span>
@@ -217,7 +227,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
                 onChange={(event) => setIncumbentId(event.target.value)} disabled={isRunning || isLoading}
                 className="w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5 text-slate-100">
                 <option value="">{isKo ? '모델 선택' : 'Select model'}</option>
-                {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id}</option>)}
+                {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}
               </select>
             </label>
             <label className="min-w-0 space-y-1 text-[11px] text-slate-300">
@@ -226,10 +236,11 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
                 onChange={(event) => setCandidateId(event.target.value)} disabled={isRunning || isLoading}
                 className="w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5 text-slate-100">
                 <option value="">{isKo ? '모델 선택' : 'Select model'}</option>
-                {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id}</option>)}
+                {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}
               </select>
             </label>
           </div>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 <input aria-label="비교 기준 임계값" type="number" min="0" max="1" step=".01" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 <input aria-label="비교 후보 임계값" type="number" min="0" max="1" step=".01" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <label className="space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? 'test 이미지 수' : 'Test images'}</span>

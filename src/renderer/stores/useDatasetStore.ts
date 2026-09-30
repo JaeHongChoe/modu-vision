@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
 import { api } from '../services/api';
+import type {DatasetPartition} from '../services/projectPreferences';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
 import { useFlowchartStore } from './useFlowchartStore';
@@ -25,13 +26,14 @@ interface DatasetState {
   sourceImages: number;
   unlabeledImages: number;
   classes: Record<string, number>;
+  classCountUnit: 'images' | 'objects' | null;
   classSplitCounts: ClassSplitCounts | null;
   split: { train: number; val: number; test: number };
   images: ImageMeta[];
   totalImagesCount: number;
   page: number;
   pageSize: number;
-  activeSplitFilter: 'all' | 'train' | 'val' | 'test';
+  activeSplitFilter: DatasetPartition;
   activeClassFilter: string | null;
   activeLabelFilter: 'all' | 'labeled' | 'unlabeled';
   trainRatio: number;
@@ -43,7 +45,7 @@ interface DatasetState {
 
   setFolderPath: (path: string) => void;
   setShowGeneratorModal: (show: boolean) => void;
-  setSplitFilter: (split: 'all' | 'train' | 'val' | 'test') => void;
+  setSplitFilter: (split: DatasetPartition) => void;
   setClassFilter: (className: string | null) => void;
   setLabelFilter: (status: 'all' | 'labeled' | 'unlabeled') => void;
   setTrainRatio: (ratio: number) => void;
@@ -102,6 +104,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   sourceImages: 0,
   unlabeledImages: 0,
   classes: {},
+  classCountUnit: null,
   classSplitCounts: null,
   split: { train: 0, val: 0, test: 0 },
   images: [],
@@ -128,7 +131,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
-      classes: {}, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
+      classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
       images: [], totalImagesCount: 0, corruptedImages: [],
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
     });
@@ -169,29 +172,11 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
-      sourceImages: 0, unlabeledImages: 0, classes: {}, classSplitCounts: null, corruptedImages: [],
+      sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [],
       split: { train: 0, val: 0, test: 0 },
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
     try {
-      const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
-      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
-      set({
-        totalImages: res.total_images,
-        sourceImages: res.source_images ?? res.total_images,
-        unlabeledImages: res.unlabeled_images ?? 0,
-        splitSupported: res.split_supported ?? null,
-        splitUnavailableReason: res.split_unavailable_reason ?? null,
-        classes: res.classes || {},
-        split: {
-          train: res.split.train,
-          val: res.split.val,
-          test: res.split.test || 0,
-        },
-        corruptedImages: res.corrupted_images || [],
-        lastImportedKey: key,
-        page: 1,
-      });
       try {
         const project = await api.project.update({ source_dataset_dir: folder });
         if (requestId !== latestImportRequest || get().datasetKey !== key) return;
@@ -207,6 +192,25 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
         }
       }
+      const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
+      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+      set({
+        totalImages: res.total_images,
+        sourceImages: res.source_images ?? res.total_images,
+        unlabeledImages: res.unlabeled_images ?? 0,
+        splitSupported: res.split_supported ?? null,
+        splitUnavailableReason: res.split_unavailable_reason ?? null,
+        classes: res.classes || {},
+        classCountUnit: task === 'detection' ? 'objects' : 'images',
+        split: {
+          train: res.split.train,
+          val: res.split.val,
+          test: res.split.test || 0,
+        },
+        corruptedImages: res.corrupted_images || [],
+        lastImportedKey: key,
+        page: 1,
+      });
       if (requestId !== latestImportRequest || get().datasetKey !== key) return;
       set({ isLoading: false });
       await get().loadImages(1);
@@ -304,6 +308,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         splitSupported: res.split_supported ?? null,
         splitUnavailableReason: res.split_unavailable_reason ?? null,
         classes: res.classes || {},
+        classCountUnit: task === 'detection' ? 'objects' : 'images',
         split: { train: res.split.train, val: res.split.val, test: res.split.test || 0 },
         importError: null,
         page: 1,

@@ -16,6 +16,16 @@ from typing import Optional
 LEGACY_ANNOTATIONS_ROOT = Path("./annotations")
 _REQUEST_ANNOTATION_ROOT: ContextVar[Optional[Path]] = ContextVar("project_annotation_root", default=None)
 _REQUEST_PROJECT_ROOT: ContextVar[Optional[Path]] = ContextVar("active_project_root", default=None)
+_REQUEST_SHARED_SCOPE: ContextVar[bool] = ContextVar('shared_project_scope',default=False)
+
+
+def set_request_shared_scope(value:bool)->Token:return _REQUEST_SHARED_SCOPE.set(value)
+
+
+def reset_request_shared_scope(token:Token)->None:_REQUEST_SHARED_SCOPE.reset(token)
+
+
+def request_shared_scope()->bool:return _REQUEST_SHARED_SCOPE.get()
 
 
 def set_request_annotation_root(path: Path) -> Token:

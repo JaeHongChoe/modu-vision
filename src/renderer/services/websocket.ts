@@ -3,7 +3,7 @@
  * Asynchronous WebSocket client for real-time training telemetry and hardware monitoring.
  */
 
-import { getBackendPort } from './api';
+import { getApiBaseUrl } from './api';
 
 type MessageHandler = (event: string, data: any) => void;
 
@@ -13,7 +13,6 @@ class WebSocketTelemetryService {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private isConnected = false;
-  private port = 8000;
 
   public async connect(): Promise<void> {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
@@ -21,8 +20,8 @@ class WebSocketTelemetryService {
     }
 
     try {
-      this.port = await getBackendPort();
-      const wsUrl = `ws://127.0.0.1:${this.port}/ws/telemetry`;
+      const base=await getApiBaseUrl();
+      const wsUrl = `${base.replace(/^http/,'ws')}/ws/telemetry`;
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {

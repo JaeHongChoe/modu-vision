@@ -3,6 +3,14 @@ import re
 import torch
 
 
+def resolve_package_device(device='cpu'):
+    if isinstance(device,str) and device.startswith('openvino:'):
+        from backend.engine.openvino_runtime import require_openvino_device
+        require_openvino_device(device.split(':',1)[1])
+        return device
+    return resolve_runtime_device(device)
+
+
 def resolve_runtime_device(device='cpu'):
     if device == 'cpu': return torch.device('cpu')
     if device == 'mps':

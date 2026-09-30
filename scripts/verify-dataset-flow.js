@@ -351,7 +351,24 @@ test('detection distribution uses object totals while preserving labeled image c
   assert.equal(classification.countUnit, 'images');
   assert.equal(classification.sharePercent(70), 88);
 
-  const studio = fs.readFileSync(path.resolve(__dirname, '../src/renderer/components/dataset/DatasetStudio.tsx'), 'utf8');
-  assert.match(studio, /classDistributionStats\(task, classes, totalImages\)/);
-  assert.doesNotMatch(studio, /count\s*\/\s*totalImages/);
+  const sourceImages = metricsModule.exports.classDistributionStats('detection', { Bow: 80 }, 88, 'images');
+  assert.equal(sourceImages.countUnit, 'images');
+  assert.equal(sourceImages.sharePercent(80), 91);
+});
+
+test('first import reads the saved partitions after canonical project source binding', async () => {
+  reset('/canonical-new');
+  let boundSource = '/previous-project-source';
+  mockApi.project = { update: async ({ source_dataset_dir }) => {
+    boundSource = source_dataset_dir;
+    return { id: 'qa-project', name: 'QA', project_dir: '/qa', source_dataset_dir };
+  }};
+  mockApi.dataset.import = async ({ folder_path }) => ({ ...summary('segmentation'),
+    split: boundSource === folder_path ? { train: 56, val: 16, test: 8 } : { train: 0, val: 0, test: 0 },
+  });
+  mockApi.dataset.getImages = async () => ({ total: 88, items: [] });
+  try {
+    await store.getState().importFolder('/canonical-new', 'segmentation');
+    assert.deepEqual(store.getState().split, { train: 56, val: 16, test: 8 });
+  } finally { delete mockApi.project; }
 });

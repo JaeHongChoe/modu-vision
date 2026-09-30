@@ -10,19 +10,22 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
+from backend.engine.dicom_input import open_source_image
 from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.annotation_formats import import_annotations,export_annotations,source_annotations_for_image
 from backend.engine.dataset_loaders import DetectionDataset,AnomalyDataset,_classification_split_assignments,_read_image_rgb,SUPPORTED_IMAGE_EXTENSIONS
 
 NORMAL_NAMES={'good','ok','normal','pass'}
 
-def source_image_paths(source,task):
+def source_image_paths(source,task,*,include_unused=False):
     source=Path(source).resolve()
     from backend.engine.annotation_storage import request_project_root
     project=request_project_root()
+    from backend.engine.dataset_usage import unused_image_paths
+    unused=set() if include_unused else unused_image_paths(source)
     scan_root=source/task if (source/task).is_dir() else source
     excluded={'masks','mask','ground_truth','labels','annotations'} if task in {'detection','segmentation','anomaly','anomaly_detection'} else set()
-    return sorted(p for p in scan_root.rglob('*') if p.is_file() and (project is None or not p.is_relative_to(project)) and not any(part.startswith('.') for part in p.relative_to(source).parts)
+    return sorted(p for p in scan_root.rglob('*') if p.is_file() and str(p.resolve()) not in unused and (project is None or not p.is_relative_to(project)) and not any(part.startswith('.') for part in p.relative_to(source).parts)
                   and not (set(p.relative_to(source).parts[:-1]) & excluded) and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
 
 def is_anomaly_normal(image,source=None):
@@ -39,7 +42,12 @@ def _annotations(source,image):
         if not isinstance(annotations,list):raise ValueError(f'Invalid Studio labels: {image.name}')
         return annotations,data.get('mask_file')
     adjacent=image.with_suffix('.json')
-    if adjacent.is_file():return import_annotations(json.loads(adjacent.read_text()),'labelme')[0]['annotations'],None
+    if adjacent.is_file():
+        document=json.loads(adjacent.read_text())
+        document.setdefault('imagePath',image.name)
+        with open_source_image(image) as opened:width,height=opened.size
+        document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)
+        return import_annotations(document,'labelme')[0]['annotations'],None
     annotations=source_annotations_for_image(source,image)
     return annotations,None
 
@@ -50,15 +58,33 @@ def _paired_mask(source,image):
     candidates.extend([source/'masks'/f'{image.stem}.png',source/'masks'/f'{image.stem}_mask.png'])
     return next((p for p in candidates if p.is_file()),None)
 
+def _mask_class_mapping(image):
+    studio=dataset_annotation_dir(Path(image).parent)/f'{Path(image).stem}.json'
+    if not studio.is_file():return {}
+    classes=json.loads(studio.read_text()).get('mask_classes',[])
+    return {c['id']:c['name'] for c in classes if c['id']>0}
+
+def _mask_pixels(path,explicit_ids=None):
+    with Image.open(path) as image:
+        pixels=np.asarray(image).copy()
+    if pixels.ndim!=2:raise ValueError('Training masks must contain single-channel class IDs')
+    if 255 not in (explicit_ids or {}) and set(np.unique(pixels)).issubset({0,255}):pixels=np.where(pixels==255,1,pixels).astype(np.uint8)
+    return pixels
+
 class ManifestSegmentationDataset:
     def __init__(self,source,images,transform=None,image_size=None,max_dim=1600,class_names=None):
-        self.source=source;self.transform=transform;self.image_size=image_size;self.max_dim=max_dim;self.samples=[];self._regions={};labels=set();max_mask_id=1
+        self.source=source;self.transform=transform;self.image_size=image_size;self.max_dim=max_dim;self.samples=[];self._regions={};labels=set();max_mask_id=1;mask_classes={}
         for image in images:
             annotations,overlay_mask=_annotations(source,image)
             mask=Path(overlay_mask) if overlay_mask and Path(overlay_mask).is_file() else _paired_mask(source,image)
             if mask:
-                values=np.unique(np.array(Image.open(mask).convert('L')))
-                if set(values).issubset({0,255}):values=np.where(values==255,1,values)
+                mask_classes.update(_mask_class_mapping(image))
+                for annotation in annotations or []:
+                    if annotation.get('type')!='tag':
+                        cid=annotation.get('category_id') or 1;name=annotation['label']
+                        if cid in mask_classes and mask_classes[cid]!=name:raise ValueError('Saved mask class IDs have conflicting names')
+                        mask_classes[cid]=name
+                values=np.unique(_mask_pixels(mask,mask_classes))
                 max_mask_id=max(max_mask_id,int(values.max(initial=0)))
             elif annotations is not None:
                 self._regions[str(image)]=annotations
@@ -67,6 +93,7 @@ class ManifestSegmentationDataset:
             else:raise ValueError(f'Missing segmentation annotation/mask: {image}')
             self.samples.append((image,mask))
         if class_names is not None:self.classes=list(class_names)
+        elif mask_classes:self.classes=['background',*[mask_classes.get(i,f'class_{i}') for i in range(1,max(max_mask_id,max(mask_classes))+1)]]
         elif labels:self.classes=['background',*sorted(labels)]
         else:self.classes=['background',*[f'class_{i}' for i in range(1,max_mask_id+1)]]
         self._class_ids={name:i for i,name in enumerate(self.classes)}
@@ -74,7 +101,7 @@ class ManifestSegmentationDataset:
     def __getitem__(self,index):
         image,mask_file=self.samples[index];rgb=_read_image_rgb(image);h,w=rgb.shape[:2]
         if mask_file:
-            mask=np.array(Image.open(mask_file).convert('L'));mask=np.where(mask==255,1,mask) if set(np.unique(mask)).issubset({0,255}) else mask
+            mask=_mask_pixels(mask_file,_mask_class_mapping(image))
             if mask.max(initial=0)>=len(self.classes):raise ValueError('Mask class IDs exceed training class mapping')
         else:
             mask=np.zeros((h,w),dtype=np.uint8)
@@ -105,7 +132,7 @@ def load_manifest_dataset(task,source,split,transform=None,image_size=None,class
     if task=='detection':
         rows=[]
         for image in available.values():
-            with Image.open(image) as pil:width,height=pil.size
+            with open_source_image(image) as pil:width,height=pil.size
             annotations,_=_annotations(source,image)
             if annotations is None:raise ValueError(f'Missing detection labels: {image}')
             regions=[]
@@ -127,17 +154,22 @@ def load_manifest_dataset(task,source,split,transform=None,image_size=None,class
         return DetectionDataset(images_dir=source,annotation_data=data,transform=transform,image_size=image_size,class_names=class_names)
     if task=='segmentation':
         if class_names is None:
-            labels=set();max_mask_id=1
+            labels=set();max_mask_id=1;mask_classes={}
             for image in available.values():
                 annotations,overlay_mask=_annotations(source,image)
                 mask=Path(overlay_mask) if overlay_mask and Path(overlay_mask).is_file() else _paired_mask(source,image)
                 if mask:
-                    values=np.unique(np.array(Image.open(mask).convert('L')))
-                    if set(values).issubset({0,255}):values=np.where(values==255,1,values)
+                    mask_classes.update(_mask_class_mapping(image))
+                    for annotation in annotations or []:
+                        if annotation.get('type')!='tag':
+                            cid=annotation.get('category_id') or 1;name=annotation['label']
+                            if cid in mask_classes and mask_classes[cid]!=name:raise ValueError('Saved mask class IDs have conflicting names')
+                            mask_classes[cid]=name
+                    values=np.unique(_mask_pixels(mask,mask_classes))
                     max_mask_id=max(max_mask_id,int(values.max(initial=0)))
                 elif annotations is not None:
                     labels.update(a['label'] for a in annotations if a.get('type') in {'bbox','polygon','rotated_bbox'})
-            class_names=['background',*sorted(labels)] if labels else ['background',*[f'class_{i}' for i in range(1,max_mask_id+1)]]
+            class_names=['background',*[mask_classes.get(i,f'class_{i}') for i in range(1,max(max_mask_id,max(mask_classes))+1)]] if mask_classes else ['background',*sorted(labels)] if labels else ['background',*[f'class_{i}' for i in range(1,max_mask_id+1)]]
         return ManifestSegmentationDataset(source,selected,transform,image_size,class_names=class_names)
     if task in {'anomaly','anomaly_detection'}:
         dataset=AnomalyDataset.__new__(AnomalyDataset);dataset.root_dir=source;dataset.split=split;dataset.transform=transform;dataset.image_size=image_size;dataset.max_dim=1600;dataset.samples=[]
