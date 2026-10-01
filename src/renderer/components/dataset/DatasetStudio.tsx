@@ -21,6 +21,7 @@ import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
+import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
@@ -174,6 +175,7 @@ export const DatasetStudio: React.FC = () => {
       <OperatorGuidanceBanner step={1} />
       <DatasetWorkflowPanel />
       <DatasetStatisticsPanel />
+      <DataReadinessPanel />
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}

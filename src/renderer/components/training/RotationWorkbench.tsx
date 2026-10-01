@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { modelTrainingProgram, type LocalTrainingDevice, type RotationEvaluation, type RotationPrediction, type RotationRow } from '../../services/modelTrainingProgram';
-import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useProgramWorkbench } from './useProgramWorkbench';
 import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
+import {ProjectImagePicker} from './ProjectImagePicker';
+import {projectSampleRow,replaceSampleRow} from './preparedSampleRows';
 
 export function parseRotationRows(value: string): RotationRow[] {
   const lines = value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -20,7 +21,7 @@ export function parseRotationRows(value: string): RotationRow[] {
 }
 
 export function RotationWorkbench() {
-  const state = useProgramWorkbench('rotation'); const images = useDatasetStore(s => s.images);
+  const state = useProgramWorkbench('rotation');
   const [rowsText, setRowsText] = useState(''); const [sampleImage, setSampleImage] = useState('');
   const [angle, setAngle] = useState(0); const [split, setSplit] = useState<RotationRow['split']>('train');
   const [epochs, setEpochs] = useState(20); const [batch, setBatch] = useState(8); const [size, setSize] = useState(64); const [width, setWidth] = useState(16);
@@ -38,8 +39,8 @@ export function RotationWorkbench() {
   }, [state.dataset?.dataset_path, state.scope, size, width, state.job?.status]);
   const addRow = () => {
     if (!sampleImage) return;
-    const relative = sampleImage.startsWith(`${state.source}/`) ? sampleImage.slice(state.source.length + 1) : sampleImage;
-    setRowsText(old => [...old.split(/\r?\n/).filter(row => row && row.split('\t')[0] !== relative), `${relative}\t${angle}\t${split}`].join('\n'));
+    try {const row=projectSampleRow(state.source,sampleImage,String(angle),split);setRowsText(old=>replaceSampleRow(old,row));}
+    catch(cause){state.setError(cause instanceof Error?cause.message:String(cause));}
   };
   const prepare = () => state.action('보정각 정답 준비', async () => {
     const rows = parseRotationRows(rowsText); const result = await modelTrainingProgram.rotation.prepare(state.source, rows);
@@ -49,11 +50,11 @@ export function RotationWorkbench() {
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
     <h2 className="flex items-center gap-2 text-base font-semibold"><RotateCw className="h-5 w-5 text-cyan-300" />학습형 정방향 보정</h2>
     <p className="mt-2 leading-5 text-slate-400">각 이미지가 정방향이 되는 반시계 보정각을 정답으로 학습합니다. 360° 방향을 예측하고 원본 해상도를 보존한 정렬 이미지와 좌표 변환을 반환합니다.</p>
-    <div className="mt-4 grid items-end gap-3 sm:grid-cols-4"><div className="sm:col-span-2"><ProgramField label="원본 이미지 선택"><select value={sampleImage} onChange={e => setSampleImage(e.target.value)} className={programInput}><option value="">데이터 갤러리 이미지 선택</option>{images.map(row => <option key={row.image_id} value={row.file_path}>{row.file_name}</option>)}</select></ProgramField></div>
+    <div className="mt-4 grid items-end gap-3 sm:grid-cols-4"><div className="sm:col-span-2"><ProjectImagePicker value={sampleImage} disabled={disabled} onSelect={row=>{setSampleImage(row.file_path);if(['train','val','test'].includes(row.split))setSplit(row.split as RotationRow['split']);}} /></div>
       <ProgramField label="정방향 반시계 보정각 · °"><input type="number" min={-180} max={180} value={angle} onChange={e => setAngle(Number(e.target.value))} className={programInput} /></ProgramField>
       <ProgramField label="이미지 분할"><select value={split} onChange={e => setSplit(e.target.value as RotationRow['split'])} className={programInput}><option value="train">train · 학습</option><option value="val">val · 선택</option><option value="test">test · 시험</option></select></ProgramField></div>
     <button type="button" className={`${programButton} mt-3`} disabled={!sampleImage || disabled || !Number.isFinite(angle)} onClick={addRow}>각도 정답 표에 추가</button>
-    <div className="mt-3"><ProgramField label="각도 정답 표 · 상대 이미지 경로 ↹ 보정각 ↹ train/val/test"><textarea rows={5} value={rowsText} onChange={e => setRowsText(e.target.value)} className={`${programInput} font-mono`} placeholder={'images/part_01.png\t-90\ttrain\nimages/part_02.png\t0\tval\nimages/part_03.png\t90\ttest'} /></ProgramField></div>
+    <details className="mt-3"><summary className="cursor-pointer text-sm text-slate-300">각도 정답 표·가져오기 상세</summary><ProgramField label="각도 정답 표 · 상대 이미지 경로 ↹ 보정각 ↹ train/val/test"><textarea rows={5} value={rowsText} onChange={e => setRowsText(e.target.value)} className={`${programInput} font-mono`} placeholder={'images/part_01.png\t-90\ttrain\nimages/part_02.png\t0\tval\nimages/part_03.png\t90\ttest'} /></ProgramField></details>
     <div className="mt-3 flex gap-3"><button type="button" onClick={() => void prepare()} disabled={!state.source || !rowsText.trim() || disabled} className={programButton}>원본과 보정각 준비</button>
       <button type="button" disabled={!state.dataset || disabled} onClick={() => void state.action('저장 정답 읽기', async () => {if (!state.dataset) return; const result = await modelTrainingProgram.rotation.manifest(state.dataset.dataset_path); if (state.isCurrent()) setRowsText(result.samples.map(row => `${row.image}\t${row.correction_deg}\t${row.split}`).join('\n'));})} className={programButton}>저장 정답 읽기</button></div>
     <div className="mt-4"><ProgramField label="프로젝트에 저장된 보정각 정답"><select value={state.dataset?.dataset_path || ''} onChange={e => state.selectDataset(e.target.value)} className={programInput} disabled={disabled}><option value="">준비 데이터 선택</option>{state.datasets.map((row, index) => <option key={row.dataset_path} value={row.dataset_path}>준비 {index + 1} · {row.sample_count}장 · train {row.provenance.split_counts?.train || 0} / val {row.provenance.split_counts?.val || 0} / test {row.provenance.split_counts?.test || 0}</option>)}</select></ProgramField></div>

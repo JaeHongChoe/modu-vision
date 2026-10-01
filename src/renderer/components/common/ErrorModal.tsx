@@ -1,19 +1,23 @@
 /**
  * src/renderer/components/common/ErrorModal.tsx
- * Bilingual (KR/EN) Shop-Floor Industrial Fault Alarm Dialog with 1-click automated remediation.
+ * Bilingual (KR/EN) fault dialog with explicit next-training and navigation actions.
  * Supports ERR_001 through ERR_008.
  */
 
-import React from 'react';
+import React, {useState} from 'react';
 import { X, Wrench } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { LedAnnunciator } from './LedAnnunciator';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {performErrorAction, errorActionLabels, trainingPresetBatchSize} from './errorActions';
 
 export const ErrorModal: React.FC = () => {
   const { activeError, clearError, language, setLanguage } = useProjectStore();
-  const { setPreset } = useTrainingStore();
+  const training = useTrainingStore();
+  const [busy,setBusy] = useState(false);
+  const [actionError,setActionError] = useState('');
   const { setShowGeneratorModal } = useDatasetStore();
 
   if (!activeError) return null;
@@ -28,21 +32,27 @@ export const ErrorModal: React.FC = () => {
     ? activeError.remediation_kr || activeError.remediation || activeError.remediation_en
     : activeError.remediation_en;
 
-  const handleRemediate = () => {
-    const action = activeError.action;
-    if (action === 'reduce_batch_size') {
-      setPreset('fast');
-      clearError();
-    } else if (action === 'open_synthetic_dialog') {
-      clearError();
-      setShowGeneratorModal(true);
-    } else if (action === 'rebalance_classes') {
-      clearError();
-    } else if (action === 'continue_on_cpu') {
-      clearError();
-    } else {
-      clearError();
-    }
+  const actionLabel = errorActionLabels[activeError.action || ''];
+  const handleRemediate = async () => {
+    setBusy(true); setActionError('');
+    const before=useProjectStore.getState();
+    const projectScope=`${before.projectDir}:${before.project?.source_dataset_dir}:${before.project?.active_labelset_id}:${useComputeStore.getState().transportRevision}`;
+    const isCurrent=()=>{const now=useProjectStore.getState();return projectScope===`${now.projectDir}:${now.project?.source_dataset_dir}:${now.project?.active_labelset_id}:${useComputeStore.getState().transportRevision}`;};
+    try {
+      const result = await performErrorAction(activeError.action, {
+        isCurrent,
+        settings: {batchSize: training.nextBatchSize ?? trainingPresetBatchSize(training.preset), device: training.nextDevice || 'auto'},
+        setSettings: training.setNextSettings,
+        selectLocal: () => useComputeStore.getState().selectTarget(null),
+        readTarget: () => useComputeStore.getState().selectedProfileId,
+        openData: () => useProjectStore.getState().setStep(1),
+        openSynthetic: () => setShowGeneratorModal(true),
+      });
+      if(!isCurrent())return;
+      training.setRemediationNotice(result.message);
+      if (result.effect === 'navigation') clearError();
+    } catch (cause) {setActionError(cause instanceof Error ? cause.message : String(cause));}
+    finally {setBusy(false);}
   };
 
   return (
@@ -97,6 +107,8 @@ export const ErrorModal: React.FC = () => {
           </div>
         </div>
 
+        {actionError && <p role="alert" className="px-5 pb-3 text-sm text-red-300">{actionError}</p>}
+        {training.remediationNotice && <p role="status" className="px-5 pb-3 text-sm text-emerald-200">{training.remediationNotice}</p>}
         {/* Action Controls */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-[#2B3547] bg-[#0B0E14]">
           <button
@@ -114,13 +126,14 @@ export const ErrorModal: React.FC = () => {
               {isKo ? '닫기' : 'Dismiss'}
             </button>
 
-            {activeError.auto_fixable && (
+            {actionLabel && (
               <button
-                onClick={handleRemediate}
+                onClick={() => void handleRemediate()}
+                disabled={busy}
                 className="flex items-center space-x-1.5 px-4 py-1.5 rounded bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] text-xs font-bold text-white border border-blue-400/40 cursor-pointer transition-colors"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span>{isKo ? '원클릭 자동 조치' : '1-Click Remediation'}</span>
+                <span>{busy ? (isKo ? '적용 확인 중…' : 'Checking…') : actionLabel[isKo ? 0 : 1]}</span>
               </button>
             )}
           </div>

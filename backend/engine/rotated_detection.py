@@ -115,6 +115,7 @@ class RotatedBoxRecord:
     label: str
     box: dict[str, float]
     size: tuple[int, int]
+    direction_deg: float | None = None
 
 
 @dataclass(frozen=True)
@@ -124,6 +125,10 @@ class RotatedBoxManifest:
     records: tuple[RotatedBoxRecord, ...]
     provenance: dict[str, Any]
     version: int = 1
+
+    @property
+    def direction_enabled(self):
+        return bool(self.records and self.records[0].direction_deg is not None)
 
     @property
     def class_names(self):
@@ -193,8 +198,13 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
                 raise ValueError(f"Rotated sample {index} needs a nonempty label")
             labels.add(label)
             box = _valid_box(obj.get("box"), *size)
-            records.append(RotatedBoxRecord(image, path, actual, split, label, box, size))
+            direction=obj.get('direction_deg')
+            if direction is not None and (isinstance(direction,bool) or not isinstance(direction,(int,float)) or not math.isfinite(direction) or not 0<=direction<360):
+                raise ValueError('Object direction must be a finite independent target in [0,360)')
+            records.append(RotatedBoxRecord(image, path, actual, split, label, box, size, float(direction) if direction is not None else None))
         counts[split] += 1
+    if any(r.direction_deg is not None for r in records) and any(r.direction_deg is None for r in records):
+        raise ValueError('Independent direction requires explicit targets for every object; it is never inferred from axial OBB angle')
     if raw["version"] == 1 and len(labels) != 1:
         raise ValueError("Single-object rotated model supports exactly one label class")
     if not counts["train"] or not counts["val"]:
@@ -214,6 +224,7 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         "source_sha256": {row.image: row.source_sha256 for row in records},
         "split_counts": counts,
         "source_image_count": len(seen_images), "object_count": len(records),
+        "direction_enabled": any(r.direction_deg is not None for r in records),
     }
     from backend.engine.prepared_family_datasets import prepared_source_provenance
     provenance.update(prepared_source_provenance(root, raw, provenance['source_sha256']))
@@ -249,7 +260,7 @@ def write_rotated_manifest(root: str | Path, samples: Sequence[Mapping[str, Any]
         if claimed is not None and claimed != source_sha:
             raise ValueError(f"Source SHA-256 mismatch for {image}")
         pinned.append({"image": image, "source_sha256": source_sha, "split": row.get("split"),
-                       **({"objects":row["objects"]} if "objects" in row else {"label": row.get("label"), "box": row.get("box")})})
+                       **({"objects":row["objects"]} if "objects" in row else {"label": row.get("label"), "box": row.get("box"), **({"direction_deg":row["direction_deg"]} if row.get("direction_deg") is not None else {})})})
     temporary_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=root,
@@ -297,21 +308,25 @@ class RotatedBoxDataset(Dataset):
             box["width"] / diagonal, box["height"] / diagonal,
             math.sin(radians), math.cos(radians),
         ], dtype=torch.float32)
+        if record.direction_deg is not None:
+            direction=math.radians(record.direction_deg)
+            target=torch.cat([target,torch.tensor([math.sin(direction),math.cos(direction)],dtype=torch.float32)])
         return tensor, target
 
 
 class RotatedBoxNet(nn.Module):
     """Small CNN regressor returning center, size and doubled-angle logits."""
 
-    def __init__(self):
+    def __init__(self, direction_enabled=False):
         super().__init__()
+        self.direction_enabled=bool(direction_enabled)
         self.features = nn.Sequential(
             nn.Conv2d(3, 16, 3, stride=2, padding=1), nn.ReLU(),
             nn.Conv2d(16, 32, 3, stride=2, padding=1), nn.ReLU(),
             nn.Conv2d(32, 64, 3, stride=2, padding=1), nn.ReLU(),
             nn.AdaptiveAvgPool2d(1), nn.Flatten(),
         )
-        self.head = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 6))
+        self.head = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 8 if self.direction_enabled else 6))
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         return self.head(self.features(images))
@@ -330,7 +345,10 @@ def _loss(raw: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     coordinates = nn.functional.smooth_l1_loss(torch.sigmoid(raw[:, :4]), targets[:, :4])
     angles = nn.functional.normalize(raw[:, 4:6], dim=1)
     orientation = nn.functional.mse_loss(angles, targets[:, 4:6])
-    return coordinates + 0.1 * orientation
+    loss=coordinates + 0.1 * orientation
+    if targets.shape[-1]==8:
+        loss=loss+0.1*nn.functional.mse_loss(nn.functional.normalize(raw[:,6:8],dim=1),targets[:,6:8])
+    return loss
 
 
 def _tensor_for_image(source_bytes: bytes, image_size: int) -> tuple[torch.Tensor, tuple[int, int]]:
@@ -378,7 +396,10 @@ def _load_checkpoint(checkpoint: str | Path, device: str | torch.device) -> tupl
                 or not isinstance(meta.get("class_names"),list) or not meta["class_names"]
                 or type(meta.get("max_objects")) is not int or not 1<=meta["max_objects"]<=32):
             raise ValueError("Rotated multi-object class or capacity metadata differs from checkpoint")
-    model = RotatedMultiBoxNet(len(meta["class_names"]), meta["max_objects"]) if meta.get("version") == 2 else RotatedBoxNet()
+    direction_enabled=meta.get('direction_enabled',False)
+    if type(direction_enabled) is not bool or payload.get('direction_enabled',False)!=direction_enabled:
+        raise ValueError('Independent direction metadata differs from checkpoint')
+    model = RotatedMultiBoxNet(len(meta["class_names"]), meta["max_objects"],direction_enabled) if meta.get("version") == 2 else RotatedBoxNet(direction_enabled)
     state = payload.get("model_state_dict")
     expected = model.state_dict()
     if (not isinstance(state, dict) or set(state) != set(expected)
@@ -407,12 +428,14 @@ def predict_rotated_box(
         return prediction
     tensor, size = _tensor_for_image(source_bytes, meta["image_size"])
     with torch.no_grad():
-        box = _decode(model(tensor.to(device))[0], *size)
+        raw=model(tensor.to(device))[0]
+        box = _decode(raw, *size)
     polygon = _points(box).astype(float).tolist()
     corners = np.asarray(polygon)
     return {
         "task": "rotated_detection", "label": meta["class_name"],
         "box": box, "polygon": polygon,
+        **({"direction_deg":_decode_direction(raw[-2:]),"direction_encoding":"unit_vector_360"} if meta.get("direction_enabled") else {}),
         "axis_aligned_box": [float(corners[:, 0].min()), float(corners[:, 1].min()),
                              float(corners[:, 0].max()), float(corners[:, 1].max())],
         "image_size": [size[0], size[1]],
@@ -420,6 +443,14 @@ def predict_rotated_box(
         "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
         "model_sha256": checksum,
     }
+
+
+def _decode_direction(raw):
+    return math.degrees(math.atan2(float(raw[0]),float(raw[1])))%360
+
+
+def _direction_error(predicted,target):
+    return abs((predicted-target+180)%360-180)
 
 
 def _angle_error(predicted: float, target: float) -> float:
@@ -434,23 +465,26 @@ def _evaluate_model(model: RotatedBoxNet, manifest: RotatedBoxManifest, split: s
         raise ValueError(f"Rotated {split} split has no samples")
     ious: list[float] = []
     angles: list[float] = []
-    samples=[]
+    samples=[];directions=[]
     model.eval()
     with torch.no_grad():
         for index, record in enumerate(dataset.records):
             image, _ = dataset[index]
-            box = _decode(model(image.unsqueeze(0).to(device))[0], *record.size)
+            raw=model(image.unsqueeze(0).to(device))[0]
+            box = _decode(raw, *record.size)
+            direction=_decode_direction(raw[-2:]) if getattr(model,'direction_enabled',False) else None
+            if direction is not None and record.direction_deg is not None:directions.append(_direction_error(direction,record.direction_deg))
             ious.append(oriented_iou(box, record.box))
             angles.append(_angle_error(box["angle_deg"], record.box["angle_deg"]))
             evidence=match_objects([{'label':record.label,'box':box,'confidence':1.}], [{'label':record.label,'box':record.box}])
             samples.append({'image':record.image,'file_path':str(record.path),'source_sha256':record.source_sha256,
                 'ground_truth':record.label,'predicted_class':record.label,'confidence':1.,'is_correct':evidence['counts']['fp']==0 and evidence['counts']['fn']==0,
                 'object_evidence':{**evidence,'coordinate_space':'original_image','source_size':list(record.size)},
-                'oriented_iou':ious[-1],'angle_error_deg':angles[-1]})
+                'oriented_iou':ious[-1],'angle_error_deg':angles[-1],**({'direction_deg':direction,'ground_truth_direction_deg':record.direction_deg,'direction_error_deg':directions[-1]} if directions and direction is not None and record.direction_deg is not None else {})})
     return {"split": split, "sample_count": len(ious),
             "mean_oriented_iou": float(np.mean(ious)),
             "mean_angle_error_deg": float(np.mean(angles)),
-            "dataset_sha256": manifest.provenance["dataset_sha256"],'test_predictions':samples,**object_average_precision(samples)}
+            "dataset_sha256": manifest.provenance["dataset_sha256"],'test_predictions':samples,**({"mean_direction_error_deg":float(np.mean(directions)),"direction_sample_count":len(directions)} if directions else {}),**object_average_precision(samples)}
 
 
 def evaluate_rotated_detector(
@@ -498,7 +532,7 @@ def train_rotated_detector(
         return _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start)
     train = RotatedBoxDataset(manifest, split="train", image_size=image_size)
     loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=0)
-    model = RotatedBoxNet().to(device)
+    model = RotatedBoxNet(manifest.direction_enabled).to(device)
     lineage = {}
     if warm_start is not None:
         from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
@@ -533,7 +567,7 @@ def train_rotated_detector(
                 best_score = metrics["mean_oriented_iou"]
                 best_metrics = metrics
                 torch.save({"task": "rotated_detection", "class_name": manifest.class_name,
-                            "image_size": image_size, "model_state_dict": model.state_dict(), **lineage}, checkpoint)
+                            "image_size": image_size, "direction_enabled":manifest.direction_enabled,"model_state_dict": model.state_dict(), **lineage}, checkpoint)
         if cancel_event is not None and cancel_event.is_set():
             raise RotatedTrainingCancelled()
     except RotatedTrainingCancelled:
@@ -542,7 +576,7 @@ def train_rotated_detector(
         (output / "job_receipt.json").unlink(missing_ok=True)
         raise
     checksum = _sha256(checkpoint)
-    meta = {"task": "rotated_detection", "class_name": manifest.class_name,
+    meta = {"task": "rotated_detection", "class_name": manifest.class_name,"direction_enabled":manifest.direction_enabled,"direction_encoding":"unit_vector_360" if manifest.direction_enabled else None,
             "image_size": image_size, "checkpoint_sha256": checksum,
             "dataset_sha256": manifest.provenance["dataset_sha256"],
             "manifest_sha256": manifest.provenance["manifest_sha256"],
@@ -560,13 +594,14 @@ def train_rotated_detector(
 
 class RotatedMultiBoxNet(nn.Module):
     """Bounded multi-object CNN with objectness, oriented geometry and class logits."""
-    def __init__(self,class_count,max_objects):
+    def __init__(self,class_count,max_objects,direction_enabled=False):
         super().__init__()
         self.class_count,self.max_objects=class_count,max_objects
+        self.direction_enabled=bool(direction_enabled);self.output_size=7+class_count+(2 if self.direction_enabled else 0)
         self.features=RotatedBoxNet().features
-        self.head=nn.Sequential(nn.Linear(64,128),nn.ReLU(),nn.Linear(128,max_objects*(7+class_count)))
+        self.head=nn.Sequential(nn.Linear(64,128),nn.ReLU(),nn.Linear(128,max_objects*self.output_size))
     def forward(self,images):
-        return self.head(self.features(images)).reshape(-1,self.max_objects,7+self.class_count)
+        return self.head(self.features(images)).reshape(-1,self.max_objects,self.output_size)
 
 
 class RotatedMultiDataset(Dataset):
@@ -583,10 +618,12 @@ class RotatedMultiDataset(Dataset):
         data=first.path.read_bytes()
         if hashlib.sha256(data).hexdigest()!=first.source_sha256: raise ValueError('Rotated source changed after validation')
         image,_=_tensor_for_image(data,self.image_size)
-        targets=torch.zeros(self.max_objects,8)
+        targets=torch.zeros(self.max_objects,10 if records[0].direction_deg is not None else 8)
         for slot,r in enumerate(records):
             box=r.box; diagonal=math.hypot(*r.size); angle=math.radians(2*box['angle_deg'])
-            targets[slot]=torch.tensor([box['cx']/r.size[0],box['cy']/r.size[1],box['width']/diagonal,box['height']/diagonal,math.sin(angle),math.cos(angle),1,self.classes.index(r.label)])
+            values=[box['cx']/r.size[0],box['cy']/r.size[1],box['width']/diagonal,box['height']/diagonal,math.sin(angle),math.cos(angle),1,self.classes.index(r.label)]
+            if r.direction_deg is not None:values.extend([math.sin(math.radians(r.direction_deg)),math.cos(math.radians(r.direction_deg))])
+            targets[slot]=torch.tensor(values)
         return image[0],targets
 
 
@@ -595,8 +632,11 @@ def _multi_loss(raw,targets):
     objectness=nn.functional.binary_cross_entropy_with_logits(raw[:,:,6],targets[:,:,6])
     if not present.any(): return objectness
     geometry=_loss(raw[present][:,:6],targets[present][:,:6])
-    classes=nn.functional.cross_entropy(raw[present][:,7:],targets[present][:,7].long())
-    return objectness+geometry+classes
+    logits=raw[present][:,7:-2] if targets.shape[-1]==10 else raw[present][:,7:]
+    classes=nn.functional.cross_entropy(logits,targets[present][:,7].long())
+    loss=objectness+geometry+classes
+    if targets.shape[-1]==10:loss=loss+0.1*nn.functional.mse_loss(nn.functional.normalize(raw[present][:,-2:],dim=1),targets[present][:,8:10])
+    return loss
 
 
 def _multi_predictions(raw,size,meta,threshold):
@@ -604,11 +644,12 @@ def _multi_predictions(raw,size,meta,threshold):
     for slot in raw:
         confidence=float(torch.sigmoid(slot[6]).item())
         if confidence<threshold: continue
-        probabilities=torch.softmax(slot[7:],dim=0)
+        probabilities=torch.softmax(slot[7:-2] if meta.get("direction_enabled") else slot[7:],dim=0)
         index=int(probabilities.argmax().item())
         box=_decode(slot[:6],*size); polygon=_points(box).astype(float).tolist()
         points=np.asarray(polygon)
         candidate={'label':meta['class_names'][index],'confidence':confidence,'class_confidence':float(probabilities[index]),'box':box,'polygon':polygon,'axis_aligned_box':[float(points[:,0].min()),float(points[:,1].min()),float(points[:,0].max()),float(points[:,1].max())]}
+        if meta.get('direction_enabled'):candidate.update(direction_deg=_decode_direction(slot[-2:]),direction_encoding='unit_vector_360')
         if any(d['label']==candidate['label'] and oriented_iou(d['box'],box)>0.5 for d in detections): continue
         detections.append(candidate)
     return detections
@@ -624,7 +665,7 @@ def predict_rotated_array(checkpoint,image_rgb,*,device='cpu',threshold=0.5):
     if meta.get('version')==2: detections=_multi_predictions(raw,(width,height),meta,threshold)
     else:
         box=_decode(raw,width,height);polygon=_points(box).astype(float).tolist();points=np.asarray(polygon)
-        detections=[{'label':meta['class_name'],'confidence':1.0,'box':box,'polygon':polygon,'axis_aligned_box':[float(points[:,0].min()),float(points[:,1].min()),float(points[:,0].max()),float(points[:,1].max())]}]
+        detections=[{'label':meta['class_name'],'confidence':1.0,'box':box,'polygon':polygon,'axis_aligned_box':[float(points[:,0].min()),float(points[:,1].min()),float(points[:,0].max()),float(points[:,1].max())],**({'direction_deg':_decode_direction(raw[-2:])} if meta.get('direction_enabled') else {})}]
     return {'task':'rotated_detection','detections':detections,'image_size':[width,height],'model_sha256':checksum}
 
 
@@ -632,7 +673,7 @@ def _evaluate_multi(model,manifest,split,meta,device):
     from backend.engine.evaluation_evidence import match_objects,object_average_precision
     data=RotatedMultiDataset(manifest,split,meta['image_size'],meta['max_objects'])
     if not len(data): raise ValueError(f'Rotated {split} split has no samples')
-    matched=predicted=truth=0;ious=[];angles=[];samples=[]
+    matched=predicted=truth=0;ious=[];angles=[];samples=[];directions=[]
     with torch.inference_mode():
         for records in data.groups:
             # Evaluation truth may contain newly corrected objects beyond the
@@ -642,24 +683,29 @@ def _evaluate_multi(model,manifest,split,meta,device):
                 raise ValueError('Rotated source changed after validation')
             image,_=_tensor_for_image(source_bytes,meta['image_size'])
             predictions=_multi_predictions(model(image.to(device))[0],first.size,meta,0.)
-            targets=[{'label':r.label,'box':r.box} for r in records]
+            targets=[{'label':r.label,'box':r.box,**({'direction_deg':r.direction_deg} if r.direction_deg is not None else {})} for r in records]
             evidence=match_objects(predictions,targets)
+            if meta.get('direction_enabled'):
+                for pair in evidence['matches']:
+                    predicted_index=pair.get('prediction_index',pair.get('predicted_index'));truth_index=pair.get('truth_index',pair.get('target_index'))
+                    if predicted_index is not None and truth_index is not None and records[truth_index].direction_deg is not None:
+                        directions.append(_direction_error(predictions[predicted_index]['direction_deg'],records[truth_index].direction_deg))
             matched+=evidence['counts']['tp'];predicted+=evidence['counts']['tp']+evidence['counts']['fp'];truth+=len(records)
             ious.extend(row['iou'] for row in evidence['matches']);angles.extend(row['angle_error_deg'] for row in evidence['matches'])
             samples.append({'image':first.image,'file_path':str(first.path),'source_sha256':first.source_sha256,
                 'ground_truth_classes':sorted({r.label for r in records}),'confidence':max((p['confidence'] for p in predictions),default=0),
                 'is_correct':evidence['counts']['fp']==0 and evidence['counts']['fn']==0,
                 'object_evidence':{**evidence,'coordinate_space':'original_image','source_size':list(first.size)}})
-    return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256'],'test_predictions':samples,**object_average_precision(samples)}
+    return {'split':split,'sample_count':len(data),'ground_truth_objects':truth,'predicted_objects':predicted,'precision':matched/max(1,predicted),'recall':matched/max(1,truth),'mean_oriented_iou':float(np.mean(ious)) if ious else 0.0,'mean_angle_error_deg':float(np.mean(angles)) if angles else 90.0,'dataset_sha256':manifest.provenance['dataset_sha256'],'test_predictions':samples,**({'mean_direction_error_deg':float(np.mean(directions)) if directions else None,'direction_matched_count':len(directions)} if meta.get('direction_enabled') else {}),**object_average_precision(samples)}
 
 
 def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start=None):
     groups={}
     for r in manifest.records: groups[r.image]=groups.get(r.image,0)+1
     max_objects=max(groups.values())
-    meta={'task':'rotated_detection','version':2,'class_name':manifest.class_name,'class_names':list(manifest.class_names),'max_objects':max_objects,'image_size':image_size,'dataset_sha256':manifest.provenance['dataset_sha256'],'dataset_path':str(manifest.root),'provenance':manifest.provenance}
+    meta={'task':'rotated_detection','direction_enabled':manifest.direction_enabled,'direction_encoding':'unit_vector_360' if manifest.direction_enabled else None,'version':2,'class_name':manifest.class_name,'class_names':list(manifest.class_names),'max_objects':max_objects,'image_size':image_size,'dataset_sha256':manifest.provenance['dataset_sha256'],'dataset_path':str(manifest.root),'provenance':manifest.provenance}
     data=RotatedMultiDataset(manifest,'train',image_size,max_objects)
-    model=RotatedMultiBoxNet(len(manifest.class_names),max_objects).to(device)
+    model=RotatedMultiBoxNet(len(manifest.class_names),max_objects,manifest.direction_enabled).to(device)
     if warm_start is not None:
         from backend.engine.specialized_warm_start import load_family_weights, requested_signature, require_new_candidate
         require_new_candidate(output_dir, warm_start)

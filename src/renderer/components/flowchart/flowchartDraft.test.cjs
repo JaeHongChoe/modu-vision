@@ -86,3 +86,24 @@ test('failed or stale draft save keeps edits dirty and does not claim durability
   assert.equal(store.getState().pipelineDirty, true);
   assert.equal(store.getState().pipeline.nodes[0].data.label, 'Newer edit');
 });
+
+test('initial default is not a persisted draft, but save/readback and reopen record durability',async()=>{
+  assert.equal(store.getState().persistedDraftHash,null);
+  store.getState().updateNodeData('inspect',{label:'Saved ROI draft'});
+  assert.equal(await store.getState().saveDraft(),true);
+  assert.match(store.getState().persistedDraftHash,/^[a-f0-9]{64}$/);
+  store.getState().invalidateForDataChange();
+  assert.equal(store.getState().persistedDraftHash,null);
+  await store.getState().loadPipeline(true,'segmentation','/source-a');
+  assert.match(store.getState().persistedDraftHash,/^[a-f0-9]{64}$/);
+  assert.equal(store.getState().pipeline.nodes[0].data.label,'Saved ROI draft');
+});
+
+test('a draft save whose transport owner changes cannot claim readback durability',async()=>{
+  store.getState().updateNodeData('inspect',{label:'Unsaved ROI draft'});
+  let finish;beforeSave=()=>new Promise(resolve=>{finish=resolve;});let ownerCurrent=true;
+  const pending=store.getState().saveDraft(()=>ownerCurrent);ownerCurrent=false;finish();
+  assert.equal(await pending,false);
+  assert.equal(store.getState().persistedDraftHash,null);
+  assert.equal(store.getState().pipelineDirty,true);
+});

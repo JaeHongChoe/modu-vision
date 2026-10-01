@@ -1,6 +1,7 @@
 import { ComputeReservations } from './ComputeReservations';
 import {ComputeJobsPanel} from './ComputeJobsPanel';
 import {SharedProjectPanel} from './SharedProjectPanel';
+import {ServerConnectionWizard} from './ServerConnectionWizard';
 import React, { useState,useEffect } from 'react';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Server, Trash2, X } from 'lucide-react';
 import { useComputeStore } from '../../stores/useComputeStore';
@@ -112,6 +113,7 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
         )}
 
         <SharedProjectPanel />
+        <ServerConnectionWizard onAdd={()=>{setDraft(emptyProfile);setShowForm(true);}} onEdit={edit}/>
         <ComputeReservations />
         <div className="mt-4 flex items-center justify-between">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-400">저장된 서버</h3>

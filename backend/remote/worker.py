@@ -796,14 +796,15 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
 
 
 def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: Any) -> dict[str, dict[str, Any]]:
-    from backend.engine.flowchart_engine import ordered_linear_nodes
+    from backend.engine.flowchart_engine import ordered_linear_nodes,debug_ancestor_ids
     from backend.engine.specialized_models import flow_model_task,valid_flow_job,FLOW_TASKS
 
     references = spec.get("models")
     portable=spec.get('portable_models') is True
     if 'portable_models' in spec and type(spec['portable_models']) is not bool:
         raise ValueError('Invalid portable model mode')
-    if not isinstance(references, list) or not 1 <= len(references) <= (24 if portable else 8):
+    scope=debug_ancestor_ids(pipeline,spec.get('stop_node_id'))
+    if not isinstance(references, list) or not (0 if portable and spec.get('stop_node_id') else 1) <= len(references) <= (24 if portable else 8):
         raise ValueError("Flowchart model references exceed the supported bound")
     if portable:
         binding=hashlib.sha256(json.dumps(references,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -827,6 +828,7 @@ def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: An
         raise SnapshotValidationError("Primary flowchart model does not match source snapshot")
     needed: dict[str, str] = {}
     for node in ordered_linear_nodes(pipeline):
+        if node.id not in scope: continue
         node_task=flow_model_task(node)
         if node_task is None:
             continue
@@ -927,7 +929,8 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
         status.update(status="running")
         engine = (engine_factory or _flowchart_engine)(checkpoints, str(actual_device))
         result = engine.execute(pipeline=pipeline, image_path=str(image),
-                                image_id=spec.get("image_id") or image.stem)
+                                image_id=spec.get("image_id") or image.stem,
+                                **({"stop_node_id":spec["stop_node_id"]} if spec.get("stop_node_id") else {}))
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         if not isinstance(result, dict):

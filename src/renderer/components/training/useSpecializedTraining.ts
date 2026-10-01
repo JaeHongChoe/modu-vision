@@ -1,11 +1,14 @@
 import {useEffect,useRef,useState} from 'react';
 import {specializedApi,type SpecializedTrainingFamily,type SpecializedTrainingJob} from '../../services/specializedApi';
 import {useProjectStore} from '../../stores/useProjectStore';
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
 import {scopedTrainingJob,type JobSnapshot} from './scopedTrainingJob';
 
 export const isActiveSpecializedJob=(job:SpecializedTrainingJob|null) => !!job && ['queued','running','stopping'].includes(job.status);
 
 export function useSpecializedTraining(family:SpecializedTrainingFamily,onComplete:(job:SpecializedTrainingJob)=>void) {
+  const handoff=useTaskHandoff(family==='defect-gan'?'defect_gan':family);
   const project=useProjectStore(state=>state.project);
   const projectDir=useProjectStore(state=>state.projectDir);
   const source=project?.source_dataset_dir ?? '';
@@ -24,10 +27,10 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     if(projectDir)void specializedApi.trainingJobs(family).then(result=>{
       if(!active||!current())return;
       const rows=result.jobs.filter(item=>item.source_dataset_path===source && item.training_provenance.labelset_id===labelset);
-      setJobs(rows);setJob(rows.find(item=>isActiveSpecializedJob(item)) ?? rows[0] ?? null);
+      setJobs(rows);setJob(handoff?(handoff.kind==='automated'?rows.find(row=>row.job_id===handoff.jobId)||null:selectHandoffRecord(rows,handoff)||null):rows.find(item=>isActiveSpecializedJob(item)) ?? rows[0] ?? null);
     }).catch(cause=>{if(active&&current())setError(String(cause.message ?? cause));});
     return()=>{active=false;};
-  },[family,projectDir,source,labelset]);
+  },[family,projectDir,source,labelset,handoff?.jobId,handoff?.selectionId]);
   useEffect(()=>{
     if(!job)return;
     if(job.status==='completed'&&!completed.current.has(job.job_id)){completed.current.add(job.job_id);complete.current(job);}

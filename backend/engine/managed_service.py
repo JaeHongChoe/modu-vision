@@ -77,6 +77,22 @@ class ManagedService:
         except (httpx.HTTPError,ValueError):return {'status':'disconnected','port':self.config['port']}
     def state(self):
         return {'runtime':self.readback(),'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config()}
+    def input_arguments(self,release):
+        path=self.root/'inputs.json'
+        if path.is_symlink():raise ValueError('Input configuration cannot follow links')
+        if not path.exists():return []
+        value=json.loads(path.read_text());scope=value.get('scope',{})
+        source=release.get('input_root')
+        if not source or scope.get('source_dataset_path')!=str(Path(source).resolve()):raise ValueError('Input configuration source changed; configure operator inputs again')
+        if value.get('mode')=='folder':
+            folder=Path(value.get('folder') or '')
+            if folder.is_symlink() or not folder.is_dir() or not folder.resolve().is_relative_to(Path(source).resolve()):raise ValueError('Input folder is no longer inside the active release source')
+            return ['--inbox',str(folder.resolve())]
+        if value.get('mode')=='camera':
+            camera=value.get('camera')
+            if not isinstance(camera,str) or not (camera.isdecimal() or camera.startswith(('rtsp://','rtsps://'))):raise ValueError('Invalid configured camera source')
+            return ['--camera-source',camera]
+        return []
     @staticmethod
     def validate_accepted_device(package,device):
         verify_flow_package(Path(package))
@@ -140,6 +156,7 @@ class ManagedService:
         resolve_runtime_device(release.get('device','cpu'))
         arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])]
         if release.get('input_root'):arguments+=['--input-root',release['input_root']]
+        arguments+=self.input_arguments(release)
         adapter_path=self.root/'adapters.json'
         if adapter_path.exists():arguments+=['--adapter-config',str(adapter_path)]
         env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=self.config['token']
@@ -223,6 +240,7 @@ class ManagedService:
         release=active['release']
         arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release['device'],'--port',str(self.config['port'])]
         if release.get('input_root'):arguments+=['--input-root',release['input_root']]
+        arguments+=self.input_arguments(release)
         if (self.root/'adapters.json').exists():arguments+=['--adapter-config',str(self.root/'adapters.json')]
         label=self.native_identity()
         plist=directory/(label+'.plist')

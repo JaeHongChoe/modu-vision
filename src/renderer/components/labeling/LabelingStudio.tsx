@@ -22,6 +22,8 @@ import { ImageFilmstrip } from './ImageFilmstrip';
 import { ModelAssistPanel } from './ModelAssistPanel';
 import { LabelSetBar } from './LabelSetBar';
 import { ImageReviewPanel } from './ImageReviewPanel';
+import {DerivedImagePanel} from './DerivedImagePanel';
+import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
 
 export const LabelingStudio: React.FC = () => {
@@ -55,6 +57,8 @@ export const LabelingStudio: React.FC = () => {
       <LabelingToolbar />
       <LabelSetBar />
       <ImageReviewPanel />
+      <DerivedImagePanel />
+      <SavedReviewQueuePanel />
       <DicomPanel />
 
       {currentImage && annotationLoadStatus === 'error' && (

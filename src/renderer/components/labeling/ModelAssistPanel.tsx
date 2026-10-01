@@ -8,6 +8,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useModelAssistRunStore } from '../../stores/useModelAssistRunStore';
 import {LabelAssistDeviceSizes,type LabelAssistExecution} from './LabelAssistDeviceSizes';
 import { BulkLabelAssist } from './BulkLabelAssist';
+import {KoreanConditionLabeler} from './KoreanConditionLabeler';
 import { CandidateProviderControls } from './CandidateProviderControls';
 import type { FoundationProposal } from '../../services/foundationLabelingApi';
 import { datasetWorkflow, type CandidateProposal } from '../../services/datasetWorkflow';
@@ -272,6 +273,7 @@ export const ModelAssistPanel: React.FC = () => {
               <p className="text-[11px] leading-relaxed text-slate-500">예측은 후보로만 저장됩니다. 기존 라벨과 원본 파일은 생성 시 변경되지 않습니다.</p>
             </section>
 
+            <KoreanConditionLabeler disabled={isDirty||!!busy||batchRunning||annotationLoadStatus!=="ready"} onCreated={next=>{setSuggestions(previous=>[next,...previous]);selectProposal(next);setNotice(`${next.candidates.length}개 한국어 조건 후보를 만들었습니다. 선택 후 명시적으로 채택하세요.`);}}/>
             <CandidateProviderControls onOpenProposal={async(path,id)=>{ await openBatchEntry({image_path:path,image_id:path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/,''),proposal_id:id,status:'generated',candidate_count:0}); }} disabled={isDirty || !!busy || batchRunning || annotationLoadStatus !== "ready"} onCreated={next => { setSuggestions(previous => [next, ...previous]); selectProposal(next); setNotice(`${next.candidates.length}개 실제 추론 후보를 만들었습니다. 검토 후 선택하세요.`); }} />
 
             {projectDir && <BulkLabelAssist execution={execution} projectDir={projectDir} modelId={modelId} threshold={threshold} keywords={keywords.split(",").map(k => k.trim()).filter(Boolean)}
@@ -287,7 +289,7 @@ export const ModelAssistPanel: React.FC = () => {
               </div>
               {proposal && <>
                 <SuggestionPreview proposal={proposal} selectedIds={selectedCandidateIds} />
-                <p className="text-[11px] text-slate-400">{({foundation:"SAM2 + DINOv3 / Grounding DINO",grounding_dino:"텍스트 검출 · Grounding DINO",template_match:"예시 템플릿 매칭",trained_model:"완료 학습 모델"} as Record<string,string>)[(proposal as CandidateProposal).backend || "trained_model"]} · {proposal.candidates.length}개 후보</p>
+                <p className="text-[11px] text-slate-400">{({foundation:"SAM2 + DINOv3 / Grounding DINO",grounding_dino:"텍스트 검출 · Grounding DINO",template_match:"예시 템플릿 매칭",vlm:"한국어 조건 · 이미지 VLM",trained_model:"완료 학습 모델"} as Record<string,string>)[(proposal as CandidateProposal).backend || "trained_model"]} · {proposal.candidates.length}개 후보</p>
                 {(proposal as CandidateProposal).support_limits && <p className="text-[10px] text-amber-200">{(proposal as CandidateProposal).support_limits}</p>}
                 <details className="text-[10px] text-slate-400"><summary className="cursor-pointer">후보 출처·버전</summary><p className="break-all">라벨 세트 {(proposal as FoundationProposal).labelset_id||labelsetId} · 버전 {(proposal as FoundationProposal).labelset_version||'모델 제안 기록'}</p>{(proposal as FoundationProposal).candidates.map(c=><pre key={c.id} className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify({id:c.id,source:c.source,area:c.area,provenance:c.provenance},null,2)}</pre>)}</details>
                 <label className="block text-[11px]">검토자<input aria-label="후보 검토자 이름" value={reviewerName} onChange={e => setReviewerName(e.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5" /></label>

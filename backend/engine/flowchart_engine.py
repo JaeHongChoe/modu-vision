@@ -218,6 +218,8 @@ class FlowchartExecutionResult(BaseModel):
     image_id: Optional[str] = None
     routed_output_node_id: Optional[str] = None
     error_message: Optional[str] = None
+    stop_node_id: Optional[str] = None
+    graph_sha256: Optional[str] = None
     execution_resources: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -230,11 +232,29 @@ class FlowchartRunRequest(BaseModel):
     device: str = Field(default="cpu", pattern=r"^(cpu|mps|cuda(?::[0-9]+)?)$")
     compute_profile_id: Optional[str] = None
     project_id: Optional[str] = None
+    stop_node_id: Optional[str] = None
 
 
 # ============================================================================
 # Safe ROI Cropping Function (Adversarial Hardened)
 # ============================================================================
+
+def debug_ancestor_ids(pipeline: FlowchartPipeline, stop_node_id: Optional[str]) -> set[str]:
+    ids = {node.id for node in pipeline.nodes}
+    if stop_node_id is None:
+        return ids
+    if stop_node_id not in ids:
+        raise ValueError("Unknown debug stop node")
+    required = {stop_node_id}
+    pending = [stop_node_id]
+    while pending:
+        target = pending.pop()
+        for edge in pipeline.edges:
+            if edge.target == target and edge.source not in required:
+                required.add(edge.source)
+                pending.append(edge.source)
+    return required
+
 
 def safe_crop_roi(
     img: np.ndarray,
@@ -1873,6 +1893,7 @@ class FlowchartEngine:
         image: Optional[Union[np.ndarray, str, Path]] = None,
         image_path: Optional[str] = None,
         image_id: Optional[str] = None,
+        stop_node_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Executes end-to-end multi-model flowchart pipeline.
@@ -1881,6 +1902,7 @@ class FlowchartEngine:
         overall_t0 = time.time()
         pipe = pipeline or get_default_flowchart()
         ordered_nodes = ordered_linear_nodes(pipe)
+        debug_scope = debug_ancestor_ids(pipe, stop_node_id)
         nodes = {node.id: node for node in ordered_nodes}
         incoming = {node.id: [] for node in ordered_nodes}
         outgoing = {node.id: [] for node in ordered_nodes}
@@ -1899,7 +1921,7 @@ class FlowchartEngine:
             if (node.data.node_type == "detection_crop" or node.data.task == "rotated_detection")
             and any(edge.target == decision_node.id for edge in outgoing[node.id])
         }
-        if any(not nodes[node_id].data.model_job_id for node_id in detector_only_ids):
+        if any(not nodes[node_id].data.model_job_id for node_id in detector_only_ids if node_id in debug_scope):
             raise ValueError("A trained detection model is required for a detector-only flow.")
         full_image_input: Dict[str, bool] = {}
         for node in processing_nodes:
@@ -2284,7 +2306,7 @@ class FlowchartEngine:
                     return process_node(node)
             return process_node(node)
 
-        for layer in execute_layers(processing_nodes, incoming, bounded_node, pipe.execution_config.max_workers):
+        for layer in execute_layers([node for node in processing_nodes if node.id in debug_scope], incoming, bounded_node, pipe.execution_config.max_workers):
             for node, (regions, evidence, branch, steps, selected_edges, reasons) in layer:
                 node_rois[node.id] = regions
                 node_evidence[node.id] = evidence
@@ -2296,6 +2318,24 @@ class FlowchartEngine:
         # the validated graph order for repeatable history and package parity.
         order_index = {node.id: index for index, node in enumerate(ordered_nodes)}
         execution_steps.sort(key=lambda step: order_index[step.node_id])
+
+        if stop_node_id and decision_node.id not in debug_scope:
+            # Debug output cannot enter production inspection or output routing.
+            from backend.engine.flow_provenance import pipeline_sha256
+            crops = node_evidence.get(stop_node_id, [])
+            ran = {step.node_id for step in execution_steps}
+            execution_steps.extend(FlowchartExecutionStep(node_id=node.id, name=node.data.label,
+                status="skipped", latency_ms=0, input_count=0, output_count=0,
+                skip_reason="outside_debug_scope") for node in ordered_nodes if node.id not in ran)
+            execution_steps.sort(key=lambda step: order_index[step.node_id])
+            return FlowchartExecutionResult(status="partial", final_verdict="REVIEW", is_ok=False,
+                rejection_reason="선택 노드까지 실행한 디버그 결과입니다. 전체 검사 판정이 아닙니다.",
+                roi_count=len(node_rois.get(stop_node_id, crops)),
+                defective_roi_count=sum(c.verdict == "NG" for c in crops), crops=crops,
+                annotated_image=self._render_master_image(img_rgb, crops), execution_steps=execution_steps,
+                total_latency_ms=round((time.time()-overall_t0)*1000, 2), inspected_image_size=[w,h],
+                image_path=str(image_path) if image_path else None, image_id=image_id,
+                stop_node_id=stop_node_id, graph_sha256=pipeline_sha256(pipe)).model_dump()
 
         decision_edges = [edge for edge in incoming[decision_node.id] if edge.id in active_edges]
         crops: List[CropInspectionResult] = []
@@ -2341,6 +2381,8 @@ class FlowchartEngine:
             fallback = decision_node.data.params.get("review_fallback")
             if fallback in ("pass", "fail"):
                 selected_edge = next((edge for edge in branch_edges if edge.isBranch == fallback), None)
+        if stop_node_id and (stop_node_id == decision_node.id or (selected_edge and selected_edge.target not in debug_scope)):
+            selected_edge = None
         execution_steps.append(FlowchartExecutionStep(
             node_id=decision_node.id, name=decision_node.data.label,
             status=dec_status, latency_ms=round(dec_lat, 2),
@@ -2350,6 +2392,10 @@ class FlowchartEngine:
             selected_edge_ids=[selected_edge.id] if selected_edge else [],
         ))
         for output_node in output_nodes:
+            if stop_node_id and output_node.id not in debug_scope:
+                execution_steps.append(FlowchartExecutionStep(node_id=output_node.id,name=output_node.data.label,
+                    status="skipped",latency_ms=0,input_count=0,output_count=0,skip_reason="outside_debug_scope"))
+                continue
             execution_steps.append(FlowchartExecutionStep(
                 node_id=output_node.id, name=output_node.data.label,
                 status=dec_status if selected_edge and output_node.id == selected_edge.target else "skipped",
@@ -2365,15 +2411,16 @@ class FlowchartEngine:
 
         defective_count = sum(1 for c in crops if c.verdict == "NG")
 
+        from backend.engine.flow_provenance import pipeline_sha256
         result = FlowchartExecutionResult(
-            status="review" if verdict == "REVIEW" else "success",
+            status="partial" if stop_node_id else "review" if verdict == "REVIEW" else "success",
             execution_resources={"requested_workers": pipe.execution_config.max_workers,
                 "requested_device_slots": pipe.execution_config.device_slots,
                 "effective_device_slots": effective_slots, "device": str(self.device),
                 "engine_device_capacity": self._max_device_concurrency},
-            final_verdict=verdict,
-            is_ok=is_ok,
-            rejection_reason=reason,
+            final_verdict="REVIEW" if stop_node_id else verdict,
+            is_ok=False if stop_node_id else is_ok,
+            rejection_reason=("선택 노드까지 실행한 디버그 결과입니다. " + reason) if stop_node_id else reason,
             roi_count=len(crops),
             defective_roi_count=defective_count,
             crops=crops,
@@ -2384,7 +2431,9 @@ class FlowchartEngine:
             tiles_processed=sum(c.tiles_processed or 0 for c in crops),
             image_path=str(image_path) if image_path else None,
             image_id=str(image_id) if image_id else None,
-            routed_output_node_id=selected_edge.target if selected_edge else None,
+            routed_output_node_id=selected_edge.target if selected_edge and not stop_node_id else None,
+            stop_node_id=stop_node_id,
+            graph_sha256=pipeline_sha256(pipe) if stop_node_id else None,
         )
 
         return result.model_dump()

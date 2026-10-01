@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Images, Loader2, RefreshCw } from 'lucide-react';
 import { api, type DefectGANCandidate, type DefectGANModelSummary } from '../../services/api';
 import { specializedApi } from '../../services/specializedApi';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
 import {useSpecializedTraining} from './useSpecializedTraining';
 import {WarmStartSelector} from './WarmStartSelector';
 import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
@@ -13,6 +15,8 @@ import {GANCompositionEditor} from './GANCompositionEditor';
 import {parseGANCrops,validateGANRegions} from './ganComposition';
 import {ganWorkflow,type ExplicitGANRow,type GANRegion,type GANPreview} from '../../services/ganWorkflow';
 import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
+import {ProjectImagePicker} from './ProjectImagePicker';
+import {annotationCrops,projectSampleRow} from './preparedSampleRows';
 
 function errorText(cause: unknown): string {
   if (cause instanceof Error) return cause.message;
@@ -21,6 +25,7 @@ function errorText(cause: unknown): string {
 }
 
 export const DefectGANWorkbench: React.FC = () => {
+  const handoff=useTaskHandoff('defect_gan');
   const projectDir = useProjectStore((state) => state.projectDir);
   const projectSource=useProjectStore(state=>state.project?.source_dataset_dir ?? '');
   const activeLabelset=useProjectStore(state=>state.project?.active_labelset_id ?? 'default');
@@ -33,6 +38,9 @@ export const DefectGANWorkbench: React.FC = () => {
   const [regions,setRegions]=useState<GANRegion[]>([]);
   const [compositionReceipt,setCompositionReceipt]=useState('');
   const [rowsText, setRowsText] = useState('');
+  const [cropImage,setCropImage] = useState('');const selectedCrop=useRef('');
+  const [cropRows,setCropRows] = useState<Array<{label:string;bbox:[number,number,number,number]}>>([]);
+  const [cropIndex,setCropIndex] = useState(0);const [cropSplit,setCropSplit] = useState<'train'|'val'|'test'>('train');
   const [sampleCount, setSampleCount] = useState<number | null>(null);
   const [epochs, setEpochs] = useState(20);
   const [warmParentId, setWarmParentId] = useState('');
@@ -61,18 +69,20 @@ export const DefectGANWorkbench: React.FC = () => {
   });
 
   useEffect(() => {
-    setBusy(null);setDatasetPath('');setDatasets([]);setRowsText('');setSourceImage('');setSourcePreview(null);setRegions([]);setCompose(false);setCompositionReceipt('');
+    setBusy(null);setDatasetPath('');setDatasets([]);setRowsText('');setSourceImage('');setSourcePreview(null);setCropImage('');selectedCrop.current='';setCropRows([]);setCropIndex(0);setRegions([]);setCompose(false);setCompositionReceipt('');
     setGenerationPackage('');setGanEvaluation(null);setAdoptedPath('');setDecisions({});setReviewer('');setReviewReason('');setReviewLabel('');setDatasetPath(''); setRowsText(''); setSampleCount(null);
     setModels([]); setJobId(''); setCandidates([]); setReviewDir(''); setNotice(''); setError('');
     if (!projectDir) return;
     let active = true;
-    void ganWorkflow.datasets().then(result=>{if(!active||!sameProject())return;setDatasets(result.datasets);const latest=result.datasets.at(-1);if(latest){setDatasetPath(latest.dataset_path);setSampleCount(latest.sample_count||null);}}).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
-    void api.defectGAN.models().then(({ models: items }) => {
-      if (!active || useProjectStore.getState().projectDir !== projectDir) return;
-      setModels(items); setJobId(items[0]?.job_id || '');
-    }).catch((cause) => { if (active) setError(errorText(cause)); });
+    void Promise.all([ganWorkflow.datasets(),api.defectGAN.models()]).then(([prepared,result])=>{
+      if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
+      const selected=selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
+      const dataset=handoff?.datasetPath?prepared.datasets.find(row=>row.dataset_path===handoff.datasetPath):prepared.datasets.at(-1);
+      if(handoff&&!dataset)throw new Error('선택 작업이 사용한 결함 생성 정답 버전을 찾지 못했습니다.');
+      if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);}
+    }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
     return () => { active = false; };
-  }, [projectDir,projectSource,activeLabelset]);
+  }, [projectDir,projectSource,activeLabelset,handoff?.jobId,handoff?.selectionId]);
 
   const sameProject = () => {const state=useProjectStore.getState();return state.projectDir===projectDir && (state.project?.source_dataset_dir ?? '')===projectSource && (state.project?.active_labelset_id ?? 'default')===activeLabelset;};
   const loadManifest = async () => {
@@ -143,6 +153,18 @@ export const DefectGANWorkbench: React.FC = () => {
       <p className="leading-5 text-slate-400">실제 결함이 보이는 영역을 지정해 학습합니다. 생성 이미지는 원본 라벨이나 학습 분할에 자동으로 섞이지 않습니다.</p>
       <p className="break-all text-slate-400">원본 이미지 폴더: {projectSource||'프로젝트 원본 폴더를 선택하세요.'}</p>
       <label className="block">프로젝트 소유 학습 데이터<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(datasets.find(row=>row.dataset_path===event.target.value)?.sample_count||null);setWarmParentId('');}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="">아래 영역 표로 복사본 준비</option>{datasets.map((row,index)=><option value={row.dataset_path} key={row.dataset_path}>복사본 {index+1} · 영역 {row.sample_count||0}개</option>)}</select></label>
+      <ProjectImagePicker value={cropImage} disabled={!!busy||training.active} label="실제 결함 원본 선택" onSelect={image=>{
+        setCropImage(image.file_path);selectedCrop.current=image.file_path;setCropRows([]);setCropIndex(0);setError('');
+        if(['train','val','test'].includes(image.split))setCropSplit(image.split as 'train'|'val'|'test');
+        const expected=image.file_path;
+        void api.annotations.get(image.image_id,image.file_path.slice(0,image.file_path.lastIndexOf('/')),image.file_path).then(result=>{
+          if(!sameProject()||selectedCrop.current!==expected)return;
+          setCropRows(annotationCrops(result.annotations || [],image.width || result.image_width || 0,image.height || result.image_height || 0));
+        }).catch(cause=>{if(sameProject()&&selectedCrop.current===expected)setError(errorText(cause));});
+      }} />
+      <div className="grid gap-3 sm:grid-cols-2"><label className="text-sm">사람이 라벨링한 결함 영역<select value={cropIndex} onChange={event=>setCropIndex(Number(event.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2">{!cropRows.length&&<option>bbox·polygon 정답이 없습니다. 2단계에서 지정하세요.</option>}{cropRows.map((row,index)=><option key={index} value={index}>{row.label} · {row.bbox.join(', ')}</option>)}</select></label><label className="text-sm">원본 단위 분할<select value={cropSplit} onChange={event=>setCropSplit(event.target.value as 'train'|'val'|'test')} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="train">학습</option><option value="val">검증</option><option value="test">시험</option></select></label></div>
+      <button type="button" className="rounded border border-cyan-800 p-2 text-cyan-100 disabled:opacity-40" disabled={!cropImage||!cropRows[cropIndex]||!!busy||training.active} onClick={()=>{try{const region=cropRows[cropIndex];const row=projectSampleRow(projectSource,cropImage,region.bbox.join(','),cropSplit)+'\t'+region.label;setRowsText(old=>[...old.split(/\r?\n/).filter(Boolean),row].join('\n'));setSampleCount(null);setNotice('원본 좌표·정답을 표에 추가했습니다. 영역 저장을 눌러 준비 데이터를 만드세요.');}catch(cause){setError(errorText(cause));}}}>선택 정답 영역을 학습 표에 추가</button>
+      <p className="text-sm text-slate-400">지원하는 bbox·polygon 정답을 사용합니다. 마스크·회전 박스는 2단계에서 명시적인 crop 영역을 지정하거나 상세 표에서 좌표를 확인하세요.</p>
       <label className="block text-slate-300">결함 영역 표 · 이미지 상대 경로 ↹ x1,y1,x2,y2 ↹ train/val/test ↹ 선택 라벨
         <textarea value={rowsText} onChange={(event) => { setRowsText(event.target.value); setSampleCount(null); }} rows={4}
           placeholder={'images/defect_001.png\t10,20,74,84\ttrain\nimages/defect_002.png\t5,8,69,72\ttrain'}
@@ -181,7 +203,7 @@ export const DefectGANWorkbench: React.FC = () => {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {compositionReceipt&&<p className="break-all font-mono text-[10px] text-violet-300">{compositionReceipt}</p>}
-      <AutoDLWorkbench task="defect_gan" familyDatasetPath={datasetPath||undefined} onComplete={()=>{void api.defectGAN.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(result.models[0]?.job_id||'');}});}}/>
+      <AutoDLWorkbench task="defect_gan" familyDatasetPath={datasetPath||undefined} onComplete={()=>{void api.defectGAN.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(selectHandoffRecord(result.models,handoff)?.job_id||'');}});}}/>
       {!!candidates.length && <div className="space-y-2 rounded border border-[#344255] bg-[#0E1722] p-3">
         <div className="font-semibold text-slate-200">생성 후보 · 검토 대기</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">

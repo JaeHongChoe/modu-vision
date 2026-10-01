@@ -4,7 +4,7 @@ import {runtimeDeploymentApi,type OptimizationJob,type RuntimeHeldoutResult} fro
 import type {ImageMeta,VisionTask} from '../../types';
 import {useProjectStore} from '../../stores/useProjectStore';
 
-export function RuntimeOptimizationPanel({packagePath,sourceFolder,task}:{packagePath:string;sourceFolder:string;task:VisionTask}){
+export function RuntimeOptimizationPanel({packagePath,sourceFolder,task,initialJobId}:{packagePath:string;sourceFolder:string;task:VisionTask;initialJobId?:string}){
   const projectDir=useProjectStore(s=>s.projectDir);
   const [devices,setDevices]=useState<string[]>([]),[device,setDevice]=useState('CPU'),[precision,setPrecision]=useState<'fp32'|'fp16'|'int8'>('fp32');
   const [calibration,setCalibration]=useState<ImageMeta[]>([]),[validation,setValidation]=useState<ImageMeta[]>([]);
@@ -21,9 +21,9 @@ export function RuntimeOptimizationPanel({packagePath,sourceFolder,task}:{packag
       const heldout=test.items.length?test:await api.dataset.getImages({folder_path:sourceFolder,task,split:'val',limit:128});if(!current)return;
       setDevices(cap.openvino.devices);setDevice(cap.openvino.devices[0]||'CPU');if(!cap.openvino.available)setError(cap.openvino.error||'OpenVINO 의존성 설치가 필요합니다.');
       setCalibration(train.items);setValidation(heldout.items);setSelectedCal(train.items.slice(0,8).map(x=>x.file_path));setSelectedVal(heldout.items.slice(0,8).map(x=>x.file_path));
-      const saved=localStorage.getItem(storageKey);if(saved){const reopened=await runtimeDeploymentApi.job(saved);if(current)setJob(reopened);}
     }).catch(e=>{if(current)setError(e instanceof Error?e.message:String(e));});return()=>{current=false;};
   },[packagePath,sourceFolder,task,storageKey]);
+  useEffect(()=>{let current=true;setJob(null);const id=initialJobId||localStorage.getItem(storageKey);if(id)runtimeDeploymentApi.job(id).then(reopened=>{if(reopened.job_id!==id)throw new Error('최적화 작업 ID가 요청과 다릅니다.');if(initialJobId&&(reopened.options?.package_dir!==packagePath||reopened.options?.input_receipt?.source_dataset_path!==sourceFolder))throw new Error('최적화 작업의 패키지·원본 소스가 현재 선택과 다릅니다.');if(current){setJob(reopened);localStorage.setItem(storageKey,reopened.job_id);}}).catch(e=>{if(current)setError(e instanceof Error?e.message:String(e));});return()=>{current=false;};},[initialJobId,storageKey,packagePath,sourceFolder]);
   useEffect(()=>{if(!job||!active)return;let current=true;const poll=setInterval(()=>{runtimeDeploymentApi.job(job.job_id).then(value=>{if(current)setJob(value);}).catch(e=>{if(current)setError(String(e));});},700);return()=>{current=false;clearInterval(poll);};},[job?.job_id,active]);
   useEffect(()=>{if(job?.status!=='completed')return;let current=true;runtimeDeploymentApi.prerequisites(job.job_id).then(value=>{if(current)setRevisions(value.approval_revision_ids);}).catch(e=>{if(current)setError(e instanceof Error?e.message:String(e));});return()=>{current=false;};},[job?.job_id,job?.status]);
   useEffect(()=>{setHeldout(null);if(job?.status!=='completed')return;let current=true;runtimeDeploymentApi.heldout(job.job_id,heldoutIndex).then(value=>{if(current)setHeldout(value);}).catch(e=>{if(current)setError(e instanceof Error?e.message:String(e));});return()=>{current=false;};},[job?.job_id,job?.status,heldoutIndex]);
@@ -33,6 +33,7 @@ export function RuntimeOptimizationPanel({packagePath,sourceFolder,task}:{packag
   const choices=(title:string,items:ImageMeta[],selected:string[],set:(value:string[])=>void)=><fieldset className="rounded border border-slate-700 p-2"><legend>{title}</legend><div className="max-h-24 overflow-auto">{items.length===0?<span className="text-amber-300">명시된 split의 이미지가 없습니다.</span>:items.map(item=><label key={item.file_path} className="flex items-center gap-2"><input type="checkbox" disabled={!!active||busy} checked={selected.includes(item.file_path)} onChange={e=>set(e.target.checked?[...selected,item.file_path]:selected.filter(p=>p!==item.file_path))}/>{item.file_name}</label>)}</div></fieldset>;
   return <section aria-label="Runtime 최적화와 양자화" className="mt-3 grid gap-3 rounded border border-violet-800 p-3 text-xs text-slate-300">
     <h4 className="font-semibold text-violet-200">OpenVINO 변환·양자화</h4>
+    {job&&<p aria-label="선택한 최적화 작업" className="break-all font-mono">최적화 작업 {job.job_id} · 입력 패키지 {packagePath}</p>}
     <div className="flex flex-wrap items-center gap-3"><label>검증 장치 <select value={device} disabled={!!active||busy} onChange={e=>setDevice(e.target.value)} className="bg-slate-900">{devices.map(d=><option key={d}>{d}</option>)}</select></label><label>정밀도 <select value={precision} disabled={!!active||busy} onChange={e=>setPrecision(e.target.value as typeof precision)} className="bg-slate-900"><option value="fp32">FP32</option><option value="fp16">FP16 가중치</option><option value="int8">INT8 (실제 이미지 보정)</option></select></label></div>
     {precision==='int8'&&choices('보정 이미지 · train',calibration,selectedCal,setSelectedCal)}{choices('변환 오차 검증 · test / val',validation,selectedVal,setSelectedVal)}
     <div className="flex gap-2"><button type="button" disabled={devices.length===0||!selectedVal.length||(precision==='int8'&&!selectedCal.length)||!!active||busy} onClick={()=>void run()} className="rounded bg-violet-700 px-3 py-2 disabled:opacity-50">{busy?'요청 중...':'독립 후보 패키지 생성'}</button>{active&&<button type="button" onClick={()=>void cancel()} className="rounded border border-slate-600 px-3">변환 중단</button>}</div>

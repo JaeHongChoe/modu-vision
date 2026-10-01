@@ -252,9 +252,11 @@ def run_measured_candidate(*, task, dataset_path, output_dir, job_id, config_ove
 def validated_budget(budget,epochs_per_trial):
     """One pre-submission budget gate shared by GUI, CLI and external REST."""
     limits = {'max_trials': 4, 'max_total_epochs': 8, 'max_seconds': 600, **(budget or {})}
-    if set(limits) - {'max_trials', 'max_total_epochs', 'max_seconds'}: raise ValueError('Unknown training budget field')
+    if set(limits) - {'max_trials', 'max_total_epochs', 'max_seconds', 'max_memory_mb'}: raise ValueError('Unknown training budget field')
     if type(limits['max_trials']) is not int or not 1 <= limits['max_trials'] <= 32 or type(limits['max_total_epochs']) is not int or not 1 <= limits['max_total_epochs'] <= 512 or isinstance(limits['max_seconds'], bool) or not isinstance(limits['max_seconds'], (int, float)) or not math.isfinite(limits['max_seconds']) or not 0 < limits['max_seconds'] <= 86400:
         raise ValueError('Training budget must be positive and bounded')
+    memory=limits.get('max_memory_mb')
+    if memory is not None and (type(memory) is not int or not 1 <= memory <= 1048576):raise ValueError('Memory budget must be a positive bounded integer in MB')
     if type(epochs_per_trial) is not int or not 1 <= epochs_per_trial <= limits['max_total_epochs']: raise ValueError('Epochs per trial must fit the total epoch budget')
     return limits
 
@@ -316,7 +318,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
     if output.exists() and (output / 'search.json').exists(): raise ValueError('Search identity already exists')
     record = {'search_id': search_id, 'task': task, 'status': 'running', 'mode': mode, 'preset': preset,
         'owner_pid':os.getpid(),'owner_kind':'api' if owner_instance else 'engine','owner_instance':owner_instance or uuid.uuid4().hex,
-        'device': device, 'budget': limits, 'epochs_per_trial': epochs_per_trial, 'trials': [], 'winner': None,
+        'device': device, 'budget': limits, 'memory_scope': 'cuda_process_allocated' if str(device).startswith('cuda') else 'mps_process_allocated' if str(device)=='mps' else 'backend_process_rss', 'epochs_per_trial': epochs_per_trial, 'trials': [], 'winner': None,
         'dataset_path': str(source), 'source_dataset_path': str(canonical),
         'dataset_fingerprint': _fingerprint(source), 'source_dataset_fingerprint': _fingerprint(canonical), 'training_provenance': training_binding,
         'configuration_parent': configuration_parent, 'created_at': time.time(), 'stop_reason': None,
@@ -325,11 +327,19 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
         raise ValueError('Invalid measured training objective or latency weight')
     _write(output / 'search.json', record); start = time.monotonic(); consumed = 0
     def persist():
+        record.update(epochs_consumed=consumed, duration_seconds=time.monotonic()-start, memory_used_mb=memory_used_mb())
         _write(output / 'search.json', record)
         if on_progress: on_progress(json.loads(json.dumps(record)))
+    def memory_used_mb():
+        if str(device).startswith('cuda'):return torch.cuda.memory_allocated(device)/1048576
+        if str(device)=='mps':return torch.mps.current_allocated_memory()/1048576
+        import psutil
+        return psutil.Process().memory_info().rss/1048576
+    def memory_exceeded():
+        return limits.get('max_memory_mb') is not None and memory_used_mb()>limits['max_memory_mb']
     try:
         from backend.engine.shared_scheduler import compute_lease_scope
-        with compute_lease_scope(search_id, device):
+        with compute_lease_scope(search_id, device,memory_budget_mb=limits.get('max_memory_mb') or 0,task=task):
             for config in itertools.chain([first], candidates):
                 if (output/'cancel_requested.json').is_file():event.set()
                 if event.is_set(): record.update(status='cancelled', winner=None, stop_reason='cancelled'); break
@@ -337,6 +347,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                 if consumed + epochs_per_trial > limits['max_total_epochs']: record['stop_reason'] = 'epoch_budget'; break
                 remaining = limits['max_seconds'] - (time.monotonic() - start)
                 if remaining <= 0: record['stop_reason'] = 'time_budget'; break
+                if memory_exceeded():record['stop_reason']='memory_budget';break
                 if _fingerprint(source) != record['dataset_fingerprint'] or _fingerprint(canonical) != record['source_dataset_fingerprint']: raise ValueError('Automated training source or labels changed')
                 if training_binding:
                     from backend.engine.training_provenance import validate_training_binding
@@ -353,6 +364,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                 def monitor():
                     while not stop_monitor.wait(.02):
                         if (output/'cancel_requested.json').is_file():event.set()
+                        if memory_exceeded():record['stop_reason']='memory_budget';child_event.set();return
                         if event.is_set() or time.monotonic() - start >= limits['max_seconds']: child_event.set(); return
                 monitor_thread = threading.Thread(target=monitor, daemon=True); monitor_thread.start()
                 def progress(values):
@@ -392,7 +404,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                 except InterruptedError:
                     trial['status'] = 'cancelled'; consumed += epochs_per_trial
                     for name in ('best_model.pt', 'model_meta.json', 'job_receipt.json'): (trial_dir / name).unlink(missing_ok=True)
-                    record['stop_reason'] = 'cancelled' if event.is_set() else 'time_budget'
+                    record['stop_reason'] = 'cancelled' if event.is_set() else 'memory_budget' if record.get('stop_reason')=='memory_budget' else 'time_budget'
                     if event.is_set(): record['status'] = 'cancelled'
                     break
                 except (ValueError, OSError, RuntimeError, KeyError, TypeError, ImportError) as exc:

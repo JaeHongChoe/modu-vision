@@ -21,7 +21,7 @@ export type MeasuredTrial = {trial_id: string; config: Record<string, unknown>; 
   progress?:{epoch?:number;epochs?:number;batch?:number;batches?:number;loss?:number}};
 export type AutomatedTrainingJob = {search_id: string; task: ModelFamily; status: string; mode: string;
   dataset_path: string; source_dataset_path?: string; created_at: number; trials: MeasuredTrial[]; winner?: MeasuredTrial;
-  training_provenance?: {labelset_id?: string}; stop_reason?: string; error?: string; epochs_consumed?: number; duration_seconds?: number};
+  training_provenance?: {labelset_id?: string}; stop_reason?: string; error?: string; epochs_consumed?: number; duration_seconds?: number; device?: string; memory_scope?:string; memory_used_mb?:number; budget?: {max_trials:number;max_total_epochs:number;max_seconds:number;max_memory_mb?:number}};
 
 const post = <T>(path: string, body: unknown) => request<T>(path, {method: 'POST', body: JSON.stringify(body)});
 const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([key, value]) => [key, String(value)])).toString();
@@ -66,7 +66,7 @@ export const modelTrainingProgram = {
     start: (options: {task: ModelFamily; dataset_path: string; family_dataset_path?: string; device: LocalTrainingDevice;
       mode: 'quick' | 'search' | 'fast_retrain'; epochs_per_trial: number; parent_job_id?: string;
       objective: 'val_loss' | 'loss_latency'; latency_weight: number;
-      budget: {max_trials: number; max_total_epochs: number; max_seconds: number};
+      budget: {max_trials: number; max_total_epochs: number; max_seconds: number;max_memory_mb?:number};
       search_space: Record<string, Array<string | number>>; base_config: Record<string, unknown>}) => post<AutomatedTrainingJob>('/api/automated-training/start', {...options, background: true}),
   },
 };

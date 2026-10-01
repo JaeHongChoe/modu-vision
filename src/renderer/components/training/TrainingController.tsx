@@ -31,7 +31,7 @@ import { RotatedDetectionPanel } from './RotatedDetectionPanel';
 import { DefectGANWorkbench } from './DefectGANWorkbench';
 import { EnhancementWorkbench } from './EnhancementWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
-import { api } from '../../services/api';
+import { api,getApiPersistenceIdentity } from '../../services/api';
 import { ModelFamilyCatalog } from './ModelFamilyCatalog';
 import { dinoSyntheticDefaults, modelChoices, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
 import { DinoSyntheticOptions } from './DinoSyntheticOptions';
@@ -41,6 +41,10 @@ import { RotationWorkbench } from './RotationWorkbench';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
 import type { VisionTask } from '../../types';
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {useTaskHandoff} from './useTaskHandoff';
+import {clearTaskHandoff} from './taskHandoff';
+import {trainingPresetBatchSize} from '../common/errorActions';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -48,16 +52,18 @@ export const TrainingController: React.FC = () => {
   const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project } = useProjectStore();
-  const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(task);
+  const handoff=useTaskHandoff();
+  const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
+  const [anomalyPurpose,setAnomalyPurpose] = useState<'image'|'region'>('image');
   const [syntheticOptions, setSyntheticOptions] = useState<DinoSyntheticTrainingOptions>({...dinoSyntheticDefaults});
   const selectedBackbone = modelChoices[task].some(choice => choice.value === trainingBackbone) ? trainingBackbone : modelChoices[task][0].value;
   const syntheticAnomaly = task === 'anomaly' && selectedBackbone === 'dino_synthetic';
   const statisticalRefit = task === 'anomaly' && !syntheticAnomaly;
   let modelOptions: Record<string, unknown> = {};
   let modelOptionsError: string | null = null;
-  try { modelOptions = trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions); }
+  try { modelOptions = trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose); }
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
@@ -95,9 +101,10 @@ export const TrainingController: React.FC = () => {
     bestMetric,
     lossHistory,
     hardware,
+    nextBatchSize,nextDevice,setNextSettings,remediationNotice,
   } = useTrainingStore();
   const {
-    profiles, selectedProfileId, isLoaded: isComputeLoaded, isLoading: isComputeLoading,
+    profiles, selectedProfileId,transportRevision, isLoaded: isComputeLoaded, isLoading: isComputeLoading,
     loadError: computeLoadError, error: computeError, probeResults, probePendingId, probeProfile,
   } = useComputeStore();
 
@@ -122,8 +129,10 @@ export const TrainingController: React.FC = () => {
     setSyntheticOptions({...dinoSyntheticDefaults});
   }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
-  useEffect(() => {setSelectedFamily(task);}, [task, projectDir]);
+  useEffect(() => {setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision,selectedProfileId]);
+  useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
+    clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
     setSelectedFamily(family);
     if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
       void useProjectStore.getState().setTask(family as VisionTask).catch(error => {setSelectedFamily(task);setActionError(error instanceof Error ? error.message : String(error));});
@@ -201,6 +210,8 @@ export const TrainingController: React.FC = () => {
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
         <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} />
+        <TrainingPreparationPanel family={selectedFamily} model={selectedFamily===task ? (syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone) : undefined} checkpoint={selectedFamily===task ? pretrainedCheckpoint : ''} onCheckpointChange={selectedFamily===task?setPretrainedCheckpoint:undefined} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} />
+        {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
         {selectedFamily === task && <>
         <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -325,14 +336,15 @@ export const TrainingController: React.FC = () => {
           </label>
           {selectedBackbone.startsWith('dinov3') && <p className="mt-2 text-slate-300">DINOv3 사전학습 특징을 사용하고 현재 라벨에 맞는 분류·분할 헤드를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p>}
           {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
+          {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region">이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 출력은 패치 점수 맵이며 픽셀 정답 마스크와 구분합니다.'}</p></div>}
           {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
             onChange={options => { setSyntheticOptions(options); setWarmParentId(''); }} />}
           {modelOptionsError && <p role="alert" className="mt-2 text-amber-300">{modelOptionsError}</p>}
-          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || syntheticAnomaly) && <label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
+          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || syntheticAnomaly) && <details className="mt-3"><summary className="cursor-pointer text-slate-300">사전학습 파일 가져오기 · 상세 설정</summary><label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
             <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
               placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
               className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />
-          </label>}
+          </label></details>}
           {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
         </div>
 
@@ -355,6 +367,7 @@ export const TrainingController: React.FC = () => {
           </button>}
         </div>}
 
+        <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
         {/* Dark Steel Execution Control Toolbar */}
         <div className="p-3 bg-[#131822] rounded-[4px] border border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -367,7 +380,7 @@ export const TrainingController: React.FC = () => {
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
                 <span>{isRecoveringTraining ? '기존 학습 확인 중...' :
-                  language === 'ko' ? 'AutoML 원클릭 학습 시작' : 'Start Auto Training'}</span>
+                  language === 'ko' ? '선택 설정으로 학습 시작' : 'Start Auto Training'}</span>
               </button>
             ) : (
               <button
@@ -480,7 +493,7 @@ export const TrainingController: React.FC = () => {
             )}
           </div>
         </div>
-        <AutoDLWorkbench task={task} />
+        <AutoDLWorkbench task={task} anomalyPurpose={anomalyPurpose} />
         </>}
         {selectedFamily === 'patch_classification' && <PatchClassificationWorkbench />}
         {selectedFamily === 'rotation' && <RotationWorkbench />}

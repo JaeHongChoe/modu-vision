@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { request } from '../../services/api';
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { WarmStartSelector } from './WarmStartSelector';
 import {AutoDLWorkbench} from './AutoDLWorkbench';
@@ -13,6 +15,7 @@ interface EnhancementJob { job_id: string; status: string; epoch: number; epochs
 const activeStatus = (status: string) => ['queued', 'running', 'stopping'].includes(status);
 
 export function EnhancementWorkbench() {
+  const handoff=useTaskHandoff('enhancement');
   const source = useProjectStore((s) => s.project?.source_dataset_dir || '');
   const projectId = useProjectStore((s) => s.project?.id);
   const labelsetId = useProjectStore((s) => s.project?.active_labelset_id || 'default');
@@ -45,22 +48,17 @@ export function EnhancementWorkbench() {
   useEffect(() => {
     let current = true;
     setDatasetPath('');setDatasets([]); setModels([]); setJobId(''); setJob(null); setJobs([]); setBusy(''); setSampleCount(null); setMetrics(null); setError(''); setNotice('');
-    void request<{datasets:PreparedDataset[]}>('/api/enhancement/datasets').then(result=>{
-      if(!current||currentScope.current!==scope)return;setDatasets(result.datasets);
-      const latest=result.datasets.at(-1);if(latest){setDatasetPath(latest.dataset_path);setSampleCount(latest.sample_count||null);}
-    }).catch(e=>{if(current)setError(e instanceof Error?e.message:'준비된 데이터 목록을 읽지 못했습니다.');});
-    void request<{ models: EnhancementModel[] }>('/api/enhancement/models').then((result) => {
-      if (current) setModels(result.models.filter((m) => !source || m.metadata.source_dataset_path === source));
-    }).catch((e) => { if (current) setError(e instanceof Error ? e.message : '모델 목록을 읽지 못했습니다.'); });
-    void request<{ jobs: EnhancementJob[] }>('/api/enhancement/jobs').then((result) => {
-      if (!current) return;
-      const own = result.jobs.filter((row) => row.source_dataset_path === source);
-      setJobs(own);
-      const running = own.find((row) => activeStatus(row.status));
-      if (running) { setJob(running); setDatasetPath(running.dataset_path); }
-    }).catch((e) => { if (current) setError(e instanceof Error ? e.message : '학습 작업을 읽지 못했습니다.'); });
+    void Promise.all([request<{datasets:PreparedDataset[]}>('/api/enhancement/datasets'),request<{models:EnhancementModel[]}>('/api/enhancement/models'),request<{jobs:EnhancementJob[]}>('/api/enhancement/jobs')]).then(([prepared,result,journal])=>{
+      if(!current||currentScope.current!==scope)return;setDatasets(prepared.datasets);
+      const items=result.models.filter(model=>model.metadata.source_dataset_path===source);setModels(items);
+      const selected=selectHandoffRecord(items,handoff);setJobId(selected?.job_id||'');
+      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>activeStatus(row.status));setJob(restored||null);
+      const path=selected?.metadata.dataset_path||handoff?.datasetPath||restored?.dataset_path;const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
+      if(handoff&&!dataset)throw new Error('선택 작업이 사용한 이미지 개선 정답 쌍을 찾지 못했습니다.');
+      if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);}
+    }).catch(cause=>{if(current&&currentScope.current===scope)setError(cause instanceof Error?cause.message:String(cause));});
     return () => { current = false; };
-  }, [projectId, source, labelsetId]);
+  }, [projectId, source, labelsetId,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
     if (!job || !activeStatus(job.status)) return;

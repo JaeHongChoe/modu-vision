@@ -157,3 +157,13 @@ test('flow layout is one undoable edit and preserves the original connected grap
   store.getState().redo();
   assert.equal(store.getState().pipeline, arranged);
 });
+
+test('debug run validates models only up to the selected node and sends stop identity',async()=>{
+  const pipeline={...store.getState().pipeline,nodes:[{id:'input',data:{node_type:'input'},position:{x:0,y:0}},{id:'roi',data:{node_type:'fixed_roi',params:{roi_bbox:[0,0,32,32]}},position:{x:100,y:0}},{id:'later',data:{node_type:'inspection',task:'segmentation',model_job_id:null},position:{x:200,y:0}}],edges:[{id:'a',source:'input',target:'roi'},{id:'b',source:'roi',target:'later'}]};
+  store.getState().replacePipeline(pipeline);store.getState().setSelectedImage({source:'dataset',imagePath:'/fixture/a.png',fileName:'a.png'});
+  let request;
+  api.flowchart.run=async data=>{request=data;return {status:'partial',final_verdict:'REVIEW',stop_node_id:'roi',execution_target:'local',execution_device:'cpu',execution_steps:[]};};
+  const ok=await store.getState().runPipeline(undefined,undefined,{savedVersionId:null,executionTarget:'local',device:'cpu',stopNodeId:'roi'});
+  assert.equal(ok,true);assert.equal(request.stop_node_id,'roi');assert.equal(store.getState().executionResult.status,'partial');
+  store.getState().updateNodeData('roi',{params:{roi_bbox:[1,1,33,33]}});assert.equal(store.getState().executionResult,null);
+});

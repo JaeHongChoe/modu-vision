@@ -4,7 +4,11 @@
  * Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { WorkspaceDialog } from './components/common/WorkspaceDialog';
+import { TaskCenter } from './components/training/TaskCenter';
+import { ProductDeliveryWorkspace } from './components/runtime/ProductDeliveryWorkspace';
+import { OperatorWorkspace } from './components/runtime/OperatorWorkspace';
 import { WizardHeader } from './components/wizard/WizardHeader';
 import { WizardFooter } from './components/wizard/WizardFooter';
 import { DatasetStudio } from './components/dataset/DatasetStudio';
@@ -16,11 +20,15 @@ import { InferenceCenterStudio } from './components/inference/InferenceCenterStu
 import { ErrorDiagnosticsModal } from './components/common/ErrorDiagnosticsModal';
 import { useProjectStore } from './stores/useProjectStore';
 import { useTrainingStore } from './stores/useTrainingStore';
+import { useComputeStore } from './stores/useComputeStore';
 import { telemetryService } from './services/websocket';
 
 export default function App() {
   const { activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
   const { updateFromTelemetry } = useTrainingStore();
+  const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
+  const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
+  const transportRevision=useComputeStore(s=>s.transportRevision);
 
   useEffect(() => {
     let unsubStatus: (() => void) | undefined;
@@ -76,14 +84,22 @@ export default function App() {
       {/* Precision Industrial Header Frame */}
       <WizardHeader />
 
+      <nav aria-label="프로젝트 작업 공간" className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
+        <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>모델·플로우 작업</button>
+        <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>운영자 검사</button>
+        <span className="flex-1"/>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>작업 센터</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>패키지·장치·진단</button>
+      </nav>
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
-      <main className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">
-        {activeStep === 1 && <DatasetStudio />}
-        {activeStep === 2 && <LabelingTool />}
-        {activeStep === 3 && <TrainingController />}
-        {activeStep === 4 && <EvaluationStudio />}
-        {activeStep === 5 && <FlowchartStudio />}
-        {activeStep === 6 && <InferenceCenterStudio />}
+      <main key={transportRevision} className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">
+        {workspace==='studio' && activeStep === 1 && <DatasetStudio />}
+        {workspace==='studio' && activeStep === 2 && <LabelingTool />}
+        {workspace==='studio' && activeStep === 3 && <TrainingController key={transportRevision}/>}
+        {workspace==='studio' && activeStep === 4 && <EvaluationStudio />}
+        {workspace==='studio' && activeStep === 5 && <FlowchartStudio />}
+        {workspace==='studio' && activeStep === 6 && <InferenceCenterStudio />}
+        {workspace==='operator'&&<div className="product-workbench flex-1 min-h-0 overflow-auto"><OperatorWorkspace/></div>}
       </main>
 
       {/* Docked Telemetry & Navigation Footer */}
@@ -91,6 +107,9 @@ export default function App() {
 
       {/* Global Industrial Fault Diagnostic Dialog */}
       <ErrorDiagnosticsModal />
+      {utility&&<WorkspaceDialog key={`${utility}:${transportRevision}`} title={utility==='tasks'?'작업 센터':'패키지·장치·설치·진단'} onClose={()=>setUtility(null)}>
+        {utility==='tasks'?<TaskCenter initialOpen onNavigate={()=>{setUtility(null);setWorkspace('studio');}}/>:<ProductDeliveryWorkspace/>}
+      </WorkspaceDialog>}
     </div>
   );
 }

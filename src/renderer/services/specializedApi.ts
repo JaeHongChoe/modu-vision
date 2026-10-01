@@ -1,6 +1,6 @@
 import { api, request, type RotatedSampleRow, type RotatedPrediction, type DefectGANCandidate } from './api';
-export type MultiRotatedSample = Omit<RotatedSampleRow, 'label'|'box'> & { label?: string; box?: RotatedSampleRow['box']; objects?: Array<{label: string; box: RotatedSampleRow['box']}> };
-export type MultiRotatedPrediction = Partial<RotatedPrediction> & { image_size: number[]; source_sha256: string; model_sha256: string; preview_data_url: string; detections?: Array<{label: string; confidence: number; box: RotatedSampleRow['box']; polygon: number[][]}> };
+export type MultiRotatedSample = Omit<RotatedSampleRow, 'label'|'box'> & { label?: string; box?: RotatedSampleRow['box']; objects?: Array<{label: string; direction_deg?: number; box: RotatedSampleRow['box']}> };
+export type MultiRotatedPrediction = Partial<RotatedPrediction> & { image_size: number[]; source_sha256: string; model_sha256: string; preview_data_url: string; detections?: Array<{label: string; confidence: number; direction_deg?: number; box: RotatedSampleRow['box']; polygon: number[][]}> };
 export type SpecializedTrainingJob = {job_id:string;task:string;status:'queued'|'running'|'stopping'|'stopped'|'completed'|'failed'|'interrupted';epoch:number;epochs:number;batch:number;batches:number;loss?:number;error?:string;source_dataset_path:string;training_provenance:{dataset_version_id:string;labelset_id:string};events:Array<{at:number;status:string;epoch:number;batch:number}>};
 export type SpecializedTrainingFamily = 'ocr'|'defect-gan';
 export const specializedApi = {

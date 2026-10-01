@@ -35,6 +35,10 @@ import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} f
 import { CustomNode } from './CustomNode';
 import { DAGCircuitOverlay } from './DAGCircuitOverlay';
 import { ImagePickerModal } from './ImagePickerModal';
+import { ImageRoiEditor } from './ImageRoiEditor';
+import { FlowNodeDebugger } from './FlowNodeDebugger';
+import { FlowWorkspacePanel } from './FlowWorkspacePanel';
+import {FlowDraftControls,flowDraftStatus} from './FlowDraftControls';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport';
@@ -83,7 +87,7 @@ const FixedRoiCoordinateInput: React.FC<{
     setEditing(false);
   };
 
-  return <label className="text-[10px] text-slate-400">
+  return <label className="text-xs text-slate-400">
     {label} (px)
     <input type="number" min={min} step="1" value={draft}
       onFocus={() => setEditing(true)}
@@ -111,6 +115,8 @@ export const FlowchartStudio: React.FC = () => {
   const {
     pipeline,
     pipelineDirty,
+    pipelineIsDraft,
+    persistedDraftHash,
     contextRevision,
     executionResult,
     lastRunSource,
@@ -167,6 +173,7 @@ export const FlowchartStudio: React.FC = () => {
   const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
   const [savedVersions, setSavedVersions] = useState<SavedFlowVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState('');
+  const [isRoiEditing,setIsRoiEditing]=useState(false);
   const [dragViewport, setDragViewport] = useState<ReturnType<typeof computeFlowchartViewport> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -354,6 +361,15 @@ export const FlowchartStudio: React.FC = () => {
     } finally {
       setIsVerifyingAction(false);
     }
+  };
+
+  const handleRunToNode = async () => {
+    if (!pipeline || !selectedNodeId || !selectedImage || isRunning || graphError) return;
+    setActionValidationError(null);
+    if (!executionReady) {setActionValidationError('실행 컴퓨터 또는 서버를 먼저 선택하세요.');return;}
+    const execution = executionChoice==='model_compute' ? {executionTarget:'local' as const,device:'cpu' as const} : flowExecutionOptions(executionChoice,selectedProfileId);
+    const ok = await runPipeline(undefined,undefined,{savedVersionId:null,...execution,stopNodeId:selectedNodeId});
+    if (ok) setActiveTab('flow');
   };
 
   const handleSingleModel = async () => {
@@ -706,9 +722,9 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-hidden select-none">
+    <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
-      <div className="min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
+      <div className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-8 h-8 shrink-0 rounded-md bg-cyan-950/40 border border-cyan-800/70 flex items-center justify-center">
             <GitFork className="w-4 h-4 text-cyan-300" />
@@ -717,12 +733,13 @@ export const FlowchartStudio: React.FC = () => {
             <h2 className="font-bold text-sm text-[#F8FAFC] tracking-wide">
               {language === 'ko' ? '검사 플로우 편집기' : 'Inspection Flow Editor'}
             </h2>
-            <p className="text-[11px] text-[#94A3B8]">
+            <p className="text-xs text-[#94A3B8]">
               {language === 'ko' ? '검사 노드·연결·판정 분기 편집' : 'Edit inspection nodes, edges and verdict branches'}
             </p>
           </div>
         </div>
 
+        <FlowDraftControls blocked={isVerifyingAction||dragViewport!==null||isRoiEditing} activeVersion={!pipelineDirty&&!pipelineIsDraft&&savedVersions.some(v=>v.version_id===selectedVersionId&&v.is_active)} hasSavedVersion={Boolean(selectedVersionId)}/>
         {/* Action Controls */}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex rounded border border-[#2B3547] bg-[#0B0E14] p-0.5" aria-label="플로우 편집 기록">
@@ -740,7 +757,7 @@ export const FlowchartStudio: React.FC = () => {
             </button>
           </div>
           {saveMessage && (
-            <span role="status" className="text-[11px] text-emerald-300 font-bold">
+            <span role="status" className="text-xs text-emerald-300 font-bold">
               ✓ {saveMessage}
             </span>
           )}
@@ -811,6 +828,9 @@ export const FlowchartStudio: React.FC = () => {
               <option value="model_compute">모델 학습 서버 · 기존 방식</option>
             </select>
           </label>
+          <button type="button" onClick={()=>setStep(6)} disabled={!selectedVersionId||pipelineDirty||pipelineIsDraft||isSaving||isRunning} title="저장하고 활성화한 플로우를 실행 패키지로 묶고 배포합니다." className="rounded border border-slate-600 px-3 py-1.5 disabled:opacity-40">실행 패키지·배포</button>
+          <button type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
+            className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
           <button
             onClick={handleRun}
             disabled={!canVerifyGraph || !executionReady || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
@@ -831,9 +851,10 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       </div>
 
-      {pipeline && <div className="border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||isSaving||isLoading}/></div>}
+      {pipeline && <div className="shrink-0 border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||isSaving||isLoading}/></div>}
+      <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-4 py-1 text-slate-400">빠른 노드 추가·연결 도구</summary>
       <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
-        <span className="mr-1 text-[11px] font-bold tracking-wider text-slate-400">노드 추가</span>
+        <span className="mr-1 text-xs font-bold tracking-wider text-slate-400">노드 추가</span>
         <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
         <button onClick={() => addEditableNode('preprocess')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">영상 전처리 추가</button>
         <button onClick={() => addEditableNode('fixed_roi')} disabled={!pipeline || isLoading || isSaving || isRunning}
@@ -871,22 +892,22 @@ export const FlowchartStudio: React.FC = () => {
         )}
       </div>
 
-      <div className="relative z-20 min-h-12 bg-[#111923] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+      </details>
+      <div className="shrink-0 relative z-20 min-h-12 bg-[#111923] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="font-semibold text-slate-100 truncate max-w-[280px]" title={pipeline?.name}>{pipeline?.name || '플로우 불러오는 중'}</span>
-          {pipeline && <span role="status" className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineDirty
+          {pipeline && <span role="status" className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${pipelineDirty
             ? 'border-amber-700 bg-amber-950/50 text-amber-200'
             : selectedVersionId && savedVersions.some((version) => version.version_id === selectedVersionId && version.is_active)
               ? 'border-emerald-800 bg-emerald-950/40 text-emerald-200'
               : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
-            {pipelineDirty ? '● 변경 사항 미저장' : selectedVersionId && savedVersions.some((version) => version.version_id === selectedVersionId && version.is_active)
-              ? '● 저장 버전 활성' : '○ 저장 전 플로우'}
+            {flowDraftStatus(pipelineDirty,persistedDraftHash,!pipelineIsDraft&&savedVersions.some(version=>version.version_id===selectedVersionId&&version.is_active),Boolean(selectedVersionId))}
           </span>}
-          {savedVersions.length > 0 && <label className="ml-2 flex shrink-0 items-center gap-1.5 text-[11px] text-slate-400">
+          {savedVersions.length > 0 && <label className="ml-2 flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
             저장 버전
             <select value={selectedVersionId} onChange={(event) => openSavedVersion(event.target.value)}
               disabled={isLoading || isSaving || isRunning || isVerifyingAction}
-              className="max-w-[220px] rounded border border-[#364357] bg-[#1A212E] px-2 py-1 text-[11px] text-slate-100 disabled:opacity-50">
+              className="max-w-[220px] rounded border border-[#364357] bg-[#1A212E] px-2 py-1 text-xs text-slate-100 disabled:opacity-50">
               <option value="">버전 선택</option>
               {savedVersions.map((version) => <option key={version.version_id} value={version.version_id}>
                 {version.is_active ? '● 활성 · ' : ''}{version.name} · {version.is_active && !pipelineDirty && selectedVersionId === version.version_id && pipeline
@@ -895,7 +916,7 @@ export const FlowchartStudio: React.FC = () => {
               </option>)}
             </select>
           </label>}
-          <span className="shrink-0 rounded border border-[#344255] px-2 py-1 text-[11px] text-slate-300">
+          <span className="shrink-0 rounded border border-[#344255] px-2 py-1 text-xs text-slate-300">
             모델 {pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null && Boolean(node.data.model_job_id)).length || 0}/{pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null).length || 0} 연결
           </span>
         </div>
@@ -905,7 +926,7 @@ export const FlowchartStudio: React.FC = () => {
               새 플로우 ▾
             </summary>
             <div className="absolute right-0 top-full mt-2 grid w-64 gap-1 rounded-lg border border-[#3B4B60] bg-[#192333] p-2 shadow-xl">
-              <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">기본</span>
+              <span className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-400">기본</span>
               <button onClick={handleSingleModel} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">
                 {task === 'classification' ? '원본 이미지 분류' : task === 'anomaly' ? '원본 이미지 이상 탐지' : task === 'detection' ? '결함 검출' : '원본 타일 분할'}
@@ -914,7 +935,7 @@ export const FlowchartStudio: React.FC = () => {
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">검출 ROI 검사</button>
               <button onClick={handleFixedRoi} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-sky-100 hover:bg-[#293B51] disabled:opacity-50">고정 ROI 검사 · 원본 픽셀 좌표</button>
-              <span className="mt-1 border-t border-[#344255] px-2 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">복합 검사 예시</span>
+              <span className="mt-1 border-t border-[#344255] px-2 pt-2 text-xs font-bold uppercase tracking-wider text-slate-400">복합 검사 예시</span>
               <button onClick={() => handleExampleTemplate('chain')} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">5개 모델 연속 검사</button>
               <button onClick={() => handleExampleTemplate('conditional')} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
@@ -932,7 +953,7 @@ export const FlowchartStudio: React.FC = () => {
       </div>
 
       {modelCheck.status !== 'ready' && (
-        <div className="min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200" role="status">
+        <div className="shrink-0 min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200" role="status">
           <span>{modelCheck.status === 'checking'
             ? (language === 'ko' ? '현재 데이터와 학습 모델을 확인한 뒤 저장된 플로우를 불러오는 중입니다.' : 'Verifying the dataset and model before loading the saved flow.')
             : modelCheckMessage}</span>
@@ -953,7 +974,7 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {graphError && pipeline && (
-        <div className="min-h-9 bg-amber-950/40 border-b border-amber-800 px-5 py-2 text-xs text-amber-200 flex items-center justify-between gap-3" role="status">
+        <div className="shrink-0 min-h-9 bg-amber-950/40 border-b border-amber-800 px-5 py-2 text-xs text-amber-200 flex items-center justify-between gap-3" role="status">
           <span>연결을 완성하면 저장·실행할 수 있습니다: {graphError}</span>
           {graphIssue && <button type="button" className="shrink-0 rounded border border-amber-600 px-2 py-1 hover:bg-amber-900/60"
             onClick={() => {
@@ -975,15 +996,15 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {modelCheck.status === 'ready' && needsModel && !isLoading && (
-        <div className="min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200">
+        <div className="shrink-0 min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200">
           <span>
             {hasDetectionNode
               ? (language === 'ko'
                 ? missingDetectionModel && missingInspectionModel
-                  ? '검출·검사 모델 작업 ID가 모두 필요합니다. 상단 작업 유형에서 각 모델을 학습한 뒤 해당 노드에 ID를 입력하세요.'
+                  ? '검출·검사 모델을 연결하세요. 각 모델을 학습한 뒤 오른쪽에서 호환 모델을 선택하세요.'
                   : missingDetectionModel
-                    ? '1차 검출 모델 작업 ID가 없습니다. 같은 데이터 폴더에서 검출 작업을 학습한 뒤 검출 노드에 ID를 입력하세요.'
-                    : 'ROI 검사 모델 작업 ID가 없습니다. 검사 노드에 현재 데이터로 학습한 모델 ID를 입력하세요.'
+                    ? '검출 모델을 연결하세요. 같은 데이터로 학습한 모델을 오른쪽에서 선택하세요.'
+                    : 'ROI 검사 모델을 연결하세요. 검사 노드에서 호환 모델을 선택하세요.'
                 : missingDetectionModel && missingInspectionModel
                   ? 'Both detector and inspection model job IDs are required. Train each task with this dataset, then enter its ID on the matching node.'
                   : missingDetectionModel
@@ -994,7 +1015,7 @@ export const FlowchartStudio: React.FC = () => {
                 ? '검사 모델이 연결되지 않았습니다. 3단계에서 학습을 완료하고 4단계에서 평가 결과를 확인하면 단일 분할 플로우에 자동 연결됩니다.'
                 : 'No inspection model is connected. Complete Step 3 training and load Step 4 evaluation to link the single segmentation flow.')
               : (language === 'ko'
-                ? '이 작업에는 자동 연결되는 검사 플로우가 없습니다. 3단계에서 학습을 완료한 뒤 검사 노드에 호환 모델 작업 ID를 지정하세요.'
+                ? '이 작업에는 자동 연결되는 검사 플로우가 없습니다. 3단계에서 학습을 완료한 뒤 검사 노드에서 호환 모델을 선택하세요.'
                 : 'This task has no automatic flow link. Complete Step 3 training, then enter a compatible model job ID on the inspection node.')}
           </span>
           {!hasDetectionNode && <div className="flex gap-2 shrink-0">
@@ -1009,9 +1030,9 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {/* Target Image Selector Bar */}
-      <div className="min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="shrink-0 min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="shrink-0 text-[11px] font-bold tracking-wide text-[#94A3B8]">검사 대상</span>
+          <span className="shrink-0 text-xs font-bold tracking-wide text-[#94A3B8]">검사 대상</span>
           {selectedImage ? (
             <div className="flex min-w-0 items-center space-x-2 bg-[#131822] px-2 py-0.5 rounded border border-[#2B3547]">
               {selectedImage.thumbnailUrl && (
@@ -1022,7 +1043,7 @@ export const FlowchartStudio: React.FC = () => {
                 />
               )}
               <span className="text-[#F8FAFC] font-bold truncate max-w-xs" title={selectedImage.fileName}>{selectedImage.fileName}</span>
-              <span className="text-[9px] text-cyan-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
+              <span className="text-xs text-cyan-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
                 {selectedImage.source.toUpperCase()}
               </span>
             </div>
@@ -1042,7 +1063,7 @@ export const FlowchartStudio: React.FC = () => {
             >
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-[10px] font-mono tabular-nums px-1 text-slate-300">
+            <span className="text-xs font-mono tabular-nums px-1 text-slate-300">
               {Math.round(displayViewport.scale * 100)}%
             </span>
             <button
@@ -1063,7 +1084,7 @@ export const FlowchartStudio: React.FC = () => {
             </button>
           </div>
 
-          {displayViewport.contentWidth > canvasSize.width + 16 && <div className="flex items-center gap-1 rounded border border-[#2B3547] bg-[#131822] px-1 py-0.5 text-[10px] text-slate-400">
+          {displayViewport.contentWidth > canvasSize.width + 16 && <div className="flex items-center gap-1 rounded border border-[#2B3547] bg-[#131822] px-1 py-0.5 text-xs text-slate-400">
             <button type="button" onClick={() => canvasRef.current?.scrollBy({ left: -Math.max(320, canvasSize.width * 0.65), behavior: 'smooth' })}
               className="rounded p-1 text-slate-200 hover:bg-[#1A212E]" aria-label="이전 노드 보기" title="이전 노드 보기"><ChevronLeft className="h-3.5 w-3.5" /></button>
             <span>좌우 탐색</span>
@@ -1083,7 +1104,7 @@ export const FlowchartStudio: React.FC = () => {
 
       {/* Error Notice */}
       {errorMessage && (
-        <div className="bg-rose-950/90 border-b border-rose-800 px-5 py-2 flex items-center justify-between text-xs text-rose-300 font-mono">
+        <div className="shrink-0 bg-rose-950/90 border-b border-rose-800 px-5 py-2 flex items-center justify-between text-xs text-rose-300 font-mono">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="w-4 h-4 text-rose-400" />
             <span>{errorMessage}</span>
@@ -1094,19 +1115,29 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       )}
       {actionValidationError && (
-        <div className="bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300" role="alert">
+        <div className="shrink-0 bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300" role="alert">
           검사 플로우 오류: {actionValidationError}
         </div>
       )}
       {editorError && (
-        <div className="bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300 flex justify-between" role="alert">
+        <div className="shrink-0 bg-rose-950/90 border-b border-rose-800 px-5 py-2 text-xs text-rose-300 flex justify-between" role="alert">
           {editorError}<button onClick={() => setEditorError(null)} className="underline">닫기</button>
         </div>
       )}
 
       {/* Main Flow Canvas or Results View */}
       {activeTab === 'flow' ? (
-        <div className="min-h-0 flex-1 flex overflow-hidden">
+        <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
+          <aside aria-label="검사 노드 팔레트" className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
+            <h3 className="font-semibold text-slate-200">검사 노드</h3>
+            {([['fixed_roi','고정 ROI'],['patch_split','패치 분할'],['preprocess','영상 전처리'],['detection_crop','검출 모델'],['inspection','검사 모델'],['blob_measure','Blob 규칙'],['measurement','치수 측정'],['aggregate','결과 집계'],['output','판정 출력']] as const).map(([type,label])=>
+              <button key={type} disabled={!pipeline||isRunning||isSaving||isLoading} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}
+            <h3 className="pt-2 font-semibold text-slate-200">기본 흐름</h3>
+            <button onClick={handleSingleModel} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">단일 모델 검사</button>
+            <button onClick={handleDetectorRoi} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">검출 ROI 검사</button>
+            <button onClick={handleFixedRoi} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">고정 ROI 검사</button>
+            <p className="pt-2 text-slate-400 leading-relaxed">노드를 추가하고 출력 포트 → 입력 포트로 연결하세요. 내 템플릿은 아래에서 관리합니다.</p>
+          </aside>
           {/* 2D PCB DAG Circuit Canvas */}
           <div
             ref={canvasRef}
@@ -1203,7 +1234,7 @@ export const FlowchartStudio: React.FC = () => {
                 <Sliders className="w-4 h-4 text-cyan-400" />
                 <span>{language === 'ko' ? '노드·연결 속성' : 'Node and Connection Properties'}</span>
               </h3>
-              <p className="mt-1 text-[11px] text-slate-400 truncate" title={selectedEdge?.label || selectedNode?.data.label}>
+              <p className="mt-1 text-xs text-slate-400 truncate" title={selectedEdge?.label || selectedNode?.data.label}>
                 {selectedEdge ? '선택한 연결선의 조건과 전달 데이터' : selectedNode ? `선택한 노드 · ${selectedNode.data.label}` : '그래프의 노드나 연결선을 선택하세요.'}
               </p>
             </div>
@@ -1234,7 +1265,7 @@ export const FlowchartStudio: React.FC = () => {
                       <option value="fail">상류 결과가 NG일 때</option>
                       <option value="review">상류 결과가 REVIEW일 때</option>
                     </select>
-                    <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400">실행하지 않은 경로도 결과 추적에 남습니다. 최종 판정은 실행된 모델의 증거만 사용합니다.</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-400">실행하지 않은 경로도 결과 추적에 남습니다. 최종 판정은 실행된 모델의 증거만 사용합니다.</p>
                   </div>
                 )}
                 {(['detection_crop', 'inspection'].includes(pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type || '')) &&
@@ -1247,7 +1278,7 @@ export const FlowchartStudio: React.FC = () => {
                       <option value="roi">검사 영역(ROI)과 원본 좌표</option>
                       <option value="image">원본 이미지</option>
                     </select>
-                    <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400">ROI를 선택하면 상류 모델이 찾은 영역을 그대로 다음 모델에 전달합니다.</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-400">ROI를 선택하면 상류 모델이 찾은 영역을 그대로 다음 모델에 전달합니다.</p>
                   </div>
                 )}
                 {pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type === 'decision' &&
@@ -1311,15 +1342,15 @@ export const FlowchartStudio: React.FC = () => {
                           <option key={model.job_id} value={model.job_id}>{model.label}{model.threshold_settings?.optimal_threshold!==undefined?` · τ ${model.threshold_settings.optimal_threshold.toFixed(3)}`:''}{model.training_labelset_id?` · 라벨 ${model.training_labelset_id}`:''}{model.parent_job_id?' · 이어 학습':''}</option>)}
                       </select>
                     </label>
-                    {(() => {const model=modelCatalog.find(m=>m.job_id===selectedNode.data.model_job_id);return model&&<div className="flex flex-wrap gap-1 text-[10px] text-teal-200">{Object.entries(model.threshold_settings||{}).map(([key,value])=><span key={key} className="rounded bg-teal-950 px-1">{({optimal_threshold:'추천 임계치',threshold:'학습 임계치',probability_threshold:'픽셀 확률',size_threshold:'크기 기준',min_defect_area_px:'최소 면적'})[key as 'threshold']} {value}</span>)}{model.training_labelset_id&&<span>라벨 {model.training_labelset_id}</span>}{model.parent_job_id&&<span title={model.parent_job_id}>부모 {model.parent_job_id}</span>}</div>;})()}
-                    <p className="text-[10px] text-slate-400">{modelCatalogLoading ? '모델을 확인하는 중입니다.' : '현재 데이터와 작업이 검증된 완료 모델만 표시합니다.'}</p>
-                    <details className="text-[10px] text-slate-400"><summary className="cursor-pointer hover:text-slate-200">고급: 작업 ID 직접 입력</summary>
+                    {(() => {const model=modelCatalog.find(m=>m.job_id===selectedNode.data.model_job_id);return model&&<div className="flex flex-wrap gap-1 text-xs text-teal-200">{Object.entries(model.threshold_settings||{}).map(([key,value])=><span key={key} className="rounded bg-teal-950 px-1">{({optimal_threshold:'추천 임계치',threshold:'학습 임계치',probability_threshold:'픽셀 확률',size_threshold:'크기 기준',min_defect_area_px:'최소 면적'})[key as 'threshold']} {value}</span>)}{model.training_labelset_id&&<span>라벨 {model.training_labelset_id}</span>}{model.parent_job_id&&<span title={model.parent_job_id}>부모 {model.parent_job_id}</span>}</div>;})()}
+                    <p className="text-xs text-slate-400">{modelCatalogLoading ? '모델을 확인하는 중입니다.' : '현재 데이터와 작업이 검증된 완료 모델만 표시합니다.'}</p>
+                    <details className="text-xs text-slate-400"><summary className="cursor-pointer hover:text-slate-200">고급: 작업 ID 직접 입력</summary>
                       <input type="text" value={selectedNode.data.model_job_id || ''}
                         onChange={(event) => updateNodeData(selectedNode.id, { model_job_id: event.target.value })}
                         placeholder="job_..."
                         className="mt-1 w-full rounded border border-[#2B3547] bg-[#1A212E] px-2.5 py-1.5 text-[#F8FAFC]" />
                     </details>
-                    <p className="text-amber-400 text-[10px]">
+                    <p className="text-amber-400 text-xs">
                       {selectedNode.data.node_type === 'inspection' && pipeline?.nodes.some((node) => node.data.node_type === 'fixed_roi')
                         ? '고정 ROI를 원본 픽셀 좌표로 잘라 모델 입력 크기에 맞춰 검사합니다. ROI가 이미지 밖이면 REVIEW로 남습니다.'
                         : selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && !pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
@@ -1344,13 +1375,14 @@ export const FlowchartStudio: React.FC = () => {
                   {selectedNode.data.params?.operation==='improve' && <select aria-label="개선 방법" value={selectedNode.data.params.method || 'clahe'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,method:e.target.value}})} className="rounded bg-slate-800 p-1"><option value="clahe">대비 개선</option><option value="denoise">노이즈 제거</option><option value="sharpen">선명도 개선</option></select>}
                   {selectedNode.data.params?.operation==='enhancement' && <select aria-label="영상 개선 모델" value={selectedNode.data.model_job_id || ''} onChange={(e) => updateNodeData(selectedNode.id,{model_job_id:e.target.value})} className="w-full rounded bg-slate-800 p-1"><option value="">영상 개선 모델 선택</option>{modelCatalog.filter((m) => m.task==='enhancement').map((m) => <option key={m.job_id} value={m.job_id}>{m.label}</option>)}</select>}
                   {selectedNode.data.params?.operation==='learned_rotation' && <select aria-label="회전 보정 모델" value={selectedNode.data.model_job_id || ''} onChange={(e)=>updateNodeData(selectedNode.id,{model_job_id:e.target.value})} className="w-full rounded bg-slate-800 p-1"><option value="">회전 모델 선택</option>{modelCatalog.filter(m=>m.task==='rotation').map(m=><option key={m.job_id} value={m.job_id}>{m.label}</option>)}</select>}
-                  {selectedNode.data.params?.operation==='fitted_roi' && <p className="text-[10px] text-teal-200">회전 객체 검출의 ROI 연결 뒤에 배치하세요. 검출 다각형의 최소 면적 사각형을 원본 영상에서 정렬해 자릅니다.</p>}
-                  <p className="text-[10px] text-slate-400">변환 결과와 원본 좌표를 검사 결과에서 확인할 수 있습니다. 방향 정렬은 회전 검출 결과의 방향을 사용합니다.</p>
+                  {selectedNode.data.params?.operation==='fitted_roi' && <p className="text-xs text-teal-200">회전 객체 검출의 ROI 연결 뒤에 배치하세요. 검출 다각형의 최소 면적 사각형을 원본 영상에서 정렬해 자릅니다.</p>}
+                  <p className="text-xs text-slate-400">변환 결과와 원본 좌표를 검사 결과에서 확인할 수 있습니다. 방향 정렬은 회전 검출 결과의 방향을 사용합니다.</p>
                 </div>}
                 {selectedNode.data.task==='ocr' && <OCRRulesEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
                 {selectedNode.data.node_type==='measurement' && <MeasurementEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})} imagePath={selectedImage?.imagePath} sourcePreview={selectedImage?.thumbnailUrl?resolveApiUrl(selectedImage.thumbnailUrl):undefined} sourceSize={executionResult?.inspected_image_size}/>}
-                {selectedNode.data.task==='anomaly' && <label className="block">이상 검사 방식<select value={selectedNode.data.params?.anomaly_mode || 'classification'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,anomaly_mode:e.target.value}})} className="ml-2 rounded bg-slate-800 p-1"><option value="classification">이미지 점수 분류</option><option value="segmentation">결함 영역 검사·마스크</option></select></label>}
-                {executionResult?.execution_steps.find((step) => step.node_id===selectedNode.id) && <details className="rounded border border-slate-700 p-2" open><summary>노드 실행 근거</summary><p className="text-slate-400">{executionResult.execution_steps.find((step) => step.node_id===selectedNode.id)?.skip_reason}</p><div className="grid grid-cols-2 gap-2">{executionResult.execution_steps.find((step) => step.node_id===selectedNode.id)?.artifacts?.map((artifact) => <div key={artifact.roi_id}><img src={artifact.image} alt="노드 중간 이미지" className="w-full object-contain" />{artifact.mask && <img src={artifact.mask} alt="결함 마스크" className="w-full object-contain" />}<p className="text-[10px]">원본 영역 {artifact.bbox.join(', ')}</p>{artifact.evidence?.recognized_text != null && <p>인식 문자: {String(artifact.evidence.recognized_text)}</p>}</div>)}</div></details>}
+                {selectedNode.data.node_type==='inspection' && selectedNode.data.task==='anomaly' && <label className="block">이상 검사 방식<select value={selectedNode.data.params?.anomaly_mode || 'classification'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,anomaly_mode:e.target.value}})} className="ml-2 rounded bg-slate-800 p-1"><option value="classification">이미지 점수 분류</option><option value="segmentation">결함 영역 검사·마스크</option></select></label>}
+                {pipeline && <FlowNodeDebugger node={selectedNode} pipeline={pipeline} result={executionResult} />}
+
                 {selectedNode.data.node_type === 'fixed_roi' && (() => {
                   const [x1, y1, x2, y2] = (selectedNode.data.params?.roi_bbox as number[] | undefined) || [0, 0, 512, 512];
                   const fields = [
@@ -1361,6 +1393,9 @@ export const FlowchartStudio: React.FC = () => {
                   ];
                   return <div className="rounded border border-sky-800/70 bg-sky-950/20 p-3 space-y-2">
                     <div className="text-sky-200 font-bold">원본 이미지의 고정 ROI</div>
+                    <ImageRoiEditor imagePath={selectedImage?.imagePath} preview={selectedImage?.thumbnailUrl} roi={[x1,y1,x2,y2]} disabled={isRunning||isSaving}
+                      onEditingChange={setIsRoiEditing}
+                      onChange={roi=>updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,roi_bbox:roi}})}/>
                     <div className="grid grid-cols-2 gap-2">
                       {fields.map((field) => <FixedRoiCoordinateInput
                         key={`${selectedNode.id}:${field.key}`}
@@ -1368,7 +1403,7 @@ export const FlowchartStudio: React.FC = () => {
                         onCommit={updateFixedRoiField}
                       />)}
                     </div>
-                    <p className="text-[10px] leading-relaxed text-slate-400">
+                    <p className="text-xs leading-relaxed text-slate-400">
                       원본 기준 [{x1}, {y1}, {x2}, {y2}] · 이미지와 겹치지 않으면 REVIEW로 기록합니다.
                     </p>
                   </div>;
@@ -1449,7 +1484,7 @@ export const FlowchartStudio: React.FC = () => {
                         className="mt-1 w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] tabular-nums" />
                     </label>
                     <ClassRulesEditor key={selectedNode.id} blob params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>
-                    <p className="text-[10px] text-slate-400">분할 검사 결과 하나를 입력받아 측정하고, 결과를 집계 또는 판정에 연결합니다.</p>
+                    <p className="text-xs text-slate-400">분할 검사 결과 하나를 입력받아 측정하고, 결과를 집계 또는 판정에 연결합니다.</p>
                   </div>
                 )}
 
@@ -1463,7 +1498,7 @@ export const FlowchartStudio: React.FC = () => {
                         <option value="all_ng">모두 NG</option>
                       </select>
                     </label>
-                    <p className="text-[10px] text-slate-400">모델 또는 Blob 결과 1~8개를 모아 판정 노드에 직접 연결합니다. REVIEW 입력은 REVIEW로 유지됩니다.</p>
+                    <p className="text-xs text-slate-400">모델 또는 Blob 결과 1~8개를 모아 판정 노드에 직접 연결합니다. REVIEW 입력은 REVIEW로 유지됩니다.</p>
                   </div>
                 )}
 
@@ -1491,7 +1526,7 @@ export const FlowchartStudio: React.FC = () => {
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-[#2B3547] text-[10px] text-[#94A3B8] space-y-1">
+                <div className="pt-4 border-t border-[#2B3547] text-xs text-[#94A3B8] space-y-1">
                   <div>NODE ID: <span className="text-slate-300 font-bold">{selectedNode.id}</span></div>
                   <div>TYPE: <span className="text-slate-300 font-bold">{selectedNode.data.node_type}</span></div>
                   <div>COORD: <span className="text-slate-300 tabular-nums">({selectedNode.position?.x ?? 0}, {selectedNode.position?.y ?? 0})</span></div>
@@ -1506,7 +1541,7 @@ export const FlowchartStudio: React.FC = () => {
             ) : (
               <div className="rounded-md border border-dashed border-[#3B4B60] bg-[#192333]/50 p-4 text-xs text-slate-300">
                 <p className="font-semibold text-slate-100">검사 흐름 설정</p>
-                <ol className="mt-3 space-y-2 text-[11px] leading-relaxed text-slate-400">
+                <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-400">
                   <li>1. 그래프의 노드 또는 연결선을 선택합니다.</li>
                   <li>2. 사용할 모델과 판정 조건을 확인합니다.</li>
                   <li>3. 변경 사항을 저장하거나 이미지를 검사합니다.</li>
@@ -1516,21 +1551,22 @@ export const FlowchartStudio: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col">
-          {executionResult && lastRunSource && <div role="status" className={`border-b px-5 py-2 text-xs ${lastRunSource.kind === 'draft'
+        <div className="flex min-h-[240px] shrink-0 flex-1 flex-col">
+          {executionResult && lastRunSource && <div role="status" className={`shrink-0 border-b px-5 py-2 text-xs ${lastRunSource.kind === 'draft'
             ? 'border-amber-700 bg-amber-950/30 text-amber-200'
             : 'border-sky-800 bg-sky-950/30 text-sky-200'}`}>
-            {flowRunSourceLabel(lastRunSource)}
+            {executionResult?.status==='partial'?'선택 노드 디버그 결과 · 전체 검사·배포 검증은 아직 실행하지 않았습니다.':flowRunSourceLabel(lastRunSource)}
             {executionResult.execution_target && <span className="ml-4">
               실행 위치: {(executionResult.execution_target === 'local' || (executionResult.execution_target === 'model_compute' && !executionResult.compute_profile_id)) ? '이 컴퓨터'
                 : executionResult.compute_profile_name || computeProfiles.find((profile) => profile.id === executionResult.compute_profile_id)?.name
                   || executionResult.compute_profile_id || '모델 학습 서버'} · {executionResult.execution_device || '장치 확인 필요'}
             </span>}
           </div>}
-          <IntermediateCropDrawer />
+          <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setActiveTab('flow');}} />
         </div>
       )}
 
+      <FlowWorkspacePanel versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('flow')}/>
       {/* Modals */}
       <ImagePickerModal isOpen={isImagePickerOpen} onClose={() => setImagePickerOpen(false)} />
       <CropDetailModal crop={inspectedCrop} onClose={() => setInspectedCrop(null)} />

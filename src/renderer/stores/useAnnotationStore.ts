@@ -550,6 +550,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
             is_normal: a.is_normal,
             color: a.color,
             rotated_bbox: a.rotated_bbox,
+            direction_deg: a.direction_deg,
             mask_rle: a.mask_rle,
           })),
           image_width: get().imageDimensions?.width || currentImage.width || 8192,

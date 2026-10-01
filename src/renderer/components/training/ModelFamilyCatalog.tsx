@@ -26,7 +26,7 @@ export function ModelFamilyCatalog({selectedFamily, onSelect}: {selectedFamily?:
     </button>)}</div>}
     <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>
     <div className="mt-3">
-      <p className="mb-3 text-slate-300">분류·패치·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. 사전학습 백본 뒤의 검사 헤드는 현재 라벨로 학습합니다.</p>
+      <p className="mb-3 text-slate-300">분류·패치·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. DINOv3 인코더는 고정하고 검사 헤드를 현재 라벨로 학습합니다. YOLO는 선택한 학습 설정으로 학습합니다. 다중 GPU DDP는 모델을 각 GPU에 복제하고 데이터 배치를 나눕니다. 모델 분할·샤딩은 제공하지 않습니다.</p>
       {error && <p role="alert" className="text-amber-300">모델 종류 확인 실패: {error}</p>}
       <div className="grid gap-2">{families.filter(family => !onSelect || !selectedFamily || family.task === selectedFamily).map(family => <article key={family.task} className="rounded border border-[#314155] bg-[#0D1622] p-3">
         <h3 className="font-semibold text-white">{family.label}<span className="ml-2 font-normal text-cyan-300">{family.model}</span></h3>

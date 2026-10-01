@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Crosshair, Loader2, RefreshCw, Square } from 'lucide-react';
 import {
   type RotatedEvaluation, type RotatedJob, type RotatedModelSummary,
-  type RotatedSampleRow,
   request,
 } from '../../services/api';
 import { specializedApi, type MultiRotatedSample, type MultiRotatedPrediction } from '../../services/specializedApi';
@@ -13,44 +12,16 @@ import {programButton,programInput,TrainingDeviceSelector} from './ProgramWorkbe
 import type {PreparedDataset,LocalTrainingDevice} from '../../services/modelTrainingProgram';
 import {RotatedBoxFitting} from './RotatedBoxFitting';
 
-function parseRows(text: string): MultiRotatedSample[] {
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) throw new Error('회전 박스 정답을 한 줄 이상 입력하세요.');
-  const rows = lines.map((line, index) => {
-    const [image, label, coordinates, split, ...extra] = line.split('\t');
-    const values = coordinates?.split(',').map((value) => Number(value.trim())) ?? [];
-    if (!image?.trim() || !label?.trim() || extra.length || values.length !== 5 ||
-        values.some((value) => !Number.isFinite(value)) || !['train', 'val', 'test'].includes(split)) {
-      throw new Error(`${index + 1}행은 이미지 상대 경로, 라벨, cx,cy,너비,높이,각도, train/val/test를 탭으로 나누세요.`);
-    }
-    const [cx, cy, width, height, angle_deg] = values;
-    if (width <= 0 || height <= 0 || angle_deg < -90 || angle_deg >= 90) {
-      throw new Error(`${index + 1}행의 너비·높이는 양수, 각도는 -90° 이상 90° 미만이어야 합니다.`);
-    }
-    return {
-      image: image.trim(), label: label.trim(), split: split as RotatedSampleRow['split'],
-      box: { cx, cy, width, height, angle_deg },
-    };
-  });
-  const groups=new Map<string, MultiRotatedSample>();
-  for (const row of rows) {
-    const existing=groups.get(row.image);
-    if (existing && existing.split!==row.split) throw new Error('같은 이미지의 객체는 같은 분할을 사용해야 합니다.');
-    if (existing) existing.objects!.push({label:row.label!,box:row.box!});
-    else groups.set(row.image,{image:row.image,split:row.split,objects:[{label:row.label!,box:row.box!}]});
-  }
-  return [...groups.values()];
-}
-
-function formatRows(rows: MultiRotatedSample[]): string {
-  return rows.flatMap((row) => (row.objects || [{label:row.label!,box:row.box!}]).map((obj) => `${row.image}\t${obj.label}\t${[obj.box.cx,obj.box.cy,obj.box.width,obj.box.height,obj.box.angle_deg].join(',')}\t${row.split}`)).join('\n');
-}
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
+import {parseRotatedRows as parseRows,formatRotatedRows as formatRows} from './rotatedDirectionRows';
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
 export const RotatedDetectionPanel: React.FC = () => {
+  const handoff=useTaskHandoff('rotated_detection');
   const projectDir = useProjectStore((state) => state.projectDir);
   const projectSource = useProjectStore((state) => state.project?.source_dataset_dir || '');
   const [datasetPath,setDatasetPath] = useState(projectSource);
@@ -84,30 +55,17 @@ export const RotatedDetectionPanel: React.FC = () => {
     setEvaluation(null); setPrediction(null); setNotice(''); setError(''); setBusy(null); setWarmParentId('');
     if (!projectDir) return;
     let active = true;
-    void request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets').then(result=>{
-      if(!active||!sameProject())return;setDatasets(result.datasets);const latest=result.datasets.at(-1);
-      if(latest){setDatasetPath(latest.dataset_path);setSampleCount(latest.sample_count||null);}
+    void Promise.all([request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets'),request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs'),specializedApi.rotated.models()]).then(([prepared,journal,result])=>{
+      if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
+      const selected=selectHandoffRecord(result.models,handoff);setModelId(selected?.job_id||'');
+      const restored=handoff?(handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>row.status==='running'||row.status==='stopping');setJob(restored||null);
+      const path=(selected as {dataset_path?:string}|undefined)?.dataset_path||handoff?.datasetPath;
+      const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
+      if(handoff&&!dataset)throw new Error('선택 작업이 사용한 회전 박스 정답 버전을 찾지 못했습니다.');
+      if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);void specializedApi.rotated.manifest(dataset.dataset_path).then(manifest=>{if(active&&sameProject())applyManifest(manifest);}).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});}
     }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
-    void request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs').then(result=>{
-      if(active&&sameProject())setJob(result.jobs.find(row=>row.status==='running'||row.status==='stopping')||null);
-    }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
-    void specializedApi.rotated.models().then(({ models: items }) => {
-      if (!active || !sameProject()) return;
-      setModels(items); setModelId(items[0]?.job_id || '');
-    }).catch((cause) => { if (active && sameProject()) setError(errorText(cause)); });
-    if (projectSource) void specializedApi.rotated.manifest(projectSource).then((manifest) => {
-      if (!active || !sameProject()) return;
-      setRowsText(formatRows(manifest.samples));
-      setDatasetPath(manifest.dataset_path);
-      setSampleCount(manifest.sample_count);
-      setSplitCounts(manifest.split_counts);
-      const test = manifest.samples.find((row) => row.split === 'test');
-      if (test) setImagePath(`${projectSource.replace(/\/+$/, '')}/${test.image}`);
-    }).catch(() => {
-      // A newly selected source may have no rotated labels yet.
-    });
     return () => { active = false; };
-  }, [projectDir, projectSource, labelsetId]);
+  }, [projectDir, projectSource, labelsetId,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
     if (!job || !isActive || !projectDir) return;
@@ -242,12 +200,12 @@ export const RotatedDetectionPanel: React.FC = () => {
       </div>
       {datasets.length>0&&<label>프로젝트에 저장된 회전 박스 정답<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(null);setSplitCounts(null);}} className={programInput}>{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <RotatedBoxFitting source={projectSource} scope={`${projectDir}/${projectSource}/${labelsetId}`} onAppend={row=>{setRowsText(old=>old?`${old}\n${row}`:row);setSampleCount(null);setSplitCounts(null);}}/>
-      <label className="block text-slate-300">정답 표 · 이미지 상대 경로 ↹ 라벨 ↹ cx,cy,너비,높이,각도 ↹ train/val/test
+      <label className="block text-slate-300">정답 표 · 이미지 상대 경로 ↹ 라벨 ↹ cx,cy,너비,높이,각도 ↹ train/val/test ↹ 객체 방향(선택)
         <textarea value={rowsText} onChange={(event) => { setRowsText(event.target.value); setSampleCount(null); setSplitCounts(null); }} rows={5}
           placeholder={'images/part_001.png\tdefect\t42,30,18,9,25\ttrain\nimages/part_002.png\tdefect\t40,31,19,8,-12\tval\nimages/part_003.png\tdefect\t44,29,17,7,10\ttest'}
           className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
-      <p className="text-slate-500">좌표는 이미지 원본 픽셀입니다. 각도는 화면에서 시계 방향이며 -90° 이상 90° 미만입니다. 동일 이미지 또는 동일 바이트의 복사본은 서로 다른 분할에 둘 수 없습니다.</p>
+      <p className="text-slate-500">좌표는 이미지 원본 픽셀입니다. 박스 축 각도는 화면에서 시계 방향이며 -90° 이상 90° 미만입니다. 선택한 다섯 번째 열은 별도의 객체 방향 0° 이상 360° 미만입니다. 방향 학습에는 모든 객체의 방향 정답이 필요합니다. 동일 이미지 또는 동일 바이트의 복사본은 서로 다른 분할에 둘 수 없습니다.</p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || !!busy}
           className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 정답 읽기</button>
@@ -288,24 +246,24 @@ export const RotatedDetectionPanel: React.FC = () => {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {evaluation && <div className="rounded border border-[#344255] bg-[#0E1722] p-3">
-        시험 {evaluation.sample_count}장 · 평균 회전 IoU {(evaluation.mean_oriented_iou * 100).toFixed(1)}% · 평균 각도 오차 {evaluation.mean_angle_error_deg.toFixed(1)}°
+        시험 {evaluation.sample_count}장 · 평균 회전 IoU {(evaluation.mean_oriented_iou * 100).toFixed(1)}% · 평균 축 각도 오차 {evaluation.mean_angle_error_deg.toFixed(1)}°{evaluation.mean_direction_error_deg!==undefined&&<span> · 방향 오차 {evaluation.mean_direction_error_deg===null?'정합 객체 없음':`${evaluation.mean_direction_error_deg.toFixed(1)}°`}</span>}
         <p className="mt-1 text-slate-500">시험 결과는 후보 품질 확인 자료입니다. 현장 승인이나 5단계 플로우 적용을 뜻하지 않습니다.</p>
       </div>}
       {prediction && <div className="grid gap-3 rounded border border-[#344255] bg-[#0E1722] p-3 md:grid-cols-[minmax(0,480px)_1fr]">
         <img src={prediction.preview_data_url} alt="원본 이미지 위에 예측된 회전 박스를 그린 미리보기" className="max-h-[320px] w-full rounded border border-slate-700 object-contain" />
         <div className="space-y-2">
           <div className="font-semibold text-slate-100">{prediction.label || `${prediction.detections?.length || 0}개 객체`} · {prediction.image_size[0]}×{prediction.image_size[1]} 원본 픽셀</div>
-          {prediction.detections?.map((d,index) => <div key={index}>{d.label} · 신뢰도 {(d.confidence*100).toFixed(1)}% · 회전 {d.box.angle_deg.toFixed(1)}°</div>)}
+          {prediction.detections?.map((d,index) => <div key={index}>{d.label} · 신뢰도 {(d.confidence*100).toFixed(1)}% · 회전 {d.box.angle_deg.toFixed(1)}° · 방향 {d.direction_deg===undefined?'미학습':`${d.direction_deg.toFixed(1)}°`}</div>)}
           <div>중심 ({prediction.box?.cx.toFixed(1)}, {prediction.box?.cy.toFixed(1)})</div>
           <div>크기 {prediction.box?.width.toFixed(1)} × {prediction.box?.height.toFixed(1)} px</div>
-          <div>회전 {prediction.box?.angle_deg.toFixed(1)}°</div>
+          <div>축 회전 {prediction.box?.angle_deg.toFixed(1)}° · 객체 방향 {prediction.direction_deg===undefined?'미학습':`${prediction.direction_deg.toFixed(1)}°`}</div>
           <div className="break-all font-mono text-[10px] text-slate-500">모델 SHA-256: {prediction.model_sha256}</div>
           <div className="break-all font-mono text-[10px] text-slate-500">이미지 SHA-256: {prediction.source_sha256}</div>
           <p className="text-slate-400">원본 좌표의 회전 박스와 클래스·검출 신뢰도를 반환합니다.</p>
         </div>
       </div>}
       <button type="button" className={programButton} disabled={!modelId} onClick={()=>void useProjectStore.getState().setStep(5)}>검사 플로우·배포 패키지</button>
-      <AutoDLWorkbench task="rotated_detection" familyDatasetPath={sampleCount ? datasetPath : undefined} onComplete={()=>void specializedApi.rotated.models().then(result=>{if(sameProject()){setModels(result.models);setModelId(result.models[0]?.job_id||'');}}).catch(cause=>{if(sameProject())setError(errorText(cause));})} />
+      <AutoDLWorkbench task="rotated_detection" familyDatasetPath={sampleCount ? datasetPath : undefined} onComplete={()=>void specializedApi.rotated.models().then(result=>{if(sameProject()){setModels(result.models);setModelId(selectHandoffRecord(result.models,handoff)?.job_id||'');}}).catch(cause=>{if(sameProject())setError(errorText(cause));})} />
     </div>
   </details>;
 };

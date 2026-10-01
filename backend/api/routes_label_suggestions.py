@@ -688,7 +688,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
             proposal.update(status="rejected", reviewer=req.actor, reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
             _write_json(_proposal_path(project, suggestion_id), proposal)
             return proposal
-        if proposal.get("backend") in {"template_match", "grounding_dino", "foundation"}:
+        if proposal.get("backend") in {"template_match", "grounding_dino", "foundation", "vlm"}:
             from backend.api.routes_label_candidates import review_external_proposal
             return review_external_proposal(project, proposal, req)
         if proposal.get("task") != project["task"]:

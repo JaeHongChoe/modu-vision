@@ -237,7 +237,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                   {datasetImages.map((img) => {
                     const isSelected = tempSelected?.imagePath === img.file_path;
                     return (
-                      <div
+                      <button type="button" aria-pressed={isSelected} aria-label={`${img.file_name} 검사 이미지 선택`}
                         key={img.file_path}
                         onClick={() => handleSelectFromDataset(img)}
                         className={`relative rounded border p-2 cursor-pointer transition-colors bg-[#1A212E] ${
@@ -264,7 +264,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                             <Check className="w-2.5 h-2.5 stroke-[3]" />
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

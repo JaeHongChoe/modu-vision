@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { activeProgramJob, modelTrainingProgram, programError, type FamilyModel, type PreparedDataset, type ProgramJob } from '../../services/modelTrainingProgram';
 
 export function useProgramWorkbench(family: 'patch' | 'rotation') {
+  const handoff=useTaskHandoff(family==='patch'?'patch_classification':'rotation');
   const project = useProjectStore(state => state.project);
   const projectDir = useProjectStore(state => state.projectDir);
   const source = project?.source_dataset_dir || '';
@@ -21,8 +24,8 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
   const isCurrent = useCallback((expected = scope) => mounted.current && current.current === expected, [scope]);
   const refreshModels = useCallback(async () => {
     const result = family === 'patch' ? await modelTrainingProgram.patch.models(source) : await modelTrainingProgram.rotation.models();
-    if (isCurrent()) {setModels(result.models); setModelId(old => result.models.some(row => row.job_id === old) ? old : result.models[0]?.job_id || '');}
-  }, [family, source, isCurrent]);
+    if (isCurrent()) {setModels(result.models);if(handoff){setModelId(selectHandoffRecord(result.models,handoff)?.job_id||'');}else setModelId(old => result.models.some(row => row.job_id === old) ? old : result.models[0]?.job_id || '');}
+  }, [family, source, isCurrent,handoff?.jobId,handoff?.selectionId]);
   const action = async (name: string, run: () => Promise<void>) => {
     const expected = scope; setBusy(name); setError(''); setNotice('');
     try {await run();} catch (cause) {if (isCurrent(expected)) setError(programError(cause));}
@@ -35,16 +38,16 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
     void Promise.all([modelTrainingProgram[family].datasets(), family === 'patch' ? modelTrainingProgram.patch.jobs() : modelTrainingProgram.rotation.jobs()])
       .then(([prepared, jobs]) => {
         if (!active || !isCurrent()) return;
-        setDatasets(prepared.datasets); setDataset(prepared.datasets.at(-1) || null);
+        setDatasets(prepared.datasets);const requested=handoff?.datasetPath?prepared.datasets.find(row=>row.dataset_path===handoff.datasetPath):prepared.datasets.at(-1);if(handoff&&!requested)throw new Error('선택 작업이 사용한 준비 데이터 버전을 찾지 못했습니다.');setDataset(requested||null);
         const own = jobs.jobs.filter(row => family === 'patch'
           ? row.task === 'patch_classification' && !!row.output_dir && row.output_dir.startsWith(`${project?.models_dir}/`)
           : row.source_dataset_path === source && row.training_provenance?.labelset_id === (project?.active_labelset_id || 'default'));
-        const restored = own.find(row => activeProgramJob(row.status)) || own.at(-1);
+        const restored = handoff?(handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row => activeProgramJob(row.status)) || own.at(-1);
         if (restored) setJob(restored);
       }).catch(cause => {if (active && isCurrent()) setError(programError(cause));});
     void refreshModels().catch(cause => {if (active && isCurrent()) setError(programError(cause));});
     return () => {active = false;};
-  }, [family, scope, projectDir, source, isCurrent, refreshModels]);
+  }, [family, scope, projectDir, source, isCurrent, refreshModels,handoff?.jobId,handoff?.selectionId]);
   useEffect(() => {
     if (!job || !activeProgramJob(job.status)) return;
     let active = true; let timer: ReturnType<typeof setTimeout>;

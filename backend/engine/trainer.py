@@ -780,6 +780,8 @@ class UnifiedAutoMLTrainer:
         elif self.task in ("anomaly", "anomaly_detection"):
             meta["detector_type"] = getattr(self, '_anomaly_method', 'patchcore' if 'patchcore' in self.config.backbone_anomaly else 'padim')
             meta['feature_backbone'] = model.backbone_name
+            meta['anomaly_mode'] = self.overrides.get('anomaly_mode', 'classification')
+            meta['evaluation_profile'] = 'region_mask_metrics' if meta['anomaly_mode'] == 'segmentation' else 'image_score_metrics'
             meta["validation"] = getattr(self,"_anomaly_validation_metrics",{})
             if meta['detector_type'] == 'dino_synthetic':
                 meta.update({

@@ -149,8 +149,13 @@ def test_flowchart_pipeline_lifecycle(client, monkeypatch, tmp_path, test_image)
     assert save_resp.status_code == 200
 
     # 3. Run flowchart
-    run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline, "image_path": str(test_image)})
+    project = client.get("/api/project/current").json()
+    inspection_image = Path(project["dataset_dir"]) / test_image.name
+    inspection_image.parent.mkdir(parents=True, exist_ok=True)
+    inspection_image.write_bytes(test_image.read_bytes())
+    run_resp = client.post("/api/flowchart/run", json={"pipeline": pipeline, "image_path": str(inspection_image)})
     assert run_resp.status_code == 409
+    assert "Model job is missing" in run_resp.json()["detail"]
 
 
 def test_export_runtime_package(client):

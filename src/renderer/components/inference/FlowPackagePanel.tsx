@@ -10,6 +10,12 @@ import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import { canVerifyFlowOnHost, edgeDeploymentCommands, flowDeploymentOptions, type EdgeTarget, type FlowDeploymentProfile } from './edgeDeployment';
 import {runtimeDeploymentApi} from '../../services/runtimeDeploymentApi';
 import {RuntimeOptimizationPanel} from './RuntimeOptimizationPanel';
+import {PackageLibraryPanel} from './PackageLibraryPanel';
+import {RuntimeServicePanel} from '../runtime/RuntimeServicePanel';
+import {useDeliveryScope} from '../runtime/useDeliveryScope';
+import {useTaskHandoff} from '../training/useTaskHandoff';
+import {productDeliveryApi} from '../../services/productDeliveryApi';
+import {reopenOptimizationTask} from './deliveryTaskSelection';
 
 interface FlowExportResult {
   package_path: string;
@@ -28,6 +34,10 @@ interface FlowExportResult {
 }
 
 export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask }> = ({ sourceFolder, task }) => {
+  const {key:deliveryKey,scope:deliveryScope,project}=useDeliveryScope(sourceFolder+task);
+  const handoff=useTaskHandoff();const requestedOptimization=handoff?.kind==='optimization'?handoff.jobId:undefined;
+  const [libraryRefresh,setLibraryRefresh]=useState(0),[optimizationPath,setOptimizationPath]=useState(''),[deploymentPath,setDeploymentPath]=useState(''),[optimizationJobId,setOptimizationJobId]=useState<string|undefined>();
+  useEffect(()=>{setOptimizationPath('');setDeploymentPath('');setOptimizationJobId(undefined);},[deliveryKey]);
   const projectDir = useProjectStore((state) => state.projectDir);
   const setStep = useProjectStore((state) => state.setStep);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
@@ -40,8 +50,10 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [isExporting, setIsExporting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  useEffect(()=>{if(!requestedOptimization)return;let active=true;const started=deliveryScope.current;setOptimizationPath('');setDeploymentPath('');setOptimizationJobId(undefined);setError(null);reopenOptimizationTask(requestedOptimization,project?.source_dataset_dir||sourceFolder,{job:runtimeDeploymentApi.job,packages:productDeliveryApi.packages,select:productDeliveryApi.select},()=>active&&deliveryScope.current===started).then(value=>{if(value){setOptimizationPath(value.package.package_path);setOptimizationJobId(value.job.job_id);setLibraryRefresh(value=>value+1);}}).catch(cause=>{if(active&&deliveryScope.current===started)setError(cause instanceof Error?cause.message:String(cause));});return()=>{active=false;};},[deliveryKey,requestedOptimization,handoff?.taskKey,handoff?.selectionId]);
   const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[] } | null>(null);
   const [result, setResult] = useState<FlowExportResult | null>(null);
+  useEffect(()=>{if(result?.package_path)setLibraryRefresh(value=>value+1);},[result?.package_path]);
   const [identity, setIdentity] = useState<SavedFlowIdentity | null>(null);
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [deploymentProfile, setDeploymentProfile] = useState<FlowDeploymentProfile>('standard');
@@ -270,7 +282,10 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       </div>}
       <p className="mt-2 text-slate-500">이 결과는 선택한 이미지 1장의 동일성 검증입니다. 현장 서비스 적용 여부는 별도로 확인하세요.</p>
       <div className="mt-3 rounded border border-slate-700 p-3"><h4 className="font-semibold">Python · C++ · C# Predictor / Executor</h4><p className="mt-1 text-slate-400">전체 DAG와 모든 연결 모델의 원본 좌표·판정·측정 결과를 같은 JSON으로 제공합니다.</p><pre className="mt-2 overflow-auto text-[11px]">{'python native_runtime/build_native.py --output native-build\nnative-build/vision_predict /absolute/package /absolute/image.png 30000\ndotnet build native_runtime/VisionRuntime.csproj -o native-build/csharp'}</pre><p className="mt-1 text-slate-500">C# 출력 폴더에 빌드한 네이티브 라이브러리를 복사하세요. CPython 개발 헤더와 대상 아키텍처의 의존성이 필요합니다.</p></div>
-      <RuntimeOptimizationPanel packagePath={result.package_path} sourceFolder={sourceFolder} task={task}/>
+      {!optimizationPath&&<RuntimeOptimizationPanel packagePath={result.package_path} sourceFolder={sourceFolder} task={task}/>}
     </div>}
+    <PackageLibraryPanel sourceFolder={sourceFolder} task={task} refreshKey={libraryRefresh} onSelected={row=>{if(row.version_id)setSelectedVersionId(row.version_id);if(handoff?.kind==='export'){setDeploymentPath(row.package_path);setOptimizationPath('');setOptimizationJobId(undefined);}}} onOptimize={row=>{setOptimizationPath(row.package_path);setOptimizationJobId(undefined);setDeploymentPath('');}} onDeploy={row=>{setDeploymentPath(row.package_path);setOptimizationPath('');setOptimizationJobId(undefined);}}/>
+    {optimizationPath&&<RuntimeOptimizationPanel key={optimizationPath} packagePath={optimizationPath} sourceFolder={sourceFolder} task={task} initialJobId={optimizationJobId}/>}
+    {deploymentPath&&<RuntimeServicePanel key={deploymentPath} projectDir={projectDir} initialPackagePath={deploymentPath}/>}
   </section>;
 };

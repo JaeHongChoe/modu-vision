@@ -5,6 +5,7 @@
  * interactive Zero-Escape tau* tradeoff curve, and synchronized dual-viewport defect heatmap.
  */
 
+import {useTaskHandoff} from '../training/useTaskHandoff';
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Activity,
@@ -77,6 +78,7 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 };
 
 export const EvaluationStudio: React.FC = () => {
+  const handoff=useTaskHandoff();
   const { language, setStep, task } = useProjectStore();
   const projectDir = useProjectStore((state) => state.projectDir);
   const warmCandidateJobId = useTrainingStore((state) => state.status === 'completed' && state.warmStartParentJobId ? state.jobId : null);
@@ -130,9 +132,9 @@ export const EvaluationStudio: React.FC = () => {
   } = useEvaluationStore();
 
   useEffect(() => {
-    loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
+    loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
     loadOverkillUnderkill().catch(() => {});
-  }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task]);
+  }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => { setComparisonTask(task); }, [task]);
 
@@ -343,7 +345,7 @@ export const EvaluationStudio: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={() => loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined)}
+            onClick={() => loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined)}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all"
           >
@@ -405,7 +407,7 @@ export const EvaluationStudio: React.FC = () => {
                 variant: 'secondary',
                 loadingText: '평가 결과 확인 중...',
                 onClick: async () => {
-                  await loadEvaluation(undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined);
+                  await loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined);
                 },
               },
             ]}

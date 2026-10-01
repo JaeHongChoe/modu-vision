@@ -2,12 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { FileText, Loader2, RefreshCw } from 'lucide-react';
 import { api, request, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
+import {useTaskHandoff} from './useTaskHandoff';
+import {selectHandoffRecord} from './taskHandoff';
 import {useSpecializedTraining} from './useSpecializedTraining';
 import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 import {WarmStartSelector} from './WarmStartSelector';
 import {AutoDLWorkbench} from './AutoDLWorkbench';
 import {TrainingDeviceSelector,programButton} from './ProgramWorkbenchControls';
 import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
+import {ProjectImagePicker} from './ProjectImagePicker';
+import {projectSampleRow,replaceSampleRow} from './preparedSampleRows';
 
 function parseRows(value: string): OCRLabelRow[] {
   const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -28,6 +32,7 @@ function describeError(cause: unknown): string {
 }
 
 export const OCRWorkbench: React.FC = () => {
+  const handoff=useTaskHandoff('ocr');
   const projectDir = useProjectStore((state) => state.projectDir);
   const projectSource=useProjectStore(state=>state.project?.source_dataset_dir ?? '');
   const activeLabelset=useProjectStore(state=>state.project?.active_labelset_id ?? 'default');
@@ -35,6 +40,9 @@ export const OCRWorkbench: React.FC = () => {
   const [datasets,setDatasets] = useState<PreparedDataset[]>([]);
   const [device,setDevice] = useState<LocalTrainingDevice>('cpu');
   const [rowsText, setRowsText] = useState('');
+  const [selectedImage,setSelectedImage] = useState('');
+  const [textTruth,setTextTruth] = useState('');
+  const [truthSplit,setTruthSplit] = useState<'train'|'val'|'test'>('train');
   const [epochs, setEpochs] = useState(20);
   const [warmParentId, setWarmParentId] = useState('');
   const [models, setModels] = useState<Array<OCRModelSummary & {metadata:OCRModelSummary['metadata'] & {dataset_path?:string}}>>([]);
@@ -55,24 +63,23 @@ export const OCRWorkbench: React.FC = () => {
   });
 
   useEffect(() => {
-    setBusy(null);setDatasetPath(projectSource);setDatasets([]);setRowsText('');
+    setBusy(null);setDatasetPath(projectSource);setDatasets([]);setRowsText('');setSelectedImage('');setTextTruth('');setImagePath('');
     setManifestCount(null);setModels([]);
     setJobId('');
     setEvaluation(null);
     setPrediction(null);
     if (!projectDir) return;
     let active = true;
-    void request<{datasets:PreparedDataset[]}>('/api/ocr/datasets').then(result=>{
-      if(!active||!sameProject())return;setDatasets(result.datasets);
-      const latest=result.datasets.at(-1);if(latest){setDatasetPath(latest.dataset_path);setManifestCount(latest.sample_count||null);}
+    void Promise.all([request<{datasets:PreparedDataset[]}>('/api/ocr/datasets'),api.ocr.models()]).then(([prepared,result])=>{
+      if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
+      const selected=selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
+      const path=(selected?.metadata as {dataset_path?:string}|undefined)?.dataset_path||handoff?.datasetPath;
+      const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
+      if(handoff&&!dataset)throw new Error('선택 작업이 사용한 문자 정답 버전을 찾지 못했습니다. 작업 센터에서 출처를 확인하세요.');
+      if(dataset){setDatasetPath(dataset.dataset_path);setManifestCount(dataset.sample_count||null);}
     }).catch(cause=>{if(active&&sameProject())setError(describeError(cause));});
-    void api.ocr.models().then((result) => {
-      if (!active || useProjectStore.getState().projectDir !== projectDir) return;
-      setModels(result.models);
-      setJobId(result.models[0]?.job_id || '');
-    }).catch((cause) => { if (active) setError(describeError(cause)); });
     return () => { active = false; };
-  }, [projectDir,projectSource,activeLabelset]);
+  }, [projectDir,projectSource,activeLabelset,handoff?.jobId,handoff?.selectionId]);
 
   const sameProject = () => {const state=useProjectStore.getState();return state.projectDir===projectDir && (state.project?.source_dataset_dir ?? '')===projectSource && (state.project?.active_labelset_id ?? 'default')===activeLabelset;};
 
@@ -142,7 +149,11 @@ export const OCRWorkbench: React.FC = () => {
     <div className="space-y-4 border-t border-[#344255] p-4">
       <p className="leading-5 text-slate-400">문자가 한 줄로 잘린 이미지와 실제 정답 문자열이 필요합니다. 후보 모델은 자동으로 검사 플로우에 적용되지 않습니다.</p>
       {datasets.length>0&&<label className="block text-slate-300">프로젝트에 저장된 문자 정답<select value={datasetPath} onChange={event=>{const row=datasets.find(item=>item.dataset_path===event.target.value);setDatasetPath(event.target.value);setManifestCount(row?.sample_count||null);}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2">{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
-      <label className="block text-slate-300">문자 이미지 폴더 경로
+      <ProjectImagePicker value={selectedImage} disabled={!!busy||training.active} onSelect={image=>{setSelectedImage(image.file_path);setImagePath(image.file_path);if(['train','val','test'].includes(image.split))setTruthSplit(image.split as 'train'|'val'|'test');}} label="문자 원본 이미지 선택" />
+      <div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm text-slate-200">사람이 확인한 정답 문자열<input aria-label="OCR 실제 정답 문자열" value={textTruth} onChange={event=>setTextTruth(event.target.value)} disabled={!!busy||training.active} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2" /></label><label className="block text-sm text-slate-200">독립 이미지 분할<select value={truthSplit} onChange={event=>setTruthSplit(event.target.value as 'train'|'val'|'test')} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="train">학습</option><option value="val">검증</option><option value="test">시험</option></select></label></div>
+      <button type="button" className={programButton} disabled={!selectedImage||!textTruth.trim()||!!busy||training.active} onClick={()=>{try{const row=projectSampleRow(projectSource,selectedImage,textTruth,truthSplit);setRowsText(old=>replaceSampleRow(old,row));setManifestCount(null);setNotice('문자 정답을 표에 추가했습니다. 정답 저장을 눌러 준비 데이터를 만들세요.');}catch(cause){setError(describeError(cause));}}}>선택 이미지의 문자 정답 추가</button>
+      <details className="rounded border border-slate-700 p-3"><summary className="cursor-pointer text-sm text-slate-300">정답 표·가져오기 상세 설정</summary>
+      <label className="mt-3 block text-slate-300">문자 이미지 폴더 경로
         <input value={datasetPath} onChange={(event) => { setDatasetPath(event.target.value); setManifestCount(null); }}
           placeholder="/path/to/text-crops" className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
@@ -151,6 +162,7 @@ export const OCRWorkbench: React.FC = () => {
           placeholder={'images/part_001.png\tABC123\ttrain\nimages/part_002.png\tABC124\tval\nimages/part_003.png\tABC125\ttest'}
           className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
+      </details>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 정답 읽기</button>
         <button type="button" onClick={() => void saveManifest()} disabled={!datasetPath || !rowsText.trim() || (!!busy || training.active)} className="rounded border border-cyan-700 bg-cyan-950/40 px-3 py-1.5 text-cyan-200 hover:bg-cyan-900/40 disabled:opacity-40">정답과 이미지 해시 저장</button>
@@ -173,10 +185,11 @@ export const OCRWorkbench: React.FC = () => {
         <button type="button" disabled={!jobId||!!busy||training.active} onClick={()=>void useProjectStore.getState().setStep(5)} className={programButton}>검사 플로우·배포 패키지</button>
       </div>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-[260px] flex-1">한 장 시험 이미지 경로
+        <span className="text-sm text-slate-300">위에서 선택한 프로젝트 이미지로 시험합니다.</span>
+        <details className="min-w-[260px] flex-1"><summary className="cursor-pointer text-slate-400">시험 이미지 경로 상세</summary><label>한 장 시험 이미지 경로
           <input value={imagePath} onChange={(event) => setImagePath(event.target.value)} placeholder="/path/to/text-crops/test.png"
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-1.5 font-mono" />
-        </label>
+        </label></details>
         <button type="button" onClick={() => void predict()} disabled={!jobId || !imagePath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">문자 읽기</button>
       </div>
       {busy && <p role="status" className="text-cyan-300"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{busy === 'train' ? '학습 중' : '처리 중'}…</p>}
@@ -187,7 +200,7 @@ export const OCRWorkbench: React.FC = () => {
         <div className="mt-2 max-h-32 overflow-y-auto font-mono text-slate-400">{evaluation.samples.map((item) => <div key={item.image} className="truncate">{item.image}: {item.reference_text} → {item.predicted_text}</div>)}</div>
       </div>}
       {prediction && <p className="rounded border border-cyan-700 bg-cyan-950/30 p-3">인식 후보: <strong className="text-cyan-200">{prediction.text || '(빈 문자열)'}</strong> · 후보 점수 {(prediction.confidence * 100).toFixed(1)}%</p>}
-      <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(result.models[0]?.job_id||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
+      <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(selectHandoffRecord(result.models,handoff)?.job_id||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
     </div>
   </details>;
 };

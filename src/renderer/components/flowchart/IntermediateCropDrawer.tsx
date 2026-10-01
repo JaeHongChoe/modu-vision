@@ -18,7 +18,7 @@ import {
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import type { FlowchartCrop } from '../../types';
 
-export const IntermediateCropDrawer: React.FC = () => {
+export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}> = ({onSelectNode}) => {
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
 
   const [filter, setFilter] = useState<'all' | 'ng' | 'ok'>('all');
@@ -192,7 +192,7 @@ export const IntermediateCropDrawer: React.FC = () => {
                     <td className="py-1 px-2 text-slate-400 font-bold tabular-nums">
                       {String(idx + 1).padStart(2, '0')}
                     </td>
-                    <td className="py-1 px-2 text-slate-200 font-medium">{step.name}</td>
+                    <td className="py-1 px-2 text-slate-200 font-medium"><button onClick={()=>onSelectNode?.(step.node_id)} className="text-sky-200 underline" aria-label={`${step.name} 실행 근거 열기`}>{step.name}</button></td>
                     <td className="py-1 px-2">
                       <span
                         className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
@@ -236,7 +236,7 @@ export const IntermediateCropDrawer: React.FC = () => {
       {/* =================================================================== */}
       {/* RIGHT COLUMN: Real crop gallery */}
       {/* =================================================================== */}
-      <div className="w-[460px] bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col overflow-hidden">
+      <div className="w-[38%] min-w-[280px] bg-[#131822] border border-[#2B3547] rounded p-4 flex flex-col overflow-hidden">
         {/* Gallery Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#2B3547]">
           <div className="flex items-center space-x-2">

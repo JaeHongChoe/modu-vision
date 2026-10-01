@@ -634,6 +634,7 @@ class TrainingConfigOverrides(BaseModel):
     device: Optional[str] = None
     backbone: Optional[str] = None
     model_name: Optional[str] = None
+    anomaly_mode: Optional[Literal['classification', 'segmentation']] = None
     anomaly_method: Optional[Literal['padim', 'patchcore', 'dino_synthetic']] = None
     anomaly_backbone: Optional[Literal['dinov3_vits16', 'dinov3_vitb16', 'dinov3_vitl16']] = None
     patch_size: Optional[int] = Field(None, strict=True, ge=32, le=1024)
@@ -741,6 +742,16 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     if req.config_overrides:
         # Origin aliases are populated only by the worker after verifying its transferred input.
         req.config_overrides = {key: value for key, value in req.config_overrides.items() if key != 'pretrained_origin'}
+    if request is not None and not req.compute_profile_id:
+        from backend.api.routes_project import get_current_project
+        from backend.engine.training_workspace import imported_weight
+        options=req.config_overrides or {}
+        selected=options.get('model_name','dinov3_vits16') if req.task=='segmentation' else options.get('anomaly_backbone','dinov3_vits16') if req.task=='anomaly' and options.get('anomaly_method')=='dino_synthetic' else options.get('anomaly_method','padim') if req.task=='anomaly' else options.get('backbone','yolo26n' if req.task=='detection' else 'dinov3_vits16')
+        if not options.get('pretrained_checkpoint'):
+            prepared=imported_weight(get_current_project(request),req.task,selected)
+            if prepared:req.config_overrides={**options,'pretrained_checkpoint':prepared}
+    if req.task=='anomaly' and (req.config_overrides or {}).get('anomaly_mode','classification') not in ('classification','segmentation'):
+        raise HTTPException(422,'Invalid anomaly purpose; choose image classification or region segmentation')
     synthetic_anomaly = (req.config_overrides or {}).get('anomaly_method') == 'dino_synthetic'
     if synthetic_anomaly:
         if req.task != 'anomaly':

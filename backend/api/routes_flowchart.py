@@ -48,12 +48,14 @@ from backend.engine.flowchart_engine import (
     get_single_segmentation_flowchart,
     ordered_linear_nodes,
     safe_crop_roi,
+    debug_ancestor_ids,
     verified_checkpoint_scope,
 )
 from backend.utils.error_catalog import format_error_response
 from backend.engine.checkpoint_paths import is_job_id, trusted_checkpoint
 from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.specialized_models import SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
+from backend.engine.flow_workspace import catalog_class_vocabulary
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -543,6 +545,7 @@ def _catalog_model_settings(meta):
     if not isinstance(provenance, dict): provenance = {}
     if not isinstance(parent, dict): parent = {}
     return {'threshold_settings': settings,
+        **catalog_class_vocabulary(meta),
         'training_labelset_id': meta.get('training_labelset_id') or provenance.get('labelset_id'),
         'parent_job_id': meta.get('parent_job_id') or parent.get('parent_job_id')}
 
@@ -917,10 +920,20 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             pipeline = get_pipeline()
         try:
             ordered_nodes = ordered_linear_nodes(pipeline)
+            debug_scope = debug_ancestor_ids(pipeline, req.stop_node_id)
+            if req.stop_node_id and req.execution_target == "model_compute":
+                raise HTTPException(422, "노드 디버그는 실행할 컴퓨터 또는 서버 프로필을 명시적으로 선택하세요.")
+            ordered_nodes = [node for node in ordered_nodes if node.id in debug_scope]
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if not req.image_path or not Path(req.image_path).is_file():
             raise HTTPException(status_code=422, detail="Select an existing inspection image before running the flowchart.")
+        if project is not None:
+            image=Path(req.image_path).expanduser().resolve()
+            roots=[Path(project[key]).expanduser().resolve() for key in ('project_dir','dataset_dir','source_dataset_dir') if project.get(key)]
+            if not any(image.is_relative_to(root) for root in roots):
+                raise HTTPException(422,'Select an inspection image inside the current project or its registered source dataset.')
+            req.image_path=str(image)
         model_contexts: Dict[str, Any] = {}
         local_model_jobs: set[str] = set()
         verified_checkpoints: Dict[tuple[str, str], Path] = {}
@@ -990,7 +1003,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
                     engine = _local_execution_engine(device)
                     with verified_checkpoint_scope(verified_checkpoints):
-                        result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id)
+                        result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}))
             except ValueError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             return {**result, "execution_target": "local", "execution_device": str(device), "compute_profile_id": None}
@@ -1010,7 +1023,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 profile = frozen_profile
             try:
                 return run_verified_flowchart_on_compute(profile, project, pipeline.model_dump(), verified_checkpoints,
-                                                         Path(req.image_path), req.image_id, device=req.device)
+                                                         Path(req.image_path), req.image_id, device=req.device, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}))
             except RemoteComputeBusy as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             except RemoteDisconnected as exc:

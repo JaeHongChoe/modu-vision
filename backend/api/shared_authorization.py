@@ -46,14 +46,25 @@ class SharedAuthorizationMiddleware:
         if path=='/api/project/list':return await self.app(scope,receive,send)
         if project is None:return await reject(409,'Select an authorized project first')
         if method not in {'GET','HEAD','OPTIONS'} and role!='owner':
-            labeling=path.startswith(('/api/annotations/','/api/label-candidates/','/api/label-suggestions/','/api/dataset/metadata/','/api/dataset/formats/'))
-            training=path.startswith(('/api/training/','/api/engine/','/api/automated-training/','/api/patch-classification/','/api/rotation/','/api/ocr/','/api/rotated-detection/','/api/enhancement/','/api/defect-gan/','/api/evaluation/'))
+            labeling=path.startswith(('/api/annotations/','/api/label-candidates/','/api/label-suggestions/','/api/dataset/metadata/','/api/dataset/formats/','/api/data-workbench/'))
+            training=path.startswith(('/api/training/','/api/engine/','/api/automated-training/','/api/patch-classification/','/api/rotation/','/api/ocr/','/api/rotated-detection/','/api/enhancement/','/api/defect-gan/','/api/evaluation/','/api/training-workspace/'))
             parts=path.strip('/').split('/')
             precision_review=len(parts)==6 and parts[:4]==['api','export','flow','optimization-jobs'] and parts[5]=='approve'
-            flow=not precision_review and path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/'))
-            review=precision_review or path.startswith(('/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/'))
+            flow=not precision_review and path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/'))
+            review=precision_review or path.startswith(('/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/','/api/product-delivery/'))
             compute_jobs=path.startswith('/api/compute/jobs')
-            allowed=(labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
+            delivery_allowed=False
+            if path.startswith('/api/product-delivery/'):
+                suffix=path.removeprefix('/api/product-delivery/')
+                if suffix=='diagnostics' or (suffix.startswith('packages/') and suffix.endswith('/select')):
+                    delivery_allowed=role in {'viewer','labeler','trainer','reviewer'}
+                elif suffix=='protocol-test' or (suffix.startswith('packages/') and suffix.endswith('/verify')):
+                    delivery_allowed=role in {'trainer','reviewer'}
+                elif suffix=='operator/inspect':
+                    delivery_allowed=role in {'labeler','trainer','reviewer'}
+                elif suffix.startswith('servers/') and suffix.endswith('/preflight'):
+                    delivery_allowed=bool(account['administrator'])
+            allowed=delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:return await reject(403,'This project role cannot perform the requested action')
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]

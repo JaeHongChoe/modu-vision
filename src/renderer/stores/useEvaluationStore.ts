@@ -229,9 +229,10 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const training = useTrainingStore.getState();
     const completedCurrentJob = training.isCurrentData && training.status === 'completed' ? training.jobId : null;
     const requestedJob = jobId || completedCurrentJob || get().jobId;
-    if ((training.isCurrentData && !completedCurrentJob)
+    const explicitScopedJob=Boolean(jobId&&source?.folderPath);
+    if (!explicitScopedJob&&((training.isCurrentData && !completedCurrentJob)
         || (!get().allowLatestRecovery && requestedJob !== completedCurrentJob)
-        || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath))) {
+        || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath)))) {
       set({ isLoading: false, errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
       return;
     }
@@ -245,6 +246,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         sourceTask: source.task,
       } : undefined);
       if (generation !== evaluationGeneration) return;
+      if(jobId&&res.job_id!==jobId)throw new Error('요청한 평가 작업과 반환된 작업 ID가 다릅니다. 작업 센터에서 다시 확인하세요.');
       set({
         jobId: res.job_id,
         metrics: res.metrics || {},

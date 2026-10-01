@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, GitCompareArrows, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import type { FlowModelTask, Language } from '../../types';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {useProjectStore} from '../../stores/useProjectStore';
+import {consumeReviewContext,evaluationOriginScope} from '../labeling/productDataWorkflow';
 import {
-  api,
+  api,getApiPersistenceIdentity,
   request,
   type ModelComparisonModel,
   type ModelComparisonRecord,
@@ -46,12 +49,13 @@ function Verdict({ outcome }: { outcome: ModelComparisonOutcome }) {
 }
 
 export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, language }) => {
+  const compute={...useComputeStore(),apiTransportIdentity:getApiPersistenceIdentity()};
   const isKo = language === 'ko';
   const [crossTasks,setCrossTasks]=useState(false);
   const [incumbentThreshold,setIncumbentThreshold]=useState(.5);
   const [candidateThreshold,setCandidateThreshold]=useState(.5);
   const [expectedText,setExpectedText]=useState('');
-  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}`;
+  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}\0${compute.transportRevision}\0${compute.selectedProfileId||'local'}\0${compute.apiTransportIdentity}`;
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
   const [models, setModels] = useState<ModelComparisonModel[]>([]);
@@ -69,6 +73,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [productFilter, setProductFilter] = useState('');
   const [lotFilter, setLotFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [originPath,setOriginPath]=useState('');
 
   useEffect(() => {
     let active = true;
@@ -79,6 +84,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     setReport(null);
     setReportScope('');
     setError(null);
+    setOriginPath('');
     setIsLoading(false);
     setIsRunning(false);
     setComparisonJob(null); setJobs([]); setProductFilter(''); setLotFilter('');
@@ -93,6 +99,11 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (!active || currentScope.current !== scopeKey) return;
       setModels(catalog.models);
       setRecords(history.comparisons);
+      const project=useProjectStore.getState().project;
+      const origin=consumeReviewContext(localStorage,evaluationOriginScope(project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute),history.comparisons.map(row=>row.comparison_id),'comparison');
+      if(origin?.comparison_id){
+        void api.evaluation.getComparison(origin.comparison_id,sourceFolder,task).then(saved=>{if(active&&currentScope.current===scopeKey){setReport(saved);setReportScope(scopeKey);setOriginPath(origin.file_path||'');}}).catch(cause=>{if(active&&currentScope.current===scopeKey)setError(errorMessage(cause));});
+      }
       setJobs(jobHistory.jobs);
       const running = jobHistory.jobs.find((j) => j.status === 'queued' || j.status === 'running');
       if (running) { setComparisonJob(running); setIsRunning(true); }
@@ -368,7 +379,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
               <span>{filteredImages.length}/{comparisonImages.length}장</span>
             </div>
             {filteredImages.map((row) => (
-              <div key={`${row.file_path}-${row.image_sha256}`} className={`rounded border p-2 ${
+              <div key={`${row.file_path}-${row.image_sha256}`} ref={node=>{if(node&&row.file_path===originPath)node.scrollIntoView({block:'center'});}} className={`rounded border p-2 ${row.file_path===originPath?'ring-2 ring-cyan-400 ':''}${
                 row.ground_truth_verdict === 'NG' && row.incumbent.verdict === 'NG' && row.candidate.verdict === 'OK'
                   ? 'border-rose-500/60 bg-rose-500/10'
                   : row.disagrees ? 'border-amber-500/45 bg-amber-500/5' : 'border-slate-600/50 bg-slate-950/25'

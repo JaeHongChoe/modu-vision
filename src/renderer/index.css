@@ -115,3 +115,22 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Shared workspace controls retain text labels and visible keyboard navigation. */
+button:focus-visible, a:focus-visible, summary:focus-visible, [role="application"]:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 3px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 1px;
+}
+.product-workbench { font-size: 14px; line-height: 1.5; }
+.product-workbench button, .product-workbench input, .product-workbench select { min-height: 34px; }
+.product-workbench button { font-weight: 500; transition: background-color 100ms ease; }
+.product-workbench button:disabled { cursor: not-allowed; opacity: .45; }
+.product-workbench input, .product-workbench textarea, .product-workbench select { border: 1px solid #475569; }
+.product-workbench pre, .product-workbench code { user-select: text; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

@@ -87,6 +87,7 @@ class AnnotationItem(BaseModel):
     mask_rle: Optional[str] = None
     is_normal: Optional[bool] = None
     color: Optional[str] = None
+    direction_deg: Optional[float] = Field(None,ge=0,lt=360,allow_inf_nan=False)
 
     @field_validator("bbox")
     @classmethod
@@ -434,6 +435,13 @@ def _get_annotations_impl(
                         })
                     else:
                         raise ValueError(f"Shape {idx + 1} has unsupported type or invalid points: {stype}")
+                    if converted_annotations:
+                        flags=shape.get('flags',{})
+                        if flags.get('studio_rotated_bbox') is not None:
+                            converted_annotations[-1].update(type='rotated_bbox',rotated_bbox=flags['studio_rotated_bbox'])
+                        direction=flags.get('studio_direction_deg',shape.get('direction_deg'))
+                        if direction is not None:
+                            converted_annotations[-1]['direction_deg']=AnnotationItem(label=lbl,direction_deg=direction).direction_deg
                 return {
                     "image_id": image_id,
                     "annotations": converted_annotations,

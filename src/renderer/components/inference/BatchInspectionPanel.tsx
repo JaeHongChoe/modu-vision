@@ -11,6 +11,8 @@ import type { FlowchartPipeline } from '../../types';
 import { activeSavedVersion, savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import { ReviewQueuePanel } from './ReviewQueuePanel';
+import {useTaskHandoff} from '../training/useTaskHandoff';
+import {openSelectedInspectionRun} from './inspectionHistorySelection';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -40,6 +42,7 @@ const stateColors: Record<string, string> = {
 let activeBatchOperation = 0;
 
 export const BatchInspectionPanel: React.FC = () => {
+  const handoff=useTaskHandoff();const requestedRun=handoff?.kind==='inspection'?handoff.jobId:undefined;
   const executionChoiceOverride = useFlowchartStore(state => state.executionChoiceOverride);
   const setExecutionChoice = useFlowchartStore(state => state.setExecutionChoice);
   const { profiles, selectedProfileId, isLoaded: computeLoaded, load: loadCompute } = useComputeStore();
@@ -165,9 +168,10 @@ export const BatchInspectionPanel: React.FC = () => {
     api.inspections.listRuns(folderPath, task).then(async ({ runs }) => {
       if (!isCurrent()) return;
       setHistory(runs);
-      if (runs.length > 0) {
-        const latest = await api.inspections.getRun(runs[0].run_id);
-        if (isCurrent() && inspectionRunMatchesSource(latest, started)) {
+      const latest=await openSelectedInspectionRun(runs,requestedRun,api.inspections.getRun);
+      if(latest){
+        if(!inspectionRunMatchesSource(latest,started))throw new Error('선택한 검사 기록의 원본 소스가 현재 프로젝트와 다릅니다.');
+        if (isCurrent()) {
           setReport(latest);
           setScope(latest.scope);
           setSelectedPath(latest.rows.find((row) => row.result)?.image.file_path ?? latest.rows[0]?.image.file_path ?? null);
@@ -177,7 +181,7 @@ export const BatchInspectionPanel: React.FC = () => {
       if (isCurrent()) setHistoryError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => { if (isCurrent()) setHistoryLoading(false); });
     return () => { active = false; };
-  }, [folderPath, task, projectDir, historyContext.canonicalSourceFolder, sourceReady]);
+  }, [folderPath, task, projectDir, historyContext.canonicalSourceFolder, sourceReady,requestedRun,handoff?.taskKey,handoff?.selectionId]);
 
   const openHistoryRun = async (runId: string, preferredImagePath?: string) => {
     const started = historyContext;

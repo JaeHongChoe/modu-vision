@@ -5,6 +5,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useProgramWorkbench } from './useProgramWorkbench';
 import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 
 export function PatchClassificationWorkbench() {
   const state = useProgramWorkbench('patch');
@@ -37,7 +38,8 @@ export function PatchClassificationWorkbench() {
     if (state.isCurrent()) {state.setJob(row); setEvaluation(null);}
   });
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
-    <h2 className="flex items-center gap-2 text-base font-semibold"><Grid2X2 className="h-5 w-5 text-cyan-300" />고해상도 패치 분류</h2>
+    <TrainingPreparationPanel family="patch_classification" model={backbone} checkpoint={checkpoint} device={device} onCheckpointChange={setCheckpoint} />
+    <h2 className="mt-4 flex items-center gap-2 text-base font-semibold"><Grid2X2 className="h-5 w-5 text-cyan-300" />고해상도 패치 분류</h2>
     <p className="mt-2 leading-5 text-slate-400">검수한 영역 라벨에서 원본 좌표의 패치를 준비하고 DINOv3로 분류합니다. 원본 이미지·라벨 해시와 이미지별 분할을 함께 저장합니다.</p>
     <div className="mt-4 grid gap-3 sm:grid-cols-4">
       <ProgramField label="원본 패치 크기"><input type="number" min={16} max={2048} value={patchSize} onChange={e => setPatchSize(Number(e.target.value))} className={programInput} /></ProgramField>

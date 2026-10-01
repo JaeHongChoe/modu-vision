@@ -344,7 +344,9 @@ def test_api_flowchart_endpoints(client, monkeypatch, tmp_path):
     r_run = client.post("/api/flowchart/run", json={"pipeline": pipe_data})
     assert r_run.status_code == 422
     assert "image" in r_run.json()["detail"].lower()
-    image = tmp_path / "inspection.png"
+    project = client.get("/api/project/current").json()
+    image = Path(project["dataset_dir"]) / "inspection.png"
+    image.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(image), np.zeros((32, 32, 3), dtype=np.uint8))
     r_run = client.post("/api/flowchart/run", json={"pipeline": pipe_data, "image_path": str(image)})
     assert r_run.status_code == 409

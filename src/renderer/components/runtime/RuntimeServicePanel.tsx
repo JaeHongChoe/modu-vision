@@ -4,16 +4,20 @@ import { SpecializedApprovalPanel } from '../evaluation/SpecializedApprovalPanel
 import React, { useEffect, useRef, useState } from 'react';
 import { request } from '../../services/api';
 import { runtimeDeploymentApi } from '../../services/runtimeDeploymentApi';
+import {SavedPackagePicker} from './SavedPackagePicker';
+import {ProtocolSettingsPanel} from './ProtocolSettingsPanel';
+import {useDeliveryScope} from './useDeliveryScope';
 
 type RuntimeIdentity = { status: string; manifest_sha256?: string; pipeline_id?: string; device?: string };
 type Deployment = { deployment_id: string; reviewer: string; restored_from?: string; release: { manifest_sha256: string; device: string }; created_at: number };
 type ServiceState = { runtime: RuntimeIdentity; active: Deployment | null; history: Deployment[]; port: number; adapter_config: { enabled: boolean; modbus: Record<string, unknown> | null; mes: Record<string, unknown> | null } };
 const EMPTY_CONFIG = '{"enabled":false,"modbus":null,"mes":null,"clear_mes_token":false}';
-type ProjectScope = { projectDir: string | null };
+type ProjectScope = { projectDir: string | null;key:string };
 
-export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ projectDir }) => {
-  const currentProject = useRef<ProjectScope>({ projectDir });
-  if (currentProject.current.projectDir !== projectDir) currentProject.current = { projectDir };
+export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPackagePath?:string }> = ({ projectDir,initialPackagePath }) => {
+  const {key}=useDeliveryScope();
+  const currentProject = useRef<ProjectScope>({ projectDir,key });
+  if (currentProject.current.key !== key) currentProject.current = { projectDir,key };
   const [state, setState] = useState<ServiceState | null>(null);
   const [loadedScope, setLoadedScope] = useState<ProjectScope | null>(null);
   const [packagePath, setPackagePath] = useState('');
@@ -22,7 +26,6 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
   const [reviewer, setReviewer] = useState('');
   const [target, setTarget] = useState('');
   const [config, setConfig] = useState(EMPTY_CONFIG);
-  const [clearMesToken, setClearMesToken] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -40,7 +43,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
   useEffect(() => {
     let valid = true;
     const started = currentProject.current;
-    setState(null); setLoadedScope(null); setConfig(EMPTY_CONFIG); setClearMesToken(false);
+    setState(null); setLoadedScope(null); setConfig(EMPTY_CONFIG);
     setPackagePath(''); setError(''); setNotice(''); setTarget(''); setBusy(false);
     setDevice('cpu');setDevices(['cpu']);
     if(projectDir)void runtimeDeploymentApi.capabilities().then(cap=>{if(valid&&currentProject.current===started)setDevices([...cap.torch_devices,...cap.openvino.devices.map(value=>'openvino:'+value)]);}).catch(()=>{});
@@ -48,7 +51,8 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
       if (valid && currentProject.current === started) { setState(result); setLoadedScope(started); setConfig(JSON.stringify(result.adapter_config, null, 2)); }
     }).catch(cause => { if (valid) setError(String(cause.message || cause)); });
     return () => { valid = false; };
-  }, [projectDir]);
+  }, [projectDir,key]);
+  useEffect(()=>{setPackagePath(initialPackagePath||'');},[initialPackagePath,key]);
   const action = async (path: string, payload?: unknown, method = 'POST') => {
     if (!ready || busy || currentProject.current.projectDir !== projectDir) return;
     const started = currentProject.current;
@@ -59,7 +63,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
       const refreshed = await refresh();
       if (currentProject.current !== started) return;
       if (!refreshed) return;
-      if (path === '/adapters') { setConfig(JSON.stringify(refreshed.adapter_config, null, 2)); setClearMesToken(false); }
+      if (path === '/adapters') { setConfig(JSON.stringify(refreshed.adapter_config, null, 2)); }
       setNotice(path === '/install' ? `설치 파일 준비: ${(result.files as string[]).join(', ')} · ${result.macos_install_command}` : path === '/adapters' ? '설정 저장됨. 적용하려면 서비스를 명시적으로 중지 후 시작하세요.' : '서비스 응답과 기록을 확인했습니다.');
     } catch (cause) { if (currentProject.current === started) setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { if (currentProject.current === started) setBusy(false); }
@@ -70,7 +74,8 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
     <p className="mt-2 text-slate-300">현재 응답: {state?.runtime.status || '확인 중'} · 장치 {state?.runtime.device || '—'} · 포트 {state?.port || '—'}</p>
     <p className="mt-1 break-all font-mono text-[10px]">실행 manifest SHA-256: {state?.runtime.manifest_sha256 || '서비스 응답 없음'}</p>
     <div className="mt-3 grid grid-cols-2 gap-2">
-      <label className="col-span-2">승인된 전체 flow 패키지 폴더<input aria-label="승인 패키지 경로" className="mt-1 w-full rounded bg-slate-800 p-2" value={packagePath} onChange={event => setPackagePath(event.target.value)} /></label>
+      <SavedPackagePicker value={packagePath} onChange={setPackagePath} disabled={busy}/>
+      <details className="col-span-2 text-slate-400"><summary>고급 · 패키지 폴더 직접 입력</summary><input aria-label="승인 패키지 경로" className="mt-1 w-full rounded bg-slate-800 p-2" value={packagePath} onChange={event => setPackagePath(event.target.value)} /></details>
       <label>실행 장치<select aria-label="서비스 실행 장치" className="mt-1 w-full rounded bg-slate-800 p-2" value={device} onChange={event => setDevice(event.target.value)}>{devices.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
       <label>적용 검토자<input aria-label="서비스 검토자" className="mt-1 w-full rounded bg-slate-800 p-2" value={reviewer} onChange={event => setReviewer(event.target.value)} /></label>
     </div>
@@ -87,14 +92,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null }> = ({ p
     <SpecializedApprovalPanel />
     <ModelOperationsPanel />
     <FleetPanel />
-    <details className="mt-3"><summary className="cursor-pointer font-semibold">Modbus TCP · HTTP MES 설정</summary>
-      <p className="my-2 text-slate-400">enabled를 켠 설정은 다음 서비스 시작 때 사용합니다. ACK 실패 시 운영 판정은 REVIEW로 보존됩니다.</p>
-      <p className="my-2 text-slate-400">MES token의 null은 같은 주소에 저장된 인증값을 유지합니다. 주소를 변경하려면 새 token을 입력하거나 인증값 삭제를 선택하세요.</p>
-      <div className="mb-2 flex gap-2"><button type="button" onClick={() => setConfig(JSON.stringify({ enabled: false, modbus: { host: '127.0.0.1', port: 502, unit_id: 1, result_register: 10, ack_register: 11, sequence_register: 12, timeout: 2, ack_timeout: 5 }, mes: null }, null, 2))}>Modbus 설정 양식</button><button type="button" onClick={() => setConfig(JSON.stringify({ enabled: false, modbus: null, mes: { url: 'http://127.0.0.1:9000/inspection', timeout: 5, field_mapping: { job_id: 'job_id', verdict: 'model_verdict' }, ack_field: 'accepted', ack_value: true, ack_job_field: 'job_id' } }, null, 2))}>MES 설정 양식</button></div>
-      <textarea aria-label="PLC MES 설정" disabled={busy || !ready} rows={12} className="w-full rounded bg-slate-800 p-2 font-mono text-[11px]" value={ready ? config : EMPTY_CONFIG} onChange={event => setConfig(event.target.value)} />
-      <label className="mt-2 flex items-center gap-2"><input type="checkbox" aria-label="저장된 MES 인증값 삭제" disabled={busy || !ready} checked={clearMesToken} onChange={event => setClearMesToken(event.target.checked)} />저장된 MES 인증값 삭제</label>
-      <button type="button" disabled={busy || !ready} className="mt-2 rounded border border-slate-600 px-3 py-2" onClick={() => { try { const parsed = JSON.parse(config); void action('/adapters', { ...parsed, clear_mes_token: clearMesToken || parsed.clear_mes_token === true }, 'PUT'); } catch { setError('설정 JSON 형식을 확인하세요.'); } }}>설정 검증 후 저장</button>
-    </details>
+    <ProtocolSettingsPanel value={ready?config:EMPTY_CONFIG} onChange={setConfig} disabled={busy||!ready} onSave={()=>{try{void action('/adapters',JSON.parse(config),'PUT');}catch{setError('설정 JSON 형식을 확인하세요.');}}}/>
     {busy && <p role="status" className="mt-2 text-blue-300">서비스 응답 확인 중…</p>}
     {error && <p role="alert" className="mt-2 break-all text-red-300">{error}</p>}
     {notice && <p role="status" className="mt-2 break-all text-emerald-300">{notice}</p>}

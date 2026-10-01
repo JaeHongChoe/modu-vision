@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Optional,Literal
 from fastapi import APIRouter,HTTPException,Request
-from pydantic import BaseModel,Field,field_validator
+from pydantic import BaseModel,ConfigDict,Field,field_validator
 from PIL import Image
 from backend.engine.dicom_input import open_source_image
 from backend.api.routes_project import get_current_project,_write_json
@@ -21,6 +21,8 @@ from backend.engine.annotation_storage import dataset_annotation_dir
 router=APIRouter(prefix='/api/label-candidates',tags=['label-candidates'])
 
 class SetupRequest(BaseModel):
+    model_config=ConfigDict(extra="forbid")
+    vlm:Optional[dict]=None
     model_dir:Optional[str]=None
     mask_model_dir:Optional[str]=None
     feature_backbone:str='dinov3_vits16'
@@ -37,7 +39,7 @@ class PointRequest(BaseModel):
     label:Literal[0,1]=1
 
 class CandidateRequest(BaseModel):
-    backend:Literal['grounding_dino','template_match','foundation']
+    backend:Literal['grounding_dino','template_match','foundation','vlm']
     image_path:str
     prompt:str=''
     label:str='defect'
@@ -80,6 +82,13 @@ def _setup(project):
     try: return json.loads(path.read_text()) if path.is_file() else {}
     except (OSError,ValueError): raise HTTPException(422,detail='Invalid semantic labeling configuration')
 
+def _can_configure_vlm(request):
+    account=getattr(request.state,'account_user',None)
+    if account is not None:return bool(account.get('administrator'))
+    # Desktop mode is protected by the process capability. Fail closed if a
+    # shared account store exists without an authenticated account context.
+    return getattr(request.app.state,'accounts',None) is None
+
 def _verify_provider_provenance(proposal):
     try:
         for candidate in proposal['candidates']:
@@ -98,15 +107,20 @@ def _verify_provider_provenance(proposal):
 def get_setup(request:Request):
     project=get_current_project(request)
     config=_setup(project)
-    return {**semantic_readiness(config.get('model_dir')),'configuration':config,
-            'providers':{'foundation':foundation_readiness(config),'grounding_dino':semantic_readiness(config.get('model_dir'))},
+    return {**semantic_readiness(config.get('model_dir')),'configuration':config,'can_configure_vlm':_can_configure_vlm(request),
+            'providers':{'foundation':foundation_readiness(config),'grounding_dino':semantic_readiness(config.get('model_dir')),'vlm':__import__('backend.engine.korean_condition_vlm',fromlist=['readiness']).readiness(config.get('vlm'))},
             'labelset_id':project.get('active_labelset_id','default'),'labelset_version':suggestions._dataset_fingerprint(project)}
 
 @router.put('/setup')
 def save_setup(req:SetupRequest,request:Request):
+    if 'vlm' in req.model_fields_set and not _can_configure_vlm(request):raise HTTPException(403,detail='Server administrator permission required to configure VLM provider endpoint and credential reference')
     project=get_current_project(request); config=_setup(project)
     for field in req.model_fields_set:
         value=getattr(req,field)
+        if field=='vlm':
+            from backend.engine.korean_condition_vlm import validate_configuration
+            try:value=validate_configuration(value or {})
+            except ValueError as exc:raise HTTPException(422,detail=str(exc)) from exc
         if field.endswith('_dir') and value:
             directory=Path(value).expanduser().resolve()
             if not directory.is_dir(): raise HTTPException(422,detail='Choose an existing local model directory')
@@ -140,6 +154,13 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
             if model_directory_hash(directory)!=signature: raise HTTPException(409,detail='Semantic model changed during inference')
             details={'model_dir':directory,'checkpoint_sha256':signature,'prompt':req.prompt,'text_threshold':req.text_threshold,
                      'support_limits':readiness['limits']}
+        elif req.backend=='vlm':
+            from backend.engine.korean_condition_vlm import candidates as vlm_candidates,LIMITS
+            setup=_setup(project).get('vlm')
+            if req.output_geometry!='bbox':raise ValueError('Configured VLM supports bounding-box candidates; choose bbox output')
+            examples={kind:[{**e.model_dump(),'image_path':str(suggestions._image_path(project,e.image_path)),'sha256':suggestions._sha256(suggestions._image_path(project,e.image_path))} for e in getattr(req,kind)] for kind in ('positive_examples','negative_examples')}
+            candidates=vlm_candidates(image,setup,prompt=req.prompt,label=req.label,threshold=req.threshold,max_candidates=req.max_candidates,cancel=cancel,**examples)
+            details={'vlm_setup':setup,'prompt':req.prompt,'positive_examples':examples['positive_examples'],'negative_examples':examples['negative_examples'],'support_limits':LIMITS}
         elif req.backend=='foundation':
             setup=_setup(project)
             examples={}
@@ -175,6 +196,10 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
     from backend.engine.project_labelsets import load_labelsets
     if not suggestions._project_binding_is_current(project) or load_labelsets(Path(project['project_dir']))['active_id']!=labelset_id:
         raise HTTPException(409,detail='Project task, source or label set changed during inference')
+    if req.backend=='vlm':
+        if _setup(project).get('vlm')!=details['vlm_setup']:raise HTTPException(409,detail='VLM configuration changed during inference')
+        for example in details['positive_examples']+details['negative_examples']:
+            if file_sha256(example['image_path'])!=example['sha256']:raise HTTPException(409,detail='VLM image example changed during inference')
     if req.backend=='foundation':
         if _setup(project)!=details['foundation_setup']:raise HTTPException(409,detail='Foundation setup changed during inference')
         _verify_provider_provenance({'candidates':candidates})
@@ -260,6 +285,10 @@ def review_external_proposal(project,proposal,req):
         raise HTTPException(409,detail='Source labels or dataset changed; generate candidates again')
     if proposal['backend']=='template_match':
         if suggestions._sha256(suggestions._image_path(project,proposal['exemplar_path']))!=proposal['exemplar_sha256']: raise HTTPException(409,detail='Exemplar changed')
+    elif proposal['backend']=='vlm':
+        if _setup(project).get('vlm')!=proposal['vlm_setup']:raise HTTPException(409,detail='VLM configuration changed')
+        for example in proposal['positive_examples']+proposal['negative_examples']:
+            if suggestions._sha256(suggestions._image_path(project,example['image_path']))!=example['sha256']:raise HTTPException(409,detail='VLM image example changed')
     elif proposal['backend']=='foundation':
         if _setup(project)!=proposal['foundation_setup']: raise HTTPException(409,detail='Foundation provider setup changed')
         for example in proposal['positive_examples']+proposal['negative_examples']:

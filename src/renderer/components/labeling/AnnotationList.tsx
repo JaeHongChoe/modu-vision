@@ -220,6 +220,7 @@ export const AnnotationList: React.FC = () => {
         </div>
       </div>
 
+      {selectedAnn?.type==='rotated_bbox'&&<label className="block border-b border-slate-700 p-3 text-xs text-slate-300">객체 방향 (0–360°, 선택)<input aria-label="객체 독립 방향 라벨" type="number" min="0" max="359.999" step=".1" value={selectedAnn.direction_deg??''} onChange={event=>{const value=event.target.value===''?undefined:Number(event.target.value);if(value===undefined||Number.isFinite(value)&&value>=0&&value<360)updateAnnotation(selectedAnn.id!,{direction_deg:value});}} className="mt-1 w-full rounded border border-slate-600 bg-slate-900 p-2"/><span className="mt-1 block text-slate-400">머리·꼬리 방향 타깃. 박스의 축 회전 각도와 별도로 저장합니다.</span></label>}
       {/* Optical Calibration Popdown */}
       {isCalibratorOpen && (
         <div className="p-2.5 bg-[#1A212E] border-b border-[#2B3547] text-xs space-y-2">

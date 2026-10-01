@@ -179,6 +179,7 @@ export interface RotatedBox {
 }
 
 export interface RotatedSampleRow {
+  direction_deg?: number;
   image: string;
   split: 'train' | 'val' | 'test';
   label: string;
@@ -204,6 +205,8 @@ export interface RotatedJob {
 }
 
 export interface RotatedEvaluation {
+  mean_direction_error_deg?: number | null;
+  direction_matched_count?: number;
   sample_count: number;
   mean_oriented_iou: number;
   mean_angle_error_deg: number;
@@ -212,6 +215,7 @@ export interface RotatedEvaluation {
 }
 
 export interface RotatedPrediction {
+  direction_deg?: number;
   label: string;
   box: RotatedBox;
   polygon: Array<[number, number]>;
@@ -405,6 +409,12 @@ export interface ModelDeploymentRevision {
 let cachedPort: number | null = null;
 let sharedBase:string|null=null;
 export function setSharedApiBase(base:string|null):void {sharedBase=base;}
+/** Stable storage binding; credentials, tokens and the local process port are excluded. */
+export function getApiPersistenceIdentity():string {
+  if(!sharedBase)return 'local';
+  try {const url=new URL(sharedBase);return `shared:${url.origin}${url.pathname.replace(/\/+$/,'')}`;}
+  catch {throw new Error('공유 서버 주소를 확인하세요.');}
+}
 
 export async function getBackendPort(): Promise<number> {
   if (cachedPort) return cachedPort;
@@ -737,6 +747,7 @@ export const api = {
       output_dir?: string;
       config_overrides?: TrainingConfigOverrides;
       compute_profile_id?: string;
+      device?: string;
       warm_start_job_id?: string;
     }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
       method: 'POST',
@@ -936,7 +947,7 @@ export const api = {
       });
     },
     run: (data: { image_path?: string; image_id?: string; pipeline?: any;
-      execution_target?: 'local' | 'selected_compute' | 'model_compute'; device?: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id?: string }) =>
+      execution_target?: 'local' | 'selected_compute' | 'model_compute'; device?: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id?: string; stop_node_id?: string }) =>
       request<any>('/api/flowchart/run', {
         method: 'POST',
         body: JSON.stringify(data),

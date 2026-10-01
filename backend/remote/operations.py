@@ -573,18 +573,19 @@ def run_remote_flowchart(
 def run_verified_flowchart_on_compute(
     profile: ComputeProfile, project: dict[str, Any], pipeline: dict[str, Any],
     verified_checkpoints: dict[tuple[str,str],Path], image: Path, image_id: str | None = None,
-    *, device: str = 'cuda', transport: SSHTransport | None = None,
+    *, device: str = 'cuda', transport: SSHTransport | None = None, stop_node_id: str | None = None,
 ) -> dict[str, Any]:
     """Transfer project-owned verified models to the explicitly selected server."""
     import torch
-    from backend.engine.flowchart_engine import FlowchartPipeline,ordered_linear_nodes
+    from backend.engine.flowchart_engine import FlowchartPipeline,ordered_linear_nodes,debug_ancestor_ids
     from backend.engine.specialized_models import flow_model_task,valid_flow_job,SPECIALIZED_TASKS
     if not isinstance(device,str) or not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?',device):
         raise ValueError('An explicit CPU, CUDA or MPS execution device is required')
     if device.startswith('cuda:'):device='cuda:'+str(int(device.split(':')[1]))
     graph=FlowchartPipeline.model_validate(pipeline)
-    needed={(node.data.model_job_id,flow_model_task(node)) for node in ordered_linear_nodes(graph) if flow_model_task(node)}
-    if needed!=set(verified_checkpoints) or not 1<=len(needed)<=24:
+    scope=debug_ancestor_ids(graph,stop_node_id)
+    needed={(node.data.model_job_id,flow_model_task(node)) for node in ordered_linear_nodes(graph) if node.id in scope and flow_model_task(node)}
+    if needed!=set(verified_checkpoints) or not (0 if stop_node_id else 1)<=len(needed)<=24:
         raise ArtifactValidationError('Portable model references differ from the validated flow')
     root=Path(project['models_dir']);project_root=Path(project['project_dir'])
     reports=Path(project['reports_dir'])
@@ -620,11 +621,12 @@ def run_verified_flowchart_on_compute(
     if image.stat().st_size>64*1024*1024:raise ArtifactValidationError('Inspection image exceeds the transfer limit')
     inputs[relative]=image
     binding=hashlib.sha256(json.dumps(references,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    context=RemoteJobContext('job_flow_'+binding[:24],references[0]['task'],reports/'remote_flow',
+    context=RemoteJobContext('job_flow_'+binding[:24],references[0]['task'] if references else 'classification',reports/'remote_flow',
         Path(project.get('dataset_dir',project_root/'dataset')),profile,binding,portable=True)
     artifacts=run_remote_operation_artifacts(context,'flowchart_run',{
         'portable_models':True,'models':references,'pipeline':pipeline,'image_path':relative,
         'image_sha256':image_hash,'image_id':image_id,'device':device,
+        **({'stop_node_id':stop_node_id} if stop_node_id else {}),
         'execution_profile_sha256':hashlib.sha256(json.dumps(profile.model_dump(),sort_keys=True,separators=(',',':')).encode()).hexdigest(),
     },transport=transport,input_files=inputs)
     result_file=artifacts.get('outputs/flowchart_result.json')
@@ -633,6 +635,8 @@ def run_verified_flowchart_on_compute(
     if (not isinstance(result,dict) or result.get('image_path')!=relative or result.get('image_sha256')!=image_hash
             or result.get('model_job_ids')!=sorted(job for job,_ in needed)):
         raise ArtifactValidationError('Portable flow result has a different image or model binding')
+    if stop_node_id and (result.get('stop_node_id')!=stop_node_id or result.get('status')!='partial'):
+        raise ArtifactValidationError('Portable debug result scope differs from the selected stop node')
     if result.get('execution_device')!=device or not isinstance(result.get('device_name'),str) or not result['device_name']:
         raise ArtifactValidationError('Portable flow execution device differs from the selected device')
     result['annotated_image']=_verified_preview_uri(result.get('annotated_image'),artifacts)

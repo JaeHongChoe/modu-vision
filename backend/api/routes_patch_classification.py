@@ -89,7 +89,9 @@ def train(body:TrainRequest,request:Request):
         from backend.engine.warm_start import architecture_for,resolve_warm_start_parent
         options={'backbone':body.backbone,'epochs':body.epochs,'batch_size':body.batch_size,
                  'image_size':[body.image_size,body.image_size],'learning_rate':body.learning_rate}
-        if body.pretrained_checkpoint:options['pretrained_checkpoint']=body.pretrained_checkpoint
+        from backend.engine.training_workspace import imported_weight
+        prepared=body.pretrained_checkpoint or imported_weight(project,'patch_classification',body.backbone)
+        if prepared:options['pretrained_checkpoint']=prepared
         if body.pretrained_sha256:options['pretrained_sha256']=body.pretrained_sha256
         source=project['source_dataset_dir'];parent=None
         if body.warm_start_job_id:

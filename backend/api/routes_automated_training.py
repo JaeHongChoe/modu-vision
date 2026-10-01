@@ -10,7 +10,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from backend.api.routes_project import get_current_project
 from backend.engine.automated_trials import run_automated_training, read_search, _write, _RUNNERS
@@ -24,6 +24,7 @@ class Budget(BaseModel):
     model_config=ConfigDict(extra='forbid')
     max_trials:int=Field(default=4,ge=1,le=32)
     max_total_epochs:int=Field(default=8,ge=1,le=512)
+    max_memory_mb:int|None=Field(default=None,ge=1,le=1048576)
     max_seconds:float=Field(default=600,gt=0,le=86400,allow_inf_nan=False)
 
 
@@ -44,6 +45,12 @@ class StartRequest(BaseModel):
     parent_job_id:str|None=None
     dataset_version_id:str|None=None
     background:bool=True
+
+    @model_validator(mode='after')
+    def validate_budget_relationship(self):
+        from backend.engine.automated_trials import validated_budget
+        validated_budget(self.budget.model_dump(), self.epochs_per_trial)
+        return self
 
 
 @router.get('/capabilities')
@@ -75,7 +82,7 @@ def start(req:StartRequest,request:Request):
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
     identifier=uuid.uuid4().hex;models=Path(project['models_dir']);event=threading.Event();key=(str(models.resolve()),identifier)
     submission={'search_id':identifier,'status':'queued','task':req.task,'mode':req.mode,'created_at':time.time(),'owner_pid':os.getpid(),'owner_instance':_PROCESS_INSTANCE,'owner_kind':'api',
-                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None}
+                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None,'budget':req.budget.model_dump(),'device':req.device}
     _write(models/'automated_training'/identifier/'submission.json',submission)
     with _LOCK:_EVENTS[key]=event
     def execute():

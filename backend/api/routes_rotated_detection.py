@@ -84,6 +84,7 @@ class RotatedSampleInput(BaseModel):
     box: RotatedBoxInput | None = None
     objects: list[dict[str, Any]] | None = Field(default=None, min_length=1, max_length=32)
     source_sha256: str | None = None
+    direction_deg: float | None = Field(None,ge=0,lt=360,allow_inf_nan=False)
 
 
 class ManifestRequest(BaseModel):
@@ -318,7 +319,7 @@ def _manifest_result(manifest) -> dict[str, Any]:
         "dataset_sha256": manifest.provenance["dataset_sha256"],
         "provenance":manifest.provenance,
         "samples": [
-            {"image": image, "source_sha256": rows[0].source_sha256, "split": rows[0].split, **({"objects": [{"label": row.label,"box": row.box} for row in rows]} if manifest.version==2 else {"label": rows[0].label,"box": rows[0].box})}
+            {"image": image, "source_sha256": rows[0].source_sha256, "split": rows[0].split, **({"objects": [{"label": row.label,"box": row.box,**({"direction_deg":row.direction_deg} if row.direction_deg is not None else {})} for row in rows]} if manifest.version==2 else {"label": rows[0].label,"box": rows[0].box,**({"direction_deg":rows[0].direction_deg} if rows[0].direction_deg is not None else {})})}
             for image, rows in _manifest_groups(manifest).items()
         ],
     }

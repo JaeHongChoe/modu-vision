@@ -1,0 +1,716 @@
+{
+  "schema_version": 1,
+  "program": "product-workflow-upgrade",
+  "baseline_commit": "02b67318c834bd364610d409471c2306c2681d24",
+  "requirements": [
+    {
+      "id": "U001",
+      "owner": "training",
+      "title": "Action-specific error resolution with verified effects",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/common/ErrorModal.tsx",
+        "src/renderer/stores/useTrainingStore.ts"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U002",
+      "owner": "training",
+      "title": "Common GUI preparation and workflow for every supported model family",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/training/TrainingPreparationPanel.tsx",
+        "src/renderer/components/training/OCRWorkbench.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U003",
+      "owner": "training",
+      "title": "Unified resumable task center and honest cancel/resource states",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/training/TaskCenter.tsx",
+        "backend/engine/training_workspace.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "passed",
+        "failure": "passed",
+        "handoff": "passed"
+      }
+    },
+    {
+      "id": "U004",
+      "owner": "training",
+      "title": "Model and runtime readiness assistant",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/api/routes_training_workspace.py",
+        "src/renderer/components/training/TrainingPreparationPanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U005",
+      "owner": "delivery",
+      "title": "Persistent package library with optimization and deployment re-entry",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/inference/PackageLibraryPanel.tsx",
+        "backend/engine/product_delivery.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U006",
+      "owner": "flow",
+      "title": "Node-linked input/output debugger",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/flowchart/FlowNodeDebugger.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "passed"
+      }
+    },
+    {
+      "id": "U007",
+      "owner": "flow",
+      "title": "Image-based ROI editor and live crop preview",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/flowchart/ImageRoiEditor.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "passed",
+        "failure": "pending",
+        "handoff": "passed"
+      }
+    },
+    {
+      "id": "U008",
+      "owner": "flow",
+      "title": "Fixed-set flow version comparison",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/api/routes_flow_workspace.py",
+        "src/renderer/components/flowchart/FlowWorkspacePanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U009",
+      "owner": "flow",
+      "title": "Run to selected node and invalidate stale results",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/flowchart_engine.py",
+        "src/renderer/stores/useFlowchartStore.ts"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "passed",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U010",
+      "owner": "flow",
+      "title": "Reusable subgraph templates and explicit cross-project mapping",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/flow_workspace.py",
+        "src/renderer/components/flowchart/FlowWorkspacePanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U011",
+      "owner": "flow",
+      "title": "Human-readable decision evidence",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/flowchart/flowWorkspace.ts"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U012",
+      "owner": "flow",
+      "title": "Flow workspace navigation and draft/saved/deployed states",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/flowchart/FlowchartStudio.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-flow.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "passed",
+        "failure": "passed",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U013",
+      "owner": "data",
+      "title": "Unified data readiness including blur/exposure/near duplicate diagnostics",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/data_workbench.py",
+        "src/renderer/components/dataset/DataReadinessPanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "passed",
+        "failure": "passed",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U014",
+      "owner": "data",
+      "title": "Non-destructive image edit with annotation transforms and version history",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/data_workbench.py",
+        "src/renderer/components/labeling/DerivedImagePanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "pending",
+        "failure": "passed",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U015",
+      "owner": "data",
+      "title": "Review prioritization for errors/disagreements/threshold cases",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/data_workbench.py",
+        "src/renderer/components/labeling/SavedReviewQueuePanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U016",
+      "owner": "data",
+      "title": "Resumable review queue and origin return",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+        "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U017",
+      "owner": "training",
+      "title": "Auto-training budgets and progress",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/automated_trials.py",
+        "src/renderer/components/training/AutoDLWorkbench.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U018",
+      "owner": "data",
+      "title": "Korean condition labeling with image examples and configurable real VLM provider",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/korean_condition_vlm.py",
+        "src/renderer/components/labeling/KoreanConditionLabeler.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U019",
+      "owner": "training",
+      "title": "Explicit anomaly image-versus-region purpose and evaluation profile",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/trainer.py",
+        "src/renderer/components/training/TrainingController.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U020",
+      "owner": "data",
+      "title": "Independent object direction targets alongside axial OBB angle",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/rotated_detection.py",
+        "src/renderer/components/training/RotatedBoxFitting.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-data.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U021",
+      "owner": "delivery",
+      "title": "Generic server connection wizard with real input preflight",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/compute/ServerConnectionWizard.tsx",
+        "backend/api/routes_product_delivery.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U022",
+      "owner": "delivery",
+      "title": "Device capability, live verification and approval state separation",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/product_delivery.py",
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U023",
+      "owner": "delivery",
+      "title": "PLC/MES forms, advanced JSON and local receiver tests",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/protocol_exercise.py",
+        "src/renderer/components/runtime/ProtocolSettingsPanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U024",
+      "owner": "delivery",
+      "title": "Dedicated operator inspection workspace",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/runtime/OperatorWorkspace.tsx",
+        "backend/engine/managed_service.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U025",
+      "owner": "delivery",
+      "title": "Install/update/compatibility checks and redacted diagnostics",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx",
+        "backend/engine/product_delivery.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U026",
+      "owner": "shared",
+      "title": "Common buttons/forms/status/loading/errors",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/App.tsx",
+        "src/renderer/index.css",
+        "backend/api/shared_authorization.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U027",
+      "owner": "shared",
+      "title": "Names and next actions in basic view, technical details collapsed",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/training/ProjectImagePicker.tsx",
+        "src/renderer/components/runtime/ProtocolSettingsPanel.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U028",
+      "owner": "shared",
+      "title": "Collapsible guidance, larger imagery and legible training visualization",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/common/OperatorGuidanceBanner.tsx",
+        "src/renderer/components/training/OscilloscopeLossCurve.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "passed",
+        "reopen": "passed",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U029",
+      "owner": "shared",
+      "title": "Text-and-color states and keyboard focus/navigation",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/common/WorkspaceDialog.tsx",
+        "src/renderer/components/common/ImagePickerModal.tsx",
+        "src/renderer/index.css"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "passed",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U030",
+      "owner": "acceptance",
+      "title": "GUI, persistence, reopen, error/cancel and downstream handoff acceptance",
+      "status": "integration_verified",
+      "implementation": [
+        "scripts/verify_product_upgrade.py",
+        "docs/product-upgrade-program.json"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U031",
+      "owner": "delivery",
+      "title": "SDK dependency and installation readiness for Python/C++/C#",
+      "status": "integration_verified",
+      "implementation": [
+        "backend/engine/product_delivery.py",
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U032",
+      "owner": "training",
+      "title": "Clear replica-DDP, frozen-encoder and finite search capability boundaries",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/training/ModelFamilyCatalog.tsx",
+        "src/renderer/components/training/AutoDLWorkbench.tsx"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-training.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    },
+    {
+      "id": "U033",
+      "owner": "delivery",
+      "title": "Explicit hardware verification matrix for GPU/MIG/NPU/Edge",
+      "status": "integration_verified",
+      "implementation": [
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx",
+        "backend/engine/product_delivery.py"
+      ],
+      "evidence": [
+        "docs/implementation-ledger/UPGRADE-delivery.md",
+        "docs/implementation-ledger/UPGRADE-integration.md"
+      ],
+      "acceptance": {
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending"
+      }
+    }
+  ],
+  "verification": {
+    "date": "2026-10-01",
+    "backend": {
+      "passed": 1555,
+      "skipped": 27,
+      "failures": 0,
+      "log_sha256": "1fbc3686b8c83e4a525a04c1391d9580d4148f08aaa1b6a20b0afde8c6301472"
+    },
+    "frontend": {
+      "passed": 115,
+      "failures": 0,
+      "log_sha256": "f28713104c75eed5d34b23293cd330f052630b526adce72284807ecc7f031cac"
+    },
+    "typecheck": "passed",
+    "scope": "All approved requirements have implementation and integration evidence. Individual native acceptance remains pending where the complete route was not exercised. External hardware/provider execution and manufacturing quality are not approved.",
+    "packaging": {
+      "passed": 40,
+      "failures": 0,
+      "signed": false,
+      "log_sha256": "db01def53f69b68e0560c06d13a9ca48debba43ae8d9fb2429ed55415c680b1a"
+    },
+    "native_evidence": "docs/implementation-ledger/UPGRADE-integration.md#final-regression-and-native-repair-acceptance"
+  }
+}

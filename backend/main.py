@@ -52,6 +52,10 @@ from backend.api.routes_dataset_metadata import router as dataset_metadata_route
 from backend.api.routes_evaluation import router as evaluation_router
 from backend.api.routes_evaluation_history import router as evaluation_history_router
 from backend.api.routes_export import router as export_router
+from backend.api.routes_data_workbench import router as data_workbench_router
+from backend.api.routes_flow_workspace import router as flow_workspace_router
+from backend.api.routes_training_workspace import router as training_workspace_router
+from backend.api.routes_product_delivery import router as product_delivery_router
 from backend.api.routes_flowchart import router as flowchart_router
 from backend.api.routes_inspections import router as inspections_router
 from backend.api.routes_label_suggestions import router as label_suggestions_router
@@ -268,6 +272,10 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(provenance_router)
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)
+    app.include_router(data_workbench_router)
+    app.include_router(flow_workspace_router)
+    app.include_router(training_workspace_router)
+    app.include_router(product_delivery_router)
     app.include_router(flowchart_router)
     app.include_router(inspections_router)
     app.include_router(export_router)

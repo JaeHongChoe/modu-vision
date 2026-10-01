@@ -45,6 +45,10 @@ def _shape(item,width,height):
         shape['rotated_bbox']=rb
     elif kind=='tag': shape['is_normal']=bool(item.get('is_normal'))
     else: raise ValueError(f'Unsupported shape: {kind}. Brush masks require a raster-mask workflow.')
+    if item.get('direction_deg') is not None:
+        direction=_number(item['direction_deg'])
+        if not 0<=direction<360:raise ValueError('Object direction must be [0,360)')
+        shape['direction_deg']=direction
     return shape
 
 def _row(row):
@@ -71,10 +75,12 @@ def export_annotations(images,format):
                     points=[[cx+x*math.cos(rad)-y*math.sin(rad),cy+x*math.sin(rad)+y*math.cos(rad)] for x,y in [(-w/2,-h/2),(w/2,-h/2),(w/2,h/2),(-w/2,h/2)]]
                     st='polygon'; flags={'studio_rotated_bbox':a['rotated_bbox']}
                 else: points=[]; st='tag'; flags={'studio_tag':True,'is_normal':a.get('is_normal',False)}
+                if a.get('direction_deg') is not None:flags['studio_direction_deg']=a['direction_deg']
                 shapes.append({'label':a['label'],'points':points,'shape_type':st,'group_id':None,'flags':flags})
             documents.append({'version':'5.0.0','flags':{},'imagePath':row['file_name'],'imageData':None,
                               'imageWidth':row['width'],'imageHeight':row['height'],'shapes':shapes})
         return {'format':'labelme','documents':documents}
+    if format in {'coco','yolo'} and any(a.get('direction_deg') is not None for row in rows for a in row['annotations']):raise ValueError('Direction targets require LabelMe or native annotation export')
     if format=='coco':
         result={'images':[],'categories':[{'id':i+1,'name':label} for i,label in enumerate(classes)],'annotations':[]}
         for image_id,row in enumerate(rows,1):
@@ -122,6 +128,7 @@ def import_annotations(payload,format):
                     x1,y1=points[0]; x2,y2=points[1]; a.update(type='bbox',bbox=[min(x1,x2),min(y1,y2),max(x1,x2),max(y1,y2)])
                 elif kind=='polygon': a.update(type='polygon',polygon=points)
                 else: raise ValueError(f'Unsupported LabelMe shape: {kind}')
+                if flags.get('studio_direction_deg') is not None:a['direction_deg']=flags['studio_direction_deg']
                 row['annotations'].append(a)
             rows.append(_row(row))
     elif format=='coco':

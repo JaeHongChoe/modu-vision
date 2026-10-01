@@ -14,7 +14,7 @@ export function RotatedBoxFitting({source,scope,onAppend}:{source:string;scope:s
   const images=useDatasetStore(state=>state.images);
   const [image,setImage]=useState('');const [mode,setMode]=useState<Mode>('center');
   const [points,setPoints]=useState<Point[]>([]);const [preview,setPreview]=useState<Preview|null>(null);const [fit,setFit]=useState<Fit|null>(null);
-  const [label,setLabel]=useState('defect');const [split,setSplit]=useState('train');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+  const [direction,setDirection]=useState('');const [label,setLabel]=useState('defect');const [split,setSplit]=useState('train');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
   const current=useRef(`${scope}/${image}`);current.current=`${scope}/${image}`;
   const mounted=useRef(true);useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
   useEffect(()=>{setImage('');setPoints([]);setFit(null);setPreview(null);setError('');},[scope]);
@@ -32,7 +32,9 @@ export function RotatedBoxFitting({source,scope,onAppend}:{source:string;scope:s
     if(!fit||!label.trim())return;
     const relative=image.slice(source.replace(/\/+$/,'').length+1);
     if(!relative||relative===image){setError('현재 원본 폴더 안의 이미지를 선택하세요.');return;}
-    const box=fit.box;onAppend(`${relative}\t${label.trim()}\t${[box.cx,box.cy,box.width,box.height,box.angle_deg].map(v=>Number(v.toFixed(4))).join(',')}\t${split}`);
+    const value=direction.trim()?Number(direction):undefined;
+    if(value!==undefined&&(!Number.isFinite(value)||value<0||value>=360)){setError('객체 방향은 0° 이상 360° 미만이어야 합니다.');return;}
+    const box=fit.box;onAppend(`${relative}\t${label.trim()}\t${[box.cx,box.cy,box.width,box.height,box.angle_deg].map(v=>Number(v.toFixed(4))).join(',')}\t${split}${value===undefined?'':`\t${value}`}`);
     setPoints([]);setFit(null);
   };
   return <section className="space-y-3 rounded border border-[#344255] bg-[#0E1722] p-3">
@@ -52,7 +54,8 @@ export function RotatedBoxFitting({source,scope,onAppend}:{source:string;scope:s
     </svg>}
     <div className="flex flex-wrap items-end gap-2"><button type="button" className={programButton} disabled={points.length<3||busy} onClick={()=>void fitBox()}>회전 박스 맞추기</button><button type="button" className={programButton} onClick={()=>{setPoints([]);setFit(null);}}>점 다시 그리기</button>
       <label>라벨<input className={programInput} value={label} onChange={event=>setLabel(event.target.value)}/></label><label>데이터 분할<select className={programInput} value={split} onChange={event=>setSplit(event.target.value)}><option value="train">학습</option><option value="val">검증</option><option value="test">시험</option></select></label>
-      <button type="button" className={programButton} disabled={!fit||!label.trim()||busy} onClick={append}>정답 표에 추가</button>
+      <label>객체 방향 (선택, 0–360°)<input aria-label="회전 객체 독립 방향" type="number" min="0" max="359.999" step=".1" value={direction} onChange={event=>setDirection(event.target.value)} className={programInput}/></label>
+      <button type="button" className={programButton} disabled={!fit||!label.trim()||busy} onClick={append}>정답 표에 추가</button><p className="w-full text-slate-400">축 회전은 180° 주기, 객체 방향은 머리·꼬리를 구분하는 360° 타깃입니다. 방향 학습을 사용하면 모든 객체의 방향을 입력하세요.</p>
     </div>{fit&&<p className="text-cyan-300">중심 ({fit.box.cx.toFixed(1)}, {fit.box.cy.toFixed(1)}) · {fit.box.width.toFixed(1)} × {fit.box.height.toFixed(1)} px · {fit.box.angle_deg.toFixed(1)}°</p>}{error&&<p role="alert" className="text-rose-300">{error}</p>}
   </section>;
 }

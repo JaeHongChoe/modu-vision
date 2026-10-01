@@ -1,7 +1,8 @@
 import {request, type LabelSuggestion} from './api';
-export interface FoundationConfiguration {model_dir?:string|null;mask_model_dir?:string|null;feature_backbone?:string;feature_checkpoint?:string|null;feature_sha256?:string|null}
+export interface VLMConfiguration {enabled:boolean;endpoint:string;model:string;api_key_env?:string|null;timeout_seconds?:number;max_tokens?:number}
+export interface FoundationConfiguration {vlm?:VLMConfiguration;model_dir?:string|null;mask_model_dir?:string|null;feature_backbone?:string;feature_checkpoint?:string|null;feature_sha256?:string|null}
 export interface ProviderReadiness {ready:boolean;error:string|null;limits:string;dependency_available:boolean;model_dir?:string|null;mask_model_dir?:string|null}
-export interface FoundationSetup {configuration:FoundationConfiguration;providers:{foundation:ProviderReadiness;grounding_dino:ProviderReadiness};labelset_id:string;labelset_version:string}
+export interface FoundationSetup {can_configure_vlm?:boolean;configuration:FoundationConfiguration;providers:{foundation:ProviderReadiness;grounding_dino:ProviderReadiness;vlm?:ProviderReadiness};labelset_id:string;labelset_version:string}
 export interface RegionExample {image_path:string;roi:[number,number,number,number]}
 export interface FoundationPoint {x:number;y:number;label:0|1}
 export interface SizeControls {min_area:number;max_area?:number;min_width:number;max_width?:number;min_height:number;max_height?:number}

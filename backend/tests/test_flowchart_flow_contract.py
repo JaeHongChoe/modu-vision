@@ -384,7 +384,8 @@ def test_run_without_inline_pipeline_uses_active_project_flow(monkeypatch, tmp_p
     from backend.main import create_app
 
     monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
-    image = tmp_path / "inspection.png"
+    image = tmp_path / "project_a" / "inspection.png"
+    image.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(image), np.zeros((16, 16, 3), dtype=np.uint8))
     app = create_app(project_dir=str(tmp_path / "workspaces"))
     client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})
@@ -798,7 +799,8 @@ def test_run_uses_active_mixed_flow_revision_when_pipeline_omitted(monkeypatch, 
     from backend.main import create_app
 
     monkeypatch.setattr(routes_flowchart, "DEFAULT_PIPELINE_FILE", tmp_path / "legacy" / "pipeline.json")
-    image = tmp_path / "inspection.png"
+    image = tmp_path / "project_a" / "inspection.png"
+    image.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(image), np.zeros((16, 16, 3), dtype=np.uint8))
     app = create_app(project_dir=str(tmp_path / "workspaces"))
     client = TestClient(app, headers={"X-Vision-Token": app.state.api_token})

@@ -84,6 +84,7 @@ export interface AnnotationItem {
   category_id?: number;
   bbox?: [number, number, number, number]; // [xmin, ymin, xmax, ymax]
   rotated_bbox?: [number, number, number, number, number]; // [cx, cy, width, height, angle_degrees]
+  direction_deg?: number; // Independent directed angle in [0, 360), never inferred from the axial box.
   polygon?: Array<[number, number]>;
   points?: Array<[number, number]>;
   mask_rle?: string;
@@ -347,6 +348,8 @@ export interface FlowchartExecutionStep {
 
 export interface FlowchartExecutionResult {
   status: string;
+  stop_node_id?: string | null;
+  graph_sha256?: string | null;
   final_verdict: 'OK' | 'NG' | 'REVIEW';
   is_ok: boolean;
   rejection_reason: string;

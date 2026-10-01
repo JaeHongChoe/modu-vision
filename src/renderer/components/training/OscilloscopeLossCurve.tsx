@@ -199,8 +199,8 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1.5">
             <Activity className="w-3.5 h-3.5 text-blue-400" />
-            <span className="font-mono text-[11px] font-bold tracking-wider text-slate-200">
-              CRT OSCILLOSCOPE DS-9000V
+            <span className="font-mono text-xs font-bold tracking-wider text-slate-200">
+              {language==='ko'?'학습·검증 손실 변화':'Training and validation loss'}
             </span>
           </div>
 
@@ -209,14 +209,14 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
             <button
               type="button"
               onClick={() => setChannelFilter(channelFilter === 'ch1' ? 'all' : 'ch1')}
-              className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[2px] border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[2px] border text-xs font-mono font-bold transition-all cursor-pointer ${
                 channelFilter === 'ch1' || channelFilter === 'all'
                   ? 'bg-[#0B1528] border-[#3B82F6] text-[#3B82F6]'
                   : 'bg-[#0B0E14] border-[#1E293B] text-slate-500'
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" />
-              <span>CH1: TRAIN</span>
+              <span>{language==='ko'?'학습 손실':'Train loss'}</span>
               <span className="text-slate-100 tabular-nums">
                 {trainLoss !== null ? trainLoss.toFixed(4) : '--'}
               </span>
@@ -226,14 +226,14 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
             <button
               type="button"
               onClick={() => setChannelFilter(channelFilter === 'ch2' ? 'all' : 'ch2')}
-              className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[2px] border text-[10px] font-mono font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[2px] border text-xs font-mono font-bold transition-all cursor-pointer ${
                 channelFilter === 'ch2' || channelFilter === 'all'
                   ? 'bg-[#1F1707] border-[#F59E0B] text-[#F59E0B]'
                   : 'bg-[#0B0E14] border-[#1E293B] text-slate-500'
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-              <span>CH2: VAL</span>
+              <span>{language==='ko'?'검증 손실':'Validation loss'}</span>
               <span className="text-slate-100 tabular-nums">
                 {valLoss !== null ? valLoss.toFixed(4) : '--'}
               </span>
@@ -248,7 +248,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
             <button
               type="button"
               onClick={() => setScaleMode('linear')}
-              className={`px-2 py-0.5 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold transition-all cursor-pointer ${
                 scaleMode === 'linear'
                   ? 'bg-[#2B3547] text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
@@ -259,7 +259,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
             <button
               type="button"
               onClick={() => setScaleMode('db')}
-              className={`px-2 py-0.5 rounded-[2px] text-[10px] font-mono font-bold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded-[2px] text-xs font-mono font-bold transition-all cursor-pointer ${
                 scaleMode === 'db'
                   ? 'bg-[#2B3547] text-slate-100'
                   : 'text-slate-400 hover:text-slate-200'
@@ -525,7 +525,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
         </svg>
 
         {/* Floating Telemetry HUD Badge (Top-Right) */}
-        <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] p-2 text-[10px] font-mono tabular-nums pointer-events-none">
+        <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] p-2 text-xs font-mono tabular-nums pointer-events-none">
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-300">
             <div>
               <span className="text-slate-500 mr-1.5">EPOCH:</span>
@@ -551,7 +551,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                 {valLoss !== null ? valLoss.toFixed(4) : '--'}
               </span>
             </div>
-            <div className="col-span-2 border-t border-[#1E293B] pt-0.5 mt-0.5 flex justify-between text-[9px]">
+            <div className="col-span-2 border-t border-[#1E293B] pt-0.5 mt-0.5 flex justify-between text-xs">
               <span className="text-slate-500">TIME REMAINING:</span>
               <span className="font-bold text-amber-400">{formatTime(etaSeconds)}</span>
             </div>
@@ -561,7 +561,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
         {/* Hover Readout Tooltip Card */}
         {hoverPoint && mousePos && (
           <div
-            className="absolute z-20 pointer-events-none bg-[#131822] border border-[#3B82F6] rounded-[3px] p-2 text-[10px] font-mono tabular-nums text-slate-200"
+            className="absolute z-20 pointer-events-none bg-[#131822] border border-[#3B82F6] rounded-[3px] p-2 text-xs font-mono tabular-nums text-slate-200"
             style={{
               left: Math.min(mousePos.x + 12, svgWidth - 160),
               top: Math.max(10, Math.min(mousePos.y - 40, svgHeight - 80)),
@@ -580,7 +580,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                 <span className="font-bold text-slate-100">{hoverPoint.valLoss !== null ? hoverPoint.valLoss.toFixed(4) : '--'}</span>
               </div>
               {hoverPoint.lr && (
-                <div className="flex justify-between space-x-3 text-slate-400 text-[9px]">
+                <div className="flex justify-between space-x-3 text-slate-400 text-xs">
                   <span>Learning Rate:</span>
                   <span>{hoverPoint.lr.toExponential(2)}</span>
                 </div>
@@ -591,7 +591,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
       </div>
 
       {/* Oscilloscope Chassis Footer Ticks */}
-      <div className="flex items-center justify-between pt-2 mt-1 text-[9px] font-mono text-slate-500">
+      <div className="flex items-center justify-between pt-2 mt-1 text-xs font-mono text-slate-500">
         <div>TIMEBASE: 1.0 EPOCH/DIV • SAMPLING: 10Hz REALTIME</div>
         <div>BANDWIDTH: FULL CONVERGENCE • TRIGGER: AUTO</div>
       </div>

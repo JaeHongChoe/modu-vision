@@ -190,6 +190,8 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         raise HTTPException(status_code=500, detail=f"Could not write flow package: {exc}") from exc
 
     result["parity"] = {"status": "not_run"}
+    from backend.engine.product_delivery import record_package
+    record_package(project,Path(result['package_path']),version_id=req.version_id,recipe_task=req.recipe_task,parity=result['parity'])
     if req.verification_image_path:
         try:
             report = verify_flow_parity(
@@ -208,6 +210,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
                 "package_path": result["package_path"], "parity": report,
             })
         result["parity"] = report
+        record_package(project,Path(result['package_path']),version_id=req.version_id,recipe_task=req.recipe_task,parity=report)
     return result
 
 

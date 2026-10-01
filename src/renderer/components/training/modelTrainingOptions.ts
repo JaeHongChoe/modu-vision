@@ -21,9 +21,10 @@ export const dinoSyntheticDefaults: DinoSyntheticTrainingOptions = {
 };
 
 export function trainingModelOverrides(task: VisionTask, model: string, checkpoint = '',
-  syntheticOptions: Partial<DinoSyntheticTrainingOptions> = {}): Record<string, unknown> {
+  syntheticOptions: Partial<DinoSyntheticTrainingOptions> = {}, purpose: 'image' | 'region' = 'image'): Record<string, unknown> {
   if (!modelChoices[task].some(choice => choice.value === model)) throw new Error('현재 검사 종류와 맞는 모델을 선택하세요.');
   const options: Record<string, unknown> = task === 'segmentation' ? {model_name: model} : task === 'anomaly' ? {anomaly_method: model} : {backbone: model};
+  if (task === 'anomaly') options.anomaly_mode = purpose === 'region' ? 'segmentation' : 'classification';
   if (task === 'anomaly' && model === 'dino_synthetic') {
     const selected = {...dinoSyntheticDefaults, ...syntheticOptions};
     if (!['dinov3_vits16', 'dinov3_vitb16', 'dinov3_vitl16'].includes(selected.anomaly_backbone)) throw new Error('지원하는 DINOv3 백본을 선택하세요.');

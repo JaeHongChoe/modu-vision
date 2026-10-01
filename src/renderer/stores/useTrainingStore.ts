@@ -93,6 +93,11 @@ interface TrainingState {
   isRecoveringTraining: boolean;
   isStopRequestPending: boolean;
   stopError: string | null;
+  nextBatchSize: number | null;
+  nextDevice: string | null;
+  remediationNotice: string | null;
+  setNextSettings: (settings: {batchSize?: number; device?: string}) => void;
+  setRemediationNotice: (notice: string | null) => void;
   preset: TrainingPreset;
   currentEpoch: number;
   totalEpochs: number;
@@ -154,6 +159,11 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   isRecoveringTraining: false,
   isStopRequestPending: false,
   stopError: null,
+  nextBatchSize: null,
+  nextDevice: null,
+  remediationNotice: null,
+  setNextSettings: (settings) => set({...('batchSize' in settings ? {nextBatchSize: settings.batchSize} : {}), ...('device' in settings ? {nextDevice: settings.device} : {})}),
+  setRemediationNotice: (remediationNotice) => set({remediationNotice}),
   preset: 'fast',
   currentEpoch: 0,
   totalEpochs: 0,
@@ -194,6 +204,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       const readiness = trainingComputeReadiness(compute.probeResults[selectedProfileId], task, get().preset, modelOverrides, !!warmStartParentJobId);
       if (!profile || !readiness.ready) throw new Error(readiness.reason);
     }
+    const batch = get().nextBatchSize;
+    if(batch !== null && (!Number.isInteger(batch) || batch < 1 || batch > 128)) throw new Error('배치 크기는 1~128 정수여야 합니다.');
     trainingRecoverySequence += 1;
     pendingStartEvents = [];
     set({
@@ -227,7 +239,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         preset: get().preset,
         dataset_path: datasetPath,
         ...(warmStartParentJobId ? { warm_start_job_id: warmStartParentJobId } : {}),
-        ...(modelOverrides ? { config_overrides: modelOverrides } : {}),
+        config_overrides: {...modelOverrides, ...(get().nextBatchSize ? {batch_size: get().nextBatchSize} : {})},
+        ...(!selectedProfileId && get().nextDevice && get().nextDevice!=='auto' ? {device: get().nextDevice!} : {}),
         ...(selectedProfileId ? { compute_profile_id: selectedProfileId } : {}),
       });
       const res = await startRequest;

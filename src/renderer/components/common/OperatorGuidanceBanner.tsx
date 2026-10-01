@@ -31,7 +31,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
   step,
   className = '',
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(()=>{try{return localStorage.getItem('vision-step-guidance')==='expanded';}catch{return false;}});
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const guidance = STEP_GUIDANCE_DATA[step];
 
@@ -67,7 +67,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
             {/* Toggle Expand / Collapse */}
             <button
               type="button"
-              onClick={() => setIsExpanded(!isExpanded)}
+              aria-expanded={isExpanded} onClick={() => {setIsExpanded(!isExpanded);try{localStorage.setItem('vision-step-guidance',isExpanded?'collapsed':'expanded');}catch{}}}
               className="flex items-center space-x-1 px-2 py-1 rounded text-slate-400 hover:text-slate-200 hover:bg-[#1A212E] border border-transparent hover:border-[#2B3547] transition-colors cursor-pointer text-[11px]"
             >
               <span>{isExpanded ? '가이드 접기' : '가이드 펼치기'}</span>
