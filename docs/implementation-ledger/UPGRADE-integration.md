@@ -69,3 +69,10 @@ Two old backend tests initially failed after the new project-image boundary guar
 After the final native restart, all 171 original file paths and content hashes still exactly matched the pre-QA manifest. The final serialized manifest SHA256 is `e3d79f35552d28d0b86932a2ae271c0cb950b435f3eb3fa0dd4e8edfc01398ac` (serialization differs from the earlier snapshot; source content did not change).
 
 Every requirement is integration verified. Native acceptance fields are marked only for observed routes; unexercised complete routes stay pending. The release bundle is an unsigned local QA build. New public changes were checked for company references, personal paths, secrets and accidental artifact/symlink inclusion. Existing remote commit history is preserved and is not claimed to have been scrubbed.
+
+## Publication status
+
+- Implementation commit `c603418` was fast-forwarded into the clean local `main` checkout.
+- HTTPS push failed because no usable credential was found; explicit existing SSH identities also returned `Permission denied (publickey)`. This is an authentication prerequisite, not a test failure.
+- Remote `main` remains at baseline `02b67318c834bd364610d409471c2306c2681d24` at the readback check. Do not report the delivery as pushed until a subsequent authenticated push and remote HEAD readback succeed.
+- The complete reviewed source, plan, Korean summary, registry and validation receipts are preserved locally. The publication checkbox remains pending.
