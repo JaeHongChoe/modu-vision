@@ -90,10 +90,8 @@ def prepare(req: Prepare, request: Request):
         selected = req.image_paths
         if req.image_limit is not None:
             if selected is None:
-                from backend.engine.enhancement import _EXTENSIONS
-                selected = [p.relative_to(source).as_posix() for p in sorted(source.rglob('*'))
-                            if p.is_file() and not p.is_symlink() and p.suffix.lower() in _EXTENSIONS
-                            and not any(part.startswith('.') for part in p.relative_to(source).parts)]
+                from backend.engine.model_execution import eligible_preparation_paths
+                selected=[p.relative_to(source).as_posix() for p in eligible_preparation_paths(source,'enhancement')]
             selected = selected[:req.image_limit]
         return prepare_enhancement(source, destination, seed=req.seed, noise_sigma=req.noise_sigma, image_paths=selected)
     except (ValueError, OSError) as exc:

@@ -91,3 +91,21 @@ def test_completed_remote_ocr_reopens_in_native_model_selector_and_prediction(tm
     assert remote_prediction.json()['model_id']==native
     assert isinstance(remote_prediction.json()['predictions']['text'],str)
     assert remote_prediction.json()['overlay_base64'].startswith('data:image/png;base64,')
+    inventory=admin.get('/api/training-workspace/tasks').json()['tasks']
+    row=next(row for row in inventory if row.get('execution_job_id')==identifier)
+    assert row['model_id']==native and row['dataset_path']==str(owned)
+    assert sum(row.get('model_id')==native for row in inventory)==1
+    checkpoint=Path(project['models_dir'])/'ocr'/native/'best_model.pt'
+    before=checkpoint.read_bytes()
+    child=admin.post('/api/compute/jobs',json={'task':'ocr','dataset_path':str(source),'family_dataset_path':str(owned),
+        'compute_profile_id':'loopback','device':'cpu','warm_start_job_id':native,
+        'config_overrides':{'epochs':1,'image_size':32,'image_width':64,'batch_size':2}})
+    assert child.status_code==202,child.text
+    for _ in range(300):
+        status=admin.get('/api/compute/jobs/'+child.json()['job_id']).json()
+        if status['status'] in ('completed','failed','aborted'):break
+        time.sleep(.02)
+    assert status['status']=='completed',status
+    payload=torch.load(Path(project['models_dir'])/'ocr'/child.json()['model_id']/'best_model.pt',map_location='cpu',weights_only=True)
+    assert payload['warm_start']['parent_job_id']==native
+    assert checkpoint.read_bytes()==before

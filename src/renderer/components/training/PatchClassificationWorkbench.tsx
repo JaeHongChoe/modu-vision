@@ -1,7 +1,7 @@
+import {openModelFlow} from './ProgramWorkbenchControls';
 import { useEffect, useState } from 'react';
 import { Grid2X2 } from 'lucide-react';
 import { modelTrainingProgram, type LocalTrainingDevice } from '../../services/modelTrainingProgram';
-import { useProjectStore } from '../../stores/useProjectStore';
 import { useProgramWorkbench } from './useProgramWorkbench';
 import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
@@ -38,7 +38,7 @@ export function PatchClassificationWorkbench() {
     if (state.isCurrent()) {state.setJob(row); setEvaluation(null);}
   });
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
-    <TrainingPreparationPanel family="patch_classification" model={backbone} checkpoint={checkpoint} device={device} onCheckpointChange={setCheckpoint} />
+    <TrainingPreparationPanel family="patch_classification" model={backbone} checkpoint={checkpoint} device={device} datasetPath={state.dataset?.dataset_path} warmStartJobId={parent||undefined} config={{backbone,epochs,batch_size:batch,image_size:imageSize,learning_rate:learningRate}} onCheckpointChange={setCheckpoint} />
     <h2 className="mt-4 flex items-center gap-2 text-base font-semibold"><Grid2X2 className="h-5 w-5 text-cyan-300" />고해상도 패치 분류</h2>
     <p className="mt-2 leading-5 text-slate-400">검수한 영역 라벨에서 원본 좌표의 패치를 준비하고 DINOv3로 분류합니다. 원본 이미지·라벨 해시와 이미지별 분할을 함께 저장합니다.</p>
     <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -66,7 +66,7 @@ export function PatchClassificationWorkbench() {
     <ProgramJobStatus job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} />
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 패치 분류 후보"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · {row.job_id.slice(-6)}</option>)}</select></ProgramField></div>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('시험 평가', async () => {const result = await modelTrainingProgram.patch.evaluate(state.modelId); if (state.isCurrent()) setEvaluation(result);})}>시험 평가</button>
-      <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void useProjectStore.getState().setStep(5)}>플로우에 연결</button>
+      <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void openModelFlow('patch_classification',state.modelId,state.dataset?.dataset_path)}>플로우에 연결</button>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('모델 내보내기', async () => {const result = await modelTrainingProgram.patch.export(state.modelId); if (state.isCurrent()) state.setNotice(`독립 실행 패키지: ${result.package_path || result.package_dir || JSON.stringify(result)}`);})}>TorchScript 내보내기</button>
     </div>
     {evaluation && <div className="mt-3 rounded border border-[#344255] p-3"><p className="font-semibold text-cyan-200">저장된 패치 시험 평가</p><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap text-slate-400">{JSON.stringify({metrics:evaluation.metrics,confusion_matrix:evaluation.confusion_matrix,evaluation_id:evaluation.evaluation_id,dataset_provenance:evaluation.dataset_provenance}, null, 2)}</pre></div>}

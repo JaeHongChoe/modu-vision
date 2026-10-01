@@ -75,8 +75,10 @@ const appOutDir = process.env.VISION_AI_STUDIO_PACKAGE_DIR
   : path.join(ROOT_DIR, 'release', 'mac-arm64');
 assert(fs.existsSync(appOutDir), 'release/mac-arm64/ directory exists');
 
-const appBundle = path.join(appOutDir, 'Vision AI Studio.app');
-assert(fs.existsSync(appBundle), 'Vision AI Studio.app application bundle exists');
+const appBundleName = process.env.VISION_AI_STUDIO_APP_BUNDLE || 'Vision AI Studio.app';
+if (path.basename(appBundleName) !== appBundleName || !appBundleName.endsWith('.app')) throw new Error('App bundle name must be a plain .app filename');
+const appBundle = path.join(appOutDir, appBundleName);
+assert(fs.existsSync(appBundle), `${appBundleName} application bundle exists`);
 
 const contentsDir = path.join(appBundle, 'Contents');
 const macOSDir = path.join(contentsDir, 'MacOS');
@@ -94,7 +96,7 @@ const asar = require('@electron/asar');
 const compiledFiles = [
   'dist/index.html',
   ...assetFiles.map(name => `dist/assets/${name}`),
-  ...['main/index.js', 'main/supervisor.js', 'main/ipc.js', 'preload/index.js'].map(name => `dist-electron/${name}`),
+  ...['main/index.js', 'main/supervisor.js', 'main/ipc.js', 'main/distributionStatus.js', 'preload/index.js'].map(name => `dist-electron/${name}`),
 ];
 const staleAssets = compiledFiles.filter(relative => {
   try {

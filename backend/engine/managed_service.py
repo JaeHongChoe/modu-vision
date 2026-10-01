@@ -56,18 +56,23 @@ class ManagedService:
         if self.config_path.is_symlink():raise ValueError('Managed service state is linked')
         self.config=json.loads(self.config_path.read_text())
         if self.config.get('native_label'):
-            label=self.native_identity()
-            result=subprocess.run(['launchctl','print',f'gui/{os.getuid()}/{label}'],capture_output=True,text=True,timeout=5)
-            import re
-            match=re.search(r'\bpid = ([0-9]+)',result.stdout)
-            pid=int(match[1]) if match else None
-            if not pid:return None
+            from backend.engine.native_autostart import NativeAutostart
+            native=NativeAutostart(self);state=native.query();pid=state.get('pid')
             try:
-                # The operating system's exact app-owned label supplies the
-                # current PID after login/restart; commands still bind storage.
-                process=psutil.Process(pid);identity=process_identity(process,self.root/'state')
-                return owned_inspection_process(identity,self.root/'state')
-            except (psutil.Error,ValueError):return None
+                if pid:
+                    process=psutil.Process(pid);identity=process_identity(process,self.root/'state')
+                    return owned_inspection_process(identity,self.root/'state')
+                if native.system=='Windows' and state.get('registered'):
+                    # Task Scheduler does not expose its child PID; exact state-dir
+                    # and inspection command checks still establish ownership.
+                    for process in psutil.process_iter(['pid']):
+                        try:
+                            identity=process_identity(process,self.root/'state')
+                            owned=owned_inspection_process(identity,self.root/'state')
+                            if owned:return owned
+                        except (psutil.Error,ValueError):continue
+            except (psutil.Error,ValueError):pass
+            return None
         return owned_inspection_process(self.config,self.root/'state')
     def readback(self):
         if self.owned_process() is None:return {'status':'stopped','port':self.config['port']}
@@ -76,7 +81,8 @@ class ManagedService:
                 response=client.get('/v1/runtime');response.raise_for_status();return response.json()
         except (httpx.HTTPError,ValueError):return {'status':'disconnected','port':self.config['port']}
     def state(self):
-        return {'runtime':self.readback(),'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config()}
+        from backend.engine.native_autostart import NativeAutostart
+        return {'runtime':self.readback(),'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config(),'native_install':NativeAutostart(self).query()}
     def input_arguments(self,release):
         path=self.root/'inputs.json'
         if path.is_symlink():raise ValueError('Input configuration cannot follow links')
@@ -150,18 +156,28 @@ class ManagedService:
     @serialized_lifecycle
     def start(self,release=None):
         if self.owned_process():return self.readback()
+        if self.config.get('native_label'):
+            from backend.engine.native_autostart import NativeAutostart
+            NativeAutostart(self).install()
+            deadline=time.monotonic()+20
+            while time.monotonic()<deadline:
+                result=self.readback()
+                if result.get('status')=='ready':return result
+                time.sleep(.1)
+            raise TimeoutError('Native service registered but runtime readiness timed out; inspect service.log')
         release=release or (self.ledger.active() or {}).get('release')
         if release is None:raise ValueError('Apply an approved package before starting the service')
         self.validate_accepted_device(release['package_path'],release.get('device','cpu'))
         resolve_runtime_device(release.get('device','cpu'))
-        arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])]
+        from backend.engine.service_bootstrap import runtime_command, runtime_cwd
+        arguments=runtime_command(['--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])])
         if release.get('input_root'):arguments+=['--input-root',release['input_root']]
         arguments+=self.input_arguments(release)
         adapter_path=self.root/'adapters.json'
         if adapter_path.exists():arguments+=['--adapter-config',str(adapter_path)]
         env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=self.config['token']
         # Runtime modules are loaded from this checkout, never from untrusted release code.
-        checkout=Path(__file__).resolve().parents[2]
+        checkout=runtime_cwd()
         log=(self.root/'service.log').open('ab')
         try:process=subprocess.Popen(arguments,cwd=checkout,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         finally:log.close()
@@ -179,7 +195,8 @@ class ManagedService:
     def stop(self):
         process=self.owned_process()
         if self.config.get('native_label'):
-            raise ValueError('Remove this app-owned automatic-start installation before manual stop/restart')
+            from backend.engine.native_autostart import NativeAutostart
+            return {**NativeAutostart(self).stop(),'status':'stopped'}
         if process:
             process.terminate()
             try:process.wait(timeout=12)
@@ -232,45 +249,18 @@ class ManagedService:
         return {'saved':True,'restart_required':self.owned_process() is not None}
     @serialized_lifecycle
     def install_files(self):
-        """Prepare native launch files; installation/activation is an explicit user control."""
-        import plistlib
-        directory=self.root/'install';directory.mkdir(exist_ok=True)
-        active=self.ledger.active()
-        if active is None:raise ValueError('An approved applied release is required')
-        release=active['release']
-        arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release['device'],'--port',str(self.config['port'])]
-        if release.get('input_root'):arguments+=['--input-root',release['input_root']]
-        arguments+=self.input_arguments(release)
-        if (self.root/'adapters.json').exists():arguments+=['--adapter-config',str(self.root/'adapters.json')]
-        label=self.native_identity()
-        plist=directory/(label+'.plist')
-        plist.write_bytes(plistlib.dumps({'Label':label,'ProgramArguments':arguments,'WorkingDirectory':str(Path(__file__).resolve().parents[2]),'EnvironmentVariables':{'VISION_INSPECTION_TOKEN':self.config['token']},'RunAtLoad':True,'KeepAlive':True,'StandardOutPath':str(self.root/'service.log'),'StandardErrorPath':str(self.root/'service.log')}))
-        plist.chmod(0o600)
-        # A portable launcher and native command instructions use the same verified runtime contract.
-        import shlex
-        launcher=directory/'start-service.sh';launcher.write_text('#!/bin/sh\ncd '+shlex.quote(str(Path(__file__).resolve().parents[2]))+'\nexport VISION_INSPECTION_TOKEN='+shlex.quote(self.config['token'])+'\nexec '+shlex.join(arguments)+'\n');launcher.chmod(0o700)
-        return {'files':[str(plist),str(launcher)],'macos_install_command':f'launchctl bootstrap gui/{os.getuid()} '+shlex.quote(str(plist)),'macos_uninstall_command':f'launchctl bootout gui/{os.getuid()}/'+label,'status':'prepared'}
+        if self.ledger.active() is None:raise ValueError('An approved applied release is required')
+        from backend.engine.native_autostart import NativeAutostart
+        return NativeAutostart(self).prepare()
 
     @serialized_lifecycle
     def activate_install(self):
-        """Activate only this app-owned login service after explicit UI action."""
-        import platform
-        if platform.system()!='Darwin':raise ValueError('Native automatic-start activation currently requires macOS; use the prepared launcher on this host')
-        prepared=self.install_files()
-        plist=Path(prepared['files'][0])
-        import plistlib
-        label=plistlib.loads(plist.read_bytes())['Label']
-        self.stop()
-        result=subprocess.run(['launchctl','bootstrap',f'gui/{os.getuid()}',str(plist)],capture_output=True,text=True,timeout=15)
-        if result.returncode:raise RuntimeError('Native login-service installation failed: '+result.stderr.strip())
-        self.config['native_label']=label;self.save(self.config)
-        return {'status':'installed','label':label,'readiness':'pending native service start','files':prepared['files']}
+        if self.ledger.active() is None:raise ValueError('An approved applied release is required')
+        from backend.engine.native_autostart import NativeAutostart
+        if not self.config.get('native_label'):self.stop()
+        return NativeAutostart(self).install()
+
     @serialized_lifecycle
     def uninstall_native(self):
-        label=self.config.get('native_label')
-        if not label:raise ValueError('No app-owned native service installation is recorded')
-        label=self.native_identity()
-        result=subprocess.run(['launchctl','bootout',f'gui/{os.getuid()}/{label}'],capture_output=True,text=True,timeout=15)
-        if result.returncode:raise RuntimeError('Native login-service removal failed: '+result.stderr.strip())
-        self.config.pop('native_label',None);self.save(self.config)
-        return {'status':'uninstalled'}
+        from backend.engine.native_autostart import NativeAutostart
+        return NativeAutostart(self).remove()

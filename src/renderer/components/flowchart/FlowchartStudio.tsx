@@ -29,7 +29,8 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
-import { api, resolveApiUrl, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
+import { api, resolveApiUrl,getApiPersistenceIdentity, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
+import {readModelFlowHandoff,clearModelFlowHandoff,bindModelToFlow,compatibleModelNode} from './modelFlowHandoff';
 import type { FlowNode, FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
 import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} from './FlowGeometryEditors';
 import { CustomNode } from './CustomNode';
@@ -173,6 +174,24 @@ export const FlowchartStudio: React.FC = () => {
   const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
   const [savedVersions, setSavedVersions] = useState<SavedFlowVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState('');
+  const [modelHandoffDismissed,setModelHandoffDismissed]=useState('');
+  const [handoffNode,setHandoffNode]=useState('');
+  const handoffState={...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()};
+  const modelHandoff=readModelFlowHandoff(localStorage,handoffState);
+  const offeredModel=modelHandoff&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`
+    ?modelCatalog.find(row=>row.job_id===modelHandoff.modelId&&row.task===modelHandoff.family):null;
+  const dismissModelHandoff=()=>{if(modelHandoff){clearModelFlowHandoff(localStorage,handoffState);setModelHandoffDismissed(`${modelHandoff.scope}:${modelHandoff.selectedAt}`);}};
+  const applyModelHandoff=async()=>{
+    if(!pipeline||!offeredModel||!modelHandoff||isRunning||isSaving||isVerifyingAction)return;
+    const captured=modelHandoff.scope;setIsVerifyingAction(true);
+    try{await verifyModelReferences(folderPath,[{job_id:offeredModel.job_id,task:offeredModel.task}]);
+      const current=readModelFlowHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
+      if(current?.scope!==captured||current.modelId!==offeredModel.job_id)throw new Error('프로젝트 또는 선택 모델이 바뀌었습니다. 다시 선택하세요.');
+      const graph=useFlowchartStore.getState().pipeline;if(!graph)throw new Error('플로우를 먼저 여세요.');
+      const result=bindModelToFlow(graph,offeredModel,handoffNode||undefined);replacePipeline(result.pipeline);selectNode(result.nodeId);setActiveTab('flow');dismissModelHandoff();
+    }catch(cause){const current=readModelFlowHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});if(current?.scope===captured)setEditorError(cause instanceof Error?cause.message:String(cause));}
+    finally{setIsVerifyingAction(false);}
+  };
   const [isRoiEditing,setIsRoiEditing]=useState(false);
   const [dragViewport, setDragViewport] = useState<ReturnType<typeof computeFlowchartViewport> | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -952,6 +971,8 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       </div>
 
+      {modelHandoff&&!offeredModel&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`&&!modelCatalogLoading&&<div role="alert" className="border-b border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">선택한 완료 모델이 현재 프로젝트·정답 버전의 모델 목록에 없습니다. 학습 화면에서 출처를 확인하세요.<button className="ml-3 underline" onClick={dismissModelHandoff}>선택 닫기</button></div>}
+      {offeredModel&&<section aria-label="선택 모델 플로우 연결" className="shrink-0 border-b border-cyan-800 bg-cyan-950/30 p-3 text-sm text-slate-200"><strong>{offeredModel.label} · 선택한 완료 모델</strong><p className="mt-1 text-slate-400">기존 연결을 유지하며 모델을 추가하거나 호환 노드에 지정합니다. 새 노드는 연결선을 직접 지정하세요.</p><div className="mt-2 flex flex-wrap gap-2"><select aria-label="선택 모델 연결 대상" value={handoffNode} onChange={event=>setHandoffNode(event.target.value)} className="rounded border border-slate-600 bg-slate-950 p-2"><option value="">새 모델 노드 추가</option>{pipeline?.nodes.filter(node=>compatibleModelNode(node,offeredModel)).map(node=><option key={node.id} value={node.id}>{node.data.label}</option>)}</select><button disabled={!pipeline||isRunning||isSaving||isVerifyingAction} onClick={()=>void applyModelHandoff()} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">선택 모델 연결</button><button onClick={dismissModelHandoff} className="rounded border border-slate-600 px-3 py-2">선택 닫기</button></div></section>}
       {modelCheck.status !== 'ready' && (
         <div className="shrink-0 min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200" role="status">
           <span>{modelCheck.status === 'checking'

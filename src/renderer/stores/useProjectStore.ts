@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type { BackendStatus } from '../../types/electron';
 import type { ErrorCatalogItem, Language, VisionTask } from '../types';
-import { api, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
+import { api, getApiPersistenceIdentity, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
 import { useAnnotationStore } from './useAnnotationStore';
 import { datasetWorkflow, workflowError } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
@@ -11,8 +11,14 @@ import { useFlowchartStore } from './useFlowchartStore';
 import { useTrainingStore } from './useTrainingStore';
 import { useInspectionRunStore } from './useInspectionRunStore';
 import { useModelAssistRunStore } from './useModelAssistRunStore';
+import { projectViewScope, readProjectStep, rememberProjectStep } from './projectViewState';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+
+function viewStorage(): Storage | undefined {
+  try { return typeof localStorage === 'undefined' ? undefined : localStorage; }
+  catch { return undefined; }
+}
 
 interface ProjectState {
   activeStep: WizardStep;
@@ -169,11 +175,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setStep: async (step) => {
     if (step === get().activeStep) return;
+    const apiIdentity = getApiPersistenceIdentity();
+    const startedScope = projectViewScope(get().project, apiIdentity);
     if (get().activeStep === 2 && useAnnotationStore.getState().isDirty) {
       const saved = await useAnnotationStore.getState().saveAnnotations();
       if (!saved || useAnnotationStore.getState().isDirty) return;
     }
+    if (projectViewScope(get().project, getApiPersistenceIdentity()) !== startedScope) return;
     set({ activeStep: step });
+    rememberProjectStep(viewStorage(), get().project, apiIdentity, step);
   },
 
   openImageForLabeling: async (imageId, filePath) => {
@@ -257,10 +267,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         throw new Error('프로젝트 동기화 중 새 편집이 생겼습니다. 이전 프로젝트의 편집 내용을 먼저 저장하세요.');
       }
       await applyProject(project, previous, true);
+      const identity = getApiPersistenceIdentity();
       set({
         project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: get().project?.id === project.id ? get().activeStep : 1,
+        task: project.task, activeStep: previous && projectViewScope(previous, identity) === projectViewScope(project, identity)
+          ? get().activeStep : readProjectStep(viewStorage(), project, identity),
       });
+      if (project.source_dataset_dir && get().activeStep !== 1) {
+        // Later stages also need the daemon's restored source and effective split;
+        // DatasetStudio is not mounted when returning directly to those stages.
+        await useDatasetStore.getState().ensureImported(project.task);
+      }
       await get().loadRecentProjects();
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });
@@ -305,7 +322,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const project = await api.project.open(projectDir);
       await applyProject(project, get().project);
       set({ project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: 1 });
+        task: project.task, activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
+      if (project.source_dataset_dir && get().activeStep !== 1) {
+        await useDatasetStore.getState().ensureImported(project.task);
+      }
       await get().loadRecentProjects();
       return true;
     } catch (error) {

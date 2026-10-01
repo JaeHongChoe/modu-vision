@@ -137,3 +137,10 @@ class AccountStore:
     def projects_for(self,user_id):
         with self._db() as db:rows=[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY id')]
         return [{**r,'role':self.project_role(user_id,r['id'])} for r in rows if self.project_role(user_id,r['id'])]
+
+    def project_members(self,project_id,actor):
+        """Only project members may read its assignable identities and roles."""
+        if self.project_role(actor,project_id) is None:raise ValueError('Project permission required')
+        with self._db() as db:
+            rows=db.execute('SELECT users.id,users.username,members.role FROM members JOIN users ON users.id=members.user_id WHERE members.project_id=? AND users.disabled=0 ORDER BY users.username',(project_id,)).fetchall()
+            return [{'id':row['id'],'name':row['username'],'role':row['role']} for row in rows]

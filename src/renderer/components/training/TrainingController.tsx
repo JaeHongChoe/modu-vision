@@ -12,7 +12,6 @@ import {
   Clock,
   ArrowLeft,
   Sparkles,
-  Sliders,
   RefreshCw,
   Server,
 } from 'lucide-react';
@@ -51,7 +50,7 @@ export const TrainingController: React.FC = () => {
   const [warmParentId, setWarmParentId] = useState('');
   const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
-  const { task, language, setStep, projectDir, project } = useProjectStore();
+  const { task, language, setStep, projectDir, project, isProjectBusy } = useProjectStore();
   const handoff=useTaskHandoff();
   const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
@@ -67,7 +66,7 @@ export const TrainingController: React.FC = () => {
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
-    splitSupported, splitUnavailableReason, applySplit, datasetKey } = useDatasetStore();
+    splitSupported, splitUnavailableReason, datasetKey } = useDatasetStore();
   const {
     jobId,
     warmStartParentJobId,
@@ -132,6 +131,8 @@ export const TrainingController: React.FC = () => {
   useEffect(() => {setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision,selectedProfileId]);
   useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
+    const data = useDatasetStore.getState();
+    if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy) return;
     clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
     setSelectedFamily(family);
     if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
@@ -209,8 +210,8 @@ export const TrainingController: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} />
-        <TrainingPreparationPanel family={selectedFamily} model={selectedFamily===task ? (syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone) : undefined} checkpoint={selectedFamily===task ? pretrainedCheckpoint : ''} onCheckpointChange={selectedFamily===task?setPretrainedCheckpoint:undefined} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} />
+        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
+        {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} config={modelOptions} warmStartJobId={warmParentId||undefined} />}
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
         {selectedFamily === task && <>
         <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
@@ -285,25 +286,23 @@ export const TrainingController: React.FC = () => {
           <GuardrailBanner
             type="warning"
             stepContext="3단계 학습 가드레일"
-            title="검증 데이터 분할(Validation Split)이 필요합니다"
+            title={split.train === 0 ? '사용 가능한 학습 이미지가 없습니다' : '사용 가능한 검증 이미지가 없습니다'}
             description={requiresSourcePartitions
               ? splitUnavailableReason || '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 확인하세요.'
-              : `현재 총 ${totalImages}장의 이미지에 대해 학습·검증 분할이 완료되지 않았습니다. 데이터나 라벨을 바꾼 뒤에는 분할을 다시 적용해야 합니다.`}
-            shopFloorTip={requiresSourcePartitions ? undefined : '산업 표준 추천 비율은 학습 80% : 검증 20% 입니다. 아래 버튼을 누르면 즉시 자동 분할됩니다.'}
-            actions={requiresSourcePartitions ? [{
-              label: '1단계에서 데이터 폴더 확인',
+              : `현재 학습 대상: Train ${split.train}장 · Val ${split.val}장 · Test ${split.test}장. 저장된 분할과 이미지의 미사용·검수 상태를 확인하세요.`}
+            shopFloorTip="검수 정책으로 제외된 이미지는 먼저 검수하세요. 기존 시험 분할을 유지하고, 분할 변경이 필요하면 1단계에서 확인 후 적용하세요."
+            actions={[
+            {
+              label: '1단계에서 데이터·분할 확인',
               icon: ArrowLeft,
               variant: 'primary',
               onClick: () => setStep(1),
-            }] : [
+            },
               {
-                label: '80:20 기본 검증 분할 즉시 적용 (추천)',
-                icon: Sliders,
-                variant: 'primary',
-                loadingText: '80:20 데이터 분할 적용 중...',
-                onClick: async () => {
-                  await applySplit(0.8);
-                },
+                label: '2단계에서 라벨·검수 확인',
+                icon: ArrowLeft,
+                variant: 'secondary',
+                onClick: () => setStep(2),
               },
             ]}
           />

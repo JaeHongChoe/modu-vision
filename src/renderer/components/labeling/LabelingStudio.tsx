@@ -25,6 +25,7 @@ import { ImageReviewPanel } from './ImageReviewPanel';
 import {DerivedImagePanel} from './DerivedImagePanel';
 import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
+import {TeamDataPanel} from './TeamDataPanel';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -56,6 +57,7 @@ export const LabelingStudio: React.FC = () => {
       {/* Top Action Toolbar */}
       <LabelingToolbar />
       <LabelSetBar />
+      <TeamDataPanel />
       <ImageReviewPanel />
       <DerivedImagePanel />
       <SavedReviewQueuePanel />

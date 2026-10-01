@@ -125,8 +125,8 @@ export const WizardFooter: React.FC = () => {
     }
     if (activeStep === 3 && totalImages > 0 && (split.val === 0 || split.train === 0)) {
       return language === 'ko'
-        ? '검증 데이터 분할이 필요합니다 (학습·검증·시험 분할 적용)'
-        : 'Validation split missing (apply train/validation/test split)';
+        ? `학습 대상 부족: Train ${split.train} · Val ${split.val} (저장된 분할·검수 상태 확인)`
+        : `Insufficient eligible data: train ${split.train}, validation ${split.val} (check saved splits and reviews)`;
     }
     if (activeStep === 3 && status === 'running') {
       return language === 'ko'

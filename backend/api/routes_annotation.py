@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -117,6 +117,7 @@ class AnnotationSaveRequest(BaseModel):
     output_dir: Optional[str] = None
     expected_revision: Optional[int] = Field(None, ge=1)
     actor: str = Field("operator", min_length=1, max_length=100)
+    lease_token: Optional[str] = Field(None, min_length=1, max_length=200)
     mask_classes: Optional[List[Dict[str, Any]]] = None
 
 
@@ -305,7 +306,9 @@ def _metadata_binding(image_path):
 
 
 @router.post("/save")
-def save_annotations(req: AnnotationSaveRequest):
+def save_annotations(req: AnnotationSaveRequest, request: Request = None):
+    from backend.api.shared_authorization import request_actor
+    req=req.model_copy(update={'actor':request_actor(request,req.actor)})
     binding = _metadata_binding(req.image_path)
     if binding is None:
         return _save_annotations_impl(req)
@@ -314,23 +317,33 @@ def save_annotations(req: AnnotationSaveRequest):
     with metadata_engine.metadata_transaction(project, source) as ledger:
         row = metadata_engine._ensure(ledger, project, source, req.image_path)
         if req.expected_revision is not None and row["revision"] != req.expected_revision:
-            raise HTTPException(status_code=409, detail={"message": "다른 작업자가 수정했습니다. 최신 라벨을 다시 불러오세요.", "current": row})
+            from backend.engine.team_data import public_image
+            raise HTTPException(status_code=409, detail={"message": "다른 작업자가 수정했습니다. 최신 라벨을 다시 불러오세요.", "current": public_image(row)})
+        from backend.engine.team_data import guard_annotation_write, annotation_written, public_image
+        try:
+            from backend.engine.team_data import _state
+            if _state(ledger)['settings']['editing_enabled'] and req.expected_revision is None:
+                raise ValueError('팀 편집은 최신 라벨의 수정 번호가 필요합니다. 최신 라벨을 다시 불러오세요.')
+            guard_annotation_write(ledger, row, req.actor, req.lease_token, req.annotations)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail={'message': str(exc), 'current': public_image(row)}) from exc
         result = _save_annotations_impl(req)
         row["workflow_state"] = "needs_review"
         row["reviewer"] = None
         row["annotation_hash"] = metadata_engine._annotation_hash(project, source, Path(req.image_path))
         row["mask_hash"] = metadata_engine._mask_hash(project, source, Path(req.image_path))
+        annotation_written(row, req.actor)
         metadata_engine._event(row, req.actor.strip() or "operator", "annotation_changed", {"workflow_state":"needs_review"})
-        result["metadata"] = row.copy()
+        result["metadata"] = public_image(row)
         return result
 
 
 @router.post("/batch_save")
-def batch_save_annotations(req: AnnotationBatchSaveRequest):
+def batch_save_annotations(req: AnnotationBatchSaveRequest, request: Request = None):
     """Batch persists annotations across multiple images."""
     results = []
     for item in req.items:
-        res = save_annotations(item)
+        res = save_annotations(item,request)
         results.append(res)
     return {
         "status": "saved",

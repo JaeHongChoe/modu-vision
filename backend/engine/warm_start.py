@@ -355,13 +355,24 @@ def portable_parent(parent: WarmStartParent, directory: Path) -> dict[str, Any]:
 
 
 def restore_portable_parent(directory: Path, envelope: dict[str, Any], task: str) -> WarmStartParent:
-    if envelope.get('checkpoint')!='parent.pt' or envelope.get('task')!=task or not is_job_id(envelope.get('job_id')):
+    import re
+    specialist=task in ('rotation','ocr','rotated_detection','defect_gan','enhancement')
+    valid_id=bool(re.fullmatch('[0-9a-f]{32}',str(envelope.get('job_id')))) if specialist else is_job_id(envelope.get('job_id'))
+    if envelope.get('checkpoint')!='parent.pt' or envelope.get('task')!=task or not valid_id:
         raise ValueError('Invalid portable warm-start parent identity')
     checkpoint=Path(directory)/'parent.pt'
     if checkpoint.is_symlink() or not checkpoint.is_file() or _sha256(checkpoint)!=envelope.get('checkpoint_sha256'):
         raise ValueError('Portable warm-start parent hash mismatch')
     payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
     classes=envelope.get('classes')
+    if specialist:
+        from backend.engine.specialized_warm_start import family_signature
+        if not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(classes,list) or family_signature(task,payload)!=(envelope.get('architecture'),tuple(classes)):
+            raise ValueError('Portable specialist parent model signature mismatch')
+        required=('generator_state_dict','discriminator_state_dict') if task=='defect_gan' else ('model_state_dict',)
+        if any(not isinstance(payload.get(key),dict) or not payload[key] for key in required):raise ValueError('Portable specialist parent weights missing')
+        if envelope.get('semantics','weight_initialization')!='weight_initialization':raise ValueError('Portable specialist parent semantics mismatch')
+        return WarmStartParent(envelope['job_id'],checkpoint,envelope['checkpoint_sha256'],task,envelope['architecture'],tuple(classes),envelope['dataset_fingerprint'])
     if not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(classes,list) or payload.get('classes')!=classes or _metadata_architecture(task,payload)!=envelope.get('architecture') or not isinstance(payload.get('model_state_dict'),dict):
         raise ValueError('Portable parent model signature mismatch')
     semantics = ('statistical_refit' if task in ('anomaly', 'anomaly_detection')

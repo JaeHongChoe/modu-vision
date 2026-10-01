@@ -1,3 +1,4 @@
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import { Images, Loader2, RefreshCw } from 'lucide-react';
 import { api, type DefectGANCandidate, type DefectGANModelSummary } from '../../services/api';
@@ -76,7 +77,7 @@ export const DefectGANWorkbench: React.FC = () => {
     let active = true;
     void Promise.all([ganWorkflow.datasets(),api.defectGAN.models()]).then(([prepared,result])=>{
       if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
-      const selected=selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
+      const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
       const dataset=handoff?.datasetPath?prepared.datasets.find(row=>row.dataset_path===handoff.datasetPath):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 결함 생성 정답 버전을 찾지 못했습니다.');
       if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);}
@@ -150,6 +151,7 @@ export const DefectGANWorkbench: React.FC = () => {
       <Images className="h-4 w-4 text-violet-400" /> 결함 이미지 생성 실험 <span className="font-normal text-slate-400">학습된 GAN · 검토 대기 후보</span>
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
+      <TrainingPreparationPanel family="defect_gan" model="defect_gan" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
       <p className="leading-5 text-slate-400">실제 결함이 보이는 영역을 지정해 학습합니다. 생성 이미지는 원본 라벨이나 학습 분할에 자동으로 섞이지 않습니다.</p>
       <p className="break-all text-slate-400">원본 이미지 폴더: {projectSource||'프로젝트 원본 폴더를 선택하세요.'}</p>
       <label className="block">프로젝트 소유 학습 데이터<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(datasets.find(row=>row.dataset_path===event.target.value)?.sample_count||null);setWarmParentId('');}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="">아래 영역 표로 복사본 준비</option>{datasets.map((row,index)=><option value={row.dataset_path} key={row.dataset_path}>복사본 {index+1} · 영역 {row.sample_count||0}개</option>)}</select></label>
@@ -203,7 +205,7 @@ export const DefectGANWorkbench: React.FC = () => {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {compositionReceipt&&<p className="break-all font-mono text-[10px] text-violet-300">{compositionReceipt}</p>}
-      <AutoDLWorkbench task="defect_gan" familyDatasetPath={datasetPath||undefined} onComplete={()=>{void api.defectGAN.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(selectHandoffRecord(result.models,handoff)?.job_id||'');}});}}/>
+      <AutoDLWorkbench task="defect_gan" familyDatasetPath={datasetPath||undefined} onComplete={()=>{void api.defectGAN.models().then(result=>{if(sameProject()){setModels(result.models);setJobId((handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff)?.job_id)||'');}});}}/>
       {!!candidates.length && <div className="space-y-2 rounded border border-[#344255] bg-[#0E1722] p-3">
         <div className="font-semibold text-slate-200">생성 후보 · 검토 대기</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6">

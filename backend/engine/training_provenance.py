@@ -8,6 +8,11 @@ import tempfile
 
 def bind_training_version(project, source, supplied_version=None):
     from backend.api.routes_dataset_versions import _snapshot,_read_manifest,_verify,_require_active_labelset
+    from backend.engine.team_data import training_binding
+    # Register the exact review eligibility before a fresh snapshot. Legacy
+    # supplied versions are verified first so reading policy cannot invalidate
+    # their original editable-file manifest as a side effect.
+    team_binding=training_binding(project,source) if supplied_version is None else None
     if supplied_version is None:
         supplied_version=_snapshot(project,source,'Training input','Immutable version bound to a new training job','snapshot')['id']
     directory,manifest=_read_manifest(project,supplied_version)
@@ -16,6 +21,18 @@ def bind_training_version(project, source, supplied_version=None):
     if verification.get('status')!='verified' or verification.get('editable_changed_files'):
         from fastapi import HTTPException
         raise HTTPException(409,'Training dataset version does not match active source, labels, and split')
+    if team_binding is None:team_binding=training_binding(project,source)
+    receipt=directory/'team-data.json'
+    team_digest=hashlib.sha256(json.dumps(team_binding,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+    if receipt.is_symlink():raise ValueError('Team-data training receipt cannot be linked')
+    if receipt.exists():
+        previous=json.loads(receipt.read_text())
+        if previous!=team_binding:raise ValueError('Team-data policy differs from the selected training version; create a new version')
+    else:
+        with tempfile.NamedTemporaryFile('w',encoding='utf-8',dir=directory,prefix='team-data-',delete=False) as handle:
+            json.dump(team_binding,handle,ensure_ascii=False,indent=2);handle.flush();os.fsync(handle.fileno());temporary=Path(handle.name)
+        try:os.replace(temporary,receipt)
+        finally:temporary.unlink(missing_ok=True)
     split_rows=[row['sha256'] for row in manifest['files'] if row['origin']=='split']
     # Folder partitions and patch manifests are also exact split evidence.
     split_digest = split_rows[0] if len(split_rows)==1 else hashlib.sha256(json.dumps(
@@ -23,7 +40,8 @@ def bind_training_version(project, source, supplied_version=None):
         sort_keys=True,separators=(',',':')).encode()).hexdigest()
     return {'dataset_version_id':manifest['id'],'labelset_id':manifest.get('labelset_id','default'),
             'dataset_fingerprint':manifest['dataset_fingerprint'],'manifest_sha256':manifest['content_digest'],
-            'split_sha256':split_digest, 'split_binding': 'saved_manifest' if split_rows else 'versioned_dataset_layout','version_dir':str(directory)}
+            'split_sha256':split_digest, 'split_binding': 'saved_manifest' if split_rows else 'versioned_dataset_layout','version_dir':str(directory),
+            'team_data':team_binding,'team_data_sha256':team_digest}
 
 
 def persist_model_binding(output,binding,*,checkpoint=True):
@@ -50,6 +68,36 @@ def persist_model_binding(output,binding,*,checkpoint=True):
 def validate_training_binding(binding):
     if not binding:return
     directory=Path(binding['version_dir'])
+    if binding.get('team_data'):
+        receipt=directory/'team-data.json'
+        if receipt.is_symlink() or not receipt.is_file():raise ValueError('Team-data training receipt is unavailable')
+        frozen=json.loads(receipt.read_text())
+        digest=hashlib.sha256(json.dumps(frozen,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+        if frozen!=binding['team_data'] or digest!=binding.get('team_data_sha256'):
+            raise ValueError('Team-data training receipt changed')
+        if not binding.get('archive_restored_from_manifest_sha256'):
+            from backend.engine.team_data import training_binding
+            from backend.engine.project_labelsets import labelset_root
+            project_root=directory.parent.parent
+            configuration=json.loads((project_root/'project.json').read_text())
+            configured_set=configuration.get('active_labelset_id','default')
+            selected_set=frozen['scope']['labelset_id']
+            if configuration.get('id')!=frozen['scope']['project_id']:
+                raise ValueError('Team-data project identity changed during training')
+            # Folder/JSON workspaces retain independently prepared labelsets and
+            # validate a staging preparation before publishing its active pointer.
+            # Desktop workspaces still require their currently selected labelset.
+            independent_engine=configuration.get('engine_task') in {
+                'classification','detection','segmentation','anomaly','patch_classification',
+                'rotation','ocr','rotated_detection','enhancement','defect_gan',
+            }
+            if configured_set!=selected_set and not independent_engine:
+                raise ValueError('Team-data active labelset changed during training')
+            configuration.update(project_dir=str(project_root),active_labelset_id=selected_set,
+                                 annotations_dir=str(labelset_root(project_root,selected_set)))
+            current=training_binding(configuration,Path(frozen['scope']['source']))
+            if any(current[key]!=frozen[key] for key in ('book_sha256','policy_sha256','eligibility_sha256')):
+                raise ValueError('Team-data guidance, review policy or eligible cohort changed during training')
     manifest=json.loads((directory/'manifest.json').read_text())
     from backend.api.routes_dataset_versions import _manifest_digest, _file_hash, _safe_backup_path
     if manifest.get('content_digest')!=binding['manifest_sha256'] or _manifest_digest(manifest)!=binding['manifest_sha256']:
@@ -165,7 +213,35 @@ def bind_family_training(project,dataset,task,supplied_version=None):
                     or not original.resolve().is_relative_to(source) or _file_hash(original)!=row.get('source_sha256')
                     or _file_hash(copied)!=row.get('source_sha256')):
                 raise ValueError('Prepared family original source image changed')
+    # A prepared manifest may outlive an approval. Resolve every actual family
+    # sample to its original source before taking a training snapshot; pending
+    # samples are never silently consumed by a specialist runner.
+    from backend.engine.team_data import training_binding
+    current_team=training_binding(project,source)
+    original_paths=[]
+    if dataset==source:
+        original_paths=list(paths)
+    elif isinstance(provenance.get('source_map'),dict):
+        for row in provenance['source_map'].values():
+            original_paths.append(source/row['source_relative_path'])
+    elif task=='rotation':
+        original_paths=[source/row.get('source_relative_path',row['image']) for row in json.loads(manifest_path.read_text())['samples']]
+    elif task=='enhancement':
+        original_paths=[source/row['source_relative_path'] for row in manifest['records']]
+    elif task=='defect_gan':
+        original_paths=[source/row['source_image'] for row in manifest.get('source_map',[])]
+    if current_team['settings']['approved_only_training']:
+        eligible={row['relative_path']:row['image_uuid'] for row in current_team['eligibility']}
+        if not original_paths:raise ValueError('Family training needs original approved source mapping')
+        for original in original_paths:
+            if not original.resolve().is_relative_to(source) or original.relative_to(source).as_posix() not in eligible:
+                raise ValueError('Family input is no longer approved for training; prepare the eligible data again')
     binding=bind_training_version(project,source,supplied_version)
+    if any(binding['team_data'][key]!=current_team[key] for key in ('book_sha256','policy_sha256','eligibility_sha256')):
+        raise ValueError('Team-data eligibility changed while binding family inputs')
+    inventory={row['relative_path']:row['image_uuid'] for row in binding['team_data']['eligibility']}
+    binding['family_source_image_uuids']=sorted({inventory[path.relative_to(source).as_posix()] for path in original_paths
+                                               if path.resolve().is_relative_to(source) and path.relative_to(source).as_posix() in inventory})
     directory=Path(binding['version_dir'])
     rows=[]
     for path in sorted(set([manifest_path,*paths])):

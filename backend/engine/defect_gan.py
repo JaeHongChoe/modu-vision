@@ -139,6 +139,8 @@ def load_defect_gan_manifest(root: str | Path) -> dict[str, Any]:
 
 def prepare_defect_gan_dataset(source_root, output_root, rows):
     source = Path(source_root).expanduser().resolve()
+    from backend.engine.model_execution import eligible_preparation_paths
+    eligible_preparation_paths(source,'defect_gan',[row.get('image') for row in rows])
     verified = _verified_samples(source, rows)
     output = Path(output_root).expanduser()
     if output.exists() or output.is_symlink() or output.resolve().is_relative_to(source):

@@ -2,12 +2,14 @@ import { request, type LabelSuggestion, type LabelSuggestionBatch } from './api'
 import {buildModelRequest} from '../components/labeling/foundationRequest';
 import type {SizeControls} from './foundationLabelingApi';
 import type { AnnotationItem } from '../types';
+import type {TeamImageState} from './teamDataApi';
 export type ReviewState = 'unworked' | 'needs_review' | 'approved';
 export interface ImageReviewMetadata {
   image_uuid: string; file_path: string; relative_path: string; content_hash: string; content_version: number;
   width: number; height: number; revision: number; tags: string[]; product: string; lot: string; group: string;
   workflow_state: ReviewState; reviewer: string | null;
   usage_state?:'active'|'not_used';
+  team?:TeamImageState;
   review_history: { at: string; actor: string; state: ReviewState; revision: number }[];
   audit: { id: string; at: string; actor: string; action: string; revision: number; changes: Record<string, unknown> }[];
 }

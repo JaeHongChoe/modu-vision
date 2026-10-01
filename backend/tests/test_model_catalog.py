@@ -14,8 +14,8 @@ def test_catalog_mounted_at_frontend_api_contract():
     assert families['classification']['default_architecture'] == 'dinov3_vits16'
     assert families['segmentation']['default_architecture'] == 'dinov3_vits16'
     assert families['detection']['default_architecture'] == 'yolo26n'
-    assert families['rotated_detection']['remote_training'] is False
-    assert families['ocr']['remote_training'] is False
+    assert families['rotated_detection']['remote_training'] is True
+    assert families['ocr']['remote_training'] is True
     assert families['anomaly']['continuation'] == 'statistical_refit'
     assert all(item['quality_approved'] is False for item in families.values())
 

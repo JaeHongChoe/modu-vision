@@ -51,6 +51,9 @@ class RevisionConflict(ValueError):
     def __init__(self, current):
         super().__init__('다른 작업자가 수정했습니다. 최신 내용을 불러와 다시 검토하세요.')
         self.current = copy.deepcopy(current)
+        if isinstance(self.current,dict) and self.current.get('team',{}).get('edit_lease'):
+            lease=self.current['team']['edit_lease']
+            self.current['team']['edit_lease']={key:lease[key] for key in ('owner','expires_at')}
 
 def _hash(path):
     if not path.is_file(): return None
@@ -156,12 +159,17 @@ def _ensure(ledger, project_root, dataset_root, image_path, annotation_root=None
             row['mask_hash']=mask; changes['mask_hash']=mask
         if changes:
             row['workflow_state']='needs_review'; row['reviewer']=None
+            from backend.engine.team_data import invalidate_reviews
+            invalidate_reviews(row, 'source_changed' if 'content_hash' in changes else 'external_annotation_changed')
             _event(row,'system','source_changed' if 'content_hash' in changes else 'external_annotation_changed',changes)
+    from backend.engine.team_data import ensure_image_team
+    ensure_image_team(row)
     return row
 
 def metadata_for_path(project_root, dataset_root, image_path, annotation_root=None):
     with metadata_transaction(project_root,dataset_root,annotation_root) as ledger:
-        return copy.deepcopy(_ensure(ledger,project_root,dataset_root,image_path,annotation_root))
+        from backend.engine.team_data import public_image
+        return public_image(_ensure(ledger,project_root,dataset_root,image_path,annotation_root))
 
 def list_metadata(project_root, dataset_root, annotation_root=None):
     source=Path(dataset_root).resolve(); project=Path(project_root).resolve()
@@ -172,7 +180,8 @@ def list_metadata(project_root, dataset_root, annotation_root=None):
             for name in sorted(files):
                 image=Path(directory)/name
                 if name.startswith('.') or image.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS: continue
-                rows.append(copy.deepcopy(_ensure(ledger,project,source,image,annotation_root)))
+                from backend.engine.team_data import public_image
+                rows.append(public_image(_ensure(ledger,project,source,image,annotation_root)))
     return rows
 
 def _find(ledger,image_uuid):
@@ -203,22 +212,28 @@ def update_metadata(project_root,dataset_root,image_uuid,expected_revision,actor
             else:
                 if not isinstance(value,str) or len(value)>200: raise ValueError('Metadata value must be under 200 characters')
                 clean[key]=value.strip()
+        from backend.engine.team_data import guard_metadata_approval, invalidate_reviews, public_image
+        guard_metadata_approval(ledger, row, clean)
+        if clean.get('workflow_state') in {'unworked', 'needs_review'}:
+            invalidate_reviews(row, 'review_requested')
         row.update(clean)
         if 'workflow_state' in clean:
             row['reviewer']=actor if clean['workflow_state']=='approved' else None
             row['review_history'].append({'at':_now(),'actor':actor,'state':clean['workflow_state'], 'revision':row['revision']+1})
         _event(row,actor,'review' if 'workflow_state' in clean else 'metadata_edited',clean)
-        return copy.deepcopy(row)
+        return public_image(row)
 
 def annotation_changed(project_root,dataset_root,image_path,actor='operator',annotation_root=None,expected_revision=None):
     with metadata_transaction(project_root,dataset_root,annotation_root) as ledger:
         row=_ensure(ledger,project_root,dataset_root,image_path,annotation_root)
         if expected_revision is not None and row['revision']!=expected_revision: raise RevisionConflict(row)
         row['workflow_state']='needs_review'; row['reviewer']=None
+        from backend.engine.team_data import annotation_written, public_image
+        annotation_written(row, actor)
         row['annotation_hash']=_annotation_hash(project_root,Path(dataset_root),Path(image_path),annotation_root)
         row['mask_hash']=_mask_hash(project_root,Path(dataset_root),Path(image_path),annotation_root)
         _event(row,actor,'annotation_changed',{'workflow_state':'needs_review'})
-        return copy.deepcopy(row)
+        return public_image(row)
 
 def duplicate_leakage(rows,assignments):
     by_hash={}

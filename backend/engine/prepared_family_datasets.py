@@ -42,6 +42,8 @@ def prepare_family_dataset(task, source, output, rows):
     if not source.is_dir() or output.exists() or output==source or output.is_relative_to(source):
         raise ValueError('Specialist preparation needs a new owned directory outside originals')
     if not rows:raise ValueError('Explicit specialist truth is required')
+    from backend.engine.model_execution import eligible_preparation_paths
+    eligible_preparation_paths(source,task,[row.get('image') for row in rows])
     mapping={}; output.mkdir(parents=True)
     try:
         for row in rows:

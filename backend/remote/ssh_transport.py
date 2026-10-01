@@ -108,6 +108,30 @@ if dependencies['torch'] and dependencies['torchvision']:
             'file': filename,
             'sha256': digest,
         }
+# Inspect known cache locations without fetching or constructing a model.
+# These hashes identify observed bytes; the training loader still validates
+# structure and never treats this probe as model quality approval.
+def cached_weight(name, path):
+    digest = None
+    if isinstance(path, str):
+        checkpoint = Path(path)
+        if checkpoint.is_file() and checkpoint.stat().st_size:
+            hasher = hashlib.sha256()
+            with checkpoint.open('rb') as reader:
+                for block in iter(lambda: reader.read(1024 * 1024), b''):
+                    hasher.update(block)
+            digest = hasher.hexdigest()
+    pretrained_weights[name] = {'ok': bool(digest), 'file': Path(path).name if isinstance(path, str) else None,
+                                'sha256': digest, 'content_verified': False}
+if dependencies['huggingface_hub']:
+    from huggingface_hub import try_to_load_from_cache
+    for name, architecture in {'dinov3_vits16':'vit_small_patch16_dinov3.lvd1689m',
+                              'dinov3_vitb16':'vit_base_patch16_dinov3.lvd1689m',
+                              'dinov3_vitl16':'vit_large_patch16_dinov3.lvd1689m'}.items():
+        cached_weight(name, try_to_load_from_cache('timm/'+architecture, 'model.safetensors'))
+if dependencies['torch']:
+    for name in ('yolo26n', 'yolo26s'):
+        cached_weight(name, str(Path(torch.hub.get_dir()) / 'checkpoints' / (name+'.pt')))
 scratch.cleanup()
 print(json.dumps({
     'protocol_version': 1,

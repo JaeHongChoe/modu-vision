@@ -82,10 +82,9 @@ def prepare_enhancement(source: str | Path, destination: str | Path, *, seed: in
         raise ValueError("Enhancement destination must be empty")
     if not math.isfinite(noise_sigma) or not 0 < noise_sigma <= 50:
         raise ValueError("Noise strength must be between 0 and 50")
-    paths = [_path(source, name) for name in image_paths] if image_paths is not None else [
-        p for p in sorted(source.rglob("*")) if p.suffix.lower() in _EXTENSIONS
-        and p.is_file() and not p.is_symlink() and not any(part.startswith(".") for part in p.relative_to(source).parts)
-    ]
+    from backend.engine.model_execution import eligible_preparation_paths
+    available=eligible_preparation_paths(source,'enhancement',image_paths)
+    paths=[_path(source,name) for name in image_paths] if image_paths is not None else available
     unique: dict[str, Path] = {}
     for path in paths:
         unique.setdefault(_sha(path), path)

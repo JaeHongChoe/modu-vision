@@ -21,11 +21,14 @@ def source_image_paths(source,task,*,include_unused=False):
     source=Path(source).resolve()
     from backend.engine.annotation_storage import request_project_root
     project=request_project_root()
+    # An archived project owns its restored source below dataset/. Exclude the
+    # project only when it is a child of the selected source being scanned.
+    exclude_project=project is not None and project.is_relative_to(source)
     from backend.engine.dataset_usage import unused_image_paths
     unused=set() if include_unused else unused_image_paths(source)
     scan_root=source/task if (source/task).is_dir() else source
     excluded={'masks','mask','ground_truth','labels','annotations'} if task in {'detection','segmentation','anomaly','anomaly_detection'} else set()
-    return sorted(p for p in scan_root.rglob('*') if p.is_file() and str(p.resolve()) not in unused and (project is None or not p.is_relative_to(project)) and not any(part.startswith('.') for part in p.relative_to(source).parts)
+    return sorted(p for p in scan_root.rglob('*') if p.is_file() and str(p.resolve()) not in unused and (not exclude_project or not p.is_relative_to(project)) and not any(part.startswith('.') for part in p.relative_to(source).parts)
                   and not (set(p.relative_to(source).parts[:-1]) & excluded) and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
 
 def is_anomaly_normal(image,source=None):
@@ -127,7 +130,12 @@ def load_manifest_dataset(task,source,split,transform=None,image_size=None,class
     available={str(p):p for p in source_image_paths(source,task)}
     selected=[]
     for name,partition in assignments.items():
-        if name not in available:raise ValueError(f'Saved split references missing/non-image source: {name}')
+        if name not in available:
+            # A persisted split keeps its original partition; an explicitly
+            # excluded review/usage sample must not be reassigned to training.
+            from backend.engine.dataset_usage import unused_image_paths
+            if name in unused_image_paths(source):continue
+            raise ValueError(f'Saved split references missing/non-image source: {name}')
         if partition==split:selected.append(available[name])
     if task=='detection':
         rows=[]

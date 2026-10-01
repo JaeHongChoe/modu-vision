@@ -1,3 +1,8 @@
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {submitModelTraining,controlModelTraining} from '../../services/modelExecution';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {getApiPersistenceIdentity} from '../../services/api';
+import {openModelFlow} from './ProgramWorkbenchControls';
 import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { request } from '../../services/api';
@@ -11,8 +16,8 @@ import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrai
 
 interface EnhancementModel { job_id: string; metadata: { best_epoch: number; dataset_path: string; source_dataset_path: string } }
 interface EnhancementMetrics { sample_count: number; input_psnr: number; output_psnr: number; improved: boolean }
-interface EnhancementJob { job_id: string; status: string; epoch: number; epochs: number; dataset_path: string; source_dataset_path: string; error: string | null }
-const activeStatus = (status: string) => ['queued', 'running', 'stopping'].includes(status);
+interface EnhancementJob { execution_job_id?:string;compute_profile_id?:string; job_id: string; status: string; epoch: number; epochs: number; dataset_path: string; source_dataset_path: string; error: string | null }
+const activeStatus = (status: string) => ['queued','preparing','running','stopping','transferring','syncing'].includes(status);
 
 export function EnhancementWorkbench() {
   const handoff=useTaskHandoff('enhancement');
@@ -35,7 +40,8 @@ export function EnhancementWorkbench() {
   const [notice, setNotice] = useState('');
   const [jobs, setJobs] = useState<EnhancementJob[]>([]);
   const [job, setJob] = useState<EnhancementJob | null>(null);
-  const scope = `${projectId || ''}\n${source}\n${labelsetId}`;
+  const compute=useComputeStore();
+  const scope = `${projectId || ''}\n${source}\n${labelsetId}\n${compute.selectedProfileId}\n${compute.transportRevision}\n${getApiPersistenceIdentity()}`;
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const training = job !== null && activeStatus(job.status);
@@ -51,14 +57,15 @@ export function EnhancementWorkbench() {
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/enhancement/datasets'),request<{models:EnhancementModel[]}>('/api/enhancement/models'),request<{jobs:EnhancementJob[]}>('/api/enhancement/jobs')]).then(([prepared,result,journal])=>{
       if(!current||currentScope.current!==scope)return;setDatasets(prepared.datasets);
       const items=result.models.filter(model=>model.metadata.source_dataset_path===source);setModels(items);
-      const selected=selectHandoffRecord(items,handoff);setJobId(selected?.job_id||'');
-      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>activeStatus(row.status));setJob(restored||null);
-      const path=selected?.metadata.dataset_path||handoff?.datasetPath||restored?.dataset_path;const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
+      const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(items,handoff);setJobId(selected?.job_id||'');
+      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>activeStatus(row.status));setJob(restored||null);
+      if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<EnhancementJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(current&&currentScope.current===scope)setJob(row);}).catch(cause=>{if(current&&currentScope.current===scope)setError(String(cause));});}
+      const path=handoff?.datasetPath||selected?.metadata.dataset_path||restored?.dataset_path;const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 이미지 개선 정답 쌍을 찾지 못했습니다.');
       if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);}
     }).catch(cause=>{if(current&&currentScope.current===scope)setError(cause instanceof Error?cause.message:String(cause));});
     return () => { current = false; };
-  }, [projectId, source, labelsetId,handoff?.jobId,handoff?.selectionId]);
+  }, [scope,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
     if (!job || !activeStatus(job.status)) return;
@@ -66,7 +73,7 @@ export function EnhancementWorkbench() {
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
-        const row = await request<EnhancementJob>(`/api/enhancement/jobs/${job.job_id}`);
+        const row = await controlModelTraining<EnhancementJob>(job,'status',()=>request<EnhancementJob>(`/api/enhancement/jobs/${job.job_id}`));
         if (!current || currentScope.current !== scope) return;
         setJob(row); setJobs((old) => [row, ...old.filter((item) => item.job_id !== row.job_id)]);
         if (row.status === 'completed') {
@@ -103,9 +110,8 @@ export function EnhancementWorkbench() {
     setSampleCount(result.records.length);
   });
   const train = () => action('이미지 개선 학습', async () => {
-    const result = await request<EnhancementJob>('/api/enhancement/train', {
-      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, epochs, device, background: true, ...(warmParentId ? {warm_start_job_id: warmParentId} : {}) }),
-    });
+    const options={dataset_path:datasetPath,epochs,device,background:true,...(warmParentId?{warm_start_job_id:warmParentId}:{})};
+    const result=await submitModelTraining<EnhancementJob>('enhancement',options,()=>request<EnhancementJob>('/api/enhancement/train',{method:'POST',body:JSON.stringify(options)}));
     if (currentScope.current !== scope) return;
     setJob(result); setJobs((old) => [result, ...old.filter((item) => item.job_id !== result.job_id)]);
     setMetrics(null); setNotice('학습을 시작했습니다. 화면을 이동해도 작업을 다시 열 수 있습니다.');
@@ -118,7 +124,7 @@ export function EnhancementWorkbench() {
   });
   const cancel = () => action('학습 중단 요청', async () => {
     if (!job) return;
-    const row = await request<EnhancementJob>(`/api/enhancement/jobs/${job.job_id}/cancel`, { method: 'POST' });
+    const row = await controlModelTraining<EnhancementJob>(job,'cancel',()=>request<EnhancementJob>(`/api/enhancement/jobs/${job.job_id}/cancel`,{method:'POST'}));
     if (currentScope.current === scope) setJob(row);
   });
   const reopen = (id: string) => action('학습 작업 확인', async () => {
@@ -133,6 +139,7 @@ export function EnhancementWorkbench() {
   return <details open className="rounded border border-[#344255] bg-[#182332] text-sm text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold"><ImagePlus className="h-4 w-4 text-cyan-400" />이미지 개선 모델</summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
+      <TrainingPreparationPanel family="enhancement" model="enhancement" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
       <p className="leading-5 text-slate-300">입력 이미지와 개선 정답 쌍으로 학습합니다. 현재 데이터의 원본을 정답으로 두고 노이즈 입력을 별도로 준비하거나, 준비된 정답 쌍을 불러올 수 있습니다.</p>
       <div className="flex flex-wrap items-end gap-3">
         <label>입력 노이즈 강도<input aria-label="입력 노이즈 강도" type="number" min={1} max={50} value={sigma} onChange={(e) => setSigma(Math.min(50, Math.max(1, Number(e.target.value) || 1)))} className={`${input} max-w-24`} /></label>
@@ -172,7 +179,7 @@ export function EnhancementWorkbench() {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-3 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {metrics && <div className="rounded border border-[#344255] p-3">시험 {metrics.sample_count}장 · 입력 PSNR {metrics.input_psnr.toFixed(2)} → 출력 {metrics.output_psnr.toFixed(2)} dB<br /><span className={metrics.improved ? 'text-emerald-300' : 'text-amber-300'}>{metrics.improved ? '시험 정답 대비 오차가 감소했습니다.' : '시험 정답 대비 개선이 확인되지 않았습니다.'}</span></div>}
-      <button type="button" disabled={!jobId} onClick={()=>void useProjectStore.getState().setStep(5)} className={button}>검사 플로우·배포 패키지</button>
+      <button type="button" disabled={!jobId} onClick={()=>void openModelFlow('enhancement',jobId,datasetPath)} className={button}>검사 플로우·배포 패키지</button>
       <AutoDLWorkbench task="enhancement" familyDatasetPath={sampleCount?datasetPath:undefined} onComplete={()=>void refresh().catch(e=>{if(currentScope.current===scope)setError(e instanceof Error?e.message:String(e));})}/>
     </div>
   </details>;

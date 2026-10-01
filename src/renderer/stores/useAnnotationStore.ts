@@ -10,6 +10,8 @@ import { datasetWorkflow, type ImageReviewMetadata } from '../services/datasetWo
 import { useDatasetStore } from './useDatasetStore';
 import { brushEditTarget, labelCategoryPalette } from '../components/labeling/foundationRequest';
 import { applyConvertedShape } from '../components/labeling/convertedAnnotation';
+import {bookPalette,imageLeaseToken} from '../components/labeling/teamDataWorkflow';
+import type {BookCategory,EditLease} from '../services/teamDataApi';
 
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 0, name: 'OK', color: '#10b981' },
@@ -76,6 +78,14 @@ interface AnnotationState {
   reviewerName: string;
   setReviewerName: (name: string) => void;
   setMetadata: (metadata: ImageReviewMetadata | null) => void;
+  teamEditingEnabled: boolean;
+  teamReviewEnabled: boolean;
+  editLease: EditLease | null;
+  labelbookVersion: number | null;
+  setTeamEditingEnabled: (enabled:boolean) => void;
+  setTeamReviewEnabled: (enabled:boolean) => void;
+  setEditLease: (lease:EditLease|null) => void;
+  setLabelbook: (version:number|null,categories?:BookCategory[]) => void;
 
   // Persistence & History
   isDirty: boolean;
@@ -139,6 +149,14 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   reviewerName: typeof localStorage !== 'undefined' ? localStorage.getItem('modu-reviewer-name') || '' : '',
   setReviewerName: (name) => { if (typeof localStorage !== 'undefined') localStorage.setItem('modu-reviewer-name', name); set({ reviewerName: name }); },
   setMetadata: (metadata) => set({ metadata }),
+  teamEditingEnabled:false,
+  teamReviewEnabled:false,
+  editLease:null,
+  labelbookVersion:null,
+  setTeamEditingEnabled:(enabled)=>set({teamEditingEnabled:enabled}),
+  setTeamReviewEnabled:(enabled)=>set({teamReviewEnabled:enabled}),
+  setEditLease:(editLease)=>set({editLease}),
+  setLabelbook:(version,categories)=>{const next=categories?.length?bookPalette(categories,get().categories):get().categories;const active=next.find(row=>row.name===get().activeCategory.name)||next[0];set({labelbookVersion:version,categories:next,...(active?{activeCategory:active,currentLabel:active.name}:{})});},
   task: 'detection',
   images: [],
   currentImageIndex: -1,
@@ -184,6 +202,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const current = idx >= 0 ? images[idx] : null;
     set({
       images,
+      ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
       externalSelectionPath: null,
       metadata: null,
       currentImageIndex: idx,
@@ -529,6 +548,8 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (pendingSave) return pendingSave;
     const { currentImage, annotations, isDirty } = get();
     if (!currentImage) return Promise.resolve(false);
+    const leaseToken=imageLeaseToken(get().editLease,get().metadata?.image_uuid);
+    if(get().teamEditingEnabled&&!leaseToken){set({saveMessage:'팀 작업의 편집 시작을 누른 뒤 저장하세요. 편집 권한이 만료됐으면 다시 시작하세요.'});return Promise.resolve(false);}
 
     set({ isSaving: true, saveMessage: 'Saving...' });
 
@@ -536,6 +557,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       try {
         const res = await datasetWorkflow.saveAnnotations({
           expected_revision: get().metadata?.revision,
+          ...(leaseToken?{lease_token:leaseToken}:{}),
           actor: get().reviewerName.trim() || "operator",
           image_id: currentImage.image_id,
           image_path: currentImage.file_path,

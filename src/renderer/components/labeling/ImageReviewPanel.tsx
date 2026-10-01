@@ -4,7 +4,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { datasetWorkflow, workflowError, type ReviewState } from '../../services/datasetWorkflow';
 const states: Record<ReviewState,string> = { unworked: '미작업', needs_review: '검토 필요', approved: '승인됨' };
 export const ImageReviewPanel: React.FC = () => {
-  const { metadata, currentImage, isDirty, isSaving, reviewerName, setReviewerName, setMetadata, loadAnnotationsForCurrent } = useAnnotationStore();
+  const { metadata, currentImage, isDirty, isSaving, reviewerName, setReviewerName, setMetadata, loadAnnotationsForCurrent, teamReviewEnabled } = useAnnotationStore();
   const projectDir = useProjectStore(s => s.projectDir);
   const [open,setOpen] = useState(false); const [busy,setBusy] = useState(false); const [error,setError] = useState('');
   const [product,setProduct] = useState(''); const [lot,setLot] = useState(''); const [group,setGroup] = useState(''); const [tags,setTags] = useState('');
@@ -34,7 +34,8 @@ export const ImageReviewPanel: React.FC = () => {
       </div><div className="flex flex-wrap gap-2">
         <button disabled={busy || isSaving} onClick={()=>void save()} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">정보 저장</button>
         <button disabled={busy || isDirty || isSaving} onClick={()=>void save('needs_review')} className="rounded border border-amber-700 px-3 py-2 disabled:opacity-40">검토 요청</button>
-        <button disabled={busy || isDirty || isSaving} onClick={()=>void save('approved')} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">라벨 승인</button>
+        <button disabled={busy || isDirty || isSaving || teamReviewEnabled} onClick={()=>void save('approved')} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">라벨 승인</button>
+        {teamReviewEnabled&&<button type="button" onClick={()=>window.dispatchEvent(new Event('modu-team-review'))} className="rounded border border-cyan-700 px-3 py-2">팀 검수에서 승인</button>}
         <button disabled={busy || isSaving} onClick={()=>{ if(isDirty) useAnnotationStore.setState({isDirty:false}); void loadAnnotationsForCurrent(); }} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">{isDirty ? "현재 편집을 버리고 최신 라벨 불러오기" : "최신 라벨 불러오기"}</button>
       </div><p className="text-slate-400">승인 후 라벨·원본 이미지가 변경되면 검토가 다시 필요합니다. 다른 작업자의 변경이 있으면 저장을 중지합니다.</p>
       <details><summary className="cursor-pointer text-slate-300">출처·변경 기록 ({metadata.audit.length})</summary>

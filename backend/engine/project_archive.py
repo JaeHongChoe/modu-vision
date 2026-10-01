@@ -15,7 +15,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any, Iterable
-from zipfile import ZIP_STORED, ZipFile
+from zipfile import ZIP_STORED, ZipFile, BadZipFile, LargeZipFile
 
 
 MAX_SOURCE_BYTES = 2 * 1024**3
@@ -275,7 +275,7 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
     for path in staging.rglob("*.json"):
         # Source files are customer data. Keep their verified bytes intact.
         # Version snapshots need their own hashes, paths and immutable source bytes.
-        if (path.is_relative_to(staging / "versions") or path.name == "release_policy.json"
+        if (path.is_relative_to(staging / "versions") or path.is_relative_to(staging/'.migrations') or path.name == "release_policy.json"
                 or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))):
             continue
         try:
@@ -292,6 +292,19 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
             if "by_dataset" in path.parts and "metadata" not in path.parts:
                 annotation_hashes[previous_hash] = _digest_file(path)
         if path.name == "workflow.json" and path.parent.name == "metadata":
+            from backend.engine.team_data import invalidate_reviews
+            from backend.engine.dataset_metadata import _event
+            changed=False
+            review_enabled=updated.get('team_data',{}).get('settings',{}).get('review_enabled',False)
+            for row in updated.get('images',{}).values():
+                team=row.get('team',{})
+                if review_enabled or team.get('reviews') or team.get('edit_lease'):
+                    invalidate_reviews(row,'project_restored',clear_lease=True)
+                    if review_enabled:
+                        row['workflow_state']='needs_review';row['reviewer']=None
+                    _event(row,'system','team_restore_invalidated',{'reason':'project_restored'})
+                    changed=True
+            if changed:path.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
             ledgers.append(path)
     for ledger in ledgers:
         _rebind_annotation_hashes(ledger, annotation_hashes)
@@ -396,6 +409,16 @@ def _rebind_versions(staging: Path, old_project: Path, target: Path,
             _rename_scopes(snapshot_root, scopes)
         manifest["content_digest"] = _content_digest(manifest)
         path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        team_receipt=path.parent/'team-data.json'
+        if team_receipt.is_file():
+            value=json.loads(team_receipt.read_text(encoding='utf-8'))
+            updated=_rebind_value(value,old_project,target,old_source,new_source)
+            for row in updated.get('eligibility',[]):
+                if row.get('annotation_hash') in annotation_hashes:
+                    row['annotation_hash']=annotation_hashes[row['annotation_hash']]
+            from backend.engine.team_data import _digest
+            updated['eligibility_sha256']=_digest(updated.get('eligibility',[]))
+            team_receipt.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
     return digests
 
 
@@ -423,6 +446,13 @@ def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, s
             sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         binding.setdefault("archive_restored_from_manifest_sha256", old_digest)
         binding.update(manifest_sha256=manifest["content_digest"], split_sha256=split_digest)
+        if binding.get('team_data'):
+            from backend.engine.team_data import _digest
+            receipt=directory/'team-data.json'
+            if not receipt.is_file() or receipt.is_symlink():raise ArchiveError('Team-data training receipt is unavailable')
+            binding.setdefault('archive_restored_from_team_data_sha256',binding.get('team_data_sha256'))
+            binding['team_data']=json.loads(receipt.read_text())
+            binding['team_data_sha256']=_digest(binding['team_data'])
         if binding.get('family_inputs'):
             for row in binding['family_inputs']:
                 if (binding.get('family_task')=='enhancement' and row.get('relative_path')=='pairs.json'
@@ -603,9 +633,13 @@ def _rebind_execution_state(staging: Path, old_project: Path, target: Path,
             probe.bind(("127.0.0.1", 0))
             port = probe.getsockname()[1]
         value.update(pid=None, port=port, token=secrets.token_urlsafe(32))
-        value.pop("native_label", None)
+        for key in ('native_label','native_kind','native_registration_path','process_created_at','process_command_sha256'):
+            value.pop(key,None)
         service_config.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
         service_config.chmod(0o600)
+    # Native files belong to the original host and may contain old secrets/paths.
+    install=staging/'runtime_service'/'install'
+    if install.is_dir():shutil.rmtree(install)
 
 
 def _replace_fingerprints(value: Any, replacements: dict[str, str]) -> Any:
@@ -653,7 +687,7 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
     source_roots = _restored_source_roots(target)
     immutable_roots = _immutable_package_roots(target)
     for path in target.rglob("*.json"):
-        if (path.name == "release_policy.json" or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))
+        if (path.is_relative_to(target/'.migrations') or path.name == "release_policy.json" or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))
                 or path.is_relative_to(target / "versions") and path.name != "manifest.json"):
             continue
         try:
@@ -709,7 +743,10 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
             names = [info.filename for info in infos]
             if len(names) != len(set(names)) or names.count("backup-manifest.json") != 1:
                 raise ArchiveError("Backup has duplicate or missing manifest entries")
+            if source.getinfo('backup-manifest.json').file_size > 32*1024*1024:
+                raise ArchiveError('Backup manifest exceeds 32 MiB',413)
             manifest = json.loads(source.read("backup-manifest.json"))
+            if not isinstance(manifest,dict):raise ArchiveError('Backup manifest must be an object')
             if manifest.get("format") != "modu-project-backup-v1":
                 raise ArchiveError("Unsupported backup format")
             rows = manifest.get("files")
@@ -757,6 +794,8 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
             if not project_path.is_file():
                 raise ArchiveError("Backup project.json is missing")
             project = json.loads(project_path.read_text(encoding="utf-8"))
+            if 'schema_version' in project and (type(project['schema_version']) is not int or project['schema_version']!=1):
+                raise ArchiveError('Backup project schema is unsupported')
             if project.get("id") != manifest.get("project_id"):
                 raise ArchiveError("Backup project identity mismatch")
             project.update({"project_dir": str(target_dir), "dataset_dir": str(target_dir / "dataset"),
@@ -791,12 +830,12 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
         _rebind_training_version_aliases(target_dir, version_digests)
         completed = True
         return target_dir
-    except (OSError, KeyError, TypeError, ValueError, sqlite3.Error) as exc:
+    except (OSError, KeyError, TypeError, ValueError, sqlite3.Error,BadZipFile,LargeZipFile,RuntimeError,NotImplementedError) as exc:
         if isinstance(exc, ArchiveError):
             raise
         raise ArchiveError(f"Invalid backup: {exc}") from exc
     finally:
         if staging.exists():
-            shutil.rmtree(staging)
+            shutil.rmtree(staging,ignore_errors=True)
         if installed and not completed and target_dir.exists():
-            shutil.rmtree(target_dir)
+            shutil.rmtree(target_dir,ignore_errors=True)

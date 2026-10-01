@@ -367,6 +367,10 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
         if previous_ledger_path.is_file():
             previous_ledger = json.loads(previous_ledger_path.read_text(encoding="utf-8"))
             restored_ledger = json.loads(restored_ledger_path.read_text(encoding="utf-8")) if restored_ledger_path.is_file() else {"schema_version":1,"images":{}}
+            # Guidance versions and current team policies are immutable project
+            # decisions, not labels to rewind. Keep their complete history.
+            if previous_ledger.get('team_data'):
+                restored_ledger['team_data']=previous_ledger['team_data']
             for name, old in previous_ledger.get("images", {}).items():
                 current = restored_ledger["images"].get(name, old.copy())
                 audit = {item["id"]:item for item in [*current.get("audit", []), *old.get("audit", [])]}
@@ -376,6 +380,14 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
                 current["revision"] = max(current.get("revision",0),old.get("revision",0))
                 current["workflow_state"] = "needs_review"
                 current["reviewer"] = None
+                from backend.engine.team_data import invalidate_reviews
+                team_history=[*current.get('team',{}).get('history',[]),*old.get('team',{}).get('history',[])]
+                current.setdefault('team',{})['history']=list({json.dumps(item,sort_keys=True):item for item in team_history}.values())
+                # Preserve reviewed decisions as history even when the restored
+                # labels predate the review; live votes and edit claims expire.
+                if old.get('team',{}).get('reviews'):
+                    current['team']['history'].append({'action':'invalidated','at':dm._now(),'reason':'version_restored','reviews':old['team']['reviews']})
+                invalidate_reviews(current,'version_restored',clear_lease=True)
                 dm._event(current,"operator","version_restored",{"version_id":manifest["id"]})
                 restored_ledger["images"][name] = current
             restored_ledger_path.parent.mkdir(parents=True,exist_ok=True)

@@ -679,6 +679,8 @@ def _restore_bytes(path: Path, previous: Optional[bytes]) -> None:
 
 @router.post("/{suggestion_id}/review")
 def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
+    from backend.api.shared_authorization import request_actor
+    req=req.model_copy(update={'actor':request_actor(request,req.actor)})
     project = get_current_project(request)
     with _REVIEW_LOCK, _VERSION_LOCK, metadata_engine.metadata_transaction(Path(project["project_dir"]), _source_path(project), Path(project["annotations_dir"])):
         proposal = _read_proposal(project, suggestion_id)
@@ -751,7 +753,7 @@ def review_suggestion(suggestion_id: str, req: ReviewRequest, request: Request):
         batch_path = _batch_path(project, batch["id"]) if batch is not None else None
         previous_batch = batch_path.read_bytes() if batch_path is not None else None
         try:
-            routes_annotation.save_annotations(annotation_request)
+            routes_annotation.save_annotations(annotation_request,request)
             if batch is not None:
                 # A verified acceptance is the only dataset change that may
                 # advance this batch's review baseline. External label/split

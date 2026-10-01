@@ -16,6 +16,10 @@ export interface CrashEventData {
 }
 
 export interface ElectronAPI {
+  getDistributionStatus:()=>Promise<DistributionState>;
+  configureUpdateChannel:(configuration:UpdateChannel|null)=>Promise<DistributionState>;
+  checkForUpdate:()=>Promise<DistributionState>;
+  downloadUpdate:()=>Promise<ManualDelivery>;
   getSharedConnection:()=>Promise<SharedConnection|null>;
   loginSharedServer:(input:{server_url:string;username:string;password:string})=>Promise<SharedConnection>;
   selectSharedProject:(projectId:string)=>Promise<SharedConnection>;
@@ -33,6 +37,12 @@ export interface ElectronAPI {
   onBackendCrashed: (callback: (data: CrashEventData) => void) => () => void;
   platform: 'darwin' | 'win32' | 'linux';
 }
+
+export interface NativeSignature {status:'verified'|'unsigned'|'invalid'|'unavailable'|'development';reason:string;publisher?:string;platform:string;checked_at:string}
+export interface UpdateChannel {channel:'stable'|'beta';manifest_url:string}
+export interface UpdateRelease {version:string;channel:'stable'|'beta';platform:string;arch:string;url:string;sha256:string;size:number}
+export interface DistributionState {app_version:string;version_source:'electron';platform:string;architecture:string;signature:NativeSignature;update:{configured:boolean;configuration:UpdateChannel|null;status:'not_configured'|'configured'|'available'|'up_to_date';release:UpdateRelease|null;automatic_update_available:false;prerequisite:string}}
+export interface ManualDelivery {version:string;path:string;sha256:string;integrity_verified:true;signature:NativeSignature;publisher_matches_installed:boolean;handoff_ready:boolean;prerequisite:string}
 
 export interface SharedConnection {server_url:string;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}
 

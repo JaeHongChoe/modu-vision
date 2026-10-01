@@ -27,6 +27,8 @@ class MaskImportRequest(BaseModel):
 
 @router.post('/import')
 def import_masks(req:MaskImportRequest,request:Request):
+    from backend.api.shared_authorization import request_actor
+    req=req.model_copy(update={'actor':request_actor(request,req.actor)})
     project,source=exchange._context(request);inventory={r['relative_path']:r for r in exchange._rows(project,source)}
     a=set_request_annotation_root(Path(project['annotations_dir']));p=set_request_project_root(Path(project['project_dir']))
     try:
@@ -61,7 +63,7 @@ def import_masks(req:MaskImportRequest,request:Request):
                         mapping={ann.get('category_id') or 1:ann['label'] for ann in existing if ann['type']!='tag'}
                         if any(ann['category_id'] in mapping and mapping[ann['category_id']]!=ann['label'] for ann in row['annotations']):raise ValueError('Merge mask class IDs conflict with existing class names')
                     annotations=[*existing,*row['annotations']] if req.conflict_policy=='merge' else row['annotations']
-                    routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=Path(row['file_name']).stem,image_path=meta['file_path'],annotations=annotations,image_width=meta['width'],image_height=meta['height'],expected_revision=receipt['revision'],actor=req.actor,mask_classes=row['classes']))
+                    routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=Path(row['file_name']).stem,image_path=meta['file_path'],annotations=annotations,image_width=meta['width'],image_height=meta['height'],expected_revision=receipt['revision'],actor=req.actor,mask_classes=row['classes']),request)
             except Exception:
                 for path,value in previous.items():
                     if value is None:path.unlink(missing_ok=True)

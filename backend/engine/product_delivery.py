@@ -5,6 +5,7 @@ import base64
 import hashlib
 import importlib.util
 import json
+import os
 import platform
 import re
 import shutil
@@ -208,13 +209,24 @@ def installation_readiness(project):
     compiler=shutil.which('c++') or shutil.which('clang++') or shutil.which('g++')
     headers=Path(sysconfig.get_path('include'))/'Python.h'
     dependencies={name:importlib.util.find_spec(name) is not None for name in ('torch','numpy','PIL','cv2','pydantic','httpx')}
-    return {'app_version':'0.1.0','host':{'os':platform.system(),'architecture':platform.machine(),'python':platform.python_version()},
-        'project':{'schema_version':schema,'supported_schema_versions':[1],'compatible':schema==1,'migration_performed':False},
+    app_version=os.environ.get('VISION_AI_APP_VERSION') or None;version_source='desktop_process' if app_version else 'unavailable'
+    package=Path(__file__).resolve().parents[2]/'package.json'
+    if not app_version and package.is_file():
+        app_version=json.loads(package.read_text()).get('version');version_source='package_manifest'
+    receipts=root/'.migrations'
+    migrated=False
+    if receipts.is_dir() and not receipts.is_symlink():
+        for record in receipts.glob('*/receipt.json'):
+            if record.is_symlink() or record.parent.is_symlink():continue
+            try:migrated=migrated or json.loads(record.read_text()).get('status')=='applied'
+            except (OSError,ValueError):continue
+    return {'app_version':app_version,'version_source':version_source,'host':{'os':platform.system(),'architecture':platform.machine(),'python':platform.python_version()},
+        'project':{'schema_version':schema,'supported_schema_versions':[1],'compatible':type(schema)is int and schema==1,'migration_performed':migrated},
         'runtime_dependencies':dependencies,'python_supported':(3,10)<=sys.version_info[:2]<(3,14),
         'sdk':{'Python':{'ready':all(dependencies.values()),'requires_python':True},
                'C++':{'ready':bool(compiler) and headers.is_file() and all(dependencies.values()),'compiler_available':bool(compiler),'python_headers_available':headers.is_file(),'requires_embedded_python':True},
                'C#':{'ready':bool(shutil.which('dotnet')) and bool(compiler) and headers.is_file() and all(dependencies.values()),'dotnet_available':bool(shutil.which('dotnet')),'requires_embedded_python':True,'bridge':'C ABI / PInvoke'}},
-        'install':{'mode':'desktop_and_project_runtime','native_autostart_supported':platform.system()=='Darwin','signing_verified':False},
+        'install':{'mode':'desktop_and_project_runtime','native_autostart_supported':platform.system() in ('Darwin','Linux','Windows'),'native_registration_verified':False,'signing_verified':False,'signing_status':'desktop_main_process_required'},
         'update':{'automatic_update_available':False,'actions':['Export a project archive before changing app versions','Check project schema and runtime dependencies before reopening'],
                   'compatibility_check_performed':True}}
 

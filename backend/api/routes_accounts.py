@@ -68,6 +68,11 @@ def membership(project_id:str,body:Membership,request:Request):
     except ValueError as exc:raise HTTPException(403,str(exc)) from exc
     return {'project_id':project_id,'user_id':body.user_id,'role':body.role}
 
+@router.get('/projects/{project_id}/members')
+def project_members(project_id:str,request:Request):
+    try:return {'members':store(request).project_members(project_id,user(request)['id'])}
+    except ValueError as exc:raise HTTPException(403,str(exc)) from exc
+
 @router.post('/select-project')
 def select_project(body:ProjectSelection,request:Request):
     try:store(request).select_project(user(request)['id'],body.project_id)

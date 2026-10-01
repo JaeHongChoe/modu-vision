@@ -72,7 +72,8 @@ def command_sha256(arguments):
 
 
 def inspection_command(arguments,state):
-    return (len(arguments)>=3 and arguments[1:3]==['-m','backend.engine.inspection_service']
+    entry=(len(arguments)>=3 and arguments[1:3]==['-m','backend.engine.inspection_service']) or (len(arguments)>=2 and arguments[1]=='--inspection-service')
+    return (entry
         and arguments.count('--state-dir')==1 and arguments.index('--state-dir')+1<len(arguments)
         and arguments[arguments.index('--state-dir')+1]==str(Path(state)))
 

@@ -4,6 +4,7 @@ import fs from 'fs';
 import {pathToFileURL} from 'node:url';
 import type { BackendSupervisor } from './supervisor';
 import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
+import {DistributionManager} from './distributionStatus';
 
 export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   const authorizeShared=(event:IpcMainInvokeEvent)=>{
@@ -13,6 +14,13 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
     const trusted=ownMainFrame&&(url.href.split(/[?#]/,1)[0]===packaged||(!app.isPackaged&&url.protocol==='http:'&&['127.0.0.1','localhost'].includes(url.hostname)&&url.port==='5173'));
     if(!trusted)throw new Error('Shared server credentials require the application main frame');
   };
+  const distribution=new DistributionManager({appVersion:app.getVersion(),packaged:app.isPackaged,
+    appPath:process.platform==='darwin'?path.resolve(process.execPath,'../../..'):app.getAppPath(),
+    executablePath:process.execPath,userDataPath:app.getPath('userData'),platform:process.platform,arch:process.arch});
+  ipcMain.handle('distribution:get-status',event=>{authorizeShared(event);return distribution.status();});
+  ipcMain.handle('distribution:configure-channel',(event,input)=>{authorizeShared(event);return distribution.configure(input);});
+  ipcMain.handle('distribution:check-update',event=>{authorizeShared(event);return distribution.check();});
+  ipcMain.handle('distribution:download-update',event=>{authorizeShared(event);return distribution.download();});
   ipcMain.handle('shared:get',event=>{authorizeShared(event);return getSharedConnection();});
   ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});

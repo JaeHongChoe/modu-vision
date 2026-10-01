@@ -1,3 +1,5 @@
+import {useComputeStore} from '../../stores/useComputeStore';
+import {getApiPersistenceIdentity} from '../../services/api';
 import { useEffect, useRef, useState } from 'react';
 import { FlaskConical, Square } from 'lucide-react';
 import { request } from '../../services/api';
@@ -19,7 +21,7 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
   const handoff=useTaskHandoff(task,true);
   const project = useProjectStore(state => state.project); const projectDir = useProjectStore(state => state.projectDir);
   const source = project?.source_dataset_dir || ''; const labelset = project?.active_labelset_id || 'default';
-  const scope = `${projectDir}\n${source}\n${labelset}\n${task}`; const currentScope = useRef(scope); currentScope.current = scope;
+  const compute=useComputeStore();const scope = `${projectDir}\n${source}\n${labelset}\n${task}\n${compute.transportRevision}\n${compute.selectedProfileId}\n${getApiPersistenceIdentity()}`; const currentScope = useRef(scope); currentScope.current = scope;
   const [capability, setCapability] = useState<TrialCapability | null>(null);
   const [values, setValues] = useState<Record<string, string>>({}); const [mode, setMode] = useState<'quick' | 'search' | 'fast_retrain'>('search');
   const [device, setDevice] = useState<LocalTrainingDevice>('cpu'); const [epochs, setEpochs] = useState(2);
@@ -134,12 +136,12 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
           <ProgramField label="전체 Epoch 예산"><input type="number" min={epochs} max={512} value={epochBudget} onChange={e => setEpochBudget(Number(e.target.value))} className={programInput} /></ProgramField>
           <ProgramField label="전체 시간 예산 · 초"><input type="number" min={1} max={86400} value={seconds} onChange={e => setSeconds(Number(e.target.value))} className={programInput} /></ProgramField></div>
         <p className="text-slate-400">메모리 예산은 CPU에서 백엔드 프로세스 전체 RSS, CUDA/MPS에서 이 프로세스의 장치 할당 메모리를 확인합니다. 학습 경계에서 협조적으로 중지하며 하드웨어 메모리를 강제로 제한하지 않습니다. GPU 예약에도 요청 예산을 기록합니다.</p>
-        <div className="grid gap-3 md:grid-cols-4"><ProgramField label="프로세스 메모리 예산 · MB"><input type="number" min={1} max={1048576} value={memory} onChange={event=>setMemory(Number(event.target.value))} className={programInput} /></ProgramField><TrainingDeviceSelector value={device} onChange={setDevice} disabled={busy || active} />
+        <div className="grid gap-3 md:grid-cols-4"><ProgramField label="프로세스 메모리 예산 · MB"><input type="number" min={1} max={1048576} value={memory} onChange={event=>setMemory(Number(event.target.value))} className={programInput} /></ProgramField><TrainingDeviceSelector localOnly value={device} onChange={setDevice} disabled={busy || active} />
           <ProgramField label="호환 완료 부모 모델"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={busy || active}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>부모 {index + 1} · SHA {row.checkpoint_sha256.slice(0, 12)}</option>)}</select></ProgramField>
           <ProgramField label="추론 시간 가중치"><input type="number" min={0} step={.001} value={latencyWeight} disabled={!latencyObjective} onChange={e => setLatencyWeight(Number(e.target.value))} className={programInput} /></ProgramField></div>
         <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={latencyObjective} onChange={e => setLatencyObjective(e.target.checked)} />검증 {capability.metric_key}와 모델 추론 시간(ms)을 함께 비교</label>
         {budgetError&&<p role="alert" className="text-amber-200">{budgetError}</p>}
-        <button type="button" className={programPrimary} disabled={busy || active || !preparedReady || !!budgetError || (mode === 'fast_retrain' && !parent)} onClick={() => void start()}>측정 학습 시작</button>
+        <button type="button" className={programPrimary} disabled={!!compute.selectedProfileId || busy || active || !preparedReady || !!budgetError || (mode === 'fast_retrain' && !parent)} onClick={() => void start()}>측정 학습 시작</button>
       </>}
       {jobs.length > 0 && <ProgramField label="저장된 자동 학습 작업"><select value={job?.search_id || ''} disabled={active} className={programInput} onChange={e => setJob(jobs.find(row => row.search_id === e.target.value) || null)}>{jobs.map((row, index) => <option key={row.search_id} value={row.search_id}>작업 {index + 1} · {statusLabels[row.status] || row.status} · {new Date(row.created_at * 1000).toLocaleString()}</option>)}</select></ProgramField>}
       {job && <div className="rounded border border-[#344255] bg-[#0B1520] p-3"><div className="flex items-center justify-between"><span className="font-semibold text-violet-200">{statusLabels[job.status] || job.status} · 후보 {job.trials.length}개 · {job.epochs_consumed || 0} epoch</span>{active && <button type="button" disabled={busy || job.status==='stopping'} onClick={() => void cancel()} className={programButton}><Square className="mr-1 inline h-3 w-3" />탐색 중지</button>}</div>

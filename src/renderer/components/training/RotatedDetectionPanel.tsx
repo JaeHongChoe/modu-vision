@@ -1,3 +1,8 @@
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {submitModelTraining,controlModelTraining} from '../../services/modelExecution';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {getApiPersistenceIdentity} from '../../services/api';
+import {openModelFlow} from './ProgramWorkbenchControls';
 import React, { useEffect, useState } from 'react';
 import { Crosshair, Loader2, RefreshCw, Square } from 'lucide-react';
 import {
@@ -42,11 +47,12 @@ export const RotatedDetectionPanel: React.FC = () => {
   const [busy, setBusy] = useState<'manifest' | 'train' | 'cancel' | 'evaluate' | 'predict' | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const isActive = job?.status === 'running' || job?.status === 'stopping';
+  const isActive = !!job&&['queued','preparing','running','stopping','transferring','syncing'].includes(job.status);
+  const compute=useComputeStore(),apiIdentity=getApiPersistenceIdentity();
 
   const sameProject = () => useProjectStore.getState().projectDir === projectDir &&
     (useProjectStore.getState().project?.source_dataset_dir || '') === projectSource &&
-    (useProjectStore.getState().project?.active_labelset_id || 'default') === labelsetId;
+    (useProjectStore.getState().project?.active_labelset_id || 'default') === labelsetId&&useComputeStore.getState().selectedProfileId===compute.selectedProfileId&&useComputeStore.getState().transportRevision===compute.transportRevision&&getApiPersistenceIdentity()===apiIdentity;
 
   useEffect(() => {
     setRowsText(''); setSampleCount(null); setSplitCounts(null);
@@ -57,22 +63,23 @@ export const RotatedDetectionPanel: React.FC = () => {
     let active = true;
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets'),request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs'),specializedApi.rotated.models()]).then(([prepared,journal,result])=>{
       if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
-      const selected=selectHandoffRecord(result.models,handoff);setModelId(selected?.job_id||'');
-      const restored=handoff?(handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>row.status==='running'||row.status==='stopping');setJob(restored||null);
-      const path=(selected as {dataset_path?:string}|undefined)?.dataset_path||handoff?.datasetPath;
+      const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff);setModelId(selected?.job_id||'');
+      const restored=handoff?(handoff.transport&&handoff.transport!=='local'?journal.jobs.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>row.status==='running'||row.status==='stopping');setJob(restored||null);
+      if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<RotatedJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&sameProject())setJob(row);}).catch(cause=>{if(active&&sameProject())setError(String(cause));});}
+      const path=handoff?.datasetPath||(selected as {dataset_path?:string}|undefined)?.dataset_path;
       const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 회전 박스 정답 버전을 찾지 못했습니다.');
       if(dataset){setDatasetPath(dataset.dataset_path);setSampleCount(dataset.sample_count||null);void specializedApi.rotated.manifest(dataset.dataset_path).then(manifest=>{if(active&&sameProject())applyManifest(manifest);}).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});}
     }).catch(cause=>{if(active&&sameProject())setError(errorText(cause));});
     return () => { active = false; };
-  }, [projectDir, projectSource, labelsetId,handoff?.jobId,handoff?.selectionId]);
+  }, [projectDir,projectSource,labelsetId,compute.selectedProfileId,compute.transportRevision,apiIdentity,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
     if (!job || !isActive || !projectDir) return;
     let active = true;
     const check = async () => {
       try {
-        const status = await specializedApi.rotated.job(job.job_id);
+        const status = await controlModelTraining<RotatedJob>(job,'status',()=>specializedApi.rotated.job(job.job_id));
         if (!active || !sameProject()) return;
         setJob(status);
         if (status.status === 'completed') {
@@ -138,7 +145,8 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const started = await request<RotatedJob>('/api/rotated-detection/train',{method:'POST',body:JSON.stringify({dataset_path:datasetPath,epochs,device,...(warmParentId?{warm_start_job_id:warmParentId}:{})})});
+      const options={dataset_path:datasetPath,epochs,device,...(warmParentId?{warm_start_job_id:warmParentId}:{})};
+      const started=await submitModelTraining<RotatedJob>('rotated_detection',options,()=>request<RotatedJob>('/api/rotated-detection/train',{method:'POST',body:JSON.stringify(options)}));
       if (!sameProject()) return;
       setJob(started);
       if (started.status === 'completed') {
@@ -158,10 +166,10 @@ export const RotatedDetectionPanel: React.FC = () => {
   };
 
   const cancelTraining = async () => {
-    if (!job || job.status !== 'running' || busy) return;
+    if (!job || !isActive || busy) return;
     setBusy('cancel'); setError('');
     try {
-      const stopped = await specializedApi.rotated.cancel(job.job_id);
+      const stopped = await controlModelTraining<RotatedJob>(job,'cancel',()=>specializedApi.rotated.cancel(job.job_id));
       if (sameProject()) setJob(stopped);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -194,6 +202,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <p className="leading-5 text-slate-400">원본 이미지의 회전 박스 정답을 지정해 후보 모델을 학습합니다. 같은 이미지의 객체는 여러 행으로 입력하세요. 완료 후보는 5단계 검사 노드에서 회전 객체 검출 모델로 선택하고 저장할 수 있습니다.</p>
+      <TrainingPreparationPanel family="rotated_detection" model="rotated_detector" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
       <div className="rounded border border-[#344255] bg-[#0E1722] px-3 py-2">
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
         <div className="mt-1 break-all font-mono text-slate-200">{projectSource || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
@@ -262,8 +271,8 @@ export const RotatedDetectionPanel: React.FC = () => {
           <p className="text-slate-400">원본 좌표의 회전 박스와 클래스·검출 신뢰도를 반환합니다.</p>
         </div>
       </div>}
-      <button type="button" className={programButton} disabled={!modelId} onClick={()=>void useProjectStore.getState().setStep(5)}>검사 플로우·배포 패키지</button>
-      <AutoDLWorkbench task="rotated_detection" familyDatasetPath={sampleCount ? datasetPath : undefined} onComplete={()=>void specializedApi.rotated.models().then(result=>{if(sameProject()){setModels(result.models);setModelId(selectHandoffRecord(result.models,handoff)?.job_id||'');}}).catch(cause=>{if(sameProject())setError(errorText(cause));})} />
+      <button type="button" className={programButton} disabled={!modelId} onClick={()=>void openModelFlow('rotated_detection',modelId,datasetPath)}>검사 플로우·배포 패키지</button>
+      <AutoDLWorkbench task="rotated_detection" familyDatasetPath={sampleCount ? datasetPath : undefined} onComplete={()=>void specializedApi.rotated.models().then(result=>{if(sameProject()){setModels(result.models);setModelId((handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff)?.job_id)||'');}}).catch(cause=>{if(sameProject())setError(errorText(cause));})} />
     </div>
   </details>;
 };

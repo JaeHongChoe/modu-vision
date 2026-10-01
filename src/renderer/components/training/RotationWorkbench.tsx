@@ -1,7 +1,8 @@
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {openModelFlow} from './ProgramWorkbenchControls';
 import { useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { modelTrainingProgram, type LocalTrainingDevice, type RotationEvaluation, type RotationPrediction, type RotationRow } from '../../services/modelTrainingProgram';
-import { useProjectStore } from '../../stores/useProjectStore';
 import { useProgramWorkbench } from './useProgramWorkbench';
 import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
@@ -46,8 +47,10 @@ export function RotationWorkbench() {
     const rows = parseRotationRows(rowsText); const result = await modelTrainingProgram.rotation.prepare(state.source, rows);
     if (state.isCurrent()) {state.addDataset(result); setEvaluation(null); state.setNotice(`${result.sample_count}장과 보정각을 프로젝트에 저장했습니다.`);}
   });
-  const selectedData = state.models.find(row => row.job_id === state.modelId)?.metadata?.dataset_path || state.dataset?.dataset_path;
+  const selectedMetadata=state.models.find(row=>row.job_id===state.modelId)?.metadata;
+  const selectedData=selectedMetadata?.training_provenance?.family_dataset_path||state.dataset?.dataset_path||selectedMetadata?.dataset_path;
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
+    <TrainingPreparationPanel family="rotation" model="small_cnn_angle_v1" device={device} datasetPath={state.dataset?.dataset_path} warmStartJobId={parent||undefined} config={{epochs,batch_size:batch,image_size:size,width,learning_rate:rate}} />
     <h2 className="flex items-center gap-2 text-base font-semibold"><RotateCw className="h-5 w-5 text-cyan-300" />학습형 정방향 보정</h2>
     <p className="mt-2 leading-5 text-slate-400">각 이미지가 정방향이 되는 반시계 보정각을 정답으로 학습합니다. 360° 방향을 예측하고 원본 해상도를 보존한 정렬 이미지와 좌표 변환을 반환합니다.</p>
     <div className="mt-4 grid items-end gap-3 sm:grid-cols-4"><div className="sm:col-span-2"><ProjectImagePicker value={sampleImage} disabled={disabled} onSelect={row=>{setSampleImage(row.file_path);if(['train','val','test'].includes(row.split))setSplit(row.split as RotationRow['split']);}} /></div>
@@ -72,7 +75,7 @@ export function RotationWorkbench() {
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 정방향 후보 모델"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null); setPrediction(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · epoch {String(row.metadata.best_epoch || '?')}</option>)}</select></ProgramField></div>
       <button type="button" className={programButton} disabled={!state.modelId || !selectedData || disabled} onClick={() => void state.action('시험 각도 평가', async () => {const result = await modelTrainingProgram.rotation.evaluate(state.modelId, selectedData!, device); if (state.isCurrent()) setEvaluation(result);})}>시험 분할 평가</button>
       <button type="button" className={programButton} disabled={!state.modelId || !sampleImage || disabled} onClick={() => void state.action('정방향 예측', async () => {const result = await modelTrainingProgram.rotation.predict(state.modelId, sampleImage, device); if (state.isCurrent()) setPrediction(result);})}>선택 이미지 정렬</button>
-      <button type="button" className={programButton} disabled={!state.modelId || disabled} onClick={() => void useProjectStore.getState().setStep(5)}>플로우에 연결</button>
+      <button type="button" className={programButton} disabled={!state.modelId || disabled} onClick={() => void openModelFlow('rotation',state.modelId,selectedData)}>플로우에 연결</button>
       <button type="button" className={programButton} disabled={!state.modelId || disabled} onClick={() => void state.action('정방향 패키지 내보내기', async () => {const result = await modelTrainingProgram.rotation.export(state.modelId); if (state.isCurrent()) state.setNotice(`TorchScript 패키지: ${result.package_dir}`);})}>내보내기</button>
     </div>
     {evaluation && <div className="mt-4 rounded border border-[#344255] p-3">시험 {evaluation.sample_count}장 · 원형 각도 MAE {evaluation.angular_mae_deg.toFixed(2)}° · 10° 이내 {(evaluation.within_10_deg * 100).toFixed(1)}%</div>}

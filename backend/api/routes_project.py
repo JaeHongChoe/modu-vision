@@ -15,10 +15,11 @@ from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from backend.engine.checkpoint_paths import set_active_project_models_dir
+from backend.engine.checkpoint_paths import set_active_project_models_dir, active_project_models_dir
 from backend.engine.annotation_storage import migrate_legacy_dataset_overlay
 from backend.engine.project_labelsets import activate_labelset, create_labelset, labelset_root, load_labelsets
 from backend.engine.project_archive import ArchiveError, create_archive, restore_archive
+from backend.engine.project_migration import preview_migration, apply_migration, MigrationError
 
 logger = logging.getLogger("vision_ai_studio.routes_project")
 router = APIRouter(prefix="/api/project", tags=["project"])
@@ -82,28 +83,41 @@ def _project_root(request: Request) -> Path:
 def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, Any]:
     account=getattr(request.state,'account_user',None)
     accounts=getattr(request.app.state,'accounts',None)
-    if account and accounts:
-        accounts.register_project(project['id'],project['project_dir'],account['id'])
-        request.state.scoped_project=project
-        return project
-    try:
-        set_active_project_models_dir(project["models_dir"])
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    _write_json(_project_root(request) / _ACTIVE_FILE_NAME, {"project_dir": project["project_dir"]})
-    request.app.state.current_project = project
     try:
         if project.get("active_labelset_id", "default") == "default":
             migrate_legacy_dataset_overlay(project)
     except (OSError, ValueError) as exc:
-        logger.warning("Could not copy legacy annotations into project %s: %s", project["id"], exc)
+        raise HTTPException(422,detail=f'Project activation failed; legacy annotation migration needs recovery: {exc}') from exc
     try:
         from backend.api.routes_dataset import migrate_legacy_split_manifest
 
         migrate_legacy_split_manifest(project)
     except (OSError, ValueError) as exc:
-        logger.warning("Could not copy legacy split into project %s: %s", project["id"], exc)
-    _record_project_in_history(request, project)
+        raise HTTPException(422,detail=f'Project activation failed; legacy split migration needs recovery: {exc}') from exc
+    if account and accounts:
+        accounts.register_project(project['id'],project['project_dir'],account['id'])
+        request.state.scoped_project=project
+        return project
+    pointer=_project_root(request)/_ACTIVE_FILE_NAME
+    history=_history_file(request)
+    prior_files={path:path.read_bytes() if path.exists() else None for path in (pointer,history)}
+    prior_models=active_project_models_dir()
+    try:
+        # Publish activation only after required migrations and history writes succeed.
+        _record_project_in_history(request, project)
+        _write_json(_project_root(request) / _ACTIVE_FILE_NAME, {"project_dir": project["project_dir"]})
+        set_active_project_models_dir(project["models_dir"])
+    except (OSError,ValueError) as exc:
+        for path,raw in prior_files.items():
+            try:
+                if raw is None:path.unlink(missing_ok=True)
+                else:
+                    from backend.engine.project_migration import _atomic_bytes
+                    _atomic_bytes(path,raw)
+            except OSError:logger.error('Activation pointer recovery failed for %s',path.name)
+        set_active_project_models_dir(prior_models)
+        raise HTTPException(status_code=422, detail=f'Project activation failed: {exc}') from exc
+    request.app.state.current_project = project
     return project
 
 
@@ -114,11 +128,16 @@ def _load_project(path: Path) -> Dict[str, Any]:
     if not manifest.is_file():
         raise HTTPException(status_code=422, detail=f"No project.json in {path}. Create a project here first.")
     try:
+        preview_migration(path)
         saved = json.loads(manifest.read_text(encoding="utf-8"))
         if not isinstance(saved, dict):
             raise ValueError("project.json must contain an object")
         # A workspace can be moved; its managed folders move with project.json.
         data = dict(saved)
+        # Validate the project shape before the backed-up schema normalization.
+        ProjectConfigResponse.model_validate(saved)
+        apply_migration(path)
+        saved = json.loads(manifest.read_text(encoding="utf-8"));data=dict(saved)
         active_set = load_labelsets(path)["active_id"]
         data.update({
             "project_dir": str(path),
@@ -177,7 +196,8 @@ class ProjectUpdateRequest(BaseModel):
 
 
 class ProjectConfigResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
+    schema_version: Literal[1] = 1
     id: str
     name: str
     task: Literal["classification", "detection", "segmentation", "anomaly"]
@@ -192,6 +212,34 @@ class ProjectConfigResponse(BaseModel):
     source_dataset_dir: Optional[str] = None
     created_at: str
     updated_at: str
+
+
+class CompatibilityApplyRequest(ProjectOpenRequest):
+    expected_manifest_sha256: str = Field(...,pattern=r'^[0-9a-f]{64}$')
+
+
+@router.post('/compatibility/preview')
+def compatibility_preview(req:ProjectOpenRequest,request:Request):
+    _compatibility_scope(req.project_dir,request)
+    try:return preview_migration(Path(req.project_dir))
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(422,detail=str(exc)) from exc
+
+
+@router.post('/compatibility/apply')
+def compatibility_apply(req:CompatibilityApplyRequest,request:Request):
+    _compatibility_scope(req.project_dir,request,write=True)
+    try:return apply_migration(Path(req.project_dir),req.expected_manifest_sha256)
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(409,detail=str(exc)) from exc
+
+
+def _compatibility_scope(directory,request,write=False):
+    account=getattr(request.state,'account_user',None)
+    if not account:return
+    selected=getattr(request.state,'scoped_project',None)
+    if not selected or Path(directory).expanduser().resolve()!=Path(selected['project_dir']).resolve():
+        raise HTTPException(403,'Compatibility checks must address the selected authorized project')
+    if write and request.app.state.accounts.project_role(account['id'],selected['id'])!='owner':
+        raise HTTPException(403,'Project owner permission is required for schema migration')
 
 
 @router.post("/create", response_model=ProjectConfigResponse)

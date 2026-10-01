@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { BackendStatus, CrashEventData, ElectronAPI } from '../types/electron';
 
 const api: ElectronAPI = {
+  getDistributionStatus:()=>ipcRenderer.invoke('distribution:get-status'),
+  configureUpdateChannel:configuration=>ipcRenderer.invoke('distribution:configure-channel',configuration),
+  checkForUpdate:()=>ipcRenderer.invoke('distribution:check-update'),
+  downloadUpdate:()=>ipcRenderer.invoke('distribution:download-update'),
   getSharedConnection:()=>ipcRenderer.invoke('shared:get'),
   loginSharedServer:input=>ipcRenderer.invoke('shared:login',input),
   selectSharedProject:id=>ipcRenderer.invoke('shared:select',id),

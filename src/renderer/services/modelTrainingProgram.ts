@@ -1,4 +1,5 @@
 import { request } from './api';
+import {submitModelTraining,requireLocalSearch} from './modelExecution';
 
 export type ModelFamily = 'classification' | 'segmentation' | 'detection' | 'anomaly' |
   'patch_classification' | 'ocr' | 'rotated_detection' | 'rotation' | 'defect_gan' | 'enhancement';
@@ -6,8 +7,8 @@ export type LocalTrainingDevice = 'cpu' | 'mps' | 'cuda';
 export type PreparedDataset = {dataset_path: string; sample_count?: number; patch_count?: number;
   patch_size?: number; stride?: number; classes?: string[]; normal_class?: string;
   provenance: {split_counts?: Record<string, number>; source_dataset_path?: string; dataset_sha256?: string}};
-export type FamilyModel = {job_id: string; checkpoint_path?: string; metadata: Record<string, unknown> & {dataset_path?: string; source_dataset_path?: string}};
-export type ProgramJob = {job_id: string; status: string; task?: string; dataset_path?: string; source_dataset_path?: string;
+export type FamilyModel = {job_id: string; checkpoint_path?: string; metadata: Record<string, unknown> & {dataset_path?: string; source_dataset_path?: string;training_provenance?:{family_dataset_path?:string}}};
+export type ProgramJob = {execution_job_id?:string;model_id?:string;compute_profile_id?:string;job_id: string; status: string; task?: string; dataset_path?: string; source_dataset_path?: string;
   epoch?: number; epochs?: number; current_epoch?: number; total_epochs?: number; loss?: number;
   current_train_loss?: number; output_dir?: string; error?: string | {message?: string};
   training_provenance?: {labelset_id?: string}; result?: Record<string, unknown>};
@@ -34,7 +35,7 @@ export const modelTrainingProgram = {
     prepare: (options: {patch_size: number; stride: number; normal_class: string; minimum_overlap: number}) => post<PreparedDataset>('/api/patch-classification/prepare', options),
     manifest: (dataset_path: string) => request<PreparedDataset>(`/api/patch-classification/manifest?${query({dataset_path})}`),
     train: (options: {dataset_path: string; backbone: string; epochs: number; batch_size: number; image_size: number;
-      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string}) => post<ProgramJob>('/api/patch-classification/train', options),
+      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string}) => submitModelTraining('patch_classification',options,()=>post<ProgramJob>('/api/patch-classification/train', options)),
     status: (job_id: string) => request<ProgramJob>(`/api/training/status?${query({job_id})}`),
     jobs: () => request<{jobs: ProgramJob[]}>('/api/training/jobs'),
     cancel: (job_id: string) => post<ProgramJob>('/api/training/stop', {job_id}),
@@ -48,7 +49,7 @@ export const modelTrainingProgram = {
     prepare: (source_dataset_path: string, samples: RotationRow[]) => post<PreparedDataset>('/api/rotation/prepare', {source_dataset_path, samples}),
     manifest: (dataset_path: string) => request<PreparedDataset & {samples: RotationRow[]}>(`/api/rotation/manifest?${query({dataset_path})}`),
     train: (options: {dataset_path: string; epochs: number; batch_size: number; image_size: number; width: number;
-      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string}) => post<ProgramJob>('/api/rotation/train', {...options, background: true}),
+      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string}) => submitModelTraining('rotation',options,()=>post<ProgramJob>('/api/rotation/train', {...options, background: true})),
     jobs: () => request<{jobs: ProgramJob[]}>('/api/rotation/jobs'),
     status: (job_id: string) => request<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}`),
     cancel: (job_id: string) => post<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}/cancel`, {}),
@@ -67,6 +68,6 @@ export const modelTrainingProgram = {
       mode: 'quick' | 'search' | 'fast_retrain'; epochs_per_trial: number; parent_job_id?: string;
       objective: 'val_loss' | 'loss_latency'; latency_weight: number;
       budget: {max_trials: number; max_total_epochs: number; max_seconds: number;max_memory_mb?:number};
-      search_space: Record<string, Array<string | number>>; base_config: Record<string, unknown>}) => post<AutomatedTrainingJob>('/api/automated-training/start', {...options, background: true}),
+      search_space: Record<string, Array<string | number>>; base_config: Record<string, unknown>}) => requireLocalSearch(()=>post<AutomatedTrainingJob>('/api/automated-training/start', {...options, background: true})),
   },
 };

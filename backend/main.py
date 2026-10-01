@@ -53,6 +53,7 @@ from backend.api.routes_evaluation import router as evaluation_router
 from backend.api.routes_evaluation_history import router as evaluation_history_router
 from backend.api.routes_export import router as export_router
 from backend.api.routes_data_workbench import router as data_workbench_router
+from backend.api.routes_team_data import router as team_data_router
 from backend.api.routes_flow_workspace import router as flow_workspace_router
 from backend.api.routes_training_workspace import router as training_workspace_router
 from backend.api.routes_product_delivery import router as product_delivery_router
@@ -139,6 +140,7 @@ class ProjectStorageScopeMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
+            "/api/project/compatibility/preview", "/api/project/compatibility/apply",
         }:
             await self.app(scope, receive, send)
             return
@@ -273,6 +275,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)
     app.include_router(data_workbench_router)
+    app.include_router(team_data_router)
     app.include_router(flow_workspace_router)
     app.include_router(training_workspace_router)
     app.include_router(product_delivery_router)
@@ -344,4 +347,12 @@ def run_server():
 
 
 if __name__ == "__main__":
-    run_server()
+    if len(sys.argv)>1 and sys.argv[1]=='--managed-service-project':
+        if len(sys.argv)!=3:raise SystemExit('--managed-service-project requires exactly one project directory')
+        from backend.engine.service_bootstrap import main as service_bootstrap_main
+        service_bootstrap_main(sys.argv[2])
+    elif len(sys.argv)>1 and sys.argv[1]=='--inspection-service':
+        del sys.argv[1]
+        from backend.engine.inspection_service import main as inspection_service_main
+        raise SystemExit(inspection_service_main())
+    else:run_server()

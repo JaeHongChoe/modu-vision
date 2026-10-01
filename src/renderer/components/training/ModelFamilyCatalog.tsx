@@ -7,7 +7,7 @@ type Method = {method: string; architectures: string[]; continuation: string; pr
 type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]};
 const stageNames: Record<string, string> = {label: '정답 준비', train: '학습', evaluate: '평가', flow: '플로우 검사', generate: '생성', review: '검토·채택', export: '내보내기'};
 
-export function ModelFamilyCatalog({selectedFamily, onSelect}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void}) {
+export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
   const [families, setFamilies] = useState<Family[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -20,10 +20,11 @@ export function ModelFamilyCatalog({selectedFamily, onSelect}: {selectedFamily?:
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-4 text-xs text-slate-200" aria-label="모델 학습 허브">
     <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />모델 학습 허브</h2>
     <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>
-    {onSelect && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(family => <button type="button" key={family.task} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
-      className={`rounded-lg border p-3 text-left transition-colors ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
+    {onSelect && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(family => <button type="button" key={family.task} disabled={disabled} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
+      className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-wait disabled:opacity-50 ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
       <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
     </button>)}</div>}
+    {disabled&&<p role="status" className="mt-2 text-cyan-200">프로젝트 데이터를 확인 중입니다. 완료 후 모델을 선택하세요.</p>}
     <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>
     <div className="mt-3">
       <p className="mb-3 text-slate-300">분류·패치·분할은 DINOv3, 객체 검출은 YOLO를 기본으로 사용합니다. DINOv3 인코더는 고정하고 검사 헤드를 현재 라벨로 학습합니다. YOLO는 선택한 학습 설정으로 학습합니다. 다중 GPU DDP는 모델을 각 GPU에 복제하고 데이터 배치를 나눕니다. 모델 분할·샤딩은 제공하지 않습니다.</p>

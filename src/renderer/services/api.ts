@@ -196,6 +196,7 @@ export interface RotatedModelSummary {
 }
 
 export interface RotatedJob {
+  execution_job_id?:string;compute_profile_id?:string;
   job_id: string;
   status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
   epochs_completed: number;

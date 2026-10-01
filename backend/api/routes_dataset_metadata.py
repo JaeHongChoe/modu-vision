@@ -223,6 +223,8 @@ def _directory_payload(req,source,inventory):
 
 @format_router.post('/import')
 def import_format(req:ExchangeRequest,request:Request):
+    from backend.api.shared_authorization import request_actor
+    req=req.model_copy(update={'actor':request_actor(request,req.actor)})
     project,source=_context(request,req.folder_path)
     all_rows=_rows(project,source)
     try: imported=import_annotations(_directory_payload(req,source,all_rows),req.format)
@@ -261,7 +263,7 @@ def import_format(req:ExchangeRequest,request:Request):
                     meta=inventory[row['file_name']]; existing=routes_annotation.get_annotations(Path(row['file_name']).stem,file_path=meta['file_path']).get('annotations',[])
                     annotations=[*existing,*row['annotations']] if req.conflict_policy=='merge' else row['annotations']
                     routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=Path(row['file_name']).stem,image_path=meta['file_path'],annotations=annotations,
-                        image_width=meta['width'],image_height=meta['height'],expected_revision=row['revision'],actor=req.actor))
+                        image_width=meta['width'],image_height=meta['height'],expected_revision=row['revision'],actor=req.actor),request)
             except Exception:
                 for path,value in previous.items():
                     if value is None: path.unlink(missing_ok=True)

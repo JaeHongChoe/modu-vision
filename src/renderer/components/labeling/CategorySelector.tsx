@@ -8,7 +8,7 @@ import { Plus, Tag } from 'lucide-react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 
 export const CategorySelector: React.FC = () => {
-  const { categories, activeCategory, setActiveCategory, addCategory, annotations } = useAnnotationStore();
+  const { categories, activeCategory, setActiveCategory, addCategory, annotations, labelbookVersion } = useAnnotationStore();
   const [newCatName, setNewCatName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -52,7 +52,7 @@ export const CategorySelector: React.FC = () => {
         );
       })}
 
-      {isAdding ? (
+      {labelbookVersion ? <span className="whitespace-nowrap text-xs text-cyan-300">공유 기준 v{labelbookVersion} · 클래스 추가는 팀 기준서에서</span> : isAdding ? (
         <div className="flex items-center space-x-1">
           <input
             type="text"

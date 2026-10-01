@@ -8,6 +8,12 @@ from starlette.responses import JSONResponse
 from fastapi import HTTPException
 
 
+def request_actor(request, declared):
+    """Shared audit authorship is the session identity, including omitted fields."""
+    account=getattr(getattr(request,'state',None),'account_user',None)
+    return account['username'] if account else declared
+
+
 class SharedAuthorizationMiddleware:
     def __init__(self,app,project_app):self.app=app;self.project_app=project_app
 
@@ -54,6 +60,12 @@ class SharedAuthorizationMiddleware:
             review=precision_review or path.startswith(('/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/','/api/product-delivery/'))
             compute_jobs=path.startswith('/api/compute/jobs')
             delivery_allowed=False
+            team_allowed=False
+            if path.startswith('/api/team-data/'):
+                management=path in {'/api/team-data/books','/api/team-data/settings'} or path.endswith('/assign')
+                voting=path.endswith(('/review','/adjudicate'))
+                editing='/lease/' in path
+                team_allowed=(management or voting) and role=='reviewer' or editing and role in {'labeler','trainer','reviewer'}
             if path.startswith('/api/product-delivery/'):
                 suffix=path.removeprefix('/api/product-delivery/')
                 if suffix=='diagnostics' or (suffix.startswith('packages/') and suffix.endswith('/select')):
@@ -64,7 +76,7 @@ class SharedAuthorizationMiddleware:
                     delivery_allowed=role in {'labeler','trainer','reviewer'}
                 elif suffix.startswith('servers/') and suffix.endswith('/preflight'):
                     delivery_allowed=bool(account['administrator'])
-            allowed=delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
+            allowed=team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:return await reject(403,'This project role cannot perform the requested action')
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]
@@ -76,7 +88,11 @@ class SharedAuthorizationMiddleware:
                 for data in value:check_paths(data,key.removesuffix('s'))
             elif isinstance(value,str) and (key.endswith(('_path','_dir')) or key=='pretrained_checkpoint') and value:
                 if account['administrator'] and path in {'/api/project/update','/api/label-candidates/setup'}:return
-                candidate=Path(value).expanduser().resolve()
+                if path=='/api/team-data/books' and key=='relative_path':
+                    relative=Path(value)
+                    if relative.is_absolute() or '..' in relative.parts or not project.get('source_dataset_dir'):raise ValueError('Example path is outside the project source')
+                    candidate=(Path(project['source_dataset_dir'])/relative).resolve()
+                else:candidate=Path(value).expanduser().resolve()
                 if not any(candidate.is_relative_to(root) for root in roots):raise ValueError('File selector is outside the authorized project')
         try:
             for key,values in parse_qs(scope.get('query_string',b'').decode()).items():
@@ -100,9 +116,14 @@ class SharedAuthorizationMiddleware:
                     changes=value.get('changes',{}) if isinstance(value,dict) else {}
                     if role not in {'owner','reviewer'} and isinstance(changes,dict) and changes.get('workflow_state')=='approved':
                         return await reject(403,'Reviewer permission required for label approval')
-                    if isinstance(value,dict):
-                        for key in ('actor','reviewer'):
-                            if key in value:value[key]=account['username']
+                    def bind_identity(node):
+                        if isinstance(node,dict):
+                            for key,data in node.items():
+                                if key in ('actor','reviewer'):node[key]=account['username']
+                                else:bind_identity(data)
+                        elif isinstance(node,list):
+                            for item in node:bind_identity(item)
+                    bind_identity(value)
                     body=json.dumps(value).encode()
                 used=False;original_receive=receive
                 async def replay():

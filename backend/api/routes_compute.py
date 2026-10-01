@@ -32,11 +32,11 @@ def _owned(record,project):
 
 
 def _row(record):
-    return {'job_id':record.job_id,'model_id':(record.launch_spec or {}).get('local_model_id',record.job_id),'task':record.task,'operation':(record.launch_spec or {}).get('operation','train'),
+    return {'job_id':record.job_id,'execution_job_id':record.job_id,'model_id':(record.launch_spec or {}).get('local_model_id',record.job_id),'task':record.task,'operation':(record.launch_spec or {}).get('operation','train'),
             'status':record.status,'phase':record.phase,'compute_profile_id':record.remote_profile_id,
             'current_epoch':record.current_epoch,'total_epochs':record.total_epochs,'current_step':record.current_step,
             'total_steps':record.total_steps,'metrics':record.metrics,'best_metric':record.best_metric,'error':record.error,
-            'submitted_at':record.start_time}
+            'submitted_at':record.start_time,'dataset_path':(record.dataset_binding or {}).get('family_dataset_path') or (record.launch_spec or {}).get('family_dataset_path') or record.dataset_path,'source_dataset_path':record.source_dataset_path,'training_provenance':record.dataset_binding or {}}
 
 
 class ProfileInput(ComputeProfile):
@@ -163,6 +163,7 @@ class ComputeJobInput(BaseModel):
     config_overrides:dict=Field(default_factory=dict)
     labeling:dict=Field(default_factory=dict)
     dataset_version_id:str|None=None
+    warm_start_job_id:str|None=None
 
 
 @router.post('/jobs',status_code=202)
@@ -194,7 +195,10 @@ def submit_job(body:ComputeJobInput,request:Request):
         if body.task not in specialized and dataset!=source:raise ValueError('This task uses the registered project source directly')
         readiness=SSHTransport().probe(profile)
         from backend.remote.ssh_transport import require_training_runtime
-        require_training_runtime(readiness,body.task,body.preset,body.config_overrides)
+        require_training_runtime(readiness,body.task,body.preset,body.config_overrides,warm_start=bool(body.warm_start_job_id))
+        if body.warm_start_job_id and body.operation!='train':raise ValueError('A labeling job cannot select a training parent')
+        from backend.engine.model_execution import resolve_training_parent
+        parent=resolve_training_parent(project,body.warm_start_job_id,body.task,dataset,body.preset,body.config_overrides)
         observed=(readiness.get('checks') or {}).get('device_inventory',{}).get('devices',[])
         from backend.api.routes_training import training_job_manager
         if observed:training_job_manager._leases.configure_devices(training_job_manager._lease_host(profile),observed)
@@ -208,12 +212,13 @@ def submit_job(body:ComputeJobInput,request:Request):
         native_family=body.task in specialized-{'patch_classification'}
         output=Path(project['models_dir'])/(body.task if native_family else '')/(native_id if native_family else identifier)
         launch={'preparation':'none','operation':body.operation,'config_overrides':body.config_overrides,'device':body.device,
-                'dataset_binding':binding,'project_id':project['id'],'account_id':account['id'] if account else None,'labeling':label_baseline['worker_options'] if label_baseline else body.labeling}
+                'dataset_binding':binding,'family_dataset_path':str(dataset),'project_id':project['id'],'account_id':account['id'] if account else None,'labeling':label_baseline['worker_options'] if label_baseline else body.labeling}
+        if parent:launch['warm_start']={**vars(parent),'checkpoint_path':str(parent.checkpoint_path),'classes':list(parent.classes)}
         if native_family:launch['local_model_id']=native_id
         if label_baseline:launch.update(label_baseline=label_baseline,label_images=[row['relative_path'] for row in label_baseline['images']])
         record=training_job_manager.start_remote_job(job_id=identifier,task=body.task,dataset_path=str(dataset),output_dir=str(output),
             remote_profile_id=profile.id,profile=profile,remote_runner=make_remote_runner(profile,launch),preset=body.preset,
-            source_dataset_path=str(source),dataset_fingerprint=fingerprint_dataset(source),launch_spec=launch,dataset_binding=binding)
+            source_dataset_path=str(source),dataset_fingerprint=fingerprint_dataset(source),launch_spec=launch,dataset_binding=binding,warm_start=parent)
         return _row(record)
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
 

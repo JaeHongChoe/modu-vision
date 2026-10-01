@@ -111,6 +111,8 @@ def load_rotation_manifest(root):
 
 def prepare_rotation_dataset(source_root, output_root, rows):
     """Copy verified native pixels and angle labels into new owned storage."""
+    from backend.engine.model_execution import eligible_preparation_paths
+    eligible_preparation_paths(source_root,'rotation',[row.get('image') for row in rows])
     manifest, canonical = _manifest(source_root, rows); output = Path(output_root).resolve()
     if output.exists() or output == manifest.root or output.is_relative_to(manifest.root):
         raise ValueError('Rotation preparation requires a new directory outside the original source')

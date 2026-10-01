@@ -1,3 +1,5 @@
+import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {openModelFlow} from './ProgramWorkbenchControls';
 import React, { useEffect, useState } from 'react';
 import { FileText, Loader2, RefreshCw } from 'lucide-react';
 import { api, request, type OCREvaluation, type OCRLabelRow, type OCRModelSummary } from '../../services/api';
@@ -72,8 +74,8 @@ export const OCRWorkbench: React.FC = () => {
     let active = true;
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/ocr/datasets'),api.ocr.models()]).then(([prepared,result])=>{
       if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
-      const selected=selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
-      const path=(selected?.metadata as {dataset_path?:string}|undefined)?.dataset_path||handoff?.datasetPath;
+      const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff);setJobId(selected?.job_id||'');
+      const path=handoff?.datasetPath||(selected?.metadata as {dataset_path?:string}|undefined)?.dataset_path;
       const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 문자 정답 버전을 찾지 못했습니다. 작업 센터에서 출처를 확인하세요.');
       if(dataset){setDatasetPath(dataset.dataset_path);setManifestCount(dataset.sample_count||null);}
@@ -147,6 +149,7 @@ export const OCRWorkbench: React.FC = () => {
       <FileText className="h-4 w-4 text-cyan-400" /> 문자 인식 모델 실험 <span className="font-normal text-slate-400">단일 행 텍스트 이미지</span>
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
+      <TrainingPreparationPanel family="ocr" model="ctc" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
       <p className="leading-5 text-slate-400">문자가 한 줄로 잘린 이미지와 실제 정답 문자열이 필요합니다. 후보 모델은 자동으로 검사 플로우에 적용되지 않습니다.</p>
       {datasets.length>0&&<label className="block text-slate-300">프로젝트에 저장된 문자 정답<select value={datasetPath} onChange={event=>{const row=datasets.find(item=>item.dataset_path===event.target.value);setDatasetPath(event.target.value);setManifestCount(row?.sample_count||null);}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2">{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <ProjectImagePicker value={selectedImage} disabled={!!busy||training.active} onSelect={image=>{setSelectedImage(image.file_path);setImagePath(image.file_path);if(['train','val','test'].includes(image.split))setTruthSplit(image.split as 'train'|'val'|'test');}} label="문자 원본 이미지 선택" />
@@ -182,7 +185,7 @@ export const OCRWorkbench: React.FC = () => {
           </select>
         </label>
         <button type="button" onClick={() => void evaluate()} disabled={!jobId || !datasetPath || (!!busy || training.active)} className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
-        <button type="button" disabled={!jobId||!!busy||training.active} onClick={()=>void useProjectStore.getState().setStep(5)} className={programButton}>검사 플로우·배포 패키지</button>
+        <button type="button" disabled={!jobId||!!busy||training.active} onClick={()=>void openModelFlow('ocr',jobId,datasetPath)} className={programButton}>검사 플로우·배포 패키지</button>
       </div>
       <div className="flex flex-wrap items-end gap-2">
         <span className="text-sm text-slate-300">위에서 선택한 프로젝트 이미지로 시험합니다.</span>
@@ -200,7 +203,7 @@ export const OCRWorkbench: React.FC = () => {
         <div className="mt-2 max-h-32 overflow-y-auto font-mono text-slate-400">{evaluation.samples.map((item) => <div key={item.image} className="truncate">{item.image}: {item.reference_text} → {item.predicted_text}</div>)}</div>
       </div>}
       {prediction && <p className="rounded border border-cyan-700 bg-cyan-950/30 p-3">인식 후보: <strong className="text-cyan-200">{prediction.text || '(빈 문자열)'}</strong> · 후보 점수 {(prediction.confidence * 100).toFixed(1)}%</p>}
-      <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId(selectHandoffRecord(result.models,handoff)?.job_id||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
+      <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId((handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff)?.job_id)||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
     </div>
   </details>;
 };
