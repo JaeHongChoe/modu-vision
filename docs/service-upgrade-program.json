@@ -558,7 +558,8 @@
           "kind": "final-project-and-socket-review",
           "result": "spec/code quality passed; original dirty-save and socket repros green; independent9authenticatedWS cases passed",
           "scope": "seven owned hashes matched; current accepted store callback verified; reused/copy project IDs retain distinct namespaces; native Windows pending"
-        }
+        },
+        "Hosted Windows Server 복원 staging rename 실패를 추적해 SQLite rebind 5곳의 연결 수명을 수정했다. 실제 API와 retained-handle RED 2개 및 archive/context 42개 통과, 독립 5개에서 부분 변경 롤백·닫힌 handle·복원본 분리를 확인했다. 새 Windows 실행은 pending."
       ],
       "file_actions": {
         "backend/main.py": "Modify",
@@ -643,7 +644,7 @@
       "title": "스케줄러와 작업 소유권",
       "files": [
         "backend/engine/shared_scheduler.py",
-        "backend/engine/scheduler.py",
+        "backend/engine/job_scheduler.py",
         "backend/engine/job_store.py"
       ],
       "proposed_contract": "claim_job(worker_id, capabilities) -> AttemptLease(fence, expires_at) / publish_result(attempt, manifest)",
@@ -655,11 +656,13 @@
         "S1-02"
       ],
       "status": "planned",
-      "evidence": [],
+      "evidence": [
+        "작업 scheduler는 새 job_scheduler.py에 구현하고 기존 학습률 scheduler.py를 보존한다. lease 이전은 이전 앱이 실행 중이면 예약을 유지하며 중단하고 안전한 drain 이후 진행하도록 설계한다. S1-02 인계 전 구현은 시작하지 않았다."
+      ],
       "file_actions": {
         "backend/engine/shared_scheduler.py": "Modify",
-        "backend/engine/scheduler.py": "Modify",
-        "backend/engine/job_store.py": "Modify after S1-02 handoff"
+        "backend/engine/job_store.py": "Modify after S1-02 handoff",
+        "backend/engine/job_scheduler.py": "Create"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
       "acceptance_state": {
@@ -3166,7 +3169,8 @@
           "kind": "hosted-owned-subtree-fixture-refinement",
           "result": "Windows Server dependencies, type checks, renderer227 and build passed; harness12 passed1 failed on fixed two-PID assumption; independently verified subtree-aware fixture3 cases passed",
           "scope": "OS parent-chain snapshot determines exact test-owned root and descendant set; bystander/ancestor protection retained; production cleanup unchanged; Windows hosted rerun pending"
-        }
+        },
+        "main a6d43e의 실제 hosted Windows는 renderer/build 성공 후 backend 69 pass,8 fail,7 skip; Linux는 CPU 계약 성공 후 browser 24 pass,3 fail. restore handle와 descriptor-swap/UTF8 fixture를 수정하고 독립 5개/9개 통과. browser fixture는 후속 수정 중이며 hosted 전체 성공으로 처리하지 않는다."
       ],
       "file_actions": {
         ".github/workflows/ci.yml": "Create",
@@ -8156,7 +8160,7 @@
       "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "main 9b6cb4eeeda05aba5a63a0cfb15212f2539d5af5 process-fixture sources pushed and remote HEAD verified; reviewed S2-03 sources 24 ready for publication; persistent-job/account candidates excluded pending coupled main review"
+    "git_publication": "main a6d43e21895b71f5948a18c281af8b34f0f58929 reviewed readiness/task-change sources pushed and remote HEAD verified; scoped Windows archive/encoding fixes ready after independent review; persistent-job/account candidates excluded pending coupled main review"
   },
   "scope_refinements": [
     {

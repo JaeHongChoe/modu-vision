@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -531,7 +532,9 @@ def _rebind_inspection_history(staging: Path, old_project: Path, target: Path,
     database = staging / "inspection_history.sqlite3"
     if not database.is_file():
         return
-    with sqlite3.connect(database) as conn:
+    # SQLite's connection context manages a transaction; closing releases the
+    # staging file handle before publication, including when rebinding fails.
+    with closing(sqlite3.connect(database)) as conn:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = OFF")
         run_columns = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
@@ -594,7 +597,7 @@ def _rebind_deployments(staging: Path, old_source: Path | None, new_source: Path
     database = staging / "model_deployments.sqlite3"
     if not database.is_file() or old_source is None or new_source is None:
         return
-    with sqlite3.connect(database) as conn, conn:
+    with closing(sqlite3.connect(database)) as conn, conn:
         for table in ("revisions", "active_revisions"):
             columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
             if "source_dataset_path" in columns:
@@ -606,7 +609,7 @@ def _rebind_execution_state(staging: Path, old_project: Path, target: Path,
                             old_source: Path | None, new_source: Path | None) -> None:
     database = staging / "reports" / "comparison_jobs.sqlite3"
     if database.is_file():
-        with sqlite3.connect(database) as conn, conn:
+        with closing(sqlite3.connect(database)) as conn, conn:
             columns = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
             if not {"job_id", "payload", "status"}.issubset(columns):
                 raise ArchiveError("Comparison jobs have an invalid schema")
@@ -623,7 +626,7 @@ def _rebind_execution_state(staging: Path, old_project: Path, target: Path,
                 conn.execute(f"UPDATE jobs SET {assignments} WHERE job_id = ?", (*fields.values(), identifier))
     database = staging / "runtime_service" / "runtime_deployments.sqlite3"
     if database.is_file():
-        with sqlite3.connect(database) as conn, conn:
+        with closing(sqlite3.connect(database)) as conn, conn:
             for identifier, release, ack in conn.execute("SELECT deployment_id, release, ack FROM deployments").fetchall():
                 conn.execute("UPDATE deployments SET release = ?, ack = ? WHERE deployment_id = ?", (
                     _rebind_json_blob(release, old_project, target, old_source, new_source),
@@ -713,7 +716,7 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
     database = target / "model_deployments.sqlite3"
     if not database.is_file():
         return
-    with sqlite3.connect(database) as conn, conn:
+    with closing(sqlite3.connect(database)) as conn, conn:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(revisions)")}
         for column in ("training_dataset_fingerprint", "evaluation_dataset_fingerprint"):
             if column in columns and replacements:

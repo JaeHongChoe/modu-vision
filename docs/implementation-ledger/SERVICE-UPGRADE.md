@@ -78,3 +78,11 @@ main763df8715d7ac78502a1f7a0f6ef06eaf1e0f283은 push 후 원격 HEAD를 확인�
 완료된 입력·부족한 항목과 다음 행동 하나를 6단계에 표시하고 전문가 이동과 과거 결과 조회를 유지했다. 학습·승인·내보내기·배포 차단 사유에 해당 단계로 이동하는 링크를 연결했다. utility dialog에서 복구 링크를 누르면 dialog도 닫아 목적 화면을 표시한다. 검사 종류 변경은 영향 미리보기 후 명시적으로 적용하며 실패 또는 지연된 결과로 다음 화면을 열지 않는다. renderer 247개·focused 27개, 동결된 브라우저 8개와 기존 거절 case 1개를 통과했다. 독립 검토 20개 후 실제 dialog/store/API 통합에서 다른 계정의 문맥으로 늦은 응답이 반영되는 문제를 재현했다. API의 읽기 전용 authority epoch와 store의 명시적인 문맥 검사를 추가해 actor 변경·A→B→A·이전 오류를 독립 재검증했고 관련 55개를 통과했다. 기능 18개와 보강 6개의 source hash가 모두 일치하며 최종 독립 검토를 통과했다. browser GUI 범위는 1366×768·1920×1080이며 native Windows·실제 모델 품질·현장 배포는 별도 pending이다. 다음 S2-04는 편집·테스트·일괄 평가·배포의 4영역과 비파괴 recipe 미리보기 설계를 마쳤고 실제 기존 component/browser에서 누락 동작을 RED로 기록했다.
 
 Windows Server 후속 run에서 owned subtree에 추가 자식 프로세스가 있어 고정된 2 PID fixture assertion이 실패했다. 종료 전 OS parent chain으로 실제 fixture subtree를 독립적으로 구해 root·명시한 child·추가 descendant의 전체 종료와 무관한 프로세스의 생존을 검증하도록 보강했다. focused 3개를 독립 통과했다. production cleanup은 변경하지 않았으며 native Windows 재실행은 pending이다.
+
+## Windows 복원과 파일 fixture의 후속 수정
+
+준비도와 작업 변경 미리보기는 main `a6d43e21895b71f5948a18c281af8b34f0f58929`로 게시하고 원격 HEAD를 확인했다. 실제 Windows Server run 36920242298은 화면/build 성공 후 backend 69개 통과·8개 실패·7개 skip이었다. 복원 staging의 SQLite 연결 5곳을 명시적으로 닫아 이동 전 handle을 해제하며 기존 transaction을 유지했다. retained-handle RED 2개를 확인하고 archive/context 42개, 독립 5개에서 부분 변경 rollback·실패 cleanup·복원 namespace·원본 byte 보존을 확인했다. 파일 복사 테스트는 성공한 POSIX 경로 교체와 Windows handle의 삭제 거절을 구분하고, held descriptor 대신 경로를 다시 열면 실패하는 control을 추가했다. UTF8 fixture 읽기를 명시했다. 두 fixture 파일 35개 및 독립 9개 통과. 수정된 hosted Windows 실행과 Windows11 설치는 pending이다.
+
+Linux run 36920242452은 CPU 계약 검사를 통과했으나 browser 24개 통과·3개 실패였다. 작업 공간 문구 변경, 현재 project 선택과 데이터 준비도 계약에 맞는 fixture 보강을 별도로 진행한다. timeout 증가나 판정 guard 제거로 통과시키지 않는다. 영속 작업 원장·계정 source는 아직 별도 후보이며 이 회차에 포함하지 않는다.
+
+작업 scheduler의 구현 대상은 새 `job_scheduler.py`로 바로잡았다. 기존 학습률 scheduler를 유지하고, lease 이전 시 이전 앱이 실행 중인 상태를 차단하는 설계 경계를 기록했다. 전체 82개 작업·156개 기존 기능 연결과 8개 보강 범위는 유지한다.

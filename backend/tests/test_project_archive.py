@@ -391,3 +391,116 @@ def test_restore_rejects_new_folder_inside_original_source(tmp_path: Path):
     response = client.post("/api/project/restore", json={"archive_path": archive, "target_dir": str(target)})
     assert response.status_code == 422
     assert not target.exists()
+
+
+def _track_restore_connections(monkeypatch):
+    """Keep real handles alive so garbage collection cannot hide missing close calls."""
+    from backend.engine import project_archive
+
+    connections = []
+    connect = sqlite3.connect
+
+    def tracked(database, *args, **kwargs):
+        # TestClient runs synchronous routes in a worker thread. Permit the
+        # test thread to inspect and clean up these real retained handles.
+        kwargs['check_same_thread'] = False
+        connection = connect(database, *args, **kwargs)
+        connections.append((Path(database), connection))
+        return connection
+
+    monkeypatch.setattr(project_archive.sqlite3, 'connect', tracked)
+    return connections
+
+
+def _connection_closed(connection):
+    try:
+        connection.execute('SELECT 1')
+    except sqlite3.ProgrammingError:
+        return True
+    return False
+
+
+def test_restore_closes_sqlite_handles_before_publication_and_return(tmp_path: Path, monkeypatch):
+    from backend.engine import project_archive
+
+    client, project, _, _, job_id, version_id, _ = _project_with_model_flow_and_run(tmp_path)
+    root = Path(project['project_dir'])
+    # Exercise every optional database rebind, including the post-install fingerprint update.
+    databases = {
+        root / 'model_deployments.sqlite3': (
+            'CREATE TABLE revisions(source_dataset_path TEXT, training_dataset_fingerprint TEXT);'
+            'CREATE TABLE active_revisions(source_dataset_path TEXT);'),
+        root / 'reports' / 'comparison_jobs.sqlite3': 'CREATE TABLE jobs(job_id TEXT, payload TEXT, status TEXT);',
+        root / 'runtime_service' / 'runtime_deployments.sqlite3': (
+            'CREATE TABLE deployments(deployment_id TEXT, release TEXT, ack TEXT);'),
+    }
+    for path, schema in databases.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(path)
+        try:
+            connection.executescript(schema)
+        finally:
+            connection.close()
+    backed = client.post('/api/project/backup', json={'destination_dir': str(tmp_path / 'backups')})
+    assert backed.status_code == 200, backed.text
+    archive = Path(backed.json()['archive_path'])
+    archive_bytes = archive.read_bytes()
+    model_bytes = (root / 'models' / job_id / 'best_model.pt').read_bytes()
+    flow_bytes = (root / 'flowcharts' / 'versions' / (version_id + '.json')).read_bytes()
+    connections = _track_restore_connections(monkeypatch)
+    replace = project_archive.os.replace
+    publications = []
+
+    def publish(source, destination):
+        source = Path(source)
+        if '.restore-' in source.name and source.is_dir():
+            handles = [connection for path, connection in connections if path.is_relative_to(source)]
+            publications.append(len(handles))
+            if not handles or not all(_connection_closed(connection) for connection in handles):
+                raise PermissionError('Restore staging database handles are still open')
+        return replace(source, destination)
+
+    monkeypatch.setattr(project_archive.os, 'replace', publish)
+    target = tmp_path / 'restored'
+    try:
+        restored = client.post('/api/project/restore', json={'archive_path': str(archive), 'target_dir': str(target)})
+        assert restored.status_code == 200, restored.text
+        assert publications == [4]
+        restored_handles = [connection for path, connection in connections
+                            if path.is_relative_to(target) or any('.restore-' in parent.name for parent in path.parents)]
+        assert len(restored_handles) == 5
+        assert all(_connection_closed(connection) for connection in restored_handles)
+        assert restored.json()['id'] == project['id']
+        assert (target / 'models' / job_id / 'best_model.pt').read_bytes() == model_bytes
+        assert (root / 'flowcharts' / 'versions' / (version_id + '.json')).read_bytes() == flow_bytes
+        assert archive.read_bytes() == archive_bytes
+    finally:
+        for _, connection in connections:
+            connection.close()
+
+
+def test_restore_closes_sqlite_handle_on_rebind_failure_and_removes_staging(tmp_path: Path, monkeypatch):
+    client, project, _, _, _, _, _ = _project_with_model_flow_and_run(tmp_path)
+    connection = sqlite3.connect(Path(project['project_dir']) / 'inspection_history.sqlite3')
+    try:
+        connection.execute('DROP TABLE runs')
+        connection.commit()
+    finally:
+        connection.close()
+    backed = client.post('/api/project/backup', json={'destination_dir': str(tmp_path / 'backups')})
+    assert backed.status_code == 200, backed.text
+    archive = Path(backed.json()['archive_path'])
+    archive_bytes = archive.read_bytes()
+    connections = _track_restore_connections(monkeypatch)
+    target = tmp_path / 'rejected'
+    try:
+        response = client.post('/api/project/restore', json={'archive_path': str(archive), 'target_dir': str(target)})
+        assert response.status_code == 422 and 'invalid run schema' in response.json()['detail'], response.text
+        handles = [connection for path, connection in connections if '.restore-' in str(path)]
+        assert handles and all(_connection_closed(connection) for connection in handles)
+        assert not target.exists()
+        assert not list(tmp_path.glob('.rejected.restore-*'))
+        assert archive.read_bytes() == archive_bytes
+    finally:
+        for _, connection in connections:
+            connection.close()

@@ -391,7 +391,8 @@ def test_gc_cleans_only_expired_owned_staging_and_preserves_active_uploads(tmp_p
     assert not orphan.exists() and unrelated.exists() and store._stage(active['id']).exists()
 
 
-def test_ingest_copy_keeps_verified_descriptor_if_source_path_is_replaced(tmp_path, monkeypatch):
+def test_ingest_descriptor_survives_posix_swap_or_windows_delete_guard(tmp_path, monkeypatch):
+    import os
     from backend.api import routes_artifacts
     _, client, (project, _) = local(tmp_path)
     source = tmp_path / 'source'; source.mkdir()
@@ -399,8 +400,19 @@ def test_ingest_copy_keeps_verified_descriptor_if_source_path_is_replaced(tmp_pa
     path = source / 'fixture.png'; path.write_bytes(original)
     assert client.put('/api/project/update', headers=header(project), json={'source_dataset_dir': str(source)}).status_code == 200
     get_store = routes_artifacts.get_artifact_store
+    replacement = []
     def swapped(request):
-        path.unlink(); path.symlink_to(outside)
+        try:
+            path.unlink()
+        except PermissionError as exc:
+            # The ordinary Windows source handle denies delete sharing. This is
+            # a blocked replacement, not evidence that a path swap succeeded.
+            assert os.name == 'nt' and exc.winerror in (5, 32)
+            replacement.append('blocked')
+            assert path.read_bytes() == original
+        else:
+            path.symlink_to(outside)
+            replacement.append('swapped')
         return get_store(request)
     monkeypatch.setattr(routes_artifacts, 'get_artifact_store', swapped)
     response = client.post('/api/dataset/artifacts/ingest', headers=header(project),
@@ -409,6 +421,56 @@ def test_ingest_copy_keeps_verified_descriptor_if_source_path_is_replaced(tmp_pa
     monkeypatch.setattr(routes_artifacts, 'get_artifact_store', get_store)
     assert content(client, project, response.json()['artifact_ref']).content == original
     assert outside.read_bytes() == b'outside'
+    assert replacement == ['blocked' if os.name == 'nt' else 'swapped']
+    # The route must release its source handle, including on Windows.
+    path.unlink()
+
+
+def test_ingest_denied_replacement_keeps_descriptor_without_reopening_source(tmp_path, monkeypatch):
+    import os
+    from backend.api import routes_artifacts
+    _, client, (project, _) = local(tmp_path)
+    source = tmp_path / 'source'; source.mkdir()
+    original = b'authorized original'
+    path = source / 'fixture.png'; path.write_bytes(original)
+    outside = tmp_path / 'outside-secret'; outside.write_bytes(b'outside')
+    assert client.put('/api/project/update', headers=header(project), json={'source_dataset_dir': str(source)}).status_code == 200
+    get_store = routes_artifacts.get_artifact_store
+    path_open = Path.open
+    os_open = os.open
+    path_unlink = Path.unlink
+    attempts = []
+    def denied(request):
+        # Model an external actor whose replacement is denied. Keep production
+        # descriptor acquisition, verified copying and publication real.
+        def reject_replacement(self, *args, **kwargs):
+            if self == path:
+                attempts.append('denied')
+                raise PermissionError('Source descriptor prevents replacement')
+            return path_unlink(self, *args, **kwargs)
+        with monkeypatch.context() as replacement:
+            replacement.setattr(Path, 'unlink', reject_replacement)
+            with pytest.raises(PermissionError):
+                path.unlink()
+        def no_source_reopen(self, *args, **kwargs):
+            assert self not in (path, outside), 'Copy must consume the held descriptor'
+            return path_open(self, *args, **kwargs)
+        def no_source_descriptor_reopen(name, *args, **kwargs):
+            assert Path(name) not in (path, outside), 'Copy must consume the held descriptor'
+            return os_open(name, *args, **kwargs)
+        monkeypatch.setattr(Path, 'open', no_source_reopen)
+        monkeypatch.setattr(os, 'open', no_source_descriptor_reopen)
+        return get_store(request)
+    monkeypatch.setattr(routes_artifacts, 'get_artifact_store', denied)
+    response = client.post('/api/dataset/artifacts/ingest', headers=header(project),
+                           json={'source_name': path.name, 'sha256': sha(original)})
+    monkeypatch.setattr(Path, 'open', path_open)
+    monkeypatch.setattr(os, 'open', os_open)
+    monkeypatch.setattr(routes_artifacts, 'get_artifact_store', get_store)
+    assert response.status_code == 200, response.text
+    assert attempts == ['denied']
+    assert content(client, project, response.json()['artifact_ref']).content == original
+    assert path.read_bytes() == original and outside.read_bytes() == b'outside'
 
 
 def test_same_logical_project_restored_copy_cannot_resolve_original_managed_ref(tmp_path):

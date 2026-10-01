@@ -12,7 +12,7 @@ SPEC.loader.exec_module(gate)
 
 
 def program():
-    return json.loads((ROOT / "docs/service-upgrade-program.json").read_text())
+    return json.loads((ROOT / "docs/service-upgrade-program.json").read_text(encoding="utf-8"))
 
 
 def test_current_program_preserves_all_mapped_scope_without_claiming_acceptance():
@@ -75,7 +75,7 @@ def test_runtime_artifact_path_uses_step_context_instead_of_job_context():
     # The runner context exists in step env, but is not permitted in job env.
     # YAML parsing alone cannot detect the rejection before a hosted job starts.
     for name in ["ci.yml", "windows-native.yml"]:
-        workflow = yaml.safe_load((ROOT / ".github/workflows" / name).read_text())
+        workflow = yaml.safe_load((ROOT / ".github/workflows" / name).read_text(encoding="utf-8"))
         for job in workflow["jobs"].values():
             assert all("runner." not in str(value) for value in job.get("env", {}).values()), name
             e2e_steps = [step for step in job["steps"] if

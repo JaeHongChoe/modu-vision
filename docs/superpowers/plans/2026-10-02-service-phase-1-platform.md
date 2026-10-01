@@ -89,13 +89,15 @@
 **Files:**
 
 - Modify: `backend/engine/shared_scheduler.py`
-- Modify: `backend/engine/scheduler.py`
+- Create: `backend/engine/job_scheduler.py`
 - Modify after S1-02 handoff: `backend/engine/job_store.py`
 - Test: `backend/tests/test_service_s1_03.py`
 
 **Interfaces:** `claim_job(worker_id, capabilities) -> AttemptLease(fence, expires_at) / publish_result(attempt, manifest)`
 
 **Consumes:** S1-02
+
+기존 `scheduler.py`는 학습률 scheduler이므로 유지한다. 새 작업 scheduler는 claim·queue·lease를 담당하며 기존 ResourceLeases facade와 호환한다. lease DB 이전 시 이전 버전 앱이 실행 중이면 예약을 유지하고 이전을 중단한다. 안전한 drain과 명시적 인계 후 이전하며 사용자 안내만으로 이중 예약 위험을 해결했다고 처리하지 않는다.
 
 **Produces:** 이 계약과 versioned 결과/이벤트, 아래 acceptance에 해당하는 실행 근거.
 
