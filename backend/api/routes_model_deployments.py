@@ -149,6 +149,11 @@ def _assess(project: dict[str, Any], source: Path, task: Task, comparison_id: st
             active: dict[str, Any] | None) -> dict[str, Any]:
     report, report_sha = _read_report(project, source, task, comparison_id)
     reasons: list[str] = []
+    try:
+        from backend.engine.comparison_truth import verify_evidence_binding
+        verify_evidence_binding(project, source, report)
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        reasons.append(f"Comparison truth binding is stale; re-evaluate: {exc}")
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
     images = report.get("images") if isinstance(report.get("images"), list) else []
     selected = report.get("selected_image_count")
@@ -296,10 +301,20 @@ def get_approval_history(source_dataset_path: str, task: DeploymentTask, request
     return {"revisions": [{**dict(row), "is_active": bool(active and row["revision_id"] == active["revision_id"])} for row in rows]}
 
 
+@contextmanager
+def _approval_authority(project):
+    from backend.engine.release_eligibility import release_authority
+    try:
+        with release_authority(project):
+            yield
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.post("/approve")
 def approve_candidate(payload: ApprovalRequest, request: Request):
     project, source = _scope(request, payload.source_dataset_path, payload.task)
-    with _store(project) as conn:
+    with _approval_authority(project), _store(project) as conn:
         conn.execute("BEGIN IMMEDIATE")
         active = _active(conn, source, payload.task)
         assessment = _assess(project, source, payload.task, payload.comparison_id, active)
@@ -319,6 +334,9 @@ def approve_candidate(payload: ApprovalRequest, request: Request):
             "action": "approve", "reviewer": payload.reviewer.strip(),
             "reason": payload.reason.strip(), "created_at": _now(),
         }
+        current = _assess(project, source, payload.task, payload.comparison_id, active)
+        if current["status"] != "ready" or current["comparison_sha256"] != assessment["comparison_sha256"]:
+            raise HTTPException(status_code=409, detail={"status": "needs_review", "reasons": current["reasons"] or ["Comparison evidence changed during approval"]})
         conn.execute("INSERT INTO revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(revision.values()))
         conn.execute("""INSERT INTO active_revisions VALUES (?, ?, ?)
             ON CONFLICT(source_dataset_path, task) DO UPDATE SET revision_id = excluded.revision_id""",
@@ -332,7 +350,7 @@ def rollback_approval(payload: RollbackRequest, request: Request):
     project, source = _approval_scope(request, payload.source_dataset_path, payload.task)
     if not _REVISION_ID.fullmatch(payload.target_revision_id):
         raise HTTPException(status_code=422, detail="Invalid deployment revision ID.")
-    with _store(project) as conn:
+    with _approval_authority(project), _store(project) as conn:
         conn.execute("BEGIN IMMEDIATE")
         active = _active(conn, source, payload.task)
         target = conn.execute(
@@ -344,6 +362,8 @@ def rollback_approval(payload: RollbackRequest, request: Request):
         target = dict(target)
         if active["revision_id"] == target["revision_id"]:
             raise HTTPException(status_code=409, detail="Selected revision is already active.")
+        if verified_approval_revision(project, target["revision_id"], expected_task=payload.task) is None:
+            raise HTTPException(status_code=409, detail="Previous approval evidence is stale; re-evaluate before rollback.")
         model = _model(project, source, payload.task, target["job_id"])
         if (model is None or _sha256(Path(model["checkpoint_path"])) != target["checkpoint_sha256"]
                 or _fingerprint(source) != target["evaluation_dataset_fingerprint"]):
@@ -393,6 +413,16 @@ def verified_approval_revision(
             evidence=EvaluationHistory(report_path.parent).get(row['comparison_id'])
             verify_specialized_evaluation_inputs(project,source,row['task'],evidence['binding'])
         except (ValueError,OSError,KeyError,TypeError):return None
+    else:
+        try:
+            from backend.engine.comparison_truth import verify_evidence_binding
+            from backend.engine.release_eligibility import evidence_context
+            with evidence_context(project):
+                if _fingerprint(source) != row["evaluation_dataset_fingerprint"]:
+                    return None
+                verify_evidence_binding(project, source, json.loads(report_path.read_text()))
+        except (ValueError, OSError, KeyError, TypeError):
+            return None
     return dict(row)
 
 
@@ -463,7 +493,7 @@ def approve_specialized(payload: SpecializedApprovalRequest, request: Request):
         if not isinstance(result.get(key), (int, float)) or not math.isfinite(result[key]) or result[key] < minimum: raise HTTPException(409, f"Held-out {key} is below the requested quality bound")
     for key, maximum in payload.maximum_metrics.items():
         if not isinstance(result.get(key), (int, float)) or not math.isfinite(result[key]) or result[key] > maximum: raise HTTPException(409, f"Held-out {key} exceeds the requested quality bound")
-    with _store(project) as conn:
+    with _approval_authority(project), _store(project) as conn:
         conn.execute("BEGIN IMMEDIATE")
         active = _active(conn, source, payload.task)
         if active and active["job_id"] != result["job_id"]:

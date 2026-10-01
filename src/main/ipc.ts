@@ -1,10 +1,56 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, type OpenDialogOptions,type IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import type { BackendSupervisor } from './supervisor';
 import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
 import {DistributionManager} from './distributionStatus';
+
+// Documents, images and report folders the studio produces. Executables,
+// scripts, shortcuts and application bundles are never opened from the renderer.
+const OPENABLE_FILE_EXTENSIONS=new Set(['.html','.htm','.json','.csv','.txt','.md','.pdf','.png','.jpg','.jpeg',
+  '.bmp','.webp','.tif','.tiff','.log','.xml','.yaml','.yml','.zip']);
+const PACKAGE_DIRECTORY_EXTENSIONS=new Set(['.app','.appex','.bundle','.framework','.plugin','.prefpane','.workflow',
+  '.action','.kext','.pkg','.mpkg','.xpc','.saver','.qlgenerator','.mdimporter','.osax','.component','.service','.scptd']);
+
+export type OpenTarget={kind:'url';url:string}|{kind:'path';path:string}|{kind:'rejected';reason:string};
+
+export function classifyOpenTarget(value:unknown):OpenTarget {
+  const rejected=(reason:string):OpenTarget=>({kind:'rejected',reason});
+  if(typeof value!=='string'||!value||value.length>4096)return rejected('invalid_target');
+  let candidate=value;
+  // A scheme, but not a Windows drive letter such as C:\
+  if(/^[a-z][a-z0-9+.-]*:/i.test(value)&&!/^[a-z]:[\\/]/i.test(value)){
+    let url:URL;
+    try{url=new URL(value);}catch{return rejected('malformed_url');}
+    if(url.protocol==='https:'||url.protocol==='http:')return {kind:'url',url:url.href};
+    if(url.protocol!=='file:')return rejected('unsupported_scheme');
+    if(url.host&&url.host!=='localhost')return rejected('network_path');
+    try{candidate=fileURLToPath(url);}catch{return rejected('malformed_file_url');}
+  }
+  // UNC paths and the \\?\ / \\.\ prefixes (two leading separators) would make the
+  // filesystem calls below contact a remote host, so they are refused before any access.
+  if(/^[\\/]{2}/.test(candidate))return rejected('network_path');
+  if(!path.isAbsolute(candidate))return rejected('relative_path');
+  let real:string;
+  try{real=fs.realpathSync(candidate);}catch{return rejected('missing');}
+  const stat=fs.statSync(real);
+  const extension=path.extname(real).toLowerCase();
+  if(stat.isDirectory()){
+    // Bundles execute when opened; detect them by layout, not only by name.
+    if(PACKAGE_DIRECTORY_EXTENSIONS.has(extension)||fs.existsSync(path.join(real,'Contents','Info.plist')))return rejected('application_bundle');
+    return {kind:'path',path:real};
+  }
+  if(stat.isFile()&&OPENABLE_FILE_EXTENSIONS.has(extension)){
+    // A macOS alias is a bookmark file that can carry any name and resolves on open.
+    const header=Buffer.alloc(16);
+    const descriptor=fs.openSync(real,'r');
+    try{fs.readSync(descriptor,header,0,16,0);}finally{fs.closeSync(descriptor);}
+    if(header.subarray(0,4).toString('latin1')==='book'&&header.includes(Buffer.from('mark','latin1')))return rejected('alias_file');
+    return {kind:'path',path:real};
+  }
+  return rejected('file_type_not_openable');
+}
 
 export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   const authorizeShared=(event:IpcMainInvokeEvent)=>{
@@ -26,8 +72,9 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});
   ipcMain.handle('shared:disconnect',event=>{authorizeShared(event);return disconnectSharedServer();});
   // 1. Backend Port & Status Queries (support both hyphenated and namespaced names)
-  const getPortHandler = async () => supervisor.getPort();
-  const getStatusHandler = async () => supervisor.getStatus();
+  // Every renderer capability is limited to the application's own main frame.
+  const getPortHandler = async (event: IpcMainInvokeEvent) => { authorizeShared(event); return supervisor.getPort(); };
+  const getStatusHandler = async (event: IpcMainInvokeEvent) => { authorizeShared(event); return supervisor.getStatus(); };
 
   ipcMain.handle('get-backend-port', getPortHandler);
   ipcMain.handle('backend:get-port', getPortHandler);
@@ -39,6 +86,7 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   ipcMain.handle(
     'dialog:select-folder',
     async (event, options?: { title?: string; defaultPath?: string }) => {
+      authorizeShared(event);
       const win = BrowserWindow.fromWebContents(event.sender);
       const dialogOpts: OpenDialogOptions = {
         title: options?.title || 'Select Dataset Directory',
@@ -67,6 +115,7 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
         filters?: Array<{ name: string; extensions: string[] }>;
       }
     ) => {
+      authorizeShared(event);
       const win = BrowserWindow.fromWebContents(event.sender);
       const dialogOpts: OpenDialogOptions = {
         title: options?.title || 'Select File',
@@ -88,36 +137,22 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
     }
   );
 
-  // 4. External URL and Local Report File Open Handler
-  ipcMain.handle('shell:open-external', async (_event, urlOrPath: string) => {
-    if (!urlOrPath || typeof urlOrPath !== 'string') {
+  // 4. External links, report files and output folders
+  ipcMain.handle('shell:open-external', async (event, urlOrPath: unknown) => {
+    authorizeShared(event);
+    const target = classifyOpenTarget(urlOrPath);
+    if (target.kind === 'rejected') {
+      console.warn(`[IPC] shell:open-external refused: ${target.reason}`);
       return false;
     }
-
     try {
-      if (
-        urlOrPath.startsWith('http://') ||
-        urlOrPath.startsWith('https://') ||
-        urlOrPath.startsWith('file://')
-      ) {
-        await shell.openExternal(urlOrPath);
+      if (target.kind === 'url') {
+        await shell.openExternal(target.url);
         return true;
       }
-
-      // Local filesystem path (e.g. exported HTML/JSON report)
-      const resolvedPath = path.isAbsolute(urlOrPath)
-        ? urlOrPath
-        : path.resolve(process.cwd(), urlOrPath);
-
-      if (fs.existsSync(resolvedPath)) {
-        const error = await shell.openPath(resolvedPath);
-        return error === '';
-      } else {
-        console.warn(`[IPC] shell:open-external target not found on disk: ${resolvedPath}`);
-        return false;
-      }
+      return (await shell.openPath(target.path)) === '';
     } catch (err) {
-      console.error('[IPC] Failed to open external target:', urlOrPath, err);
+      console.error('[IPC] Failed to open external target:', err);
       return false;
     }
   });

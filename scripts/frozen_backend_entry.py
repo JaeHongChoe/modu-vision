@@ -39,6 +39,22 @@ def remote_bundle_diagnostic(inventory):
                                                                 separators=(',', ':')).encode()).hexdigest()}
 
 
+# Internal children are launched as `<executable> -m <module>` in both source
+# and frozen builds, which keeps their command lines identifiable by owners.
+# Only these modules may be run this way from the frozen executable.
+FROZEN_MODULES = frozenset({'backend.engine.operations_worker', 'backend.training_cli'})
+
+
+def run_internal_module(argv):
+    if len(argv) < 2 or argv[1] not in FROZEN_MODULES:
+        requested = argv[1] if len(argv) > 1 else ''
+        print(f'Unsupported frozen module request: {requested!r}', file=sys.stderr)
+        return 2
+    sys.argv = [sys.argv[0], *argv[2:]]
+    runpy.run_module(argv[1], run_name='__main__', alter_sys=True)
+    return 0
+
+
 def diagnostics():
     root = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
     inventory_path = root / 'backend-build-inventory.json'
@@ -77,6 +93,8 @@ if __name__ == '__main__':
     if len(sys.argv)>1 and sys.argv[1] in ('--flow-package-runner','--flow-package-worker'):
         from backend.engine.frozen_package_dispatch import main
         raise SystemExit(main(sys.argv[2:],worker=sys.argv[1]=='--flow-package-worker'))
+    if len(sys.argv)>1 and sys.argv[1]=='-m':
+        raise SystemExit(run_internal_module(sys.argv[1:]))
     if len(sys.argv)>1 and sys.argv[1]=='--basic-training-worker':
         del sys.argv[1]
         runpy.run_module('backend.training_cli',run_name='__main__')

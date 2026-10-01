@@ -533,7 +533,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
     return {"verified_job_ids": verified}
 
 
-def _catalog_model_settings(meta):
+def _catalog_model_settings(meta, checkpoint=None):
     from backend.engine.class_semantics import recorded_roles, class_semantics_record
     settings = {}
     defaults = meta.get('threshold_settings', {})
@@ -545,7 +545,14 @@ def _catalog_model_settings(meta):
     parent = meta.get('warm_start') or {}
     if not isinstance(provenance, dict): provenance = {}
     if not isinstance(parent, dict): parent = {}
-    return {'threshold_settings': settings,
+    score_spec = None
+    if meta.get('task') in ('anomaly', 'anomaly_detection'):
+        from backend.engine.score_contract import checkpoint_score_spec, validate_score_spec
+        score_spec = checkpoint_score_spec(checkpoint) if checkpoint is not None else (
+            validate_score_spec(meta['score_spec']) if meta.get('score_spec') else None)
+        if score_spec is not None:
+            settings['threshold'] = score_spec['threshold']
+    return {'threshold_settings': settings, 'score_spec': score_spec,
         **catalog_class_vocabulary(meta),
         'class_semantics': class_semantics_record(meta.get('classes', []), recorded_roles(meta)),
         'training_labelset_id': meta.get('training_labelset_id') or provenance.get('labelset_id'),
@@ -582,6 +589,10 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             "detection", "anomaly", "segmentation", "classification", "patch_classification",
         ):
             continue
+        try:
+            score_settings = _catalog_model_settings(meta, checkpoint)
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError):
+            continue
         seen.add(job_id)
         model_name = str(meta.get("model_name") or meta.get("backbone") or task)
         record = training_job_manager.get_job(job_id)
@@ -596,7 +607,7 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             "best_metric": best_metric,
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(checkpoint.stat().st_mtime)),
             "source_dataset_path": str(source),
-            **_catalog_model_settings(meta),
+            **score_settings,
         })
     if project:
         for specialized_task in SPECIALIZED_TASKS:

@@ -84,7 +84,9 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
 
   // Read the threshold from the model that produced this ROI, including detector-only flows.
   const inspectNode = modelNodeForCrop(pipeline, crop);
-  const threshold = inspectNode?.data.threshold;
+  const threshold = crop.score_spec?.threshold ?? inspectNode?.data.threshold;
+  const distance = crop.score_spec?.domain === 'distance';
+  const scoreUnit = crop.score_spec?.unit || 'probability';
   const hasDefectArea = typeof crop.defect_area_px === 'number' && Number.isFinite(crop.defect_area_px);
   const hasBlobCount = typeof crop.blob_count === 'number' && Number.isFinite(crop.blob_count);
   const hasLargestBlobArea = typeof crop.largest_blob_area_px === 'number' && Number.isFinite(crop.largest_blob_area_px);
@@ -92,9 +94,10 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const isSegmentation = inspectNode?.data.task === 'segmentation' || hasBlobCount || hasLargestBlobArea;
   const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
   const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
-  const scorePercent = crop.defect_score * 100;
+  const scale = distance ? Math.max(crop.defect_score, threshold || 0, 1e-9) * 1.1 : 1;
+  const scorePercent = crop.defect_score / scale * 100;
   const thresholdPercent = typeof threshold === 'number' && Number.isFinite(threshold)
-    ? threshold * 100 : null;
+    ? threshold / scale * 100 : null;
   const deltaPercent = thresholdPercent === null ? null : scorePercent - thresholdPercent;
 
   return (
@@ -178,7 +181,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                   <span className="text-slate-400">{isSegmentation ? '최고 결함 픽셀 확률:' : '결함 / 이상 점수:'}</span>
                   <div className="flex items-center space-x-2">
                     <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
-                      {scorePercent.toFixed(1)}%
+                      {distance ? `${crop.defect_score.toFixed(4)} ${scoreUnit}` : `${scorePercent.toFixed(1)}%`}
                     </span>
                     <span className="text-slate-400 text-[10px] tabular-nums">
                       ({crop.defect_score.toFixed(4)})
@@ -197,25 +200,25 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                     <div
                       className="absolute top-0 bottom-0 w-0.5 bg-[#F59E0B] z-10"
                       style={{ left: `${thresholdPercent}%` }}
-                      title={`기준 임계값: ${thresholdPercent.toFixed(1)}%`}
+                      title={`기준 임계값: ${threshold} ${scoreUnit}`}
                     />
                   )}
                 </div>
 
                 {/* Gauge Labels */}
                 <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
-                  <span>0.0%</span>
+                  <span>{distance?'0':'0.0%'}</span>
                   <span className="text-[#F59E0B]">
-                    임계 기준: {thresholdPercent === null ? '확인 불가' : `${thresholdPercent.toFixed(1)}%`}
+                    임계 기준: {thresholdPercent === null ? '확인 불가' : distance ? `${threshold} ${scoreUnit}` : `${thresholdPercent.toFixed(1)}%`}
                   </span>
-                  <span>100.0%</span>
+                  <span>{distance?scale.toFixed(2):'100.0%'}</span>
                 </div>
 
                 {/* Delta Calculation */}
                 <div className="mt-2 pt-2 border-t border-[#2B3547] flex justify-between text-[10px] font-mono">
                   <span className="text-slate-400">임계값 초과 편차 (Δ):</span>
                   <span className={`font-bold tabular-nums ${deltaPercent !== null && deltaPercent > 0 ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
-                    {deltaPercent === null ? '—' : deltaPercent > 0 ? `+${deltaPercent.toFixed(1)}%` : `${deltaPercent.toFixed(1)}%`}
+                    {deltaPercent === null ? '—' : distance ? `${(crop.defect_score-(threshold||0)).toFixed(4)} ${scoreUnit}` : deltaPercent > 0 ? `+${deltaPercent.toFixed(1)}%` : `${deltaPercent.toFixed(1)}%`}
                   </span>
                 </div>
               </div>

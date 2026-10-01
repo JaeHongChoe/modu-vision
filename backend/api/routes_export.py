@@ -324,6 +324,12 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
         result["release_policy"] = None
         result["release_policy_withheld"] = "cohort_parity_required"
     if cohort is None and not req.verification_image_path:
+        if approved_revisions is not None:
+            from backend.engine.release_eligibility import authorize_release_action
+            try:
+                authorize_release_action(package, project, action='export', source=source)
+            except (ValueError, OSError) as exc:
+                raise HTTPException(status_code=409, detail=f"Export approval became stale: {exc}") from exc
         record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task, parity=result["parity"])
         return result
     scope = "cohort" if cohort is not None else "single_image"
@@ -354,10 +360,17 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             "package_path": str(package), "parity": report,
         })
     result["parity"] = report
-    if approved_revisions is not None and scope == "cohort":
-        receipt = package / flow_package_engine.PARITY_RECEIPT
-        result["release_policy"] = {**result["release_policy"], "device": report["device"],
-                                    "parity_receipt_sha256": hashlib.sha256(receipt.read_bytes()).hexdigest()}
+    if approved_revisions is not None:
+        from backend.engine.release_eligibility import authorize_release_action, release_authority
+        try:
+            with release_authority(project, source=source):
+                authorize_release_action(package, project, action='export', source=source)
+                if scope == "cohort":
+                    receipt = package / flow_package_engine.PARITY_RECEIPT
+                    result["release_policy"] = {**result["release_policy"], "device": report["device"],
+                                                "parity_receipt_sha256": hashlib.sha256(receipt.read_bytes()).hexdigest()}
+        except (ValueError, OSError) as exc:
+            raise HTTPException(status_code=409, detail=f"Export approval became stale during verification: {exc}") from exc
     return result
 
 

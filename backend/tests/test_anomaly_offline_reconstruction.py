@@ -16,6 +16,7 @@ def _legacy(tmp_path):
     parent.fit(torch.utils.data.DataLoader(torch.rand(2, 3, 32, 32), batch_size=2))
     state = parent.state_dict()
     state.pop('feature_extractor_state_dict')
+    state.pop('score_spec', None)  # Historical files predate the fitted-state calibration binding.
     metadata = {'task': 'anomaly', 'detector_type': 'padim', 'feature_backbone': 'resnet18',
         'classes': ['good', 'anomaly'], 'image_size': [32, 32]}
     checkpoint = tmp_path / 'best_model.pt'

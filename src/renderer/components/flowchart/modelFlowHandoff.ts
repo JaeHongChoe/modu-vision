@@ -1,4 +1,4 @@
-import type {FlowchartPipeline,FlowNode} from '../../types';
+import type {FlowchartPipeline,FlowNode,FlowNodeData} from '../../types';
 import type {FlowModelCatalogItem} from '../../services/api';
 import {taskHandoffScope,type HandoffScope} from '../training/taskHandoff';
 type StorageLike=Pick<Storage,'getItem'|'setItem'|'removeItem'>;
@@ -19,15 +19,23 @@ export function compatibleModelNode(node:FlowNode,model:Pick<FlowModelCatalogIte
  if(model.task==='detection'&&node.data.node_type==='detection_crop')return true;
  return node.data.node_type==='inspection'&&node.data.task===model.task;
 }
+export function modelScoreBinding(model:FlowModelCatalogItem):Partial<FlowNodeData>{
+ const spec=model.score_spec;
+ return {model_job_id:model.job_id,threshold:spec?.threshold??model.threshold_settings?.threshold??.5,score_spec:spec?{...spec}:undefined};
+}
+export function thresholdUpdate(data:Partial<FlowNodeData>,threshold:number):Partial<FlowNodeData>{
+ if(!Number.isFinite(threshold)||threshold<0||(data.score_spec?.domain!=='distance'&&threshold>1))throw new Error('임계값 threshold 범위를 확인하세요.');
+ return {threshold,...(data.score_spec?{score_spec:{...data.score_spec,threshold}}:{})};
+}
 export function bindModelToFlow(pipeline:FlowchartPipeline,model:FlowModelCatalogItem,nodeId?:string){
  if(String(model.task)==='defect_gan')throw new Error('생성 모델은 검사 노드에 연결하지 않습니다.');
  if(nodeId){const node=pipeline.nodes.find(row=>row.id===nodeId);if(!node||!compatibleModelNode(node,model))throw new Error('선택 모델과 호환되는 노드를 선택하세요.');
-   return {nodeId,pipeline:{...pipeline,nodes:pipeline.nodes.map(row=>row.id===nodeId?{...row,data:{...row.data,model_job_id:model.job_id}}:row)}};
+   return {nodeId,pipeline:{...pipeline,nodes:pipeline.nodes.map(row=>row.id===nodeId?{...row,data:{...row.data,...modelScoreBinding(model)}}:row)}};
  }
  if(pipeline.nodes.filter(row=>['inspection','detection_crop','preprocess'].includes(row.data.node_type)).length>=8)throw new Error('모델 노드 제한에 도달했습니다. 기존 호환 노드를 선택하세요.');
  const id=`model_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
  const node:FlowNode={id,position:{x:640,y:80+pipeline.nodes.length*80},data:{label:model.label||model.task,
    node_type:model.capabilities?.role==='preprocess'?'preprocess':'inspection',model_job_id:model.job_id,
-   ...(model.capabilities?.role==='preprocess'?{params:{operation:model.capabilities.operation}}:{task:model.task,threshold:.5,params:{}})}};
+   ...(model.capabilities?.role==='preprocess'?{params:{operation:model.capabilities.operation}}:{task:model.task,...modelScoreBinding(model),params:{}})}};
  return {nodeId:id,pipeline:{...pipeline,nodes:[...pipeline.nodes,node]}};
 }

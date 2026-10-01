@@ -121,8 +121,9 @@ def _render_standalone_html(
                         task=eval_data.get("task", "classification"),
                         model_path=model_file,
                         image_input=f_path,
-                        threshold=0.5,
+                        threshold=eval_data.get('metrics', {}).get('active_threshold'),
                         device=dev,
+                        **({'score_spec':eval_data['metrics']['score_spec']} if eval_data.get('metrics', {}).get('score_spec') else {}),
                     )
                     overlay_bgr = cv2.cvtColor(res.visual_overlay, cv2.COLOR_RGB2BGR)
                     ok, buf = cv2.imencode(".png", overlay_bgr)

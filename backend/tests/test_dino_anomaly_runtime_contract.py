@@ -77,7 +77,7 @@ def test_real_evaluation_uses_native_scale_and_frozen_threshold(tmp_path, monkey
     model = PatchScoreModel()
     monkeypatch.setattr(routes, 'reconstruct_anomaly_detector', lambda *args: model)
     checkpoint = tmp_path / 'best_model.pt'
-    torch.save({'model_state_dict': {}}, checkpoint)
+    torch.save({'model_state_dict': {'threshold': model.threshold}}, checkpoint)
     result = routes._evaluate_anomaly(checkpoint,
         {'detector_type':'dino_synthetic', 'map_semantics':'patch_score', 'image_size':[32,32]},
         dataset.parent, torch.device('cpu'))

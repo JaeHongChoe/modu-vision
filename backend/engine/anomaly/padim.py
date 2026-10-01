@@ -57,6 +57,7 @@ class PaDiMDetector:
         self.mean: Optional[torch.Tensor] = None      # [H, W, 1, d]
         self.cov_inv: Optional[torch.Tensor] = None   # [H, W, d, d]
         self.threshold: float = 0.0
+        self.score_spec = None
 
     def to(self, device: Union[torch.device, str]) -> "PaDiMDetector":
         self.device = torch.device(device)
@@ -126,6 +127,8 @@ class PaDiMDetector:
         mean_s = float(np.mean(train_scores))
         std_s = float(np.std(train_scores))
         self.threshold = round(mean_s + 3.0 * std_s, 4)
+        self.score_spec = None
+        self.state_dict()  # Persist a calibration identity from these fitted statistics.
 
         return {
             "total_samples": N,
@@ -218,7 +221,7 @@ class PaDiMDetector:
 
     def state_dict(self) -> Dict[str, Any]:
         """Returns serializable state dictionary."""
-        return {
+        state = {
             "feature_extractor_state_dict": {key: value.cpu() for key, value in self.feature_extractor.state_dict().items()},
             "mean": self.mean.cpu() if self.mean is not None else None,
             "cov_inv": self.cov_inv.cpu() if self.cov_inv is not None else None,
@@ -229,6 +232,12 @@ class PaDiMDetector:
             "regularizer": self.regularizer,
             "seed": self.seed,
         }
+        from backend.engine.score_contract import calibrated_score_spec
+        # Serialization can add migrated legacy fields or follow a statistics
+        # update. Bind what is actually saved; prediction uses the cached spec.
+        self.score_spec = calibrated_score_spec(state, 'mahalanobis_distance')
+        state['score_spec'] = dict(self.score_spec)
+        return state
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """Loads state dictionary."""
@@ -239,6 +248,8 @@ class PaDiMDetector:
         if state_dict.get("sub_dims") is not None:
             self.sub_dims = state_dict["sub_dims"].to(self.device)
         self.threshold = state_dict.get("threshold", 0.0)
+        from backend.engine.score_contract import restore_score_spec
+        self.score_spec = restore_score_spec({**state_dict, 'threshold': self.threshold}, 'mahalanobis_distance')
         self.target_dim = state_dict.get("target_dim", self.target_dim)
         self.regularizer = state_dict.get("regularizer", self.regularizer)
 

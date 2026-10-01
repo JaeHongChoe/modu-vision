@@ -32,7 +32,7 @@ def evaluate_anomaly_dataset(model, dataset, *, device='cpu', cancellation_reque
                 values=cv2.resize(values,(target.shape[1],target.shape[0]),interpolation=cv2.INTER_LINEAR)
             heatmaps.append(values);masks.append(target)
     result=compute_anomaly_metrics(scores,labels,heatmaps,masks,
-        fixed_threshold=getattr(model, 'threshold', None) if semantics == 'patch_score' else None,
+        fixed_threshold=getattr(model, 'threshold', None),
         threshold_comparison='gt' if semantics == 'patch_score' else 'ge')
     if len(set(labels)) < 2:
         result['image_auroc'] = None

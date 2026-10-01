@@ -16,6 +16,7 @@ import base64
 import hashlib
 import json
 import logging
+import math
 import os
 import threading
 import time
@@ -976,7 +977,7 @@ def _evaluate_anomaly(
             image_labels.append(label)
 
     single_class = len(set(image_labels)) < 2
-    fixed_threshold = float(getattr(model, 'threshold', meta.get('anomaly_threshold', .5))) if patch_scores or single_class else None
+    fixed_threshold = float(getattr(model, 'threshold', meta.get('anomaly_threshold', .5)))
     anom_metrics = compute_anomaly_metrics(image_scores, image_labels, pixel_heatmaps=pixel_heatmaps, pixel_masks=pixel_masks,
         fixed_threshold=fixed_threshold,
         threshold_comparison='gt' if patch_scores else 'ge')
@@ -991,7 +992,9 @@ def _evaluate_anomaly(
             evidence_arrays[f"mask_{index}"] = pixel_masks[mask_index]; mask_index += 1
     np.savez_compressed(evidence_file, **evidence_arrays)
     evidence_hash = hashlib.sha256(evidence_file.read_bytes()).hexdigest()
-    optimal_th = float(model.threshold) if patch_scores else anom_metrics["active_threshold"]
+    optimal_th = fixed_threshold
+    from backend.engine.score_contract import state_score_spec
+    score_spec = state_score_spec(state_dict) if hasattr(model, 'threshold') else None
 
     matrix = [[0] * num_classes for _ in range(num_classes)]
     cell_samples: Dict[str, List[str]] = {
@@ -1019,6 +1022,8 @@ def _evaluate_anomaly(
             "confidence": round(score_f, 4),
             "is_correct": bool(label == pred_idx),
             "anomaly_mode": mode,
+            "defect_score": score_f,
+            "score_spec": score_spec,
             "map_semantics": map_semantics,
             "pixel_evidence": {"file_path": str(evidence_file), "sha256": evidence_hash,
                                "heatmap_key": f"heatmap_{idx}", "mask_key": f"mask_{idx}" if mask_sources[idx] is not None else None,
@@ -1044,6 +1049,8 @@ def _evaluate_anomaly(
             "threshold_basis": anom_metrics['threshold_basis'] if single_class else 'heldout_normal_calibration' if patch_scores and getattr(model, 'calibration', {}).get('normal_image_count', 0) else 'model_default' if patch_scores else anom_metrics['threshold_basis'],
             "threshold_search_available": anom_metrics['threshold_search_available'],
             "active_threshold": optimal_th,
+            "score_spec": score_spec,
+            "score_basis": "saved_model_calibration",
             "f1_score": anom_metrics.get("f1_score"),
             "optimal_threshold": None if single_class else round(optimal_th, 4),
             "best_metric": meta.get("best_metric"),
@@ -1086,6 +1093,11 @@ def _annotate_predictions(predictions: List[Dict[str, Any]], task: str, roles: O
     derived = str(task).lower().strip() in _DERIVED_SCORE_TASKS
     for prediction in predictions:
         prediction["is_defect"] = is_defect_label(prediction.get("ground_truth"), roles)
+        if task in ('anomaly', 'anomaly_detection') and prediction.get('score_spec'):
+            from backend.engine.score_contract import validate_score_spec
+            validate_score_spec(prediction['score_spec'])
+            prediction['defect_score'] = float(prediction.get('defect_score', prediction['confidence']))
+            continue
         if derived:
             prediction.pop("defect_score", None)
         prediction["defect_score"] = compute_sample_defect_score(prediction, task=task, roles=roles)
@@ -1176,7 +1188,8 @@ def run_or_load_evaluation(
                 if (all_exist and len(cached.get("test_predictions", [])) > 0
                         and cached.get("evaluation_contract_version") == EVALUATION_CONTRACT_VERSION
                         and cached.get("binding") == evaluation_binding
-                        and cached.get("class_semantics") == class_semantics):
+                        and cached.get("class_semantics") == class_semantics
+                        and (task not in ('anomaly', 'anomaly_detection') or isinstance(cached.get('metrics', {}).get('score_spec'), dict))):
                     from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
                     for p in cached.get("test_predictions", []):
                         if "is_defect" not in p:
@@ -1265,7 +1278,8 @@ def get_evaluation_results(
 def get_defect_heatmap(
     image_id: str,
     job_id: Optional[str] = Query(None),
-    threshold: float = Query(0.5, ge=0.0, le=1.0),
+    threshold: Optional[float] = Query(None),
+    score_spec: Optional[str] = Query(None),
     format: str = Query("base64", description="'base64' or 'image'"),
     file_path: Optional[str] = Query(None),
 ):
@@ -1287,13 +1301,25 @@ def get_defect_heatmap(
             detail=f"Model checkpoint not found for job: {job_id}",
         )
 
+    task = "classification"
+    meta_path = model_file.parent / "model_meta.json"
+    if meta_path.is_file():
+        task = json.loads(meta_path.read_text()).get('task', 'classification')
+    from backend.engine.score_contract import resolve_inference_score
+    try:
+        requested_spec = json.loads(score_spec) if isinstance(score_spec, str) else None
+        threshold, resolved_score_spec = resolve_inference_score(model_file, task, threshold, requested_spec)
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
     from backend.remote.operations import remote_job_context, run_remote_inference
     from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
 
     try:
         remote_context = remote_job_context(model_file.parent, model_file.parent.name)
         if remote_context is not None:
-            payload, png_bytes = run_remote_inference(remote_context, img_file, threshold, image_id)
+            payload, png_bytes = run_remote_inference(remote_context, img_file, threshold, image_id,
+                **({'score_spec':resolved_score_spec} if resolved_score_spec is not None else {}))
             if format.lower() in ("image", "png"):
                 return Response(content=png_bytes, media_type="image/png")
             return payload
@@ -1319,11 +1345,14 @@ def get_defect_heatmap(
             image_input=img_file,
             threshold=threshold,
             device=get_device(),
+            **({'score_spec':resolved_score_spec} if resolved_score_spec is not None else {}),
         )
         overlay_rgb = res.visual_overlay
         confidence = float(res.confidence_score)
         predictions = res.predictions
         latency_ms = float(res.latency_ms)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
     except Exception as e:
         logger.exception("Inference failed on %s: %s", img_file, e)
         raise HTTPException(status_code=500, detail=f"Inference execution failed: {str(e)}")
@@ -1344,6 +1373,7 @@ def get_defect_heatmap(
     return {
         "image_id": image_id,
         "threshold": threshold,
+        "score_spec": resolved_score_spec,
         "confidence_score": round(confidence, 4),
         "overlay_base64": data_url,
         "predictions": predictions,
@@ -1357,7 +1387,7 @@ def get_overkill_underkill_analysis(
     target_max_underkill: int = Query(0, ge=0),
     cost_escape: float = Query(500.0, ge=0.0),
     cost_scrap: float = Query(25.0, ge=0.0),
-    current_threshold: float = Query(0.5, ge=0.0, le=1.0),
+    current_threshold: float = Query(0.5),
 ):
     """
     Industrial Overkill (과검) vs Underkill (미검) Optimization & Trade-off Curve.
@@ -1394,6 +1424,12 @@ def get_overkill_underkill_analysis(
         raise HTTPException(422, detail=str(exc)) from exc
     predictions = eval_payload["test_predictions"]
     task = eval_payload.get("task", "classification")
+    spec = eval_payload.get('metrics', {}).get('score_spec')
+    if (isinstance(spec, dict) and spec.get('domain') == 'distance') or (
+            task in ('anomaly', 'anomaly_detection') and not isinstance(spec, dict)):
+        raise HTTPException(422, 'Raw distance calibration requires a train/validation calibration run; the probability optimizer cannot rescale distance scores. Use the saved model threshold or a bound manual override.')
+    if not math.isfinite(current_threshold) or not 0 <= current_threshold <= 1:
+        raise HTTPException(422, 'Probability threshold must be between 0 and 1')
     from backend.engine.class_semantics import recorded_roles
     try:
         class_roles = recorded_roles(eval_payload)
@@ -1498,7 +1534,7 @@ def get_zero_escape_calibrate_endpoint(
     target_max_underkill: int = Query(0, ge=0),
     cost_escape: float = Query(500.0, ge=0.0),
     cost_scrap: float = Query(25.0, ge=0.0),
-    current_threshold: float = Query(0.5, ge=0.0, le=1.0),
+    current_threshold: float = Query(0.5),
     apply_to_eval_results: bool = Query(True),
 ):
     return run_zero_escape_calibration(

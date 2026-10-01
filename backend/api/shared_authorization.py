@@ -79,7 +79,12 @@ class SharedAuthorizationMiddleware:
                     delivery_allowed=role in {'labeler','trainer','reviewer'}
                 elif suffix.startswith('servers/') and suffix.endswith('/preflight'):
                     delivery_allowed=bool(account['administrator'])
-            allowed=team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
+            # This exact endpoint records authenticated denials itself. It still
+            # requires project membership above and an owner/admin gate in-route.
+            emergency_rollback=(method=='POST' and len(parts)==5 and parts[:3]==['api','fleet','targets']
+                                and len(parts[3])==32 and all(c in '0123456789abcdef' for c in parts[3])
+                                and parts[4]=='emergency-rollback')
+            allowed=emergency_rollback or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:return await reject(403,'This project role cannot perform the requested action')
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]

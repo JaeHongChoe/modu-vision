@@ -212,7 +212,7 @@ export const EvaluationStudio: React.FC = () => {
   [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
-  const hasCalibrationEvidence = Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  const hasCalibrationEvidence = metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = !jobId
     ? (language === 'ko' ? '평가가 완료된 모델이 있어야 리포트를 내보낼 수 있습니다.' : 'Load an evaluated model before exporting a report.')
@@ -471,7 +471,7 @@ export const EvaluationStudio: React.FC = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="space-y-0.5">
                 <div className="text-[10px] text-slate-400 font-mono">
-                  현재 임계값: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
+                  현재 임계값 ({metrics.score_spec?.unit || 'probability'}): <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
                 </div>
                 <div className="text-[10px] text-[#38BDF8] font-mono">
                   평가 표본 탐색 임계값:{' '}
@@ -517,6 +517,7 @@ export const EvaluationStudio: React.FC = () => {
               {metrics.selection_overlap && <p className="mt-1 text-amber-200">{language === 'ko'
                 ? '모델 선택에 사용한 검증 데이터의 결과입니다. 별도 시험 데이터에서도 확인하세요.'
                 : 'This validation data was also used for model selection. Verify the model on a separate test set.'}</p>}
+              {metrics.score_spec?.domain === 'distance' && <p className="mt-1 text-cyan-200">저장된 거리 보정 임계값으로 평가합니다. 임계값 보정에는 학습·검증 데이터를 사용하세요.</p>}
               {metrics.threshold_search_available === false && <p className="mt-1 text-amber-200">{language === 'ko'
                 ? '정상 또는 불량 정답이 없어 AUROC와 최적 임계값을 산출할 수 없습니다. 판정은 저장된 모델 임계값을 사용합니다.'
                 : 'AUROC and threshold search require both normal and defect truth. Verdicts use the saved model threshold.'}</p>}
@@ -1038,6 +1039,7 @@ export const EvaluationStudio: React.FC = () => {
               heatmapOverlayBase64={heatmapOverlayBase64}
               heatmapLoading={heatmapLoading}
               confidenceThreshold={confidenceThreshold}
+              scoreSpec={metrics.score_spec}
               onThresholdChange={setConfidenceThreshold}
               defectScore={selectedPrediction?.defect_score}
               groundTruth={selectedPrediction?.ground_truth}

@@ -7,6 +7,7 @@ Reattaching this process does not restore optimizer or RNG state.
 from __future__ import annotations
 
 from dataclasses import asdict
+import functools
 import hashlib
 import json
 import logging
@@ -26,6 +27,10 @@ from backend.engine.runtime_process_control import atomic_private_json, command_
 POLL_SECONDS = .05
 CANCEL_GRACE_SECONDS = 15.
 CANCEL_TERMINATE_SECONDS = 5.
+# A process created this long before the current boot cannot still be alive.
+# The margin absorbs boot-time estimation and small wall-clock adjustments.
+BOOT_MARGIN_SECONDS = 300.
+_TERMINAL_STATES = ('completed', 'failed', 'aborted', 'interrupted')
 _LOCK = threading.RLock()
 logger = logging.getLogger(__name__)
 
@@ -129,17 +134,71 @@ def _stop_owned(journal, *, force=False):
         return False
 
 
+@functools.lru_cache(maxsize=1)
+def _boot_id():
+    """Identifier of the current boot, when the platform exposes one.
+
+    It cannot change while this process runs, so it is read once; observers
+    check liveness every POLL_SECONDS.
+    """
+    try:
+        if sys.platform.startswith('linux'):
+            return Path('/proc/sys/kernel/random/boot_id').read_text().strip() or None
+        if sys.platform == 'darwin':
+            value = subprocess.run(['/usr/sbin/sysctl', '-n', 'kern.bootsessionuuid'], capture_output=True, text=True,
+                                   timeout=5).stdout.strip()
+            return value or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return None
+
+
+def _boot_evidence(journal):
+    """'earlier' for a changed boot identifier, 'estimated_earlier' from boot
+    time alone (journals without an identifier, Windows), otherwise None."""
+    recorded, current = journal.get('owner_boot_id'), _boot_id()
+    if recorded and current:
+        return 'earlier' if recorded != current else None
+    if journal['owner_created_at'] < psutil.boot_time() - BOOT_MARGIN_SECONDS:
+        return 'estimated_earlier'
+    return None
+
+
 def _owned_members(journal):
-    """Reconcile inherited marks in the worker's original private session."""
+    """Reconcile inherited marks in the worker's original private session.
+
+    A changed boot identifier is conclusive. An estimated earlier boot never
+    outweighs live processes that carry this run's token; it only lets an
+    otherwise unrelated, unmarked session count as exited, without signals.
+    """
     try:
         pid = journal['owner_pid']
+        evidence = _boot_evidence(journal)
+        if evidence == 'earlier':
+            return []
         try:
             leader = psutil.Process(pid)
             if abs(leader.create_time() - journal['owner_created_at']) >= .01:
-                return None  # A reused session leader cannot establish ownership.
+                # A stepped wall clock can move a live leader's reported start
+                # time (Linux derives it from boot time), so its token decides.
+                try:
+                    token = leader.environ().get('MODU_VISION_LOCAL_WORKER_TOKEN')
+                except psutil.AccessDenied:
+                    # Another user's process cannot be this user's worker.
+                    if os.name != 'nt' and leader.username() != journal['owner_username']:
+                        return []
+                    return None
+                if token != journal['owner_token']:
+                    # POSIX never reuses a PID while a process group or session
+                    # with that ID exists, so another process at this PID proves
+                    # the owned group ended. Windows keeps the token scan.
+                    if os.name != 'nt':
+                        return []
+                    leader = None
         except psutil.NoSuchProcess:
             leader = None
         members = []
+        unmarked = False
         for process in psutil.process_iter(['pid']):
             try:
                 if os.name != 'nt':
@@ -152,7 +211,7 @@ def _owned_members(journal):
                 token = process.environ().get('MODU_VISION_LOCAL_WORKER_TOKEN')
                 if token != journal['owner_token']:
                     if os.name != 'nt':
-                        return None  # Never signal an unmarked session member.
+                        unmarked = True  # never signalled; decides below
                     continue
                 if process.create_time() + .01 < journal['owner_created_at']:
                     return None
@@ -161,7 +220,13 @@ def _owned_members(journal):
                 continue
             except (psutil.Error, PermissionError):
                 return None
-        return sorted(members, key=lambda process: process.pid == pid, reverse=True)
+        if members:
+            # Marked workers are alive; a session shared with unmarked processes
+            # stays unknown so nothing unmarked is ever signalled.
+            return None if unmarked else sorted(members, key=lambda process: process.pid == pid, reverse=True)
+        if unmarked:
+            return [] if evidence == 'estimated_earlier' else None
+        return []
     except (psutil.Error, OSError, KeyError, TypeError, ValueError):
         return None
 
@@ -213,6 +278,42 @@ class _AttachedProcess:
             time.sleep(POLL_SECONDS)
 
 
+def _restore_confirmed_terminal(manager, record, journal, root, leases):
+    from backend.api.routes_training import _write_job_receipt
+    record.status = record.phase = journal['status']
+    status = {}
+    status_path = root / 'status.json'
+    try:
+        if status_path.is_file() and not status_path.is_symlink():
+            candidate = json.loads(status_path.read_text())
+            if candidate.get('job_id') == record.job_id and candidate.get('spec_sha256') == journal['spec_sha256']:
+                status = candidate
+    except (OSError, ValueError):
+        # A damaged progress file must not hide a confirmed terminal job.
+        logger.exception('Ignoring unreadable local status for %s', record.job_id)
+    for field in ('current_epoch', 'total_epochs', 'current_step', 'total_steps', 'train_loss', 'val_loss',
+                  'best_metric', 'metrics', 'loss_history'):
+        if field in status:
+            setattr(record, field, status[field])
+    record.result = {**(status.get('result') or {}), 'status': record.status, 'best_metric': status.get('best_metric'),
+                     'worker_exit_confirmed': True, 'optimizer_resume': False}
+    if record.status in ('failed', 'interrupted'):
+        message = status.get('error') or (
+            f"Owned worker exited before terminal publication (exit {journal.get('worker_exit_code')})"
+            if record.status == 'interrupted' else None)
+        if message:
+            record.error = {'message': message}
+    if not (root / 'job_receipt.json').is_file():
+        try:
+            _write_job_receipt(record)
+        except Exception:
+            logger.exception('Could not persist restored local receipt for %s', record.job_id)
+    # Replaces a disconnected/stopping record (reconnect) or registers history.
+    manager.restore_local_job(record)
+    # Exit is confirmed, so a reservation left by an interrupted observer is stale.
+    leases.release(record.job_id, terminal=True)
+
+
 def recover_local_jobs(manager, *, job_id=None):
     """Observe persisted owned children; never replay preparation or training."""
     from backend.api.routes_training import JobRecord
@@ -247,6 +348,11 @@ def recover_local_jobs(manager, *, job_id=None):
                 parent = dict(spec['warm_start'], checkpoint_path=Path(spec['warm_start']['checkpoint_path']),
                               classes=tuple(spec['warm_start']['classes']))
                 record.warm_start = WarmStartParent(**parent)
+            if journal.get('worker_exit_confirmed') is True and journal.get('status') in _TERMINAL_STATES:
+                # An observer already confirmed the owned session exited. Restore
+                # history only; probing its old PID could match another process.
+                _restore_confirmed_terminal(manager, record, journal, root, leases)
+                continue
             if journal.get('cancel_requested_at') or _cancelled(root, record.job_id):
                 record.preparation_cancel.set()
             if _liveness(journal) is None:
@@ -323,7 +429,8 @@ def run_owned_training(record, callback, *, config_overrides, device, split_mani
                'preset': record.preset, 'output_dir': str(root), 'spec_path': str(spec_path), 'spec_sha256': digest,
                'owner_pid': child.pid, 'owner_created_at': psutil.Process(child.pid).create_time(),
                'owner_command_sha256': command_sha256(command), 'owner_token': token,
-               'owner_session': child.pid, 'owner_username': psutil.Process(child.pid).username(), 'optimizer_resume': False}
+               'owner_session': child.pid, 'owner_username': psutil.Process(child.pid).username(),
+               'owner_boot_id': _boot_id(), 'optimizer_resume': False}
     try:
         _save(journal)
         child.stdin.write((record.job_id + '\n').encode())

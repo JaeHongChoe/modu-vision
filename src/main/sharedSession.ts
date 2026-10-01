@@ -8,6 +8,14 @@ export function validatedServerUrl(value:string):string {
   return url.origin;
 }
 export function getSharedConnection():SharedConnection|null {if(!connection)return null;const {token,...publicData}=connection;return publicData;}
+/** True only for API/WebSocket requests to the connected shared server origin. */
+export function isSharedServerUrl(target:string):boolean {
+  if(!connection)return false;
+  try{
+    const url=new URL(target);if(url.protocol==='wss:')url.protocol='https:';if(url.protocol==='ws:')url.protocol='http:';
+    return url.origin===connection.server_url&&/^\/(api|ws)\//.test(url.pathname);
+  }catch{return false;}
+}
 export function sharedHeaders(target:string):Record<string,string> {
   if(!connection||connection.expires_at<=Date.now()/1000)return {};
   const url=new URL(target);if(url.protocol==='wss:')url.protocol='https:';if(url.protocol==='ws:')url.protocol='http:';

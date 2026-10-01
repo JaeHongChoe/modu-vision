@@ -19,7 +19,15 @@
     "test:m4": "node scripts/verify-m4.js",
     "test:m5": "node scripts/verify-m5.js",
     "test:training-cancel": "node scripts/verify-training-cancel.js",
-    "test:packaging": "node scripts/verify-packaging.js"
+    "test:packaging": "node scripts/verify-packaging.js",
+    "test:e2e:harness": "node --test scripts/tests/e2e-harness.test.cjs",
+    "typecheck:e2e": "tsc -p scripts/e2e/fixtures/tsconfig.json",
+    "pretest:e2e": "npm run test:e2e:harness",
+    "test:e2e": "playwright test",
+    "pretest:e2e:browser": "npm run test:e2e:harness",
+    "test:e2e:browser": "playwright test --project=browser",
+    "pretest:e2e:electron": "npm run test:e2e:harness",
+    "test:e2e:electron": "playwright test --project=electron"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
@@ -28,6 +36,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.10.7",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

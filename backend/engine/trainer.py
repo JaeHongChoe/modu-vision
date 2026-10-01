@@ -765,6 +765,11 @@ class UnifiedAutoMLTrainer:
                 "augmentation_profile": self.overrides.get('augmentation_profile', 'industrial'),
                 **self.overrides},
         }
+        if self.task in {"detection", "segmentation"}:
+            # New candidates identify the loader contract, allowing historical
+            # impact checks to distinguish image-only augmentation results.
+            meta["augmentation_contract"] = {"version": 1, "target_sync": True,
+                                             "crop": None, "mask_interpolation": "nearest"}
 
         if self.task == "classification":
             meta["backbone"] = str(self.overrides.get('backbone', self.config.backbone_classification))
@@ -792,6 +797,10 @@ class UnifiedAutoMLTrainer:
             meta['anomaly_mode'] = self.overrides.get('anomaly_mode', 'classification')
             meta['evaluation_profile'] = 'region_mask_metrics' if meta['anomaly_mode'] == 'segmentation' else 'image_score_metrics'
             meta["validation"] = getattr(self,"_anomaly_validation_metrics",{})
+            from backend.engine.score_contract import resolve_model_score
+            meta['score_spec'], _ = resolve_model_score(model, None, model.threshold)
+            meta['anomaly_threshold'] = model.threshold
+            meta['threshold_settings'] = {'threshold': model.threshold}
             if meta['detector_type'] == 'dino_synthetic':
                 meta.update({
                     'anomaly_backbone': model.backbone_name,
@@ -840,8 +849,9 @@ def infer(
     task: str,
     model_path: Union[str, Path],
     image_input: Union[str, Path, np.ndarray, Image.Image],
-    threshold: float = 0.5,
+    threshold: Optional[float] = None,
     device: Optional[Union[str, torch.device]] = None,
+    score_spec: Optional[Dict[str, Any]] = None,
 ) -> InferenceResult:
     """
     Unified industrial inference engine supporting all 4 vision tasks.
@@ -850,6 +860,8 @@ def infer(
     start_time = time.time()
     dev = get_device(device)
     m_path = Path(model_path)
+    from backend.engine.score_contract import resolve_inference_score
+    threshold, resolved_score_spec = resolve_inference_score(m_path, task.lower().strip(), threshold, score_spec)
     meta_path = m_path.parent / "model_meta.json"
     meta = {}
     if meta_path.exists():
@@ -1045,6 +1057,12 @@ def infer(
         )
 
     elif task_clean in ("anomaly", "anomaly_detection"):
+        # The file may have changed after threshold resolution. Authorize the
+        # exact tensors loaded for this prediction, never cached path metadata.
+        from backend.engine.score_contract import state_score_spec, compatible_scores
+        actual_score_spec = state_score_spec(state_dict)
+        if not compatible_scores(actual_score_spec, resolved_score_spec):
+            raise ValueError('Score calibration differs from the loaded model state')
         model = reconstruct_anomaly_detector(state_dict, meta, dev)
         patch_scores = getattr(model, 'model_metadata', {}).get('map_semantics') == 'patch_score'
         if patch_scores:
@@ -1067,6 +1085,7 @@ def infer(
 
         latency = (time.time() - start_time) * 1000.0
         predictions = {"is_anomaly": is_anomaly, "anomaly_score": score, "threshold": effective_threshold,
+                       "score_spec": resolved_score_spec, "score_basis": "saved_model_calibration" if score_spec is None else "explicit_score_spec",
                        "map_semantics": 'patch_score' if patch_scores else 'pixel_score'}
         if patch_scores:
             import base64

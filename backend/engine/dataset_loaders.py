@@ -17,6 +17,7 @@ import glob
 import hashlib
 import json
 import logging
+import math
 import os
 import random
 import xml.etree.ElementTree as ET
@@ -645,14 +646,18 @@ class DetectionDataset(Dataset):
             scale_y = 1.0
 
         tensor = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
-        if self.transform:
-            tensor = self.transform(tensor)
 
         raw_annos = self.img_to_annos.get(img_id, [])
         valid_boxes: List[List[float]] = []
         valid_labels: List[int] = []
         valid_areas: List[float] = []
         valid_norms: List[List[float]] = []
+        valid_rotated: List[List[float]] = []
+        rotated_present: List[bool] = []
+        rotated_authority: List[bool] = []
+        valid_rotated_polygons: List[List[List[float]]] = []
+        valid_directions: List[float] = []
+        direction_present: List[bool] = []
 
         for a in raw_annos:
             x, y, bw, bh = a["bbox"]
@@ -660,10 +665,12 @@ class DetectionDataset(Dataset):
             if bw <= 0 or bh <= 0:
                 continue
 
-            x1 = max(0.0, float(x) * scale_x)
-            y1 = max(0.0, float(y) * scale_y)
-            x2 = min(float(target_w), float(x + bw) * scale_x)
-            y2 = min(float(target_h), float(y + bh) * scale_y)
+            x1 = min(float(target_w), max(0.0, float(x) * scale_x))
+            y1 = min(float(target_h), max(0.0, float(y) * scale_y))
+            x2 = min(float(target_w), max(0.0, float(x + bw) * scale_x))
+            y2 = min(float(target_h), max(0.0, float(y + bh) * scale_y))
+            if x2 <= x1 or y2 <= y1:
+                continue
 
             # Inverted coordinate auto-swap
             if x2 < x1:
@@ -684,6 +691,46 @@ class DetectionDataset(Dataset):
             valid_labels.append(self.original_to_dense[original_category])
             valid_areas.append(float((x2 - x1) * (y2 - y1)))
             valid_norms.append([x1 / target_w, y1 / target_h, x2 / target_w, y2 / target_h])
+            rotated = a.get("rotated_bbox")
+            if rotated is not None:
+                if len(rotated) != 5 or not all(math.isfinite(float(value)) for value in rotated) or rotated[2] <= 0 or rotated[3] <= 0:
+                    raise ValueError("Invalid rotated box target")
+                cx, cy, box_w, box_h, angle = rotated
+                radians = math.radians(angle)
+                corners = [[(cx + dx * math.cos(radians) - dy * math.sin(radians)) * scale_x,
+                            (cy + dx * math.sin(radians) + dy * math.cos(radians)) * scale_y]
+                           for dx, dy in [(-box_w/2, -box_h/2), (box_w/2, -box_h/2),
+                                          (box_w/2, box_h/2), (-box_w/2, box_h/2)]]
+                valid_rotated_polygons.append(corners)
+                # Anisotropic resizing preserves exact quadrilateral vertices.
+                # Only uniform scaling or axis-aligned source edges preserve a
+                # rectangular OBB. Even max_dim rounding is accounted for.
+                rectangular = scale_x == scale_y or angle % 90 == 0
+                if rectangular:
+                    width_scale, height_scale = ((scale_y, scale_x) if angle % 180 == 90 else (scale_x, scale_y))
+                    valid_rotated.append([cx * scale_x, cy * scale_y, box_w * width_scale, box_h * height_scale, angle])
+                else:
+                    valid_rotated.append([0, 0, 0, 0, 0])
+                rotated_authority.append(rectangular)
+                xs, ys = zip(*corners)
+                x1, y1 = max(0, min(xs)), max(0, min(ys))
+                x2, y2 = min(target_w, max(xs)), min(target_h, max(ys))
+                valid_boxes[-1] = [x1, y1, x2, y2]
+                valid_areas[-1] = (x2 - x1) * (y2 - y1)
+                valid_norms[-1] = [x1 / target_w, y1 / target_h, x2 / target_w, y2 / target_h]
+            else:
+                valid_rotated.append([0, 0, 0, 0, 0])
+                valid_rotated_polygons.append([[0, 0]] * 4)
+                rotated_authority.append(False)
+            rotated_present.append(rotated is not None)
+            direction = a.get("direction_deg")
+            if direction is not None and (not math.isfinite(float(direction)) or not 0 <= float(direction) < 360):
+                raise ValueError("Direction target must be finite degrees in [0,360)")
+            if direction is not None:
+                radians = math.radians(float(direction))
+                direction = math.degrees(math.atan2(scale_y * math.sin(radians), scale_x * math.cos(radians))) % 360
+            valid_directions.append(float(direction) if direction is not None else 0)
+            direction_present.append(direction is not None)
 
         if len(valid_boxes) > 0:
             boxes_t = torch.tensor(valid_boxes, dtype=torch.float32)
@@ -706,6 +753,21 @@ class DetectionDataset(Dataset):
             "iscrowd": iscrowd_t,
             "boxes_normalized": norm_t,
         }
+        # Optional native metadata is retained beside the AABB envelope. Validity
+        # masks distinguish missing targets in mixed legacy annotation sets.
+        if any(rotated_present):
+            target["rotated_boxes"] = torch.tensor(valid_rotated, dtype=torch.float32)
+            target["rotated_boxes_valid"] = torch.tensor(rotated_authority, dtype=torch.bool)
+            target["rotated_polygons"] = torch.tensor(valid_rotated_polygons, dtype=torch.float32)
+            target["rotated_polygons_valid"] = torch.tensor(rotated_present, dtype=torch.bool)
+        if any(direction_present):
+            target["direction_deg"] = torch.tensor(valid_directions, dtype=torch.float32)
+            target["direction_valid"] = torch.tensor(direction_present, dtype=torch.bool)
+
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample = apply_sample_transform(self.transform, tensor, target, task="detection")
+            tensor, target = sample.image, sample.targets
 
         return tensor, target
 
@@ -803,10 +865,11 @@ class SegmentationDataset(Dataset):
             mask_np = mask_np.astype(np.int64)
 
         img_t = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
-        if self.transform:
-            img_t = self.transform(img_t)
-
         mask_t = torch.from_numpy(mask_np).long()
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample = apply_sample_transform(self.transform, img_t, mask_t, task="segmentation")
+            img_t, mask_t = sample.image, sample.targets
         return img_t, mask_t
 
 
@@ -988,8 +1051,6 @@ class AnomalyDataset(Dataset):
             target_w, target_h = w, h
 
         img_t = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
-        if self.transform:
-            img_t = self.transform(img_t)
 
         if mask_p is not None and mask_p.exists():
             with Image.open(str(mask_p)) as m_im:
@@ -1002,6 +1063,10 @@ class AnomalyDataset(Dataset):
         else:
             mask_t = torch.zeros((target_h, target_w), dtype=torch.int64)
 
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample = apply_sample_transform(self.transform, img_t, mask_t, task="anomaly")
+            img_t, mask_t = sample.image, sample.targets
         return img_t, label, mask_t
 
 

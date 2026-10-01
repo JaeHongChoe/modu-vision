@@ -304,3 +304,23 @@ def frozen_annotation_root(binding,source,output):
         else:destination.write_text(json.dumps(source_label,ensure_ascii=False))
     binding['frozen_source_labels']=frozen
     return root
+
+
+def assess_training_geometry(metadata):
+    """Assess the recorded loader contract, without inferring model quality."""
+    if not isinstance(metadata.get('task'), str):
+        return 'unknown', 'Recorded training task is missing or malformed', ['inspect_training_config']
+    if metadata.get('task') not in ('detection', 'segmentation'):
+        return 'unaffected', 'This task is outside the bbox/mask spatial augmentation defect', []
+    config = metadata.get('training_config')
+    config = config if isinstance(config, dict) else {}
+    contract = metadata.get('augmentation_contract')
+    contract = contract if isinstance(contract, dict) else {}
+    profile = config.get('augmentation_profile')
+    if profile in ('none', 'photometric'):
+        return 'unaffected', 'Recorded augmentation profile does not transform target geometry', []
+    if contract.get('target_sync') is True and type(contract.get('version')) is int and contract['version'] >= 1:
+        return 'unaffected', 'Recorded loader contract synchronizes image and target geometry', []
+    if profile == 'industrial' and (contract.get('target_sync') is False or contract.get('version') == 0):
+        return 'affected', 'Spatial augmentation used an image-only target contract; quality impact is unmeasured', ['train_candidate', 'compare_fixed_cohort', 'evaluate_model', 'review_approval']
+    return 'unknown', 'Recorded augmentation profile or target synchronization version is missing or ambiguous', ['inspect_training_config']

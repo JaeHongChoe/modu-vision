@@ -52,6 +52,7 @@ class PatchCoreDetector:
 
         self.coreset: Optional[torch.Tensor] = None  # [K, D]
         self.threshold: float = 0.0
+        self.score_spec = None
 
     def to(self, device: Union[torch.device, str]) -> "PatchCoreDetector":
         self.device = torch.device(device)
@@ -123,6 +124,8 @@ class PatchCoreDetector:
         mean_s = float(np.mean(train_scores))
         std_s = float(np.std(train_scores))
         self.threshold = round(mean_s + 3.0 * std_s, 4)
+        self.score_spec = None
+        self.state_dict()  # Persist a calibration identity from these fitted statistics.
 
         return {
             "total_normal_patches": total_patches,
@@ -211,7 +214,7 @@ class PatchCoreDetector:
 
     def state_dict(self) -> Dict[str, Any]:
         """Returns serializable state dictionary."""
-        return {
+        state = {
             "feature_extractor_state_dict": {key: value.cpu() for key, value in self.feature_extractor.state_dict().items()},
             "coreset": self.coreset.cpu() if self.coreset is not None else None,
             "threshold": self.threshold,
@@ -220,6 +223,12 @@ class PatchCoreDetector:
             "max_coreset_size": self.max_coreset_size,
             "seed": self.seed,
         }
+        from backend.engine.score_contract import calibrated_score_spec
+        # Serialization can add migrated legacy fields or follow a statistics
+        # update. Bind what is actually saved; prediction uses the cached spec.
+        self.score_spec = calibrated_score_spec(state, 'euclidean_distance')
+        state['score_spec'] = dict(self.score_spec)
+        return state
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         """Loads state dictionary."""
@@ -227,6 +236,8 @@ class PatchCoreDetector:
             self.feature_extractor.load_state_dict(state_dict['feature_extractor_state_dict'], strict=True)
         self.coreset = state_dict["coreset"].to(self.device) if state_dict.get("coreset") is not None else None
         self.threshold = state_dict.get("threshold", 0.0)
+        from backend.engine.score_contract import restore_score_spec
+        self.score_spec = restore_score_spec({**state_dict, 'threshold': self.threshold}, 'euclidean_distance')
         self.coreset_sampling_ratio = state_dict.get("coreset_sampling_ratio", self.coreset_sampling_ratio)
         self.max_coreset_size = state_dict.get("max_coreset_size", self.max_coreset_size)
 

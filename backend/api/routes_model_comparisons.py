@@ -129,9 +129,15 @@ def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> di
         return None
     if not isinstance(meta, dict) or meta.get("task") != task:
         return None
+    score_spec = None
+    if task == 'anomaly':
+        from backend.engine.score_contract import checkpoint_score_spec
+        try: score_spec = checkpoint_score_spec(checkpoint)
+        except (ValueError, OSError, KeyError, TypeError, RuntimeError): return None
     return {
         "job_id": job_id,
         "task": task,
+        "score_spec": score_spec,
         "checkpoint_path": str(checkpoint),
         "training_dataset_fingerprint": training_fingerprint,
         "created_at": meta.get("created_at") or receipt.get("completed_at") or None,
@@ -438,12 +444,14 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         pipeline=pipelines[model['job_id']]
         if params:
             node=next(n for n in pipeline.nodes if n.data.node_type in ('inspection','detection_crop'))
-            node.data.params.update({key:value for key,value in params.items() if key!='threshold'})
-            if 'threshold' in params:
-                try:threshold=float(params['threshold'])
-                except (ValueError,TypeError):raise HTTPException(422,'Model threshold requires [0,1]')
-                if not 0<=threshold<=1:raise HTTPException(422,'Model threshold requires [0,1]')
+            node.data.params.update({key:value for key,value in params.items() if key not in ('threshold','score_spec')})
+            if 'threshold' in params or 'score_spec' in params:
+                from backend.engine.score_contract import resolve_inference_score
+                try:
+                    threshold, spec = resolve_inference_score(model['checkpoint_path'], model['task'], params.get('threshold'), params.get('score_spec'))
+                except (ValueError,TypeError,KeyError) as exc:raise HTTPException(422,str(exc)) from exc
                 node.data.threshold=threshold
+                node.data.score_spec=spec
         try:ordered_linear_nodes(pipeline)
         except ValueError as exc:raise HTTPException(422,str(exc)) from exc
     rows: list[dict[str, Any]] = []

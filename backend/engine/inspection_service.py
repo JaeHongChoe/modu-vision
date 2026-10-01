@@ -34,6 +34,7 @@ from backend.engine.flow_package_runtime import run_flow_package, verify_flow_pa
 
 MAX_UPLOAD_BYTES = 32 * 1024 * 1024
 VALID_VERDICTS = {"OK", "NG", "REVIEW"}
+MAX_INTERRUPTED_ATTEMPTS = 3
 INBOX_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
 
@@ -163,6 +164,9 @@ class InspectionStore:
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
             if "model_verdict" not in columns:
                 conn.execute("ALTER TABLE jobs ADD COLUMN model_verdict TEXT")
+            # Counts only attempts interrupted by a worker stop, not operator retries.
+            if "interrupted" not in columns:
+                conn.execute("ALTER TABLE jobs ADD COLUMN interrupted INTEGER NOT NULL DEFAULT 0")
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
@@ -183,11 +187,27 @@ class InspectionStore:
         )
 
     def recover(self) -> None:
-        """A killed process leaves running rows retryable with an audit event."""
+        """A killed process leaves running rows retryable with an audit event.
+
+        An input that kills the worker on every attempt would otherwise loop
+        forever; after MAX_INTERRUPTED_ATTEMPTS interrupted attempts it becomes
+        REVIEW for an operator. Operator retries start a new count.
+        """
         with self._connection() as conn:
-            rows = conn.execute("SELECT job_id FROM jobs WHERE state='running'").fetchall()
+            rows = conn.execute("SELECT job_id, interrupted FROM jobs WHERE state='running'").fetchall()
             for row in rows:
-                conn.execute("UPDATE jobs SET state='queued', updated_at=? WHERE job_id=?", (_now(), row["job_id"]))
+                interrupted = row["interrupted"] + 1
+                if interrupted >= MAX_INTERRUPTED_ATTEMPTS:
+                    message = (f"Worker stopped during {interrupted} consecutive inspection attempts; "
+                               "quarantined for operator review")
+                    conn.execute(
+                        "UPDATE jobs SET state='error',verdict='REVIEW',error=?,interrupted=?,updated_at=? WHERE job_id=?",
+                        (message, interrupted, _now(), row["job_id"]),
+                    )
+                    self._event(conn, row["job_id"], "error", message)
+                    continue
+                conn.execute("UPDATE jobs SET state='queued', interrupted=?, updated_at=? WHERE job_id=?",
+                             (interrupted, _now(), row["job_id"]))
                 self._event(conn, row["job_id"], "queued", "Worker restarted before the prior result was committed")
             pending = conn.execute(
                 "SELECT job_id FROM deliveries WHERE state IN ('sending','failed')",
@@ -373,7 +393,7 @@ class InspectionStore:
     def retry(self, job_id: str) -> bool:
         with self._connection() as conn:
             cursor = conn.execute(
-                "UPDATE jobs SET state='queued',verdict=NULL,result_json=NULL,error=NULL,updated_at=? "
+                "UPDATE jobs SET state='queued',verdict=NULL,result_json=NULL,error=NULL,interrupted=0,updated_at=? "
                 "WHERE job_id=? AND state='error'", (_now(), job_id),
             )
             if cursor.rowcount:

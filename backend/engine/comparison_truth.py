@@ -74,3 +74,58 @@ def verify_truth(project, source, binding):
         current=image_truth.read_truth({**project,'source_dataset_dir':str(source)},row['file_path'],task=scope['task'],
                                       classes=scope['classes'],class_roles=roles,participating_tasks=binding.get('participating_tasks'))
         if current['truth_sha256']!=row['truth_sha256']:raise ValueError('Comparison reviewed truth changed during execution')
+
+
+def verify_evidence_binding(project, source, report):
+    """Revalidate saved truth, including the conservative legacy fallback."""
+    binding = report.get('truth_binding')
+    rows = report.get('images', [])
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError('Comparison truth image evidence is malformed')
+    if binding is not None:
+        if (not isinstance(binding, dict) or not isinstance(binding.get('images'), list)
+                or any(not isinstance(row, dict) for row in binding['images'])):
+            raise ValueError('Comparison truth binding is malformed')
+        scope = binding.get('scope')
+        semantics = scope.get('class_semantics') if isinstance(scope, dict) else None
+        if (not isinstance(scope, dict) or not isinstance(scope.get('task'), str)
+                or not isinstance(scope.get('classes'), list) or not isinstance(semantics, dict)
+                or not isinstance(semantics.get('basis'), dict) or not isinstance(semantics.get('roles'), dict)
+                or not isinstance(binding.get('metadata_sha256'), dict)):
+            raise ValueError('Comparison truth scope or metadata binding is malformed')
+        expected = {row['file_path']: row.get('truth_sha256') for row in rows}
+        actual = {row['file_path']: row['truth_sha256'] for row in binding['images']}
+        if len(actual) != len(binding['images']) or actual != expected:
+            raise ValueError('Comparison truth binding does not cover its exact image evidence')
+        verify_truth(project, source, binding)
+        return
+    # Old alias-only reports have no reviewed-truth snapshot. Preserve their
+    # unchanged history, but never let them override a later human declaration.
+    if any(row.get('truth_sha256') for row in rows):
+        raise ValueError('Comparison truth binding is missing')
+    names = sorted({row.get('ground_truth_label') or row.get('ground_truth_verdict')
+                    for row in rows} - {None})
+    if not names:
+        raise ValueError('Legacy comparison has no truth vocabulary; re-evaluate')
+    from backend.engine.checkpoint_paths import is_job_id
+    for job_id in (report.get('incumbent_job_id'), report.get('candidate_job_id')):
+        if not is_job_id(job_id):
+            raise ValueError('Legacy comparison model identity is invalid')
+        metadata_path = Path(project['models_dir']) / job_id / 'model_meta.json'
+        if metadata_path.is_symlink():
+            raise ValueError('Legacy comparison model metadata is linked')
+        metadata = json.loads(metadata_path.read_text())
+        if not isinstance(metadata, dict):
+            raise ValueError('Legacy comparison model metadata is malformed')
+        vocabulary = metadata.get('classes') or metadata.get('class_names') or names
+        roles = recorded_roles(metadata, task=report['task'], classes=vocabulary)
+        if roles is not None:
+            aliases = class_semantics_record(vocabulary, task=report['task'])['roles']
+            current_roles = class_semantics_record(vocabulary, roles, task=report['task'])['roles']
+            if current_roles != aliases:
+                raise ValueError('Legacy comparison has no binding for explicit class roles; re-evaluate')
+    for row in rows:
+        current = image_truth.read_truth({**project, 'source_dataset_dir': str(source)}, row['file_path'],
+                                        task=report['task'], classes=names)
+        if current['declaration'] is not None or current.get('has_prior_scoped_declarations'):
+            raise ValueError('Legacy comparison has no binding for current reviewed truth; re-evaluate')

@@ -651,8 +651,6 @@ class LabelMeDetectionDataset(Dataset):
             scale_y = 1.0
 
         tensor = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
-        if self.transform:
-            tensor = self.transform(tensor)
 
         raw_annos = self.img_to_annos.get(img_id, [])
         valid_boxes: List[List[float]] = []
@@ -704,6 +702,11 @@ class LabelMeDetectionDataset(Dataset):
             "iscrowd": iscrowd_t,
             "boxes_normalized": norm_t,
         }
+
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample = apply_sample_transform(self.transform, tensor, target, task="detection")
+            tensor, target = sample.image, sample.targets
 
         return tensor, target
 
@@ -818,10 +821,11 @@ class LabelMeSegmentationDataset(Dataset):
             mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
 
         img_t = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
-        if self.transform:
-            img_t = self.transform(img_t)
-
         mask_t = torch.from_numpy(mask).long()
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample = apply_sample_transform(self.transform, img_t, mask_t, task="segmentation")
+            img_t, mask_t = sample.image, sample.targets
         return img_t, mask_t
 
 

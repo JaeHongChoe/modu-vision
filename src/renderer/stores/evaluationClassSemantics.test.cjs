@@ -146,3 +146,17 @@ test('rendered evaluation cells, badges, and calibration controls use the record
     testPredictions: [sample('ng', 'OK', 'OK'), sample('pending', 'pending', 'OK')], filteredPredictions: [] });
   assert.equal(unresolved.nodes.find(n => n.type === 'button' && unresolved.text(n) === '평가 임계값 적용').props.disabled, true);
 });
+
+
+test('distance evaluation inherits calibrated threshold and sends a bound heatmap override',async()=>{
+ const f=fixture(),spec={domain:'distance',unit:'mahalanobis_distance',direction:'higher_is_defect',calibration_id:'saved-model',threshold:8};
+ f.results.metrics={active_threshold:8,score_spec:spec};
+ f.results.test_predictions=[{...sample('raw','scratch','scratch',4),defect_score:4,score_spec:spec}];
+ const calls=[];f.api.evaluation.getHeatmap=async(...args)=>{calls.push(args);return {overlay_base64:null};};
+ await f.state().loadEvaluation('job');
+ assert.equal(f.state().confidenceThreshold,8);
+ f.state().setConfidenceThreshold(9);
+ await f.state().updateHeatmap();
+ assert.deepEqual(calls.at(-1)[4],{...spec,threshold:9});
+ assert.equal(f.computeSampleVerdict(f.results.test_predictions[0],9,null,semantics.roles),'CORRECT_OK');
+});

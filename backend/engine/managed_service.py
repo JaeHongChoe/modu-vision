@@ -122,20 +122,8 @@ class ManagedService:
         from backend.engine.runtime_release_evidence import verify_release_evidence
         device=device or manifest.get('runtime',{}).get('device','cpu')
         evidence=verify_release_evidence(package,device)
-        approvals=manifest.get('release',{}).get('approval_revisions')
-        if not isinstance(approvals,list) or not approvals or len(approvals)!=len(checkpoints):raise ValueError('Every package model requires explicit project approval')
-        from backend.api.routes_model_deployments import verified_approval_revision, _fingerprint
-        from backend.api.routes_export import _selected_release
-        for approval in approvals:
-            verified=verified_approval_revision(project,approval.get('revision_id'),expected_task=approval.get('task'))
-            if verified is None or any(verified.get(key)!=approval.get(key) for key in ('job_id','task','checkpoint_sha256')):
-                raise ValueError('Release approval is stale, mismatched, or unverified')
-            source=Path(verified['source_dataset_path'])
-            if _fingerprint(source)!=verified['evaluation_dataset_fingerprint']:raise ValueError('Release evaluation dataset has changed')
-            if project.get('source_dataset_dir') and source.resolve()!=Path(project['source_dataset_dir']).resolve():
-                raise ValueError('Release approval belongs to a different current source')
-            selected=_selected_release(project,source,verified['task'],verified['job_id'],checkpoints[verified['job_id']],approval['revision_id'])
-            if selected is None or selected!=approval:raise ValueError('Release approval is revoked, stale, or unverified')
+        from backend.engine.release_eligibility import authorize_release_action, release_authority
+        approvals=authorize_release_action(package,project,action='stage')
         digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
         destination=self.releases/digest
         if destination.is_symlink():raise ValueError('Staged release directory is linked')
@@ -156,20 +144,23 @@ class ManagedService:
         policy=self.releases/(digest+'.policy.json')
         if policy.is_symlink():raise ValueError('Staged release policy is linked')
         verify_release_evidence(destination,device,expected_receipt_sha256=evidence['receipt_sha256'])
-        policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals,
-                        'device':device}
-        if evidence['receipt_kind']=='flow_parity':policy_payload['parity_receipt_sha256']=evidence['receipt_sha256']
-        if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
-        if policy.exists() and json.loads(policy.read_text())!=policy_payload:raise ValueError('Existing release policy differs')
-        if not policy.exists():
-            with policy.open('x') as writer:json.dump(policy_payload,writer)
-            policy.chmod(0o600)
-        _verify_release_policy(destination,verify_flow_package(destination)[1],policy,device=device)
-        return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,'device':device,
-                'approval_revisions':approvals,
-                ('parity_receipt_sha256' if evidence['receipt_kind']=='flow_parity' else 'runtime_acceptance_sha256'):evidence['receipt_sha256'],
-                'acceptance_contract':evidence['receipt_kind'],
-                'parity_cohort_sha256':evidence['cohort_sha256'],'input_root':project.get('source_dataset_dir')}
+        with release_authority(project):
+            # Copy/parity work can outlive a truth edit or approval revocation.
+            authorize_release_action(destination,project,action='stage')
+            policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals,
+                            'device':device}
+            if evidence['receipt_kind']=='flow_parity':policy_payload['parity_receipt_sha256']=evidence['receipt_sha256']
+            if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
+            if policy.exists() and json.loads(policy.read_text())!=policy_payload:raise ValueError('Existing release policy differs')
+            if not policy.exists():
+                with policy.open('x') as writer:json.dump(policy_payload,writer)
+                policy.chmod(0o600)
+            _verify_release_policy(destination,verify_flow_package(destination)[1],policy,device=device)
+            return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,'device':device,
+                    'approval_revisions':approvals,
+                    ('parity_receipt_sha256' if evidence['receipt_kind']=='flow_parity' else 'runtime_acceptance_sha256'):evidence['receipt_sha256'],
+                    'acceptance_contract':evidence['receipt_kind'],
+                    'parity_cohort_sha256':evidence['cohort_sha256'],'input_root':project.get('source_dataset_dir')}
     @serialized_lifecycle
     def start(self,release=None,*,recover=True):
         if recover and not self.config.get('native_label'):

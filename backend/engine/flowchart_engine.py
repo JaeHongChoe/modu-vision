@@ -23,6 +23,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from hashlib import sha256
 import logging
+import math
 import os
 import re
 import time
@@ -106,6 +107,7 @@ class FlowNodeData(BaseModel):
     task: Optional[str] = "anomaly"  # 'detection', 'anomaly', 'segmentation', 'classification'
     model_job_id: Optional[str] = None
     threshold: Optional[float] = 0.5
+    score_spec: Optional[Dict[str, Any]] = None
     crop_padding: Optional[int] = 10
     rule: Optional[str] = "any_defect_is_ng"  # 'any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed'
     params: Dict[str, Any] = Field(default_factory=dict)
@@ -153,6 +155,8 @@ class CropInspectionResult(BaseModel):
     label: str
     bbox: List[int]  # [x1, y1, x2, y2]
     defect_score: float
+    score_spec: Optional[Dict[str, Any]] = None
+    score_basis: Optional[str] = None
     verdict: Literal["OK", "NG"]
     crop_thumbnail: str  # Base64 Data URI
     flaw_type: str
@@ -683,7 +687,14 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
             raise ValueError("Learned preprocessing requires a trained model.")
     for node in models:
         threshold = node.data.threshold
-        if threshold is None or not 0 <= threshold <= 1:
+        if threshold is None:
+            raise ValueError('Model threshold is required')
+        if node.data.score_spec is not None:
+            from backend.engine.score_contract import validate_score_spec
+            spec = validate_score_spec(node.data.score_spec, threshold=threshold)
+            if spec['domain'] == 'distance' and (node.data.node_type != 'inspection' or node.data.task != 'anomaly'):
+                raise ValueError('Distance score specification requires an anomaly inspection model')
+        elif threshold is None or not math.isfinite(threshold) or not 0 <= threshold <= 1:
             raise ValueError(f"Model node {node.id} threshold must be between 0 and 1.")
         if node.data.crop_padding is not None and node.data.crop_padding < 0:
             raise ValueError(f"Model node {node.id} crop padding cannot be negative.")
@@ -750,8 +761,9 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         raise ValueError("Decision incomplete_policy must be review or ng.")
     if decision.data.params.get("review_fallback") not in (None, "pass", "fail"):
         raise ValueError("Decision review_fallback must be pass or fail when configured.")
-    if rule == "score_gt_threshold" and not 0 <= (decision.data.threshold or 0) <= 1:
-        raise ValueError("Decision score threshold must be between 0 and 1.")
+    if rule == "score_gt_threshold":
+        from backend.engine.score_contract import validate_score_rule
+        validate_score_rule([node.data.score_spec for node in models], decision.data.score_spec, decision.data.threshold)
     if rule == "max_flaws_allowed":
         if any(node.data.node_type == "inspection" and node.data.task == "segmentation" for node in models):
             raise ValueError(
@@ -1446,6 +1458,16 @@ class FlowchartEngine:
 
         model, is_trained = self._get_inspection_model(task=task, job_id=job_id)
         task_clean = task.lower().strip()
+        score_spec, score_basis = None, None
+        if task_clean == 'anomaly' and is_trained and (
+                isinstance(model, (PaDiMDetector, PatchCoreDetector))
+                or inspect_node.data.score_spec is not None or getattr(model, 'score_spec', None) is not None):
+            from backend.engine.score_contract import resolve_model_score
+            try:
+                score_spec, score_basis = resolve_model_score(model, inspect_node.data.score_spec, threshold)
+                threshold = score_spec['threshold']
+            except (ValueError, TypeError, KeyError) as exc:
+                raise FlowchartInspectionConfigurationError(str(exc)) from exc
         patch_scores = (
             task_clean == "anomaly"
             and getattr(model, "model_metadata", {}).get("map_semantics")
@@ -1645,7 +1667,8 @@ class FlowchartEngine:
                         roi_id=roi["id"],
                         label=roi["label"],
                         bbox=bounded_bbox,
-                        defect_score=defect_score if patch_scores else round(defect_score, 4),
+                        defect_score=defect_score,
+                        score_spec=score_spec, score_basis=score_basis,
                         verdict=verdict,
                         crop_thumbnail=crop_b64,
                         flaw_type=flaw_type,
@@ -1755,6 +1778,11 @@ class FlowchartEngine:
             is_ok = False
             rejection_reason = no_inspection_reason or "No inspection region was found; the image was not inspected. Review required."
         elif rule == "score_gt_threshold":
+            from backend.engine.score_contract import validate_score_rule
+            try:
+                validate_score_rule([crop.score_spec for crop in crops], decision_node.data.score_spec, threshold)
+            except ValueError as exc:
+                raise FlowchartInspectionConfigurationError(str(exc)) from exc
             max_score = max((c.defect_score for c in crops), default=0.0)
             is_ng = any(
                 c.defect_score > threshold if c.map_semantics == 'patch_score'

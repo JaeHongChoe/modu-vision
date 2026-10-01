@@ -1,0 +1,63 @@
+:root {
+  --workspace-bg: #101722;
+  --workspace-surface: #182332;
+  --workspace-inset: #0d141e;
+  --workspace-border: #405166;
+  --workspace-text: #edf2f8;
+  --workspace-muted: #afbdce;
+  --workspace-accent: #9cddff;
+  --workspace-focus: #7dd3fc;
+  --workspace-success: #9ce5bc;
+  --workspace-warning: #ffd28a;
+  --workspace-danger: #ffb5bd;
+  --workspace-space-1: .25rem;
+  --workspace-space-2: .5rem;
+  --workspace-space-3: .75rem;
+  --workspace-space-4: 1rem;
+  --workspace-space-6: 1.5rem;
+  --workspace-radius: .625rem;
+  --workspace-font-small: .8125rem;
+  --workspace-font-body: .875rem;
+  --workspace-font-title: 1.125rem;
+}
+.workspace-dialog { margin: auto; padding: 0; width: min(72rem, calc(100vw - 2rem)); max-width: none; max-height: calc(100dvh - 2rem); color: var(--workspace-text); background: var(--workspace-bg); border: 1px solid var(--workspace-border); border-radius: var(--workspace-radius); box-shadow: 0 24px 80px #0008; font-size: var(--workspace-font-body); line-height: 1.55; }
+.workspace-overlay { position: fixed; inset: 0; z-index: 150; display: flex; align-items: center; justify-content: center; padding: 1rem; background: #02070dba; }
+.workspace-dialog { display: flex; flex-direction: column; }
+.workspace-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--workspace-space-4); padding: var(--workspace-space-4) var(--workspace-space-6); border-bottom: 1px solid var(--workspace-border); }
+.workspace-dialog__header h2 { margin: 0; font-size: var(--workspace-font-title); font-weight: 650; }
+.workspace-dialog__body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: var(--workspace-space-6); }
+.workspace-stack { display: flex; flex-direction: column; gap: var(--workspace-space-6); min-width: 0; }
+.workspace-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--workspace-space-3); }
+.workspace-form-row { align-items: flex-start; }
+.workspace-section { min-width: 0; padding: var(--workspace-space-4); background: var(--workspace-surface); border: 1px solid var(--workspace-border); border-radius: var(--workspace-radius); }
+.workspace-section__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--workspace-space-3); margin-bottom: var(--workspace-space-4); }
+.workspace-section h3 { font-size: 1rem; font-weight: 650; }
+.workspace-description { color: var(--workspace-muted); margin-top: var(--workspace-space-1); overflow-wrap: anywhere; }
+.workspace-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--workspace-space-2); min-height: 2.25rem; padding: .45rem .8rem; color: var(--workspace-text); background: #223247; border: 1px solid #58718d; border-radius: .4rem; font-size: var(--workspace-font-body); font-weight: 550; white-space: normal; }
+.workspace-button:hover:not(:disabled) { background: #2d445d; }
+.workspace-button:disabled { opacity: .55; cursor: not-allowed; }
+.workspace-button:focus-visible, .workspace-field :is(input, select, textarea):focus-visible, .workspace-section summary:focus-visible { outline: 2px solid var(--workspace-focus); outline-offset: 3px; }
+.workspace-badge { display: inline-flex; align-items: center; gap: .4rem; padding: .2rem .6rem; border: 1px solid currentColor; border-radius: 999px; color: var(--workspace-muted); font-size: var(--workspace-font-small); font-weight: 550; }
+.workspace-badge[data-tone="success"] { color: var(--workspace-success); background: #153528; }
+.workspace-badge[data-tone="warning"] { color: var(--workspace-warning); background: #382c19; }
+.workspace-badge[data-tone="danger"] { color: var(--workspace-danger); background: #3b222c; }
+.workspace-badge[data-tone="info"] { color: var(--workspace-accent); background: #163148; }
+.workspace-field { display: flex; flex: 1 1 14rem; flex-direction: column; gap: var(--workspace-space-1); min-width: 0; font-size: var(--workspace-font-body); }
+.workspace-field label { color: var(--workspace-text); font-weight: 550; }
+.workspace-field :is(input, select, textarea) { width: 100%; min-height: 2.5rem; padding: .5rem .65rem; border: 1px solid #667b94; border-radius: .4rem; color: var(--workspace-text); background: var(--workspace-inset); }
+.workspace-field [aria-invalid="true"] { border-color: var(--workspace-danger); }
+.workspace-field__error { color: var(--workspace-danger); }
+.workspace-feedback { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--workspace-space-3); padding: var(--workspace-space-4); border: 1px solid var(--workspace-border); border-radius: .5rem; background: var(--workspace-inset); }
+.workspace-feedback[data-kind="error"] { border-color: #b56270; }
+.workspace-feedback strong { display: block; font-weight: 600; }
+.workspace-feedback[data-kind="error"] strong { color: var(--workspace-danger); }
+.workspace-records { display: grid; gap: var(--workspace-space-3); margin-top: var(--workspace-space-4); }
+.workspace-record { min-width: 0; padding: var(--workspace-space-4); background: var(--workspace-inset); border: 1px solid var(--workspace-border); border-radius: .5rem; overflow-wrap: anywhere; }
+.workspace-record dl { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 3fr); gap: .3rem 1rem; margin-top: .5rem; font-size: var(--workspace-font-small); }
+.workspace-record dt { color: var(--workspace-muted); }
+.workspace-record dd { user-select: text; }
+.workspace-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--workspace-space-3); }
+.workspace-disclosure summary { cursor: pointer; padding: .3rem 0; font-weight: 550; }
+.workspace-launcher { padding: var(--workspace-space-2); border-bottom: 1px solid var(--workspace-border); background: var(--workspace-bg); }
+@media (max-width: 600px) { .workspace-dialog__header, .workspace-dialog__body { padding: var(--workspace-space-4); } }
+@media (forced-colors: active) { .workspace-badge, .workspace-button, .workspace-section, .workspace-record { border-color: CanvasText; } }

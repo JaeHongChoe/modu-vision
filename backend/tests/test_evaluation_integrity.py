@@ -105,7 +105,7 @@ def test_ng_only_api_evaluation_uses_model_threshold_and_reports_missing_normals
     monkeypatch.setattr(evaluation, "AnomalyDataset", lambda **kwargs: Dataset())
     monkeypatch.setattr(evaluation, "reconstruct_anomaly_detector", lambda *a, **k: Detector())
     checkpoint = tmp_path / "model.pt"
-    torch.save({"model_state_dict": {}}, checkpoint)
+    torch.save({"model_state_dict": {"threshold": Detector.threshold}}, checkpoint)
     result = evaluation._evaluate_anomaly(checkpoint, {"image_size": [16, 16]}, tmp_path, torch.device("cpu"))
     metrics = result["metrics"]
     assert metrics["image_auroc"] is None

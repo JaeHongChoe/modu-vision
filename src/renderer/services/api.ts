@@ -33,6 +33,7 @@ export interface ComputeProfile {
 export type ComputeProfileInput = Omit<ComputeProfile, 'id'> & { id?: string };
 
 export interface FlowModelCatalogItem {
+  score_spec?: import('../types').ScoreSpec | null;
   class_semantics?: {version:1;roles:import('../utils/classSemantics').ClassRoles;basis?:Record<string,string>};
   class_names?: string[];
   class_ids?: number[];
@@ -307,6 +308,7 @@ export interface LabelSuggestionBatch {
 }
 
 export interface ModelComparisonModel {
+  score_spec?: import('../types').ScoreSpec | null;
   job_id: string;
   task: FlowModelTask;
   training_dataset_fingerprint: string;
@@ -864,10 +866,11 @@ export const api = {
       return request<EvaluationResults>(`/api/evaluation/results?${q.toString()}`);
     },
 
-    getHeatmap: (imageId: string, jobId?: string, threshold = 0.5, filePath?: string) => {
+    getHeatmap: (imageId: string, jobId?: string, threshold?: number, filePath?: string, scoreSpec?: import('../types').ScoreSpec) => {
       const q = new URLSearchParams();
       if (jobId) q.set('job_id', jobId);
-      q.set('threshold', String(threshold));
+      if (threshold !== undefined) q.set('threshold', String(threshold));
+      if (scoreSpec) q.set('score_spec', JSON.stringify(scoreSpec));
       q.set('format', 'base64');
       if (filePath) q.set('file_path', filePath);
       return request<{

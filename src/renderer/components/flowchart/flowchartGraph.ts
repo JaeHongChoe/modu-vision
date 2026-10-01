@@ -18,9 +18,21 @@ function allowedPayloads(from: FlowNodeType, to: FlowNodeType): NonNullable<Flow
   return [];
 }
 
-export function decisionRulePatch(data: FlowNodeData, rule: string): Partial<FlowNodeData> {
+function scoreSpecIssue(data: FlowNodeData): string | null {
+  const spec=data.score_spec, threshold=data.threshold;
+  if(!spec)return typeof threshold==='number'&&Number.isFinite(threshold)&&threshold>=0&&threshold<=1?null:'점수 임계치는 0~1이어야 합니다.';
+  if(!['distance','probability'].includes(spec.domain)||!['mahalanobis_distance','euclidean_distance','probability'].includes(spec.unit)
+    ||(spec.domain==='probability')!==(spec.unit==='probability')||spec.direction!=='higher_is_defect'||!spec.calibration_id?.trim())return '점수 단위 또는 보정 식별자를 확인하세요.';
+  if(!Number.isFinite(threshold)||threshold!<0||spec.threshold!==threshold||(spec.domain==='probability'&&threshold!>1))return '점수 명세와 임계값의 단위·범위가 일치해야 합니다.';
+  return null;
+}
+
+export function decisionRulePatch(data: FlowNodeData, rule: string, sourceModels: FlowNode[] = []): Partial<FlowNodeData> {
   if (rule !== 'score_gt_threshold') return { rule };
   const current = data.threshold;
+  const sourceSpec=sourceModels[0]?.data.score_spec;
+  if(!data.score_spec&&sourceSpec&&sourceModels.every(node=>['domain','unit','direction','calibration_id'].every(key=>node.data.score_spec?.[key as keyof typeof sourceSpec]===sourceSpec[key as keyof typeof sourceSpec])))return {rule,threshold:sourceSpec.threshold,score_spec:{...sourceSpec}};
+  if(data.score_spec)return {rule,threshold:data.score_spec.threshold,score_spec:data.score_spec};
   return { rule, threshold: typeof current === 'number' && Number.isFinite(current) && current >= 0 && current <= 1 ? current : 0.5 };
 }
 
@@ -232,9 +244,9 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   }
   for (const node of models) {
     const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
-    if (!Number.isFinite(modelThreshold) || modelThreshold < 0 || modelThreshold > 1) {
-      return `${node.data.label}: 모델 임계치는 0~1이어야 합니다.`;
-    }
+    const scoreIssue=scoreSpecIssue({...node.data,threshold:modelThreshold});
+    if(scoreIssue)return `${node.data.label}: ${scoreIssue}`;
+    if(node.data.score_spec?.domain==='distance'&&(node.data.node_type!=='inspection'||node.data.task!=='anomaly'))return '거리 점수는 이상 탐지 모델에만 적용할 수 있습니다.';
     if (node.data.crop_padding !== undefined && (!Number.isInteger(node.data.crop_padding) || node.data.crop_padding < 0)) {
       return `${node.data.label}: ROI 패딩은 0 이상의 정수여야 합니다.`;
     }
@@ -304,10 +316,12 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   if (evidence.some((edge) => nodes.get(edge.source)?.data.node_type === 'aggregate') && rule !== 'aggregate_verdict') {
     return '집계 결과에는 집계 판정 룰을 선택하세요.';
   }
-  if (rule === 'score_gt_threshold' &&
-    (typeof decision.data.threshold !== 'number' || !Number.isFinite(decision.data.threshold) ||
-      decision.data.threshold < 0 || decision.data.threshold > 1)) {
-    return '판정 점수 임계치는 0~1이어야 합니다.';
+  if (rule === 'score_gt_threshold') {
+    const issue=scoreSpecIssue(decision.data);
+    if(issue)return issue;
+    const spec=decision.data.score_spec;
+    if(models.some(node=>Boolean(node.data.score_spec)!==Boolean(spec)||
+      (spec&&['domain','unit','direction','calibration_id'].some(key=>node.data.score_spec?.[key as keyof typeof spec]!==spec[key as keyof typeof spec]))))return '전역 점수 룰에는 동일한 단위와 보정 식별자가 필요합니다.';
   }
   if (rule === 'max_flaws_allowed') {
     if (models.some((node) => node.data.node_type === 'inspection' && node.data.task === 'segmentation')) {

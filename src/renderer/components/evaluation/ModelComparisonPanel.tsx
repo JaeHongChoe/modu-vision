@@ -63,6 +63,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [incumbentId, setIncumbentId] = useState('');
   const [candidateId, setCandidateId] = useState('');
   const [maxImages, setMaxImages] = useState(task === 'segmentation' ? 1 : 4);
+  const incumbentSpec=models.find(model=>model.job_id===incumbentId)?.score_spec;
+  const candidateSpec=models.find(model=>model.job_id===candidateId)?.score_spec;
+  useEffect(()=>{setIncumbentThreshold(incumbentSpec?.threshold??.5);},[incumbentId,incumbentSpec?.calibration_id]);
+  useEffect(()=>{setCandidateThreshold(candidateSpec?.threshold??.5);},[candidateId,candidateSpec?.calibration_id]);
   const [report, setReport] = useState<ModelComparisonReport | null>(null);
   const [reportScope, setReportScope] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -181,8 +185,8 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         full_test: fullTest,
         incumbent_task:models.find(m=>m.job_id===incumbentId)?.task,
         candidate_task:models.find(m=>m.job_id===candidateId)?.task,
-        incumbent_params:{threshold:incumbentThreshold,...(models.find(m=>m.job_id===incumbentId)?.task==='ocr'?{expected_text:expectedText}:{})},
-        candidate_params:{threshold:candidateThreshold,...(models.find(m=>m.job_id===candidateId)?.task==='ocr'?{expected_text:expectedText}:{})},
+        incumbent_params:{threshold:incumbentThreshold,...(incumbentSpec?{score_spec:{...incumbentSpec,threshold:incumbentThreshold}}:{}),...(models.find(m=>m.job_id===incumbentId)?.task==='ocr'?{expected_text:expectedText}:{})},
+        candidate_params:{threshold:candidateThreshold,...(candidateSpec?{score_spec:{...candidateSpec,threshold:candidateThreshold}}:{}),...(models.find(m=>m.job_id===candidateId)?.task==='ocr'?{expected_text:expectedText}:{})},
       }) });
       if (currentScope.current !== requestedScope) return;
       setComparisonJob(created); setJobs((current) => [created, ...current]);
@@ -251,7 +255,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
               </select>
             </label>
           </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 <input aria-label="비교 기준 임계값" type="number" min="0" max="1" step=".01" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 <input aria-label="비교 후보 임계값" type="number" min="0" max="1" step=".01" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 ({incumbentSpec?.unit||'probability'}) <input aria-label="비교 기준 임계값" type="number" min="0" max={incumbentSpec?.domain==='distance'?undefined:1} step="any" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 ({candidateSpec?.unit||'probability'}) <input aria-label="비교 후보 임계값" type="number" min="0" max={candidateSpec?.domain==='distance'?undefined:1} step="any" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <label className="space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? 'test 이미지 수' : 'Test images'}</span>

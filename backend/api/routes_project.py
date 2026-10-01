@@ -9,6 +9,7 @@ import re
 import tempfile
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -305,21 +306,36 @@ def get_current_project(request: Request):
     return create_project(ProjectCreateRequest(name="Default Project", project_dir=str(default_dir)), request)
 
 
+@contextmanager
+def _project_context_mutation(project):
+    """Fence source/labelset publication against live release authorization."""
+    from backend.engine.runtime_process_control import runtime_state_lock
+    with_context = runtime_state_lock(project["project_dir"])
+    try:
+        with_context.__enter__()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Project release authorization is in progress; retry the project change") from exc
+    try:
+        yield _load_project(Path(project["project_dir"]))
+    finally:
+        with_context.__exit__(None, None, None)
+
+
 @router.put("/update", response_model=ProjectConfigResponse)
 def update_project(req: ProjectUpdateRequest, request: Request):
-    project = dict(get_current_project(request))
-    updates = req.model_dump(exclude_unset=True)
-    if "source_dataset_dir" in updates and updates["source_dataset_dir"]:
-        source = Path(updates["source_dataset_dir"]).expanduser().resolve()
-        workspace = Path(project["project_dir"]).resolve()
-        if workspace == source or workspace.is_relative_to(source):
-            raise HTTPException(status_code=422, detail="Project workspace cannot be inside its dataset source. Choose a separate project directory.")
-        updates["source_dataset_dir"] = str(source)
-    project.update(updates)
-    project["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    validated = ProjectConfigResponse.model_validate(project).model_dump()
-    _write_json(Path(validated["project_dir"]) / "project.json", validated)
-    return _activate_project(request, validated)
+    with _project_context_mutation(get_current_project(request)) as project:
+        updates = req.model_dump(exclude_unset=True)
+        if "source_dataset_dir" in updates and updates["source_dataset_dir"]:
+            source = Path(updates["source_dataset_dir"]).expanduser().resolve()
+            workspace = Path(project["project_dir"]).resolve()
+            if workspace == source or workspace.is_relative_to(source):
+                raise HTTPException(status_code=422, detail="Project workspace cannot be inside its dataset source. Choose a separate project directory.")
+            updates["source_dataset_dir"] = str(source)
+        project.update(updates)
+        project["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        validated = ProjectConfigResponse.model_validate(project).model_dump()
+        _write_json(Path(validated["project_dir"]) / "project.json", validated)
+        return _activate_project(request, validated)
 
 
 @router.get("/list")
@@ -343,7 +359,8 @@ def list_labelsets(request: Request):
 def add_labelset(req: LabelSetCreateRequest, request: Request):
     project = get_current_project(request)
     try:
-        return create_labelset(Path(project["project_dir"]), req.name)
+        with _project_context_mutation(project) as current:
+            return create_labelset(Path(current["project_dir"]), req.name)
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -352,8 +369,9 @@ def add_labelset(req: LabelSetCreateRequest, request: Request):
 def select_labelset(set_id: str, request: Request):
     project = get_current_project(request)
     try:
-        activate_labelset(Path(project["project_dir"]), set_id)
-        return _activate_project(request, _load_project(Path(project["project_dir"])))
+        with _project_context_mutation(project) as current:
+            activate_labelset(Path(current["project_dir"]), set_id)
+            return _activate_project(request, _load_project(Path(current["project_dir"])))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Label set not found: {set_id}") from exc
     except (ValueError, OSError) as exc:

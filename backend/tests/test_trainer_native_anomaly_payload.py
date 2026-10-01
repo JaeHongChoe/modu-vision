@@ -32,9 +32,9 @@ class RecordedDetector:
         return self.values, self.score
 
 
-def _checkpoint(tmp_path):
+def _checkpoint(tmp_path, threshold=.5):
     path = tmp_path / 'best_model.pt'
-    torch.save({'model_state_dict': {}, 'image_size': [16, 16]}, path)
+    torch.save({'model_state_dict': {'threshold': threshold}, 'image_size': [16, 16]}, path)
     return path
 
 
@@ -79,7 +79,7 @@ def test_dino_compressed_payload_keeps_exact_calibrated_threshold(tmp_path, monk
     detector = RecordedDetector('patch_score', np.full((40, 48), 0.125, dtype=np.float32), score=threshold)
     detector.threshold = threshold
     monkeypatch.setattr(trainer, 'reconstruct_anomaly_detector', lambda *args: detector)
-    result = trainer.infer('anomaly_detection', _checkpoint(tmp_path), np.zeros((40, 48, 3), dtype=np.uint8),
+    result = trainer.infer('anomaly_detection', _checkpoint(tmp_path, threshold), np.zeros((40, 48, 3), dtype=np.uint8),
                            threshold=None, device='cpu')
     assert result.predictions['threshold'] == threshold
     assert result.predictions['is_anomaly'] is False

@@ -789,15 +789,15 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
         apply_memory_budget(spec)
         if spec.get("task") not in _TRAIN_TASKS:
             raise ValueError("Invalid inference task")
-        threshold = spec.get("threshold", 0.5)
-        if type(threshold) not in (int, float) or not 0 <= threshold <= 1:
-            raise ValueError("Invalid inference threshold")
+        threshold = spec.get("threshold")
         status.update(job_id=spec["job_id"], device=spec.get("device"))
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         _, _, checkpoint, metadata = _source_training_run(run_dir, spec)
         if metadata.get("task") != spec["task"]:
             raise SnapshotValidationError("Inference task does not match source model")
+        from backend.engine.score_contract import resolve_inference_score
+        threshold, resolved_score_spec = resolve_inference_score(checkpoint, spec['task'], threshold, spec.get('score_spec'))
         image = _selected_image(run_dir, spec)
         status.update(status="running")
         import cv2
@@ -810,7 +810,8 @@ def run_infer(spec_path: Path) -> dict[str, Any]:
             inference=infer_specialist(spec['task'],checkpoint,image,threshold=float(threshold),device=str(get_device(spec.get('device'))),output_dir=run_dir/'outputs')
         else:
             inference = infer(task=spec["task"], model_path=checkpoint, image_input=image,
-                              threshold=float(threshold), device=get_device(spec.get("device")))
+                              threshold=float(threshold), device=get_device(spec.get("device")),
+                              **({'score_spec':resolved_score_spec} if resolved_score_spec is not None else {}))
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         overlay_bgr = cv2.cvtColor(inference.visual_overlay, cv2.COLOR_RGB2BGR)

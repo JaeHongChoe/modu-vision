@@ -124,6 +124,8 @@ export interface TestPredictionItem {
   predicted_class: string;
   confidence: number;
   defect_score?: number;
+  score_spec?: ScoreSpec | null;
+  map_semantics?: string;
   class_scores?: Record<string,number>;
   evaluation_file_path?: string;
   source_image_id?: string;
@@ -223,12 +225,21 @@ export interface NodePort {
   pinNumber: number;
 }
 
+export interface ScoreSpec {
+  domain: 'probability' | 'distance';
+  unit: 'probability' | 'mahalanobis_distance' | 'euclidean_distance';
+  direction: 'higher_is_defect';
+  calibration_id: string;
+  threshold: number;
+}
+
 export interface FlowNodeData {
   label: string;
   node_type: 'input' | 'fixed_roi' | 'patch_split' | 'preprocess' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'decision' | 'output';
   task?: string;
   model_job_id?: string;
   threshold?: number;
+  score_spec?: ScoreSpec;
   crop_padding?: number;
   rule?: string;
   params?: Record<string, any>;
@@ -309,6 +320,8 @@ export interface FlowchartCrop {
   label: string;
   bbox: [number, number, number, number] | number[];
   defect_score: number;
+  score_spec?: ScoreSpec | null;
+  score_basis?: string | null;
   verdict: 'OK' | 'NG';
   crop_thumbnail: string;
   flaw_type: string;

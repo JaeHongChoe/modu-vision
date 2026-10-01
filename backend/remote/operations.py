@@ -502,7 +502,7 @@ def run_remote_evaluation(
 
 def run_remote_inference(
     context: RemoteJobContext, image: Path, threshold: float, image_id: str,
-    *, transport: SSHTransport | None = None,device:str|None=None,
+    *, transport: SSHTransport | None = None,device:str|None=None,score_spec:dict|None=None,
 ) -> tuple[dict[str, Any], bytes]:
     image = Path(image).resolve(strict=True)
     if not image.is_file():
@@ -516,6 +516,7 @@ def run_remote_inference(
         context, "infer", {
             "image_path": relative, "image_sha256": image_hash,
             "threshold": float(threshold), "image_id": image_id,**({'device':device} if device is not None else {}),
+            **({'score_spec':score_spec} if score_spec is not None else {}),
         }, transport=transport, input_files={relative: image},
     )
     result_file = artifacts.get("outputs/result.json")
@@ -526,6 +527,8 @@ def run_remote_inference(
     if (not isinstance(result, dict) or result.get("image_sha256") != image_hash
             or result.get("image_path") != relative or result.get("overlay_path") != "outputs/overlay.png"):
         raise ArtifactValidationError("Remote inference result does not match the selected image")
+    if score_spec is not None and result.get('predictions', {}).get('score_spec') != score_spec:
+        raise ArtifactValidationError('Remote inference score calibration differs from selected model')
     png = overlay_file.read_bytes()
     if not png.startswith(b"\x89PNG\r\n\x1a\n"):
         raise ArtifactValidationError("Remote inference overlay is not a PNG image")

@@ -54,6 +54,35 @@ class RunRequest(BaseModel):
     background:bool=True
 
 
+class LegacyImpactEntry(BaseModel):
+    issue: str
+    reason: str
+    source_ids: dict[str, str | None]
+    lineage: dict[str, str | None]
+    quality_cause: Literal['not_established']
+    scope_matches: bool | None
+
+
+class LegacyRecoveryAction(BaseModel):
+    action: str
+    reason: str
+    source_ids: dict[str, str | None]
+    requires_human_review: Literal[True]
+    automatic: Literal[False]
+
+
+class LegacyImpactReport(BaseModel):
+    schema_version: Literal[1]
+    project_id: str | None
+    affected: list[LegacyImpactEntry]
+    unaffected: list[LegacyImpactEntry]
+    unknown: list[LegacyImpactEntry]
+    next_action: list[LegacyRecoveryAction]
+    quality_approved: Literal[False]
+    live_eligibility_checked: Literal[False]
+    limits: str
+
+
 def project(request):
     current=get_current_project(request)
     if not current:raise HTTPException(409,'Open a project first')
@@ -84,7 +113,16 @@ def state(request:Request):
     current,store,key=_store(request)
     from backend.engine.operations_worker import watcher_state
     with _LOCK:active=key in _EVENTS
-    return {'policy':store.policy(),'cycles':store.history(),'watcher':watcher_state(current),'active':active}
+    from backend.engine.workflow_impact import legacy_impact
+    return {'policy':store.policy(),'cycles':store.history(),'watcher':watcher_state(current),'active':active,
+            'legacy_impact': legacy_impact(current)}
+
+
+@router.get('/legacy-impact', response_model=LegacyImpactReport)
+def legacy_impact_report(request: Request):
+    from backend.engine.workflow_impact import legacy_impact
+    try: return legacy_impact(project(request))
+    except (ValueError, OSError) as exc: raise HTTPException(422, str(exc)) from exc
 
 @router.put('/policy')
 def policy(payload:OperationsPolicy,request:Request):

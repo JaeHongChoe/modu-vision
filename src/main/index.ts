@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
 import { registerIpcHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
-import {sharedHeaders} from './sharedSession';
+import {isSharedServerUrl,sharedHeaders} from './sharedSession';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
@@ -44,12 +44,20 @@ async function createWindow(): Promise<BrowserWindow> {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // The preload only uses contextBridge and ipcRenderer, which sandboxed
+      // preloads provide; the renderer gets no Node.js access.
+      sandbox: true,
       webSecurity: true,
     },
   });
   const prodHtmlPath = path.join(__dirname, '../../dist/index.html');
   const packagedUrl = pathToFileURL(prodHtmlPath).href;
+
+  // The CSP admits HTTPS/WSS so a shared project server can be used; only the
+  // connected server origin is actually reachable from the renderer.
+  win.webContents.session.webRequest.onBeforeRequest({ urls: ['https://*/*', 'wss://*/*'] }, (details, callback) => {
+    callback({ cancel: !isSharedServerUrl(details.url) });
+  });
 
   // Keep the capability in the main process. This covers fetch, <img>, canvas
   // image loads, and WebSocket handshakes without exposing it to page scripts.

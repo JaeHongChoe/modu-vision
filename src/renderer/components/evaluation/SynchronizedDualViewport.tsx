@@ -14,7 +14,7 @@ import {
   Sliders,
   Crosshair,
 } from 'lucide-react';
-import type { TestPredictionItem, ViewTransform, Point, VisionTask } from '../../types';
+import type { ScoreSpec, TestPredictionItem, ViewTransform, Point, VisionTask } from '../../types';
 import { calculateZoomAtPoint, calculateFitToScreen, viewportToImage } from '../../utils/coordinateMath';
 import { PhysicalScaleOverlay } from './PhysicalScaleOverlay';
 import { resolveApiUrl } from '../../services/api';
@@ -25,6 +25,7 @@ export interface SynchronizedDualViewportProps {
   heatmapOverlayBase64: string | null;
   heatmapLoading: boolean;
   confidenceThreshold: number;
+  scoreSpec?: ScoreSpec | null;
   onThresholdChange: (tau: number) => void;
   defectScore?: number;
   groundTruth?: string;
@@ -37,6 +38,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
   heatmapOverlayBase64,
   heatmapLoading,
   confidenceThreshold,
+  scoreSpec,
   onThresholdChange,
   defectScore,
   groundTruth,
@@ -123,17 +125,18 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
         {/* Left: Confidence Threshold Slider */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Sliders className="w-4 h-4 text-[#3B82F6]" />
-          <span className="font-semibold text-slate-300">Threshold (τ):</span>
+          <span className="font-semibold text-slate-300">Threshold (τ) · {scoreSpec?.unit || 'probability'}:</span>
           <span className="font-mono font-bold text-[#3B82F6] tabular-nums text-sm">
             {confidenceThreshold.toFixed(2)}
           </span>
           <input
-            type="range"
-            min="0.01"
-            max="0.99"
-            step="0.01"
+            type="number"
+            aria-label="평가 판정 임계값"
+            min="0"
+            max={scoreSpec?.domain === 'distance' ? undefined : 1}
+            step="any"
             value={confidenceThreshold}
-            onChange={(e) => onThresholdChange(parseFloat(e.target.value))}
+            onChange={(e) => {const value=e.target.valueAsNumber;if(Number.isFinite(value)&&value>=0&&(scoreSpec?.domain==='distance'||value<=1))onThresholdChange(value);}}
             className="w-28 sm:w-40 min-w-0 accent-[#3B82F6] cursor-pointer"
           />
         </div>

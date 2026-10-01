@@ -121,8 +121,12 @@ class ManifestSegmentationDataset:
         if size:rgb=cv2.resize(rgb,size);mask=cv2.resize(mask,size,interpolation=cv2.INTER_NEAREST)
         elif mask.shape!=(h,w):mask=cv2.resize(mask,(w,h),interpolation=cv2.INTER_NEAREST)
         tensor=torch.from_numpy(rgb.transpose(2,0,1).copy()).float()/255
-        if self.transform:tensor=self.transform(tensor)
-        return tensor,torch.from_numpy(mask.astype(np.int64)).long()
+        mask_tensor=torch.from_numpy(mask.astype(np.int64)).long()
+        if self.transform:
+            from backend.engine.augmentations import apply_sample_transform
+            sample=apply_sample_transform(self.transform,tensor,mask_tensor,task='segmentation')
+            tensor,mask_tensor=sample.image,sample.targets
+        return tensor,mask_tensor
 
 def load_manifest_dataset(task,source,split,transform=None,image_size=None,class_names=None):
     source=Path(source).resolve();assignments=_classification_split_assignments(source)
@@ -153,7 +157,14 @@ def load_manifest_dataset(task,source,split,transform=None,image_size=None,class
                     a={**a,'type':'bbox','bbox':[max(0,float(xs.min())),max(0,float(ys.min())),min(width,float(xs.max())),min(height,float(ys.max()))]}
                 regions.append(a)
             rows.append({'file_name':image.relative_to(source).as_posix(),'width':width,'height':height,'annotations':regions})
-        data=export_annotations(rows,'coco')
+        # COCO is used only as an internal AABB/class adapter. Keep native
+        # orientation/direction beside it rather than exporting a lossy target.
+        coco_rows=[{**row,'annotations':[{k:v for k,v in a.items() if k!='direction_deg'} for a in row['annotations']]} for row in rows]
+        data=export_annotations(coco_rows,'coco')
+        native_regions=[a for row in rows for a in row['annotations']]
+        for annotation,native in zip(data['annotations'],native_regions):
+            for key in ('rotated_bbox','direction_deg'):
+                if native.get(key) is not None:annotation[key]=native[key]
         selected_names={p.relative_to(source).as_posix() for p in selected}
         data['images']=[r for r in data['images'] if r['file_name'] in selected_names]
         selected_ids={r['id'] for r in data['images']}

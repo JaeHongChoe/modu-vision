@@ -89,7 +89,7 @@ export function computeSampleVerdict(
   }
   if (!Number.isFinite(defectScore)) return 'REVIEW';
 
-  const predictedNg = defectScore >= threshold;
+  const predictedNg = item.map_semantics === 'patch_score' ? defectScore > threshold : defectScore >= threshold;
   if (isDefect) {
     return predictedNg ? 'CORRECT_NG' : 'ESCAPE';
   } else {
@@ -269,6 +269,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       set({
         jobId: res.job_id,
         metrics: res.metrics || {},
+        confidenceThreshold: Number.isFinite(res.metrics?.active_threshold) ? res.metrics.active_threshold : .5,
         classSemantics: res.class_semantics || null,
         confusionMatrix: res.confusion_matrix || null,
         testPredictions: res.test_predictions || [],
@@ -328,6 +329,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   setConfidenceThreshold: (confidenceThreshold) => {
+    if(!Number.isFinite(confidenceThreshold)||confidenceThreshold<0||(get().metrics.score_spec?.domain!=='distance'&&confidenceThreshold>1))return;
     set({ confidenceThreshold });
     get().computeFilteredList();
 
@@ -349,7 +351,8 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         selectedPrediction.image_id,
         jobId || undefined,
         confidenceThreshold,
-        selectedPrediction.file_path
+        selectedPrediction.file_path,
+        get().metrics.score_spec ? {...get().metrics.score_spec,threshold:confidenceThreshold} : undefined
       );
       if (requestId === currentHeatmapRequestId) {
         set({ heatmapOverlayBase64: res.overlay_base64, heatmapLoading: false });
@@ -381,7 +384,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   loadOverkillUnderkill: async (targetUnderkill, escapeCost, scrapCost) => {
     const generation = evaluationGeneration;
     const { jobId, confidenceThreshold } = get();
-    if (!jobId) {
+    if (!jobId || get().metrics.score_spec?.domain === 'distance') {
       set({ overkillAnalysis: null, isAnalyzingTradeoff: false });
       return;
     }
@@ -421,6 +424,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const generation = evaluationGeneration;
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();
     const activeJob = jobIdOverride || jobId;
+    if(get().metrics.score_spec?.domain==='distance'){
+      set({calibrationSuccess:false,calibrationMessage:'거리 점수는 학습·검증 데이터로 보정하세요. 현재 모델 임계값 또는 보정 식별자가 연결된 수동 임계값을 사용합니다.'});return;
+    }
     if (!activeJob || !testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles))
         || !testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles))) {
       set({ calibrationMessage: 'NG와 OK 검증 예측이 모두 있어야 임계값을 적용할 수 있습니다.', calibrationSuccess: false });
