@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import tempfile
 import uuid
+from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from backend.api.routes_project import get_current_project
@@ -93,6 +94,8 @@ class FlowCompare(BaseModel):
     image_paths:list[str]=Field(min_length=1,max_length=20)
     name:str=Field(default='Version comparison',min_length=1,max_length=120)
     device:str=Field(default='cpu',pattern=r'^(cpu|mps|cuda(?::[0-9]+)?)$')
+    execution_target:Literal['local','selected_compute']='local'
+    compute_profile_id:str|None=None
 
 
 def _comparisons(project): return Path(project['project_dir'])/'flowcharts'/'comparisons'
@@ -115,6 +118,8 @@ def comparisons(request:Request):
 def compare_versions(req:FlowCompare,request:Request):
     project=_context(request,req.project_id)
     if req.version_a==req.version_b: raise HTTPException(422,'Select two different saved flow versions')
+    if req.execution_target=='selected_compute' and not req.compute_profile_id:
+        raise HTTPException(422,'Select a compute profile before target comparison')
     versions=flows.list_saved_pipelines(project.get('source_dataset_dir'),request=request)['pipelines']
     if not all(any(v['version_id']==x for v in versions) for x in (req.version_a,req.version_b)):
         raise HTTPException(409,'Saved flow versions must belong to the selected source dataset')
@@ -124,7 +129,8 @@ def compare_versions(req:FlowCompare,request:Request):
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
     record={'comparison_id':uuid.uuid4().hex,'project_id':project['id'],'source_dataset_path':project.get('source_dataset_dir'),'labelset_id':project.get('active_labelset_id','default'),
         'name':req.name,'created_at':datetime.now(timezone.utc).isoformat(),'version_a':req.version_a,'version_b':req.version_b,
-        'graph_a_sha256':pipeline_sha256(ga),'graph_b_sha256':pipeline_sha256(gb),'device':req.device,'rows':[]}
+        'graph_a_sha256':pipeline_sha256(ga),'graph_b_sha256':pipeline_sha256(gb),'device':req.device,
+        'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,'rows':[]}
     for path in paths:
         row={'image_path':str(path),'file_name':path.name,'image_sha256':hashes[str(path)]}
         snapshot_root=Path(project.get('dataset_dir') or Path(project['project_dir'])/'dataset')/'flow_compare_inputs'
@@ -139,8 +145,8 @@ def compare_versions(req:FlowCompare,request:Request):
             snapshot.write_bytes(contents)
             snapshot.chmod(0o400)
             try:
-                a=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=ga,image_path=str(snapshot),execution_target='local',device=req.device),request=request)
-                b=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=gb,image_path=str(snapshot),execution_target='local',device=req.device),request=request)
+                a=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=ga,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id),request=request)
+                b=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=gb,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id),request=request)
                 if hashlib.sha256(snapshot.read_bytes()).hexdigest()!=hashes[str(path)]:
                     raise HTTPException(409,'Frozen comparison input was changed')
                 for result in (a,b): result['image_path']=str(path)

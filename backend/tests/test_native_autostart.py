@@ -63,9 +63,9 @@ def test_bootstrap_reads_current_approved_release_and_rechecks_policy(tmp_path,m
     package=tmp_path/'current-release';package.mkdir();(package/'manifest.json').write_bytes(b'current manifest')
     release={'package_path':str(package),'release_policy':'current-policy','device':'cpu','manifest_sha256':hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()}
     monkeypatch.setattr(bootstrap.ManagedService,'ledger',None,raising=False)
-    monkeypatch.setattr(bootstrap,'ManagedService',lambda path:SimpleNamespace(root=item.root,config=item.config,ledger=SimpleNamespace(active=lambda:{'release':release}),input_arguments=lambda r:[],validate_accepted_device=lambda p,d:None))
+    monkeypatch.setattr(bootstrap,'ManagedService',lambda path:SimpleNamespace(root=item.root,config=item.config,ledger=SimpleNamespace(active=lambda:{'release':release},diagnostics=lambda:{'pending':None}),input_arguments=lambda r:[],validate_accepted_device=lambda p,d,**kw:None))
     seen=[];monkeypatch.setattr(bootstrap,'verify_flow_package',lambda p:(None,[]))
-    monkeypatch.setattr(bootstrap,'_verify_release_policy',lambda p,c,policy:seen.append(str(policy)))
+    monkeypatch.setattr(bootstrap,'_verify_release_policy',lambda p,c,policy,**kw:seen.append(str(policy)))
     monkeypatch.setattr(bootstrap,'resolve_runtime_device',lambda d:d)
     args,env=bootstrap.bootstrap_command(project)
     assert str(package) in args and 'old-release' not in args

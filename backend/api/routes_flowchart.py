@@ -534,6 +534,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
 
 
 def _catalog_model_settings(meta):
+    from backend.engine.class_semantics import recorded_roles, class_semantics_record
     settings = {}
     defaults = meta.get('threshold_settings', {})
     if not isinstance(defaults, dict): defaults = {}
@@ -546,6 +547,7 @@ def _catalog_model_settings(meta):
     if not isinstance(parent, dict): parent = {}
     return {'threshold_settings': settings,
         **catalog_class_vocabulary(meta),
+        'class_semantics': class_semantics_record(meta.get('classes', []), recorded_roles(meta)),
         'training_labelset_id': meta.get('training_labelset_id') or provenance.get('labelset_id'),
         'parent_job_id': meta.get('parent_job_id') or parent.get('parent_job_id')}
 

@@ -375,41 +375,301 @@ def build_flow_package(
         raise
 
 
-def verify_flow_parity(
-    *, package_dir: Path, pipeline: FlowchartPipeline, checkpoints: Mapping[str, Path],
-    image_path: Path, image_id: str | None = None,
-) -> dict[str, Any]:
-    """Compare the app CPU engine with the isolated exported runner on one image."""
-    image = Path(image_path).expanduser().resolve()
-    if not image.is_file():
-        raise ValueError(f"Parity image is missing: {image}")
+PARITY_CONTRACT = "flow_parity_v1"
+PARITY_RECEIPT = "parity_receipt.json"
+MAX_PARITY_IMAGES = 64
+# compare_flow_results tolerances, recorded with every report.
+PARITY_TOLERANCE = {"defect_score_abs": 1e-4, "float_abs": 1e-4, "raster_abs": 1e-6}
+SINGLE_IMAGE_LIMITATION = ("One CPU image only: this is not a cohort or target-device acceptance and cannot "
+                           "stand in for one.")
+# Frozen applications cannot run run_flow.py with their own binary; they dispatch to
+# the package runtime through this early command-line option of the frozen backend.
+FROZEN_PACKAGE_RUNNER_FLAG = "--flow-package-runner"
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+                                     default=str).encode("utf-8")).hexdigest()
+
+
+def parity_cohort_sha256(image_sha256s) -> str:
+    """Order-independent identity of the frozen parity inputs."""
+    return _canonical_sha256(sorted(image_sha256s))
+
+
+def _frozen_parity_inputs(images, *, minimum: int) -> list[dict[str, Any]]:
+    rows = list(images or [])
+    if not minimum <= len(rows) <= MAX_PARITY_IMAGES:
+        raise ValueError(f"Parity cohort needs {minimum if minimum > 1 else 1} to {MAX_PARITY_IMAGES} images"
+                         if minimum == 1 else f"Parity cohort needs 2 to {MAX_PARITY_IMAGES} images")
+    frozen, seen = [], set()
+    for index, row in enumerate(rows):
+        raw = row.get("path") if isinstance(row, Mapping) else row
+        image_id = row.get("image_id") if isinstance(row, Mapping) else None
+        image = Path(str(raw)).expanduser().resolve()
+        if str(image) in seen:
+            raise ValueError(f"Parity cohort contains a duplicate image: {image.name}")
+        seen.add(str(image))
+        if not image.is_file():
+            raise ValueError(f"Parity image is missing: {image}")
+        try:
+            probe = read_image_safely_rgb(image, max_dim=32)
+            if probe.size == 0:
+                raise ValueError("Empty image")
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"Parity image is not readable: {image}") from exc
+        frozen.append({"index": index, "path": str(image), "image_id": image_id, "sha256": _file_sha256(image)})
+    return frozen
+
+
+def _parity_identity(package: Path) -> dict[str, Any]:
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    files = {row["path"]: row["sha256"] for row in manifest.get("files", []) if isinstance(row, dict)}
+    runtime = manifest.get("runtime") if isinstance(manifest.get("runtime"), dict) else {}
+    return {
+        "manifest_sha256": _file_sha256(package / "manifest.json"),
+        "graph_sha256": files.get("pipeline.json"),
+        "checkpoints": {row["job_id"]: files.get(row["checkpoint"]) for row in manifest.get("models", [])
+                        if isinstance(row, dict) and "job_id" in row and "checkpoint" in row},
+        "package_runtime_device": runtime.get("device", "cpu"),
+    }
+
+
+_EXECUTABLE_DIGESTS: dict[tuple[str, int, int], str] = {}
+
+
+def _executable_sha256(path: str) -> str | None:
     try:
-        probe = read_image_safely_rgb(image, max_dim=32)
-        if probe.size == 0:
-            raise ValueError("Empty image")
-    except (OSError, ValueError) as exc:
-        raise ValueError(f"Parity image is not readable: {image}") from exc
+        stat = os.stat(path)
+    except OSError:
+        return None
+    key = (os.path.realpath(path), stat.st_size, stat.st_mtime_ns)
+    if key not in _EXECUTABLE_DIGESTS:
+        _EXECUTABLE_DIGESTS[key] = _file_sha256(Path(key[0]))
+    return _EXECUTABLE_DIGESTS[key]
+
+
+def _packaged_runtime_identity(package: Path) -> dict[str, Any]:
+    """Which separate process executes the package, with the runner and runtime digests it loads."""
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    files = {row["path"]: row["sha256"] for row in manifest.get("files", []) if isinstance(row, dict)}
+    frozen = bool(getattr(sys, "frozen", False))
+    import platform
+    return {
+        "kind": "frozen_package_dispatcher" if frozen else "isolated_python_runner",
+        "independent_process": True,
+        "executable": sys.executable, "executable_sha256": _executable_sha256(sys.executable),
+        "python_version": None if frozen else platform.python_version(),
+        "dispatcher_flag": FROZEN_PACKAGE_RUNNER_FLAG if frozen else None,
+        "package_runner_sha256": files.get("run_flow.py"),
+        "package_runtime_sha256": files.get("backend/engine/flow_package_runtime.py"),
+    }
+
+
+def _packaged_runner_command(package: Path, item: Mapping[str, Any], output: Path, device: str):
+    """Command for one isolated package execution: run_flow.py from source, the dispatcher when frozen."""
+    runtime = _packaged_runtime_identity(package)
+    arguments = ["--image", str(item["path"]), "--output", str(output), "--device", device]
+    if item.get("image_id"):
+        arguments.extend(("--image-id", str(item["image_id"])))
+    if runtime["kind"] == "frozen_package_dispatcher":
+        # The dispatcher re-verifies the package against this digest before running its own runtime.
+        command = [sys.executable, FROZEN_PACKAGE_RUNNER_FLAG, "--package", str(package),
+                   "--manifest-sha256", _file_sha256(package / "manifest.json"), *arguments]
+    else:
+        command = [sys.executable, str(package / "run_flow.py"), *arguments]
+    return command, runtime
+
+
+def _package_input_mismatch(package: Path, pipeline: FlowchartPipeline, checkpoints: Mapping[str, Path]) -> str | None:
+    """Why the app-side graph or checkpoints are not exactly the packaged ones, if they differ."""
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    files = {row["path"]: row["sha256"] for row in manifest.get("files", []) if isinstance(row, dict)}
+    packaged = FlowchartPipeline.model_validate(json.loads((package / "pipeline.json").read_text(encoding="utf-8")))
+    if packaged.model_dump() != pipeline.model_dump():
+        return "The flow graph differs from the packaged graph"
+    models = {row["job_id"]: row for row in manifest.get("models", []) if isinstance(row, dict) and "job_id" in row}
+    if set(models) != set(checkpoints):
+        return "The flow checkpoints differ from the packaged models"
+    tasks = {node.data.model_job_id: flow_model_task(node) for node in pipeline.nodes if flow_model_task(node) is not None}
+    for job_id, row in models.items():
+        source = Path(checkpoints[job_id])
+        if tasks.get(job_id) != row.get("task"):
+            return f"Model {job_id} has a different task than the packaged model"
+        if not source.is_file() or _file_sha256(source) != files.get(row.get("checkpoint")):
+            return f"The source checkpoint for {job_id} differs from the packaged checkpoint"
+    return None
+
+
+def _run_packaged_image(package: Path, item: Mapping[str, Any], device: str, timeout: float) -> dict[str, Any]:
+    """Execute one image in the package's isolated runner, never the app's import path."""
+    with tempfile.TemporaryDirectory(prefix="modu-flow-parity-") as temporary:
+        output = Path(temporary) / "result.json"
+        command, _ = _packaged_runner_command(package, item, output, device)
+        completed = subprocess.run(
+            command, cwd=temporary, env={**os.environ, "PYTHONPATH": ""},
+            capture_output=True, text=True, timeout=timeout, check=False,
+        )
+        if completed.returncode != 0 or not output.is_file():
+            raise ValueError(f"Packaged flow execution failed: {completed.stderr.strip()[-1000:]}")
+        return json.loads(output.read_text(encoding="utf-8"))
+
+
+def _flow_evidence(result: Mapping[str, Any]) -> dict[str, Any]:
+    """Decision, route, ROI and raster digests that both executions must share."""
+    return {
+        "final_verdict": result.get("final_verdict"),
+        "routed_output_node_id": result.get("routed_output_node_id"),
+        "roi_count": result.get("roi_count"),
+        "branch_path": [{"node_id": step.get("node_id"), "status": step.get("status"),
+                         "branch_verdict": step.get("branch_verdict"), "selected_edge_ids": step.get("selected_edge_ids")}
+                        for step in result.get("execution_steps", []) or []],
+        "rois": [{"roi_id": crop.get("roi_id"), "source_node_id": crop.get("source_node_id"), "bbox": crop.get("bbox"),
+                  "verdict": crop.get("verdict"),
+                  "mask_sha256": _canonical_sha256(crop["mask"]) if crop.get("mask") is not None else None,
+                  "polygon_sha256": _canonical_sha256(crop["polygon"]) if crop.get("polygon") is not None else None}
+                 for crop in result.get("crops", []) or []],
+    }
+
+
+def verify_flow_parity_cohort(
+    *, package_dir: Path, pipeline: FlowchartPipeline, checkpoints: Mapping[str, Path], images,
+    device: str, scope: str = "cohort", timeout_per_image: float = 300,
+) -> dict[str, Any]:
+    """Run the app engine and the isolated package on the same frozen images and device.
+
+    Invalid input or an unavailable device raises before execution. Execution
+    failures, changed inputs and mismatches are returned as a failed or mismatch
+    report so the caller can persist them.
+    """
+    if scope not in ("cohort", "single_image"):
+        raise ValueError("Parity scope must be cohort or single_image")
+    from backend.engine.runtime_device import resolve_runtime_device
+    resolved = resolve_runtime_device(device)
+    inputs = _frozen_parity_inputs(images, minimum=2 if scope == "cohort" else 1)
+    if scope == "single_image" and len(inputs) != 1:
+        raise ValueError("Single-image parity takes exactly one image")
+    package = Path(package_dir).resolve()
+    identity = _parity_identity(package)
+    packaged_runtime = _packaged_runtime_identity(package)
+    import backend.engine.flowchart_engine as app_engine_module
+    reference_runtime = {"kind": "in_process_app_engine", "device": str(resolved),
+                         "engine_sha256": _file_sha256(Path(app_engine_module.__file__))}
 
     def resolve(job_id: str, task: str) -> Path | None:
         return Path(checkpoints[job_id]) if job_id in checkpoints else None
 
-    reference = FlowchartEngine(device="cpu", checkpoint_resolver=resolve).execute(
-        pipeline=pipeline, image_path=str(image), image_id=image_id,
-    )
-    reference = reference.model_dump() if hasattr(reference, "model_dump") else reference
-    package = Path(package_dir).resolve()
-    with tempfile.TemporaryDirectory(prefix="modu-flow-parity-") as temporary:
-        output = Path(temporary) / "result.json"
-        command = [sys.executable, str(package / "run_flow.py"), "--image", str(image), "--output", str(output)]
-        if image_id:
-            command.extend(("--image-id", image_id))
-        completed = subprocess.run(
-            command, cwd=temporary, env={**os.environ, "PYTHONPATH": ""},
-            capture_output=True, text=True, timeout=300, check=False,
-        )
-        if completed.returncode != 0 or not output.is_file():
-            raise ValueError(f"Packaged flow execution failed: {completed.stderr.strip()[-1000:]}")
-        packaged = json.loads(output.read_text(encoding="utf-8"))
-    report = compare_flow_results(reference, packaged)
-    report["image_path"] = str(image)
+    rows: list[dict[str, Any]] = []
+    status, error = "passed", None
+    # The reference must run the packaged graph and checkpoint bytes, or nothing is compared.
+    try:
+        verify_flow_package(package)
+        mismatch = _package_input_mismatch(package, pipeline, checkpoints)
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        mismatch = f"Package integrity check failed: {exc}"
+    if mismatch:
+        status, error = "failed", mismatch
+    engine = None
+    for item in inputs:
+        row = {"index": item["index"], "image_path": item["path"], "image_id": item["image_id"],
+               "image_sha256": item["sha256"]}
+        if status == "failed":
+            rows.append({**row, "status": "not_run"})
+            continue
+        try:
+            engine = engine or FlowchartEngine(device=str(resolved), checkpoint_resolver=resolve)
+            reference = engine.execute(pipeline=pipeline, image_path=item["path"], image_id=item["image_id"])
+            reference = reference.model_dump() if hasattr(reference, "model_dump") else reference
+            packaged = _run_packaged_image(package, item, device, timeout_per_image)
+            if _file_sha256(Path(item["path"])) != item["sha256"]:
+                raise ValueError("Parity input changed during verification")
+        except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+            status, error = "failed", str(exc)[-1000:]
+            rows.append({**row, "status": "failed", "error": error})
+            continue
+        comparison = compare_flow_results(reference, packaged)
+        rows.append({**row, "status": comparison["status"], "mismatched_fields": comparison["mismatched_fields"],
+                     "reference": _flow_evidence(reference), "packaged": _flow_evidence(packaged)})
+        if comparison["status"] != "passed" and status == "passed":
+            status = "mismatch"
+    if not mismatch:
+        try:
+            verify_flow_package(package)
+            changed = ("package manifest" if _file_sha256(package / "manifest.json") != identity["manifest_sha256"]
+                       else _package_input_mismatch(package, pipeline, checkpoints))
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            changed = str(exc)
+        if changed:
+            earlier = f" (earlier: {error})" if error else ""
+            status, error = "failed", f"Package, graph, runtime or checkpoint bytes changed during parity verification: {changed}{earlier}"[-1000:]
+    completed = [row for row in rows if row["status"] in ("passed", "mismatch")]
+    single = scope == "single_image"
+    report = {
+        "contract": PARITY_CONTRACT, "status": status, "scope": scope,
+        "limitation": SINGLE_IMAGE_LIMITATION if single else None,
+        "device": device, "resolved_device": str(resolved),
+        "image_count": len(inputs), "completed_count": len(completed),
+        "cohort_sha256": parity_cohort_sha256(item["sha256"] for item in inputs),
+        **identity, "tolerance": dict(PARITY_TOLERANCE),
+        "reference_runtime": reference_runtime, "packaged_runtime": packaged_runtime,
+        "compared_fields": compare_flow_results({}, {})["compared_fields"],
+        "mismatched_fields": [field if single else f"images[{row['index']}].{field}"
+                              for row in rows for field in row.get("mismatched_fields", [])],
+        "verdict_counts": {verdict: sum(row["packaged"]["final_verdict"] == verdict for row in completed)
+                           for verdict in sorted({row["packaged"]["final_verdict"] for row in completed}, key=str)},
+        "images": rows, "error": error,
+        "verified_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if single:
+        packaged_row = completed[0]["packaged"] if completed else {}
+        report.update(image_path=inputs[0]["path"], final_verdict=packaged_row.get("final_verdict"),
+                      roi_count=packaged_row.get("roi_count"))
     return report
+
+
+def verify_flow_parity(
+    *, package_dir: Path, pipeline: FlowchartPipeline, checkpoints: Mapping[str, Path],
+    image_path: Path, image_id: str | None = None,
+) -> dict[str, Any]:
+    """Limited compatibility check: one image on CPU. Raises when the package cannot run."""
+    report = verify_flow_parity_cohort(package_dir=package_dir, pipeline=pipeline, checkpoints=checkpoints,
+                                       images=[{"path": str(image_path), "image_id": image_id}], device="cpu",
+                                       scope="single_image")
+    if report["status"] == "failed":
+        raise ValueError(report["error"] or "Packaged flow parity failed")
+    return report
+
+
+def write_parity_receipt(package_dir: Path, report: Mapping[str, Any]) -> Path:
+    """Keep the parity evidence beside the package; it is bound to the manifest digest it names."""
+    package = Path(package_dir).resolve()
+    target = package / PARITY_RECEIPT
+    if target.is_symlink():
+        raise ValueError("Parity receipt cannot follow a link")
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=package, prefix=".parity-receipt-", delete=False) as handle:
+        json.dump({"schema_version": 1, **report}, handle, ensure_ascii=False, indent=2)
+        handle.flush()
+        os.fsync(handle.fileno())
+        staged = Path(handle.name)
+    os.replace(staged, target)
+    return target
+
+
+def parity_receipt_status(package_dir: Path) -> dict[str, Any]:
+    """Read the saved receipt and check it still names this package's manifest."""
+    package = Path(package_dir).resolve()
+    target = package / PARITY_RECEIPT
+    if target.is_symlink() or not target.is_file():
+        return {"present": False, "matches_manifest": False, "status": "not_run", "scope": None, "device": None}
+    receipt = json.loads(target.read_text(encoding="utf-8"))
+    return {"present": True, "matches_manifest": receipt.get("manifest_sha256") == _file_sha256(package / "manifest.json"),
+            "status": receipt.get("status"), "scope": receipt.get("scope"), "device": receipt.get("device"),
+            "contract": receipt.get("contract"), "cohort_sha256": receipt.get("cohort_sha256")}

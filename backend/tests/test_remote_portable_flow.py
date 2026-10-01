@@ -103,15 +103,31 @@ def test_uncertain_portable_launch_keeps_reservation_and_retries_same_worker(tmp
         def launch(self,*args):
             assert shared_leases().list()[0]['selector']=='2'
             super().launch(*args)
+            profile, _, run_id = args
+            run = self.root / 'runs' / run_id
+            spec = json.loads((run / 'spec.json').read_text())
+            from backend.remote.coordinator import _sha256
+            (run / 'worker_identity.json').write_text(json.dumps({'protocol_version': 1, 'run_id': run_id,
+                'job_id': spec['job_id'], 'operation': spec['operation'], 'spec_sha256': _sha256(run / 'spec.json'),
+                'control_kind': profile.runtime_kind, 'control_handle': 'a' * 64}))
             raise ConnectionError('Worker launched; SSH response was lost')
+        def recover_handle(self, *args, **kwargs):
+            from backend.remote.ssh_transport import SSHTransport
+            return SSHTransport.recover_handle(self, *args, **kwargs)
     remote=AmbiguousLaunch(Path(profile.remote_root))
     with pytest.raises(RemoteDisconnected):
         run_verified_flowchart_on_compute(profile,project,pipeline,models,image,device='cpu',transport=remote)
     pending=shared_leases().list()
     assert len(pending)==1 and pending[0]['remote']==1 and pending[0]['uncertain']==1
+    journal = next((Path(project['reports_dir']) / 'remote_flow').rglob('flowchart_run_*.json'))
+    before = json.loads(journal.read_text())
+    assert before['state'] == 'launching' and not before.get('remote_handle')
     result=run_verified_flowchart_on_compute(profile,project,pipeline,models,image,device='cpu',transport=remote)
     assert result['execution_device']=='cpu' and remote.launches==1
     assert shared_leases().list()==[]
+    after = json.loads(journal.read_text())
+    assert after['op_id'] == before['op_id'] and after['launch_acknowledgment_recovered'] is True
+    assert after['remote_handle'] == 'a' * 64 and after['worker_exit_confirmed'] is True
 
 
 def test_prelaunch_preparing_journal_reuploads_and_launches_once_after_process_crash(tmp_path,monkeypatch):

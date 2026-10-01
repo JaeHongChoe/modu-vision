@@ -12,6 +12,10 @@ import uuid
 def approve_precision_package(candidate,output,*,revisions,reviewer,reason,maximum_absolute_drift,holdout_reviewed):
     from backend.engine.flow_package_runtime import verify_flow_package,_sha256
     root=Path(candidate).resolve();_,checkpoints=verify_flow_package(root)
+    from backend.engine.runtime_release_evidence import verify_measured_precision_evidence
+    original_manifest=json.loads((root/'manifest.json').read_text())
+    device=original_manifest['runtime']['device']
+    measured=verify_measured_precision_evidence(root,device,check_source=True)
     if not isinstance(reviewer,str) or not reviewer.strip() or not isinstance(reason,str) or len(reason.strip())<8 or holdout_reviewed is not True:
         raise ValueError('Explicit reviewer, meaningful reason and reviewed holdout are required')
     if type(maximum_absolute_drift) not in (int,float) or not math.isfinite(maximum_absolute_drift) or maximum_absolute_drift<0:
@@ -52,14 +56,16 @@ def approve_precision_package(candidate,output,*,revisions,reviewer,reason,maxim
             'candidate_manifest_sha256':source_hash,'source_manifest_sha256':info['source_manifest_sha256'],
             'input_receipt':receipt,'models':info['models'],'runtime_configuration':original_manifest['runtime'],
             'heldout_flow_results_sha256':info['heldout_flow_results_sha256'],
-            'approval_revisions':[revisions[job_id] for job_id in sorted(revisions)],'acceptance_scope':'precision_and_runtime'}
+            'approval_revisions':[revisions[job_id] for job_id in sorted(revisions)],'acceptance_scope':'precision_and_runtime',
+            'contract':'measured_precision_cohort_v1','scope':'cohort',**measured}
         (staging/'runtime_acceptance.json').write_text(json.dumps(acceptance,indent=2)+'\n',encoding='utf-8')
         manifest={**original_manifest,'release':{'approval_revisions':acceptance['approval_revisions']},'runtime_acceptance_sha256':_sha256(staging/'runtime_acceptance.json')}
         manifest['files']=[{'path':p.relative_to(staging).as_posix(),'size':p.stat().st_size,'sha256':_sha256(p)} for p in sorted(staging.rglob('*')) if p.is_file()]
         (staging/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
-        verify_flow_package(staging)
+        verify_measured_precision_evidence(staging,device,acceptance=acceptance)
+        verify_measured_precision_evidence(root,device,check_source=True)
         if _sha256(root/'manifest.json')!=source_hash:raise ValueError('Candidate changed during approval')
         os.rename(staging,target)
     policy={'schema_version':1,'manifest_sha256':_sha256(target/'manifest.json'),'approval_revisions':acceptance['approval_revisions'],
-            'runtime_acceptance_sha256':manifest['runtime_acceptance_sha256']}
+            'runtime_acceptance_sha256':manifest['runtime_acceptance_sha256'],'device':device}
     return {'status':'approved','package_path':str(target.resolve()),'runtime_acceptance':acceptance,'release_policy':policy}

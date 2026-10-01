@@ -117,7 +117,7 @@ def character_errors(reference,predicted):
             'alignment':list(reversed(alignment)),'per_character':{char:_counts(**value) for char,value in chars.items()}}
 
 
-def evaluation_analysis(samples,task):
+def evaluation_analysis(samples,task,roles=None):
     from backend.engine.evaluation_history import binary_verdict
     bins=[{'lower':i/10,'upper':(i+1)/10,'count':0,'file_paths':[]} for i in range(10)]
     scores=[];sizes=[];classes=defaultdict(lambda:{'tp':0,'fp':0,'fn':0})
@@ -126,7 +126,7 @@ def evaluation_analysis(samples,task):
         if isinstance(score,(int,float)) and math.isfinite(score) and 0<=score<=1:
             bucket=bins[min(9,int(score*10))];bucket['count']+=1;bucket['file_paths'].append(row.get('file_path'))
         defect_score=row.get('defect_score')
-        actual=binary_verdict(row.get('ground_truth_verdict',row.get('ground_truth')))
+        actual=binary_verdict(row.get('ground_truth_verdict',row.get('ground_truth')),roles)
         if task in ('classification','patch_classification','detection','segmentation','anomaly') and actual and isinstance(defect_score,(int,float)) and math.isfinite(defect_score) and 0<=defect_score<=1:
             scores.append((float(defect_score),actual=='NG'))
         object_evidence=row.get('object_evidence') or {}

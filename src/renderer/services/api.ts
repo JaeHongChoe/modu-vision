@@ -33,6 +33,9 @@ export interface ComputeProfile {
 export type ComputeProfileInput = Omit<ComputeProfile, 'id'> & { id?: string };
 
 export interface FlowModelCatalogItem {
+  class_semantics?: {version:1;roles:import('../utils/classSemantics').ClassRoles;basis?:Record<string,string>};
+  class_names?: string[];
+  class_ids?: number[];
   job_id: string;
   task: FlowModelTask;
   label: string;
@@ -370,6 +373,15 @@ export interface ModelComparisonReport extends ModelComparisonRecord {
   image_selection: string;
   limitations: string[];
   images: ModelComparisonRow[];
+  intake_lineage?: {
+    cohort_id: string;
+    cohort_sha256: string;
+    truth_sha256: string;
+    ancestor_source_dataset_path: string;
+    truth_source_dataset_path: string;
+    version_ids: string[];
+    version_sha256: string[];
+  };
 }
 
 export interface ModelDeploymentAssessment {
@@ -1025,6 +1037,9 @@ export const api = {
       version_id?: string;
       verification_image_path?: string;
       verification_image_id?: string;
+      approval_revision_ids?: Record<string,string>;
+      parity_images?: Array<{path:string;image_id?:string}>;
+      parity_device?: string;
       deployment_profile?: 'standard' | 'edge_cpu';
       target_os?: 'linux' | 'windows' | 'macos';
       target_arch?: 'x86_64' | 'arm64';
@@ -1040,13 +1055,22 @@ export const api = {
         target: { os: 'linux' | 'windows' | 'macos'; architecture: 'x86_64' | 'arm64' };
       };
       parity: {
-        status: 'not_run' | 'passed';
+        status: 'not_run' | 'passed' | 'mismatch' | 'failed';
+        scope?: 'single_image' | 'cohort';
+        device?: string;
+        cohort_sha256?: string;
+        manifest_sha256?: string;
         image_path?: string;
         final_verdict?: string;
         roi_count?: number;
         compared_fields?: string[];
       };
     }>('/api/export/flow', { method: 'POST', body: JSON.stringify(data) }),
+    flowApprovalPrerequisites: (params:{source_dataset_path:string;recipe_task:FlowModelTask|'mixed';version_id?:string}) => {
+      const query=new URLSearchParams({source_dataset_path:params.source_dataset_path,recipe_task:params.recipe_task});
+      if(params.version_id)query.set('version_id',params.version_id);
+      return request<import('./flowPackageExport').FlowApprovalPrerequisites>(`/api/export/flow/approval-prerequisites?${query}`);
+    },
     runtime: (data: {
       job_id?: string;
       export_format?: string;

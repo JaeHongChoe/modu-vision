@@ -126,6 +126,8 @@ export interface TestPredictionItem {
   defect_score?: number;
   class_scores?: Record<string,number>;
   evaluation_file_path?: string;
+  source_image_id?: string;
+  labeling_supported?: boolean;
   object_evidence?: import('../services/evaluationEvidence').ObjectEvidence;
   pixel_evidence?: import('../services/evaluationEvidence').PixelEvidence;
   character_evidence?: import('../services/evaluationEvidence').CharacterEvidence;
@@ -134,6 +136,7 @@ export interface TestPredictionItem {
 }
 
 export interface EvaluationResults {
+  class_semantics?: { version: 1; roles: import('../utils/classSemantics').ClassRoles; basis?: Record<string, string> };
   job_id: string;
   task: VisionTask;
   metrics: Record<string, any>;

@@ -39,6 +39,9 @@ import { ImagePickerModal } from './ImagePickerModal';
 import { ImageRoiEditor } from './ImageRoiEditor';
 import { FlowNodeDebugger } from './FlowNodeDebugger';
 import { FlowWorkspacePanel } from './FlowWorkspacePanel';
+import { FlowEvaluationPanel } from './FlowEvaluationPanel';
+import {nodeClassChoices} from './flowWorkspace';
+import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import {FlowDraftControls,flowDraftStatus} from './FlowDraftControls';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
@@ -487,17 +490,15 @@ export const FlowchartStudio: React.FC = () => {
     const currentPipeline = pipeline;
     setIsVerifyingAction(true);
     try {
-      const candidate = await api.flowchart.getPipelineVersion(versionId);
-      await verifyCurrentPipeline(candidate, folderPath);
       if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== currentPipeline) {
         throw new Error('플로우 또는 데이터가 검증 중 변경되었습니다. 버전을 다시 선택하세요.');
       }
       const opened = await loadPipelineVersion(versionId, folderPath);
       if (!opened) throw new Error('선택한 플로우 버전을 열지 못했습니다.');
       setSelectedVersionId(versionId);
-      setSavedVersions((versions) => versions.map((version) => ({ ...version, is_active: version.version_id === versionId })));
       setZoomScale(null);
-      setModelCheck({ status: 'ready' });
+      try { await verifyCurrentPipeline(opened, folderPath); setModelCheck({ status: 'ready' }); }
+      catch { setModelCheck({ status: 'blocked', reason: 'saved_model_mismatch' }); }
       setSelectedEdgeId(null);
       setActionValidationError(null);
       setActiveTab('flow');
@@ -506,6 +507,24 @@ export const FlowchartStudio: React.FC = () => {
     } finally {
       setIsVerifyingAction(false);
     }
+  };
+
+  const activateSavedVersion = async () => {
+    if (!selectedVersionId || !pipeline || pipelineDirty || pipelineIsDraft || isVerifyingAction || isRunning || isSaving) return;
+    const selected = savedVersions.find(v => v.version_id === selectedVersionId);
+    if (!selected || !window.confirm(`“${selected.name}” 버전을 활성 검사 흐름으로 지정할까요? 다음 일괄 검사와 자동 운영에서 사용됩니다.`)) return;
+    const sourceKey = datasetKey;
+    const graph = pipeline;
+    setIsVerifyingAction(true); setActionValidationError(null);
+    try {
+      await verifyCurrentPipeline(graph, folderPath);
+      if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== graph) throw new Error('검증 중 데이터 또는 플로우가 바뀌었습니다.');
+      await api.flowchart.activatePipelineVersion(selectedVersionId, folderPath);
+      const readback = await api.flowchart.listPipelines(folderPath);
+      if (!readback.pipelines.some(v => v.version_id === selectedVersionId && v.is_active)) throw new Error('활성 버전 변경을 확인하지 못했습니다.');
+      if (useDatasetStore.getState().datasetKey === sourceKey && useFlowchartStore.getState().pipeline === graph) setSavedVersions(readback.pipelines);
+    } catch (cause) { setActionValidationError(cause instanceof Error ? cause.message : String(cause)); }
+    finally { setIsVerifyingAction(false); }
   };
 
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
@@ -935,6 +954,10 @@ export const FlowchartStudio: React.FC = () => {
               </option>)}
             </select>
           </label>}
+          {selectedVersionId && !savedVersions.some(v => v.version_id === selectedVersionId && v.is_active) &&
+            <button onClick={() => void activateSavedVersion()} disabled={pipelineDirty || pipelineIsDraft || isLoading || isSaving || isRunning || isVerifyingAction || needsModel || Boolean(graphError)}
+              title="저장 버전을 열면 편집 화면에만 표시됩니다. 검증 후 이 버튼으로 활성 검사 흐름을 지정하세요."
+              className="shrink-0 rounded border border-emerald-700 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-100 disabled:opacity-40">이 버전 활성화</button>}
           <span className="shrink-0 rounded border border-[#344255] px-2 py-1 text-xs text-slate-300">
             모델 {pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null && Boolean(node.data.model_job_id)).length || 0}/{pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null).length || 0} 연결
           </span>
@@ -1469,7 +1492,7 @@ export const FlowchartStudio: React.FC = () => {
                   </div>
                 )}
 
-                {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && <ClassRulesEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
+                {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && <ClassRulesEditor key={selectedNode.id} classes={pipeline?nodeClassChoices(pipeline,selectedNode.id,modelCatalog):[]} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
 
                 {selectedNode.data.node_type === 'detection_crop' && selectedNode.data.crop_padding !== undefined && (
                   <div>
@@ -1490,7 +1513,7 @@ export const FlowchartStudio: React.FC = () => {
                 {selectedNode.data.node_type === 'blob_measure' && (
                   <div className="space-y-3 rounded border border-teal-800/70 bg-teal-950/20 p-3">
                     <p className="text-teal-200 font-bold">분할 마스크의 연결된 결함 덩어리 측정</p>
-                    <label className="block text-[#94A3B8]">최소 Blob 면적 (px)
+                    <label className="block text-[#94A3B8]">최소 Blob 면적 (px²)
                       <input type="number" min="1" step="1" value={selectedNode.data.params?.min_blob_area_px ?? 1}
                         onChange={(event) => updateNodeData(selectedNode.id, {
                           params: { ...selectedNode.data.params, min_blob_area_px: Math.max(1, Math.trunc(Number(event.target.value) || 1)) },
@@ -1504,7 +1527,7 @@ export const FlowchartStudio: React.FC = () => {
                         })}
                         className="mt-1 w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] tabular-nums" />
                     </label>
-                    <ClassRulesEditor key={selectedNode.id} blob params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>
+                    <ClassRulesEditor key={selectedNode.id} blob classes={pipeline?nodeClassChoices(pipeline,selectedNode.id,modelCatalog):[]} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>
                     <p className="text-xs text-slate-400">분할 검사 결과 하나를 입력받아 측정하고, 결과를 집계 또는 판정에 연결합니다.</p>
                   </div>
                 )}
@@ -1588,6 +1611,10 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       <FlowWorkspacePanel versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('flow')}/>
+      <WorkflowImpactPanel />
+      <FlowEvaluationPanel sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
+        contextKey={`${useProjectStore.getState().project?.id}:${useProjectStore.getState().project?.active_labelset_id}:${getApiPersistenceIdentity()}`}
+        onOpenImage={imagePath=>{useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:imagePath.split('/').pop()||imagePath});setActiveTab('flow');}}/>
       {/* Modals */}
       <ImagePickerModal isOpen={isImagePickerOpen} onClose={() => setImagePickerOpen(false)} />
       <CropDetailModal crop={inspectedCrop} onClose={() => setInspectedCrop(null)} />

@@ -13,7 +13,7 @@ import json
 import math
 import numbers
 from datetime import datetime
-from typing import Any, Callable, Dict, Iterable, Mapping
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 
 from backend.engine.evaluation_history import binary_verdict
 from backend.engine.zero_escape_analyzer import is_defect_label
@@ -72,19 +72,19 @@ def prediction_fingerprint(predictions: Iterable[Mapping[str, Any]]) -> str:
     return hashlib.sha256(b"[" + b",".join(encoded) + b"]").hexdigest()
 
 
-def _truth(label: Any) -> str:
+def _truth(label: Any, roles: Optional[Dict[str, str]] = None) -> str:
     """Binary truth as zero-escape analysis counts it, refused where that would be wrong."""
-    known = binary_verdict(label)
+    known = binary_verdict(label, roles)
     if known is None:
         raise ValueError(f"Prediction ground truth is unknown ({label!r}); calibration needs reviewed OK/NG truth")
-    counted = "ng" if is_defect_label(label) else "ok"
+    counted = "ng" if is_defect_label(label, roles) else "ok"
     if counted != known.lower():
         raise ValueError(f"Ground truth {label!r} is {known} but zero-escape analysis would count it as "
                          f"{counted.upper()}; calibration would miscount it")
     return counted
 
 
-def _validated_rows(predictions: Any) -> Dict[str, int]:
+def _validated_rows(predictions: Any, roles: Optional[Dict[str, str]] = None) -> Dict[str, int]:
     if not isinstance(predictions, list) or not predictions:
         raise ValueError("Calibration evidence needs a nonempty test_predictions list")
     counts = {"ng": 0, "ok": 0}
@@ -101,7 +101,7 @@ def _validated_rows(predictions: Any) -> Dict[str, int]:
             raise ValueError(f"Prediction {index} has no finite score")
         if "ground_truth" not in row:
             raise ValueError(f"Prediction {index} has no ground truth")
-        counts[_truth(row["ground_truth"])] += 1
+        counts[_truth(row["ground_truth"], roles)] += 1
         identity = _canonical(_json_safe({key: row.get(key) for key in _DUPLICATE_KEY_FIELDS}))
         if identity in seen:
             raise ValueError(f"Prediction {index} is a duplicate of an earlier prediction")
@@ -136,7 +136,8 @@ def validate_calibration_evidence(payload: Mapping[str, Any], expected_contract_
     if "test_predictions" not in payload:
         raise ValueError("Evaluation payload has no test_predictions")
     predictions = payload["test_predictions"]
-    counts = _validated_rows(predictions)
+    from backend.engine.class_semantics import recorded_roles
+    counts = _validated_rows(predictions, recorded_roles(payload))
     binding = payload.get("binding")
     return {
         "evaluation_contract_version": version,

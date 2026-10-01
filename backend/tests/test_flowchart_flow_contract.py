@@ -618,7 +618,7 @@ def test_failed_save_cannot_activate_a_version_removed_by_rollback(monkeypatch, 
                 activation_lock_attempt.set()
             elif caller == "list_saved_pipelines":
                 list_lock_attempt.set()
-            elif caller == "export_saved_flow":
+            elif caller in {"export_saved_flow", "_saved_flow_models"}:
                 export_lock_attempt.set()
             return original_lock.__enter__()
 

@@ -17,6 +17,16 @@ from backend.api.shared_authorization import SharedAuthorizationMiddleware
  ('trainer','/api/training-workspace/readiness',True),
  ('viewer','/api/flow-workspace/templates',False),
  ('labeler','/api/data-workbench/derived',True),
+ ('trainer','/api/flow-evaluations/cohorts',True),
+ ('trainer','/api/flow-evaluations',True),
+ ('labeler','/api/flow-evaluations',False),
+ ('reviewer','/api/image-truth',True),
+ ('trainer','/api/image-truth',False),
+ ('labeler','/api/capture-intake/register',True),
+ ('trainer','/api/capture-intake/candidates/id/review',False),
+ ('reviewer','/api/capture-intake/candidates/id/review',True),
+ ('reviewer','/api/capture-intake/adopt',True),
+ ('labeler','/api/capture-intake/adopt',False),
 ])
 def test_workspace_role_policy(tmp_path,monkeypatch,role,path,allowed):
     from backend.api import routes_project

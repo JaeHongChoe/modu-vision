@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import sys
@@ -26,16 +27,38 @@ def runtime_cwd():
     return Path(sys.executable).resolve().parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2]
 
 
+def trusted_runtime_identity():
+    """Bind diagnostics to this trusted checkout or this frozen runtime build."""
+    if getattr(sys,'frozen',False):
+        inventory=Path(getattr(sys,'_MEIPASS',runtime_cwd()))/'backend-build-inventory.json'
+        if not inventory.is_file():return {'mode':'frozen','status':'inventory_missing'}
+        value=json.loads(inventory.read_text())
+        return {'mode':'frozen','status':'identified','build_identity_sha256':value['build_identity_sha256'],
+                'inventory_sha256':hashlib.sha256(inventory.read_bytes()).hexdigest()}
+    root=runtime_cwd();digest=hashlib.sha256()
+    for source in sorted((root/'backend').rglob('*.py')):
+        if {'tests','__pycache__','.pytest_cache'}.intersection(source.parts):continue
+        digest.update(str(source.relative_to(root)).encode());digest.update(hashlib.sha256(source.read_bytes()).digest())
+    return {'mode':'source','status':'identified','source_sha256':digest.hexdigest()}
+
+
 def bootstrap_command(project_dir):
     service=ManagedService(project_dir)
     active=service.ledger.active()
     if not active:raise ValueError('Apply an approved release before automatic startup')
+    pending=service.ledger.diagnostics()['pending']
+    if pending:
+        # Native startup is allowed to restore the committed package, never the
+        # unaccepted candidate recorded in state/runtime.json. The manager will
+        # reconcile the durable operation after an exact live acknowledgment.
+        state=service.root/'state'/'runtime.json'
+        state.unlink(missing_ok=True)
     release=active['release'];package=Path(release['package_path']);policy=Path(release['release_policy'])
     _,checkpoints=verify_flow_package(package)
-    _verify_release_policy(package,checkpoints,policy)
+    _verify_release_policy(package,checkpoints,policy,device=release.get('device','cpu'))
     digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
     if digest!=release.get('manifest_sha256'):raise ValueError('Active deployment manifest differs from its release receipt')
-    service.validate_accepted_device(release['package_path'],release.get('device','cpu'))
+    service.validate_accepted_device(release['package_path'],release.get('device','cpu'),expected_receipt_sha256=(release.get('parity_receipt_sha256') or release.get('runtime_acceptance_sha256')))
     resolve_runtime_device(release.get('device','cpu'))
     args=['--package',release['package_path'],'--state-dir',str(service.root/'state'),
           '--runtime-root',str(service.root/'releases'),'--release-policy',release['release_policy'],

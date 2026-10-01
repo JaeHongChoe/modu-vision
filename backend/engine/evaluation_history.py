@@ -14,34 +14,39 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()
 
 
-def binary_verdict(label):
-    """Normalize known manufacturing truth; absent/review truth remains unknown."""
+def binary_verdict(label, roles=None):
+    """Normalize known manufacturing truth with recorded class roles; absent or review truth remains unknown."""
     if label is None or not str(label).strip() or str(label).strip().casefold() in ('review', 'unknown'):
         return None
-    if str(label).strip().casefold() in ('정상', '양품', '합격'):
-        return 'OK'
-    from backend.engine.zero_escape_analyzer import is_defect_label
-    return 'NG' if is_defect_label(label) else 'OK'
+    from backend.engine.class_semantics import class_role
+    return {'normal': 'OK', 'defect': 'NG'}.get(class_role(label, roles))
 
 
-def grouped_errors(rows, task=None):
+def grouped_errors(rows, task=None, roles=None):
+    """Group errors; class labels use the evaluated model's roles, binary flow verdicts never do."""
     groups = {name: defaultdict(lambda: {'samples': 0, 'errors': 0, 'misses': 0, 'overkill': 0, 'unknown_truth': 0})
               for name in ('product', 'lot', 'ground_truth')}
     for row in rows:
         truth = row.get('ground_truth', row.get('ground_truth_verdict'))
         prediction = row.get('prediction', row.get('predicted_class', row.get('predicted_label')))
+        binary_prediction = False
         if isinstance(row.get('candidate'), dict):
             prediction = row['candidate'].get('verdict')
+            binary_prediction = True
         if prediction is None:
             prediction = row.get('final_verdict')
+            binary_prediction = 'final_verdict' in row
         candidate = row.get('candidate') if isinstance(row.get('candidate'), dict) else {}
         explicit_error = row.get('error') or candidate.get('error')
         binary_task = task in (None, 'classification', 'patch_classification', 'detection', 'segmentation', 'anomaly')
         # Flow comparisons already contain reviewed binary truth. It takes precedence
         # over the descriptive class label, including explicit unknown truth.
         flow_verdict = isinstance(row.get('candidate'), dict) or 'final_verdict' in row
-        truth_binary = binary_verdict(row.get('ground_truth_verdict') if 'ground_truth_verdict' in row else truth) if binary_task else None
-        prediction_binary = binary_verdict(prediction) if binary_task else None
+        if 'ground_truth_verdict' in row:
+            truth_binary = binary_verdict(row.get('ground_truth_verdict')) if binary_task else None
+        else:
+            truth_binary = binary_verdict(truth, roles) if binary_task else None
+        prediction_binary = binary_verdict(prediction, None if binary_prediction else roles) if binary_task else None
         unknown = truth_binary is None if binary_task and flow_verdict else truth in (None, '')
         if flow_verdict and binary_task:
             mismatch = not unknown and prediction_binary != truth_binary
@@ -63,6 +68,12 @@ def grouped_errors(rows, task=None):
     return {key: dict(value) for key, value in groups.items()}
 
 
+def _result_roles(result):
+    semantics = result.get('class_semantics') if isinstance(result, dict) else None
+    roles = semantics.get('roles') if isinstance(semantics, dict) else None
+    return roles if isinstance(roles, dict) else None
+
+
 class EvaluationHistory:
     def __init__(self, directory: Path):
         self.directory = Path(directory)
@@ -72,7 +83,9 @@ class EvaluationHistory:
 
     def append(self, result, binding):
         evidence = {'evaluation_id': 'evaluation_' + uuid.uuid4().hex, 'created_at': time.time(),
-                    'binding': binding, 'result': result, 'grouped_errors': grouped_errors(result.get('test_predictions', []), result.get('task', binding.get('task')))}
+                    'binding': binding, 'result': result,
+                    'grouped_errors': grouped_errors(result.get('test_predictions', []), result.get('task', binding.get('task')),
+                                                     _result_roles(result))}
         record = {**evidence, 'evidence_sha256': hashlib.sha256(canonical(evidence)).hexdigest()}
         path = self.directory / (record['evaluation_id'] + '.json')
         with path.open('xb') as writer:

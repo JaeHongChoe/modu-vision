@@ -5,6 +5,7 @@ import { request } from '../../services/api';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import {WorkflowImpactPanel} from './WorkflowImpactPanel';
 
 type TraceRecord = Record<string, unknown>;
 interface Trace {
@@ -60,6 +61,7 @@ export function ProvenancePanel({ onClose }: { onClose: () => void }) {
     <section role="dialog" aria-modal="true" aria-labelledby="provenance-title" className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded border border-[#344255] bg-[#182332] text-sm text-slate-200">
       <header className="flex items-center justify-between border-b border-[#344255] p-4"><h2 id="provenance-title" className="flex items-center gap-2 font-semibold"><History className="h-4 w-4 text-cyan-300" />데이터·모델·판정 이력</h2><button type="button" onClick={onClose} aria-label="이력 닫기" className="rounded p-2 hover:bg-slate-700"><X className="h-5 w-5" /></button></header>
       <div className="space-y-4 overflow-y-auto p-4">
+        <WorkflowImpactPanel />
         <p className="text-slate-300">이미지부터 라벨, 분할, 모델, 플로우와 검사 결과의 저장된 출처를 확인합니다.</p>
         <div className="flex items-end gap-2"><label className="flex-1">검사 이미지<select value={imagePath} onChange={(e) => setImagePath(e.target.value)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2">
           {!images.length && <option value="">1단계에서 데이터를 불러오세요</option>}{images.map((image) => <option key={image.file_path} value={image.file_path}>{image.file_name}</option>)}

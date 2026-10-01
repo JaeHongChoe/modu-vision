@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import errno
 import hashlib
 import json
 import os
@@ -19,6 +20,7 @@ import tempfile
 import threading
 import time
 import traceback
+from uuid import uuid4
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
@@ -86,12 +88,51 @@ class _StatusWriter:
             "updated_at": _timestamp(),
         }
         _atomic_json(self.path, self._payload)
+        if Path('/proc/self/stat').is_file():
+            from backend.remote.process_control import _entry
+            token = os.environ.get('MODU_VISION_WORKER_TOKEN') or uuid4().hex
+            os.environ['MODU_VISION_WORKER_TOKEN'] = token
+            process = _entry(Path('/proc'), os.getpid())
+            if process:
+                identity = {key: process[key] for key in ('pid', 'group', 'session', 'start_ticks')}
+                identity.update(token=token, job_id=job_id, run_id=run_dir.name, operation=operation,
+                                protocol_version=PROTOCOL_VERSION, spec_sha256=spec_sha256)
+                if os.environ.get('MODU_VISION_RUNTIME_KIND') == 'docker':
+                    identifier = os.environ.get('HOSTNAME', '')
+                    if re.fullmatch(r'[a-fA-F0-9]{12,64}', identifier):
+                        identity.update(control_kind='docker', control_handle=identifier)
+                elif process['pid'] == process['group'] == process['session']:
+                    identity.update(control_kind='python', control_handle=f"{process['pid']}:{token}")
+                _atomic_json(run_dir / 'worker_identity.json', identity)
+        # Allocate data blocks while space is available. Terminal failure can
+        # overwrite these blocks even when an atomic replacement needs space.
+        self.terminal_path = run_dir / "terminal_status.json"
+        with self.terminal_path.open("w", encoding="utf-8") as reserve:
+            os.chmod(self.terminal_path, 0o600)
+            reserve.write(json.dumps({"protocol_version": PROTOCOL_VERSION, "job_id": job_id,
+                                      "operation": operation, "status": "preparing"}).ljust(4096))
+            reserve.flush()
+            os.fsync(reserve.fileno())
 
     def update(self, **changes: Any) -> dict[str, Any]:
         with self._lock:
             self._payload.update(changes)
             self._payload["updated_at"] = _timestamp()
-            _atomic_json(self.path, self._payload)
+            try:
+                _atomic_json(self.path, self._payload)
+            except OSError as exc:
+                if exc.errno not in (errno.ENOSPC, errno.EDQUOT) or self._payload["status"] not in {"failed", "aborted"}:
+                    raise
+                terminal = {key: self._payload[key] for key in
+                            ("protocol_version", "job_id", "operation", "spec_sha256", "status", "error", "updated_at")}
+                terminal["status_storage"] = "reserved_blocks"
+                encoded = json.dumps(terminal, ensure_ascii=True).encode("utf-8")
+                if len(encoded) > 4096:
+                    terminal["error"] = str(terminal.get("error") or "")[:500]
+                    encoded = json.dumps(terminal, ensure_ascii=True).encode("utf-8")
+                with self.terminal_path.open("r+b", buffering=0) as reserve:
+                    reserve.write(encoded.ljust(4096, b" "))
+                    os.fsync(reserve.fileno())
             return self._payload.copy()
 
 

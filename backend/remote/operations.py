@@ -27,11 +27,13 @@ from typing import Any
 from backend.remote.coordinator import (
     ArtifactValidationError,
     RemoteDisconnected,
+    RemoteWorkerExited,
     _atomic_json,
     _bundle_backend,
     _remote_json,
     _remote_path,
     _sha256,
+    _confirm_owned_exit,
 )
 from backend.remote.profiles import ComputeProfile
 from backend.remote.ssh_transport import SSHTransport
@@ -244,18 +246,22 @@ def _run_remote_operation_artifacts(
         status = _remote_json(transport, context.profile, status_path)
         if status is None:
             missing_status_polls += 1
-            handle = journal.get("remote_handle")
-            if missing_status_polls >= 2 and isinstance(handle, str) and handle:
-                running = transport.is_running(context.profile, op_id, handle)
-                if running is False:
-                    journal["state"] = "failed"
-                    journal["error"] = f"Remote {operation} worker exited before publishing status"
-                    _save_operation(journal_path, journal)
-                    raise RuntimeError(journal["error"])
         if status is not None:
             if (status.get("protocol_version") != 1 or status.get("job_id") != context.job_id
                     or status.get("operation") != operation):
                 raise ArtifactValidationError("Operation status is bound to a different job")
+            if not journal.get('remote_handle') and hasattr(transport, 'recover_handle'):
+                spec_path = context.output_dir / 'remote_operations' / op_id / 'spec.json'
+                handle = transport.recover_handle(context.profile, op_id, job_id=context.job_id,
+                    operation=operation, spec_sha256=_sha256(spec_path) if spec_path.is_file() else None)
+                if handle:
+                    journal.update(remote_handle=handle, state='launched', launch_acknowledgment_recovered=True)
+                    _save_operation(journal_path, journal)
+            if status.get('status') in ('completed', 'failed', 'aborted'):
+                journal['worker_terminal_state'] = status['status']
+                _save_operation(journal_path, journal)
+                _confirm_owned_exit(transport, context.profile, op_id, journal.get('remote_handle'))
+                journal['worker_exit_confirmed'] = True
             if status.get("status") == "completed":
                 journal['state']='worker_completed'
                 _save_operation(journal_path,journal)
@@ -265,6 +271,27 @@ def _run_remote_operation_artifacts(
                 journal["error"] = status.get("error")
                 _save_operation(journal_path, journal)
                 raise RuntimeError(f"Remote {operation} {status['status']}: {status.get('error') or ''}")
+        handle = journal.get('remote_handle')
+        if status is not None or missing_status_polls >= 2:
+            if not isinstance(handle, str) or not handle:
+                raise RemoteDisconnected(f'Remote {operation} launch ownership is unavailable; reconnect to the same run')
+            running = transport.is_running(context.profile, op_id, handle)
+            if running is None:
+                raise RemoteDisconnected(f'Remote {operation} worker connection is uncertain; reconnect to the same run')
+            if running is False:
+                fallback = _remote_json(transport, context.profile, _remote_path(context.profile, op_id, 'terminal_status.json'))
+                if fallback is not None and (fallback.get('protocol_version') != 1 or fallback.get('job_id') != context.job_id
+                                             or fallback.get('operation') != operation):
+                    raise ArtifactValidationError('Operation terminal fallback belongs to another job')
+                terminal = fallback if fallback and fallback.get('status') in ('failed', 'aborted') else None
+                journal['state'] = terminal['status'] if terminal else 'failed'
+                journal['error'] = (terminal or {}).get('error') or f'Remote {operation} worker exited before publishing status'
+                journal['worker_exit_confirmed'] = True
+                try:
+                    _save_operation(journal_path, journal)
+                except OSError:
+                    logger.exception('Could not save confirmed remote operation exit %s', op_id)
+                raise RemoteWorkerExited(journal['error'])
         if time.monotonic() - start > timeout_seconds:
             raise RemoteDisconnected(f"Remote {operation} has not returned a terminal status; reconnect to the same run")
         time.sleep(OP_POLL_INTERVAL_SECONDS)
@@ -372,7 +399,7 @@ def run_remote_operation_artifacts(
     journal_path.parent.mkdir(parents=True,exist_ok=True)
     lease_key='operation_'+hashlib.sha256((str(journal_path.resolve())+json.dumps(context.profile.model_dump(),sort_keys=True)).encode()).hexdigest()[:32]
     descriptor=_open_operation_lock(journal_path.with_suffix('.lock'))
-    stop=threading.Event();thread=None;leases=None;acquired=False
+    stop=threading.Event();thread=None;leases=None;acquired=False;worker_exit_confirmed=False
     try:
         leases=ResourceLeases(shared_leases().path,owner=lease_key)
         host=f"ssh:{context.profile.ssh_target.rsplit('@',1)[-1].lower()}:{context.profile.ssh_port}"
@@ -390,13 +417,17 @@ def run_remote_operation_artifacts(
         thread=threading.Thread(target=heartbeat,daemon=True,name=lease_key);thread.start()
         return _run_remote_operation_artifacts(context,operation,extra_spec,transport=transport,force_new=force_new,
             timeout_seconds=timeout_seconds,input_files=input_files)
+    except RemoteWorkerExited:
+        worker_exit_confirmed=True
+        raise
     finally:
         stop.set()
         if thread:thread.join(timeout=1)
         if acquired:
-            try:state=json.loads(journal_path.read_text()).get('state') if journal_path.is_file() else 'preparing'
-            except (OSError,ValueError):state='unknown'
-            if state in ('launching','launched','unknown'):leases.mark_uncertain(lease_key)
+            try:journal=json.loads(journal_path.read_text()) if journal_path.is_file() else {'state':'preparing'}
+            except (OSError,ValueError):journal={'state':'unknown'}
+            state=journal.get('state')
+            if not worker_exit_confirmed and not journal.get('worker_exit_confirmed') and (journal.get('remote_handle') or state in ('launching','launched','unknown')):leases.mark_uncertain(lease_key)
             else:leases.release(lease_key,terminal=True)
         os.close(descriptor)
 

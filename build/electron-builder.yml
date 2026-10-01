@@ -9,6 +9,9 @@ directories:
   output: release
   buildResources: build
 
+beforePack: build/release-hooks.cjs
+afterPack: build/release-hooks.cjs
+
 # Exclude unnecessary test caches, markdown files, and unpackaged dev files
 files:
   - "dist/**/*"
@@ -21,6 +24,10 @@ files:
 
 # Extract Python backend into resourcesPath (unpacked from ASAR so Python interpreter can read it)
 extraResources:
+  - from: "dist-backend/vision_ai_backend"
+    to: "backend_bin"
+    filter:
+      - "**/*"
   - from: "native_runtime"
     to: "native_runtime"
     filter:
@@ -96,6 +103,17 @@ win:
         - x64
   icon: build/icon.ico
   legalTrademarks: Vision AI Studio Team
+
+# Native Linux builds have their own executable/dependency/startup acceptance.
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Development
 
 nsis:
   oneClick: false

@@ -91,7 +91,8 @@ class FakeRemote:
         return subprocess.CompletedProcess(["touch"], 0, "", "")
 
     def is_running(self, profile, run_id, handle):
-        return True
+        status = self.root / 'runs' / run_id / 'status.json'
+        return json.loads(status.read_text()).get('status') not in {'completed', 'failed', 'aborted'} if status.exists() else True
 
 
 def _setup(tmp_path):
@@ -116,7 +117,7 @@ def test_remote_training_transfers_snapshot_and_registers_verified_local_artifac
     source, output, profile, record = _setup(tmp_path)
     fake = FakeRemote(Path(profile.remote_root))
     result = run_remote_training(record, profile, transport=fake)
-    assert result == {"status": "completed", "best_metric": 0.25}
+    assert result == {"status": "completed", "best_metric": 0.25, "worker_exit_confirmed": True}
     assert fake.launches == 1
     assert (output / "best_model.pt").read_bytes() == b"checkpoint from fake remote trainer"
     assert record.dataset_path == str(output / "remote_snapshot" / "data")

@@ -310,4 +310,6 @@ def test_flow_export_binds_active_approval_revision_and_checkpoint_hash(tmp_path
         "revision_id": revision_id, "job_id": "job_candidate", "task": "classification",
         "checkpoint_sha256": _sha(checkpoint),
     }]
-    assert exported.json()["release_policy"]["manifest_sha256"] == _sha(package / "manifest.json")
+    assert exported.json()["release_policy"] is None
+    assert exported.json()["release_policy_withheld"] == "cohort_parity_required"
+    assert exported.json()["parity"]["status"] == "not_run"

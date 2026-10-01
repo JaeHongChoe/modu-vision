@@ -283,6 +283,11 @@ def _build_detection_datasets(
     return train_ds, val_ds
 
 
+def _training_class_semantics(classes, task=None):
+    from backend.engine.class_semantics import training_class_semantics
+    return training_class_semantics(classes, task=task)
+
+
 class UnifiedAutoMLTrainer:
     """
     Unified AutoML Vision Training Controller.
@@ -497,6 +502,9 @@ class UnifiedAutoMLTrainer:
                     raise ValueError("Warm-start parent architecture differs from current training model")
                 load_parent_weights(model, self.warm_start, classes)
 
+            # Requested class roles are checked before any epoch runs and frozen with the model.
+            from backend.engine.class_semantics import training_class_semantics
+            self._class_semantics = training_class_semantics(classes, self.overrides.get('class_roles'), task=self.task)
             if self.task not in ('anomaly', 'anomaly_detection') and (len(train_ds) == 0 or len(val_ds) == 0):
                 raise ValueError('Supervised training requires nonempty train and validation splits')
             from backend.engine.distributed_training import current_distributed_context,distributed_loader,wrap_model,set_sampler_epoch,distributed_mean
@@ -742,6 +750,7 @@ class UnifiedAutoMLTrainer:
             "best_epoch": epoch,
             "best_metric": round(metric, 5),
             "classes": classes,
+            "class_semantics": getattr(self, "_class_semantics", None) or _training_class_semantics(classes, self.task),
             "image_size": list(img_size),
             "device": str(self.device),
             "training_duration_seconds": round(elapsed, 2),

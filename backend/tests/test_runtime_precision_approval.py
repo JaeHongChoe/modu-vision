@@ -38,9 +38,12 @@ def measured_candidate(real_package,tmp_path):
     source=tmp_path/'source';(source/'val').mkdir(parents=True)
     heldout=source/'val/heldout.png';heldout.write_bytes(image.read_bytes())
     project={'project_dir':str(tmp_path),'source_dataset_dir':str(source),'dataset_dir':str(tmp_path/'dataset')}
-    receipt=_optimization_input_receipt(project,source,[],[str(heldout)])
+    heldout_second=source/'val/heldout_second.png'
+    from PIL import Image
+    Image.new('RGB',(48,32),'white').save(heldout_second)
+    receipt=_optimization_input_receipt(project,source,[],[str(heldout),str(heldout_second)])
     folder=tmp_path/'exports/flows';folder.mkdir()
-    result=optimize_flow_package(package,output_dir=folder/'candidate',validation_images=[heldout],input_receipt=receipt)
+    result=optimize_flow_package(package,output_dir=folder/'candidate',validation_images=[heldout,heldout_second],input_receipt=receipt)
     candidate=Path(result['package_path'])
     revision={'revision_id':'revision_fixture','job_id':'job_real_runtime','task':'segmentation',
               'checkpoint_sha256':_sha256(candidate/'models/job_real_runtime/best_model.pt')}
@@ -90,7 +93,8 @@ def test_approval_api_refuses_changed_holdout_and_active_revision(measured_candi
             proof=await client.get(prefix+'/heldout-results/0')
             assert proof.status_code==200,proof.text
             assert proof.json()['reference']['final_verdict']==proof.json()['candidate']['final_verdict']=='NG'
-            assert (await client.get(prefix+'/heldout-results/1')).status_code==409
+            assert (await client.get(prefix+'/heldout-results/1')).status_code==200
+            assert (await client.get(prefix+'/heldout-results/2')).status_code==409
             stale=await client.post(prefix+'/approve',json=body)
             assert stale.status_code==409 and 'changed' in stale.text
             image.write_bytes(b'changed original')

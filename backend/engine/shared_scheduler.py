@@ -102,7 +102,7 @@ class ResourceLeases:
     def acquire(self, job_id, host, selector='all', *, remote=False,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None):
         with self.connect() as conn:
             conn.execute('BEGIN IMMEDIATE')
-            conn.execute('DELETE FROM leases WHERE remote=0 AND expires<?', (time.time(),))
+            conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<?', (time.time(),))
             row=conn.execute('SELECT * FROM leases WHERE job_id=?',(job_id,)).fetchone()
             if row:
                 if row['owner']!=self.owner:return False

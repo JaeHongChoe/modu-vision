@@ -53,8 +53,11 @@ from backend.api.routes_evaluation import router as evaluation_router
 from backend.api.routes_evaluation_history import router as evaluation_history_router
 from backend.api.routes_export import router as export_router
 from backend.api.routes_data_workbench import router as data_workbench_router
+from backend.api.routes_capture_intake import router as capture_intake_router
 from backend.api.routes_team_data import router as team_data_router
 from backend.api.routes_flow_workspace import router as flow_workspace_router
+from backend.api.routes_flow_evaluation import router as flow_evaluation_router
+from backend.api.routes_image_truth import router as image_truth_router
 from backend.api.routes_training_workspace import router as training_workspace_router
 from backend.api.routes_product_delivery import router as product_delivery_router
 from backend.api.routes_flowchart import router as flowchart_router
@@ -168,6 +171,8 @@ async def lifespan(app: FastAPI):
     broadcaster.start(loop)
     from backend.remote.coordinator import recover_remote_jobs
     recover_remote_jobs(training_job_manager)
+    from backend.engine.local_training_worker import recover_local_jobs
+    recover_local_jobs(training_job_manager)
     logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
     yield
     # Graceful Shutdown Sequence
@@ -275,8 +280,11 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)
     app.include_router(data_workbench_router)
+    app.include_router(capture_intake_router)
     app.include_router(team_data_router)
     app.include_router(flow_workspace_router)
+    app.include_router(flow_evaluation_router)
+    app.include_router(image_truth_router)
     app.include_router(training_workspace_router)
     app.include_router(product_delivery_router)
     app.include_router(flowchart_router)

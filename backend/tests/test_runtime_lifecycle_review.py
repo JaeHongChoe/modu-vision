@@ -27,6 +27,13 @@ def test_concurrent_runtime_start_claims_one_process_across_instances(tmp_path,m
     def launch(*args,**kwargs):
         spawned.append(10000);entered.set();assert release.wait(3);return process(10000)
     module=fleet_agent if kind=='field' else managed_service
+    if kind=='managed':
+        monkeypatch.setattr(module,'verify_flow_package',lambda path:(None,{}))
+        monkeypatch.setattr(module,'_verify_release_policy',lambda *args,**kwargs:None)
+    else:
+        from backend.engine import flow_package_runtime,inspection_service
+        monkeypatch.setattr(flow_package_runtime,'verify_flow_package',lambda path:(None,{}))
+        monkeypatch.setattr(inspection_service,'_verify_release_policy',lambda *args,**kwargs:None)
     monkeypatch.setattr(module.subprocess,'Popen',launch);monkeypatch.setattr(module.psutil,'Process',process)
     class Client:
         def __enter__(self):return self
@@ -35,11 +42,11 @@ def test_concurrent_runtime_start_claims_one_process_across_instances(tmp_path,m
     for agent in agents:
         monkeypatch.setattr(agent,'client',lambda:Client())
         monkeypatch.setattr(agent,'runtime' if kind=='field' else 'readback',lambda:{'status':'ready','manifest_sha256':digest,'device':'cpu'})
-        if kind=='managed':monkeypatch.setattr(agent,'validate_accepted_device',lambda *args:None)
+        if kind=='managed':monkeypatch.setattr(agent,'validate_accepted_device',lambda *args,**kwargs:None)
     def start(agent):
         try:
             if kind=='field':results.append(agent.apply(digest,'cpu'))
-            else:results.append(agent.start({'package_path':str(package),'release_policy':str(policy),'device':'cpu'}))
+            else:results.append(agent.start({'package_path':str(package),'release_policy':str(policy),'device':'cpu','manifest_sha256':digest}))
         except Exception as exc:errors.append(exc)
     first=threading.Thread(target=start,args=(agents[0],));first.start();assert entered.wait(3)
     second=threading.Thread(target=start,args=(agents[1],));second.start();second.join(1)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -14,6 +15,15 @@ from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.dataset_metadata import metadata_for_path
 
 router = APIRouter(prefix="/api/provenance", tags=["provenance"])
+
+
+@router.get('/impact')
+def workflow_impact(request: Request):
+    from backend.engine.workflow_impact import analyze
+    try:
+        return analyze(get_current_project(request))
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 def _hash(path: Path) -> str | None:

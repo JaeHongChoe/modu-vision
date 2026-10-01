@@ -26,6 +26,7 @@ import {DerivedImagePanel} from './DerivedImagePanel';
 import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
 import {TeamDataPanel} from './TeamDataPanel';
+import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -61,6 +62,7 @@ export const LabelingStudio: React.FC = () => {
       <ImageReviewPanel />
       <DerivedImagePanel />
       <SavedReviewQueuePanel />
+      <WorkflowImpactPanel />
       <DicomPanel />
 
       {currentImage && annotationLoadStatus === 'error' && (

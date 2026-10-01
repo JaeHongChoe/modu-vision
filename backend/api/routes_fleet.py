@@ -49,7 +49,7 @@ def deploy(target_id:str,payload:DeployRequest,request:Request):
         # without requiring that hardware to exist on this central computer.
         import re
         if not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?|openvino:(CPU|GPU|NPU)',payload.device):raise ValueError('Unsupported field execution device')
-        release={**ManagedService(project['project_dir']).stage(payload.package_path,project),'device':payload.device}
+        release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device)
         return store.apply(target_id,release,reviewer=payload.reviewer)
     return execute(action)
 @router.post('/targets/{target_id}/rollback')

@@ -154,20 +154,20 @@ CALIBRATION_REJECTION_TEXT = {
 
 
 @functools.lru_cache(maxsize=None)
-def _shipped_runtime_function(name: str):
-    """Load one pure top-level helper from the shipped infer.py source."""
+def _shipped_class_semantics() -> Dict[str, Any]:
+    """Execute the class-semantics block exactly as it appears in the shipped infer.py."""
     source = generate_standalone_infer_py()
-    match = re.search(rf"^def {re.escape(name)}\(.*?(?=^\S)", source, flags=re.MULTILINE | re.DOTALL)
-    if match is None:
-        raise RuntimeError(f"Shipped inference client has no {name} helper")
+    begin, end = "# --- class semantics runtime: begin ---", "# --- class semantics runtime: end ---"
+    if begin not in source or end not in source:
+        raise RuntimeError("Shipped inference client has no class semantics block")
     namespace: Dict[str, Any] = {}
-    exec(compile(match.group(0), f"<infer.py:{name}>", "exec"), namespace)
-    return namespace[name]
+    exec(compile(source[source.index(begin):source.index(end)], "<infer.py:class_semantics>", "exec"), namespace)
+    return namespace
 
 
-def runtime_is_defect_class(name: Any) -> bool:
+def runtime_is_defect_class(name: Any, roles: Optional[Dict[str, str]] = None) -> bool:
     """The OK/NG class rule applied by the exported infer.py, read from its own source."""
-    return bool(_shipped_runtime_function("is_defect_class")(name))
+    return bool(_shipped_class_semantics()["is_defect_class"](name, roles))
 
 
 def _file_sha256(path: Path) -> str:
@@ -185,12 +185,13 @@ def _unit_threshold(value: Any) -> Optional[float]:
     return None
 
 
-def _calibration_rejection(eval_data: Dict[str, Any], checkpoint_path: Path, task: str, classes: Any) -> Optional[str]:
+def _calibration_rejection(eval_data: Dict[str, Any], checkpoint_path: Path, task: str, classes: Any,
+                           class_roles: Optional[Dict[str, str]] = None) -> Optional[str]:
     from backend.engine.calibration_evidence import (
         CALIBRATION_EVIDENCE_VERSION, CALIBRATION_ROLE, calibration_transfer_scope, validate_calibration_evidence,
     )
 
-    scope = calibration_transfer_scope(task, classes, runtime_is_defect_class)
+    scope = calibration_transfer_scope(task, classes, lambda name: runtime_is_defect_class(name, class_roles))
     if not scope["transferable"]:
         return scope["reason"]
     evidence = eval_data.get("calibration_evidence")
@@ -244,7 +245,8 @@ def resolve_export_threshold(checkpoint_path: Path, meta: Dict[str, Any], task: 
         return {**decision, "calibration_not_transferable": "evaluation_results_unreadable"}
     if not isinstance(eval_data, dict) or not eval_data.get("zero_underkill_calibrated"):
         return decision
-    reason = _calibration_rejection(eval_data, checkpoint_path, task, classes)
+    from backend.engine.class_semantics import recorded_roles
+    reason = _calibration_rejection(eval_data, checkpoint_path, task, classes, recorded_roles(meta, task=task, classes=classes))
     if reason:
         return {**decision, "calibration_not_transferable": reason}
     evidence = eval_data["calibration_evidence"]
@@ -327,7 +329,7 @@ def run_smoke_test_validation(
 
 def generate_standalone_infer_py() -> str:
     """Generates the Python inference client shipped with each model package."""
-    return '''"""
+    template = '''"""
 Modu Vision Standalone Python Inference Client
 Usage:
     python infer.py --image path/to/image.png
@@ -396,19 +398,25 @@ def preprocess_image(image_input, target_size=(256, 256), mean=None, std=None):
     return batch, orig_w, orig_h
 
 
-def is_defect_class(name):
-    clean = str(name).strip().lower().replace("-", "_")
-    tokens = clean.split("_")
-    if "ng" in tokens or "defect" in tokens or "fail" in tokens:
-        return True
-    compact = clean.replace("_", "").replace(" ", "")
-    return not (compact in ("ok", "normal", "pass", "good", "0", "background", "bg",
-                           "nondefect", "nodefect", "정상", "양품", "합격")
-                or clean.startswith(("ok_", "normal_", "good_"))
-                or clean.endswith(("_ok", "_normal", "_good")))
+__CLASS_SEMANTICS_RUNTIME__
+
+def recorded_class_roles(cfg):
+    """Class roles frozen at export; packages without a record use the rule above."""
+    record = cfg.get("class_semantics")
+    if record is None:
+        return None
+    version = record.get("version") if isinstance(record, dict) else None
+    if type(version) is not int or version != CLASS_SEMANTICS_VERSION:
+        raise ValueError(f"Unsupported class_semantics version in config.json: {version!r}")
+    roles = record.get("roles")
+    if not isinstance(roles, dict) or any(role not in CLASS_ROLES for role in roles.values()):
+        raise ValueError("config.json class_semantics roles must be normal, defect or unknown")
+    return roles
 
 
 class StandaloneInspector:
+    class_roles = None
+
     def __init__(self, model_path: str = None, config_path: str = "config.json"):
         base_dir = Path(__file__).parent
         if not os.path.exists(config_path):
@@ -423,6 +431,7 @@ class StandaloneInspector:
         self.model_path = model_path
         self.task = self.cfg.get("task", "classification").lower()
         self.classes = self.cfg.get("classes", ["OK", "Defect"])
+        self.class_roles = recorded_class_roles(self.cfg)
         self.resolution = tuple(self.cfg.get("image_size", [256, 256]))
         self.threshold = float(self.cfg.get("optimal_threshold", 0.50))
         self.decision_threshold = self.threshold
@@ -678,7 +687,7 @@ class StandaloneInspector:
             pred_name = self.classes[pred_idx] if pred_idx < len(self.classes) else f"class_{pred_idx}"
 
             normal_indices = [index for index, name in enumerate(self.classes)
-                              if not is_defect_class(name)]
+                              if not is_defect_class(name, self.class_roles)]
             if not normal_indices:
                 requires_review = True
                 review_reason = "Classification checkpoint has no OK/normal class."
@@ -691,7 +700,7 @@ class StandaloneInspector:
             if foreground_classes and str(foreground_classes[0]).strip().lower() in ("background", "__background__"):
                 foreground_classes = foreground_classes[1:]
             defect_indices = [idx for idx, cname in enumerate(foreground_classes, start=1)
-                              if is_defect_class(cname)]
+                              if is_defect_class(cname, self.class_roles)]
             if not defect_indices:
                 requires_review = True
                 review_reason = "Detection checkpoint has no defect class."
@@ -823,6 +832,8 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+    from backend.engine.class_semantics import runtime_source
+    return template.replace("__CLASS_SEMANTICS_RUNTIME__\n", runtime_source())
 
 
 def export_runtime_package(
@@ -859,6 +870,9 @@ def export_runtime_package(
             "a verified anomaly runtime is available."
         )
     classes = meta.get("classes", ["OK", "Defect"])
+    from backend.engine.class_semantics import class_semantics_record, recorded_roles
+    # New packages freeze each class role so a later alias change cannot alter them.
+    class_semantics = class_semantics_record(classes, recorded_roles(meta, task=task, classes=classes), task=task)
     res = int(resolution or meta.get("image_size", [256, 256])[0])
     img_size = [res, res]
     if task == "patch_classification" or dino_anomaly:
@@ -993,6 +1007,7 @@ def export_runtime_package(
         "zero_underkill_calibrated": calibration_applied,
         "threshold_source": threshold_decision["threshold_source"],
         "calibration_not_transferable": rejection,
+        "class_semantics": class_semantics,
         "exported_from_checkpoint": ckpt_path.name,
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }

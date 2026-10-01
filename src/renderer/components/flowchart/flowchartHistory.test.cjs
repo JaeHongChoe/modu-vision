@@ -167,3 +167,13 @@ test('debug run validates models only up to the selected node and sends stop ide
   assert.equal(ok,true);assert.equal(request.stop_node_id,'roi');assert.equal(store.getState().executionResult.status,'partial');
   store.getState().updateNodeData('roi',{params:{roi_bbox:[1,1,33,33]}});assert.equal(store.getState().executionResult,null);
 });
+
+test('opening a saved version reads it without changing the active inspection recipe', async () => {
+  let activations = 0;
+  api.flowchart.getPipelineVersion = async (id) => ({ ...structuredClone(initial), name: id });
+  api.flowchart.activatePipelineVersion = async () => { activations++; return { pipeline: initial }; };
+  const opened = await store.getState().loadPipelineVersion('older', '/source');
+  assert.equal(opened.name, 'older');
+  assert.equal(activations, 0);
+  assert.equal(store.getState().executionResult, null);
+});

@@ -91,11 +91,24 @@ def test_service_runtime_switch_reopens_same_verified_identity(tmp_path):
     import hashlib
     releases=tmp_path/'releases'; releases.mkdir()
     packages=[]
+    from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt,bind_policy
+    from PIL import Image
+    images=[]
+    for number,color in enumerate(('white','black')):
+        image=tmp_path/f'parity_{number}.png';Image.new('RGB',(32,32),color).save(image);images.append(image)
     for number in range(2):
-        model=tmp_path/f'job_{number}'/'best_model.pt';model.parent.mkdir();model.write_bytes(f'checkpoint {number}'.encode())
-        revision={'revision_id':str(number)*32,'job_id':f'job_{number}','task':'detection','checkpoint_sha256':hashlib.sha256(model.read_bytes()).hexdigest()}
-        result=build_flow_package(pipeline=get_single_detection_flowchart(job_id=f'job_{number}'),checkpoints={f'job_{number}':model},output_base_dir=releases,package_name=f'release_{number}',approved_revisions={revision["job_id"]:revision})
-        package=Path(result['package_path']);policy=releases/f'policy_{number}.json';policy.write_text(json.dumps(result['release_policy']));packages.append((package,policy,result['release_policy']['manifest_sha256']))
+        model=tmp_path/f'job_{number}'/'best_model.pt';model.parent.mkdir()
+        real_classification_checkpoints({f'job_{number}':model})
+        revision={'revision_id':str(number)*32,'job_id':f'job_{number}','task':'classification','checkpoint_sha256':hashlib.sha256(model.read_bytes()).hexdigest()}
+        graph=get_single_segmentation_flowchart(job_id=f'job_{number}')
+        for node in graph.nodes:
+            if node.data.node_type=='inspection':node.data.task='classification'
+        result=build_flow_package(pipeline=graph,checkpoints={f'job_{number}':model},output_base_dir=releases,package_name=f'release_{number}',approved_revisions={revision['job_id']:revision})
+        package=Path(result['package_path'])
+        cohort_receipt(package,graph,{f'job_{number}':model},images)
+        policy=releases/f'policy_{number}.json';policy.write_text(json.dumps(bind_policy(result['release_policy'],package)))
+        packages.append((package,policy,result['release_policy']['manifest_sha256']))
     state=tmp_path/'state'
     app=create_service_app(packages[0][0],state,token='secret',auto_worker=False,release_policy=packages[0][1],runtime_root=releases)
     with TestClient(app) as client:
@@ -131,7 +144,7 @@ def test_new_training_records_exact_version_labelset_and_checkpoint_binding(tmp_
     from backend.api import routes_training
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'user'))
     monkeypatch.chdir(tmp_path)
-    manager=routes_training.TrainingJobManager();monkeypatch.setattr(routes_training,'training_job_manager',manager)
+    manager=routes_training.TrainingJobManager(local_execution='embedded');monkeypatch.setattr(routes_training,'training_job_manager',manager)
     class Trainer:
         def __init__(self,**kwargs):self.output=Path(kwargs['output_dir'])
         def train(self,job_id):

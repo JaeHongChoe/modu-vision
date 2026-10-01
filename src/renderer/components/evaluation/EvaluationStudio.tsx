@@ -28,6 +28,7 @@ import {
   computeSampleVerdict,
   SampleVerdict,
   isDefectLabel,
+  isNormalLabel,
 } from '../../stores/useEvaluationStore';
 import { resolveApiUrl } from '../../services/api';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
@@ -67,13 +68,15 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
         </span>
       );
     case 'CORRECT_OK':
-    default:
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#064E3B] text-[#6EE7B7] border border-[#10B981] font-mono font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
           <span>🟢 TN 정상합격</span>
         </span>
       );
+    case 'REVIEW':
+    default:
+      return <span className="rounded border border-slate-500 px-1.5 py-0.5 text-[10px] text-slate-300">확인 필요 (REVIEW)</span>;
   }
 };
 
@@ -104,6 +107,7 @@ export const EvaluationStudio: React.FC = () => {
     jobId,
     isLoading,
     metrics,
+    classSemantics,
     confusionMatrix,
     selectedCell,
     testPredictions,
@@ -182,7 +186,7 @@ export const EvaluationStudio: React.FC = () => {
     let correctNgs = 0;
 
     testPredictions.forEach((p) => {
-      const v = computeSampleVerdict(p, confidenceThreshold, overkillAnalysis);
+      const v = computeSampleVerdict(p, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
       if (v === 'ESCAPE') escapes++;
       else if (v === 'OVERKILL') overkills++;
       else if (v === 'CORRECT_OK') normalOks++;
@@ -196,18 +200,18 @@ export const EvaluationStudio: React.FC = () => {
       normal: normalOks,
       defect: correctNgs,
     };
-  }, [testPredictions, confidenceThreshold, overkillAnalysis]);
+  }, [testPredictions, confidenceThreshold, overkillAnalysis, classSemantics]);
   const detectionGrains = useMemo(() => task === 'detection' && testPredictions.length > 0
     ? summarizeDetectionGrains({
       matrix,
-      verdicts: testPredictions.map((prediction) => computeSampleVerdict(prediction, confidenceThreshold, overkillAnalysis)),
+      verdicts: testPredictions.map((prediction) => computeSampleVerdict(prediction, confidenceThreshold, overkillAnalysis, classSemantics?.roles)),
       threshold: confidenceThreshold,
       map50: metrics.mAP_50,
     })
     : null,
-  [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, metrics.mAP_50]);
-  const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth));
-  const hasNormalSamples = testPredictions.some((p) => !isDefectLabel(p.ground_truth));
+  [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
+  const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
+  const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
   const hasCalibrationEvidence = Boolean(jobId && hasDefectSamples && hasNormalSamples);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = !jobId
@@ -259,8 +263,8 @@ export const EvaluationStudio: React.FC = () => {
     const isDiag = i === j;
     const trueClass = classes[i];
     const predClass = classes[j];
-    const isTrueOk = !isDefectLabel(trueClass);
-    const isPredOk = !isDefectLabel(predClass);
+    const isTrueOk = isNormalLabel(trueClass, classSemantics?.roles);
+    const isPredOk = isNormalLabel(predClass, classSemantics?.roles);
 
     let baseBg = '';
     let textColor = '';
@@ -324,7 +328,7 @@ export const EvaluationStudio: React.FC = () => {
   };
 
   const selectedVerdict = selectedPrediction
-    ? computeSampleVerdict(selectedPrediction, confidenceThreshold, overkillAnalysis)
+    ? computeSampleVerdict(selectedPrediction, confidenceThreshold, overkillAnalysis, classSemantics?.roles)
     : null;
 
   return (
@@ -945,7 +949,7 @@ export const EvaluationStudio: React.FC = () => {
             {filteredPredictions.map((pred) => {
               const isSelected = selectedPrediction?.image_id === pred.image_id;
               const thumbUrl = resolveApiUrl(pred.thumbnail_url);
-              const verdict = computeSampleVerdict(pred, confidenceThreshold, overkillAnalysis);
+              const verdict = computeSampleVerdict(pred, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
               const isEscape = verdict === 'ESCAPE';
               const isOverkill = verdict === 'OVERKILL';
 
@@ -953,6 +957,7 @@ export const EvaluationStudio: React.FC = () => {
               if (isEscape) borderLeft = 'border-l-2 border-l-[#EF4444]';
               else if (isOverkill) borderLeft = 'border-l-2 border-l-[#F59E0B]';
               else if (verdict === 'CORRECT_NG') borderLeft = 'border-l-2 border-l-[#06B6D4]';
+              else if (verdict === 'REVIEW') borderLeft = 'border-l-2 border-l-slate-500';
 
               return (
                 <div
@@ -988,12 +993,13 @@ export const EvaluationStudio: React.FC = () => {
 
                   <div className="flex items-center justify-between pt-1 border-t border-[#1E2638]">
                     <SampleVerdictBadge verdict={verdict} />
-                    <button type="button" onClick={(event) => {
+                    <button type="button" disabled={pred.labeling_supported === false}
+                      title={pred.labeling_supported === false ? '원본 이미지 연결 근거가 없어 라벨 화면을 열 수 없습니다.' : '이 평가 이미지의 원본 라벨 열기'} onClick={(event) => {
                       event.stopPropagation();
-                      void useProjectStore.getState().openImageForLabeling(pred.image_id, pred.file_path).then((opened) => {
+                      void useProjectStore.getState().openImageForLabeling(pred.source_image_id || pred.image_id, pred.file_path).then((opened) => {
                         if (!opened) setReportError('선택한 이미지의 라벨 화면을 열지 못했습니다. 데이터 출처와 저장 상태를 확인하세요.');
                       }).catch((cause) => setReportError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
-                    }} className="rounded border border-cyan-700 px-2 py-1 text-[10px] text-cyan-200 hover:bg-cyan-950">라벨 수정</button>
+                    }} className="rounded border border-cyan-700 px-2 py-1 text-[10px] text-cyan-200 hover:bg-cyan-950 disabled:opacity-50 disabled:cursor-not-allowed">라벨 수정</button>
                     <span className="text-[10px] text-slate-400 font-mono">
                       GT: {pred.ground_truth}
                     </span>

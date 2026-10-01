@@ -78,7 +78,7 @@ class FieldAgent:
             with self.client() as client:response=client.get('/v1/runtime');response.raise_for_status();return response.json()
         except (ValueError,httpx.HTTPError):return {'status':'disconnected'}
     @serialized_lifecycle
-    def stage(self,archive,expected):
+    def stage(self,archive,expected,policy):
         if len(expected)!=64 or any(c not in '0123456789abcdef' for c in expected):raise ValueError('Invalid manifest identity')
         staging=self.releases/('stage-'+secrets.token_hex(12));extract_package_archive(archive,staging)
         try:
@@ -86,24 +86,25 @@ class FieldAgent:
             from backend.engine.inspection_service import _verify_release_policy
             pipeline,checkpoints=verify_flow_package(staging)
             if hashlib.sha256((staging/'manifest.json').read_bytes()).hexdigest()!=expected:raise ValueError('Release manifest differs from sender identity')
-            manifest=json.loads((staging/'manifest.json').read_text());approvals=manifest.get('release',{}).get('approval_revisions')
-            policy={'schema_version':1,'manifest_sha256':expected,'approval_revisions':approvals}
-            if manifest.get('runtime_acceptance_sha256'):policy['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
+            if not isinstance(policy,dict) or policy.get('manifest_sha256')!=expected or not isinstance(policy.get('device'),str):
+                raise ValueError('Authenticated release request requires its exact trusted manifest/device/cohort approval policy')
             policy_path=self.releases/(expected+'.policy.json')
             if policy_path.is_symlink():raise ValueError('Release policy is linked')
             temporary=self.releases/('.check-'+secrets.token_hex(12)+'.policy.json')
             try:
-                temporary.write_text(json.dumps(policy));_verify_release_policy(staging,checkpoints,temporary)
+                temporary.write_text(json.dumps(policy));_verify_release_policy(staging,checkpoints,temporary,device=policy['device'])
             finally:temporary.unlink(missing_ok=True)
             destination=self.releases/expected
             if destination.exists():
                 if destination.is_symlink():raise ValueError('Release destination is linked')
                 verify_flow_package(destination)
                 if hashlib.sha256((destination/'manifest.json').read_bytes()).hexdigest()!=expected:raise ValueError('Existing staged release identity differs')
+                from backend.engine.runtime_release_evidence import verify_release_evidence
+                verify_release_evidence(destination,policy['device'],expected_receipt_sha256=(policy.get('parity_receipt_sha256') or policy.get('runtime_acceptance_sha256')))
                 shutil.rmtree(staging)
             else:staging.rename(destination)
             if policy_path.exists() and json.loads(policy_path.read_text())!=policy:raise ValueError('Existing release policy differs')
-            if not policy_path.exists():policy_path.write_text(json.dumps(policy));policy_path.chmod(0o600)
+            if not policy_path.exists():atomic_private_json(policy_path,policy)
             return {'manifest_sha256':expected,'status':'staged','model_count':len(checkpoints),'pipeline_id':pipeline.id}
         finally:
             if staging.exists():shutil.rmtree(staging,ignore_errors=True)
@@ -113,11 +114,15 @@ class FieldAgent:
         from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
         selected=str(resolve_runtime_device(device));package=self.releases/digest;policy=self.releases/(digest+'.policy.json')
         if not package.is_dir() or not policy.is_file():raise ValueError('Stage the approved release before applying it')
+        from backend.engine.flow_package_runtime import verify_flow_package
+        from backend.engine.inspection_service import _verify_release_policy
+        _verify_release_policy(package,verify_flow_package(package)[1],policy,device=selected)
         if not self.owned():
-            arguments=[sys.executable,'-m','backend.engine.inspection_service','--package',str(package),'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),
-                '--release-policy',str(policy),'--require-approved-release','--device',selected,'--port',str(self.config['port'])]
+            from backend.engine.service_bootstrap import runtime_command,runtime_cwd
+            arguments=runtime_command(['--package',str(package),'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),
+                '--release-policy',str(policy),'--require-approved-release','--device',selected,'--port',str(self.config['port'])])
             env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=self.config['token']
-            with (self.root/'service.log').open('ab') as log:process=subprocess.Popen(arguments,cwd=Path(__file__).resolve().parents[2],env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+            with (self.root/'service.log').open('ab') as log:process=subprocess.Popen(arguments,cwd=runtime_cwd(),env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
             try:self.config.update(process_identity(process,self.root/'state'));self.save(self.config)
             except Exception:
                 process.terminate();process.wait(timeout=10);raise
@@ -153,13 +158,16 @@ def create_agent_app(root,token):
     async def stage(request:Request):
         temporary=None
         try:
+            raw_policy=request.headers.get('X-Release-Policy','')
+            if not raw_policy or len(raw_policy)>65536:raise ValueError('Authenticated release request requires a bounded trusted release policy')
+            policy=json.loads(raw_policy)
             with tempfile.NamedTemporaryFile(dir=agent.root,prefix='upload-',delete=False) as writer:
                 temporary=Path(writer.name);size=0
                 async for chunk in request.stream():
                     size+=len(chunk)
                     if size>MAX_ARCHIVE_BYTES:raise HTTPException(413,'Release archive exceeds limit')
                     writer.write(chunk)
-            return agent.stage(temporary,request.headers.get('X-Manifest-SHA256',''))
+            return agent.stage(temporary,request.headers.get('X-Manifest-SHA256',''),policy)
         except (ValueError,OSError,zipfile.BadZipFile) as exc:raise HTTPException(422,str(exc)) from exc
         finally:
             if temporary:temporary.unlink(missing_ok=True)

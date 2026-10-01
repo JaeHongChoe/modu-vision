@@ -57,10 +57,13 @@ class SharedAuthorizationMiddleware:
             parts=path.strip('/').split('/')
             precision_review=len(parts)==6 and parts[:4]==['api','export','flow','optimization-jobs'] and parts[5]=='approve'
             flow=not precision_review and path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/'))
-            review=precision_review or path.startswith(('/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/','/api/product-delivery/'))
+            review=precision_review or path == '/api/image-truth' or path.startswith(('/api/image-truth/','/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/','/api/product-delivery/'))
+            flow=flow or path == '/api/flow-evaluations' or path.startswith('/api/flow-evaluations/')
             compute_jobs=path.startswith('/api/compute/jobs')
             delivery_allowed=False
             team_allowed=False
+            if path.startswith('/api/capture-intake/'):
+                delivery_allowed=(path.endswith('/register') and role in {'labeler','trainer','reviewer'}) or (path.endswith(('/review','/adopt')) and role=='reviewer')
             if path.startswith('/api/team-data/'):
                 management=path in {'/api/team-data/books','/api/team-data/settings'} or path.endswith('/assign')
                 voting=path.endswith(('/review','/adjudicate'))

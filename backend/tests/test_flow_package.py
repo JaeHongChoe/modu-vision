@@ -211,13 +211,16 @@ def test_export_flow_route_requires_saved_graph_and_source_matched_model(tmp_pat
     def fail_packaged_run(**_kwargs):
         raise ValueError("packaged runner failed")
     with monkeypatch.context() as patcher:
-        patcher.setattr(routes_export, "verify_flow_parity", fail_packaged_run)
+        patcher.setattr(routes_export.flow_package_engine, "verify_flow_parity_cohort", fail_packaged_run)
         failed_parity = client.post("/api/export/flow", json={
             **request, "package_name": "failed_parity",
             "verification_image_path": str(parity_image),
         })
     assert failed_parity.status_code == 409
     assert failed_parity.json()["detail"]["package_path"].endswith("failed_parity")
+    assert failed_parity.json()["detail"]["parity"]["status"] == "failed"
+    receipt = Path(failed_parity.json()["detail"]["package_path"]) / "parity_receipt.json"
+    assert json.loads(receipt.read_text(encoding="utf-8"))["error"] == "packaged runner failed"
 
     (source / "image.jpg").write_bytes(b"changed source image")
     refused = client.post("/api/export/flow", json={**request, "package_name": "changed_line"})

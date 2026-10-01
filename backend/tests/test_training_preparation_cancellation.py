@@ -54,7 +54,7 @@ def test_start_returns_job_id_while_labelme_preparation_is_blocked(monkeypatch, 
 
     monkeypatch.setattr(routes_training, "prepare_labelme_segmentation", slow_preparation)
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
 
     def start():
@@ -133,7 +133,7 @@ def test_start_prepares_studio_only_segmentation_labels(monkeypatch, tmp_path):
             return {"status": "completed"}
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
     response = routes_training.start_training(routes_training.TrainingStartRequest(
         task="segmentation", dataset_path=str(source), output_dir=str(tmp_path / "models"),
@@ -201,7 +201,7 @@ def test_terminal_training_job_writes_recoverable_receipt(monkeypatch, tmp_path,
             return {"status": terminal}
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     output = tmp_path / terminal
     record = manager.start_job(
         f"job_{terminal}", "segmentation", str(tmp_path), str(output),

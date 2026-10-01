@@ -1,0 +1,7 @@
+# Default architecture providers. Base CUDA torch/torchvision are pinned in Dockerfile.
+# Checkpoint bytes are transferred and verified per run; credentials are never baked in.
+timm==1.0.24
+safetensors==0.7.0
+huggingface-hub==1.1.4
+ultralytics==8.4.41
+opencv-python-headless==4.11.0.86

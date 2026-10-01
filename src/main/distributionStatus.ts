@@ -3,12 +3,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import type {DistributionState,NativeSignature,UpdateChannel,UpdateRelease,ManualDelivery} from '../types/electron';
+import type {DistributionState,NativeSignature,UpdateChannel,UpdateRelease,ManualDelivery,DeliveryRecovery,DistributionBackend} from '../types/electron';
 
 const runFile=promisify(execFile);
 const MANIFEST_LIMIT=64*1024, ARTIFACT_LIMIT=1024*1024*1024;
 type Runner=(file:string,args:string[])=>Promise<{stdout:string;stderr:string}>;
-export interface DistributionOptions {appVersion:string;packaged:boolean;appPath:string;executablePath:string;userDataPath:string;platform:string;arch:string;runner?:Runner;fetcher?:typeof fetch}
+export interface DistributionOptions {appVersion:string;packaged:boolean;appPath:string;executablePath:string;userDataPath:string;platform:string;arch:string;resourcesPath?:string;runner?:Runner;fetcher?:typeof fetch}
 
 function httpsUrl(value:string):URL {
   const url=new URL(value);
@@ -49,6 +49,46 @@ export class DistributionManager {
   constructor(options:DistributionOptions){
     if(fs.existsSync(options.userDataPath)&&fs.lstatSync(options.userDataPath).isSymbolicLink())throw new Error('Distribution user storage cannot be a symbolic link');
     this.options={...options,userDataPath:fs.existsSync(options.userDataPath)?fs.realpathSync(options.userDataPath):path.resolve(options.userDataPath)};
+    const journal=this.deliveryJournal();
+    if(journal&&['downloading','verifying'].includes(journal.status)){
+      if(journal.partial_path){const partial=this.ownedDeliveryPath(journal.partial_path);if(!path.basename(partial).startsWith('.')||!partial.endsWith('.partial'))throw new Error('Invalid interrupted download path');unlinked(partial);fs.rmSync(partial,{force:true});}
+      this.saveDelivery({...journal,status:journal.status==='downloading'?'interrupted':'downloaded_unverified',checked_at:new Date().toISOString(),error:'Application interrupted before delivery acceptance'});
+    }
+  }
+  private deliveryPath():string{return path.join(this.options.userDataPath,'distribution-delivery.json');}
+  private ownedDeliveryPath(value:string):string {
+    const directory=path.join(this.options.userDataPath,'updates'),resolved=path.resolve(value);
+    const target=fs.existsSync(path.dirname(resolved))?path.join(fs.realpathSync(path.dirname(resolved)),path.basename(resolved)):resolved;
+    if(path.dirname(target)!==directory)throw new Error('Delivery journal path differs from owned update storage');
+    return target;
+  }
+  private deliveryJournal():(DeliveryRecovery&{partial_path?:string})|null {
+    const file=this.deliveryPath();unlinked(file);if(!fs.existsSync(file))return null;
+    if(fs.statSync(file).size>8192)throw new Error('Delivery journal is too large');
+    const value=JSON.parse(fs.readFileSync(file,'utf8'));
+    if(value.schema_version!==1||typeof value.status!=='string'||typeof value.version!=='string'||! /^[0-9a-f]{64}$/.test(value.manifest_sha256)||! /^[0-9a-f]{64}$/.test(value.candidate_sha256)||(value.installed_sha256!==null&&! /^[0-9a-f]{64}$/.test(value.installed_sha256)))throw new Error('Delivery journal identity is invalid');
+    if(value.candidate_path)value.candidate_path=this.ownedDeliveryPath(value.candidate_path);
+    return value;
+  }
+  private saveDelivery(value:DeliveryRecovery&{partial_path?:string}):void {
+    const file=this.deliveryPath();unlinked(file);fs.mkdirSync(this.options.userDataPath,{recursive:true});
+    const temporary=file+'.'+crypto.randomUUID()+'.tmp';
+    try {fs.writeFileSync(temporary,JSON.stringify(value),{flag:'wx',mode:0o600});const fd=fs.openSync(temporary,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temporary,file);}
+    finally{fs.rmSync(temporary,{force:true});}
+  }
+  private installedSHA():string|null {
+    return fs.existsSync(this.options.executablePath)&&fs.statSync(this.options.executablePath).isFile()?crypto.createHash('sha256').update(fs.readFileSync(this.options.executablePath)).digest('hex'):null;
+  }
+  private deliveryRecovery():DeliveryRecovery|null {
+    const journal=this.deliveryJournal();if(!journal)return null;
+    const {partial_path,...visible}=journal;
+    if(visible.candidate_path&&['handoff_ready','publisher_required','downloaded_unverified'].includes(visible.status)){
+      unlinked(visible.candidate_path);
+      if(!fs.existsSync(visible.candidate_path)||crypto.createHash('sha256').update(fs.readFileSync(visible.candidate_path)).digest('hex')!==visible.candidate_sha256||this.installedSHA()!==visible.installed_sha256){
+        visible.status='invalidated';visible.error='Candidate or installed executable changed; check the release again';this.saveDelivery(visible);
+      }
+    }
+    return visible;
   }
   private configPath():string{return path.join(this.options.userDataPath,'distribution-channel.json');}
   private configuration():UpdateChannel|null {
@@ -79,7 +119,7 @@ export class DistributionManager {
         await runner('/usr/bin/codesign',['--verify','--deep','--strict',target]);
         const info=await runner('/usr/bin/codesign',['--display','--verbose=4',target]);const text=info.stdout+'\n'+info.stderr;
         const team=/TeamIdentifier=([^\s]+)/.exec(text)?.[1];
-        if(/Signature=adhoc|flags=.*adhoc/i.test(text)||!team||team==='not set')return result('unsigned','Ad-hoc signing does not establish a publisher identity');
+        if(/Signature=adhoc|flags=.*adhoc/i.test(text)||!team||team==='not')return result('unsigned','Code signing did not establish a publisher identity');
         return result('verified','Native code signature verified; notarization is a separate deployment requirement',team);
       }
       if(this.options.platform==='win32'){
@@ -90,10 +130,32 @@ export class DistributionManager {
       return result('unavailable','This platform needs a separately configured publisher signature verifier');
     }catch(cause){const error=cause as NodeJS.ErrnoException;return result(error.code==='ENOENT'?'unavailable':/not signed|unsigned/i.test(String(error))?'unsigned':'invalid','Native signature verification did not succeed: '+String(error.message||error).slice(0,500));}
   }
+  private async backendInventory():Promise<DistributionBackend> {
+    const prerequisites=['Final installer startup and physical camera/PLC acceptance require the actual target', 'Model quality approval is recorded separately from runtime acceptance'];
+    if(!this.options.packaged)return {status:'development',startup_acceptance:'unverified',prerequisites:['Build and validate the frozen backend on the target OS and architecture',...prerequisites]};
+    const directory=path.join(this.options.resourcesPath||process.resourcesPath||this.options.appPath,'backend_bin');
+    const receiptPath=path.join(directory,'backend-release.json');
+    if(!fs.existsSync(receiptPath))return {status:'missing',prerequisites:['Rebuild the frozen backend and package its dependency inventory',...prerequisites]};
+    try {
+      const receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+      const name=this.options.platform==='win32'?'vision_ai_backend.exe':'vision_ai_backend';
+      const executable=path.join(directory,name);
+      const digest=crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
+      const platform=({Darwin:'darwin',Windows:'win32',Linux:'linux'} as Record<string,string>)[receipt.inventory?.platform];
+      const architecture=({arm64:'arm64',aarch64:'arm64',x86_64:'x64',AMD64:'x64',x64:'x64'} as Record<string,string>)[receipt.inventory?.architecture];
+      if(receipt.executable!==name||receipt.executable_sha256!==digest||platform!==this.options.platform||architecture!==this.options.arch||! /^[0-9a-f]{64}$/.test(receipt.inventory?.build_identity_sha256))throw new Error('Backend executable or target differs from inventory');
+      const acceptance=receipt.acceptance;
+      const passed=acceptance?.status==='passed'&&acceptance.frozen===true&&acceptance.executable_sha256===digest&&acceptance.build_identity_sha256===receipt.inventory.build_identity_sha256&&!!acceptance.health&&!!acceptance.restart_health;
+      const signature=await this.signature(executable,false);
+      if(signature.status!=='verified')prerequisites.unshift('Verify the frozen backend publisher signature');
+      if(!passed)prerequisites.unshift('Run frozen backend dependency imports, startup and restart acceptance on this target');
+      return {status:'inventory_bound',build_identity_sha256:receipt.inventory.build_identity_sha256,executable_sha256:digest,startup_acceptance:passed?'passed':'unverified',signature,offline:receipt.inventory.offline,prerequisites};
+    } catch(cause){return {status:'invalid',reason:String((cause as Error).message||cause),prerequisites:['Rebuild the changed or invalid frozen backend',...prerequisites]};}
+  }
   async status():Promise<DistributionState> {
     const configuration=this.configuration();
-    return {app_version:this.options.appVersion,version_source:'electron',platform:this.options.platform,architecture:this.options.arch,signature:await this.signature(),
-      update:{configured:!!configuration,configuration,status:this.release?'available':configuration?'configured':'not_configured',release:this.release,automatic_update_available:false,
+    return {app_version:this.options.appVersion,version_source:'electron',platform:this.options.platform,architecture:this.options.arch,signature:await this.signature(),backend:await this.backendInventory(),
+      update:{configured:!!configuration,configuration,status:this.release?'available':configuration?'configured':'not_configured',release:this.release,automatic_update_available:false,recovery:this.deliveryRecovery(),
         prerequisite:configuration?'Manual delivery verifies package bytes and native signature before a matching publisher handoff':'Configure the actual HTTPS release manifest URL; no release channel is supplied'}};
   }
   private async request(url:string,limit:number,timeout:number,consume:(chunk:Uint8Array)=>Promise<void>|void):Promise<void> {
@@ -131,17 +193,21 @@ export class DistributionManager {
     const directory=path.join(this.options.userDataPath,'updates');unlinked(directory);fs.mkdirSync(directory,{recursive:true,mode:0o700});
     const extension=path.extname(new URL(release.url).pathname);const suffix=['.dmg','.exe','.zip','.AppImage'].includes(extension)?extension:'.bin';
     const target=path.join(directory,`release-${release.version}-${release.platform}-${release.arch}${suffix}`),temporary=path.join(directory,'.'+crypto.randomUUID()+'.partial');unlinked(target);
+    const journal:DeliveryRecovery&{partial_path?:string}={schema_version:1,status:'downloading',version:release.version,manifest_sha256:before,candidate_sha256:release.sha256,installed_sha256:this.installedSHA(),candidate_path:target,partial_path:temporary,checked_at:new Date().toISOString()};
+    this.saveDelivery(journal);
     const fd=fs.openSync(temporary,'wx',0o600),digest=crypto.createHash('sha256');let size=0,opened=true;
     try{
       await this.request(release.url,release.size,120000,chunk=>{const buffer=Buffer.from(chunk);digest.update(buffer);size+=buffer.length;let offset=0;while(offset<buffer.length)offset+=fs.writeSync(fd,buffer,offset,buffer.length-offset);});
       if(size!==release.size||digest.digest('hex')!==release.sha256)throw new Error('Release package size or checksum differs from the manifest');
       if(started!==this.revision)throw new Error('Update configuration changed during download');
       fs.fsyncSync(fd);fs.closeSync(fd);opened=false;fs.renameSync(temporary,target);
+      this.saveDelivery({...journal,status:'verifying',partial_path:undefined,checked_at:new Date().toISOString()});
       const signature=await this.signature(target,false),installed=await this.signature();
-      const matched=signature.status==='verified'&&installed.status==='verified'&&!!signature.publisher&&signature.publisher===installed.publisher;
+      const matched=signature.status==='verified'&&installed.status==='verified'&&!!signature.publisher&&signature.publisher===installed.publisher&&this.installedSHA()===journal.installed_sha256;
+      this.saveDelivery({...journal,status:matched?'handoff_ready':'publisher_required',partial_path:undefined,checked_at:new Date().toISOString()});
       return {version:release.version,path:target,sha256:release.sha256,integrity_verified:true,signature,publisher_matches_installed:matched,handoff_ready:matched,
         prerequisite:matched?'Back up the project, then install the verified package manually':'A valid artifact signature matching the installed publisher is required for a verified installation handoff; no automatic installation occurred'};
-    }catch(cause){if(opened)try{fs.closeSync(fd);}catch{}throw cause;}
+    }catch(cause){if(opened)try{fs.closeSync(fd);}catch{}this.saveDelivery({...journal,status:'failed',partial_path:undefined,error:cause instanceof Error?cause.name:'DeliveryFailure',checked_at:new Date().toISOString()});throw cause;}
     finally{fs.rmSync(temporary,{force:true});}
   }
 }

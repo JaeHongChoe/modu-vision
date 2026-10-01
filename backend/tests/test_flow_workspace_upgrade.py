@@ -80,7 +80,8 @@ from backend.api import routes_flow_workspace as workspace_routes
 from backend.api import routes_flowchart as flow_routes
 
 
-def test_fixed_input_comparison_persists_and_reopens_without_activating_version(tmp_path,monkeypatch):
+@pytest.mark.parametrize('device,target,profile', [('cpu','local',None),('mps','local',None),('cuda','selected_compute','owned-server')])
+def test_fixed_input_comparison_persists_and_reopens_without_activating_version(tmp_path,monkeypatch,device,target,profile):
     source=tmp_path/'source';source.mkdir();image=source/'one.png';Image.new('RGB',(64,64),'red').save(image)
     project={'id':'project-a','project_dir':str(tmp_path/'project'),'dataset_dir':str(tmp_path/'project'/'dataset'),'source_dataset_dir':str(source)}
     request=SimpleNamespace(state=SimpleNamespace())
@@ -92,12 +93,16 @@ def test_fixed_input_comparison_persists_and_reopens_without_activating_version(
     vb=flow_routes._save_version(gb,'classification',str(source),Path(project['project_dir']))
     calls=[]
     def inference(req,request):
-        calls.append((req.image_path,req.pipeline.name))
+        calls.append((req.image_path,req.pipeline.name,req.device,req.execution_target,req.compute_profile_id))
         return {'final_verdict':'OK' if req.pipeline.name=='Second' else 'NG','rejection_reason':req.pipeline.name,'crops':[],'execution_steps':[]}
     monkeypatch.setattr(flow_routes,'run_flowchart',inference)
-    result=workspace_routes.compare_versions(workspace_routes.FlowCompare(project_id=project['id'],version_a=va,version_b=vb,image_paths=[str(image)]),request)
+    result=workspace_routes.compare_versions(workspace_routes.FlowCompare(project_id=project['id'],version_a=va,version_b=vb,image_paths=[str(image)],device=device,execution_target=target,compute_profile_id=profile),request)
     assert calls[0][0]==calls[1][0] and calls[0][0]!=str(image)
     assert not Path(calls[0][0]).exists()
+    assert calls[0][2:]==calls[1][2:]==(device,target,profile)
+    assert result['device']==device
+    assert result['execution_target']==target
+    assert result['compute_profile_id']==profile
     assert result['rows'][0]['difference']['verdict_changed'] is True
     assert workspace_routes.comparisons(request)['comparisons'][0]['comparison_id']==result['comparison_id']
     assert not (Path(project['project_dir'])/'flowcharts'/'active.json').exists()

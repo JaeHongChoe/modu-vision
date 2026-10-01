@@ -21,6 +21,9 @@ import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
+import {CaptureIntakePanel} from './CaptureIntakePanel';
+import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
+import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
@@ -30,6 +33,7 @@ import { classDistributionStats } from './classDistribution';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 
 export const DatasetStudio: React.FC = () => {
+  const {key:sourceContextKey}=useDeliveryScope();
   const { task, language, projectDir, openImageForLabeling } = useProjectStore();
   const {
     folderPath,
@@ -174,6 +178,8 @@ export const DatasetStudio: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
       <DatasetWorkflowPanel />
+      <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+      <WorkflowImpactPanel />
       <DatasetStatisticsPanel />
       <DataReadinessPanel />
       {sourceSaveError && (

@@ -34,12 +34,12 @@ from backend.engine.exporter import (
 )
 from backend.utils.error_catalog import format_error_response
 from backend.api.routes_project import get_current_project
-from backend.api.routes_model_deployments import verified_release_revision
 from backend.api.routes_evaluation import _resolve_job_artifacts
 from backend.api.routes_flowchart import _FLOW_SAVE_LOCK, _recipe_file, _version_dir
 from backend.engine.checkpoint_paths import is_job_id
 from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_nodes
-from backend.engine.flow_package import build_flow_package, verify_flow_parity
+from backend.engine import flow_package as flow_package_engine
+from backend.engine.flow_package import build_flow_package
 from backend.engine.specialized_models import FLOW_TASKS, SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.edge_runtime import SUPPORTED_TARGETS, normalize_target
@@ -61,6 +61,12 @@ def edge_targets():
             "host": host, "python": {"minimum": "3.10", "maximum_exclusive": "3.14"}}
 
 
+class ParityImageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: str
+    image_id: Optional[str] = None
+
+
 class ExportFlowRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source_dataset_path: str
@@ -69,6 +75,8 @@ class ExportFlowRequest(BaseModel):
     version_id: Optional[str] = None
     verification_image_path: Optional[str] = None
     verification_image_id: Optional[str] = None
+    parity_images: Optional[List[ParityImageRequest]] = Field(default=None, min_length=2, max_length=64)
+    parity_device: Optional[str] = None
     approval_revision_ids: Optional[Dict[str, str]] = None
     deployment_profile: Literal["standard", "edge_cpu",'edge_cuda'] = "standard"
     target_os: Optional[str] = None
@@ -78,48 +86,42 @@ class ExportFlowRequest(BaseModel):
     @model_validator(mode="after")
     def validate_deployment(self):
         from backend.engine.runtime_configuration import runtime_options
-        runtime_options(self.runtime_config)
+        runtime = runtime_options(self.runtime_config)
         if self.deployment_profile in ('edge_cpu','edge_cuda'):
             target = normalize_target(self.target_os, self.target_arch)
             self.target_os, self.target_arch = target["os"], target["architecture"]
         elif self.target_os is not None or self.target_arch is not None:
             raise ValueError("Target OS/architecture requires the edge_cpu deployment profile")
+        if self.parity_images is not None or self.parity_device is not None:
+            if self.parity_images is None:
+                raise ValueError("parity_device requires a frozen parity_images cohort")
+            if self.parity_device is None:
+                raise ValueError("A parity_images cohort requires an explicit parity_device")
+            if self.verification_image_path is not None:
+                raise ValueError("Use either parity_images or the limited single verification_image_path, not both")
+            if self.parity_device.startswith("openvino:"):
+                raise ValueError("OpenVINO packages are accepted through the measured optimization path")
+            if self.parity_device != runtime["device"]:
+                raise ValueError(f"parity_device {self.parity_device!r} must be the package runtime device {runtime['device']!r}")
         return self
 
 
-@router.post("/flow")
-def export_saved_flow(req: ExportFlowRequest, request: Request):
-    """Export only a saved, source-matched graph and all its verified checkpoints."""
-    if req.recipe_task not in (*FLOW_TASKS, "mixed"):
-        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
-    source = Path(req.source_dataset_path).expanduser().resolve()
-    if not source.is_dir():
-        raise HTTPException(status_code=422, detail="Select an existing source dataset folder")
-    if req.verification_image_path:
-        image = Path(req.verification_image_path).expanduser().resolve()
-        if not image.is_file():
-            raise HTTPException(status_code=422, detail="Select an existing parity verification image")
-        try:
-            preview = read_image_safely_rgb(image, max_dim=32)
-            if preview.size == 0:
-                raise ValueError("Empty image")
-        except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail="Parity verification image is unreadable") from exc
-    project = get_current_project(request)
+def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, version_id: Optional[str]):
+    """Load a saved, source-matched graph and resolve every model checkpoint it names."""
     project_dir = Path(project["project_dir"]).resolve()
-    if req.version_id:
-        if not re.fullmatch(r"[0-9a-f]{32}", req.version_id):
+    if version_id:
+        if not re.fullmatch(r"[0-9a-f]{32}", version_id):
             raise HTTPException(status_code=422, detail="Invalid saved flow version ID")
-        saved_path = _version_dir(project_dir) / f"{req.version_id}.json"
+        saved_path = _version_dir(project_dir) / f"{version_id}.json"
     else:
-        saved_path = _recipe_file(req.recipe_task, str(source), project_dir)
+        saved_path = _recipe_file(recipe_task, str(source), project_dir)
     with _FLOW_SAVE_LOCK:
         if saved_path.is_symlink() or not saved_path.is_file():
             raise HTTPException(status_code=409, detail="Save this flow for the selected dataset before exporting it")
         try:
             saved = json.loads(saved_path.read_text(encoding="utf-8"))
-            if req.version_id:
-                if (saved.get("version_id") != req.version_id or saved.get("recipe_task") != req.recipe_task
+            if version_id:
+                if (saved.get("version_id") != version_id or saved.get("recipe_task") != recipe_task
                         or saved.get("source_dataset_path") != str(source)):
                     raise ValueError("Saved flow version belongs to a different source or recipe")
                 saved = saved["pipeline"]
@@ -162,18 +164,143 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
                 detail=f"Completed {task} model {job_id} does not match the selected dataset or saved flow: {exc}",
             ) from exc
         checkpoints[job_id] = checkpoint
+    return pipeline, checkpoints, job_tasks
+
+
+def _release_candidates(project: Dict[str, Any], source: Path, task: str, job_id: str, checkpoint: Path) -> List[Dict[str, Any]]:
+    """Existing approval revisions that still verify for this exact checkpoint, newest first.
+
+    A revision qualifies when its stored evidence verifies, it names this job and
+    checkpoint digest, its evaluation data is unchanged and no later rollback
+    replaced it. Being the task's active revision is reported, not required, so
+    several models of one task can each be released with their own approval.
+    """
+    from backend.api import routes_model_deployments as deployments
+    checkpoint_sha = deployments._sha256(Path(checkpoint))
+    with deployments._store(project) as conn:
+        active = deployments._active(conn, source, task)
+        rows = [dict(row) for row in conn.execute(
+            "SELECT * FROM revisions WHERE source_dataset_path = ? AND task = ? AND job_id = ? AND checkpoint_sha256 = ? "
+            "ORDER BY rowid DESC", (str(source), task, job_id, checkpoint_sha)).fetchall()]
+        rolled_back = {row[0] for row in conn.execute(
+            "SELECT parent_revision_id FROM revisions WHERE source_dataset_path = ? AND task = ? AND action = 'rollback' "
+            "AND parent_revision_id IS NOT NULL", (str(source), task)).fetchall()}
+    fingerprint = deployments._fingerprint(source)
+    candidates = []
+    for row in rows:
+        if row["revision_id"] in rolled_back or row["evaluation_dataset_fingerprint"] != fingerprint:
+            continue
+        verified = deployments.verified_approval_revision(project, row["revision_id"], expected_task=task)
+        if verified is None or verified.get("job_id") != job_id or verified.get("checkpoint_sha256") != checkpoint_sha:
+            continue
+        candidates.append({key: row[key] for key in ("revision_id", "action", "reviewer", "reason", "created_at", "comparison_id")}
+                          | {"checkpoint_sha256": checkpoint_sha, "is_active": bool(active and active["revision_id"] == row["revision_id"])})
+    return candidates
+
+
+def _selected_release(project: Dict[str, Any], source: Path, task: str, job_id: str, checkpoint: Path,
+                      revision_id: str) -> Optional[Dict[str, str]]:
+    """Bind an explicitly selected revision to the exact model; never creates an approval."""
+    for candidate in _release_candidates(project, source, task, job_id, checkpoint):
+        if candidate["revision_id"] == revision_id:
+            return {"revision_id": revision_id, "job_id": job_id, "task": task,
+                    "checkpoint_sha256": candidate["checkpoint_sha256"]}
+    return None
+
+
+def _canonical_source(req_source: str) -> Path:
+    source = Path(req_source).expanduser().resolve()
+    if not source.is_dir():
+        raise HTTPException(status_code=422, detail="Select an existing source dataset folder")
+    return source
+
+
+@router.get("/flow/approval-prerequisites")
+def flow_approval_prerequisites(source_dataset_path: str, recipe_task: str, request: Request,
+                                version_id: Optional[str] = None):
+    """Read back the verified approvals each saved-flow model can be released with."""
+    if recipe_task not in (*FLOW_TASKS, "mixed"):
+        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+    source = _canonical_source(source_dataset_path)
+    project = get_current_project(request)
+    pipeline, checkpoints, job_tasks = _saved_flow_models(project, source, recipe_task, version_id)
+    models, selected = [], {}
+    for job_id, checkpoint in checkpoints.items():
+        task = job_tasks[job_id]
+        candidates = _release_candidates(project, source, task, job_id, checkpoint)
+        active = next((row["revision_id"] for row in candidates if row["is_active"]), None)
+        if active:
+            selected[job_id] = active
+        models.append({
+            "job_id": job_id, "task": task,
+            "node_ids": [node.id for node in pipeline.nodes if node.data.model_job_id == job_id],
+            "checkpoint_sha256": candidates[0]["checkpoint_sha256"] if candidates else hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
+            "candidates": candidates, "selected_revision_id": active,
+            "reason": None if active else ("select_verified_revision" if candidates else "no_verified_approval"),
+        })
+    status = ("ready" if len(selected) == len(models) else
+              "blocked" if any(not row["candidates"] for row in models) else "selection_required")
+    return {"status": status, "approval_revision_ids": selected, "models": models,
+            "approval_created": False}
+
+
+def _validated_cohort(req: ExportFlowRequest, source: Path) -> List[Dict[str, Optional[str]]]:
+    from backend.engine.runtime_device import resolve_runtime_device
+    try:
+        resolve_runtime_device(req.parity_device)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Parity target device is unavailable: {exc}") from exc
+    images = []
+    for row in req.parity_images or []:
+        image = Path(row.path).expanduser()
+        if image.is_symlink() or not image.resolve().is_relative_to(source) or not image.resolve().is_file():
+            raise HTTPException(status_code=422, detail="Parity cohort images must be files inside the selected source")
+        images.append({"path": str(image.resolve()), "image_id": row.image_id})
+    return images
+
+
+def _failed_parity(exc: Exception, *, scope: str, device: str, package: Path) -> Dict[str, Any]:
+    report = {"contract": flow_package_engine.PARITY_CONTRACT, "status": "failed", "scope": scope, "device": device,
+              "error": str(exc)[-1000:], "images": [], "mismatched_fields": [], "completed_count": 0}
+    try:
+        report.update(flow_package_engine._parity_identity(package))
+    except (OSError, ValueError, KeyError) as identity_error:
+        report["identity_error"] = str(identity_error)
+    return report
+
+
+@router.post("/flow")
+def export_saved_flow(req: ExportFlowRequest, request: Request):
+    """Export only a saved, source-matched graph and all its verified checkpoints."""
+    if req.recipe_task not in (*FLOW_TASKS, "mixed"):
+        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+    source = _canonical_source(req.source_dataset_path)
+    if req.verification_image_path:
+        image = Path(req.verification_image_path).expanduser().resolve()
+        if not image.is_file():
+            raise HTTPException(status_code=422, detail="Select an existing parity verification image")
+        try:
+            preview = read_image_safely_rgb(image, max_dim=32)
+            if preview.size == 0:
+                raise ValueError("Empty image")
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail="Parity verification image is unreadable") from exc
+    cohort = _validated_cohort(req, source) if req.parity_images is not None else None
+    project = get_current_project(request)
+    project_dir = Path(project["project_dir"]).resolve()
+    pipeline, checkpoints, job_tasks = _saved_flow_models(project, source, req.recipe_task, req.version_id)
+
     approved_revisions = None
     if req.approval_revision_ids is not None:
         if set(req.approval_revision_ids) != set(checkpoints):
-            raise HTTPException(status_code=409, detail="Every flow model needs one active approval revision")
+            raise HTTPException(status_code=409, detail="Every flow model needs one selected approval revision")
         approved_revisions = {}
         for job_id, checkpoint in checkpoints.items():
-            revision = verified_release_revision(
-                project, req.approval_revision_ids[job_id], source=source,
-                task=job_tasks[job_id], job_id=job_id, checkpoint=checkpoint,
-            )
+            revision = _selected_release(project, source, job_tasks[job_id], job_id, checkpoint,
+                                         req.approval_revision_ids[job_id])
             if revision is None:
-                raise HTTPException(status_code=409, detail=f"Flow model {job_id} has no matching active approval")
+                raise HTTPException(status_code=409,
+                                    detail=f"Flow model {job_id} has no verified approval revision {req.approval_revision_ids[job_id]!r} for its checkpoint")
             approved_revisions[job_id] = revision
     try:
         result = build_flow_package(
@@ -189,28 +316,48 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     except OSError as exc:
         raise HTTPException(status_code=500, detail=f"Could not write flow package: {exc}") from exc
 
-    result["parity"] = {"status": "not_run"}
     from backend.engine.product_delivery import record_package
-    record_package(project,Path(result['package_path']),version_id=req.version_id,recipe_task=req.recipe_task,parity=result['parity'])
-    if req.verification_image_path:
-        try:
-            report = verify_flow_parity(
-                package_dir=Path(result["package_path"]), pipeline=pipeline,
-                checkpoints=checkpoints, image_path=Path(req.verification_image_path),
-                image_id=req.verification_image_id,
-            )
-        except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
-            raise HTTPException(status_code=409, detail={
-                "message": f"Exported flow parity verification failed: {exc}",
-                "package_path": result["package_path"],
-            }) from exc
-        if report["status"] != "passed":
-            raise HTTPException(status_code=409, detail={
-                "message": "Exported flow did not match the app CPU engine on the selected image",
-                "package_path": result["package_path"], "parity": report,
-            })
-        result["parity"] = report
-        record_package(project,Path(result['package_path']),version_id=req.version_id,recipe_task=req.recipe_task,parity=report)
+    package = Path(result["package_path"])
+    result["parity"] = {"status": "not_run"}
+    if approved_revisions is not None and cohort is None:
+        # Approved field releases need a passed cohort receipt; raw or one-image policies are not issued.
+        result["release_policy"] = None
+        result["release_policy_withheld"] = "cohort_parity_required"
+    if cohort is None and not req.verification_image_path:
+        record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task, parity=result["parity"])
+        return result
+    scope = "cohort" if cohort is not None else "single_image"
+    device = req.parity_device if cohort is not None else "cpu"
+    images = cohort if cohort is not None else [{"path": req.verification_image_path, "image_id": req.verification_image_id}]
+    # Record a failure first: if the package changes or the process stops mid-check, the library keeps it.
+    record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task,
+                   parity=_failed_parity(RuntimeError("Parity verification started but recorded no result"),
+                                         scope=scope, device=device, package=package))
+    try:
+        report = flow_package_engine.verify_flow_parity_cohort(
+            package_dir=package, pipeline=pipeline, checkpoints=checkpoints, images=images, device=device, scope=scope,
+        )
+    except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        report = _failed_parity(exc, scope=scope, device=device, package=package)
+    # Every executed check leaves its receipt in the package and the library, including failures.
+    flow_package_engine.write_parity_receipt(package, report)
+    try:
+        record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task, parity=report)
+    except (ValueError, OSError) as exc:
+        # A package that no longer verifies cannot replace the failure already recorded for it.
+        report = {**report, "status": "failed", "error": f"{report.get('error') or ''} Library record refused: {exc}".strip()}
+        flow_package_engine.write_parity_receipt(package, report)
+    if report["status"] != "passed":
+        raise HTTPException(status_code=409, detail={
+            "message": ("Exported flow did not match the app engine on the frozen parity input" if report["status"] == "mismatch"
+                        else f"Exported flow parity verification failed: {report.get('error')}"),
+            "package_path": str(package), "parity": report,
+        })
+    result["parity"] = report
+    if approved_revisions is not None and scope == "cohort":
+        receipt = package / flow_package_engine.PARITY_RECEIPT
+        result["release_policy"] = {**result["release_policy"], "device": report["device"],
+                                    "parity_receipt_sha256": hashlib.sha256(receipt.read_bytes()).hexdigest()}
     return result
 
 
@@ -292,6 +439,7 @@ def _optimization_input_receipt(project,source,calibration,validation):
             values.append({'relative_path':relative.as_posix(),'sha256':_sha256(path),'split':partition})
         return values
     return {'source_dataset_path':str(source),'source_fingerprint':_fingerprint(source),
+            'split_manifest_path':str(split) if split.is_file() else None,
             'split_manifest_sha256':_sha256(split) if split.is_file() else None,
             'calibration_images':rows(calibration),'validation_images':rows(validation)}
 

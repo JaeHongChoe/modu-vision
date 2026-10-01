@@ -9,6 +9,8 @@ from backend.engine.managed_service import ManagedService
 
 def test_managed_process_apply_readback_restart_and_real_rollback(tmp_path):
     client,project,source,fingerprint,models=_fixture(tmp_path)
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt
+    real_classification_checkpoints(models)
     service=ManagedService(project['project_dir'])
     history=[]
     try:
@@ -22,6 +24,7 @@ def test_managed_process_apply_readback_restart_and_real_rollback(tmp_path):
             for node in pipeline.nodes:
                 if node.data.node_type=='inspection':node.data.task='classification'
             result=build_flow_package(pipeline=pipeline,checkpoints={candidate:models[candidate]},output_base_dir=tmp_path/'exports',package_name=f'release_{number}',approved_revisions={candidate:{key:revision[key] for key in ('revision_id','job_id','task','checkpoint_sha256')}})
+            cohort_receipt(result['package_path'],pipeline,{candidate:models[candidate]},[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
             deployed=service.apply(result['package_path'],'cpu','operator',project)
             assert service.readback()['manifest_sha256']==deployed['release']['manifest_sha256']
             if number==0:
@@ -84,3 +87,33 @@ def test_redacted_mes_token_survives_routine_config_edit_and_can_be_explicitly_c
     assert stored['mes']['timeout']==10
     service.configure_adapters({**redacted,'clear_mes_token':True})
     assert json.loads((service.root/'adapters.json').read_text())['mes']['token'] is None
+
+
+def test_manual_two_model_same_task_approvals_stage_exactly_and_rollback_revokes_candidate(tmp_path):
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt
+    client,project,source,fingerprint,models=_fixture(tmp_path)
+    real_classification_checkpoints(models);selected={}
+    for number,(baseline,candidate) in enumerate((('job_base','job_candidate'),('job_candidate','job_third'))):
+        comparison='comparison_'+str(number)*32
+        _report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
+        approved=_approve(client,source,comparison);assert approved.status_code==200,approved.text
+        selected[candidate]=approved.json()['revision']
+    graph=get_single_segmentation_flowchart(job_id='job_candidate')
+    inspection=next(node for node in graph.nodes if node.data.node_type=='inspection');inspection.data.task='classification'
+    second=inspection.model_copy(deep=True);second.id='node_inspect_second';second.data.model_job_id='job_third';graph.nodes.insert(2,second)
+    connecting=next(edge for edge in graph.edges if edge.source==inspection.id)
+    outgoing=connecting.model_copy(deep=True);outgoing.id='second-decision';outgoing.source=second.id
+    connecting.target=second.id;graph.edges.append(outgoing)
+    checkpoints={job:models[job] for job in selected}
+    approvals={job:{key:revision[key] for key in ('revision_id','job_id','task','checkpoint_sha256')} for job,revision in selected.items()}
+    exported=build_flow_package(pipeline=graph,checkpoints=checkpoints,output_base_dir=tmp_path/'exports',package_name='two_classifiers',approved_revisions=approvals)
+    cohort_receipt(exported['package_path'],graph,checkpoints,[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
+    service=ManagedService(project['project_dir'])
+    staged=service.stage(exported['package_path'],project,'cpu')
+    assert staged['device']=='cpu'
+    assert {row['job_id']:row['revision_id'] for row in staged['approval_revisions']}=={job:row['revision_id'] for job,row in selected.items()}
+    rolled_back=client.post('/api/model-deployments/rollback',json={'source_dataset_path':str(source),'task':'classification',
+        'target_revision_id':selected['job_candidate']['revision_id'],'reviewer':'operator','reason':'Independent fixture rollback decision'})
+    assert rolled_back.status_code==200,rolled_back.text
+    with pytest.raises(ValueError,match='revoked|unverified|stale'):
+        service.stage(exported['package_path'],project,'cpu')

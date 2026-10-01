@@ -28,7 +28,7 @@ class ManagedService:
         self.root=project_dir/'runtime_service'
         if self.root.is_symlink():raise ValueError('Managed service storage is linked')
         self.root.mkdir(parents=True,exist_ok=True)
-        for name in ('service.json','state','adapters.json','install','service.log','runtime_deployments.sqlite3'):
+        for name in ('service.json','state','adapters.json','install','service.log','native-install.json','runtime_deployments.sqlite3','runtime_deployments.sqlite3-wal','runtime_deployments.sqlite3-shm'):
             if (self.root/name).is_symlink():raise ValueError('Managed service project state is linked')
         for name in ('runtime.json','inspection_service.sqlite3','uploads'):
             if (self.root/'state'/name).is_symlink():raise ValueError('Managed service execution state is linked')
@@ -82,7 +82,11 @@ class ManagedService:
         except (httpx.HTTPError,ValueError):return {'status':'disconnected','port':self.config['port']}
     def state(self):
         from backend.engine.native_autostart import NativeAutostart
-        return {'runtime':self.readback(),'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config(),'native_install':NativeAutostart(self).query()}
+        from backend.engine.service_bootstrap import trusted_runtime_identity
+        runtime=self.readback()
+        return {'runtime':runtime,'active':self.ledger.active(),'history':self.ledger.history(),'port':self.config['port'], 'adapter_config':self.read_adapter_config(),'native_install':NativeAutostart(self).query(),
+                'recovery':self.ledger.diagnostics(),'runtime_build':runtime.get('runtime_build') if runtime.get('status')=='ready' else None,
+                'manager_build':trusted_runtime_identity()}
     def input_arguments(self,release):
         path=self.root/'inputs.json'
         if path.is_symlink():raise ValueError('Input configuration cannot follow links')
@@ -100,31 +104,38 @@ class ManagedService:
             return ['--camera-source',camera]
         return []
     @staticmethod
-    def validate_accepted_device(package,device):
-        verify_flow_package(Path(package))
+    def validate_accepted_device(package,device,*,expected_receipt_sha256=None):
+        from backend.engine.runtime_release_evidence import verify_release_evidence
+        verify_release_evidence(package,device,expected_receipt_sha256=expected_receipt_sha256)
         manifest=json.loads((Path(package)/'manifest.json').read_text())
         if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
             raise ValueError('OpenVINO execution requires a verified package with openvino_models.json')
         if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
             raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
     @serialized_lifecycle
-    def stage(self,package_path,project):
+    def stage(self,package_path,project,device=None):
         package=Path(package_path).expanduser()
         if package.is_symlink():raise ValueError('Linked release package is unsupported')
         package=package.resolve(strict=True)
         _,checkpoints=verify_flow_package(package)
         manifest=json.loads((package/'manifest.json').read_text())
+        from backend.engine.runtime_release_evidence import verify_release_evidence
+        device=device or manifest.get('runtime',{}).get('device','cpu')
+        evidence=verify_release_evidence(package,device)
         approvals=manifest.get('release',{}).get('approval_revisions')
         if not isinstance(approvals,list) or not approvals or len(approvals)!=len(checkpoints):raise ValueError('Every package model requires explicit project approval')
-        from backend.api.routes_model_deployments import verified_approval_revision, _fingerprint, _store, _active
+        from backend.api.routes_model_deployments import verified_approval_revision, _fingerprint
+        from backend.api.routes_export import _selected_release
         for approval in approvals:
             verified=verified_approval_revision(project,approval.get('revision_id'),expected_task=approval.get('task'))
             if verified is None or any(verified.get(key)!=approval.get(key) for key in ('job_id','task','checkpoint_sha256')):
                 raise ValueError('Release approval is stale, mismatched, or unverified')
             source=Path(verified['source_dataset_path'])
             if _fingerprint(source)!=verified['evaluation_dataset_fingerprint']:raise ValueError('Release evaluation dataset has changed')
-            with _store(project) as conn:active=_active(conn,source,verified['task'])
-            if active is None or active['revision_id']!=approval['revision_id']:raise ValueError('Release approval is not the active approved revision')
+            if project.get('source_dataset_dir') and source.resolve()!=Path(project['source_dataset_dir']).resolve():
+                raise ValueError('Release approval belongs to a different current source')
+            selected=_selected_release(project,source,verified['task'],verified['job_id'],checkpoints[verified['job_id']],approval['revision_id'])
+            if selected is None or selected!=approval:raise ValueError('Release approval is revoked, stale, or unverified')
         digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
         destination=self.releases/digest
         if destination.is_symlink():raise ValueError('Staged release directory is linked')
@@ -133,41 +144,68 @@ class ManagedService:
             try:
                 temporary.mkdir()
                 # Copy only checksum-bound package files; unlisted material is never staged.
-                for relative in ['manifest.json', *[row['path'] for row in manifest['files']]]:
+                for relative in ['manifest.json', *(['parity_receipt.json'] if evidence['receipt_kind']=='flow_parity' else []), *[row['path'] for row in manifest['files']]]:
                     origin=package/relative;target=temporary/relative
                     target.parent.mkdir(parents=True,exist_ok=True)
                     shutil.copyfile(origin,target,follow_symlinks=False)
-                verify_flow_package(temporary)
+                verify_release_evidence(temporary,device,expected_receipt_sha256=evidence['receipt_sha256'])
                 if hashlib.sha256((temporary/'manifest.json').read_bytes()).hexdigest()!=digest:raise ValueError('Package changed while staging')
                 os.rename(temporary,destination)
             finally:
                 if temporary.exists():shutil.rmtree(temporary)
         policy=self.releases/(digest+'.policy.json')
         if policy.is_symlink():raise ValueError('Staged release policy is linked')
-        policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals}
+        verify_release_evidence(destination,device,expected_receipt_sha256=evidence['receipt_sha256'])
+        policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals,
+                        'device':device}
+        if evidence['receipt_kind']=='flow_parity':policy_payload['parity_receipt_sha256']=evidence['receipt_sha256']
         if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
         if policy.exists() and json.loads(policy.read_text())!=policy_payload:raise ValueError('Existing release policy differs')
         if not policy.exists():
             with policy.open('x') as writer:json.dump(policy_payload,writer)
             policy.chmod(0o600)
-        _verify_release_policy(destination,verify_flow_package(destination)[1],policy)
-        return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,
-                'approval_revisions':approvals,'input_root':project.get('source_dataset_dir')}
+        _verify_release_policy(destination,verify_flow_package(destination)[1],policy,device=device)
+        return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,'device':device,
+                'approval_revisions':approvals,
+                ('parity_receipt_sha256' if evidence['receipt_kind']=='flow_parity' else 'runtime_acceptance_sha256'):evidence['receipt_sha256'],
+                'acceptance_contract':evidence['receipt_kind'],
+                'parity_cohort_sha256':evidence['cohort_sha256'],'input_root':project.get('source_dataset_dir')}
     @serialized_lifecycle
-    def start(self,release=None):
-        if self.owned_process():return self.readback()
+    def start(self,release=None,*,recover=True):
+        if recover and not self.config.get('native_label'):
+            from backend.engine.native_autostart import NativeAutostart
+            native=NativeAutostart(self);journal=native._journal()
+            if journal and journal['status']=='registering' and native.query()['registered']:
+                # Explicit start reconciles an owned registration that survived
+                # a crash before service.json publication, avoiding a second daemon.
+                native.install()
+        if recover:
+            recovery=self.ledger.recover(self.apply_runtime)
+            if recovery and recovery['status']=='interrupted_without_previous':
+                self.stop()
+                raise ValueError('Interrupted initial deployment has no accepted release; apply an approved package explicitly')
+        release=release or (self.ledger.active() or {}).get('release')
+        if release:
+            self.validate_accepted_device(release['package_path'],release.get('device','cpu'),expected_receipt_sha256=(release.get('parity_receipt_sha256') or release.get('runtime_acceptance_sha256')))
+            _verify_release_policy(Path(release['package_path']),verify_flow_package(Path(release['package_path']))[1],Path(release['release_policy']),device=release.get('device','cpu'))
+        if self.owned_process():
+            readback=self.readback()
+            if recover and release:
+                self.ledger._validate_ack(release,readback)
+            return readback
         if self.config.get('native_label'):
             from backend.engine.native_autostart import NativeAutostart
             NativeAutostart(self).install()
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:
                 result=self.readback()
-                if result.get('status')=='ready':return result
+                if result.get('status')=='ready':
+                    if recover and release:self.ledger._validate_ack(release,result)
+                    return result
                 time.sleep(.1)
             raise TimeoutError('Native service registered but runtime readiness timed out; inspect service.log')
-        release=release or (self.ledger.active() or {}).get('release')
         if release is None:raise ValueError('Apply an approved package before starting the service')
-        self.validate_accepted_device(release['package_path'],release.get('device','cpu'))
+        self.validate_accepted_device(release['package_path'],release.get('device','cpu'),expected_receipt_sha256=(release.get('parity_receipt_sha256') or release.get('runtime_acceptance_sha256')))
         resolve_runtime_device(release.get('device','cpu'))
         from backend.engine.service_bootstrap import runtime_command, runtime_cwd
         arguments=runtime_command(['--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])])
@@ -188,7 +226,9 @@ class ManagedService:
         while time.monotonic()<deadline:
             if process.poll() is not None:raise RuntimeError('Managed service exited; inspect its local service.log')
             result=self.readback()
-            if result.get('status')=='ready':return result
+            if result.get('status')=='ready':
+                if recover:self.ledger._validate_ack(release,result)
+                return result
             time.sleep(.1)
         self.stop();raise TimeoutError('Managed service readiness timed out')
     @serialized_lifecycle
@@ -206,15 +246,15 @@ class ManagedService:
     @serialized_lifecycle
     def apply_runtime(self,release):
         _,checkpoints=verify_flow_package(Path(release['package_path']))
-        _verify_release_policy(Path(release['package_path']),checkpoints,Path(release['release_policy']))
-        self.start(release)
+        _verify_release_policy(Path(release['package_path']),checkpoints,Path(release['release_policy']),device=release.get('device','cpu'))
+        self.start(release,recover=False)
         with self.client() as client:
             response=client.post('/v1/runtime/apply',json=release);response.raise_for_status()
             ack=client.get('/v1/runtime');ack.raise_for_status();return ack.json()
     @serialized_lifecycle
     def apply(self,package,device,reviewer,project):
         self.validate_accepted_device(package,device)
-        release={**self.stage(package,project),'device':str(resolve_runtime_device(device))}
+        release={**self.stage(package,project,str(resolve_runtime_device(device))),'device':str(resolve_runtime_device(device))}
         previous = self.ledger.active()
         try: return self.ledger.apply(release,self.apply_runtime,reviewer=reviewer)
         except Exception:
@@ -257,8 +297,16 @@ class ManagedService:
     def activate_install(self):
         if self.ledger.active() is None:raise ValueError('An approved applied release is required')
         from backend.engine.native_autostart import NativeAutostart
-        if not self.config.get('native_label'):self.stop()
-        return NativeAutostart(self).install()
+        previous_native=bool(self.config.get('native_label'))
+        previous_running=self.owned_process() is not None
+        if not previous_native:self.stop()
+        try:return NativeAutostart(self).install()
+        except Exception:
+            if previous_running and not previous_native:
+                # Registration failure must not leave the accepted independent
+                # service stopped merely because its startup handoff failed.
+                self.start()
+            raise
 
     @serialized_lifecycle
     def uninstall_native(self):

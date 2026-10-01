@@ -102,15 +102,21 @@ def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> di
     job_dir = _models_dir(project) / job_id
     if job_dir.is_symlink() or not job_dir.is_dir():
         return None
-    checkpoint = trusted_checkpoint(job_id, str(job_dir))
+    checkpoint = trusted_checkpoint(job_id, str(job_dir), project_models_dir=_models_dir(project))
     if checkpoint is None or checkpoint.parent.resolve() != job_dir.resolve():
         return None
     receipt = completed_job_receipt(job_dir)
     if not receipt or receipt.get("task") != task:
         return None
     recorded_source = receipt.get("source_dataset_path")
-    if not recorded_source or Path(recorded_source).expanduser().resolve() != source:
+    if not recorded_source:
         return None
+    intake_lineage=None
+    if Path(recorded_source).expanduser().resolve()!=source:
+        try:
+            from backend.engine.intake_lineage import verify_ancestor_model
+            intake_lineage=verify_ancestor_model(project,source,checkpoint,task)
+        except (ValueError,OSError,KeyError,TypeError):return None
     training_fingerprint = receipt.get("dataset_fingerprint")
     if not isinstance(training_fingerprint, str) or not training_fingerprint.startswith("v1:"):
         return None
@@ -133,6 +139,7 @@ def _model(project: dict[str, Any], source: Path, task: Task, job_id: str) -> di
         "warm_start": meta.get("warm_start"),
         "receipt_warm_start": receipt.get("warm_start"),
         "family_dataset_path": meta.get("dataset_path") or receipt.get("dataset_path"),
+        "intake_lineage":intake_lineage,
     }
 
 
@@ -390,15 +397,36 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
     if baseline is None or candidate is None:
         raise HTTPException(status_code=409, detail="두 모델 모두 현재 프로젝트·출처·작업 유형의 완료 checkpoint여야 합니다.")
 
+    model_hashes = {
+        'incumbent': _sha256(Path(baseline['checkpoint_path'])),
+        'candidate': _sha256(Path(candidate['checkpoint_path'])),
+    }
     dataset_fingerprint = _fingerprint(source)
-    images, total_test_images = (_owned_patch_test_images(project, source, [baseline, candidate], 2**31 if payload.full_test else payload.max_images)
+    intake_lineage=baseline.get('intake_lineage') or candidate.get('intake_lineage')
+    if intake_lineage:
+        if baseline_task!=candidate_task:raise HTTPException(409,'Intake ancestor comparison requires the same task and ordered classes')
+        from backend.engine.intake_lineage import verify_current_model
+        for model in (baseline,candidate):
+            if not model.get('intake_lineage'):
+                try:verify_current_model(project,source,model['checkpoint_path'],model['task'],intake_lineage)
+                except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
+        other=baseline.get('intake_lineage') and candidate.get('intake_lineage')
+        if other and other['cohort_sha256']!=intake_lineage['cohort_sha256']:raise HTTPException(409,'Ancestor models require the identical frozen held-out cohort')
+        images=list(intake_lineage['images']);total_test_images=len(images)
+        if not payload.full_test:images=images[:payload.max_images]
+    else:
+        images, total_test_images = (_owned_patch_test_images(project, source, [baseline, candidate], 2**31 if payload.full_test else payload.max_images)
                                 if payload.task == 'patch_classification' else
                                 _test_images(source, payload.task, None if payload.full_test else payload.max_images))
+    truth_binding=None
+    if not intake_lineage and payload.task!='patch_classification':
+        from backend.engine.comparison_truth import bind_truth
+        try:truth_binding=bind_truth(project,source,payload.task,[baseline,candidate],images)
+        except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
     if progress: progress(0, len(images))
-    model_hashes = {
-        "incumbent": _sha256(Path(baseline["checkpoint_path"])),
-        "candidate": _sha256(Path(candidate["checkpoint_path"])),
-    }
+    if any(_sha256(Path(model['checkpoint_path'])) != model_hashes[key]
+           for key,model in (('incumbent',baseline),('candidate',candidate))):
+        raise HTTPException(409,'비교 중 모델 checkpoint가 바뀌었습니다. 다시 실행해 주세요.')
     paths = {baseline["job_id"]: Path(baseline["checkpoint_path"]), candidate["job_id"]: Path(candidate["checkpoint_path"])}
     engines = {
         job_id: FlowchartEngine(device="cpu", checkpoint_resolver=lambda requested, _task, paths=paths: paths.get(requested))
@@ -428,7 +456,7 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         for key, model in (("incumbent", baseline), ("candidate", candidate)):
             try:
                 result = engines[model["job_id"]].execute(
-                    pipeline=pipelines[model["job_id"]], image_path=image["file_path"], image_id=image["image_id"],
+                    pipeline=pipelines[model["job_id"]], image_path=image.get('evaluation_file_path') or image["file_path"], image_id=image["image_id"],
                 )
                 row[key] = _outcome(result)
             except Exception as exc:
@@ -451,8 +479,22 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         raise HTTPException(status_code=409, detail="비교 중 모델 checkpoint가 바뀌었습니다. 다시 실행해 주세요.")
     if any(_sha256(Path(image["file_path"])) != image["image_sha256"] for image in images):
         raise HTTPException(status_code=409, detail="비교 중 test 이미지가 바뀌었습니다. 다시 실행해 주세요.")
+    if intake_lineage:
+        from backend.engine.intake_lineage import verify_ancestor_model,verify_current_model
+        for model in (baseline,candidate):
+            if model.get('intake_lineage'):
+                try:current=verify_ancestor_model(project,source,model['checkpoint_path'],model['task'])
+                except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
+                if current!=model['intake_lineage']:raise HTTPException(409,'Intake frozen cohort or truth changed during comparison')
+            else:
+                try:verify_current_model(project,source,model['checkpoint_path'],model['task'],intake_lineage)
+                except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
 
     summary = _summary(rows)
+    if truth_binding:
+        from backend.engine.comparison_truth import verify_truth
+        try:verify_truth(project,source,truth_binding)
+        except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
     report = {
         "schema_version": 1,
         "comparison_id": f"comparison_{uuid.uuid4().hex}",
@@ -488,6 +530,10 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         ],
         "images": rows,
     }
+    if intake_lineage:
+        report['intake_lineage']={key:value for key,value in intake_lineage.items() if key!='images'}
+        report['image_selection']='Verified intake ancestor frozen held-out image bytes and original scoped truth'
+    if truth_binding:report['truth_binding']=truth_binding
     output = _report_dir(project)
     output.mkdir(parents=True, exist_ok=True)
     path = output / f"{report['comparison_id']}.json"

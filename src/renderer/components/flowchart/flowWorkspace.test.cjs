@@ -8,3 +8,21 @@ test('keyboard ROI movement preserves crop dimensions at image boundaries',()=>{
 test('debugger inputs include only selected edges and none for skipped nodes',()=>{const graph={edges:[{id:'chosen',source:'a',target:'c'},{id:'off',source:'b',target:'c'}]};const steps=[{node_id:'a',selected_edge_ids:['chosen'],artifacts:[{roi_id:'one'}]},{node_id:'b',selected_edge_ids:[],artifacts:[{roi_id:'two'}]},{node_id:'c',input_count:1,status:'passed'}];assert.deepEqual(m.exports.activeInputArtifacts('c',graph,{execution_steps:steps}),[{roi_id:'one'}]);steps[2]={node_id:'c',input_count:0,status:'skipped'};assert.deepEqual(m.exports.activeInputArtifacts('c',graph,{execution_steps:steps}),[]);});
 test('fixed image selections reopen after a transport epoch changes for the same API/profile',()=>{const scope={projectId:'same',projectDir:'/project',source:'/source',task:'segmentation',labelset:'labels',computeProfileId:'profile',apiIdentity:'shared:https://server-a'};const storage=new Map();storage.set(m.exports.flowTestSetStorageKey({...scope,transportRevision:1}),JSON.stringify(['/source/one.png','/source/two.png']));assert.deepEqual(JSON.parse(storage.get(m.exports.flowTestSetStorageKey({...scope,transportRevision:8}))),['/source/one.png','/source/two.png']);});
 test('fixed image selections never restore from another server with identical project IDs and paths',()=>{const scope={projectId:'same',projectDir:'/project',source:'/source',task:'segmentation',labelset:'labels',computeProfileId:'profile'};const storage=new Map();storage.set(m.exports.flowTestSetStorageKey({...scope,apiIdentity:'shared:https://server-a'}),'["/source/one.png"]');assert.equal(storage.get(m.exports.flowTestSetStorageKey({...scope,apiIdentity:'shared:https://server-b'})),undefined);assert.equal(storage.get(m.exports.flowTestSetStorageKey({...scope,apiIdentity:'local'})),undefined);});
+test('artifact search and last-page access retain artifacts beyond the first twelve',()=>{
+  const rows=Array.from({length:30},(_,i)=>({roi_id:`region:${i}`,bbox:[i,0,i+1,10],evidence:{class_name:i===29?'scratch':'normal'}}));
+  const last=m.exports.artifactPage(rows,'',2,12);assert.equal(last.total,30);assert.equal(last.rows[5].roi_id,'region:29');
+  assert.equal(m.exports.artifactPage(rows,'scratch',7,12).rows[0].roi_id,'region:29');
+});
+test('ROI trace follows selected branches and excludes an unselected sibling',()=>{
+  const graph={edges:[{id:'a',source:'roi',target:'yes'},{id:'b',source:'roi',target:'no'},{id:'c',source:'yes',target:'next'}]};
+  const result={execution_steps:[{node_id:'roi',status:'passed',selected_edge_ids:['a'],artifacts:[{roi_id:'r1'}]},{node_id:'no',status:'skipped',artifacts:[]},{node_id:'yes',status:'flagged_ng',selected_edge_ids:['c'],artifacts:[{roi_id:'r1:patch_2'}]},{node_id:'next',status:'passed',artifacts:[{roi_id:'r1:patch_2'}]}]};
+  assert.deepEqual(m.exports.roiTrace('r1:patch_2',graph,result).map(r=>r.node_id),['roi','yes','next']);
+});
+test('class rule choices use model IDs and refuse conflicting upstream vocabularies',()=>{
+  const graph={nodes:[{id:'seg',data:{model_job_id:'model'}},{id:'blob',data:{node_type:'blob_measure'}}],edges:[{source:'seg',target:'blob'}]};
+  const models=[{job_id:'model',class_names:['background','Bow'],class_ids:[0,1]}];
+  assert.deepEqual(m.exports.nodeClassChoices(graph,'blob',models),[{id:1,name:'Bow'}]);
+  graph.nodes.push({id:'other',data:{model_job_id:'second'}});graph.edges.push({source:'other',target:'blob'});
+  models.push({job_id:'second',class_names:['background','Crack'],class_ids:[0,1]});
+  assert.deepEqual(m.exports.nodeClassChoices(graph,'blob',models),[]);
+});

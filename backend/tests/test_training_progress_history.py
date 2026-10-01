@@ -26,7 +26,7 @@ def test_local_synthetic_epoch_retains_absent_validation_loss_through_real_callb
                         lambda **kwargs: callbacks.append(kwargs['callback']) or SimpleNamespace())
     monkeypatch.setattr(routes_training.threading, 'Thread',
                         lambda **kwargs: SimpleNamespace(start=lambda: None))
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     manager._leases = SimpleNamespace(acquire=lambda *args: True, release=lambda *args, **kw: None)
     record = manager.start_job('job_synthetic', 'anomaly', str(tmp_path), str(tmp_path))
     callbacks[0].on_epoch_end(0, 2, 0.4, None, 0.001, {'val_image_auroc': None})

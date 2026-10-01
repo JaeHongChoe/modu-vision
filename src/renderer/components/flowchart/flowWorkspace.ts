@@ -1,5 +1,29 @@
 import type { FlowchartPipeline, FlowchartExecutionStep, FlowchartExecutionResult, FlowNode } from '../../types';
 
+export function nodeClassChoices(pipeline:FlowchartPipeline,nodeId:string,models:{job_id:string;class_names?:string[];class_ids?:number[]}[]):{id:number;name:string}[]{
+  const own=pipeline.nodes.find(node=>node.id===nodeId)?.data.model_job_id;
+  const jobs=new Set<string>();const visited=new Set<string>();
+  const visit=(id:string)=>{
+    if(visited.has(id))return;visited.add(id);
+    const node=pipeline.nodes.find(row=>row.id===id);
+    if(node?.data.model_job_id){jobs.add(node.data.model_job_id);return;}
+    pipeline.edges.filter(edge=>edge.target===id).forEach(edge=>visit(edge.source));
+  };
+  if(own)jobs.add(own);else visit(nodeId);
+  const vocabulary=new Map<number,string>();
+  for(const job of jobs){
+    const model=models.find(row=>row.job_id===job);
+    if(!model?.class_names?.length||model.class_ids?.length!==model.class_names.length)return [];
+    for(let index=0;index<model.class_names.length;index++){
+      const id=model.class_ids[index],name=model.class_names[index];
+      if(id===0)continue;
+      if(vocabulary.has(id)&&vocabulary.get(id)!==name)return [];
+      vocabulary.set(id,name);
+    }
+  }
+  return [...vocabulary].sort(([a],[b])=>a-b).map(([id,name])=>({id,name}));
+}
+
 export function flowTestSetStorageKey(scope:{projectId:string;projectDir:string;source:string;task:string;labelset?:string;computeProfileId:string|null;apiIdentity:string}):string {
   return `flow-test-set:v2:${JSON.stringify([scope.apiIdentity,scope.computeProfileId,scope.projectId,scope.projectDir,scope.source,scope.task,scope.labelset||'default'])}`;
 }
@@ -39,13 +63,34 @@ export function nodeEvidenceText(node:FlowNode,step:FlowchartExecutionStep):stri
       const name=String(row.class_name||row.class_id);
       if(rule?.min_count!=null) lines.push(`${name}: 필요 최소 ${rule.min_count}개, 측정 ${row.count}개`);
       if(rule?.max_count!=null) lines.push(`${name}: 허용 최대 ${rule.max_count}개, 측정 ${row.count}개`);
-      if(rule?.min_area_px!=null) lines.push(`${name}: 필요 면적 ${rule.min_area_px} px 이상, 측정 ${row.area_px} px`);
-      if(rule?.max_area_px!=null) lines.push(`${name}: 허용 면적 ${rule.max_area_px} px 이하, 측정 ${row.area_px} px`);
-      if(!rule) lines.push(`${name}: ${row.count}개, 면적 ${row.area_px} px, ${row.verdict}`);
+      if(rule?.min_area_px!=null) lines.push(`${name}: 필요 면적 ${rule.min_area_px} px² 이상, 측정 ${row.area_px} px²`);
+      if(rule?.max_area_px!=null) lines.push(`${name}: 허용 면적 ${rule.max_area_px} px² 이하, 측정 ${row.area_px} px²`);
+      if(!rule) lines.push(`${name}: ${row.count}개, 면적 ${row.area_px} px², ${row.verdict}`);
     }
     if(artifact.evidence?.recognized_text!=null) lines.push(`인식한 문자: ${artifact.evidence.recognized_text}`);
   }
   return [...new Set(lines)];
+}
+
+type Artifact = NonNullable<FlowchartExecutionStep['artifacts']>[number];
+export function artifactPage(rows:Artifact[], query:string, page:number, pageSize=12) {
+  const needle=query.trim().toLocaleLowerCase();
+  const filtered=needle?rows.filter(row=>JSON.stringify([row.roi_id,row.bbox,row.evidence]).toLocaleLowerCase().includes(needle)):rows;
+  const pages=Math.max(1,Math.ceil(filtered.length/pageSize));
+  const index=Math.max(0,Math.min(pages-1,page));
+  return {rows:filtered.slice(index*pageSize,(index+1)*pageSize),total:filtered.length,pages,page:index};
+}
+
+export function roiTrace(roiId:string,pipeline:FlowchartPipeline,result:FlowchartExecutionResult) {
+  // Only observed IDs and selected graph edges are evidence. Never infer a
+  // skipped path or a geometric match between unrelated region identifiers.
+  const related=(id:string)=>id===roiId||roiId.startsWith(`${id}:`)||id.startsWith(`${roiId}:`);
+  const matching=new Set(result.execution_steps.filter(step=>step.status!=='skipped'&&(step.artifacts||[]).some(a=>related(a.roi_id))).map(s=>s.node_id));
+  return result.execution_steps.filter(step=>matching.has(step.node_id)).map(step=>({
+    node_id:step.node_id,name:step.name||step.node_id,status:step.branch_verdict||step.status,
+    input_count:step.input_count??0,output_count:step.output_count??0,
+    next:pipeline.edges.filter(edge=>edge.source===step.node_id&&matching.has(edge.target)&&step.selected_edge_ids?.includes(edge.id)).map(edge=>edge.target),
+  }));
 }
 
 export function insertSubgraph(base:FlowchartPipeline,module:FlowchartPipeline,prefix:string):FlowchartPipeline {

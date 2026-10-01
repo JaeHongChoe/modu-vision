@@ -13,7 +13,7 @@
  */
 
 import { ChildProcess, execSync, spawn } from 'child_process';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import http from 'http';
@@ -54,6 +54,7 @@ export interface BackendStatusInfo extends BackendStatus {
   health: BackendHealth | null;
   restartCount: number;
   uptimeSeconds: number | null;
+  runtimeIdentity: {mode:'frozen';build_identity_sha256:string;executable_sha256:string}|null;
 }
 
 export interface CrashEventData {
@@ -82,6 +83,7 @@ export interface SupervisorConfig {
 const MAX_LOG_BUFFER_LINES = 100;
 
 export class BackendSupervisor extends EventEmitter {
+  private runtimeIdentity:BackendStatusInfo['runtimeIdentity']=null;
   private config: Required<SupervisorConfig>;
   private state: ProcessState = 'STOPPED';
   private childProcess: ChildProcess | null = null;
@@ -166,6 +168,7 @@ export class BackendSupervisor extends EventEmitter {
       health: this.healthInfo,
       restartCount: this.restartCount,
       uptimeSeconds: uptime,
+      runtimeIdentity:this.runtimeIdentity,
     };
   }
 
@@ -198,73 +201,77 @@ export class BackendSupervisor extends EventEmitter {
     const apiToken = randomBytes(32).toString('hex');
     this.apiToken = apiToken;
 
-    const projectDir = this.resolveProjectDir();
-    const standaloneBin = this.resolveStandaloneBinary();
-    let spawnBin: string;
-    let spawnArgs: string[];
-
-    if (standaloneBin) {
-      this.resolvedPythonPath = standaloneBin;
-      spawnBin = standaloneBin;
-      spawnArgs = [
-        '--host', this.config.host,
-        '--port', '0',
-        '--project-dir', projectDir,
-        '--log-level', this.config.logLevel,
-      ];
-      console.log(`[Supervisor] Launching compiled standalone backend: ${spawnBin} ${spawnArgs.join(' ')}`);
-    } else {
-      const pythonBin = this.resolvePython();
-      this.resolvedPythonPath = pythonBin;
-
-      // Auto-validate and self-heal missing Python libraries
-      this.ensureDependencies(pythonBin);
-
-      const scriptPath = this.resolveBackendScript();
-      spawnBin = pythonBin;
-      spawnArgs = [
-        scriptPath,
-        '--host', this.config.host,
-        '--port', '0', // Request OS ephemeral port
-        '--project-dir', projectDir,
-        '--log-level', this.config.logLevel,
-      ];
-      console.log(`[Supervisor] Launching Python backend: ${spawnBin} ${spawnArgs.join(' ')}`);
-    }
-
-    const appRoot = this.getAppRoot();
-    const backendCwd = this.getBackendWorkingDirectory(appRoot);
-    const userDataDir = getElectronApp()?.getPath('userData');
-    const env = {
-      ...process.env,
-      PYTHONUNBUFFERED: '1',
-      PYTHONDONTWRITEBYTECODE: '1',
-      PYTHONPATH: appRoot,
-      VISION_AI_STUDIO_API_TOKEN: apiToken,
-      VISION_AI_APP_VERSION: getElectronApp()?.getVersion() || '',
-      ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
-    };
-
     try {
-      this.childProcess = spawn(spawnBin, spawnArgs, {
-        cwd: backendCwd,
-        env,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-    } catch (spawnError: any) {
-      this.setState('CRASHED');
-      throw new Error(`Failed to spawn backend process at '${spawnBin}': ${spawnError.message}`);
-    }
+      const projectDir = this.resolveProjectDir();
+      const standaloneBin = this.resolveStandaloneBinary();
+      let spawnBin: string;
+      let spawnArgs: string[];
 
-    const pid = this.childProcess.pid;
-    console.log(`[Supervisor] Python daemon spawned with PID ${pid}`);
+      if (standaloneBin) {
+        this.resolvedPythonPath = standaloneBin;
+        spawnBin = standaloneBin;
+        spawnArgs = [
+          '--host', this.config.host,
+          '--port', '0',
+          '--project-dir', projectDir,
+          '--log-level', this.config.logLevel,
+        ];
+        console.log(`[Supervisor] Launching compiled standalone backend: ${spawnBin} ${spawnArgs.join(' ')}`);
+      } else {
+        const pythonBin = this.resolvePython();
+        this.resolvedPythonPath = pythonBin;
 
-    // Attach stream listeners
-    this.attachProcessListeners(this.childProcess);
+        // Auto-validate and self-heal missing Python libraries
+        this.ensureDependencies(pythonBin);
 
-    try {
+        const scriptPath = this.resolveBackendScript();
+        spawnBin = pythonBin;
+        spawnArgs = [
+          scriptPath,
+          '--host', this.config.host,
+          '--port', '0', // Request OS ephemeral port
+          '--project-dir', projectDir,
+          '--log-level', this.config.logLevel,
+        ];
+        console.log(`[Supervisor] Launching Python backend: ${spawnBin} ${spawnArgs.join(' ')}`);
+      }
+
+      const appRoot = this.getAppRoot();
+      const backendCwd = this.getBackendWorkingDirectory(appRoot);
+      const userDataDir = getElectronApp()?.getPath('userData');
+      const env = {
+        ...process.env,
+        PYTHONUNBUFFERED: '1',
+        PYTHONDONTWRITEBYTECODE: '1',
+        PYTHONPATH: appRoot,
+        VISION_AI_STUDIO_API_TOKEN: apiToken,
+        VISION_AI_APP_VERSION: getElectronApp()?.getVersion() || '',
+        ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
+      };
+
+      try {
+        this.childProcess = spawn(spawnBin, spawnArgs, {
+          cwd: backendCwd,
+          env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+      } catch (spawnError: any) {
+        this.setState('CRASHED');
+        throw new Error(`Failed to spawn backend process at '${spawnBin}': ${spawnError.message}`);
+      }
+
+      const pid = this.childProcess.pid;
+      console.log(`[Supervisor] Python daemon spawned with PID ${pid}`);
+
+      // Attach stream listeners
+      this.attachProcessListeners(this.childProcess);
+
       // 1. Discover Ephemeral Port from stdout
-      const port = await this.discoverPort(this.childProcess, this.config.portDiscoveryTimeoutMs);
+      // Frozen model libraries need time for first-launch OS verification and
+      // initialization. A packaged app must not fall back to system Python.
+      const startupTimeout=standaloneBin&&getElectronApp()?.isPackaged
+        ? Math.max(this.config.portDiscoveryTimeoutMs,180000):this.config.portDiscoveryTimeoutMs;
+      const port = await this.discoverPort(this.childProcess, startupTimeout);
       this.port = port;
       console.log(`[Supervisor] Ephemeral port discovered: ${port}`);
 
@@ -283,8 +290,14 @@ export class BackendSupervisor extends EventEmitter {
       return port;
     } catch (startupError: any) {
       console.error(`[Supervisor] Startup failed: ${startupError.message}`);
+      const alreadyReported = this.state === 'CRASHED';
       await this.stopBackend();
       this.setState('CRASHED');
+      if (!alreadyReported) this.emit('crashed', {
+        exitCode: null, signal: null, recentStderr: [...this.stderrBuffer],
+        recentStdout: [...this.stdoutBuffer], restartsAttempted: this.restartCount,
+        message: startupError.message,
+      } satisfies CrashEventData);
       throw startupError;
     }
   }
@@ -298,7 +311,7 @@ export class BackendSupervisor extends EventEmitter {
     this.setState('STOPPING');
 
     const proc = this.childProcess;
-    if (!proc || proc.killed) {
+    if (!proc || !proc.pid || proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
       this.cleanupState();
       return;
     }
@@ -470,14 +483,24 @@ export class BackendSupervisor extends EventEmitter {
         }
       };
 
+      const onError = (error: Error) => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          reject(error);
+        }
+      };
+
       const cleanup = () => {
         clearTimeout(timer);
         this.removeListener('stdout', onLine);
         proc.removeListener('exit', onExit);
+        proc.removeListener('error', onError);
       };
 
       this.on('stdout', onLine);
       proc.once('exit', onExit);
+      proc.once('error', onError);
     });
   }
 
@@ -628,13 +651,26 @@ export class BackendSupervisor extends EventEmitter {
         path.join(process.resourcesPath, binName),
       ];
       for (const cand of candidates) {
-        if (fs.existsSync(cand)) return cand;
+        if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+          const receiptPath=path.join(path.dirname(cand),'backend-release.json');
+          if(!fs.existsSync(receiptPath))throw new Error('Packaged frozen backend inventory is missing; rebuild the backend on this platform');
+          const receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+          const digest=createHash('sha256').update(fs.readFileSync(cand)).digest('hex');
+          if(receipt.executable!==binName||receipt.executable_sha256!==digest||!receipt.inventory?.build_identity_sha256)throw new Error('Packaged frozen backend checksum or build identity differs from its inventory');
+          this.runtimeIdentity={mode:'frozen',build_identity_sha256:receipt.inventory.build_identity_sha256,executable_sha256:digest};
+          return cand;
+        }
       }
+      throw new Error('Packaged frozen backend is missing. Build it on the target OS and architecture before packaging.');
     }
+
+    if (process.env.VISION_AI_STUDIO_DEV_SOURCE_BACKEND === '1') return null;
 
     // 2. Local dist-backend build folder
     const distBin = path.join(appRoot, 'dist-backend', binName);
-    if (fs.existsSync(distBin)) return distBin;
+    if (fs.existsSync(distBin) && fs.statSync(distBin).isFile()) return distBin;
+    const directoryBin=path.join(appRoot,'dist-backend','vision_ai_backend',binName);
+    if(fs.existsSync(directoryBin) && fs.statSync(directoryBin).isFile())return directoryBin;
 
     return null;
   }
@@ -686,8 +722,8 @@ export class BackendSupervisor extends EventEmitter {
     }
 
     const app = getElectronApp();
-    if (app && app.isPackaged) {
-      // In production, write to userData to guarantee write permissions
+    if (app && (app.isPackaged || process.env.VISION_AI_STUDIO_USER_DATA_DIR)) {
+      // Isolated development QA and production write to userData to guarantee write permissions
       const userProjects = path.join(app.getPath('userData'), 'projects');
       fs.mkdirSync(userProjects, { recursive: true });
       return userProjects;

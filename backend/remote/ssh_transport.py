@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import json
+import csv
+import io
+import errno
 import os
 import re
 import shlex
+import shutil
 import signal
 import subprocess
 import threading
 import time
+from uuid import uuid4
 from pathlib import Path, PurePosixPath
 from typing import Sequence
 
@@ -26,6 +31,7 @@ _REQUIRED_WEIGHTS = (
 _PROBE_SCRIPT = r"""
 import hashlib
 import importlib
+from importlib.metadata import version, PackageNotFoundError
 import json
 import os
 from pathlib import Path
@@ -41,12 +47,33 @@ os.environ['YOLO_CONFIG_DIR'] = str(Path(scratch.name) / 'ultralytics')
 modules = ('torch', 'torchvision', 'cv2', 'numpy', 'PIL', 'sklearn', 'psutil', 'fastapi', 'pydantic',
            'timm', 'safetensors', 'huggingface_hub', 'ultralytics')
 dependencies = {}
+versions = {}
+distribution_names = {'PIL': 'Pillow', 'sklearn': 'scikit-learn', 'huggingface_hub': 'huggingface-hub'}
 for name in modules:
     try:
         importlib.import_module(name)
         dependencies[name] = True
     except Exception:
         dependencies[name] = False
+    try:
+        versions[name] = version(distribution_names.get(name, name))
+    except PackageNotFoundError:
+        try:
+            versions[name] = version('opencv-python-headless' if name == 'cv2' else 'opencv-python') if name == 'cv2' else None
+        except PackageNotFoundError:
+            versions[name] = None
+dependency_lock = None
+lock_name = os.environ.get('MODU_VISION_MODEL_DEPENDENCIES_LOCK')
+if lock_name:
+    lock = Path(lock_name)
+    try:
+        data = lock.read_bytes()
+        pins = dict(line.split('==', 1) for line in data.decode().splitlines() if line and not line.startswith('#') and '==' in line)
+        installed = {name: version(name) for name in pins}
+        dependency_lock = {'sha256': hashlib.sha256(data).hexdigest(), 'pins': pins, 'installed': installed,
+                           'matches': pins == installed}
+    except (OSError, ValueError, PackageNotFoundError) as exc:
+        dependency_lock = {'matches': False, 'error': type(exc).__name__ + ': ' + str(exc)}
 model_dependencies = {}
 if dependencies['timm']:
     import timm
@@ -136,6 +163,9 @@ scratch.cleanup()
 print(json.dumps({
     'protocol_version': 1,
     'runtime_dependencies': dependencies,
+    'runtime_versions': versions,
+    'dependency_lock': dependency_lock,
+    'owned_process_control': {'private_session': bool(shutil.which('setsid')), 'pidfd': hasattr(os, 'pidfd_open')},
     'model_dependencies': model_dependencies,
     'pretrained_weights': pretrained_weights,
     'remote_root_exists': root_exists,
@@ -183,6 +213,14 @@ def require_training_runtime(readiness, task, preset, overrides=None, *, warm_st
     missing = [name for name in required if not dependencies.get(name, False)]
     if missing:
         raise ValueError('Selected model requires installed remote dependencies: ' + ', '.join(missing))
+    versions = checks.get('runtime_versions')
+    minima = {'timm': (1, 0, 24), 'safetensors': (0, 4, 0), 'huggingface_hub': (0, 24, 0), 'ultralytics': (8, 4, 41)}
+    if versions is not None:
+        unsupported = [name for name in required if tuple(int(p) for p in re.findall(r'\d+', str(versions.get(name) or ''))[:3]) < minima[name]]
+        if unsupported:
+            raise ValueError('Selected model requires supported remote dependency versions: ' + ', '.join(unsupported))
+    if checks.get('dependency_lock') is not None and checks['dependency_lock'].get('matches') is not True:
+        raise ValueError('Remote model dependency lock does not match the installed environment')
     canonical = canonical_dino_name(str(model)) if is_dino_backbone(str(model)) else model
     if required and checks.get('model_dependencies') is not None and not checks['model_dependencies'].get(canonical, False):
         raise ValueError(f'Remote runtime does not implement {canonical}; update timm>=1.0.24 or ultralytics>=8.4.41')
@@ -249,21 +287,53 @@ def _stop_transfer(process: subprocess.Popen[str]) -> None:
         process.communicate()
 
 
+def _control_options() -> list[str]:
+    path = os.environ.get('VISION_AI_STUDIO_SSH_CONTROL_PATH')
+    if not path:
+        return []
+    if not path.startswith('/') or path.count('%C') != 1 or '%' in path.replace('%C', '') or '\x00' in path:
+        raise ValueError('SSH control path must be absolute and contain one %C user/host/port binding')
+    return ['-o', f'ControlPath={path}', '-o', 'ControlMaster=no']
+
+
 class SSHTransport:
     """Uses OpenSSH key/agent authentication and strict known-host checking."""
+
+    def supports_resumable_transfer(self, profile: ComputeProfile) -> bool:
+        """Rsync is a host transport capability, independent of the worker image."""
+        if not shutil.which('rsync'):
+            return False
+        try:
+            result = self.exec(profile, ['rsync', '--version'], timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        return result.returncode == 0 and result.stdout.lstrip().startswith('rsync ')
+
+    def _rsync_argv(self, profile: ComputeProfile, source: str, target: str) -> list[str]:
+        return ['rsync', '--times', '--perms', '--checksum', '--partial', '--partial-dir=.transfer-partials',
+                '--chmod=u=rw,go-rwx', '--rsync-path=umask 077; rsync', '-e', shlex.join(self._ssh_base(profile)[:-2]),
+                '--', source, target]
 
     @staticmethod
     def _ssh_base(profile: ComputeProfile) -> list[str]:
         return [
             "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-            "-p", str(profile.ssh_port), "--", profile.ssh_target,
+            "-p", str(profile.ssh_port),
+            "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
+            "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
+            *_control_options(),
+            "--", profile.ssh_target,
         ]
 
     @staticmethod
     def _scp_base(profile: ComputeProfile) -> list[str]:
         return [
             "scp", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-            "-P", str(profile.ssh_port), "--",
+            "-P", str(profile.ssh_port),
+            "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
+            "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
+            *_control_options(),
+            "--",
         ]
 
     def exec(
@@ -340,6 +410,7 @@ class SSHTransport:
             # HOME, Path.home() resolves to / and route imports try to create
             # their cache at an unwritable filesystem root.
             command += ["--env", f"HOME={run_dir}", "--env", f"XDG_CACHE_HOME={run_dir}/.cache"]
+            command += ['--env', 'MODU_VISION_RUNTIME_KIND=docker']
         if user is not None:
             if not re.fullmatch(r"[0-9]+:[0-9]+\Z", user):
                 raise ValueError("Docker user must be numeric UID:GID")
@@ -384,6 +455,12 @@ class SSHTransport:
                     "checks": {"ssh": True, "runtime": True, **checks},
                     "message": "Incompatible remote worker protocol",
                 }
+            if profile.runtime_kind == 'docker':
+                # NVIDIA indexes inside a selected container start at zero.
+                # Reservation selectors refer to the SSH host's indexes.
+                visible = checks.get('device_inventory') or {'devices': []}
+                checks['visible_device_inventory'] = visible
+                checks['device_inventory'] = self._host_device_inventory(profile, visible)
             dependencies = checks["runtime_dependencies"]
             required = (
                 "torch", "torchvision", "cv2", "numpy", "PIL", "sklearn",
@@ -407,6 +484,8 @@ class SSHTransport:
                 "device_name": checks["device_name"],
                 "device_type": checks["device_type"],
                 "checks": {"ssh": True, "runtime": True, **checks},
+                'transfer': {'mode': 'rsync' if self.supports_resumable_transfer(profile) else 'scp',
+                             'resumable': self.supports_resumable_transfer(profile)},
                 "message": "Ready" if ready else (
                     "Selected GPU is unavailable to the runtime" if not gpu_ready else
                     'Missing runtime dependencies: ' + ', '.join(missing) if missing else
@@ -415,6 +494,26 @@ class SSHTransport:
             }
         except (ValueError, KeyError, TypeError) as exc:
             return {"ready": False, "checks": {"ssh": True, "runtime": False}, "message": f"Invalid probe response: {exc}"}
+
+    def _host_device_inventory(self, profile, visible):
+        try:
+            result = self.exec(profile, ['nvidia-smi', '--query-gpu=index,uuid,memory.total',
+                                         '--format=csv,noheader,nounits'], timeout=10)
+            if result.returncode != 0:
+                raise ValueError('Host CUDA inventory could not be read')
+            rows = []
+            for values in csv.reader(io.StringIO(result.stdout)):
+                selector, identifier, capacity = (part.strip() for part in values)
+                memory = int(float(capacity))
+                if not selector.isdecimal() or not identifier.startswith('GPU-') or memory <= 0:
+                    raise ValueError('Host CUDA inventory is invalid')
+                rows.append({'selector': selector, 'uuid': identifier, 'memory_mb': memory,
+                             'parent_uuid': None, 'kind': 'cuda'})
+            rows.extend(row for row in visible.get('devices', []) if row.get('kind') == 'mig')
+            return {**visible, 'devices': rows}
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            return {'devices': [], 'cpu': {'available': True}, 'mig_supported': False,
+                    'prerequisite': 'Host CUDA identity inventory is unavailable; sharing cannot be allocated'}
 
     def upload(
         self, profile: ComputeProfile, local: Path | str, remote_relative: str,
@@ -427,10 +526,13 @@ class SSHTransport:
         if cancel is not None and cancel.is_set():
             raise SSHTransferCancelled("upload cancelled")
         self._ensure_private_directories(profile, str(PurePosixPath(remote).parent))
-        _checked(self.exec(profile, ["install", "-m", "600", "/dev/null", remote]), "protect upload destination")
+        resumable = self.supports_resumable_transfer(profile)
+        if not resumable:
+            _checked(self.exec(profile, ["install", "-m", "600", "/dev/null", remote]), "protect upload destination")
         if cancel is not None and cancel.is_set():
             raise SSHTransferCancelled("upload cancelled")
-        argv = [*self._scp_base(profile), str(source), f"{profile.ssh_target}:{remote}"]
+        argv = self._rsync_argv(profile, str(source), f'{profile.ssh_target}:{remote}') if resumable else [
+            *self._scp_base(profile), str(source), f"{profile.ssh_target}:{remote}"]
         process = subprocess.Popen(
             argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, shell=False, start_new_session=os.name == "posix",
@@ -463,9 +565,18 @@ class SSHTransport:
         destination = Path(local).expanduser().absolute()
         destination.parent.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
-            [*self._scp_base(profile), f"{profile.ssh_target}:{remote}", str(destination)],
+            self._rsync_argv(profile, f'{profile.ssh_target}:{remote}', str(destination))
+            if self.supports_resumable_transfer(profile) else [*self._scp_base(profile), f"{profile.ssh_target}:{remote}", str(destination)],
             capture_output=True, text=True, shell=False, timeout=300, check=False,
         )
+        # Downloads write at the local receiver. Keep an exhausted local
+        # artifact volume distinct from uncertain SSH/worker connectivity.
+        error = result.stderr.lower()
+        if result.returncode not in (0, 255):
+            if 'no space left on device' in error:
+                raise OSError(errno.ENOSPC, 'Local storage capacity is insufficient for the downloaded artifact')
+            if 'disk quota exceeded' in error:
+                raise OSError(errno.EDQUOT, 'Local storage quota is insufficient for the downloaded artifact')
         return _checked(result, "download")
 
     def launch(self, profile: ComputeProfile, argv: Sequence[str], run_id: str) -> str:
@@ -483,8 +594,12 @@ class SSHTransport:
                 timeout=60,
             )
         else:
-            command = shlex.join(self.runtime_argv(profile, argv, run_id=run_id))
-            script = f"umask 077; cd {shlex.quote(run_dir)} || exit 1; nohup {command} > {shlex.quote(run_dir + '/worker.log')} 2>&1 < /dev/null & echo $!"
+            # A private session plus a launch-time inherited marker binds all
+            # child workers to this run for liveness and cancellation.
+            worker_token = uuid4().hex
+            command = shlex.join(['setsid', 'env', f'MODU_VISION_WORKER_TOKEN={worker_token}',
+                                 *self.runtime_argv(profile, argv, run_id=run_id)])
+            script = f"umask 077; cd {shlex.quote(run_dir)} || exit 1; nohup {command} > {shlex.quote(run_dir + '/worker.log')} 2>&1 < /dev/null & echo $!:{worker_token}"
             result = self.exec(profile, ["sh", "-c", script], timeout=60)
         _checked(result, "launch")
         identity = result.stdout.strip()
@@ -497,6 +612,64 @@ class SSHTransport:
         run_dir = _run_path(profile, run_id)
         return _checked(self.exec(profile, ["touch", f"{run_dir}/cancel"]), "cancel signal")
 
+    def recover_handle(self, profile, run_id, *, job_id, operation, spec_sha256):
+        """Recover a lost launch acknowledgment from the run's bound receipt."""
+        if not isinstance(spec_sha256, str) or not re.fullmatch('[a-f0-9]{64}', spec_sha256):
+            return None
+        try:
+            result = self.exec(profile, ['cat', _run_path(profile, run_id) + '/worker_identity.json'], timeout=10)
+            if result.returncode != 0:
+                return None
+            identity = json.loads(result.stdout)
+            if (identity.get('protocol_version') != 1 or identity.get('run_id') != run_id
+                    or identity.get('job_id') != job_id or identity.get('operation') != operation
+                    or identity.get('spec_sha256') != spec_sha256 or identity.get('control_kind') != profile.runtime_kind):
+                return None
+            handle = identity.get('control_handle')
+            if profile.runtime_kind == 'docker':
+                return handle if isinstance(handle, str) and re.fullmatch('[a-fA-F0-9]{12,64}', handle) else None
+            pid, token = str(handle).split(':', 1)
+            if (pid.isdecimal() and int(pid) > 0 and re.fullmatch('[a-f0-9]{32}', token)
+                    and identity.get('pid') == identity.get('group') == identity.get('session') == int(pid)
+                    and identity.get('token') == token):
+                return handle
+        except (OSError, ValueError, TypeError, AttributeError, subprocess.TimeoutExpired):
+            pass
+        return None
+
+    def _control_python(self, profile: ComputeProfile, run_id: str, handle: str, action: str):
+        run_dir = _run_path(profile, run_id)
+        parts = handle.split(':', 1)
+        pid = parts[0]
+        if not pid.isdecimal() or int(pid) <= 0 or (len(parts) == 2 and not re.fullmatch('[0-9a-f]{32}', parts[1])):
+            return None
+        # The source is embedded so a lost/unfinished code transfer cannot load
+        # another installed application's module for a control operation.
+        source = (Path(__file__).with_name('process_control.py')).read_text()
+        try:
+            return self.exec(profile, [profile.runtime_value, '-B', '-c', source,
+                                      run_dir, pid, action, *parts[1:]], timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+    def stop_owned(self, profile: ComputeProfile, run_id: str, handle: str, *, force: bool = False) -> bool | None:
+        """Signal proven owned processes only; uncertainty never authorizes a kill."""
+        _run_path(profile, run_id)
+        if profile.runtime_kind == 'python':
+            result = self._control_python(profile, run_id, handle, 'kill' if force else 'terminate')
+            return True if result is not None and result.returncode == 0 else None
+        running = self.is_running(profile, run_id, handle)
+        if running is False:
+            return True  # Already confirmed exited; no signal is needed.
+        if running is not True:
+            return None
+        command = ['docker', 'kill', '--signal', 'KILL' if force else 'TERM', handle]
+        try:
+            result = self.exec(profile, command, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        return True if result.returncode == 0 else None
+
     def is_running(self, profile: ComputeProfile, run_id: str, handle: str) -> bool | None:
         """True if this run is active, False if exited, None if status is unknown."""
         run_dir = _run_path(profile, run_id)
@@ -505,6 +678,13 @@ class SSHTransport:
                 return None
             command = ["docker", "container", "inspect", "--format", "{{.Name}} {{.State.Running}}", handle]
         else:
+            if ':' in handle:
+                group = self._control_python(profile, run_id, handle, 'probe')
+                if group is None or group.returncode != 4:
+                    return {0: True, 1: False}.get(group.returncode) if group is not None else None
+                # Before status initialization there can be no training
+                # children; reconcile a failed launch through its exact PID.
+                handle = handle.split(':', 1)[0]
             if not handle.isdecimal() or int(handle) <= 0:
                 return None
             command = ["ps", "-ww", "-p", handle, "-o", "stat=", "-o", "args="]
@@ -522,7 +702,7 @@ class SSHTransport:
             if len(fields) != 2:
                 return None
             if fields[0] != f"/modu-vision-{run_id}":
-                return False
+                return None  # An identity mismatch cannot confirm worker death.
             return {"true": True, "false": False}.get(fields[1].lower())
         if result.returncode == 1 and not result.stdout.strip() and not result.stderr.strip():
             return False

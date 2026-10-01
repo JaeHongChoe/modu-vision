@@ -1,0 +1,320 @@
+"""Project-owned service capture candidates and explicit dataset branch adoption.
+
+Service SQLite records are read only. Captures are snapshotted with their real
+job/model/graph identity; predictions never become labels or normal truth.
+Adoption copies a bounded source into a new owned source, retains its test split,
+and leaves captured images excluded until the existing label/review workflow
+explicitly includes them. Source switching is a separate user action.
+"""
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import sqlite3
+import tempfile
+import uuid
+
+from PIL import Image
+from backend.engine import dataset_metadata as dm
+from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+from backend.engine.flow_workspace import atomic_json
+from backend.engine.image_truth import digest
+from backend.engine.heldout_splits import normalized_assignments
+
+COPY_LIMIT_BYTES = 2 * 1024**3
+TRACKED_EXTENSIONS = SUPPORTED_IMAGE_EXTENSIONS | {'.json','.txt','.xml','.csv','.yaml','.yml'}
+
+
+def _scope(project):
+    source = project.get('source_dataset_dir')
+    if not source or not Path(source).is_dir() or Path(source).is_symlink(): raise ValueError('Select an unlinked active project source')
+    return {'project_id':project['id'],'source_dataset_path':str(Path(source).resolve()),
+            'task':project['task'],'labelset_id':project.get('active_labelset_id','default')}
+
+
+def _owned(project, path):
+    root = Path(project['project_dir']).resolve(); path = Path(path)
+    if not path.resolve().is_relative_to(root): raise ValueError('Intake storage is outside the project')
+    for candidate in (path,*path.parents):
+        if candidate == root: break
+        if candidate.is_symlink(): raise ValueError('Intake storage cannot contain symbolic links')
+    return path
+
+
+def _root(project):
+    root = _owned(project,Path(project['dataset_dir'])/'capture_intake'); root.mkdir(parents=True,exist_ok=True)
+    return root
+
+
+def _index(project):
+    path = _owned(project,_root(project)/'index.json')
+    return json.loads(path.read_text()) if path.is_file() else {'schema_version':1,'candidates':{},'versions':[]}
+
+
+def _files(project):
+    source = Path(project['source_dataset_dir']).resolve(); project_root = Path(project['project_dir']).resolve()
+    rows = []
+    for directory, names, files in os.walk(source,followlinks=False):
+        names[:] = sorted(name for name in names if not name.startswith('.') and (Path(directory)/name).resolve()!=project_root)
+        for name in sorted(files):
+            path=Path(directory)/name
+            if name.startswith('.') or path.suffix.lower() not in TRACKED_EXTENSIONS: continue
+            if path.is_symlink() or not path.resolve().is_relative_to(source): raise ValueError('Source dataset cannot contain linked tracked files')
+            rows.append({'relative_path':path.relative_to(source).as_posix(),'sha256':dm._hash(path),'size':path.stat().st_size})
+    return rows
+
+
+def _split(project):
+    source=Path(project['source_dataset_dir']).resolve();key=hashlib.sha256(str(source).encode()).hexdigest()
+    path=Path(project['dataset_dir'])/'splits'/f'{key}.json'
+    if path.is_symlink() or not path.is_file(): raise ValueError('Save a fixed split before registering service captures')
+    record=json.loads(path.read_text())
+    if record.get('folder_path')!=str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('Saved split source changed')
+    record={**record,'assignments':normalized_assignments(source,record['assignments'])}
+    if not any(part=='test' for part in record['assignments'].values()): raise ValueError('A fixed held-out test split is required for intake')
+    return path,record
+
+
+def _source_binding(project):
+    split,_=_split(project)
+    from backend.engine.grouped_dataset_views import source_image_paths
+    source=Path(project['source_dataset_dir']).resolve(); rows=source_image_paths(source,project['task'],include_unused=True)
+    labels=[]
+    for image in rows:
+        labels.append({'relative_path':image.relative_to(source).as_posix(),
+                       'annotation_sha256':dm._annotation_hash(project['project_dir'],source,image,project['annotations_dir']),
+                       'mask_sha256':dm._mask_hash(project['project_dir'],source,image,project['annotations_dir'])})
+    with dm.metadata_transaction(project['project_dir'],source,project['annotations_dir']) as ledger:
+        policy=copy.deepcopy(ledger.get('team_data',{}))
+    return {'source_files_sha256':digest(_files(project)),'split_sha256':dm._hash(split),'labels_sha256':digest(labels),'policy_sha256':digest(policy)}
+
+
+def _service_rows(project, job_ids, limit):
+    state=_owned(project,Path(project['project_dir'])/'runtime_service'/'state')
+    database=_owned(project,state/'inspection_service.sqlite3')
+    if not database.is_file(): raise ValueError('No project-owned service capture database is available')
+    if job_ids is not None and (not job_ids or len(job_ids)>5000 or any(not re.fullmatch(r'[0-9a-f]{32}',identifier) for identifier in job_ids)):
+        raise ValueError('Select valid service job IDs')
+    with sqlite3.connect(database.as_uri()+'?mode=ro',uri=True) as connection:
+        connection.row_factory=sqlite3.Row
+        if job_ids:
+            rows=connection.execute('SELECT * FROM jobs WHERE job_id IN ('+','.join('?' for _ in job_ids)+') ORDER BY created_at,rowid',job_ids).fetchall()
+            if len(rows)!=len(set(job_ids)): raise ValueError('Service job is absent from this project')
+        else:
+            rows=connection.execute("SELECT * FROM jobs WHERE state IN ('completed','error','delivery_error','delivery_pending') ORDER BY updated_at DESC,rowid DESC LIMIT ?",(limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _candidate(project,index,identifier,*,check_original=True):
+    if not re.fullmatch(r'capture_[0-9a-f]{32}',identifier) or identifier not in index['candidates']: raise ValueError('Capture candidate is unavailable')
+    row=copy.deepcopy(index['candidates'][identifier])
+    if row['scope']!=_scope(project): raise ValueError('Capture candidate source/task/labelset changed')
+    if row.get('snapshot_path'):
+        snapshot=_owned(project,_root(project)/row['snapshot_path'])
+        if not snapshot.is_file() or dm._hash(snapshot)!=row['source_sha256']: raise ValueError('Capture snapshot changed')
+        if check_original and dm._hash(Path(row['origin']['image_path']))!=row['source_sha256']: raise ValueError('Captured source changed after registration')
+    return row
+
+
+def register_service_jobs(project, *, job_ids=None, limit=100):
+    if type(limit) is not int or not 1<=limit<=5000: raise ValueError('Read 1–5000 service jobs per intake')
+    scope=_scope(project);rows=_service_rows(project,job_ids,limit);binding=_source_binding(project)
+    root=_root(project);source=Path(project['source_dataset_dir']).resolve()
+    from backend.engine.grouped_dataset_views import source_image_paths
+    source_hashes={dm._hash(path):path.relative_to(source).as_posix() for path in source_image_paths(source,project['task'],include_unused=True)}
+    registered=[]
+    with dm._file_lock(root/'intake.lock'):
+        index=_index(project)
+        for receipt in rows:
+            if receipt['state'] in {'queued','running'}: raise ValueError('Wait for the service job to finish before intake')
+            receipt_sha=digest(receipt)
+            previous=next((row for row in index['candidates'].values() if row['scope']==scope and row['job_receipt_sha256']==receipt_sha and row['base_source_binding']==binding),None)
+            if previous: registered.append(copy.deepcopy(previous));continue
+            result=json.loads(receipt.get('result_json') or 'null') or {}
+            path=Path(receipt['image_path']);failure=receipt.get('error'); checksum=receipt.get('image_sha256') or None
+            readable=False;extension='.image'
+            try:
+                if (path.is_symlink() or not path.is_file() or not any(path.resolve().is_relative_to(allowed) for allowed in (source,Path(project['project_dir']).resolve()/'runtime_service'/'state'/'uploads'))):
+                    raise ValueError('Captured image is unavailable, linked or outside this project source/uploads')
+                if dm._hash(path)!=checksum: raise ValueError('Captured source hash differs from the service job')
+                with Image.open(path) as image:
+                    if image.width*image.height>100_000_000: raise ValueError('Captured image exceeds the pixel limit')
+                    extension={ 'PNG':'.png','JPEG':'.jpg','TIFF':'.tif','BMP':'.bmp','WEBP':'.webp'}.get(image.format,'.png');image.verify()
+                readable=True
+            except (ValueError,OSError) as exc:failure=failure or str(exc)
+            duplicate=source_hashes.get(checksum)
+            if not duplicate:
+                duplicate=next((row['candidate_id'] for row in index['candidates'].values() if row['scope']==scope and row['source_sha256']==checksum and checksum and row['base_source_binding']==binding),None)
+            identifier='capture_'+uuid.uuid4().hex;snapshot=None
+            if readable:
+                snapshot=f'candidates/{identifier}/image{extension}';target=_owned(project,root/snapshot);target.parent.mkdir(parents=True)
+                shutil.copyfile(path,target)
+                if dm._hash(target)!=checksum: shutil.rmtree(target.parent);raise ValueError('Capture changed while snapshotting')
+            row={'schema_version':1,'candidate_id':identifier,'scope':scope,'revision':1,'created_at':dm._now(),
+                 'source_sha256':checksum,'snapshot_path':snapshot,'job_receipt_sha256':receipt_sha,'base_source_binding':binding,
+                 'routing':'failed' if failure or not readable else 'duplicate' if duplicate else 'unknown',
+                 'duplicate_of':duplicate,'failure':failure,'truth_verdict':'UNKNOWN','source_prediction':receipt.get('verdict') or result.get('final_verdict'),
+                 'review_state':'pending','review':None,'history':[],'adoptions':[],
+                 'origin':{'job_id':receipt['job_id'],'image_path':receipt['image_path'],'capture_source':receipt['source'],
+                           'service_state':receipt['state'],'created_at':receipt['created_at'],'updated_at':receipt['updated_at'],
+                           'runtime_identity':result.get('runtime_identity'), 'graph_sha256':result.get('graph_sha256'),
+                           'node_evidence':result.get('execution_steps',[]),'roi_evidence':result.get('crops',[]),
+                           'error':receipt.get('error'),'job_receipt_sha256':receipt_sha}}
+            index['candidates'][identifier]=row;registered.append(copy.deepcopy(row))
+        atomic_json(root/'index.json',index)
+    return {'candidates':registered,'total':len(registered),'scope':scope}
+
+
+def list_candidates(project):
+    scope=_scope(project); index=_index(project);rows=[]
+    for value in index['candidates'].values():
+        if value['scope']!=scope:continue
+        try:row=_candidate(project,index,value['candidate_id']);row['stale']=False
+        except (ValueError,OSError) as exc:row=copy.deepcopy(value);row['stale']=True;row['stale_reason']=str(exc)
+        rows.append(row)
+    return {'candidates':sorted(rows,key=lambda row:row['created_at'],reverse=True),'total':len(rows),'scope':scope}
+
+
+def candidate_image(project,identifier):
+    row=_candidate(project,_index(project),identifier)
+    if not row['snapshot_path']:raise ValueError('Capture image is unavailable')
+    return _owned(project,_root(project)/row['snapshot_path'])
+
+
+def review_candidate(project,identifier,*,expected_revision,actor,decision,note=''):
+    if decision not in {'adopt','reject'} or not isinstance(actor,str) or not actor.strip() or len(actor)>100: raise ValueError('Choose adopt/reject and enter a reviewer')
+    if not isinstance(note,str) or len(note)>2000:raise ValueError('Intake review note exceeds 2000 characters')
+    root=_root(project)
+    with dm._file_lock(root/'intake.lock'):
+        index=_index(project);row=_candidate(project,index,identifier)
+        if row['revision']!=expected_revision:raise dm.RevisionConflict(row)
+        if decision=='adopt' and (row['routing'] in {'duplicate','failed'} or not row['snapshot_path']):raise ValueError('Duplicate or failed/unavailable captures cannot be adopted')
+        row['revision']+=1;row['review_state']='reviewed';row['review']={'decision':decision,'actor':actor.strip(),'note':note.strip(),
+          'at':dm._now(),'source_sha256':row['source_sha256'],'candidate_revision':row['revision']}
+        row['history'].append(copy.deepcopy(row['review']));index['candidates'][identifier]=row;atomic_json(root/'index.json',index)
+        return row
+
+
+def _fixed_cohorts(project):
+    from backend.engine.flow_evaluation import list_evidence
+    rows = [{'cohort_id':row['cohort_id'],'cohort_sha256':row['record_sha256'],'input_sha256':row['input_sha256'],
+             'truth_sha256':row['truth_sha256'],'scope':row['scope']} for row in list_evidence(project,'cohorts')]
+    source=Path(project['source_dataset_dir'])
+    if source.parent.parent.resolve()==(_root(project)/'versions').resolve():
+        ancestor=read_version(project,source.parent.name)
+        for row in ancestor.get('fixed_cohorts',[]):
+            if not any(current['cohort_id']==row['cohort_id'] for current in rows):rows.append(copy.deepcopy(row))
+    return rows
+
+
+def adopt_candidates(project, identifiers, *, actor, name):
+    if not identifiers or len(identifiers)>1000 or len(set(identifiers))!=len(identifiers):raise ValueError('Choose 1–1000 unique reviewed candidates')
+    if not isinstance(actor,str) or not actor.strip() or len(actor)>100 or not isinstance(name,str) or not name.strip() or len(name)>200:raise ValueError('Enter a reviewer and version name')
+    scope=_scope(project);root=_root(project);source=Path(project['source_dataset_dir']).resolve()
+    with dm._file_lock(root/'intake.lock'):
+        index=_index(project);candidates=[_candidate(project,index,identifier) for identifier in identifiers];binding=_source_binding(project)
+        for row in candidates:
+            if row['review_state']!='reviewed' or not row['review'] or row['review']['decision']!='adopt':raise ValueError('Every adopted candidate requires an explicit human intake review')
+            if row['routing'] in {'failed','duplicate'}:raise ValueError('Duplicate/failed captures cannot be adopted')
+            if row['base_source_binding']!=binding:raise ValueError('Active source, labels, split or policy changed since intake; register the current capture again')
+        files=_files(project)
+        if sum(row['size'] for row in files)>COPY_LIMIT_BYTES:raise ValueError('Owned intake branch exceeds the 2 GiB copy limit; use a smaller source scope')
+        _,split=_split(project);identifier='intake_'+uuid.uuid4().hex;versions=_owned(project,root/'versions');versions.mkdir(exist_ok=True)
+        directory=versions/identifier;staging=Path(tempfile.mkdtemp(prefix='.adopting-',dir=versions));final_source=directory/'source'
+        copied_overlays=[];split_path=None;published=False
+        try:
+            branch=staging/'source';branch.mkdir()
+            for row in files:
+                original=source/row['relative_path'];target=branch/row['relative_path'];target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(original,target)
+                if dm._hash(target)!=row['sha256']:raise ValueError('Source changed during intake adoption')
+            assignments=dict(split['assignments']);adopted=[]
+            for row in candidates:
+                snapshot=_owned(project,root/row['snapshot_path']);relative=f"images/train/capture_{row['candidate_id'][8:]}{snapshot.suffix}"
+                target=branch/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(snapshot,target)
+                if dm._hash(target)!=row['source_sha256']:raise ValueError('Capture snapshot changed during adoption')
+                assignments[relative]='train';adopted.append({'candidate_id':row['candidate_id'],'relative_path':relative,'source_sha256':row['source_sha256'],
+                  'truth_verdict':'UNKNOWN','usage_state':'not_used','workflow_state':'needs_review','review':row['review'],'origin':row['origin']})
+            test_records=[row for row in files if assignments.get(row['relative_path'])=='test']
+            with dm.metadata_transaction(project['project_dir'],source,project['annotations_dir']) as ledger:policy=copy.deepcopy(ledger.get('team_data',{}))
+            record={'schema_version':1,'version_id':identifier,'name':name.strip(),'created_at':dm._now(),'actor':actor.strip(),
+                    'scope':scope,'source_dataset_path':str(final_source),'parent_source_dataset_path':str(source),'parent_source_binding':binding,
+                    'base_files':files,'adopted':adopted,'split_assignments':assignments,'fixed_test_records':test_records,
+                    'fixed_test_sha256':digest(test_records),'fixed_cohorts':_fixed_cohorts(project),
+                    'review_policy':policy,'review_policy_sha256':digest(policy),'activated':False,
+                    'training_readiness':'Capture images require labels, review-policy approval and explicit inclusion',
+                    'lineage':{'parent_source_dataset_path':str(source),'task':project['task'],'labelset_id':scope['labelset_id'],
+                               'parent_model_rule':'Exact task, ordered classes and architecture are checked by the existing warm-start gate'}}
+            if _source_binding(project)!=binding:raise ValueError('Active source changed during intake adoption')
+            staging.rename(directory)
+            # Copy image-parent annotation overlays with correct branch mask paths.
+            from backend.engine.grouped_dataset_views import source_image_paths
+            parents={image.parent for image in source_image_paths(source,project['task'],include_unused=True)}
+            for parent in parents:
+                overlay=dataset_annotation_dir(parent,Path(project['annotations_dir']),use_scope=False)
+                new_overlay=dataset_annotation_dir(final_source/parent.relative_to(source),Path(project['annotations_dir']),use_scope=False)
+                if not overlay.is_dir():continue
+                if overlay.is_symlink() or any(path.is_symlink() for path in overlay.rglob('*')):raise ValueError('Label overlay cannot contain symbolic links')
+                new_overlay.mkdir(parents=True,exist_ok=False);copied_overlays.append(new_overlay)
+                for file in overlay.rglob('*'):
+                    relative=file.relative_to(overlay)
+                    if not file.is_file() or relative.parts[0]=='metadata' or file.name.startswith('.'):continue
+                    target=new_overlay/relative;target.parent.mkdir(parents=True,exist_ok=True)
+                    if file.suffix=='.json':
+                        data=json.loads(file.read_text())
+                        if isinstance(data.get('mask_file'),str) and Path(data['mask_file']).is_relative_to(overlay):data['mask_file']=str(new_overlay/Path(data['mask_file']).relative_to(overlay))
+                        atomic_json(target,data)
+                    else:shutil.copyfile(file,target)
+            key=hashlib.sha256(str(final_source).encode()).hexdigest();split_path=_owned(project,Path(project['dataset_dir'])/'splits'/f'{key}.json')
+            atomic_json(split_path,{'folder_path':str(final_source),'assignments':assignments,'seed':split.get('seed',42),'intake_version_id':identifier})
+            with dm.metadata_transaction(project['project_dir'],final_source,project['annotations_dir']) as ledger:
+                if policy:ledger['team_data']=policy
+                for row in adopted:
+                    metadata=dm._ensure(ledger,project['project_dir'],final_source,final_source/row['relative_path'],project['annotations_dir'])
+                    metadata.update(workflow_state='needs_review',usage_state='not_used',capture_intake={'version_id':identifier,**copy.deepcopy(row)})
+                    dm._event(metadata,actor.strip(),'capture_adopted_pending_label_review',{'candidate_id':row['candidate_id'],'usage_state':'not_used'})
+            metadata_scope=dataset_annotation_dir(final_source,Path(project['annotations_dir']),use_scope=False)
+            if metadata_scope not in copied_overlays:copied_overlays.append(metadata_scope)
+            # Bind copied label/mask bytes and label revisions without copying
+            # explicit truth declarations into the new source scope.
+            from backend.engine.image_truth import image_binding
+            record['copied_label_bindings']=[{'relative_path':image.relative_to(final_source).as_posix(),
+                'binding':image_binding(dm.metadata_for_path(project['project_dir'],final_source,image,project['annotations_dir']))}
+                for image in source_image_paths(final_source,project['task'],include_unused=True)]
+            record['record_sha256']=digest(record);atomic_json(directory/'record.json',record)
+            for row in candidates:
+                value=index['candidates'][row['candidate_id']];value['adoptions'].append(identifier);value['revision']+=1
+            index['versions'].append(identifier);atomic_json(root/'index.json',index);published=True
+            return record
+        finally:
+            if staging.exists():shutil.rmtree(staging)
+            if not published:
+                if directory.exists():shutil.rmtree(directory)
+                for overlay in copied_overlays:
+                    if overlay.exists():shutil.rmtree(overlay)
+                if split_path:split_path.unlink(missing_ok=True)
+
+
+def read_version(project,identifier):
+    if not re.fullmatch(r'intake_[0-9a-f]{32}',identifier):raise ValueError('Invalid intake version identifier')
+    directory=_owned(project,_root(project)/'versions'/identifier);path=_owned(project,directory/'record.json')
+    if not path.is_file():raise ValueError('Intake version is unavailable')
+    record=json.loads(path.read_text());body={key:value for key,value in record.items() if key!='record_sha256'}
+    if digest(body)!=record.get('record_sha256') or record['scope']['project_id']!=project['id']:raise ValueError('Intake version record changed')
+    source=_owned(project,Path(record['source_dataset_path']))
+    for row in [*record['base_files'],*record['adopted']]:
+        if dm._hash(source/row['relative_path'])!=row.get('sha256',row.get('source_sha256')):raise ValueError('Intake version source bytes changed')
+    return record
+
+
+def list_versions(project):
+    rows=[]
+    for identifier in _index(project)['versions']:
+        try:rows.append(read_version(project,identifier))
+        except (ValueError,OSError):continue
+    return {'versions':sorted(rows,key=lambda row:row['created_at'],reverse=True),'total':len(rows)}

@@ -172,8 +172,14 @@ def _run_isolated(package_dir, image_path, image_id, options):
         request.write_text(json.dumps({'image_path':str(Path(image_path).expanduser().resolve()),'image_id':image_id,
                                        'options':options}),encoding='utf-8')
         bootstrap="import sys;sys.modules['pyarrow']=None;from backend.engine.flow_package_runtime import worker_main;worker_main()"
-        python=os.environ.get('VISION_OPENVINO_PYTHON',sys.executable) if options['device'].startswith('openvino:') else sys.executable
-        command=[python,'-c',bootstrap,str(root),str(request),str(output)]
+        explicit_openvino=options['device'].startswith('openvino:') and bool(os.environ.get('VISION_OPENVINO_PYTHON'))
+        if getattr(sys,'frozen',False) and not explicit_openvino:
+            # A frozen app cannot run -c; its worker re-verifies and runs this package's own runtime.
+            command=[sys.executable,'--flow-package-worker','--package',str(root),'--manifest-sha256',_sha256(root/'manifest.json'),
+                     '--request',str(request),'--output',str(output)]
+        else:
+            python=os.environ['VISION_OPENVINO_PYTHON'] if explicit_openvino else sys.executable
+            command=[python,'-c',bootstrap,str(root),str(request),str(output)]
         env={**os.environ,'PYTHONPATH':str(root),'PYTHONNOUSERSITE':'1',
              'OMP_NUM_THREADS':str(options['cpu_threads']),'MKL_NUM_THREADS':str(options['cpu_threads'])}
         outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root)

@@ -8,6 +8,7 @@ local training receipt is allowed to say ``completed``.
 from __future__ import annotations
 
 import hashlib
+import errno
 import json
 import logging
 import os
@@ -15,19 +16,27 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import threading
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Optional
 
 from backend.remote.profiles import ComputeProfile
 from backend.remote.snapshot import build_snapshot
-from backend.remote.ssh_transport import SSHTransport
+from backend.remote.ssh_transport import SSHTransport, SSHTransportError
 
 logger = logging.getLogger("vision_ai_studio.remote_coordinator")
 
 PROTOCOL_VERSION = 1
 POLL_INTERVAL_SECONDS = 2.0
 START_TIMEOUT_SECONDS = 120.0
+CANCEL_GRACE_SECONDS = 15.0
+CANCEL_TERMINATE_SECONDS = 5.0
+CANCEL_CONFIRM_SECONDS = 5.0
+TERMINAL_EXIT_GRACE_SECONDS = 5.0
+TERMINAL_EXIT_TERMINATE_SECONDS = 5.0
+TERMINAL_EXIT_CONFIRM_SECONDS = 5.0
+_JOURNAL_LOCK = threading.RLock()
 
 
 class RemoteDisconnected(RuntimeError):
@@ -40,6 +49,33 @@ class ArtifactValidationError(ValueError):
 
 class RemoteWorkerExited(RuntimeError):
     """The remote process ended before it published a status receipt."""
+
+
+def _confirm_owned_exit(transport, profile, run_id, handle):
+    """Terminal publication precedes teardown; only owned exit frees compute."""
+    started = time.monotonic()
+    terminated_at = killed_at = None
+    while True:
+        try:
+            running = transport.is_running(profile, run_id, handle) if isinstance(handle, str) and handle else None
+        except (OSError, TimeoutError, subprocess.TimeoutExpired) as exc:
+            raise RemoteDisconnected(f'Could not confirm terminal worker exit: {exc}') from exc
+        if running is False:
+            return
+        if running is None:
+            raise RemoteDisconnected('Terminal worker ownership is uncertain; its reservation requires reconciliation')
+        now = time.monotonic()
+        if terminated_at is None and now - started >= TERMINAL_EXIT_GRACE_SECONDS:
+            if transport.stop_owned(profile, run_id, handle, force=False) is not True:
+                raise RemoteDisconnected('Could not confirm owned terminal worker cleanup')
+            terminated_at = now
+        elif terminated_at is not None and killed_at is None and now - terminated_at >= TERMINAL_EXIT_TERMINATE_SECONDS:
+            if transport.stop_owned(profile, run_id, handle, force=True) is not True:
+                raise RemoteDisconnected('Could not confirm final owned terminal worker cleanup')
+            killed_at = now
+        elif killed_at is not None and now - killed_at >= TERMINAL_EXIT_CONFIRM_SECONDS:
+            raise RemoteDisconnected('Terminal status was published, but owned worker exit remains unconfirmed')
+        time.sleep(min(POLL_INTERVAL_SECONDS, .2))
 
 
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
@@ -65,10 +101,71 @@ def _journal_index() -> Path:
     return root / "remote_jobs"
 
 
+def _read_journal(output: Path, job_id: str) -> dict[str, Any]:
+    """Read the newest matching copy when either storage volume is exhausted."""
+    candidates = []
+    for path in (output / 'remote_job.json', _journal_index() / f'{job_id}.json'):
+        try:
+            value = json.loads(path.read_text(encoding='utf-8'))
+            if value.get('job_id') == job_id and Path(value['output_dir']).resolve() == output.resolve():
+                candidates.append(value)
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    if not candidates:
+        raise ValueError('Owned remote journal is unavailable')
+    return max(candidates, key=lambda value: value.get('journal_updated_at', 0))
+
+
 def _save_journal(journal: dict[str, Any]) -> None:
-    output = Path(journal["output_dir"])
-    _atomic_json(output / "remote_job.json", journal)
-    _atomic_json(_journal_index() / f"{journal['job_id']}.json", journal)
+    with _JOURNAL_LOCK:
+        output = Path(journal["output_dir"])
+        path = output / "remote_job.json"
+        # A cancellation can arrive from the API while the monitor holds its
+        # earlier journal copy. Never erase an acknowledged cancellation.
+        if path.is_file() or (_journal_index() / f"{journal['job_id']}.json").is_file():
+            saved = _read_journal(output, journal['job_id'])
+            if saved.get("job_id") == journal["job_id"]:
+                for key, value in saved.items():
+                    if key.startswith("cancel_") and key not in journal:
+                        journal[key] = value
+        journal['journal_updated_at'] = time.time_ns()
+        errors = []
+        for target in (path, _journal_index() / f"{journal['job_id']}.json"):
+            try:
+                _atomic_json(target, journal)
+            except OSError as exc:
+                errors.append(exc)
+                logger.warning("Could not persist remote journal at %s: %s", target, exc)
+        if len(errors) == 2:
+            raise errors[0]
+
+
+def request_remote_cancellation(record: Any) -> None:
+    """Persist cancel intent before acknowledging it or signaling a worker."""
+    with _JOURNAL_LOCK:
+        path = Path(record.output_dir) / "remote_job.json"
+        if not path.is_file():
+            # Compatibility runners may predate the profile journal. Keep the
+            # control intent durable without inventing a launch specification.
+            _atomic_json(Path(record.output_dir) / 'remote_cancel.json',
+                         {'job_id': record.job_id, 'cancel_requested_at': time.time()})
+            return
+        journal = _read_journal(Path(record.output_dir), record.job_id)
+        if journal.get("job_id") != record.job_id:
+            raise ValueError("Cancellation does not match the owned remote run")
+        journal.setdefault("cancel_requested_at", time.time())
+        _save_journal(journal)
+
+
+def _terminal_journal(journal: dict[str, Any], state: str, **changes: Any) -> bool:
+    """An exhausted local disk must not turn confirmed death into uncertainty."""
+    journal.update(state=state, **changes)
+    try:
+        _save_journal(journal)
+        return True
+    except OSError:
+        logger.exception("Could not persist confirmed terminal remote run %s", journal["job_id"])
+        return False
 
 
 def persist_queued_remote_job(record: Any, profile: ComputeProfile, launch_spec: dict[str, Any]) -> None:
@@ -208,6 +305,7 @@ def _copy_artifacts(
         raise ArtifactValidationError("Remote checkpoint or model metadata is missing")
 
     staged: dict[str, Path] = {}
+    preserve_partial = False
     try:
         for relative in sorted(required):
             entry = by_name[relative]
@@ -216,12 +314,18 @@ def _copy_artifacts(
             if not isinstance(expected_hash, str) or len(expected_hash) != 64 or not isinstance(expected_size, int) or expected_size <= 0:
                 raise ArtifactValidationError(f"Invalid remote artifact metadata: {relative}")
             target = output_dir / PurePosixPath(relative).name
-            with tempfile.NamedTemporaryFile(dir=output_dir, prefix=f".{target.name}-", delete=False) as handle:
-                staged_path = Path(handle.name)
+            staging = output_dir / '.remote-downloads'
+            staging.mkdir(mode=0o700, exist_ok=True)
+            staged_path = staging / target.name
+            if staged_path.is_symlink():
+                raise ArtifactValidationError('A remote artifact staging path is linked')
             staged[relative] = staged_path
             try:
                 transport.download(profile, f"runs/{job_id}/{relative}", staged_path)
             except Exception as exc:
+                preserve_partial = True
+                if isinstance(exc, OSError) and exc.errno in (errno.ENOSPC, errno.EDQUOT):
+                    raise ArtifactValidationError('Local storage capacity is insufficient to receive the completed model') from exc
                 raise RemoteDisconnected(f"Could not download {relative}: {exc}") from exc
             if staged_path.stat().st_size != expected_size or _sha256(staged_path) != expected_hash:
                 raise ArtifactValidationError(f"Remote artifact hash mismatch: {relative}")
@@ -260,7 +364,8 @@ def _copy_artifacts(
         _atomic_json(output_dir / "remote_artifacts.json", manifest)
     finally:
         for staged_path in staged.values():
-            staged_path.unlink(missing_ok=True)
+            if not preserve_partial:
+                staged_path.unlink(missing_ok=True)
 
 
 def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, journal: dict[str, Any]) -> dict[str, Any]:
@@ -268,29 +373,73 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
     status_path = _remote_path(profile, job_id, "status.json")
     output = Path(journal["output_dir"])
     started = time.monotonic()
-    cancellation_sent = False
     missing_status_polls = 0
     while True:
-        if record.preparation_cancel.is_set() and not cancellation_sent:
+        # Re-read durable intent after an API request or daemon restart.
+        path = output / "remote_job.json"
+        if path.is_file():
+            saved = _read_journal(output, job_id)
+            if saved.get("job_id") == job_id:
+                journal.update({key: value for key, value in saved.items() if key.startswith("cancel_")})
+        if record.preparation_cancel.is_set() and not journal.get("cancel_requested_at"):
+            request_remote_cancellation(record)
+            journal["cancel_requested_at"] = time.time()
+        if journal.get("cancel_requested_at") and not journal.get("cancel_signal_sent_at"):
             try:
                 transport.touch_cancel(profile, job_id)
             except Exception as exc:
                 raise RemoteDisconnected(f"Could not confirm remote cancellation: {exc}") from exc
-            cancellation_sent = True
+            journal["cancel_signal_sent_at"] = time.time()
+            _save_journal(journal)
             record.phase = "stopping"
         status = _remote_json(transport, profile, status_path)
-        if status is None:
-            missing_status_polls += 1
-            handle = journal.get("remote_handle")
-            if missing_status_polls >= 2 and isinstance(handle, str) and handle:
+        handle = journal.get("remote_handle")
+        if not handle and status is not None and hasattr(transport, 'recover_handle'):
+            spec_hash = next((row.get('sha256') for row in journal.get('transfers', []) if row.get('target') == 'spec.json'), None)
+            handle = transport.recover_handle(profile, job_id, job_id=job_id,
+                operation=journal.get('operation', 'train'), spec_sha256=spec_hash)
+            if handle:
+                journal.update(remote_handle=handle, state='launched', launch_acknowledgment_recovered=True)
+                _save_journal(journal)
+        state = status.get("status") if status else None
+        if state not in {"completed", "aborted", "failed"}:
+            if status is None:
+                missing_status_polls += 1
+            if status is not None or missing_status_polls >= 2:
                 try:
-                    running = transport.is_running(profile, job_id, handle)
+                    running = transport.is_running(profile, job_id, handle) if isinstance(handle, str) and handle else None
                 except (OSError, TimeoutError, subprocess.TimeoutExpired) as exc:
                     raise RemoteDisconnected(f"Could not check remote worker: {exc}") from exc
+                if running is None:
+                    raise RemoteDisconnected("The owned worker could not be checked; its reservation requires reconciliation")
                 if running is False:
-                    raise RemoteWorkerExited(
-                        "Remote worker exited before publishing status; inspect the run's worker.log"
-                    )
+                    # The worker preallocates this small terminal receipt so a
+                    # full disk can still publish failure over stale progress.
+                    fallback = _remote_json(transport, profile, _remote_path(profile, job_id, "terminal_status.json"))
+                    if fallback and fallback.get("status") in {"completed", "aborted", "failed"}:
+                        status = fallback
+                    elif journal.get("cancel_requested_at"):
+                        persisted = _terminal_journal(journal, "aborted", worker_exit_confirmed=True)
+                        result = {"status": "aborted", "worker_exit_confirmed": True}
+                        if not persisted: result["journal_persisted"] = False
+                        return result
+                    else:
+                        raise RemoteWorkerExited("Remote worker exited before publishing status; inspect the run's worker.log")
+                elif journal.get("cancel_requested_at"):
+                    now = time.time()
+                    if not journal.get("cancel_terminate_sent_at") and now - journal["cancel_signal_sent_at"] >= CANCEL_GRACE_SECONDS:
+                        if transport.stop_owned(profile, job_id, handle, force=False) is not True:
+                            raise RemoteDisconnected("Could not confirm termination of the owned worker")
+                        journal["cancel_terminate_sent_at"] = now
+                        _save_journal(journal)
+                    elif journal.get("cancel_terminate_sent_at") and not journal.get("cancel_kill_sent_at") and now - journal["cancel_terminate_sent_at"] >= CANCEL_TERMINATE_SECONDS:
+                        if transport.stop_owned(profile, job_id, handle, force=True) is not True:
+                            raise RemoteDisconnected("Could not confirm final cancellation of the owned worker")
+                        journal["cancel_kill_sent_at"] = now
+                        _save_journal(journal)
+                    elif journal.get("cancel_kill_sent_at") and now - journal["cancel_kill_sent_at"] >= CANCEL_CONFIRM_SECONDS:
+                        raise RemoteDisconnected("Cancellation was sent, but worker exit remains unconfirmed")
+        if status is None:
             if time.monotonic() - started > START_TIMEOUT_SECONDS:
                 raise RuntimeError("Remote worker did not publish its status in time")
             time.sleep(POLL_INTERVAL_SECONDS)
@@ -300,6 +449,14 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
         state = status.get("status")
         if state not in {"queued", "preparing", "running", "stopping", "syncing", "completed", "aborted", "failed"}:
             raise ValueError(f"Unknown remote worker status: {state}")
+        if state in {'completed', 'aborted', 'failed'}:
+            journal['worker_terminal_state'] = state
+            try:
+                _save_journal(journal)
+            except OSError:
+                logger.exception('Could not save terminal publication; reconciling owned worker exit %s', job_id)
+            _confirm_owned_exit(transport, profile, job_id, handle)
+            journal['worker_exit_confirmed'] = True
         record.phase = "syncing" if state == "completed" else state
         for attr in ("current_epoch", "total_epochs", "current_step", "total_steps"):
             value = status.get(attr)
@@ -316,17 +473,66 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
         if isinstance(status.get("metrics"), dict):
             record.metrics = status["metrics"]
         if state == "completed":
-            _copy_artifacts(transport, profile, journal, output)
+            try:
+                _copy_artifacts(transport, profile, journal, output)
+            except OSError as exc:
+                if exc.errno in (errno.ENOSPC, errno.EDQUOT):
+                    raise ArtifactValidationError('Local storage capacity is insufficient to publish the completed model') from exc
+                raise
             # The manager still has to publish its local provenance receipt.
             # If the app exits in between, a restart can verify/download again.
             journal["state"] = "artifacts_verified"
             _save_journal(journal)
-            return {"status": "completed", "best_metric": record.best_metric}
+            return {"status": "completed", "best_metric": record.best_metric, "worker_exit_confirmed": True}
         if state in ("aborted", "failed"):
-            journal["state"] = state
-            _save_journal(journal)
-            return {"status": state, "error": status.get("error")}
+            persisted = _terminal_journal(journal, state, worker_exit_confirmed=True)
+            result = {"status": state, "error": status.get("error"), "worker_exit_confirmed": True}
+            if not persisted: result["journal_persisted"] = False
+            return result
         time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _transfer_and_launch(record: Any, profile: ComputeProfile, transport: SSHTransport, journal: dict[str, Any]) -> bool:
+    """Replay verified staged files; launching is the no-relaunch boundary."""
+    transfers = journal.get('transfers')
+    if not isinstance(transfers, list) or not transfers:
+        raise ValueError('Remote transfer recovery is missing its durable file manifest')
+    output = Path(journal['output_dir']).resolve()
+    for row in transfers:
+        source = Path(row['source'])
+        if (source.is_symlink() or not source.resolve().is_relative_to(output) or not source.is_file()
+                or source.stat().st_size != row['size'] or _sha256(source) != row['sha256']):
+            raise ValueError('A staged remote upload changed; start a new run from the source version')
+        _remote_path(profile, journal['job_id'], row['target'])
+    journal['state'] = 'transferring'
+    _save_journal(journal)
+    record.phase = 'transferring'
+    record.total_bytes = sum(row['size'] for row in transfers)
+    record.transferred_bytes = 0
+    for row in transfers:
+        if record.preparation_cancel.is_set() or journal.get('cancel_requested_at'):
+            _terminal_journal(journal, 'aborted')
+            return False
+        transport.upload(profile, Path(row['source']), f"runs/{journal['job_id']}/{row['target']}", cancel=record.preparation_cancel)
+        record.transferred_bytes += row['size']
+    if record.preparation_cancel.is_set():
+        _terminal_journal(journal, 'aborted')
+        return False
+    job_id = journal['job_id']
+    code_dir = _remote_path(profile, job_id, 'code')
+    remote_archive = _remote_path(profile, job_id, 'code.tar.gz')
+    for command in (['mkdir', '-p', code_dir], ['tar', '-xzf', remote_archive, '-C', code_dir]):
+        result = transport.exec(profile, command)
+        if result.returncode != 0:
+            raise SSHTransportError(f'Could not stage isolated remote code: {result.stderr}')
+    journal['state'] = 'launching'
+    _save_journal(journal)
+    handle = transport.launch(profile, ['-m', 'backend.remote.worker', journal.get('operation', 'train'),
+                                      '--spec', _remote_path(profile, job_id, 'spec.json')], job_id)
+    journal.update(state='launched', remote_handle=handle)
+    _save_journal(journal)
+    record.phase = 'running'
+    return True
 
 
 def run_remote_training(
@@ -348,10 +554,15 @@ def run_remote_training(
     journal: dict[str, Any] = {}
     try:
         if resume:
-            journal = json.loads(journal_path.read_text(encoding="utf-8"))
+            journal = _read_journal(output, record.job_id)
             if journal.get("job_id") != record.job_id or ComputeProfile.model_validate(journal['profile']) != profile:
                 raise ValueError("Remote journal does not match this job and server")
             record.dataset_path = journal["dataset_path"]
+            if journal.get('state') == 'transferring':
+                launched = False
+                if not _transfer_and_launch(record, profile, transport, journal):
+                    return {'status': 'aborted'}
+                launched = True
         else:
             if journal_path.is_file():
                 journal = json.loads(journal_path.read_text(encoding="utf-8"))
@@ -449,59 +660,39 @@ def run_remote_training(
             if parent_transfer: transfers = transfers + (parent_transfer,)
             if pretrained_transfer: transfers = transfers + (pretrained_transfer,)
             if source_snapshot:transfers=transfers+((source_snapshot.archive_path,'source.tar.gz'),)
-            record.total_bytes = sum(source.stat().st_size for source, _ in transfers)
-            for source, target in transfers:
-                if record.preparation_cancel.is_set():
-                    journal["state"] = "aborted"
-                    _save_journal(journal)
-                    return {"status": "aborted"}
-                transport.upload(profile, source, f"runs/{job_id}/{target}", cancel=record.preparation_cancel)
-                record.transferred_bytes += source.stat().st_size
-            if record.preparation_cancel.is_set():
-                journal["state"] = "aborted"
-                _save_journal(journal)
-                return {"status": "aborted"}
-            code_dir = _remote_path(profile, job_id, "code")
-            remote_archive = _remote_path(profile, job_id, "code.tar.gz")
-            mkdir = transport.exec(profile, ["mkdir", "-p", code_dir])
-            if mkdir.returncode != 0:
-                raise RuntimeError(f"Could not create isolated remote code directory: {mkdir.stderr}")
-            unpack = transport.exec(profile, ["tar", "-xzf", remote_archive, "-C", code_dir])
-            if unpack.returncode != 0:
-                raise RuntimeError(f"Could not unpack remote worker code: {unpack.stderr}")
-            journal["state"] = "launching"
+            journal['transfers'] = [{'source': str(source.absolute()), 'target': target,
+                                     'size': source.stat().st_size, 'sha256': _sha256(source)} for source, target in transfers]
+            journal['state'] = 'transferring'
             _save_journal(journal)
-            spec_remote = _remote_path(profile, job_id, "spec.json")
-            # An SSH timeout here cannot prove whether the detached worker
-            # started. Never schedule a duplicate run after this point.
+            if not _transfer_and_launch(record, profile, transport, journal):
+                return {'status': 'aborted'}
             launched = True
-            handle = transport.launch(profile, ["-m", "backend.remote.worker", operation, "--spec", spec_remote], job_id)
-            journal["state"] = "launched"
-            journal["remote_handle"] = handle
-            _save_journal(journal)
-            record.phase = "running"
         return _monitor(record, profile, transport, journal)
     except RemoteDisconnected as exc:
         logger.warning("Remote run %s disconnected: %s", record.job_id, exc)
         record.phase = "disconnected"
         return {"status": "disconnected", "error": str(exc)}
     except ArtifactValidationError as exc:
-        journal["state"] = "failed"
-        journal["verification_error"] = str(exc)
-        _save_journal(journal)
-        return {"status": "failed", "error": str(exc)}
+        persisted = _terminal_journal(journal, 'failed', verification_error=str(exc))
+        result = {"status": "failed", "error": str(exc)}
+        if not persisted: result['journal_persisted'] = False
+        return result
     except RemoteWorkerExited as exc:
-        journal["state"] = "failed"
-        journal["error"] = str(exc)
-        _save_journal(journal)
-        return {"status": "failed", "error": str(exc)}
+        persisted = _terminal_journal(journal, "failed", error=str(exc), worker_exit_confirmed=True)
+        result = {"status": "failed", "error": str(exc)}
+        if not persisted: result["journal_persisted"] = False
+        return result
     except Exception as exc:
+        launched = launched or journal.get('state') in {'launching', 'launched', 'artifacts_verified'}
         if record.preparation_cancel.is_set() and not launched:
             if journal_path.is_file():
                 saved = json.loads(journal_path.read_text(encoding="utf-8"))
                 saved["state"] = "aborted"
                 _save_journal(saved)
             return {"status": "aborted"}
+        if journal.get('state') == 'transferring' and isinstance(exc, (SSHTransportError, OSError, TimeoutError, subprocess.TimeoutExpired)):
+            record.phase = 'disconnected'
+            return {'status': 'disconnected', 'error': str(exc), 'recovery_mode': 'transfer', 'optimizer_resume': False}
         if launched:
             logger.warning("Remote run %s outcome needs reconciliation: %s", record.job_id, exc)
             record.phase = "disconnected"
@@ -516,7 +707,7 @@ def run_remote_training(
 
 
 def reconnect_remote_training(record: Any, *, transport: Optional[SSHTransport] = None) -> dict[str, Any]:
-    journal = json.loads((Path(record.output_dir) / "remote_job.json").read_text(encoding="utf-8"))
+    journal = _read_journal(Path(record.output_dir), record.job_id)
     profile = ComputeProfile.model_validate(journal["profile"])
     return run_remote_training(record, profile, transport=transport, resume=True)
 
@@ -526,8 +717,8 @@ def make_remote_runner(profile: ComputeProfile, launch_spec: Optional[dict[str, 
     def runner(record: Any) -> dict[str, Any]:
         journal_path = Path(record.output_dir) / "remote_job.json"
         if journal_path.is_file():
-            state = json.loads(journal_path.read_text(encoding="utf-8")).get("state")
-            if state in ("launching", "launched", "artifacts_verified", "completed"):
+            state = _read_journal(Path(record.output_dir), record.job_id).get("state")
+            if state in ("transferring", "launching", "launched", "artifacts_verified", "completed"):
                 return reconnect_remote_training(record)
             if state != "queued":
                 raise ValueError(f"Remote run cannot be launched from journal state {state!r}")
@@ -607,7 +798,7 @@ def recover_remote_jobs(manager: Any) -> None:
     journals.sort(key=recovery_order)
     for path, journal in journals:
         try:
-            if journal.get("state") in ("preparing", "prepared", "transferring"):
+            if journal.get("state") in ("preparing", "prepared") or (journal.get('state') == 'transferring' and not journal.get('transfers')):
                 # No launch was attempted. Reusing a half-prepared snapshot is
                 # unsafe; make the interruption explicit and release its slot.
                 journal["state"] = "failed"

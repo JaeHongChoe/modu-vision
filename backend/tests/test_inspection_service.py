@@ -147,20 +147,29 @@ def test_required_release_policy_blocks_unapproved_package_before_state(package:
 def test_approved_release_policy_accepts_exact_package_and_rejects_stale_manifest(tmp_path: Path):
     from backend.engine.inspection_service import create_service_app
 
+    from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt,bind_policy
     checkpoint = tmp_path / "job_detector" / "best_model.pt"
     checkpoint.parent.mkdir()
-    checkpoint.write_bytes(b"approved detector checkpoint")
+    real_classification_checkpoints({'job_detector':checkpoint})
+    graph=get_single_segmentation_flowchart(job_id='job_detector')
+    for node in graph.nodes:
+        if node.data.node_type=='inspection':node.data.task='classification'
     result = build_flow_package(
-        pipeline=get_single_detection_flowchart(job_id="job_detector"),
-        checkpoints={"job_detector": checkpoint},
+        pipeline=graph,checkpoints={"job_detector": checkpoint},
         output_base_dir=tmp_path / "exports", package_name="approved_service",
         approved_revisions={"job_detector": {
-            "revision_id": "b" * 32, "job_id": "job_detector", "task": "detection",
+            "revision_id": "b" * 32, "job_id": "job_detector", "task": "classification",
             "checkpoint_sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
         }},
     )
     package = Path(result["package_path"])
     policy = tmp_path / "release-policy.json"
+    images=[]
+    for number,color in enumerate(('white','black')):
+        image=tmp_path/f'parity_{number}.png';Image.new('RGB',(32,32),color).save(image);images.append(image)
+    cohort_receipt(package,graph,{'job_detector':checkpoint},images)
+    result['release_policy']=bind_policy(result['release_policy'],package)
     policy.write_text(json.dumps(result["release_policy"]), encoding="utf-8")
     app = create_service_app(
         package, tmp_path / "approved_state", token="secret",

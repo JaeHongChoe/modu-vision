@@ -1059,6 +1059,39 @@ def _evaluate_anomaly(
     }
 
 
+_DERIVED_SCORE_TASKS = ("classification", "anomaly", "anomaly_detection")
+
+
+def _evaluation_class_semantics(meta: Any, task: Optional[str] = None) -> Dict[str, Any]:
+    """The evaluated model's frozen class roles, or the derived record for older models."""
+    from backend.engine.class_semantics import class_semantics_record, recorded_roles
+    classes = meta.get("classes") if isinstance(meta, dict) else None
+    names = [str(name) for name in classes] if isinstance(classes, list) else []
+    try:
+        if recorded_roles(meta, task=task, classes=names or None) is not None:
+            return dict(meta["class_semantics"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Model class semantics record is invalid: {exc}") from exc
+    return class_semantics_record(names, task=task)
+
+
+def _annotate_predictions(predictions: List[Dict[str, Any]], task: str, roles: Optional[Dict[str, str]]) -> List[Dict[str, Any]]:
+    """Set truth flags and defect scores with the evaluated model's class roles.
+
+    Scores that only follow from predicted class and confidence are recomputed so a
+    worker or older annotation cannot keep a different class meaning; explicit
+    model scores (detection, segmentation, patches) are kept.
+    """
+    from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
+    derived = str(task).lower().strip() in _DERIVED_SCORE_TASKS
+    for prediction in predictions:
+        prediction["is_defect"] = is_defect_label(prediction.get("ground_truth"), roles)
+        if derived:
+            prediction.pop("defect_score", None)
+        prediction["defect_score"] = compute_sample_defect_score(prediction, task=task, roles=roles)
+    return predictions
+
+
 def run_or_load_evaluation(
     job_id: Optional[str] = None,
     dataset_path: Optional[str] = None,
@@ -1098,6 +1131,8 @@ def run_or_load_evaluation(
                           "checkpoint_sha256": _sha256(model_pt)}
     from backend.engine.evaluation_history import evaluation_model_context
     evaluation_binding.update(evaluation_model_context(out_dir.parent.parent,meta))
+    class_semantics = _evaluation_class_semantics(meta, task)
+    from backend.engine.evaluation_sources import remap_prepared_predictions
 
     def preserve_result(result):
         result["evaluation_contract_version"] = EVALUATION_CONTRACT_VERSION
@@ -1105,25 +1140,14 @@ def run_or_load_evaluation(
             raise HTTPException(409, "Evaluation inputs changed during execution")
         from backend.engine.dataset_metadata import metadata_for_path
         project_root = out_dir.parent.parent
-        prepared_mapping = {}
-        manifest_path = resolved_dataset / "source_manifest.json"
-        if manifest_path.is_file():
-            for item in json.loads(manifest_path.read_text()):
-                original = item.get("source_image")
-                for key in ("image", "prepared_image", "image_path", "output_image"):
-                    if item.get(key) and original: prepared_mapping[str(Path(item[key]).resolve())] = original
+        remap_prepared_predictions(result.get("test_predictions", []), resolved_dataset, bound_source, out_dir)
         for prediction in result.get("test_predictions", []):
             path = prediction.get("file_path")
-            original = prepared_mapping.get(str(Path(path).resolve())) if path else None
-            if original:
-                prediction["evaluation_file_path"] = path
-                prediction["file_path"] = original
-                path = original
             if path and Path(path).is_file() and Path(path).resolve().is_relative_to(bound_source):
                 metadata = metadata_for_path(project_root, bound_source, Path(path), routes_dataset.STUDIO_ANNOTATIONS_DIR)
                 prediction.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "tags", "product", "lot", "group", "workflow_state")})
         from backend.engine.evaluation_evidence import evaluation_analysis
-        result['analysis']=evaluation_analysis(result.get('test_predictions',[]),task)
+        result['analysis']=evaluation_analysis(result.get('test_predictions',[]),task,(result.get('class_semantics') or {}).get('roles'))
         record = EvaluationHistory(project_root / "reports" / "evaluations").append(result, evaluation_binding)
         result["evaluation_id"] = record["evaluation_id"]
         result["binding"] = evaluation_binding
@@ -1151,20 +1175,25 @@ def run_or_load_evaluation(
                         break
                 if (all_exist and len(cached.get("test_predictions", [])) > 0
                         and cached.get("evaluation_contract_version") == EVALUATION_CONTRACT_VERSION
-                        and cached.get("binding") == evaluation_binding):
+                        and cached.get("binding") == evaluation_binding
+                        and cached.get("class_semantics") == class_semantics):
                     from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
                     for p in cached.get("test_predictions", []):
                         if "is_defect" not in p:
-                            p["is_defect"] = is_defect_label(p.get("ground_truth"))
+                            p["is_defect"] = is_defect_label(p.get("ground_truth"), class_semantics["roles"])
                         if "defect_score" not in p:
-                            p["defect_score"] = compute_sample_defect_score(p, task=task)
+                            p["defect_score"] = compute_sample_defect_score(p, task=task, roles=class_semantics["roles"])
+                    remap_prepared_predictions(cached.get("test_predictions", []), resolved_dataset, bound_source, out_dir)
                     return cached
         except Exception:
             pass
 
     try:
         if remote_context is not None:
-            return preserve_result(run_remote_evaluation(remote_context, force_recompute=force_clean))
+            remote = run_remote_evaluation(remote_context, force_recompute=force_clean)
+            remote["class_semantics"] = class_semantics
+            _annotate_predictions(remote.get("test_predictions", []), remote.get("task", task), class_semantics["roles"])
+            return preserve_result(remote)
     except RemoteDisconnected as exc:
         raise HTTPException(status_code=503, detail=f"Remote evaluation connection lost; retry the same job: {exc}") from exc
     except ArtifactValidationError as exc:
@@ -1187,14 +1216,12 @@ def run_or_load_evaluation(
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported vision task: {task}")
 
-    from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
-    for p in res.get("test_predictions", []):
-        p["is_defect"] = is_defect_label(p.get("ground_truth"))
-        p["defect_score"] = compute_sample_defect_score(p, task=task)
+    _annotate_predictions(res.get("test_predictions", []), task, class_semantics["roles"])
 
     payload = {
         "job_id": resolved_job_id,
         "task": task,
+        "class_semantics": class_semantics,
         "metrics": res["metrics"],
         "confusion_matrix": res["confusion_matrix"],
         "test_predictions": res["test_predictions"],
@@ -1367,6 +1394,11 @@ def get_overkill_underkill_analysis(
         raise HTTPException(422, detail=str(exc)) from exc
     predictions = eval_payload["test_predictions"]
     task = eval_payload.get("task", "classification")
+    from backend.engine.class_semantics import recorded_roles
+    try:
+        class_roles = recorded_roles(eval_payload)
+    except ValueError as exc:
+        raise HTTPException(422, detail=f"Evaluation class semantics record is invalid: {exc}") from exc
 
     result = analyze_zero_escape(
         predictions=predictions,
@@ -1376,6 +1408,7 @@ def get_overkill_underkill_analysis(
         cost_scrap=cost_scrap,
         current_threshold=current_threshold,
         num_threshold_steps=101,
+        class_roles=class_roles,
     )
     result["job_id"] = target_job
     result["evaluated_split"] = evidence["evaluated_split"]

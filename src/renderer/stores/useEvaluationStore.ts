@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import type {
   BenchmarkResult,
+  EvaluationResults,
   ConfusionMatrixData,
   OverkillUnderkillAnalysis,
   TestPredictionItem,
@@ -14,8 +15,9 @@ import type {
 } from '../types';
 import { api, getApiBaseUrl } from '../services/api';
 import { useTrainingStore } from './useTrainingStore';
+import { classRole, isDefectClass, type ClassRoles } from '../utils/classSemantics';
 
-export type SampleVerdict = 'ESCAPE' | 'OVERKILL' | 'CORRECT_NG' | 'CORRECT_OK';
+export type SampleVerdict = 'ESCAPE' | 'OVERKILL' | 'CORRECT_NG' | 'CORRECT_OK' | 'REVIEW';
 export type SampleFilter =
   | 'all'
   | 'escape'
@@ -31,28 +33,32 @@ let heatmapDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentHeatmapRequestId = 0;
 let evaluationGeneration = 0;
 
-export function isDefectLabel(label?: string | number): boolean {
+/** Shared class meaning; pass roles recorded by the backend when the response has them. */
+export function isDefectLabel(label?: string | number, roles?: ClassRoles | null): boolean {
   if (label === undefined || label === null) return false;
-  if (typeof label === 'number') return label !== 0;
-  const clean = String(label).trim().toLowerCase();
-  const normalSet = new Set(['ok', 'normal', 'pass', 'good', '0', 'background', 'ok_normal', 'true_ok', 'ok_chip']);
-  const tokens = clean.replace(/-/g, '_').split('_');
-  if (tokens.some((token) => ['ng', 'defect', 'fail'].includes(token))) return true;
-  return !(normalSet.has(clean) || /^(ok|normal|good)_/.test(clean) || /_(ok|normal|good)$/.test(clean));
+  return isDefectClass(label, roles);
+}
+
+/** Missing or unresolved labels cannot provide a normal calibration sample. */
+export function isNormalLabel(label?: string | number, roles?: ClassRoles | null): boolean {
+  return label !== undefined && label !== null && String(label).trim() !== '' && classRole(label, roles) === 'normal';
 }
 
 export function computeSampleVerdict(
   item: TestPredictionItem,
   threshold: number,
-  overkillAnalysis?: OverkillUnderkillAnalysis | null
+  overkillAnalysis?: OverkillUnderkillAnalysis | null,
+  roles?: ClassRoles | null
 ): SampleVerdict {
   // 1. Check overkillAnalysis.sample_details if available
   const sampleDetails = (overkillAnalysis as any)?.sample_details;
   if (sampleDetails && Array.isArray(sampleDetails)) {
     const detail = sampleDetails.find(
-      (d: any) => d.image_id === item.image_id || d.file_name === item.file_name || d.file_path === item.file_path
+      (d: any) => (!!item.image_id && d.image_id === item.image_id)
+        || (!!item.file_name && d.file_name === item.file_name)
+        || (!!item.file_path && d.file_path === item.file_path)
     );
-    if (detail) {
+    if (detail && typeof detail.is_defect === 'boolean' && Number.isFinite(detail.defect_score)) {
       const isDefect = detail.is_defect;
       const score = detail.defect_score;
       const predictedNg = score >= threshold;
@@ -64,18 +70,24 @@ export function computeSampleVerdict(
     }
   }
 
-  // 2. Fallback heuristic
-  const isDefect = (item as any).is_defect !== undefined
-    ? Boolean((item as any).is_defect)
-    : isDefectLabel(item.ground_truth);
+  // 2. Preserve per-image backend truth (for example, detection with multiple
+  // classes); use the recorded class meaning only when that evidence is absent.
+  const imageTruth = (item as TestPredictionItem & { is_defect?: boolean }).is_defect;
+  const hasImageTruth = typeof imageTruth === 'boolean';
+  if (!hasImageTruth && (item.ground_truth === undefined || item.ground_truth === null || String(item.ground_truth).trim() === '')) {
+    return 'REVIEW';
+  }
+  const isDefect = hasImageTruth ? imageTruth : isDefectLabel(item.ground_truth, roles);
 
   let defectScore: number;
   if ((item as any).defect_score !== undefined) {
     defectScore = (item as any).defect_score;
   } else {
-    const isPredDefect = isDefectLabel(item.predicted_class);
+    if (item.predicted_class === undefined || item.predicted_class === null || !Number.isFinite(item.confidence)) return 'REVIEW';
+    const isPredDefect = isDefectLabel(item.predicted_class, roles);
     defectScore = isPredDefect ? item.confidence : 1.0 - item.confidence;
   }
+  if (!Number.isFinite(defectScore)) return 'REVIEW';
 
   const predictedNg = defectScore >= threshold;
   if (isDefect) {
@@ -90,6 +102,7 @@ interface EvaluationState {
   allowLatestRecovery: boolean;
   isLoading: boolean;
   metrics: Record<string, any>;
+  classSemantics: EvaluationResults['class_semantics'] | null;
   confusionMatrix: ConfusionMatrixData | null;
   selectedCell: { trueClass: string; predClass: string } | null;
   testPredictions: TestPredictionItem[];
@@ -142,6 +155,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   allowLatestRecovery: true,
   isLoading: false,
   metrics: {},
+  classSemantics: null,
   confusionMatrix: null,
   selectedCell: null,
   testPredictions: [],
@@ -174,7 +188,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   isBenchmarking: false,
 
   computeFilteredList: () => {
-    const { testPredictions, selectedCell, confusionMatrix, sampleFilter, confidenceThreshold, overkillAnalysis } = get();
+    const { testPredictions, selectedCell, confusionMatrix, sampleFilter, confidenceThreshold, overkillAnalysis, classSemantics } = get();
 
     // 1. Confusion Matrix cell filter (Robust Dual-Key Matching)
     let list = testPredictions;
@@ -202,7 +216,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     // 2. Verdict filter (4-Quadrant verification)
     if (sampleFilter !== 'all') {
       list = list.filter((item) => {
-        const v = computeSampleVerdict(item, confidenceThreshold, overkillAnalysis);
+        const v = computeSampleVerdict(item, confidenceThreshold, overkillAnalysis, classSemantics?.roles);
         if (sampleFilter === 'escape' || sampleFilter === 'fn_escape') return v === 'ESCAPE';
         if (sampleFilter === 'overkill' || sampleFilter === 'fp_overkill') return v === 'OVERKILL';
         if (sampleFilter === 'normal' || sampleFilter === 'tn_normal') return v === 'CORRECT_OK';
@@ -233,13 +247,18 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     if (!explicitScopedJob&&((training.isCurrentData && !completedCurrentJob)
         || (!get().allowLatestRecovery && requestedJob !== completedCurrentJob)
         || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath)))) {
-      set({ isLoading: false, errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
+      evaluationGeneration += 1;
+      currentHeatmapRequestId += 1;
+      set({ isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null,
+        testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
+        overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false,
+        errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
       return;
     }
     const generation = ++evaluationGeneration;
     // The renderer store is transient. Let the backend resolve its latest
     // completed checkpoint when this window has lost the training job ID.
-    set({ isLoading: true, errorMessage: null });
+    set({ isLoading: true, errorMessage: null, classSemantics: null, overkillAnalysis: null });
     try {
       const res = await api.evaluation.getResults(requestedJob || undefined, source?.folderPath ? {
         sourceDatasetPath: source.folderPath,
@@ -250,6 +269,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       set({
         jobId: res.job_id,
         metrics: res.metrics || {},
+        classSemantics: res.class_semantics || null,
         confusionMatrix: res.confusion_matrix || null,
         testPredictions: res.test_predictions || [],
         filteredPredictions: res.test_predictions || [],
@@ -258,6 +278,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         isLoading: false,
         errorMessage: null,
       });
+      get().computeFilteredList();
 
       // Also proactively load overkill/underkill analysis
       get().loadOverkillUnderkill().catch(() => {});
@@ -267,8 +288,8 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       }
     } catch (e) {
       if (generation !== evaluationGeneration) return;
-      set({ isLoading: false, jobId: null, metrics: {}, confusionMatrix: null, testPredictions: [],
-        filteredPredictions: [], overkillAnalysis: null,
+      set({ isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
+        filteredPredictions: [], selectedPrediction: null, selectedCell: null, overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
     }
@@ -281,7 +302,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     heatmapDebounceTimer = null;
     set({
       jobId: null, allowLatestRecovery: allowSourceRecovery, isLoading: false,
-      metrics: {}, confusionMatrix: null, selectedCell: null,
+      metrics: {}, classSemantics: null, confusionMatrix: null, selectedCell: null,
       testPredictions: [], filteredPredictions: [], selectedPrediction: null,
       heatmapOverlayBase64: null, heatmapLoading: false,
       isExportingReport: false, exportedReportPath: null, errorMessage: null,
@@ -388,9 +409,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   applyOptimalThreshold: () => {
-    const { overkillAnalysis, testPredictions } = get();
-    const hasBothClasses = testPredictions.some((p) => isDefectLabel(p.ground_truth))
-      && testPredictions.some((p) => !isDefectLabel(p.ground_truth));
+    const { overkillAnalysis, testPredictions, classSemantics } = get();
+    const hasBothClasses = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles))
+      && testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
     if (hasBothClasses && overkillAnalysis?.optimal_threshold !== undefined) {
       get().setConfidenceThreshold(overkillAnalysis.optimal_threshold);
     }
@@ -398,10 +419,10 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
 
   calibrateZeroEscape: async (jobIdOverride) => {
     const generation = evaluationGeneration;
-    const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions } = get();
+    const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();
     const activeJob = jobIdOverride || jobId;
-    if (!activeJob || !testPredictions.some((p) => isDefectLabel(p.ground_truth))
-        || !testPredictions.some((p) => !isDefectLabel(p.ground_truth))) {
+    if (!activeJob || !testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles))
+        || !testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles))) {
       set({ calibrationMessage: 'NG와 OK 검증 예측이 모두 있어야 임계값을 적용할 수 있습니다.', calibrationSuccess: false });
       return;
     }

@@ -192,9 +192,9 @@ export const TrainingController: React.FC = () => {
   // Map status string to LedState
   const getStatusLedState = (): LedState => {
     if (['queued', 'preparing', 'transferring', 'running', 'stopping', 'syncing'].includes(status)) return 'running';
-    if (status === 'disconnected') return 'fail';
+    if (['disconnected', 'interrupted', 'unverified'].includes(status)) return 'fail';
     if (status === 'completed') return 'pass';
-    if (status === 'aborted') return 'standby';
+    if (['aborted', 'cancelled', 'stopped'].includes(status)) return 'standby';
     if (status === 'failed') return 'fail';
     return 'offline';
   };
@@ -203,6 +203,7 @@ export const TrainingController: React.FC = () => {
     queued: '대기 중', preparing: '데이터 준비 중', transferring: '서버로 전송 중', reconnecting: '서버 상태 다시 확인 중',
     running: '학습 중', stopping: '중단 확인 중', syncing: '결과 동기화 중',
     completed: '완료', aborted: '중단됨', failed: '실패', disconnected: '연결 끊김 · 상태 미확인',
+    cancelled: '취소 확인', stopped: '중단 확인', interrupted: '실행 중단 · 복구 확인 필요', unverified: '작업 상태 확인 필요',
   };
   const currentPhase = jobPhase || status;
 

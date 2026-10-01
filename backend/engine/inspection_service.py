@@ -49,7 +49,7 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], policy_path: Path) -> None:
+def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], policy_path: Path, *, device: str | None = None) -> None:
     """Check a separately provisioned approval policy before any service state exists."""
     path = Path(policy_path).expanduser()
     if path.is_symlink() or not path.is_file() or path.resolve().is_relative_to(package_dir):
@@ -87,6 +87,14 @@ def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], poli
                 or _sha256(checkpoints[job_id]) != revision["checkpoint_sha256"]):
             raise ValueError("Approved release checkpoint or revision does not match the package")
         seen.add(job_id)
+    from backend.engine.runtime_release_evidence import verify_release_evidence
+    accepted_device=policy.get('device')
+    if not isinstance(accepted_device,str) or (device is not None and accepted_device!=device):
+        raise ValueError('Release policy device differs from actual runtime device')
+    parity_sha=policy.get('runtime_acceptance_sha256') if manifest.get('runtime_acceptance_sha256') else policy.get('parity_receipt_sha256')
+    if not isinstance(parity_sha,str) or not re.fullmatch('[0-9a-f]{64}',parity_sha):
+        raise ValueError('Release policy must bind a completed cohort acceptance receipt checksum')
+    verify_release_evidence(package_dir,accepted_device,expected_receipt_sha256=parity_sha)
 
 
 class FileJob(BaseModel):
@@ -473,7 +481,7 @@ def create_service_app(
     if require_approved_release and release_policy is None:
         raise ValueError("Approved release policy is required")
     if release_policy is not None:
-        _verify_release_policy(package_dir, checkpoints, release_policy)
+        _verify_release_policy(package_dir, checkpoints, release_policy,device=device)
     from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
     resolve_runtime_device(device)
     store = InspectionStore(Path(state_dir).expanduser().resolve())

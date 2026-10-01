@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     TORCH_HOME=/opt/modu-vision/torch-cache \
-    MODU_VISION_WEIGHTS_MANIFEST=/opt/modu-vision/torch-cache/weights-manifest.json
+    MODU_VISION_WEIGHTS_MANIFEST=/opt/modu-vision/torch-cache/weights-manifest.json \
+    MODU_VISION_MODEL_DEPENDENCIES_LOCK=/opt/modu-vision/requirements-models.lock
 
 # Match the base image's torch 2.6.0 and CUDA 12.6 build. --no-deps keeps the
 # preinstalled CUDA torch binary instead of replacing it during resolution.
@@ -30,7 +31,16 @@ RUN python -m pip install --no-cache-dir \
     "onnx>=1.17,<2" \
     "onnxruntime>=1.19,<2"
 
-RUN python -c "import torch, torchvision, cv2, numpy, PIL, sklearn, psutil, fastapi, pydantic, onnx, onnxruntime; assert torch.__version__.startswith('2.6.0')"
+COPY requirements-models.lock /opt/modu-vision/requirements-models.lock
+# Private build contexts may upload this file at 0600. The numeric worker UID
+# must read the installed environment contract during runtime preflight.
+RUN chmod 644 /opt/modu-vision/requirements-models.lock \
+    && python -m pip install --no-cache-dir -r /opt/modu-vision/requirements-models.lock
+# The detector distribution pulls GUI OpenCV. Headless workers need one cv2
+# provider; reinstall after removing GUI wheels because they share cv2 files.
+RUN python -m pip uninstall -y opencv-python opencv-contrib-python \
+    && python -m pip install --no-cache-dir --no-deps --force-reinstall opencv-python-headless==4.11.0.86
+RUN python -c "import torch, torchvision, cv2, numpy, PIL, sklearn, psutil, fastapi, pydantic, onnx, onnxruntime, timm, safetensors, huggingface_hub, ultralytics; assert torch.__version__.startswith('2.6.0'); assert timm.is_model('vit_small_patch16_dinov3.lvd1689m'); assert ultralytics.__version__ == '8.4.41'"
 
 # The worker has --network none at run time. Cache every DEFAULT checkpoint
 # reachable from the current training model factories, then record full hashes.

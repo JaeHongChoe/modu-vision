@@ -16,7 +16,7 @@ from backend.main import create_app
 def completed_local(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user'))
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, 'training_job_manager', manager)
     class Trainer:
         def __init__(self, **kwargs): self.output = Path(kwargs['output_dir'])
@@ -49,7 +49,7 @@ def completed_local(tmp_path, monkeypatch):
     record.val_loss = .5
     record.loss_history = [{'epoch': 1, 'train_loss': .6, 'val_loss': .7}, {'epoch': 2, 'train_loss': .4, 'val_loss': .5}]
     routes_training._write_job_receipt(record)
-    monkeypatch.setattr(routes_training, 'training_job_manager', routes_training.TrainingJobManager())
+    monkeypatch.setattr(routes_training, 'training_job_manager', routes_training.TrainingJobManager(local_execution='embedded'))
     return client, project, source, job, Path(record.output_dir), record.loss_history
 
 

@@ -89,12 +89,10 @@ class FlowchartInspectionConfigurationError(RuntimeError):
     """A trained checkpoint cannot support a safe OK/NG decision."""
 
 
-def _normal_class_indices(classes: Sequence[str]) -> List[int]:
-    normal_names = {"ok", "good", "normal", "pass", "nondefect", "nodefect", "정상", "양품"}
-    return [
-        index for index, name in enumerate(classes)
-        if str(name).casefold().strip().replace(" ", "").replace("_", "").replace("-", "") in normal_names
-    ]
+def _normal_class_indices(classes: Sequence[str], roles: Optional[Dict[str, str]] = None) -> List[int]:
+    """Normal classes by the checkpoint's recorded roles, else the shared alias rule."""
+    from backend.engine.class_semantics import normal_class_indices
+    return normal_class_indices(classes, roles)
 
 
 # ============================================================================
@@ -881,6 +879,7 @@ class FlowchartEngine:
         self._model_cache: Dict[Tuple[Any, ...], Any] = {}
         self._model_input_sizes: Dict[Tuple[Any, ...], Tuple[int, int]] = {}
         self._model_classes: Dict[Tuple[Any, ...], List[str]] = {}
+        self._model_class_roles: Dict[Tuple[Any, ...], Optional[Dict[str, str]]] = {}
         if type(max_device_concurrency) is not int or not 1 <= max_device_concurrency <= 8:
             raise ValueError("Engine device capacity must be an integer from 1 to 8")
         self._max_device_concurrency = max_device_concurrency
@@ -913,10 +912,20 @@ class FlowchartEngine:
                     self._model_cache.clear()
                     self._model_input_sizes.clear()
                     self._model_classes.clear()
+                    self._model_class_roles.clear()
                     self.device = torch.device('cpu')
             self._max_device_concurrency = device_slots
             self._device_gate = threading.BoundedSemaphore(device_slots)
             return self.execution_resources()
+
+    def _remember_model_classes(self, cache_key: Tuple[Any, ...], classes: Sequence[Any],
+                                checkpoint: Mapping[str, Any], task: Optional[str] = None) -> None:
+        """Keep the class list with the roles frozen in the checkpoint, if it has them."""
+        from backend.engine.class_semantics import recorded_roles
+        names = [str(name) for name in classes]
+        roles = recorded_roles(checkpoint, task=task, classes=names)
+        self._model_classes[cache_key] = names
+        self._model_class_roles[cache_key] = roles
 
     def _remember_input_size(self, cache_key: Tuple[Any, ...], checkpoint: Dict[str, Any]) -> None:
         raw = checkpoint.get("image_size", [224, 224])
@@ -973,7 +982,7 @@ class FlowchartEngine:
                 )
                 model.load_state_dict(state, strict=True)
                 self._remember_input_size(cache_key, ckpt)
-                self._model_classes[cache_key] = foreground_class_names(classes)
+                self._remember_model_classes(cache_key, foreground_class_names(classes), ckpt)
                 is_trained = True
                 logger.info("Loaded detection checkpoint from %s", ckpt_path)
             except Exception as e:
@@ -1038,7 +1047,7 @@ class FlowchartEngine:
                     state = ckpt.get("model_state_dict", ckpt.get("model_state", ckpt.get("state_dict", ckpt)))
                     model.load_state_dict(state, strict=True)
                     self._remember_input_size(cache_key, ckpt)
-                    self._model_classes[cache_key] = list(ckpt.get("classes", []))
+                    self._remember_model_classes(cache_key, ckpt.get("classes", []), ckpt, task="segmentation")
                     is_trained = True
                     logger.info("Loaded UNet segmentation checkpoint from %s", ckpt_path)
                 except Exception as e:
@@ -1064,7 +1073,7 @@ class FlowchartEngine:
                     state = ckpt.get("model_state_dict", ckpt.get("model_state", ckpt.get("state_dict", ckpt)))
                     model.load_state_dict(state, strict=True)
                     self._remember_input_size(cache_key, ckpt)
-                    self._model_classes[cache_key] = [str(name) for name in ckpt.get("classes", [])]
+                    self._remember_model_classes(cache_key, ckpt.get("classes", []), ckpt)
                     is_trained = True
                     logger.info("Loaded classification checkpoint from %s", ckpt_path)
                 except Exception as e:
@@ -1463,7 +1472,7 @@ class FlowchartEngine:
                     "Segmentation class_names differs from checkpoint class mapping"
                 )
             class_names = requested
-        normal_indices = _normal_class_indices(class_names) if is_trained else [0]
+        normal_indices = _normal_class_indices(class_names, self._model_class_roles.get(key)) if is_trained else [0]
         if (
             task_clean in ("classification", "classifier")
             and is_trained

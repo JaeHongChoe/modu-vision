@@ -171,6 +171,14 @@ def _comparisons(project,source):
 
 
 def _validate_origin(project,source,queue):
+    if queue['origin'].get('flow_evaluation_id'):
+        from backend.engine.flow_evaluation import read_evaluation
+        origin=queue['origin'];record=read_evaluation(project,origin['flow_evaluation_id'])
+        if (origin.get('step')!=5 or not record['validity']['valid']
+                or record['record_sha256']!=origin.get('evidence_sha256')
+                or record['scope']['source_dataset_path']!=str(source)):
+            raise ValueError('Whole-flow review origin changed; create a new queue')
+        return queue
     origin=queue['origin'];kind='comparison_id' if origin.get('comparison_id') else 'evaluation_id'
     records=_comparisons(project,source) if kind=='comparison_id' else _evaluations(project,source)
     record=next((r for r in records if r[kind]==origin[kind]),None)

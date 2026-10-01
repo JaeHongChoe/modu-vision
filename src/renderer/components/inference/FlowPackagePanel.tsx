@@ -16,22 +16,8 @@ import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {productDeliveryApi} from '../../services/productDeliveryApi';
 import {reopenOptimizationTask} from './deliveryTaskSelection';
-
-interface FlowExportResult {
-  package_path: string;
-  package_name: string;
-  pipeline_id: string;
-  model_job_ids: string[];
-  total_files: number;
-  deployment?: { profile: 'edge_cpu'|'edge_cuda'; device: string; target: EdgeTarget };
-  parity: {
-    status: 'not_run' | 'passed';
-    image_path?: string;
-    final_verdict?: string;
-    roi_count?: number;
-    compared_fields?: string[];
-  };
-}
+import { flowPackageExport, type FlowApprovalPrerequisites, type FlowExportResult } from '../../services/flowPackageExport';
+import { defaultCohort, MAX_PARITY_IMAGES, parityFields, parityHeadline, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
 
 export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask }> = ({ sourceFolder, task }) => {
   const {key:deliveryKey,scope:deliveryScope,project}=useDeliveryScope(sourceFolder+task);
@@ -45,13 +31,18 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [selectedVersionId, setSelectedVersionId] = useState('');
   const [images, setImages] = useState<ImageMeta[]>([]);
   const [selectedImagePath, setSelectedImagePath] = useState('');
-  const [verifyOnImage, setVerifyOnImage] = useState(true);
+  const [parityMode, setParityMode] = useState<ParityMode>('cohort');
+  const [cohortPaths, setCohortPaths] = useState<string[]>([]);
+  const [release, setRelease] = useState<FlowApprovalPrerequisites | null>(null);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [releaseSelection, setReleaseSelection] = useState<Record<string, string>>({});
+  const [includeApprovals, setIncludeApprovals] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   useEffect(()=>{if(!requestedOptimization)return;let active=true;const started=deliveryScope.current;setOptimizationPath('');setDeploymentPath('');setOptimizationJobId(undefined);setError(null);reopenOptimizationTask(requestedOptimization,project?.source_dataset_dir||sourceFolder,{job:runtimeDeploymentApi.job,packages:productDeliveryApi.packages,select:productDeliveryApi.select},()=>active&&deliveryScope.current===started).then(value=>{if(value){setOptimizationPath(value.package.package_path);setOptimizationJobId(value.job.job_id);setLibraryRefresh(value=>value+1);}}).catch(cause=>{if(active&&deliveryScope.current===started)setError(cause instanceof Error?cause.message:String(cause));});return()=>{active=false;};},[deliveryKey,requestedOptimization,handoff?.taskKey,handoff?.selectionId]);
-  const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[] } | null>(null);
+  const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[]; status?: string } | null>(null);
   const [result, setResult] = useState<FlowExportResult | null>(null);
   useEffect(()=>{if(result?.package_path)setLibraryRefresh(value=>value+1);},[result?.package_path]);
   const [identity, setIdentity] = useState<SavedFlowIdentity | null>(null);
@@ -103,6 +94,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         || saved.pipelines.find((item) => item.is_latest)?.version_id || saved.pipelines[0]?.version_id || '');
       setImages(availableImages);
       setSelectedImagePath(availableImages[0]?.file_path || '');
+      setCohortPaths(defaultCohort(availableImages.map((item) => item.file_path)));
     }).catch((cause) => {
       if (active) setError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => {
@@ -126,10 +118,29 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       });
     return () => { active = false; };
   }, [selectedVersionId, versions, sourceFolder, projectDir]);
+  useEffect(() => {
+    setRelease(null); setReleaseError(null); setReleaseSelection({});
+    if (!sourceFolder || !selectedVersion) return;
+    let active = true;
+    flowPackageExport.prerequisites({ source_dataset_path: sourceFolder, recipe_task: selectedVersion.recipe_task, version_id: selectedVersion.version_id })
+      .then((value) => { if (active) { setRelease(value); setReleaseSelection(value.approval_revision_ids); } })
+      .catch((cause) => { if (active) setReleaseError(cause instanceof Error ? cause.message : '승인 정보를 읽지 못했습니다.'); });
+    return () => { active = false; };
+  }, [selectedVersionId, versions, sourceFolder, projectDir, refreshKey]);
+  // Parity runs on the device the package will use; the backend rejects any other device.
+  const packageDevice = deploymentProfile === 'edge_cpu' ? 'cpu' : deploymentProfile === 'edge_cuda' ? 'cuda:0' : runtimeDevice;
+  const effectiveParityMode: ParityMode = canVerify ? parityMode : 'none';
+  const cohortImages = images.filter((item) => cohortPaths.includes(item.file_path));
+  const approvalIds = includeApprovals ? releaseApprovalIds(release, releaseSelection) : null;
   const exportFlow = async () => {
     if (!sourceFolder || !selectedVersion || identity?.versionId !== selectedVersion.version_id || isExporting) return;
-    if (verifyOnImage && canVerify && !selectedImage) {
-      setError('동일성 검증에 사용할 실제 이미지를 선택하세요.');
+    const parity = parityFields(effectiveParityMode, cohortImages, selectedImage, packageDevice);
+    if ('error' in parity) {
+      setError(parity.error);
+      return;
+    }
+    if (includeApprovals && !approvalIds) {
+      setError('승인 포함 패키지는 모든 모델에 검증된 승인 revision을 하나씩 선택해야 합니다. 승인 없이 만들려면 승인 포함을 해제하세요.');
       return;
     }
     setError(null);
@@ -137,17 +148,15 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     setFailedExport(null);
     setIsExporting(true);
     try {
-      const exported = await runtimeDeploymentApi.exportFlow({
+      const exported = await flowPackageExport.exportFlow({
         source_dataset_path: sourceFolder,
         recipe_task: selectedVersion.recipe_task,
         version_id: selectedVersion.version_id,
         package_name: `modu_flow_${selectedVersion.version_id.slice(0, 8)}_${Date.now()}`,
         ...flowDeploymentOptions(deploymentProfile, edgeTarget),
-        runtime_config:{deadline_ms:deadlineMs,cpu_threads:cpuThreads,device:deploymentProfile==='edge_cpu'?'cpu':deploymentProfile==='edge_cuda'?'cuda:0':runtimeDevice},
-        ...(verifyOnImage && canVerify && selectedImage ? {
-          verification_image_path: selectedImage.file_path,
-          verification_image_id: selectedImage.image_id,
-        } : {}),
+        runtime_config:{deadline_ms:deadlineMs,cpu_threads:cpuThreads,device:packageDevice},
+        ...parity.fields,
+        ...(approvalIds ? { approval_revision_ids: approvalIds } : {}),
       });
       if (useProjectStore.getState().projectDir === projectDir && useDatasetStore.getState().folderPath === sourceFolder) {
         setResult(exported);
@@ -160,7 +169,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         const packagePath = typeof detail?.package_path === 'string' ? detail.package_path : undefined;
         const mismatchedFields = Array.isArray(parity?.mismatched_fields)
           ? parity.mismatched_fields.filter((field): field is string => typeof field === 'string') : [];
-        setFailedExport(packagePath || mismatchedFields.length ? { packagePath, mismatchedFields } : null);
+        setFailedExport(packagePath || mismatchedFields.length ? { packagePath, mismatchedFields, status: typeof parity?.status === 'string' ? parity.status : undefined } : null);
         setError(typeof detail?.message === 'string' ? detail.message
           : cause instanceof Error ? cause.message : '전체 플로우 패키지를 만들지 못했습니다.');
       }
@@ -240,47 +249,91 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         </select>
       </label>
       <label className="grid min-w-0 gap-1.5 text-xs font-medium text-slate-300">
-        검증 이미지
+        한 장 확인 이미지
         <select value={selectedImagePath} onChange={(event) => { setSelectedImagePath(event.target.value); setResult(null); }}
-          disabled={!verifyOnImage || !canVerify || images.length === 0 || isExporting}
+          disabled={effectiveParityMode !== 'single' || images.length === 0 || isExporting}
           className="w-full rounded border border-[#455670] bg-[#0F1723] px-3 py-2 text-xs text-slate-100 disabled:opacity-50">
           {images.length === 0 && <option value="">사용 가능한 이미지 없음</option>}
           {images.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
         </select>
       </label>
-      <button type="button" onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting || (verifyOnImage && canVerify && !selectedImage)}
+      <button type="button" onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
+          || (effectiveParityMode === 'single' && !selectedImage) || (effectiveParityMode === 'cohort' && cohortImages.length < 2) || (includeApprovals && !approvalIds)}
         className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">
         {isExporting ? '패키지 생성·검증 중...' : '전체 플로우 내보내기'}
       </button>
     </div>
-    <label className="mt-3 flex items-center gap-2 text-xs text-slate-300">
-      <input type="checkbox" checked={verifyOnImage && canVerify} onChange={(event) => setVerifyOnImage(event.target.checked)} disabled={isExporting || !canVerify}
-        className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
-      실제 이미지로 앱 엔진과 독립 실행 패키지 결과 비교
-    </label>
+    <fieldset className="mt-4 rounded border border-[#344255] p-3 text-xs text-slate-300" disabled={isExporting}>
+      <legend className="px-1 font-semibold text-slate-200">승인 revision</legend>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" checked={includeApprovals} onChange={(event) => setIncludeApprovals(event.target.checked)}
+          className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
+        현장 서비스에 적용할 승인 포함 패키지로 만들기
+      </label>
+      {releaseError && <p role="alert" className="mt-2 text-rose-300">승인 정보 확인 실패: {releaseError}</p>}
+      {includeApprovals && release && <ul className="mt-2 grid gap-2">
+        {release.models.map((model) => <li key={model.job_id} className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:items-center">
+          <span className="min-w-0 break-all font-mono text-slate-400">{model.task} · {model.job_id} · {model.checkpoint_sha256.slice(0, 12)}</span>
+          {model.candidates.length ? <select value={releaseSelection[model.job_id] || ''} aria-label={`${model.job_id} 승인 revision`}
+            onChange={(event) => setReleaseSelection((current) => ({ ...current, [model.job_id]: event.target.value }))}
+            className="rounded border border-[#455670] bg-[#0F1723] px-2 py-1.5 text-slate-100">
+            <option value="">검증된 승인 revision 선택</option>
+            {model.candidates.map((candidate) => <option key={candidate.revision_id} value={candidate.revision_id}>
+              {candidate.is_active ? '[현재 활성] ' : ''}{candidate.action} · {candidate.reviewer} · {new Date(candidate.created_at).toLocaleString('ko-KR')}
+            </option>)}
+          </select> : <span className="text-amber-300">이 체크포인트에 검증된 승인이 없습니다. 4단계에서 평가·승인한 뒤 다시 확인하세요.</span>}
+        </li>)}
+      </ul>}
+      {includeApprovals && release && !approvalIds && <p className="mt-2 text-amber-300">모든 모델에 승인 revision을 하나씩 선택해야 승인 포함 패키지를 만들 수 있습니다. 승인은 여기서 새로 만들지 않습니다.</p>}
+      {!includeApprovals && <p className="mt-2 text-slate-500">승인 없는 패키지는 내보내기·시험용이며 현장 서비스 적용 단계에서 거부됩니다.</p>}
+    </fieldset>
+    <fieldset className="mt-3 rounded border border-[#344255] p-3 text-xs text-slate-300" disabled={isExporting || !canVerify}>
+      <legend className="px-1 font-semibold text-slate-200">앱 엔진 · 독립 실행 패키지 동일성 검증</legend>
+      <div className="flex flex-wrap gap-4">
+        {([['cohort', '고정 이미지 여러 장'], ['single', '한 장 (제한된 확인)'], ['none', '검증 안 함']] as const).map(([mode, label]) =>
+          <label key={mode} className="flex items-center gap-1.5"><input type="radio" name="flow-parity-mode" checked={effectiveParityMode === mode}
+            onChange={() => { setParityMode(mode); setResult(null); }} className="border-[#455670] bg-[#0F1723] text-sky-500" />{label}</label>)}
+      </div>
+      <p className="mt-2 text-slate-400">대상 장치 <span className="font-mono text-slate-200">{packageDevice}</span> · 패키지 실행 장치와 같은 장치로만 비교합니다.</p>
+      {effectiveParityMode === 'cohort' && <div className="mt-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장)</span>
+          <button type="button" onClick={() => setCohortPaths(images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}
+            className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">목록 전체</button>
+          <button type="button" onClick={() => setCohortPaths([])} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+        </div>
+        <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto sm:grid-cols-2">
+          {images.map((item) => <li key={item.file_path}><label className="flex min-w-0 items-center gap-1.5">
+            <input type="checkbox" checked={cohortPaths.includes(item.file_path)} onChange={() => setCohortPaths((current) => toggleCohort(current, item.file_path))}
+              className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
+            <span className="truncate">{item.file_name}</span></label></li>)}
+        </ul>
+      </div>}
+      {effectiveParityMode === 'single' && <p className="mt-2 text-amber-300">한 장 CPU 확인은 호환용 제한 검증이며 여러 장·대상 장치 수락 근거로 쓰이지 않습니다.</p>}
+    </fieldset>
     {!canVerify && <p role="status" className="mt-2 text-xs text-amber-300">선택한 Edge 대상과 현재 앱의 OS/CPU가 다르거나 현재 대상 정보가 없습니다. 이미지 결과 비교는 대상 장비에서 실행하세요.</p>}
     {error && <div role="alert" className="mt-3 rounded border border-rose-700 bg-rose-950/30 p-3 text-xs text-rose-200">
       <p>{error}</p>
+      {failedExport?.status && <p className="mt-2">동일성 검증 결과: {failedExport.status === 'mismatch' ? '불일치' : failedExport.status === 'failed' ? '실행 실패' : failedExport.status} (패키지에 실패 기록 저장)</p>}
       {failedExport?.mismatchedFields.length ? <p className="mt-2 break-all font-mono">불일치 항목: {failedExport.mismatchedFields.join(', ')}</p> : null}
       {failedExport?.packagePath && <p className="mt-2 break-all font-mono">검증 실패 패키지: {failedExport.packagePath}</p>}
       {failedExport && <button type="button" onClick={() => void exportFlow()} disabled={isExporting}
-        className="mt-2 rounded border border-rose-500 px-2 py-1 font-semibold hover:bg-rose-900/50 disabled:opacity-50">같은 이미지로 다시 생성·검증</button>}
+        className="mt-2 rounded border border-rose-500 px-2 py-1 font-semibold hover:bg-rose-900/50 disabled:opacity-50">같은 입력으로 다시 생성·검증</button>}
     </div>}
     {result && <div className="mt-4 rounded border border-[#455670] bg-[#0E1722] p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2 text-slate-100">
         <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 패키지 생성 완료 · 모델 {result.model_job_ids.length}개 · 파일 {result.total_files}개
-        <span className={`rounded border px-2 py-0.5 ${result.parity.status === 'passed' ? 'border-emerald-700 text-emerald-300' : 'border-amber-700 text-amber-300'}`}>
-          {result.parity.status === 'passed' ? '실제 이미지 결과 일치' : '실제 이미지 동일성 미검증'}
-        </span>
+        {(() => { const headline = parityHeadline(result.parity); return <span className={`rounded border px-2 py-0.5 ${headline.tone === 'ok' ? 'border-emerald-700 text-emerald-300' : headline.tone === 'fail' ? 'border-rose-700 text-rose-300' : 'border-amber-700 text-amber-300'}`}>{headline.text}</span>; })()}
       </div>
-      {result.parity.status === 'passed' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
+      {result.parity.status === 'passed' && result.parity.scope === 'cohort' && <p className="mt-2 text-slate-300">판정 분포 {Object.entries(result.parity.verdict_counts || {}).map(([verdict, count]) => `${verdict} ${count}`).join(' · ')} · 입력 묶음 {result.parity.cohort_sha256?.slice(0, 12)}</p>}
+      {result.parity.status === 'passed' && result.parity.scope === 'single_image' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
       <p className="mt-2 break-all font-mono text-slate-400">{result.package_path}</p>
       {result.deployment && <div className="mt-3 rounded border border-sky-800 bg-sky-950/20 p-3">
         <p className="font-semibold text-sky-200">{result.deployment.profile} · {result.deployment.target.os} / {result.deployment.target.architecture} · {result.deployment.device}</p>
         <p className="mt-2 text-slate-400">패키지 폴더를 대상 장비로 복사한 뒤 아래 순서로 실행하세요.</p>
         <pre className="mt-2 overflow-x-auto whitespace-pre text-[11px] text-slate-300">{Object.values(edgeDeploymentCommands(result.deployment.target)).join('\n')}</pre>
       </div>}
-      <p className="mt-2 text-slate-500">이 결과는 선택한 이미지 1장의 동일성 검증입니다. 현장 서비스 적용 여부는 별도로 확인하세요.</p>
+      <p className="mt-2 text-slate-500">{result.parity.scope === 'cohort' ? '앱 엔진과 독립 실행 패키지가 같은 고정 입력·장치에서 같은 판정을 냈다는 기록입니다.' : result.parity.scope === 'single_image' ? '이미지 1장 CPU 확인이며 현장 수락 근거가 아닙니다.' : '동일성 검증을 실행하지 않았습니다.'} 실제 대상 장비 실행과 현장 서비스 적용은 별도로 확인하세요.</p>
       <div className="mt-3 rounded border border-slate-700 p-3"><h4 className="font-semibold">Python · C++ · C# Predictor / Executor</h4><p className="mt-1 text-slate-400">전체 DAG와 모든 연결 모델의 원본 좌표·판정·측정 결과를 같은 JSON으로 제공합니다.</p><pre className="mt-2 overflow-auto text-[11px]">{'python native_runtime/build_native.py --output native-build\nnative-build/vision_predict /absolute/package /absolute/image.png 30000\ndotnet build native_runtime/VisionRuntime.csproj -o native-build/csharp'}</pre><p className="mt-1 text-slate-500">C# 출력 폴더에 빌드한 네이티브 라이브러리를 복사하세요. CPython 개발 헤더와 대상 아키텍처의 의존성이 필요합니다.</p></div>
       {!optimizationPath&&<RuntimeOptimizationPanel packagePath={result.package_path} sourceFolder={sourceFolder} task={task}/>}
     </div>}

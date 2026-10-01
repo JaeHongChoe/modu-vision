@@ -20,34 +20,14 @@ import numpy as np
 
 logger = logging.getLogger("vision_ai_studio.zero_escape_analyzer")
 
-NORMAL_LABELS = {
-    "ok",
-    "normal",
-    "pass",
-    "good",
-    "0",
-    "background",
-    "ok_normal",
-    "true_ok",
-    "ok_chip",
-    "정상",
-    "양품",
-    "합격",
-}
-
-
-def is_defect_label(label: Any) -> bool:
-    """Returns True if the label represents a manufacturing flaw/defect."""
+def is_defect_label(label: Any, roles: Optional[Dict[str, str]] = None) -> bool:
+    """Returns True unless the label names a normal class, using recorded roles first."""
     if label is None:
         return False
     if isinstance(label, (int, float)):
         return label != 0
-    clean = str(label).strip().lower()
-    tokens = clean.replace("-", "_").split("_")
-    if "ng" in tokens or "defect" in tokens or "fail" in tokens:
-        return True
-    return not (clean in NORMAL_LABELS or clean.startswith(("ok_", "normal_", "good_"))
-                or clean.endswith(("_ok", "_normal", "_good")))
+    from backend.engine.class_semantics import is_defect_class
+    return is_defect_class(label, roles)
 
 
 def compute_sample_defect_score(
@@ -55,6 +35,7 @@ def compute_sample_defect_score(
     task: str = "classification",
     anomaly_min: Optional[float] = None,
     anomaly_max: Optional[float] = None,
+    roles: Optional[Dict[str, str]] = None,
 ) -> float:
     """
     Computes genuine defect_score in [0.0, 1.0]:
@@ -79,7 +60,7 @@ def compute_sample_defect_score(
     if task_clean == "classification":
         pred_cls = str(prediction.get("predicted_class", "")).strip()
         conf = float(prediction.get("confidence", 0.5))
-        is_pred_defect = is_defect_label(pred_cls)
+        is_pred_defect = is_defect_label(pred_cls, roles)
         if is_pred_defect:
             score = conf
         else:
@@ -105,13 +86,13 @@ def compute_sample_defect_score(
             defect_scores = [
                 float(d.get("score", 0.0))
                 for d in detections
-                if isinstance(d, dict) and is_defect_label(d.get("label", ""))
+                if isinstance(d, dict) and is_defect_label(d.get("label", ""), roles)
             ]
             score = max(defect_scores, default=0.0)
         else:
             pred_cls = str(prediction.get("predicted_class", "")).strip()
             conf = float(prediction.get("confidence", 0.0))
-            score = conf if is_defect_label(pred_cls) else 0.0
+            score = conf if is_defect_label(pred_cls, roles) else 0.0
         return float(np.clip(score, 0.0, 1.0))
 
     # 5. Semantic Segmentation
@@ -122,7 +103,7 @@ def compute_sample_defect_score(
         if coverage > 1.0:
             coverage = coverage / 100.0  # normalize percent to [0, 1]
 
-        if is_defect_label(pred_cls) or coverage > 0.001:
+        if is_defect_label(pred_cls, roles) or coverage > 0.001:
             score = max(conf, min(1.0, coverage * 5.0))
         else:
             score = 1.0 - conf
@@ -131,7 +112,7 @@ def compute_sample_defect_score(
     # Fallback
     pred_cls = str(prediction.get("predicted_class", "")).strip()
     conf = float(prediction.get("confidence", 0.5))
-    score = conf if is_defect_label(pred_cls) else (1.0 - conf)
+    score = conf if is_defect_label(pred_cls, roles) else (1.0 - conf)
     return float(np.clip(score, 0.0, 1.0))
 
 
@@ -178,6 +159,7 @@ def analyze_zero_escape(
     cost_scrap: float = 25.0,
     current_threshold: float = 0.5,
     num_threshold_steps: int = 101,
+    class_roles: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Performs comprehensive zero-escape optimization and tradeoff analysis.
@@ -217,7 +199,7 @@ def analyze_zero_escape(
     from backend.engine.evaluation_history import binary_verdict
     known_truth = []
     for idx, prediction in enumerate(predictions):
-        verdict = binary_verdict(prediction.get("ground_truth"))
+        verdict = binary_verdict(prediction.get("ground_truth"), class_roles)
         if verdict is None:
             raise ValueError(f"Prediction {idx} has unknown ground truth; zero-escape analysis needs reviewed OK/NG truth")
         known_truth.append(verdict == "NG")
@@ -242,7 +224,7 @@ def analyze_zero_escape(
         gt = p.get("ground_truth", "")
         is_def = known_truth[idx]
         score = compute_sample_defect_score(
-            p, task=task, anomaly_min=anomaly_min, anomaly_max=anomaly_max
+            p, task=task, anomaly_min=anomaly_min, anomaly_max=anomaly_max, roles=class_roles
         )
         img_id = str(p.get("image_id", p.get("file_name", f"sample_{idx:04d}")))
         file_name = str(p.get("file_name", img_id))

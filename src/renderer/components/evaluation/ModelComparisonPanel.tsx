@@ -333,6 +333,18 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             <span className="ml-auto font-mono text-[10px] text-slate-400">{visibleReport.created_at.slice(0, 19).replace('T', ' ')}</span>
           </div>
           <p className="break-all font-mono text-[10px] text-slate-400">{visibleReport.incumbent_job_id} → {visibleReport.candidate_job_id}</p>
+          {visibleReport.intake_lineage && (
+            <details className="rounded border border-sky-400/30 bg-sky-950/20 p-2 text-[11px]">
+              <summary className="cursor-pointer text-sky-200">{isKo ? '데이터 버전 간 고정 테스트 비교 근거' : 'Frozen test evidence across dataset versions'}</summary>
+              <div className="mt-2 space-y-1 break-all text-slate-300">
+                <p>{isKo ? '같은 고정 이미지와 원본 정답 범위에서 비교했습니다. 정답 미확인 표본은 품질 계산에서 제외합니다.' : 'Both models used the same frozen images and original truth scope. Unknown truth is excluded from quality metrics.'}</p>
+                <p>{isKo ? '원본 데이터' : 'Original source'}: {visibleReport.intake_lineage.ancestor_source_dataset_path}</p>
+                <p>{isKo ? '정답 데이터 출처' : 'Truth source'}: {visibleReport.intake_lineage.truth_source_dataset_path}</p>
+                <p>{isKo ? '채택 버전' : 'Adopted versions'}: {visibleReport.intake_lineage.version_ids.join(' → ')}</p>
+                <p className="font-mono text-[10px]">{visibleReport.intake_lineage.cohort_id}<br />{visibleReport.intake_lineage.cohort_sha256}</p>
+              </div>
+            </details>
+          )}
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {[
               [isKo ? 'test 표본' : 'Test sample', `${visibleReport.selected_image_count}/${visibleReport.total_test_images}`],

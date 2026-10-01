@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import subprocess
 import tempfile
 import threading
 import time
@@ -75,6 +76,7 @@ class JobRecord:
     split_manifest_root: Optional[str] = None
     warm_start: Optional[WarmStartParent] = None
     dataset_binding: Optional[Dict[str, Any]] = None
+    process: Optional[subprocess.Popen] = field(default=None, repr=False)
 
 
 def _write_job_receipt(record: JobRecord) -> None:
@@ -146,7 +148,10 @@ class TrainingJobManager:
 
     ACTIVE_STATES = ("running", "stopping", "disconnected")
 
-    def __init__(self):
+    def __init__(self, *, local_execution: Literal['subprocess', 'embedded'] = 'subprocess'):
+        # Embedded execution is an explicit library/test compatibility mode.
+        # The application singleton and ordinary callers own a CLI subprocess.
+        self.local_execution = local_execution
         self._lock = threading.Lock()
         self._jobs: Dict[str, JobRecord] = {}
         self._active_job_id: Optional[str] = None
@@ -223,10 +228,60 @@ class TrainingJobManager:
             return list(self._jobs.values())
 
     def restore_terminal_job(self, record: JobRecord) -> None:
-        if record.status not in ("completed", "aborted", "failed"):
+        if record.status not in ("completed", "aborted", "failed", "interrupted", "stopped"):
             raise ValueError("Only terminal jobs can be restored without a worker")
         with self._lock:
             self._jobs.setdefault(record.job_id, record)
+
+    def restore_local_job(self, record: JobRecord, *, runner=None, leases=None) -> None:
+        """Register an existing CLI child; its launch and optimizer are not replayed."""
+        with self._lock:
+            previous = self._jobs.get(record.job_id)
+            if previous is not None and (previous.status not in ('disconnected', 'stopping')
+                                        or previous.thread is not None and previous.thread.is_alive()):
+                return
+            self._jobs[record.job_id] = record
+            self._refresh_active_id()
+        if runner is None:
+            return
+        def monitor():
+            stop = threading.Event()
+            def heartbeat():
+                while not stop.wait(5):
+                    leases.heartbeat(record.job_id)
+            threading.Thread(target=heartbeat, daemon=True, name=f'Lease-{record.job_id}').start()
+            try:
+                record.result = runner(WebSocketTelemetryCallback(job_id=record.job_id, max_hz=30.0))
+                record.status = record.result['status']
+                record.phase = record.status
+                if record.result.get('error'):
+                    record.error = {'message': record.result['error']}
+            except Exception as exc:
+                from backend.engine.local_training_worker import LocalWorkerUncertain
+                record.status = record.phase = 'disconnected' if isinstance(exc, LocalWorkerUncertain) else 'failed'
+                record.error = {'message': str(exc)}
+            finally:
+                stop.set()
+                if record.status == 'disconnected':
+                    leases.mark_uncertain(record.job_id)
+                else:
+                    try:
+                        _write_job_receipt(record)
+                    except OSError:
+                        logger.exception('Could not persist recovered local receipt for %s', record.job_id)
+                    leases.release(record.job_id, terminal=True)
+                with self._lock:
+                    self._refresh_active_id()
+        record.thread = threading.Thread(target=monitor, daemon=True, name=f'LocalReconnect-{record.job_id}')
+        record.thread.start()
+
+    def reconnect_local_job(self, job_id: str) -> Optional[JobRecord]:
+        record = self.get_job(job_id)
+        if record is None or record.remote_profile_id is not None or record.status not in ('disconnected', 'stopping'):
+            return None
+        from backend.engine.local_training_worker import recover_local_jobs
+        recover_local_jobs(self, job_id=job_id)
+        return self.get_job(job_id)
 
     @property
     def is_training(self) -> bool:
@@ -319,7 +374,7 @@ class TrainingJobManager:
                     callback=cb,
                     config_overrides=config_overrides,
                     warm_start=warm_start,
-                )
+                ) if self.local_execution == 'embedded' else None
             except Exception as e:
                 self._leases.release(job_id)
                 err_card = classify_exception(e, details=str(e))
@@ -359,7 +414,12 @@ class TrainingJobManager:
                             raise LabelMePreparationCancelled("Training preparation cancelled by user request")
                         from backend.engine.training_provenance import validate_training_binding
                         validate_training_binding(record.dataset_binding)
-                        result = trainer.train(job_id=job_id)
+                        if self.local_execution == 'subprocess':
+                            from backend.engine.local_training_worker import run_owned_training
+                            result = run_owned_training(record, cb, config_overrides=config_overrides, device=device,
+                                                        split_manifest_root=split_manifest_root, leases=self._leases)
+                        else:
+                            result = trainer.train(job_id=job_id)
                         validate_training_binding(record.dataset_binding)
                 except LabelMePreparationCancelled:
                     result = {"status": "aborted"}
@@ -368,6 +428,9 @@ class TrainingJobManager:
                     logger.exception("Training job %s failed: %s", job_id, ex)
                     err_card = classify_exception(ex, details=str(ex))
                     error = err_card.to_ws_payload()
+                    from backend.engine.local_training_worker import LocalWorkerUncertain
+                    if isinstance(ex, LocalWorkerUncertain):
+                        record.phase = 'disconnected'
                     # Also notify via WebSocket
                     cb.on_error(ex, stage="training_loop")
                 finally:
@@ -376,7 +439,7 @@ class TrainingJobManager:
                     finally:
                         with self._lock:
                             if error is not None:
-                                record.status = "failed"
+                                record.status = "disconnected" if record.phase == 'disconnected' else "failed"
                                 record.error = error
                             elif record.status == "stopping":
                                 record.status = "aborted"
@@ -385,18 +448,27 @@ class TrainingJobManager:
                                 record.status = result.get("status", "completed")
                                 record.result = result
                                 record.best_metric = result.get("best_metric")
-                            if self._active_job_id == job_id:
+                                if result.get('error'):
+                                    record.error = {'message': str(result['error'])}
+                            if self._active_job_id == job_id and record.status != 'disconnected':
                                 self._active_job_id = None
                             self._refresh_active_id()
                         try:
-                            _write_job_receipt(record)
+                            if record.status != 'disconnected':
+                                _write_job_receipt(record)
                         except Exception as persistence_error:
                             logger.exception("Could not persist terminal receipt for job %s", job_id)
                             record.status = "failed"
                             record.error = {"message": f"Training provenance persistence failed: {persistence_error}"}
-                            _write_job_receipt(record)
+                            try:
+                                _write_job_receipt(record)
+                            except OSError:
+                                logger.exception("Terminal training state could not be saved after a persistence failure")
                     heartbeat.set()
-                    self._leases.release(job_id, terminal=True)
+                    if record.status == 'disconnected':
+                        self._leases.mark_uncertain(job_id)
+                    else:
+                        self._leases.release(job_id, terminal=True)
                     logger.info("Background training thread finished for job %s", job_id)
 
             t = threading.Thread(target=_worker, name=f"Trainer-{job_id}", daemon=True)
@@ -440,7 +512,7 @@ class TrainingJobManager:
                     raise ValueError("Remote profile identity does not match the training job")
                 if launch_spec is None and recovery_state is None:
                     raise ValueError("A durable launch specification is required for queued remote jobs")
-            queued = profile is not None and recovery_state not in ("launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
+            queued = profile is not None and recovery_state not in ("transferring", "launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
             record = JobRecord(
                 job_id=job_id, task=task, preset=preset, dataset_path=dataset_path,
                 output_dir=output_dir, status="queued" if queued else "running", remote_profile_id=remote_profile_id,
@@ -600,6 +672,12 @@ class TrainingJobManager:
             elif not record or record.status not in self.ACTIVE_STATES:
                 return False
             else:
+                if record.remote_profile_id:
+                    from backend.remote.coordinator import request_remote_cancellation
+                    request_remote_cancellation(record)
+                elif self.local_execution == 'subprocess':
+                    from backend.engine.local_training_worker import request_local_cancellation
+                    request_local_cancellation(record)
                 record.status = "stopping"
                 record.preparation_cancel.set()
                 if record.trainer is not None:
@@ -1069,7 +1147,10 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
     disconnected = previous is not None and previous.status == "disconnected"
     success = training_job_manager.abort_job(job_id)
     if success and disconnected:
-        training_job_manager.reconnect_remote_job(job_id)
+        if previous.remote_profile_id:
+            training_job_manager.reconnect_remote_job(job_id)
+        else:
+            training_job_manager.reconnect_local_job(job_id)
     return {
         "status": "stopping" if success else "not_running",
         "job_id": job_id,
@@ -1079,12 +1160,15 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
 @router.post("/reconnect")
 def reconnect_training(req: TrainingStopRequest,request:Request=None):
     if not req.job_id:
-        raise HTTPException(status_code=422, detail="job_id is required to reconnect a remote run")
+        raise HTTPException(status_code=422, detail="job_id is required to reconnect an owned worker")
     if not _record_in_request_project(training_job_manager.get_job(req.job_id),request):raise HTTPException(404,'Job unavailable in this project')
-    record = training_job_manager.reconnect_remote_job(req.job_id)
+    current = training_job_manager.get_job(req.job_id)
+    record = (training_job_manager.reconnect_remote_job(req.job_id) if current and current.remote_profile_id
+              else training_job_manager.reconnect_local_job(req.job_id))
     if record is None:
         raise HTTPException(status_code=409, detail="This job cannot be reconnected")
-    return {"job_id": record.job_id, "status": record.status, "compute_profile_id": record.remote_profile_id}
+    return {"job_id": record.job_id, "status": record.status, "compute_profile_id": record.remote_profile_id,
+            "optimizer_resume": False}
 
 
 def _completed_receipt_record(job_id: str, request: Request) -> Optional[JobRecord]:

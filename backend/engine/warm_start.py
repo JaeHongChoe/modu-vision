@@ -196,9 +196,13 @@ def resolve_warm_start_parent(
     if receipt.get("task") != task:
         raise ValueError("Warm-start parent task differs from the requested task")
     recorded_source = receipt.get("source_dataset_path")
-    if (not isinstance(recorded_source, str) or not recorded_source
-            or Path(recorded_source).expanduser().resolve() != Path(source_dataset_path).expanduser().resolve()):
+    if not isinstance(recorded_source, str) or not recorded_source:
         raise ValueError("Warm-start parent source differs from this project's source")
+    intake_ancestor = Path(recorded_source).expanduser().resolve() != Path(source_dataset_path).expanduser().resolve()
+    if intake_ancestor:
+        from backend.engine.intake_lineage import project_for_source,verify_ancestor_model
+        project = project_for_source(root,source_dataset_path)
+        verify_ancestor_model(project,Path(source_dataset_path),checkpoint,task)
     fingerprint = receipt.get("dataset_fingerprint")
     if not isinstance(fingerprint, str) or not fingerprint.startswith("v1:"):
         raise ValueError("Warm-start parent source fingerprint is missing")
@@ -235,7 +239,7 @@ def resolve_warm_start_parent(
         raise ValueError('Statistical refit needs a parent with saved feature extractor weights; train a fresh candidate first')
     if payload.get('training_provenance'):
         from backend.engine.specialized_models import _verify_historical_source
-        _verify_historical_source(root.resolve(), source_dataset_path, payload, metadata)
+        _verify_historical_source(root.resolve(), recorded_source if intake_ancestor else source_dataset_path, payload, metadata)
     return WarmStartParent(
         job_id=job_id, checkpoint_path=checkpoint.resolve(), checkpoint_sha256=digest,
         task=task, architecture=architecture, classes=tuple(classes), dataset_fingerprint=fingerprint,

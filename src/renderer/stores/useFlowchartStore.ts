@@ -237,11 +237,11 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
-  loadPipelineVersion: async (versionId, sourceDatasetPath) => {
+  loadPipelineVersion: async (versionId, _sourceDatasetPath) => {
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
     try {
-      const { pipeline: data } = await api.flowchart.activatePipelineVersion(versionId, sourceDatasetPath);
+      const data = await api.flowchart.getPipelineVersion(versionId);
       if (generation !== flowchartGeneration) return null;
       flowchartRunInputRevision += 1;
       set({

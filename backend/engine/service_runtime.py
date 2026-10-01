@@ -15,6 +15,8 @@ class ServiceRuntime:
         self.state_file=Path(state_dir)/'runtime.json'
         self.runtime_root=Path(runtime_root).resolve() if runtime_root else None
         self.verify_policy=verify_policy
+        from backend.engine.service_bootstrap import trusted_runtime_identity
+        self.runtime_build=trusted_runtime_identity()
         self.identity=None
         if self.state_file.exists():
             prior=json.loads(self.state_file.read_text())
@@ -39,13 +41,13 @@ class ServiceRuntime:
             raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
         from backend.engine.edge_runtime import enforce_edge_device
         enforce_edge_device(package,device)
-        if policy:self.verify_policy(package,checkpoints,policy)
+        if policy:self.verify_policy(package,checkpoints,policy,device=device)
         elif not initial:raise ValueError('Runtime apply requires approved release policy')
         digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
         if expected_manifest is not None and digest!=expected_manifest:raise ValueError('Runtime manifest hash mismatch')
         selected=str(resolve_runtime_device(device))
         identity={'status':'ready','package_path':str(package),'release_policy':str(policy) if policy else None,'device':selected,'manifest_sha256':digest,'pipeline_id':pipeline.id,
-                  'model_sha256':{job:hashlib.sha256(path.read_bytes()).hexdigest() for job,path in checkpoints.items()}}
+                  'runtime_build':self.runtime_build,'model_sha256':{job:hashlib.sha256(path.read_bytes()).hexdigest() for job,path in checkpoints.items()}}
         with self.lock:
             if persist:
                 temporary=self.state_file.with_suffix('.tmp')

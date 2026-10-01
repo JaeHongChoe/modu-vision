@@ -10,8 +10,11 @@ import plistlib
 import re
 import shutil
 import subprocess
+import time
+import uuid
 import xml.etree.ElementTree as ET
 from backend.engine.project_migration import _atomic_bytes
+from backend.engine.runtime_process_control import atomic_private_json
 
 
 class NativeAutostart:
@@ -20,6 +23,25 @@ class NativeAutostart:
         self.label=service.native_identity()
         self.kind={'Darwin':'launch_agent','Linux':'systemd_user','Windows':'scheduled_task'}.get(self.system,'unsupported')
         self.tool={'Darwin':'launchctl','Linux':'systemctl','Windows':'schtasks.exe'}.get(self.system)
+        self.journal_path=service.root/'native-install.json'
+        if self.journal_path.is_symlink():raise ValueError('Native install journal cannot be linked')
+    def _journal(self):
+        if not self.journal_path.exists():return None
+        if self.journal_path.is_symlink():raise ValueError('Native install journal cannot be linked')
+        value=json.loads(self.journal_path.read_text())
+        if value.get('schema_version')!=1 or value.get('native_label')!=self.label or value.get('platform')!=self.system:
+            raise ValueError('Native install journal identity differs from this project')
+        return value
+    def _write_journal(self,status,*,operation_id=None,error=None):
+        from backend.engine.service_bootstrap import trusted_runtime_identity
+        active=self.service.ledger.active()
+        value={'schema_version':1,'operation_id':operation_id or uuid.uuid4().hex,'status':status,
+               'native_label':self.label,'platform':self.system,'registration_path':str(self.registration_path()),
+               'descriptor_sha256':hashlib.sha256(self._descriptor()).hexdigest(),
+               'manifest_sha256':active['release'].get('manifest_sha256') if active else None,
+               'runtime_build':trusted_runtime_identity(),'updated_at':time.time(),'error':error}
+        atomic_private_json(self.journal_path,value)
+        return value
     def registration_path(self):
         if self.system=='Darwin':return self.home/'Library'/'LaunchAgents'/(self.label+'.plist')
         if self.system=='Linux':return self.home/'.config'/'systemd'/'user'/(self.label+'.service')
@@ -63,6 +85,10 @@ class NativeAutostart:
                'prepared':prepared,'registered':False,'enabled':False,'running':False,'verified':False,
                'startup_scope':'user_login' if self.system in ('Darwin','Windows') else 'user_session',
                'prerequisite':'A logged-in user session is required; Linux boot without login requires separately configured user lingering'}
+        journal=self._journal()
+        if journal:
+            status={'registering':'interrupted_registration','removing':'interrupted_removal'}.get(journal['status'],journal['status'])
+            state['install_recovery']={**journal,'status':status}
         if self.kind=='unsupported':return state
         if not path.exists() and not self.service.config.get('native_kind') and not self.service.config.get('native_label'):return state
         self._owned_file(path)
@@ -95,6 +121,8 @@ class NativeAutostart:
     def install(self):
         target=self.registration_path();self._owned_file(target)
         existed=target.exists()
+        previous_native={key:self.service.config[key] for key in ('native_label','native_kind','native_registration_path') if key in self.service.config}
+        operation=self._write_journal('registering')
         prepared=self.prepare();target.parent.mkdir(parents=True,exist_ok=True)
         _atomic_bytes(target,self._descriptor())
         state=self.query();created=not state['registered']
@@ -112,6 +140,9 @@ class NativeAutostart:
                 self._run(['schtasks.exe','/Run','/TN',self.label])
             self.service.config.update(native_label=self.label,native_kind=self.kind,native_registration_path=str(target))
             self.service.save(self.service.config)
+            readback=self.query()
+            if not readback['registered']:raise RuntimeError('Native registration command completed but OS readback did not confirm ownership')
+            self._write_journal('registration_checked',operation_id=operation['operation_id'])
         except (OSError,RuntimeError,subprocess.SubprocessError):
             if created:
                 try:
@@ -123,6 +154,9 @@ class NativeAutostart:
                 except (OSError,RuntimeError,subprocess.SubprocessError):
                     # Keep the owned descriptor available for explicit recovery.
                     pass
+            self._write_journal('registration_failed',operation_id=operation['operation_id'],error='Native registration failed; verify owned descriptor and OS state before retrying')
+            for key in ('native_label','native_kind','native_registration_path'):self.service.config.pop(key,None)
+            self.service.config.update(previous_native);self.service.save(self.service.config)
             raise
         return {**self.query(),'files':prepared['files'],'status':'installed','readiness':'Check the live inspection runtime separately'}
     def stop(self):
@@ -135,6 +169,7 @@ class NativeAutostart:
     def remove(self):
         target=self.registration_path();self._owned_file(target);state=self.query()
         if state.get('error') and self.service.config.get('native_kind'):raise RuntimeError('Native registration readback failed; owned records retained: '+state['error'])
+        operation=self._write_journal('removing')
         self.stop()
         if self.system=='Linux' and state['registered']:self._run(['systemctl','--user','disable',self.label+'.service'])
         elif self.system=='Windows' and state['registered']:self._run(['schtasks.exe','/Delete','/TN',self.label,'/F'])
@@ -142,4 +177,5 @@ class NativeAutostart:
         if self.system=='Linux':self._run(['systemctl','--user','daemon-reload'])
         for key in ('native_label','native_kind','native_registration_path'):self.service.config.pop(key,None)
         self.service.save(self.service.config)
+        self._write_journal('removed',operation_id=operation['operation_id'])
         return {**self.query(),'status':'uninstalled'}

@@ -11,20 +11,21 @@ import { useDatasetStore } from './useDatasetStore';
 import { trainingComputeReadiness } from '../utils/trainingComputeReadiness';
 
 export type TrainingStatus = 'idle' | 'queued' | 'preparing' | 'transferring' | 'running'
-  | 'stopping' | 'syncing' | 'disconnected' | 'completed' | 'aborted' | 'failed';
+  | 'stopping' | 'syncing' | 'disconnected' | 'unverified' | 'interrupted'
+  | 'completed' | 'aborted' | 'cancelled' | 'stopped' | 'failed';
 
 const ACTIVE_STATUSES: TrainingStatus[] = [
-  'queued', 'preparing', 'transferring', 'running', 'stopping', 'syncing', 'disconnected',
+  'queued', 'preparing', 'transferring', 'running', 'stopping', 'syncing', 'disconnected', 'unverified',
 ];
 
 function isTrainingStatus(value: unknown): value is TrainingStatus {
-  return typeof value === 'string' && ([...ACTIVE_STATUSES, 'idle', 'completed', 'aborted', 'failed'] as string[]).includes(value);
+  return typeof value === 'string' && ([...ACTIVE_STATUSES, 'idle', 'completed', 'aborted', 'cancelled', 'stopped', 'interrupted', 'failed'] as string[]).includes(value);
 }
 
-function statusFromJob(job: any): TrainingStatus {
+export function statusFromJob(job: any): TrainingStatus {
   if (isTrainingStatus(job?.status)) return job.status;
   if (isTrainingStatus(job?.phase)) return job.phase;
-  return job?.status === 'started' ? 'running' : 'idle';
+  return job?.status === 'started' ? 'running' : 'unverified';
 }
 
 function transferPercent(job: any): number | null {
@@ -128,14 +129,14 @@ let startRequest: ReturnType<typeof api.training.start> | null = null;
 let pendingStartEvents: Array<{ event: string; data: any }> = [];
 let trainingRecoverySequence = 0;
 
-async function waitForStoppedJob(jobId: string): Promise<'completed' | 'aborted' | 'failed'> {
+async function waitForStoppedJob(jobId: string): Promise<TrainingStatus> {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     const job = await api.training.getStatus(jobId);
-    if (job.status === 'completed' || job.status === 'aborted' || job.status === 'failed') {
+    if (['completed', 'aborted', 'failed', 'cancelled', 'stopped'].includes(job.status)) {
       return job.status;
     }
-    if (job.status === 'disconnected') {
+    if (['disconnected', 'unverified', 'interrupted'].includes(job.status)) {
       throw new Error('서버 연결이 끊겨 중단 결과를 확인할 수 없습니다. 다시 연결하여 상태를 확인하세요.');
     }
     await new Promise((resolve) => setTimeout(resolve, 500));

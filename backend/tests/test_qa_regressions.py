@@ -27,7 +27,7 @@ def test_training_manager_starts_without_locking_itself(monkeypatch, tmp_path):
             return {"status": "completed", "model_path": str(tmp_path / "best_model.pt")}
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", FastTrainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     result = []
 
     caller = threading.Thread(
@@ -62,7 +62,7 @@ def test_training_cancel_returns_immediately_and_waits_for_worker_exit(monkeypat
             self.abort_requested = True
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     record = manager.start_job("cancel_qa", "segmentation", str(tmp_path), str(tmp_path))
     assert started.wait(timeout=2)
     try:
@@ -109,7 +109,7 @@ def test_cancel_keeps_slot_busy_until_device_cleanup_finishes(monkeypatch, tmp_p
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
     monkeypatch.setattr(routes_training, "clear_device_cache", slow_cleanup)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     record = manager.start_job("cleanup_qa", "segmentation", str(tmp_path), str(tmp_path))
     assert started.wait(timeout=2)
     try:
@@ -183,7 +183,7 @@ def test_training_stop_routes_report_stopping_then_aborted(monkeypatch, tmp_path
             pass
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
     started = routes_training.start_training(routes_training.TrainingStartRequest(
         task="segmentation", dataset_path=str(tmp_path),
@@ -375,7 +375,7 @@ def test_training_start_uses_prepared_labelme_dataset(tmp_path, monkeypatch):
             return {"status": "completed"}
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", ObservePreparedTrainer)
-    manager = routes_training.TrainingJobManager()
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
     response = routes_training.start_training(routes_training.TrainingStartRequest(
         task="segmentation", dataset_path=str(source), output_dir=str(tmp_path / "models"),

@@ -283,7 +283,8 @@ def _queue_path(project,source,identifier):
 
 def create_review_queue(project,source,task,labelset_id,rows,origin,threshold=.5,margin=.05):
     if not 0<=threshold<=1 or not 0<=margin<=1:raise ValueError('Review threshold and margin must be [0,1]')
-    if origin.get('step')!=4 or not (origin.get('evaluation_id') or origin.get('comparison_id')):raise ValueError('Review queue requires an originating saved evaluation or comparison')
+    flow_origin=origin.get('step')==5 and bool(origin.get('flow_evaluation_id'))
+    if not flow_origin and (origin.get('step')!=4 or not (origin.get('evaluation_id') or origin.get('comparison_id'))):raise ValueError('Review queue requires an originating saved evaluation, comparison or whole-flow evaluation')
     items=[];seen=set()
     for row in rows:
         path=row.get('file_path') or row.get('source_image')
@@ -296,11 +297,15 @@ def create_review_queue(project,source,task,labelset_id,rows,origin,threshold=.5
         candidate=row.get('candidate') or {};incumbent=row.get('incumbent') or {};truth=row.get('ground_truth_verdict')
         if row.get('error') or row.get('is_correct') is False or candidate.get('error') or incumbent.get('error') or (truth in ('OK','NG') and candidate.get('verdict') in ('OK','NG') and truth!=candidate['verdict']):reasons.append('error')
         if row.get('disagreement') or row.get('models_disagree') or row.get('disagrees'):reasons.append('disagreement')
+        if flow_origin and row.get('review_required'):reasons.append('flow_review')
+        if flow_origin and row.get('unknown_truth'):reasons.append('unknown_truth')
         score=row.get('defect_score',row.get('confidence',candidate.get('max_defect_score')))
         if isinstance(score,(int,float)) and math.isfinite(score) and abs(score-threshold)<=margin:reasons.append('threshold')
         if not reasons:continue
-        rank=(300 if 'error' in reasons else 0)+(200 if 'disagreement' in reasons else 0)+(100 if 'threshold' in reasons else 0)
-        items.append({'relative_path':relative,'file_path':str(image),'source_sha256':digest,'reasons':reasons,'priority':rank,'state':'pending'})
+        rank=(300 if 'error' in reasons else 0)+(250 if 'flow_review' in reasons else 0)+(200 if 'disagreement' in reasons else 0)+(150 if 'unknown_truth' in reasons else 0)+(100 if 'threshold' in reasons else 0)
+        item={'relative_path':relative,'file_path':str(image),'source_sha256':digest,'reasons':reasons,'priority':rank,'state':'pending'}
+        if flow_origin:item['origin_evidence']=copy.deepcopy(row.get('origin_evidence',{}))
+        items.append(item)
     items.sort(key=lambda r:(-r['priority'],r['relative_path']))
     queue={'schema_version':1,'id':'review_'+uuid.uuid4().hex,'scope':{'source':str(Path(source).resolve()),'task':task,'labelset_id':labelset_id},'revision':1,'created_at':time.time(),'items':items,'cursor':0,'origin':origin,'threshold':threshold,'margin':margin,'history':[]}
     _write(_queue_path(project,source,queue['id']),queue,True);return queue

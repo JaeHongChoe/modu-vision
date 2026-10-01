@@ -6,7 +6,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from types import SimpleNamespace
 
 import pytest
 
@@ -25,14 +24,14 @@ def test_declared_frozen_resources_export_and_reopen_flow(tmp_path,monkeypatch,p
     from backend.engine import flow_package
     from backend.engine.flowchart_engine import get_single_detection_flowchart
     from backend.engine.native_sdk import _REQUIRED
-    builder=_builder();commands=[]
-    with monkeypatch.context() as capture:
-        capture.setattr(builder,'OUTPUT_DIR',tmp_path/'dist')
-        capture.setattr(builder,'check_pyinstaller',lambda:True)
-        capture.setattr(builder.platform,'system',lambda:platform_name)
-        capture.setattr(builder.subprocess,'run',lambda command,**kwargs:commands.append(command) or SimpleNamespace(returncode=0))
-        builder.build_binary()
-    command=commands[0];frozen=tmp_path/'_MEI';frozen.mkdir()
+    builder=_builder();output=tmp_path/'dist';(output/'.build').mkdir(parents=True)
+    inventory=builder.dependency_inventory(ROOT)
+    (output/'.build/backend-build-inventory.json').write_text(json.dumps(inventory))
+    snapshot=builder.snapshot_sources(ROOT,tmp_path/'source-snapshot',inventory['resources'])
+    # Exercise exact snapshot/resource declarations without pretending a mocked
+    # compiler produced a native executable or execution acceptance receipt.
+    command=builder.pyinstaller_command(snapshot,output,platform_name)
+    frozen=tmp_path/'_MEI';frozen.mkdir()
     for index,argument in enumerate(command):
         if argument!='--add-data':continue
         source,target=command[index+1].rsplit(separator,1);source=Path(source);destination=frozen/target

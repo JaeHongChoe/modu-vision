@@ -230,7 +230,7 @@ def test_recalibration_replaces_previous_evidence():
     ("classification", ["ok", "good", "ng"], False, "classification_requires_one_normal_one_defect"),
     ("classification", ["ok", "scratch", "dent"], False, "classification_requires_one_normal_one_defect"),
     ("classification", ["scratch", "dent"], False, "classification_requires_one_normal_one_defect"),
-    ("classification", ["nondefect", "NG"], False, "class_semantics_mismatch"),
+    ("classification", ["nondefect", "NG"], True, None),
     ("classification", ["합격", "불량"], True, None),
     ("classification", ["양품", "NG"], True, None),
     ("classification", ["review", "NG"], False, "class_semantics_mismatch"),
@@ -238,7 +238,7 @@ def test_recalibration_replaces_previous_evidence():
     ("detection", ["scratch"], True, None),
     ("detection", ["background", "scratch", "component_ok"], False, "detection_non_defect_foreground"),
     ("detection", ["background"], False, "detection_requires_defect_classes"),
-    ("detection", ["__background__", "nondefect"], False, "class_semantics_mismatch"),
+    ("detection", ["__background__", "nondefect"], False, "detection_requires_defect_classes"),
     ("segmentation", ["background", "defect"], False, "segmentation_area_rule"),
     ("patch_classification", ["good", "defect"], False, "patch_score_rule_unverified"),
     ("anomaly", ["good", "anomaly"], False, "anomaly_uses_saved_model_threshold"),
@@ -254,6 +254,14 @@ def test_transfer_scope_allows_only_identical_evaluation_and_runtime_scores(task
     assert scope["transferable"] is transferable
     assert scope["reason"] == reason
     json.dumps(scope, allow_nan=False)
+
+
+def test_transfer_scope_rejects_runtime_roles_that_differ_from_evaluation_truth():
+    from backend.engine.calibration_evidence import calibration_transfer_scope
+    from backend.engine.exporter import runtime_is_defect_class
+    scope = calibration_transfer_scope("classification", ["OK", "NG"],
+                                       lambda name: runtime_is_defect_class(name, {"OK": "defect"}))
+    assert scope == {**scope, "transferable": False, "reason": "class_semantics_mismatch"}
 
 
 def test_transfer_scope_requires_the_runtime_class_rule():

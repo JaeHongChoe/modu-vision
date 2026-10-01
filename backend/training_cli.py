@@ -28,6 +28,8 @@ def parser():
     train.add_argument('--background',action='store_true',help='Launch an independent local process; use status/cancel')
     worker=commands.add_parser('execute',help=argparse.SUPPRESS);worker.add_argument('--output',required=True);worker.add_argument('--run-id',required=True)
     worker.add_argument('--launch-handshake',action='store_true',help=argparse.SUPPRESS)
+    basic=commands.add_parser('basic-execute',help=argparse.SUPPRESS)
+    basic.add_argument('--spec',required=True);basic.add_argument('--launch-handshake',action='store_true',help=argparse.SUPPRESS)
     for name in ('status','cancel','evaluate','predict'):
         command=commands.add_parser(name,help={'status':'Reopen durable progress and verify delivered files','cancel':'Request cooperative cancellation','evaluate':'Write actual heldout metrics JSON','predict':'Write source-linked per-image predictions JSON'}[name])
         command.add_argument('--output',required=True);command.add_argument('--run-id',required=True)
@@ -42,7 +44,13 @@ def main(argv=None):
     torch.set_num_threads(1)
     from backend.engine import training_engine as engine
     try:
-        if options.command=='capabilities':result=engine.capabilities()
+        if options.command=='basic-execute':
+            if options.launch_handshake:
+                spec=json.loads(Path(options.spec).read_text())
+                if sys.stdin.readline().strip()!=spec['job_id']:raise RuntimeError('Basic training launcher ended before publishing its owner')
+            from backend.engine.local_training_worker import execute_basic
+            result=execute_basic(options.spec)
+        elif options.command=='capabilities':result=engine.capabilities()
         elif options.command=='prepare':
             result=engine.prepare(task=options.task,source_dataset_path=options.source,output_dir=options.output,
                 labels_path=options.labels,prepare_options=json.loads(options.prepare_json))

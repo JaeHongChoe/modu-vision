@@ -142,9 +142,11 @@ def test_ssh_exec_uses_strict_options_and_quotes_remote_arguments(monkeypatch):
     assert argv[:7] == [
         "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-p", "22"
     ]
-    assert argv[7] == "--"
-    assert argv[8] == profile.ssh_target
-    assert shlex.split(argv[9]) == ["python3", "-c", "print('a; b')"]
+    assert argv[argv.index("--") + 1] == profile.ssh_target
+    assert "ConnectTimeout=10" in argv
+    assert "ServerAliveInterval=5" in argv
+    assert "ServerAliveCountMax=2" in argv
+    assert shlex.split(argv[-1]) == ["python3", "-c", "print('a; b')"]
     assert kwargs["shell"] is False
 
 
@@ -506,7 +508,7 @@ def test_python_runtime_honors_selected_gpu():
         (0, "/modu-vision-job-1 true\n", "", True),
         (0, "/modu-vision-job-1 false\n", "", False),
         (1, "", "Error: No such object: abcdef123456", False),
-        (0, "/other-job true\n", "", False),
+        (0, "/other-job true\n", "", None),
         (255, "", "ssh: disconnected", None),
     ],
 )
