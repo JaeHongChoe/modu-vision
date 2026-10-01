@@ -28,6 +28,7 @@ function harness(kind, outcome) {
     if(!(i in states)) states[i]=typeof initial==='function'?initial():initial;
     return [states[i],value=>{states[i]=typeof value==='function'?value(states[i]):value;}];
   };
+  const ImpactDialog=()=>null;
   const jsx=(type,props)=>({type,props:props||{}}),empty=()=>null;
   const mocks={
     react:{default:{},useState:state,useEffect(){},useRef:value=>({current:value})},
@@ -42,6 +43,7 @@ function harness(kind, outcome) {
     './taskHandoff':{taskHandoffScope:scopeFor,taskHandoffContextScope:scopeFor,
       taskDestination:()=>({family:'segmentation',step:4}),modelFamilies:['segmentation'],
       saveTaskHandoff:()=>writes.push(job)},
+    './TaskChangeImpactDialog':{TaskChangeImpactDialog:ImpactDialog,taskPreviewScope:()=>scopeFor({...project,...compute,apiTransportIdentity:transport})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''},
   };
   const relative=kind==='center'?'../training/TaskCenter.tsx':'../wizard/WizardHeader.tsx';
@@ -54,7 +56,8 @@ function harness(kind, outcome) {
   global.window={api:{platform:'windows'}};global.localStorage={};
   render();
   if(kind==='center'){states[2]=[job];states[4]=job.key;}
-  return {render,states,writes,steps,navigations,taskCalls,project,compute,
+  const confirmHeader=async value=>{await headerAction({render,project}).props.onChange({target:{value}});const dialog=nodes(render()).find(n=>n.type===ImpactDialog);assert.ok(dialog,'task impact preview opens');const started=dialog.props.scope;const result=await project.setTask(value);if(started===scopeFor({...project,...compute,apiTransportIdentity:transport}))dialog.props.onResult(result);};
+  return {confirmHeader,render,states,writes,steps,navigations,taskCalls,project,compute,
     changeTransport:value=>{transport=value;}};
 }
 function nodes(node) {
@@ -92,7 +95,7 @@ test('matching task cannot bypass another project mutation',async()=>{
 });
 test('header exposes task failure inline and disables selection while project busy',async()=>{
   const h=harness('header',{ok:false,task:'classification',applied:false,error:'Task change refused'});
-  await headerAction(h).props.onChange({target:{value:'segmentation'}});
+  await h.confirmHeader('segmentation');
   const tree=h.render(),select=nodes(tree).find(n=>n.props['aria-label']==='검사 작업 종류');
   assert.ok(select,'task selector has an accessible name');
   const failure=nodes(tree).find(n=>n.props.role==='alert'&&n.props.children==='Task change refused');
@@ -103,7 +106,8 @@ test('header exposes task failure inline and disables selection while project bu
 test('header ignores a late failure from a previous project or transport',async()=>{
   let finish;const deferred=new Promise(resolve=>{finish=resolve;});
   const h=harness('header',()=>deferred);
-  const pending=headerAction(h).props.onChange({target:{value:'segmentation'}});
+  const pending=h.confirmHeader('segmentation');
+  await Promise.resolve();
   h.project.project={...h.project.project,id:'project-b'};h.project.projectDir='/project-b';
   h.compute.transportRevision++;h.changeTransport('server-b');
   finish({ok:false,task:'classification',applied:false,error:'Old project failure'});await pending;

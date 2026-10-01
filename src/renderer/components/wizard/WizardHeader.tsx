@@ -33,6 +33,7 @@ import { getApiPersistenceIdentity } from '../../services/api';
 import { ComputeServerPanel } from '../compute/ComputeServerPanel';
 import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
 import { ProvenancePanel } from '../common/ProvenancePanel';
+import { TaskChangeImpactDialog, taskPreviewScope } from './TaskChangeImpactDialog';
 import type { VisionTask } from '../../types';
 
 export const WizardHeader: React.FC = () => {
@@ -44,7 +45,6 @@ export const WizardHeader: React.FC = () => {
     activeStep,
     setStep,
     task,
-    setTask,
     language,
     setLanguage,
     backendStatus,
@@ -64,15 +64,10 @@ export const WizardHeader: React.FC = () => {
       currentCompute.transportRevision, getApiPersistenceIdentity()]);
   };
   const taskError = taskFailure?.scope === taskScope() ? taskFailure.message : null;
+  const [taskProposal,setTaskProposal]=useState<{task:VisionTask;scope:string}|null>(null);
   const changeTask = async (nextTask: VisionTask) => {
-    const scope = taskScope();
     setTaskFailure(null);
-    try {
-      const outcome = await setTask(nextTask);
-      if (!outcome.ok && taskScope() === scope) setTaskFailure({ scope, message: outcome.error });
-    } catch (cause) {
-      if (taskScope() === scope) setTaskFailure({ scope, message: cause instanceof Error ? cause.message : String(cause) });
-    }
+    if(nextTask!==task && !useProjectStore.getState().isProjectBusy)setTaskProposal({task:nextTask,scope:taskPreviewScope()});
   };
 
   useEffect(() => {
@@ -182,7 +177,8 @@ export const WizardHeader: React.FC = () => {
     ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
     : 'bg-red-950/80 border-red-500/50 text-red-400';
 
-  return (
+  return (<>
+    {taskProposal && <TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(!outcome.ok)setTaskFailure({scope:taskScope(),message:outcome.error});}}/>}
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
       {/* Top Application Bar (Draggable Electron Region) */}
       <div
@@ -388,5 +384,5 @@ export const WizardHeader: React.FC = () => {
       {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
       {showProvenance && <ProvenancePanel onClose={() => setShowProvenance(false)} />}
     </header>
-  );
+  </>);
 };

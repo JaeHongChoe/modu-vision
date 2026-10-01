@@ -456,6 +456,7 @@ test('a refused model family change keeps the active family and says why', async
   const family = (task: string) => hub.getByRole('button', { name: new RegExp(`^${label(task)}`) });
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await family('segmentation').click();
+  await page.getByRole('dialog', { name: '검사 작업 변경 영향' }).getByRole('button', { name: '영향 확인 후 변경', exact: true }).click();
   await expect(page.getByRole('alert').filter({ hasText: '모델 종류를 바꾸지 못했습니다: Another job is running (S0-05 fixture)' })).toBeVisible();
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await expect(family('segmentation')).toHaveAttribute('aria-pressed', 'false');

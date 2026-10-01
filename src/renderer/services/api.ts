@@ -462,6 +462,10 @@ export function setProjectContext(context:ProjectContext|null):void {
 export function getProjectContext():ProjectContext|null {
   return boundProjectContext?{...boundProjectContext}:null;
 }
+/** Accepted authority epoch; also changes when leaving and returning to a namespace. */
+export function getProjectContextGeneration():number {
+  return contextGeneration;
+}
 function artifactQuery(ref:ArtifactRef):string {
   if(!/^[A-Za-z0-9_.:-]{1,128}$/.test(ref.id)||!Number.isSafeInteger(ref.revision)||ref.revision<1||!/^[a-f0-9]{64}$/.test(ref.sha256))
     throw new Error('파일 참조 ID·버전·해시를 확인하세요.');

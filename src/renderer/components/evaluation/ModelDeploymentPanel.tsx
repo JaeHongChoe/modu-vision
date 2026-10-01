@@ -89,7 +89,8 @@ export const ModelDeploymentPanel: React.FC<{ taskOverride?: FlowModelTask }> = 
     }
   };
 
-  return <section className="rounded-lg border border-[#3B5269] bg-[#111C2A] p-4 text-xs text-slate-200" aria-label="모델 승인과 롤백">
+  const approvalBlocker=busy?'승인 응답 확인 중입니다.':loading?'비교·승인 기록을 확인 중입니다.':!source?'현재 데이터 원본이 필요합니다.':!comparisonId?'저장된 두 모델 비교가 필요합니다.':assessment?.status!=='ready'?'비교 근거의 사전 검사를 통과해야 합니다.':!attested?'표본 대표성 검토 확인이 필요합니다.':!reviewer.trim()?'승인자를 입력하세요.':reason.trim().length<8?'판단 근거를 8자 이상 입력하세요.':null;
+  return <section id="workflow-approval" tabIndex={-1} className="rounded-lg border border-[#3B5269] bg-[#111C2A] p-4 text-xs text-slate-200" aria-label="모델 승인과 롤백">
     <div className="flex items-start gap-3">
       <div className="rounded-md border border-cyan-500/30 bg-cyan-500/10 p-2 text-cyan-300"><ShieldCheck className="h-4 w-4" /></div>
       <div className="min-w-0 flex-1">
@@ -101,7 +102,7 @@ export const ModelDeploymentPanel: React.FC<{ taskOverride?: FlowModelTask }> = 
         <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> 새로고침
       </button>
     </div>
-    {!projectDir || !source ? <p className="mt-3 text-amber-300">1단계에서 현재 프로젝트의 데이터 출처를 선택하세요.</p> : <>
+    {!projectDir || !source ? <div className="mt-3 text-amber-300"><p>승인 보류: 현재 프로젝트의 데이터 출처가 필요합니다.</p><button className="workspace-button mt-2" onClick={()=>void useProjectStore.getState().setStep(1)}>데이터 원본 확인 (1단계)</button></div> : <>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="rounded border border-[#30475C] bg-[#0B1520] p-3">
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-300">승인 모델</div>
@@ -117,7 +118,7 @@ export const ModelDeploymentPanel: React.FC<{ taskOverride?: FlowModelTask }> = 
         </div>
       </div>
       <label className="mt-3 block space-y-1 text-slate-300">저장된 후보 비교
-        <select value={comparisonId} onChange={(event) => { setComparisonId(event.target.value); setAttested(false); setError(null); }}
+        <select id="approval-comparison" value={comparisonId} onChange={(event) => { setComparisonId(event.target.value); setAttested(false); setError(null); }}
           disabled={busy || loading} className="w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-slate-100">
           <option value="">비교 보고서 선택</option>
           {comparisons.map((item) => <option key={item.comparison_id} value={item.comparison_id}>{item.incumbent_job_id} → {item.candidate_job_id} · {item.created_at.slice(0, 16)}</option>)}
@@ -132,16 +133,17 @@ export const ModelDeploymentPanel: React.FC<{ taskOverride?: FlowModelTask }> = 
         {assessment.reasons.length > 0 && <ul className="mt-1 list-disc space-y-0.5 pl-4 text-amber-200">{assessment.reasons.map((item) => <li key={item}>{item}</li>)}</ul>}
       </div>}
       <div className="mt-3 grid gap-2 sm:grid-cols-[160px_1fr]">
-        <label>승인자<input value={reviewer} onChange={(event) => setReviewer(event.target.value)} maxLength={100} placeholder="이름 또는 ID"
+        <label>승인자<input id="approval-reviewer" value={reviewer} onChange={(event) => setReviewer(event.target.value)} maxLength={100} placeholder="이름 또는 ID"
           className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white" /></label>
-        <label>승인·롤백 사유<input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} placeholder="비교 결과와 판단 근거를 적어 주세요"
+        <label>승인·롤백 사유<input id="approval-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} placeholder="비교 결과와 판단 근거를 적어 주세요"
           className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white" /></label>
       </div>
       <label className="mt-3 flex items-start gap-2 leading-relaxed text-slate-300">
-        <input type="checkbox" checked={attested} onChange={(event) => setAttested(event.target.checked)} className="mt-0.5" />
+        <input id="approval-attestation" type="checkbox" checked={attested} onChange={(event) => setAttested(event.target.checked)} className="mt-0.5" />
         OK·NG 표본의 제품·Lot·촬영 조건이 적용 범위를 대표하는지 직접 검토했습니다.
       </label>
-      <button type="button" onClick={() => void apply('approve')}
+      {approvalBlocker&&<div className="mt-3 text-amber-200"><p id="model-approval-reason">승인 보류: {approvalBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!source)void useProjectStore.getState().setStep(1);else document.getElementById(!comparisonId||assessment?.status!=='ready'?'approval-comparison':!attested?'approval-attestation':!reviewer.trim()?'approval-reviewer':'approval-reason')?.focus();}}>{!source?'데이터 원본 확인 (1단계)':'평가·모델 비교 확인 (4단계)'}</button></div>}
+      <button type="button" aria-describedby={approvalBlocker?'model-approval-reason':undefined} onClick={() => void apply('approve')}
         disabled={busy || assessment?.status !== 'ready' || !attested || !reviewer.trim() || reason.trim().length < 8}
         className="mt-3 rounded border border-emerald-500/60 bg-emerald-700/30 px-3 py-2 font-semibold text-emerald-100 hover:bg-emerald-700/50 disabled:cursor-not-allowed disabled:opacity-40">
         후보 승인 revision 저장

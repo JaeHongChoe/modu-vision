@@ -128,7 +128,7 @@ function projectStore(projectApi, { dataset: datasetState = {}, identity = { val
   const m = load('./useProjectStore.ts', {
     '../services/api': {
       api: { project: { getCurrent: async () => ({ ...project, task: 'classification' }), list: async () => ({ projects: [] }), acceptContext(_project, apply) { apply?.(); }, ...projectApi } },
-      getApiPersistenceIdentity: () => identity.value, setCachedPort() {},
+      getApiPersistenceIdentity: () => identity.value, getProjectContext: () => null, getProjectContextGeneration: () => 0, setCachedPort() {},
     },
     '../services/datasetWorkflow': { datasetWorkflow: {}, workflowError: error => String(error?.message || error) },
     './projectViewState': { projectViewScope: (value, scope) => `${scope}:${value?.id}`, readProjectStep: () => 1, rememberProjectStep() {} },

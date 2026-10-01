@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { useProjectStore } from '../../stores/useProjectStore';
+import { recoveryStep } from '../wizard/workflowReadiness';
 import { request } from '../../services/api';
 import { useDeliveryScope } from '../runtime/useDeliveryScope';
 import { AsyncAction } from './AsyncAction';
@@ -111,7 +113,7 @@ export function WorkflowImpactPanel() {
             action={<AsyncAction pending={busy} onClick={() => void refreshCurrent()}>현재 입력 비교 다시 시도</AsyncAction>} />}
           {result && <div className="workspace-stack">
             {error && <p className="workspace-description">아래는 마지막 조회 결과입니다. 현재 입력을 다시 확인하세요.</p>}
-            <div className="workspace-toolbar">{result.required_actions.length ? result.required_actions.map(action => <StatusBadge key={action} tone="warning">{actions[action] || action}</StatusBadge>) : <p className="workspace-description">확인한 기록에서 추가 작업이 발견되지 않았습니다. 아래 근거의 확인 상태를 함께 보세요.</p>}</div>
+            <div className="workspace-toolbar">{result.required_actions.length ? result.required_actions.map(action => <button key={action} className="workspace-button" onClick={()=>{close();void useProjectStore.getState().setStep(recoveryStep(action));}}>{actions[action] || action} → {recoveryStep(action)}단계</button>) : <p className="workspace-description">확인한 기록에서 추가 작업이 발견되지 않았습니다. 아래 근거의 확인 상태를 함께 보세요.</p>}</div>
             <div className="workspace-grid">{groups.map(([title, rows]) => <details key={title} className="workspace-record workspace-disclosure"><summary>{title} · {rows.length}</summary>
               <ul className="workspace-records">{rows.map((row, index) => <li key={index}><strong>{row.name || row.job_id || row.version_id || row.evaluation_id || row.revision_id || row.package_id}</strong><p><StatusBadge tone={row.state === 'current' ? 'success' : 'neutral'}>{row.state ? states[row.state] || row.state : `모델 ${states[row.checkpoint_state || 'unverified']} · 데이터 ${states[row.data_state || 'unverified']}`}</StatusBadge></p>{row.reason && <p className="workspace-description">{row.reason}</p>}</li>)}</ul>
               {!rows.length && <p className="workspace-description">저장 기록 없음</p>}

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type { BackendStatus } from '../../types/electron';
 import type { ErrorCatalogItem, Language, VisionTask } from '../types';
-import { api, getApiPersistenceIdentity, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, setCachedPort, type ProjectBackupResult, type ProjectConfig, type RecentProject } from '../services/api';
 import { useAnnotationStore } from './useAnnotationStore';
 import { datasetWorkflow, workflowError } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
@@ -55,9 +55,10 @@ function settledProjectError(state: { project: ProjectConfig | null; projectDir:
   return carriedProjectError(state);
 }
 
-/** The project and server a task change belongs to; the task itself is what changes. */
+/** The accepted authority and project a task change belongs to; the task itself changes. */
 export function taskChangeScope(state: { project: ProjectConfig | null; projectDir: string | null }): string {
-  return [getApiPersistenceIdentity(), state.project?.id ?? '', state.project?.project_dir ?? '', state.projectDir ?? ''].join('\0');
+  return [getApiPersistenceIdentity(), getProjectContextGeneration(), JSON.stringify(getProjectContext()),
+    state.project?.id ?? '', state.project?.project_dir ?? '', state.projectDir ?? ''].join('\0');
 }
 
 /** Edits made while a selection request was in flight still belong to the visible project; never switch over them. */
@@ -303,10 +304,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const sameScope = () => taskChangeScope(get()) === originScope;
     // A reply for a project or server that is no longer open never touches the current one.
     const leftScope = (applied: boolean): TaskChangeOutcome => {
-      // The message shown now belongs to the project that is open, not the one this change started in.
-      set({ projectError: settledProjectError(get(), get().task) });
+      // Current recovery guidance belongs to the accepted namespace; an old reply cannot clear it.
+      // A different project also drops a known retained failure from this origin,
+      // without replacing a new error that arrived while the request was pending.
+      const changedProject = get().project?.id !== origin?.id || get().projectDir !== origin?.project_dir;
+      if (changedProject && taskFailure?.scope === originScope && get().projectError === taskFailure.message) {
+        taskFailure = null;
+        set({ projectError: null });
+      }
       return { ok: false, task: get().task, applied,
-        error: '모델 종류를 바꾸는 동안 프로젝트 또는 연결 서버가 바뀌어 결과를 적용하지 않았습니다. 이전 프로젝트를 다시 열어 모델 종류를 확인하세요.' };
+        error: '모델 종류를 바꾸는 동안 프로젝트·계정·연결이 바뀌어 결과를 적용하지 않았습니다. 이전 프로젝트를 다시 열어 모델 종류를 확인하세요.' };
     };
     set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     taskChangeInFlight = true;

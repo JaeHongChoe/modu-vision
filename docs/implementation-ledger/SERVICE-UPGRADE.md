@@ -72,3 +72,9 @@ main4542288 재실행에서 Linux·Windows Server CPU 의존성 hash 설치와 n
 ## Hosted process fixture refinement
 
 main763df8715d7ac78502a1f7a0f6ef06eaf1e0f283은 push 후 원격 HEAD를 확인했다. Windows Server에서 화면 회귀227개와 build까지 통과했으나 프로세스 정리 harness는12개 통과·1개 실패였다. backend tree 전체 종료가 먼저 실행되어 detached child fixture도 함께 끝나던 구성 문제였다. workspace marker 검사 대상은 backend와 별도 tree에 두고, 그 자식 종료와 무관한 bystander 생존 assertion을 유지했다. Linux에서는 관련 backend277개 통과·2개 실패였으며 runner의 ambient session에 접근 불가 프로세스가 섞여 검사 불확실로 판정됐다. 두 테스트는 소유한 별도 session을 사용하며 접근 거부 시 unknown을 유지하는 control도 확인한다. production 종료 정책과 작업 원장은 변경하지 않았다. 검토된 fixture로 별도 published production tree의 복구5개와 프로세스 harness 검사를 독립 통과했다. 실제 Windows 후속 실행은 pending이며 Windows11 설치·서명·실장비 완료를 주장하지 않는다.
+
+## S2-03 단계별 준비도와 작업 변경 영향
+
+완료된 입력·부족한 항목과 다음 행동 하나를 6단계에 표시하고 전문가 이동과 과거 결과 조회를 유지했다. 학습·승인·내보내기·배포 차단 사유에 해당 단계로 이동하는 링크를 연결했다. utility dialog에서 복구 링크를 누르면 dialog도 닫아 목적 화면을 표시한다. 검사 종류 변경은 영향 미리보기 후 명시적으로 적용하며 실패 또는 지연된 결과로 다음 화면을 열지 않는다. renderer 247개·focused 27개, 동결된 브라우저 8개와 기존 거절 case 1개를 통과했다. 독립 검토 20개 후 실제 dialog/store/API 통합에서 다른 계정의 문맥으로 늦은 응답이 반영되는 문제를 재현했다. API의 읽기 전용 authority epoch와 store의 명시적인 문맥 검사를 추가해 actor 변경·A→B→A·이전 오류를 독립 재검증했고 관련 55개를 통과했다. 기능 18개와 보강 6개의 source hash가 모두 일치하며 최종 독립 검토를 통과했다. browser GUI 범위는 1366×768·1920×1080이며 native Windows·실제 모델 품질·현장 배포는 별도 pending이다. 다음 S2-04는 편집·테스트·일괄 평가·배포의 4영역과 비파괴 recipe 미리보기 설계를 마쳤고 실제 기존 component/browser에서 누락 동작을 RED로 기록했다.
+
+Windows Server 후속 run에서 owned subtree에 추가 자식 프로세스가 있어 고정된 2 PID fixture assertion이 실패했다. 종료 전 OS parent chain으로 실제 fixture subtree를 독립적으로 구해 root·명시한 child·추가 descendant의 전체 종료와 무관한 프로세스의 생존을 검증하도록 보강했다. focused 3개를 독립 통과했다. production cleanup은 변경하지 않았으며 native Windows 재실행은 pending이다.

@@ -1095,7 +1095,15 @@
         "src/renderer/components/inference/FlowPackagePanel.tsx",
         "src/renderer/components/runtime/RuntimeServicePanel.tsx",
         "src/renderer/components/runtime/FleetPanel.tsx",
-        "src/renderer/components/common/taskChangeConsumers.test.cjs"
+        "src/renderer/components/common/taskChangeConsumers.test.cjs",
+        "src/renderer/App.tsx",
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx",
+        "scripts/e2e/service-s0-05.spec.ts",
+        "src/renderer/services/api.ts",
+        "src/renderer/stores/taskContextCommit.test.cjs",
+        "src/renderer/stores/flowIdentity.test.cjs",
+        "src/renderer/stores/contextCommit.test.cjs",
+        "src/renderer/components/compute/sharedSourceScope.test.cjs"
       ],
       "proposed_contract": "get_next_action(ProjectContext) -> ReadinessAction",
       "acceptance": [
@@ -1106,12 +1114,22 @@
         "S1-01",
         "S0-05"
       ],
-      "status": "in_progress",
+      "status": "verification_pending",
       "evidence": [
         {
           "kind": "readiness-preparation-only",
           "result": "existing stage/navigation contracts inspected for production RED design",
           "scope": "next-action guidance/impact-preview design in preparation; no implementation or GUI acceptance yet"
+        },
+        {
+          "kind": "readiness-impact-navigation-implementation",
+          "result": "247 renderer and 27 focused tests passed; exact 8 browser cases and 1 prior family-refusal case passed; independent 20 focused tests passed",
+          "scope": "six stages, one next action, manual and historical navigation, task-impact confirmation and recovery links at 1366x768 and 1920x1080; no automatic training, compute probe or deployment"
+        },
+        {
+          "kind": "accepted-namespace-task-commit-fix",
+          "result": "actual dialog/store/API RED: 3 failed and 1 control passed; related 55 passed; independent original race plus actor/ABA/error/ABA-error and 4 integration cases passed; all 24 frozen sources matched",
+          "scope": "accepted workspace/project/actor context and authority epoch prevent stale task success/error commits; current recovery guidance preserved; native Windows and target acceptance remain pending"
         }
       ],
       "file_actions": {
@@ -1130,17 +1148,25 @@
         "src/renderer/components/inference/FlowPackagePanel.tsx": "Modify",
         "src/renderer/components/runtime/RuntimeServicePanel.tsx": "Modify",
         "src/renderer/components/runtime/FleetPanel.tsx": "Modify",
-        "src/renderer/components/common/taskChangeConsumers.test.cjs": "Modify"
+        "src/renderer/components/common/taskChangeConsumers.test.cjs": "Modify",
+        "src/renderer/App.tsx": "Modify",
+        "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "Modify",
+        "scripts/e2e/service-s0-05.spec.ts": "Modify",
+        "src/renderer/services/api.ts": "Modify",
+        "src/renderer/stores/taskContextCommit.test.cjs": "Create",
+        "src/renderer/stores/flowIdentity.test.cjs": "Modify",
+        "src/renderer/stores/contextCommit.test.cjs": "Modify",
+        "src/renderer/components/compute/sharedSourceScope.test.cjs": "Modify"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
-        "gui": "pending",
+        "implementation": "verified",
+        "contract": "verified",
+        "gui": "verified",
         "persist": "pending",
         "reopen": "pending",
-        "failure": "pending",
-        "handoff": "pending",
+        "failure": "verified",
+        "handoff": "verified",
         "windows_native": "pending",
         "target_execution": "pending"
       },
@@ -1169,8 +1195,14 @@
         "S2-02",
         "S2-03"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "in_progress",
+      "evidence": [
+        {
+          "kind": "flow-editor-design-and-production-red",
+          "result": "four-area design prepared; actual component RED: 2 failures and 1 preservation control; mounted browser RED: 1 failure for absent area navigation",
+          "scope": "design and baseline evidence only; edit/test/evaluate/release plus explicit recipe adoption; feature implementation starts after reviewed S2-03 handoff"
+        }
+      ],
       "file_actions": {
         "src/renderer/components/flowchart/FlowchartStudio.tsx": "Modify",
         "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "Create"
@@ -3129,6 +3161,11 @@
           "kind": "hosted-process-fixture-repair",
           "result": "main763df hosted Windows227renderer+buildpassed thenharness12pass1fail; Linux277backendpass2fail; marker-tree/private-session fixtures corrected with retained ownership and unknown-inspection assertions; independentfocused process/recovery passed",
           "scope": "production process cleanup unchanged; WindowsServer rerun pending; no Windows11 installer/signing acceptance"
+        },
+        {
+          "kind": "hosted-owned-subtree-fixture-refinement",
+          "result": "Windows Server dependencies, type checks, renderer227 and build passed; harness12 passed1 failed on fixed two-PID assumption; independently verified subtree-aware fixture3 cases passed",
+          "scope": "OS parent-chain snapshot determines exact test-owned root and descendant set; bystander/ancestor protection retained; production cleanup unchanged; Windows hosted rerun pending"
         }
       ],
       "file_actions": {
@@ -8115,11 +8152,11 @@
       "S1-02",
       "S1-07",
       "S2-02",
-      "S2-03",
+      "S2-04",
       "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "sourcewave main e02b00d56b6adbcc76cc2580321c91676974ad83, workflow-contextfix45422885746ea2078817c494ad27af5a2c110853 and layoutfixturefix763df8715d7ac78502a1f7a0f6ef06eaf1e0f283 pushed/remoteHEADverified; current2processfixture sources independently reviewed; ledger/auth/readiness candidates excluded"
+    "git_publication": "main 9b6cb4eeeda05aba5a63a0cfb15212f2539d5af5 process-fixture sources pushed and remote HEAD verified; reviewed S2-03 sources 24 ready for publication; persistent-job/account candidates excluded pending coupled main review"
   },
   "scope_refinements": [
     {

@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Server,
 } from 'lucide-react';
-import { taskChangeScope, useProjectStore } from '../../stores/useProjectStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
@@ -40,6 +40,7 @@ import { RotationWorkbench } from './RotationWorkbench';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
 import type { VisionTask } from '../../types';
+import {TaskChangeImpactDialog,taskPreviewScope} from '../wizard/TaskChangeImpactDialog';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
@@ -52,6 +53,7 @@ export const TrainingController: React.FC = () => {
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project, isProjectBusy } = useProjectStore();
   const handoff=useTaskHandoff();
+  const [taskProposal,setTaskProposal]=useState<{task:VisionTask;scope:string}|null>(null);
   const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
@@ -120,7 +122,7 @@ export const TrainingController: React.FC = () => {
   const computeReady = isComputeLoaded && !isComputeLoading && !computeLoadError &&
     (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
   const warmStartSupported = true;
-  const sourceReady = Boolean(projectDir && folderPath && datasetKey === `${folderPath}\0${task}`);
+  const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
 
   useEffect(() => {
     setTrainingBackbone(modelChoices[task][0].value);
@@ -128,25 +130,16 @@ export const TrainingController: React.FC = () => {
     setSyntheticOptions({...dinoSyntheticDefaults});
   }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
-  useEffect(() => {setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision,selectedProfileId]);
+  useEffect(() => {if(!taskProposal||taskProposal.scope!==taskPreviewScope())setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision,selectedProfileId]);
   useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
     const data = useDatasetStore.getState();
     if (data.isLoading || data.isSplitting || useProjectStore.getState().isProjectBusy) return;
+    if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
+      setTaskProposal({task:family as VisionTask,scope:taskPreviewScope()});return;
+    }
     clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
     setSelectedFamily(family);
-    if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
-      // The model choice follows the task that is actually active after the change;
-      // a reply that arrives after another project was opened belongs to that earlier project.
-      const scope = taskChangeScope(useProjectStore.getState());
-      void useProjectStore.getState().updateTask(family as VisionTask).then(outcome => {
-        if (taskChangeScope(useProjectStore.getState()) !== scope) return;
-        if (!outcome.ok) {
-          setSelectedFamily(outcome.task as ModelFamily);
-          setActionError(`모델 종류를 바꾸지 못했습니다: ${outcome.error}`);
-        }
-      });
-    }
   };
 
   useEffect(() => {
@@ -176,11 +169,16 @@ export const TrainingController: React.FC = () => {
   }, [jobId, isTraining, refreshCurrentJob]);
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
-    !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && computeReady;
+    !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && computeReady;
+  const startBlocker = isProjectBusy || isLoading || isSplitting ? '프로젝트·데이터 변경이 진행 중입니다.'
+    : !sourceReady || importError ? '현재 데이터 원본을 다시 가져와야 합니다.'
+    : totalImages<1 || split.train<1 || split.val<1 ? '저장된 Train·Val 분할과 검수 이미지를 준비하세요.'
+    : isRecoveringTraining ? '이전 학습의 실행 상태를 확인 중입니다.'
+    : modelOptionsError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
-    if (!canStart) return;
+    if (!canStart || useProjectStore.getState().isProjectBusy) return;
     setActionError(null);
     try { await startTraining(folderPath, task, warmParentId || undefined, modelOptions); }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
@@ -216,8 +214,10 @@ export const TrainingController: React.FC = () => {
   };
   const currentPhase = jobPhase || status;
 
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
+  return (<>
+    {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(outcome.ok){clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});setSelectedFamily(outcome.task);}else setActionError(`모델 종류를 바꾸지 못했습니다: ${outcome.error}`);}}/>}
+    <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
+      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!sourceReady||totalImages<1||split.train<1||split.val<1)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{!sourceReady||totalImages<1||split.train<1||split.val<1?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
       <OperatorGuidanceBanner step={3} />
       <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
         <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
@@ -384,7 +384,7 @@ export const TrainingController: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStart}
-                disabled={!canStart}
+                disabled={!canStart} aria-describedby={startBlocker?"training-start-reason":undefined}
                 className="flex items-center space-x-2 px-5 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] rounded-[4px] border border-[#3B82F6] text-xs font-bold text-white uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
@@ -512,7 +512,7 @@ export const TrainingController: React.FC = () => {
         {selectedFamily === 'enhancement' && <EnhancementWorkbench />}
       </div>
     </div>
-  );
+  </>);
 };
 
 export default TrainingController;

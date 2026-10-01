@@ -56,6 +56,28 @@ async function waitUntil(predicate, timeoutMs = 10000) {
   return false;
 }
 
+// The expected tree comes from the OS snapshot, independently of cleanup's
+// ownership scan. Windows can add a console host below a detached worker.
+function fixtureSubtree(rows, rootPid) {
+  const parents = new Map(rows.map(row => [row.pid, row.ppid]));
+  return rows.filter(row => {
+    const visited = new Set();
+    for (let pid = row.pid; pid && !visited.has(pid); pid = parents.get(pid)) {
+      if (pid === rootPid) return true;
+      visited.add(pid);
+    }
+    return false;
+  });
+}
+
+function subtreeDiagnostic(rows) {
+  return JSON.stringify(rows.map(row => {
+    const command = row.command || '';
+    const executable = command.startsWith('"') ? command.slice(1, command.indexOf('"', 1)) : command.split(/\s+/)[0];
+    return { pid: row.pid, ppid: row.ppid, name: path.posix.basename(executable.replace(/\\/g, '/')) };
+  }));
+}
+
 function get(port, requestPath, headers = {}) {
   return new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port, path: requestPath, headers }, res => {
@@ -125,6 +147,17 @@ test('a temporary workspace has isolated folders and valid sample images', () =>
   assert.equal(fs.readFileSync(marker, 'utf8'), 'existing', 'existing material is never removed');
 });
 
+test('fixture subtree includes an extra grandchild and excludes a foreign process with the same executable', () => {
+  const rows = [
+    { pid: 10, ppid: 1, command: 'node worker' },
+    { pid: 11, ppid: 10, command: 'node child' },
+    { pid: 12, ppid: 11, command: 'node grandchild' },
+    { pid: 13, ppid: 1, command: 'node foreign' },
+  ];
+  assert.deepEqual(fixtureSubtree(rows, 10).map(row => row.pid), [10, 11, 12]);
+  assert.equal(subtreeDiagnostic(rows.slice(0, 1)), '[{"pid":10,"ppid":1,"name":"node"}]');
+});
+
 test('owned backend reaches health and stop ends only its own processes', async () => {
   // A Korean, space-containing workspace exercises the locale-sensitive scan.
   const dir = path.join(scratch('backend'), '작업 공간');
@@ -154,16 +187,23 @@ test('owned backend reaches health and stop ends only its own processes', async 
     escapedChildPid = Number(fs.readFileSync(escapedChildFile, 'utf8'));
     assert.ok(harness.processAlive(childPid) && harness.processAlive(escapedPid));
 
+    const snapshot = harness.scanProcesses();
+    assert.equal(snapshot.error, null);
+    const escapedTree = fixtureSubtree(snapshot.rows, escapedPid);
+    const treeDiagnostic = subtreeDiagnostic(escapedTree);
+    assert.ok(escapedTree.some(row => row.pid === escapedPid), `escaped worker is present: ${treeDiagnostic}`);
+    assert.ok(escapedTree.some(row => row.pid === escapedChildPid), `explicit child is present: ${treeDiagnostic}`);
     const stopped = await backend.stop();
     assert.equal(stopped.exited, true);
     assert.equal(stopped.exitedBeforeStop, false);
     assert.equal(stopped.groupAlive, false);
     assert.equal(harness.processAlive(backend.pid), false);
     assert.ok(await waitUntil(() => !harness.processAlive(childPid)), 'group descendant exits');
-    assert.deepEqual(stopped.escaped.map(row => row.pid).sort(), [escapedPid, escapedChildPid].sort(),
-      'escaped worker and its child are found by the workspace marker and the process tree');
+    assert.deepEqual(stopped.escaped.map(row => row.pid).sort((a, b) => a - b), escapedTree.map(row => row.pid).sort((a, b) => a - b),
+      `cleanup reports exactly the independently observed escaped subtree: ${treeDiagnostic}`);
     assert.ok(await waitUntil(() => !harness.processAlive(escapedPid)), 'escaped worker is stopped');
     assert.ok(await waitUntil(() => !harness.processAlive(escapedChildPid)), 'children of an escaped worker are stopped');
+    assert.ok(await waitUntil(() => escapedTree.every(row => !harness.processAlive(row.pid))), `all escaped targets exit: ${treeDiagnostic}`);
     assert.equal(stopped.scanError, null);
     assert.equal(harness.processAlive(bystander.pid), true, 'unrelated processes are preserved');
     if (viewer) {

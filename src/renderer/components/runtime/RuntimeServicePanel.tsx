@@ -1,3 +1,5 @@
+import type {WorkflowStep} from '../wizard/workflowReadiness';
+import {useProjectStore} from '../../stores/useProjectStore';
 import { ModelOperationsPanel } from './ModelOperationsPanel';
 import { FleetPanel } from './FleetPanel';
 import { SpecializedApprovalPanel } from '../evaluation/SpecializedApprovalPanel';
@@ -15,7 +17,7 @@ type ServiceState = { runtime: RuntimeIdentity; active: Deployment | null; histo
 const EMPTY_CONFIG = '{"enabled":false,"modbus":null,"mes":null,"clear_mes_token":false}';
 type ProjectScope = { projectDir: string | null;key:string };
 
-export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPackagePath?:string }> = ({ projectDir,initialPackagePath }) => {
+export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPackagePath?:string;onNavigate?:(step:WorkflowStep)=>void }> = ({ projectDir,initialPackagePath,onNavigate }) => {
   const {key}=useDeliveryScope();
   const currentProject = useRef<ProjectScope>({ projectDir,key });
   if (currentProject.current.key !== key) currentProject.current = { projectDir,key };
@@ -70,6 +72,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     finally { if (currentProject.current === started) setBusy(false); }
   };
   if (!projectDir) return null;
+  const deployBlocker=busy?'응답 확인 중입니다.':!packagePath.trim()?'승인 포함 패키지가 필요합니다.':!reviewer.trim()?'적용 검토자를 입력하세요.':null;
   return <section className="mt-4 rounded border border-slate-600 bg-slate-950/40 p-3 text-xs" aria-label="검사 서비스 배포">
     <div className="flex items-center justify-between"><h3 className="font-bold">독립 검사 서비스</h3><button type="button" disabled={busy} onClick={() => void refresh()}>상태 새로고침</button></div>
     <p className="mt-2 text-slate-300">현재 응답: {state?.runtime.status || '확인 중'} · 장치 {state?.runtime.device || '—'} · 포트 {state?.port || '—'}</p>
@@ -87,7 +90,8 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     </div>
     <p className="mt-2 text-slate-400">응답 제한 시간과 CPU 스레드 수는 전체 flow 내보내기에서 저장합니다. 정밀도 승인 패키지는 검토한 실행 장치를 사용합니다.</p>
     <div className="mt-2 flex flex-wrap gap-2">
-      <button type="button" disabled={busy || !packagePath.trim() || !reviewer.trim()} onClick={() => void action('/apply', { package_path: packagePath, device, reviewer })} className="rounded bg-blue-700 px-3 py-2 disabled:opacity-40">승인 패키지 적용</button>
+    {deployBlocker&&<div className="mt-2 text-xs text-amber-200"><p id="runtime-deploy-reason">적용 보류: {deployBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!packagePath.trim())void (onNavigate||useProjectStore.getState().setStep)(6);else document.querySelector<HTMLElement>('[aria-label="서비스 검토자"]')?.focus();}}>{!packagePath.trim()?'승인·패키지 확인 (6단계)':'적용 입력 확인'}</button></div>}
+      <button aria-describedby={deployBlocker?'runtime-deploy-reason':undefined} type="button" disabled={busy || !packagePath.trim() || !reviewer.trim()} onClick={() => void action('/apply', { package_path: packagePath, device, reviewer })} className="rounded bg-blue-700 px-3 py-2 disabled:opacity-40">승인 패키지 적용</button>
       <button type="button" disabled={busy || !state?.active} onClick={() => void action('/start')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">서비스 시작</button>
       <button type="button" disabled={busy || state?.runtime.status === 'stopped'} onClick={() => void action('/stop')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">서비스 중지</button>
       <button type="button" disabled={busy || !state?.active} onClick={() => void action('/install')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">자동 시작 설치 파일 준비</button>
@@ -97,7 +101,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     <div className="mt-3 flex gap-2"><select aria-label="서비스 복원 이력" className="min-w-0 flex-1 rounded bg-slate-800 p-2" value={target} onChange={event => setTarget(event.target.value)}><option value="">보존된 적용 이력 선택</option>{state?.history.map(item => <option value={item.deployment_id} key={item.deployment_id}>{new Date(item.created_at * 1000).toLocaleString()} · {item.release.manifest_sha256.slice(0, 12)} · {item.reviewer}</option>)}</select><button type="button" disabled={busy || !target || !reviewer.trim()} className="rounded border border-amber-600 px-3 disabled:opacity-40" onClick={() => void action('/rollback', { deployment_id: target, reviewer })}>서비스 롤백</button></div>
     <SpecializedApprovalPanel />
     <ModelOperationsPanel />
-    <FleetPanel />
+    <FleetPanel onNavigate={onNavigate} />
     <ProtocolSettingsPanel value={ready?config:EMPTY_CONFIG} onChange={setConfig} disabled={busy||!ready} onSave={()=>{try{void action('/adapters',JSON.parse(config),'PUT');}catch{setError('설정 JSON 형식을 확인하세요.');}}}/>
     {busy && <p role="status" className="mt-2 text-blue-300">서비스 응답 확인 중…</p>}
     {error && <p role="alert" className="mt-2 break-all text-red-300">{error}</p>}

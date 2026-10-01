@@ -178,7 +178,8 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     }
   };
 
-  return <section className="rounded-lg border border-[#344255] bg-[#151E2B] p-5" aria-label="전체 검사 플로우 패키지">
+  const exportBlocker = !sourceFolder?'현재 데이터 원본이 필요합니다.':!selectedVersion || identity?.versionId!==selectedVersion.version_id?'저장된 플로우 버전을 선택하세요.':includeApprovals&&!approvalIds?'모든 모델의 검증된 승인 revision을 선택하세요.':effectiveParityMode==='single'&&!selectedImage?'동일성 확인 이미지를 선택하세요.':effectiveParityMode==='cohort'&&cohortImages.length<2?'고정 검증 이미지를 2장 이상 선택하세요.':null;
+  return <section id="workflow-package" tabIndex={-1} className="rounded-lg border border-[#344255] bg-[#151E2B] p-5" aria-label="전체 검사 플로우 패키지">
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#344255] pb-4">
       <div className="flex items-start gap-3">
         <div className="rounded-lg border border-sky-700/60 bg-sky-950/50 p-2 text-sky-300"><PackageCheck className="h-5 w-5" /></div>
@@ -257,7 +258,8 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
           {images.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
         </select>
       </label>
-      <button type="button" onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
+      {exportBlocker&&<div className="text-xs text-amber-200"><p id="flow-export-reason">내보내기 보류: {exportBlocker}</p><button className="workspace-button mt-2" onClick={()=>void setStep(!sourceFolder?1:!selectedVersion?5:includeApprovals&&!approvalIds?4:6)}>{!sourceFolder?'데이터 원본 확인 (1단계)':!selectedVersion?'플로우 저장·평가 (5단계)':includeApprovals&&!approvalIds?'평가·승인 확인 (4단계)':'검증 이미지 선택 (6단계)'}</button></div>}
+      <button type="button" aria-describedby={exportBlocker?'flow-export-reason':undefined} onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
           || (effectiveParityMode === 'single' && !selectedImage) || (effectiveParityMode === 'cohort' && cohortImages.length < 2) || (includeApprovals && !approvalIds)}
         className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">
         {isExporting ? '패키지 생성·검증 중...' : '전체 플로우 내보내기'}

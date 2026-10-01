@@ -313,3 +313,7 @@
 - E04 검사 규칙 변경의 사유와 before/after 감사기록: owner S5-10; 이 phase 연결 S2-08
 - E07 배포 준비 화면의 전체 의존성 점검표: owner S5-05; 이 phase 연결 S2-04
 - E08 데이터 입출력·백업도 같은 영속 작업 센터에서 재개: owner S1-02; 이 phase 연결 S2-09
+
+## 진행 인계: 단계별 안내에서 플로우 편집으로
+
+S2-03의 실제 mounted footer/header와 학습·승인·내보내기·runtime 소비자를 확장했다. source registry에 24개 검토 경계를 기록하며 API/store의 accepted context와 epoch 검사를 포함한다. 취소·busy·dirty·거절·지연 응답은 변경과 이동을 막고 현재 문맥의 오류 안내를 보존한다. 새 기능과 기존 거절 browser case 및 실제 store/API 통합 검토를 통과했다. S2-04는 승인된 four-area presentation design을 적용하며 기존 DAG·실행·평가·저장/활성 버전의 의미를 유지한다. recipe 선택은 미리보기이며 호환 모델·클래스·점수 계약 확인 후 별도로 적용한다. source acceptance와 native Windows/장비/품질 acceptance는 구분한다.

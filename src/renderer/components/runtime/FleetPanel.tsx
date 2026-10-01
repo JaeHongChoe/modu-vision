@@ -1,3 +1,5 @@
+import type {WorkflowStep} from '../wizard/workflowReadiness';
+import {useProjectStore} from '../../stores/useProjectStore';
 import {useEffect,useRef,useState} from 'react';
 import {request} from '../../services/api';
 import {useDeliveryScope} from './useDeliveryScope';
@@ -7,7 +9,7 @@ type Target={target_id:string;name:string;url:string;token_set:boolean};
 type Deployment={deployment_id:string;created_at:number;reviewer:string;restored_from?:string;release:{manifest_sha256:string;device:string}};
 type AgentState={target:Target;runtime:{status:string;device?:string;manifest_sha256?:string;model_sha256?:Record<string,string>};active:Deployment|null;history:Deployment[];matches_active:boolean;error?:string;emergency_rollback_events?:EmergencyRollbackEvent[]};
 const control='min-w-0 rounded border border-slate-600 bg-[#0D1622] p-2 text-xs';
-export function FleetPanel(){
+export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}={}){
   const {projectDir,scope,key}=useDeliveryScope();
   const [targets,setTargets]=useState<Target[]>([]),[selected,setSelected]=useState(''),[state,setState]=useState<AgentState|null>(null),[name,setName]=useState(''),[url,setUrl]=useState(''),[token,setToken]=useState(''),[packagePath,setPackagePath]=useState(''),[reviewer,setReviewer]=useState(''),[device,setDevice]=useState('cpu'),[rollback,setRollback]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [capabilityRecord,setCapabilities]=useState<{key:string;value:RollbackCapabilities}|null>(null);
@@ -95,6 +97,7 @@ export function FleetPanel(){
       if(current()&&!lastReceipt.current){setEmergencyStatus('failed');setEmergencyError(message);}
     }finally{if(current())setBusy(false);}
   };
+  const deployBlocker=busy?'응답 확인 중입니다.':!selected?'현장 장비를 선택하세요.':!packagePath.trim()?'승인 포함 패키지가 필요합니다.':!reviewer.trim()?'적용 검토자를 입력하세요.':null;
   if(!projectDir)return null;
   return <details className="mt-3 rounded-lg border border-slate-700 bg-[#142131] p-3"><summary className="cursor-pointer text-sm font-semibold text-cyan-200">중앙 · 현장 장비 모델 관리</summary><div className="mt-3 space-y-3 text-xs text-slate-200">
     <p className="leading-5 text-slate-400">장비에 Field Agent를 실행한 뒤 HTTPS 주소 또는 SSH 터널로 등록하세요. 승인된 전체 플로우를 전송하고 장비가 실제 사용하는 manifest·장치·모델 해시를 확인합니다.</p>
@@ -102,7 +105,8 @@ export function FleetPanel(){
     <div className="flex gap-2"><select aria-label="현장 장비 선택" className={`${control} flex-1`} disabled={busy} value={selected} onChange={e=>{const id=e.target.value;selectedRef.current=id;setSelected(id);setState(null);setRollback('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');if(id)void action(()=>read(id));}}><option value="">장비 선택</option>{targets.map(t=><option key={t.target_id} value={t.target_id}>{t.name} · {t.url}</option>)}</select><button className="text-cyan-200" disabled={busy||!selected} onClick={()=>void action(refreshActualState)}>실제 상태 확인</button></div>
     {state&&<section className="rounded border border-slate-700 bg-slate-950/40 p-2"><p>{state.runtime.status==='ready'?'장비 응답 확인됨':state.runtime.status==='stopped'?'장비 검사 서비스 중지됨':'장비 연결 확인 필요'} · {state.runtime.device||'장치 응답 없음'} · {state.matches_active?'중앙 적용 기록과 일치':'중앙 기록과 실행 상태 확인 필요'}</p><p className="mt-1 break-all font-mono text-[10px]">실행 manifest: {state.runtime.manifest_sha256||'—'}</p>{Object.entries(state.runtime.model_sha256||{}).map(([id,hash])=><p key={id} className="mt-1 break-all font-mono text-[10px]">{id} · {hash}</p>)}</section>}
     <div className="grid gap-2 sm:grid-cols-2"><SavedPackagePicker value={packagePath} onChange={setPackagePath} disabled={busy}/><details className="sm:col-span-2"><summary className="text-slate-400">고급 · 패키지 폴더 직접 입력</summary><input aria-label="현장 배포 승인 패키지" className={`${control} w-full`} value={packagePath} onChange={e=>setPackagePath(e.target.value)}/></details><label>적용 검토자<input aria-label="현장 배포 검토자" className={`${control} w-full`} value={reviewer} onChange={e=>setReviewer(e.target.value)}/></label><label>장비 실행 자원<input aria-label="현장 실행 자원" className={`${control} w-full`} value={device} onChange={e=>setDevice(e.target.value)} placeholder="cpu / cuda:0 / openvino:CPU"/></label></div>
-    <button disabled={busy||!selected||!packagePath.trim()||!reviewer.trim()} onClick={()=>void action(deploy)} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">패키지 전송·적용 응답 확인</button>
+    {deployBlocker&&<div className="mt-2 text-xs text-amber-200"><p id="fleet-deploy-reason">적용 보류: {deployBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(selected&&!packagePath.trim())void (onNavigate||useProjectStore.getState().setStep)(6);else document.querySelector<HTMLElement>(!selected?'[aria-label="현장 장비 선택"]':'[aria-label="현장 배포 검토자"]')?.focus();}}>{!selected?'현장 장비 선택':!packagePath.trim()?'승인·패키지 확인 (6단계)':'적용 입력 확인'}</button></div>}
+    <button aria-describedby={deployBlocker?'fleet-deploy-reason':undefined} disabled={busy||!selected||!packagePath.trim()||!reviewer.trim()} onClick={()=>void action(deploy)} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">패키지 전송·적용 응답 확인</button>
     <div className="flex gap-2"><select aria-label="현장 배포 복원 이력" className={`${control} flex-1`} disabled={busy} value={rollback} onChange={e=>{setRollback(e.target.value);setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');}}><option value="">복원할 적용 기록</option>{state?.history.map(h=><option key={h.deployment_id} value={h.deployment_id}>{new Date(h.created_at*1000).toLocaleString()} · {h.release.manifest_sha256.slice(0,12)} · {h.release.device}</option>)}</select><button disabled={busy||!selected||!rollback||!reviewer.trim()||!capabilities?.can_rollback} onClick={()=>void action(restore)} className="rounded border border-amber-700 px-3 disabled:opacity-40">장비 롤백</button></div>
     <section aria-label="긴급 롤백" className="space-y-2 rounded-lg border border-amber-700/60 bg-amber-950/20 p-3">
       <h3 className="font-semibold text-amber-200">긴급 롤백</h3>

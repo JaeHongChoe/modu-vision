@@ -50,7 +50,7 @@ function harness({ server = () => first, accept = () => true, dirty = false, ope
   const m = load('./useProjectStore.ts', {
     '../services/api': {
       api: { project: projectApi },
-      getApiPersistenceIdentity: () => 'local', setCachedPort() {},
+      getApiPersistenceIdentity: () => 'local', getProjectContext: () => null, getProjectContextGeneration: () => 0, setCachedPort() {},
     },
     '../services/datasetWorkflow': { datasetWorkflow: {}, workflowError: error => String(error?.message || error) },
     './projectViewState': { projectViewScope: (p, scope) => `${scope}:${p?.id}`, readProjectStep: () => 3, rememberProjectStep() {} },

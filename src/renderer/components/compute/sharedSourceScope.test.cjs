@@ -46,7 +46,8 @@ async function harness({ connected = true, additive = true } = {}) {
     update: async body => { calls.push('update'); writes.push({ project_id: accepted?.project_id || backend.id, ...body }); backend = { ...backend, ...body }; return backend; },
   };
   const projectModule = load('../../stores/useProjectStore.ts', {
-    '../services/api': { api: { project: projectApi }, getApiPersistenceIdentity: () => identity, setCachedPort() {} },
+    '../services/api': { api: { project: projectApi }, getApiPersistenceIdentity: () => identity,
+      getProjectContext: () => accepted, getProjectContextGeneration: () => 0, setCachedPort() {} },
     '../services/datasetWorkflow': { datasetWorkflow: {}, workflowError: e => e.message || String(e) },
     './projectViewState': { projectViewScope: (p, i) => `${i}:${p?.id}`, readProjectStep: () => 1, rememberProjectStep() {} },
     './useAnnotationStore': { useAnnotationStore: annotation }, './useDatasetStore': { useDatasetStore: dataset },
