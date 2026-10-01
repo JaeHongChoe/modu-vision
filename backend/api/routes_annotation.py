@@ -10,7 +10,9 @@ import json
 import logging
 import base64
 import binascii
+import hashlib
 import os
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -22,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend.engine.dataset_loaders import BoundingBox, SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root, request_project_root
+from backend.engine.annotation_transactions import AnnotationFileTransaction
 from backend.engine import dataset_metadata as metadata_engine
 from backend.engine.labeling_ai import (
     auto_select_contour,
@@ -126,7 +129,30 @@ class AnnotationBatchSaveRequest(BaseModel):
     items: List[AnnotationSaveRequest]
 
 
-def _save_annotations_impl(req: AnnotationSaveRequest):
+def _save_annotations_impl(req: AnnotationSaveRequest, file_transaction=None):
+    target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
+                  dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
+                  if req.image_path else scoped_annotation_root(ANNOTATIONS_DIR))
+    if file_transaction is not None:
+        return _save_annotations_locked(req, target_dir, file_transaction)
+    # Legacy requests have no ledger lock. Hold one image lock from validation
+    # and inherited palette reads through encoding, publication and cleanup.
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        lock_name = hashlib.sha256(req.image_id.encode()).hexdigest()
+        with metadata_engine._file_lock(target_dir / f".annotation-save-{lock_name}.lock"):
+            files = AnnotationFileTransaction()
+            result = _save_annotations_locked(req, target_dir, files)
+            files.cleanup()
+            return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=format_error_response(
+            "ERR_UNKNOWN", details=f"Failed to write annotations: {exc}")) from exc
+
+
+def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_transaction):
     """
     Saves canvas annotations for an image.
     Automatically:
@@ -136,17 +162,12 @@ def _save_annotations_impl(req: AnnotationSaveRequest):
     _validate_image_id(req.image_id)
     if req.image_path and Path(req.image_path).stem != req.image_id:
         raise HTTPException(status_code=422, detail="image_id must match image_path filename")
-    target_dir = (_trusted_annotation_directory(req.output_dir) if req.output_dir else
-                  dataset_annotation_dir(Path(req.image_path).parent, ANNOTATIONS_DIR)
-                  if req.image_path else scoped_annotation_root(ANNOTATIONS_DIR))
     if req.image_path:
         image = Path(req.image_path)
         peers = [p for p in image.parent.iterdir() if p.is_file() and p.stem == image.stem and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
         if len(peers) > 1:
             raise HTTPException(status_code=422, detail="같은 폴더에 확장자만 다른 동일 이름 이미지가 있어 라벨 저장이 모호합니다. 이미지 이름을 구분한 데이터셋을 사용하세요.")
-    target_dir.mkdir(parents=True, exist_ok=True)
     masks_dir = target_dir / "masks"
-    masks_dir.mkdir(parents=True, exist_ok=True)
 
     img_w = req.image_width or 256
     img_h = req.image_height or 256
@@ -230,14 +251,17 @@ def _save_annotations_impl(req: AnnotationSaveRequest):
 
     # If polygon contours provided, auto-rasterize mask PNG
     mask_file_path = None
+    mask_file = masks_dir / f"{req.image_id}.png"
+    mask_bytes = None
     if polygons_for_mask or brush_masks:
         try:
             mask_arr = polygons_to_mask(polygons_for_mask, height=img_h, width=img_w) if polygons_for_mask else np.zeros((img_h, img_w), dtype=np.uint8)
             for brush_pixels, category_id in brush_masks:
                 mask_arr[brush_pixels] = category_id
-            mask_file = masks_dir / f"{req.image_id}.png"
-            if not cv2.imwrite(str(mask_file), mask_arr):
-                raise OSError(f"Could not write annotation mask: {mask_file}")
+            encoded, png = cv2.imencode(".png", mask_arr)
+            if not encoded:
+                raise OSError(f"Could not encode annotation mask: {mask_file}")
+            mask_bytes = png.tobytes()
             mask_file_path = str(mask_file)
         except Exception as e:
             logger.exception("Failed to rasterize polygon mask: %s", e)
@@ -268,16 +292,19 @@ def _save_annotations_impl(req: AnnotationSaveRequest):
             data["mask_classes"] = list(_classes(list(classes.values())).values())
         except ValueError as exc: raise HTTPException(422, detail=str(exc)) from exc
 
+    # Finish validation and both encodings before touching any live annotation.
     try:
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        if mask_file_path is None:
-            (masks_dir / f"{req.image_id}.png").unlink(missing_ok=True)
+        json_bytes = json.dumps(data, indent=2, ensure_ascii=False, allow_nan=False).encode("utf-8")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid annotation data: {exc}") from exc
+    updates = {mask_file: mask_bytes, json_path: json_bytes}
+    try:
+        file_transaction.publish(updates)
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=format_error_response("ERR_UNKNOWN", details=f"Failed to write annotations: {e}"),
-        )
+        ) from e
 
     return {
         "status": "saved",
@@ -327,7 +354,7 @@ def save_annotations(req: AnnotationSaveRequest, request: Request = None):
             guard_annotation_write(ledger, row, req.actor, req.lease_token, req.annotations)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail={'message': str(exc), 'current': public_image(row)}) from exc
-        result = _save_annotations_impl(req)
+        result = _save_annotations_impl(req, metadata_engine.annotation_file_transaction(ledger))
         row["workflow_state"] = "needs_review"
         row["reviewer"] = None
         row["annotation_hash"] = metadata_engine._annotation_hash(project, source, Path(req.image_path))
@@ -340,11 +367,36 @@ def save_annotations(req: AnnotationSaveRequest, request: Request = None):
 
 @router.post("/batch_save")
 def batch_save_annotations(req: AnnotationBatchSaveRequest, request: Request = None):
-    """Batch persists annotations across multiple images."""
-    results = []
+    """One project/source commits together; legacy mixed failures disclose saves."""
+    bindings = []
     for item in req.items:
-        res = save_annotations(item,request)
-        results.append(res)
+        try:
+            bindings.append(_metadata_binding(item.image_path))
+        except HTTPException:
+            # Keep per-item validation and its original error for an unbound or
+            # mixed batch, including the saved prefix if a later item fails.
+            bindings.append(None)
+    atomic = bool(bindings and bindings[0] is not None and all(binding == bindings[0] for binding in bindings))
+    transaction = metadata_engine.metadata_transaction(*bindings[0]) if atomic else nullcontext()
+    results = []
+    with transaction:
+        for index, item in enumerate(req.items):
+            try:
+                results.append(save_annotations(item, request))
+            except HTTPException as exc:
+                if atomic:
+                    raise
+                detail = dict(exc.detail) if isinstance(exc.detail, dict) else {"message": exc.detail}
+                detail.update({"cause": exc.detail, "saved_images_count": len(results), "results": results,
+                               "failed_image_id": item.image_id, "failed_index": index})
+                raise HTTPException(status_code=exc.status_code, detail=detail, headers=exc.headers) from exc
+            except Exception as exc:
+                if atomic:
+                    raise
+                detail = format_error_response("ERR_UNKNOWN", details=f"Failed to save annotations: {exc}")
+                detail.update({"cause": str(exc), "saved_images_count": len(results), "results": results,
+                               "failed_image_id": item.image_id, "failed_index": index})
+                raise HTTPException(status_code=500, detail=detail) from exc
     return {
         "status": "saved",
         "saved_images_count": len(results),

@@ -396,6 +396,7 @@ class ClassificationDataset(Dataset):
 
         assignments = None if ignore_saved_split else _classification_split_assignments(self.root_dir)
         if assignments is not None:
+            self.split_basis = "saved_manifest"
             source_dirs = [d for d in (train_dir, val_dir, test_dir) if d.is_dir()] or [self.root_dir]
             folder_samples = [self._load_from_folder(source_dir) for source_dir in source_dirs]
             class_names = {name for _, names, _ in folder_samples for name in names}
@@ -418,7 +419,8 @@ class ClassificationDataset(Dataset):
             ]
             return
 
-        if split and (train_dir.is_dir() or val_dir.is_dir()):
+        if split and (train_dir.is_dir() or val_dir.is_dir() or test_dir.is_dir()):
+            self.split_basis = "folders"
             available = [directory for directory in (train_dir, val_dir, test_dir) if directory.is_dir()]
             names = {name for directory in available for name in self._load_from_folder(directory)[1]}
             self.classes = sorted(
@@ -434,9 +436,13 @@ class ClassificationDataset(Dataset):
             else:
                 self.samples = []
         else:
+            self.split_basis = "automatic"
             self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir)
             if split and split in ["train", "val"]:
                 self.samples = self._split_samples(self.samples, split, val_split, seed)
+            elif split == "test":
+                # Automatic train/validation splitting does not declare a test set.
+                self.samples = []
 
     @staticmethod
     def _load_from_folder(folder: Path) -> Tuple[List[Tuple[Path, int]], List[str], Dict[str, int]]:

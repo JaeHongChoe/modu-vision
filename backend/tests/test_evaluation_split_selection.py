@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from PIL import Image
 
 from backend.api.routes_evaluation import _paired_evaluation_paths
 
@@ -13,6 +14,7 @@ from backend.api.routes_evaluation import _paired_evaluation_paths
 def test_independent_test_partition_precedes_validation(tmp_path: Path, task: str, label_path: str):
     for split in ("test", "val"):
         (tmp_path / "images" / split).mkdir(parents=True)
+        Image.new('RGB', (16, 16)).save(tmp_path / 'images' / split / 'sample.png')
     if task == "detection":
         for split in ("test", "val"):
             (tmp_path / f"annotations_{split}.json").write_text("{}")
@@ -33,3 +35,16 @@ def test_incomplete_test_partition_fails_instead_of_silently_using_validation(tm
 
     with pytest.raises(HTTPException, match="test"):
         _paired_evaluation_paths(tmp_path, "detection")
+
+
+@pytest.mark.parametrize('task', ['detection', 'segmentation'])
+def test_empty_but_complete_test_partition_uses_named_validation(tmp_path, task):
+    for split in ('test', 'val'):
+        (tmp_path / 'images' / split).mkdir(parents=True)
+        if task == 'detection':
+            (tmp_path / f'annotations_{split}.json').write_text('{}')
+        else:
+            (tmp_path / 'masks' / split).mkdir(parents=True)
+    Image.new('RGB', (16, 16)).save(tmp_path / 'images' / 'val' / 'sample.png')
+    images, _, split = _paired_evaluation_paths(tmp_path, task)
+    assert split == 'val' and images == tmp_path / 'images' / 'val'

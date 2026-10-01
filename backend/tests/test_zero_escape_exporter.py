@@ -255,7 +255,7 @@ def test_defect_score_ordering_and_escape_detection():
 # 3. Elimination of Synthetic Beta Fallback Tests
 # ============================================================================
 
-def test_no_random_beta_fallback(client):
+def test_no_random_beta_fallback(client, tmp_path):
     """
     Verifies zero usage of random beta distributions when evaluating jobs.
     Checks source files and endpoint reproducibility.
@@ -281,7 +281,7 @@ def test_no_random_beta_fallback(client):
     # 3. Linkage with real eval_results.json:
     # Write a test eval_results.json to a temporary job directory and ensure the API loads it
     test_job_id = "test_real_eval_linkage_job"
-    models_dir = Path("./models") / test_job_id
+    models_dir = tmp_path / test_job_id
     models_dir.mkdir(parents=True, exist_ok=True)
     try:
         custom_preds = [
@@ -292,10 +292,12 @@ def test_no_random_beta_fallback(client):
             json.dump({
                 "job_id": test_job_id,
                 "task": "classification",
+                "evaluation_contract_version": 2,
+                "metrics": {"evaluated_split": "test", "selection_overlap": False},
                 "test_predictions": custom_preds,
             }, f)
 
-        resp = client.get(f"/api/evaluation/overkill-underkill?job_id={test_job_id}")
+        resp = client.get('/api/evaluation/overkill-underkill', params={'job_id': str(models_dir)})
         assert resp.status_code == 200
         data = resp.json()
         assert data["sample_count"] == 2

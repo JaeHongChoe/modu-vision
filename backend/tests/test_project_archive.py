@@ -77,12 +77,16 @@ def test_archive_restores_source_and_studio_labels_to_new_workspace(tmp_path: Pa
     })
     assert saved.status_code == 200, saved.text
     output = tmp_path / "backups"
+    transient = Path(project['annotations_dir']) / '.annotation-atomic-backup'
+    transient.write_bytes(b'prior annotation retained during publication')
     output.mkdir()
     backed = client.post("/api/project/backup", json={"destination_dir": str(output)})
     assert backed.status_code == 200, backed.text
     archive = Path(backed.json()["archive_path"])
     assert archive.is_file() and backed.json()["source_included"] is True
     assert backed.json()["file_count"] >= 3
+    with ZipFile(archive) as zipped:
+        assert not any('.annotation-atomic-' in name for name in zipped.namelist())
 
     target = tmp_path / "restored_project"
     restored = client.post("/api/project/restore", json={"archive_path": str(archive), "target_dir": str(target)})

@@ -40,6 +40,8 @@ def _files(root: Path, excluded_root: Path | None = None, *, skip_sqlite_journal
             folders[:] = [name for name in folders if parent / name != excluded_root]
         folders.sort()
         for name in sorted(files):
+            if name.startswith('.annotation-atomic-'):
+                continue  # Private publication backups are not project artifacts.
             path = parent / name
             if path.is_symlink():
                 raise ArchiveError("Project or source contains an unsupported file or symbolic link")

@@ -72,6 +72,7 @@ from backend.engine.trainer import infer
 from backend.utils.error_catalog import format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_evaluation")
+EVALUATION_CONTRACT_VERSION = 2
 
 router = APIRouter(prefix="/api/evaluation", tags=["evaluation"])
 
@@ -171,6 +172,8 @@ def _same_label_tree(first: Path, second: Path) -> bool:
             if path.is_symlink():
                 return None
             if path.is_file():
+                if path.name.startswith(('.annotation-save-', '.annotation-atomic-')):
+                    continue
                 digest = hashlib.sha256()
                 with path.open("rb") as handle:
                     for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -419,9 +422,14 @@ def _paired_evaluation_paths(dataset_dir: Path, task: str) -> Tuple[Path, Path, 
         labels = (dataset_dir / f"annotations_{split}.json") if task == "detection" else (dataset_dir / "masks" / split)
         if not (labels.is_file() if task == "detection" else labels.is_dir()):
             raise HTTPException(status_code=422, detail=f"{task} {split} images exist without matching labels: {labels}")
+        if not any(path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS for path in images.rglob('*')):
+            continue
         return images, labels, split
-    labels = (dataset_dir / "annotations.json") if task == "detection" else (dataset_dir / "masks")
-    return image_root, labels, "all"
+    raise HTTPException(status_code=422, detail="Evaluation requires a saved test or validation partition; unpartitioned images may include training data.")
+
+
+def _split_evidence(split: str) -> Dict[str, Any]:
+    return {"evaluated_split": split, "selection_overlap": split == "val"}
 
 
 def _evaluate_classification(
@@ -430,13 +438,15 @@ def _evaluate_classification(
     dataset_dir: Path,
     device: torch.device,
 ) -> Dict[str, Any]:
-    val_ds = ClassificationDataset(root_dir=dataset_dir, split="test")
+    selected_split = "test"
+    val_ds = ClassificationDataset(root_dir=dataset_dir, split=selected_split)
     if len(val_ds.samples) == 0:
-        val_ds = ClassificationDataset(root_dir=dataset_dir, split="val")
+        selected_split = "val"
+        val_ds = ClassificationDataset(root_dir=dataset_dir, split=selected_split)
     if len(val_ds.samples) == 0:
-        val_ds = ClassificationDataset(root_dir=dataset_dir)
-    if len(val_ds.samples) == 0:
-        raise HTTPException(status_code=400, detail="No evaluation images found in classification dataset")
+        raise HTTPException(status_code=422, detail="No held-out classification images. Save a nonempty test or validation partition before evaluation.")
+    if getattr(val_ds, "split_basis", None) == "automatic":
+        raise HTTPException(status_code=422, detail="Save the classification split before evaluation; an automatic split can change after training.")
 
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
     state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
@@ -515,6 +525,7 @@ def _evaluate_classification(
 
     return {
         "metrics": {
+            **_split_evidence(selected_split),
             "accuracy": metrics["accuracy"],
             "macro_precision": metrics["macro_precision"],
             "macro_recall": metrics["macro_recall"],
@@ -615,7 +626,7 @@ def _evaluate_patch_classification(
             "macro_f1": metrics["macro_f1"],
             "best_metric": meta.get("best_metric"),
             "per_class": metrics.get("per_class", {}),
-            "evaluated_split": selected_split,
+            **_split_evidence(selected_split),
         },
         "confusion_matrix": confusion,
         "test_predictions": test_predictions,
@@ -626,9 +637,13 @@ def _evaluate_patch_classification(
 def _manifest_evaluation_dataset(task, source, image_size, class_names=None):
     from backend.engine.grouped_dataset_views import load_manifest_dataset
     try:
-        dataset = load_manifest_dataset(task, source, "test", image_size=image_size, class_names=class_names)
+        selected_split = "test"
+        dataset = load_manifest_dataset(task, source, selected_split, image_size=image_size, class_names=class_names)
         if dataset is not None and len(dataset) == 0:
-            dataset = load_manifest_dataset(task, source, "val", image_size=image_size, class_names=class_names)
+            selected_split = "val"
+            dataset = load_manifest_dataset(task, source, selected_split, image_size=image_size, class_names=class_names)
+        if dataset is not None:
+            dataset.evaluation_split = selected_split
         return dataset
     except (ValueError, OSError, KeyError) as exc:
         raise HTTPException(422, f"Saved evaluation split is invalid: {exc}") from exc
@@ -658,8 +673,10 @@ def _evaluate_detection(
     try:
         val_ds = _manifest_evaluation_dataset("detection", dataset_dir, img_size, classes)
         if val_ds is None:
-            val_img, val_anno, _ = _paired_evaluation_paths(dataset_dir, "detection")
+            val_img, val_anno, selected_split = _paired_evaluation_paths(dataset_dir, "detection")
             val_ds = DetectionDataset(images_dir=val_img, annotation_file=val_anno, image_size=img_size, class_names=classes)
+        else:
+            selected_split = val_ds.evaluation_split
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Detection evaluation class mapping is incompatible: {exc}") from exc
     if len(val_ds) == 0:
@@ -749,6 +766,7 @@ def _evaluate_detection(
 
     return {
         "metrics": {
+            **_split_evidence(selected_split),
             "mAP_50": map_res.get("mAP_50", 0.0),
             "mAP_50_95": map_res.get("mAP_50_95", 0.0),
             "best_metric": meta.get("best_metric"),
@@ -776,8 +794,10 @@ def _evaluate_segmentation(
     if classes[0] != "background": classes = ["background", *classes]
     val_ds = _manifest_evaluation_dataset("segmentation", dataset_dir, img_size, classes)
     if val_ds is None:
-        val_img, val_mask, _ = _paired_evaluation_paths(dataset_dir, "segmentation")
+        val_img, val_mask, selected_split = _paired_evaluation_paths(dataset_dir, "segmentation")
         val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=img_size)
+    else:
+        selected_split = val_ds.evaluation_split
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for segmentation")
 
@@ -863,6 +883,7 @@ def _evaluate_segmentation(
 
     return {
         "metrics": {
+            **_split_evidence(selected_split),
             "miou": seg_metrics.get("miou", 0.0),
             "mdice": seg_metrics.get("mdice", 0.0),
             "pixel_accuracy": seg_metrics.get("pixel_accuracy", 0.0),
@@ -890,8 +911,13 @@ def _evaluate_anomaly(
 ) -> Dict[str, Any]:
     val_ds = _manifest_evaluation_dataset("anomaly", dataset_dir, tuple(meta.get("image_size", [256, 256])))
     if val_ds is None:
+        selected_split = "test"
         val_ds = AnomalyDataset(root_dir=dataset_dir, split="test")
-        if len(val_ds) == 0: val_ds = AnomalyDataset(root_dir=dataset_dir, split="val")
+        if len(val_ds) == 0:
+            selected_split = "val"
+            val_ds = AnomalyDataset(root_dir=dataset_dir, split="val")
+    else:
+        selected_split = val_ds.evaluation_split
     if len(val_ds) == 0:
         raise HTTPException(status_code=400, detail="No evaluation images found for anomaly detection")
 
@@ -949,11 +975,11 @@ def _evaluate_anomaly(
             image_scores.append(score_f)
             image_labels.append(label)
 
+    single_class = len(set(image_labels)) < 2
+    fixed_threshold = float(getattr(model, 'threshold', meta.get('anomaly_threshold', .5))) if patch_scores or single_class else None
     anom_metrics = compute_anomaly_metrics(image_scores, image_labels, pixel_heatmaps=pixel_heatmaps, pixel_masks=pixel_masks,
-        fixed_threshold=float(model.threshold) if patch_scores else None,
+        fixed_threshold=fixed_threshold,
         threshold_comparison='gt' if patch_scores else 'ge')
-    if patch_scores and len(set(image_labels)) < 2:
-        anom_metrics['image_auroc'] = None
     import uuid
     evidence_dir = model_pt.parent / "evaluation_maps"
     evidence_dir.mkdir(exist_ok=True)
@@ -965,7 +991,7 @@ def _evaluate_anomaly(
             evidence_arrays[f"mask_{index}"] = pixel_masks[mask_index]; mask_index += 1
     np.savez_compressed(evidence_file, **evidence_arrays)
     evidence_hash = hashlib.sha256(evidence_file.read_bytes()).hexdigest()
-    optimal_th = float(model.threshold) if patch_scores else anom_metrics.get("active_threshold", 0.5)
+    optimal_th = float(model.threshold) if patch_scores else anom_metrics["active_threshold"]
 
     matrix = [[0] * num_classes for _ in range(num_classes)]
     cell_samples: Dict[str, List[str]] = {
@@ -1008,15 +1034,18 @@ def _evaluate_anomaly(
 
     return {
         "metrics": {
+            **_split_evidence(selected_split),
             "image_auroc": anom_metrics.get("image_auroc"),
             "pixel_auroc": anom_metrics.get("pixel_auroc"),
             "pixel_evaluated_images": len(pixel_heatmaps),
             "pixel_missing_masks": len(maps) - len(pixel_heatmaps),
             "anomaly_mode": mode,
             "map_semantics": map_semantics,
-            "threshold_basis": 'heldout_normal_calibration' if patch_scores and getattr(model, 'calibration', {}).get('normal_image_count', 0) else 'model_default' if patch_scores else 'evaluation_threshold_search',
-            "f1_score": anom_metrics.get("f1_score", 1.0),
-            "optimal_threshold": round(optimal_th, 4),
+            "threshold_basis": anom_metrics['threshold_basis'] if single_class else 'heldout_normal_calibration' if patch_scores and getattr(model, 'calibration', {}).get('normal_image_count', 0) else 'model_default' if patch_scores else anom_metrics['threshold_basis'],
+            "threshold_search_available": anom_metrics['threshold_search_available'],
+            "active_threshold": optimal_th,
+            "f1_score": anom_metrics.get("f1_score"),
+            "optimal_threshold": None if single_class else round(optimal_th, 4),
             "best_metric": meta.get("best_metric"),
         },
         "confusion_matrix": {
@@ -1071,6 +1100,7 @@ def run_or_load_evaluation(
     evaluation_binding.update(evaluation_model_context(out_dir.parent.parent,meta))
 
     def preserve_result(result):
+        result["evaluation_contract_version"] = EVALUATION_CONTRACT_VERSION
         if _fingerprint(bound_source) != evaluation_binding["dataset_fingerprint"] or _sha256(model_pt) != evaluation_binding["checkpoint_sha256"]:
             raise HTTPException(409, "Evaluation inputs changed during execution")
         from backend.engine.dataset_metadata import metadata_for_path
@@ -1119,7 +1149,9 @@ def run_or_load_evaluation(
                             break
                     if not all_exist:
                         break
-                if all_exist and len(cached.get("test_predictions", [])) > 0 and (not cached.get("binding") or cached["binding"] == evaluation_binding):
+                if (all_exist and len(cached.get("test_predictions", [])) > 0
+                        and cached.get("evaluation_contract_version") == EVALUATION_CONTRACT_VERSION
+                        and cached.get("binding") == evaluation_binding):
                     from backend.engine.zero_escape_analyzer import is_defect_label, compute_sample_defect_score
                     for p in cached.get("test_predictions", []):
                         if "is_defect" not in p:
@@ -1312,48 +1344,29 @@ def get_overkill_underkill_analysis(
     target_job = job_id or (training_job_manager.active_job_id if hasattr(training_job_manager, "active_job_id") else None)
     if not target_job:
         raise HTTPException(status_code=422, detail="A completed training job is required for calibration analysis.")
-    predictions = []
-    task = "classification"
+    from backend.engine.calibration_evidence import validate_calibration_evidence
 
-    # 1. Search the job's actual output directory (models/{target_job}/eval_results.json)
-    eval_candidates = []
-    if target_job:
-        eval_candidates.extend([
-            Path(f"./models/{target_job}/eval_results.json"),
-            Path(f"./projects/{target_job}/models/eval_results.json"),
-            Path(target_job) / "eval_results.json" if Path(target_job).is_dir() else None,
-            Path(f"./reports/{target_job}/evaluation_results.json"),
-        ])
-        if Path(target_job).is_dir():
-            eval_candidates.insert(0, Path(target_job) / "eval_results.json")
-        rec = training_job_manager.get_job(target_job)
-        if rec and rec.output_dir:
-            eval_candidates.insert(0, Path(rec.output_dir) / "eval_results.json")
-
-    for cand in eval_candidates:
-        if cand and cand.is_file():
-            try:
-                with _eval_file_lock:
-                    with open(cand, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                if data.get("test_predictions"):
-                    predictions = data["test_predictions"]
-                    task = data.get("task", "classification")
-                    break
-            except Exception:
-                pass
-
-    # 2. If not found or empty, execute live evaluation on the validation dataset using checkpoint
-    if not predictions:
+    eval_payload = None
+    # Explicit directory inputs retain their import contract. Normal jobs always
+    # use the checkpoint/data binding checks shared with the evaluation screen.
+    if Path(target_job).is_dir():
         try:
-            eval_payload = run_or_load_evaluation(job_id=target_job, force_recompute=True)
-            predictions = eval_payload.get("test_predictions", [])
-            task = eval_payload.get("task", "classification")
-        except Exception as eval_err:
-            logger.info("Could not execute live evaluation for job %s: %s", target_job, eval_err)
-
-    if not predictions:
-        raise HTTPException(status_code=422, detail=f"No real evaluation predictions for job: {target_job}")
+            with _eval_file_lock:
+                eval_payload = json.loads((Path(target_job) / "eval_results.json").read_text(encoding="utf-8"))
+            evidence = validate_calibration_evidence(eval_payload, EVALUATION_CONTRACT_VERSION)
+        except (OSError, ValueError, TypeError):
+            eval_payload = None
+    if eval_payload is None:
+        try:
+            eval_payload = run_or_load_evaluation(job_id=target_job)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(422, detail=f"No usable evaluation predictions for calibration: {exc}") from exc
+    try:
+        evidence = validate_calibration_evidence(eval_payload, EVALUATION_CONTRACT_VERSION)
+    except ValueError as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    predictions = eval_payload["test_predictions"]
+    task = eval_payload.get("task", "classification")
 
     result = analyze_zero_escape(
         predictions=predictions,
@@ -1365,6 +1378,9 @@ def get_overkill_underkill_analysis(
         num_threshold_steps=101,
     )
     result["job_id"] = target_job
+    result["evaluated_split"] = evidence["evaluated_split"]
+    result["selection_overlap"] = evidence["selection_overlap"]
+    result["calibration_evidence"] = evidence
     return result
 
 
@@ -1401,30 +1417,25 @@ def run_zero_escape_calibration(
     target_job = result.get("job_id") or job_id
 
     if apply_to_eval_results and target_job:
-        eval_candidates = [
-            Path(f"./models/{target_job}/eval_results.json"),
-            Path(f"./projects/{target_job}/models/eval_results.json"),
-            Path("./models/eval_results.json"),
-        ]
+        from backend.engine.calibration_evidence import validate_calibration_evidence, mark_calibration_evidence
         if Path(target_job).is_dir():
-            eval_candidates.insert(0, Path(target_job) / "eval_results.json")
-        rec = training_job_manager.get_job(target_job)
-        if rec and rec.output_dir:
-            eval_candidates.insert(0, Path(rec.output_dir) / "eval_results.json")
-
+            eval_path = Path(target_job) / "eval_results.json"
+        else:
+            eval_path = _resolve_job_artifacts(job_id=target_job)[0] / "eval_results.json"
         with _eval_file_lock:
-            for p in eval_candidates:
-                if p and p.is_file():
-                    try:
-                        with open(p, "r", encoding="utf-8") as f:
-                            data = json.load(f)
-                        data["optimal_threshold"] = optimal_th
-                        data["zero_underkill_calibrated"] = True
-                        data["calibrated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                        _atomic_write_json(p, data)
-                        break
-                    except Exception as e:
-                        logger.warning("Could not persist calibrated threshold to %s: %s", p, e)
+            try:
+                data = json.loads(eval_path.read_text(encoding="utf-8"))
+                current = validate_calibration_evidence(data, EVALUATION_CONTRACT_VERSION)
+                if current != result["calibration_evidence"]:
+                    raise HTTPException(409, "Evaluation predictions changed during calibration; retry the analysis")
+                marked = mark_calibration_evidence(data, optimal_th, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), EVALUATION_CONTRACT_VERSION)
+                _atomic_write_json(eval_path, marked)
+                result["calibration_evidence"] = marked["calibration_evidence"]
+            except ValueError as exc:
+                raise HTTPException(409, detail=f"Evaluation evidence changed during calibration: {exc}") from exc
+            except OSError as exc:
+                logger.warning("Could not persist calibrated threshold to %s: %s", eval_path, exc)
+                raise HTTPException(500, detail="Calibrated threshold could not be saved; previous settings are retained") from exc
 
     result["calibrated"] = True
     underkill_cnt = result.get("optimal_stats", {}).get("underkill_count", 0)

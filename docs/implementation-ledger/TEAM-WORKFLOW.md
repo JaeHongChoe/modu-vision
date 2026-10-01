@@ -66,3 +66,10 @@ Original image/adjacent annotation bytes are independently checked: **171 of 171
 - The private macOS package is unsigned and uses the configured development Python. Signed/notarized releases, a real HTTPS update channel and a frozen backend binary remain external delivery prerequisites.
 - Native startup descriptors are implemented and tested with isolated OS responses. Actual global installation, reboot/logon persistence, PLC/MES equipment and Windows/Linux acceptance are not claimed.
 - Source publication to Git is separate from release publication and operational/model approval.
+
+## Evaluation and annotation follow-up
+
+The subsequent [integrity review](EVALUATION-INTEGRITY.md) repairs held-out split
+selection, single-class anomaly reporting, calibration/export evidence and
+annotation transaction failures. It records the later 1,897-pass broad gate and
+34-pass final batch supplement separately from the earlier results above.

@@ -503,12 +503,33 @@ export const EvaluationStudio: React.FC = () => {
 
           {/* Primary Metric KPI Cards */}
           <div>
+            {hasReportableResult && <div className="mb-3 rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs leading-relaxed text-slate-300" role="status">
+              <p className="font-semibold text-slate-100">
+                {language === 'ko' ? '평가 데이터: ' : 'Evaluation data: '}
+                {metrics.evaluated_split === 'test' ? (language === 'ko' ? '시험 분할 (Test)' : 'Test partition')
+                  : metrics.evaluated_split === 'val' ? (language === 'ko' ? '검증 분할 (Validation)' : 'Validation partition')
+                  : (language === 'ko' ? '분할 근거 미확인' : 'Partition evidence unavailable')}
+              </p>
+              {metrics.selection_overlap && <p className="mt-1 text-amber-200">{language === 'ko'
+                ? '모델 선택에 사용한 검증 데이터의 결과입니다. 별도 시험 데이터에서도 확인하세요.'
+                : 'This validation data was also used for model selection. Verify the model on a separate test set.'}</p>}
+              {metrics.threshold_search_available === false && <p className="mt-1 text-amber-200">{language === 'ko'
+                ? '정상 또는 불량 정답이 없어 AUROC와 최적 임계값을 산출할 수 없습니다. 판정은 저장된 모델 임계값을 사용합니다.'
+                : 'AUROC and threshold search require both normal and defect truth. Verdicts use the saved model threshold.'}</p>}
+              {metrics.threshold_basis === 'evaluation_threshold_search' && <p className="mt-1 text-amber-200">{language === 'ko'
+                ? '이 평가의 판정은 평가 데이터에서 탐색한 임계값을 사용합니다. 플로우의 판정 규칙과 적용 임계값을 함께 확인하세요.'
+                : 'These verdicts use a threshold searched on evaluation data. Check the flow rules and applied threshold as well.'}</p>}
+              {metrics.threshold_calibration_applied && <p className="mt-1 text-amber-200">{language === 'ko'
+                ? '이 데이터는 임계값 보정에도 사용했습니다. 보정 효과는 별도 시험 데이터에서 확인하세요.'
+                : 'This data was also used for threshold calibration. Validate the calibration on a separate test set.'}</p>}
+            </div>}
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               {language === 'ko' ? '주요 품질 지표' : 'Primary Quality Metrics'}
             </h3>
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
               {Object.entries(metrics).map(([k, v]) => {
-                if (typeof v !== 'number') return null;
+                const unavailable = v === null && (k === 'image_auroc' || k === 'pixel_auroc');
+                if (typeof v !== 'number' && !unavailable) return null;
                 const termKey = getMetricTermKey(k);
                 return (
                   <div key={k} className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
@@ -518,7 +539,8 @@ export const EvaluationStudio: React.FC = () => {
                       </span>
                       {termKey && <JargonTooltip termKey={termKey} />}
                     </div>
-                    <span className="text-base font-bold text-slate-100 tabular-nums">{v.toFixed(4)}</span>
+                    <span className="text-base font-bold text-slate-100 tabular-nums">{unavailable
+                      ? (language === 'ko' ? '산출 불가' : 'Unavailable') : v.toFixed(4)}</span>
                   </div>
                 );
               })}

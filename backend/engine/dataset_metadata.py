@@ -14,6 +14,7 @@ except ImportError:  # Native Windows backend
     import msvcrt
 import hashlib
 import json
+import logging
 import os
 import random
 import tempfile
@@ -21,14 +22,50 @@ import time
 import uuid
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from PIL import Image
 from backend.engine.dicom_input import open_source_image
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
+from backend.engine.annotation_transactions import AnnotationFileTransaction
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 
 _ACTIVE_TRANSACTIONS = ContextVar("metadata_transactions", default=None)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _MetadataTransactionState:
+    ledger: dict
+    rollback_callbacks: list[Callable[[], None]] = field(default_factory=list)
+    cleanup_callbacks: list[Callable[[], None]] = field(default_factory=list)
+    annotation_files: AnnotationFileTransaction | None = None
+    failed: bool = False
+
+
+def _transaction_state(ledger):
+    for state in (_ACTIVE_TRANSACTIONS.get() or {}).values():
+        if state.ledger is ledger:
+            return state
+    raise RuntimeError('Metadata transaction is not active')
+
+
+def register_transaction_callbacks(ledger, rollback, cleanup=None):
+    """Attach artifact recovery to the outer transaction's held OS lock."""
+    state = _transaction_state(ledger)
+    state.rollback_callbacks.append(rollback)
+    if cleanup is not None:
+        state.cleanup_callbacks.append(cleanup)
+
+
+def annotation_file_transaction(ledger):
+    """Share earliest annotation originals across nested saves/imports."""
+    state = _transaction_state(ledger)
+    if state.annotation_files is None:
+        state.annotation_files = AnnotationFileTransaction()
+        register_transaction_callbacks(ledger, state.annotation_files.rollback, state.annotation_files.cleanup)
+    return state.annotation_files
 
 @contextmanager
 def _file_lock(path):
@@ -76,7 +113,15 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
     key = str(path.resolve())
     active = _ACTIVE_TRANSACTIONS.get() or {}
     if key in active:
-        yield active[key]
+        state = active[key]
+        try:
+            if state.failed:
+                raise RuntimeError('Metadata transaction has already failed')
+            yield state.ledger
+        except BaseException:
+            # A caller catching a nested failure must not commit a partial ledger.
+            state.failed = True
+            raise
         return
     # Restoring a ledger never replaces its external lock inode.
     locks = Path(project_root)/'.metadata_locks'; locks.mkdir(parents=True, exist_ok=True)
@@ -86,16 +131,43 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
         ledger = json.loads(path.read_text()) if path.exists() else {'schema_version':1, 'images':{}}
         if not isinstance(ledger.get('images'),dict): raise ValueError('Invalid metadata ledger')
         before = json.dumps(ledger, sort_keys=True)
-        token = _ACTIVE_TRANSACTIONS.set({**active,key:ledger})
+        state = _MetadataTransactionState(ledger)
+        token = _ACTIVE_TRANSACTIONS.set({**active,key:state})
+        temporary = None
         try:
             yield ledger
+            if state.failed:
+                raise RuntimeError('Metadata transaction failed in a nested operation')
             if json.dumps(ledger,sort_keys=True) != before or not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with tempfile.NamedTemporaryFile('w',encoding='utf-8',dir=path.parent,delete=False) as handle:
-                    json.dump(ledger,handle,ensure_ascii=False,indent=2); handle.flush(); os.fsync(handle.fileno())
                     temporary = Path(handle.name)
+                    json.dump(ledger,handle,ensure_ascii=False,indent=2); handle.flush(); os.fsync(handle.fileno())
                 os.replace(temporary,path)
+        except BaseException as exc:
+            state.failed = True
+            failures = []
+            # Recovery finishes before releasing the OS lock to a waiting writer.
+            for rollback in reversed(state.rollback_callbacks):
+                try:
+                    rollback()
+                except BaseException as error:
+                    failures.append(str(error))
+            if failures:
+                raise RuntimeError('Metadata transaction rollback failed: ' + '; '.join(failures)) from exc
+            raise
+        else:
+            for cleanup in state.cleanup_callbacks:
+                try:
+                    cleanup()
+                except Exception:
+                    logger.warning('Could not clean committed metadata transaction artifacts', exc_info=True)
         finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    logger.warning('Could not remove metadata staging file %s', temporary, exc_info=True)
             _ACTIVE_TRANSACTIONS.reset(token)
 
 def _visible_path(dataset_root, image_path):

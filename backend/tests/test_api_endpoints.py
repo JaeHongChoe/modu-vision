@@ -497,14 +497,18 @@ class TestEvaluationRoutes:
             initial_data = {
                 "job_id": "test_dir",
                 "task": "classification",
+                "evaluation_contract_version": 2,
+                "metrics": {"evaluated_split": "test", "selection_overlap": False},
                 "test_predictions": [
                     {
+                        "image_id": "ng_0",
                         "ground_truth": "NG",
                         "defect_score": 0.88,
                         "predicted_class": "NG",
                         "confidence": 0.88,
                     },
                     {
+                        "image_id": "ok_0",
                         "ground_truth": "OK",
                         "defect_score": 0.12,
                         "predicted_class": "OK",
@@ -527,11 +531,13 @@ class TestEvaluationRoutes:
             with open(eval_file, "r", encoding="utf-8") as f:
                 updated = json.load(f)
             assert updated.get("zero_underkill_calibrated") is True
+            assert updated['metrics']['calibration_role'] == 'threshold_calibration'
+            assert updated['calibration_evidence']['independent_test_required'] is True
             assert abs(updated.get("optimal_threshold") - 0.8799) < 1e-3
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    def test_zero_escape_calibration_concurrent_calls(self, app_and_client):
+    def test_zero_escape_calibration_concurrent_calls(self, app_and_client, monkeypatch):
         import concurrent.futures
         _, client, temp_dir = app_and_client
         job_id = "job_test_concurrent_endpoints"
@@ -542,14 +548,18 @@ class TestEvaluationRoutes:
         initial_data = {
             "job_id": job_id,
             "task": "classification",
+            "evaluation_contract_version": 2,
+            "metrics": {"evaluated_split": "val", "selection_overlap": True},
             "test_predictions": [
                 {
+                    "image_id": "ng_0",
                     "ground_truth": "NG",
                     "defect_score": 0.75,
                     "predicted_class": "NG",
                     "confidence": 0.75,
                 },
                 {
+                    "image_id": "ok_0",
                     "ground_truth": "OK",
                     "defect_score": 0.20,
                     "predicted_class": "OK",
@@ -569,6 +579,11 @@ class TestEvaluationRoutes:
             status="completed",
         )
         training_job_manager._jobs[job_id] = record
+        # This case isolates concurrent calibration writes. Authentic checkpoint
+        # binding/evaluation is exercised by trained_eval_job in the tests above.
+        from backend.api import routes_evaluation
+        monkeypatch.setattr(routes_evaluation, 'run_or_load_evaluation', lambda **kw: json.loads(eval_file.read_text()))
+        monkeypatch.setattr(routes_evaluation, '_resolve_job_artifacts', lambda **kw: (job_dir, None, {}, 'classification', job_id, job_dir))
 
         def worker(_):
             return client.post(

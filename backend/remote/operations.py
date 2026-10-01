@@ -433,13 +433,21 @@ def run_remote_evaluation(
     context: RemoteJobContext, *, force_recompute: bool = False,
     transport: SSHTransport | None = None,
 ) -> dict[str, Any]:
+    from backend.api.routes_evaluation import EVALUATION_CONTRACT_VERSION
     artifact = run_remote_operation(
-        context, "evaluate", {}, "eval_results.json",
+        context, "evaluate", {"evaluation_contract_version": EVALUATION_CONTRACT_VERSION}, "eval_results.json",
         transport=transport, force_new=force_recompute,
     )
     result = json.loads(artifact.read_text(encoding="utf-8"))
     if not isinstance(result, dict) or result.get("job_id") != context.job_id or result.get("task") != context.task:
         raise ArtifactValidationError("Remote evaluation result belongs to a different model")
+    version = result.get("evaluation_contract_version")
+    if type(version) is not int or version != EVALUATION_CONTRACT_VERSION:
+        raise ArtifactValidationError("Remote evaluation contract version is missing or unsupported; re-run the evaluation")
+    metrics = result.get("metrics")
+    split = metrics.get("evaluated_split") if isinstance(metrics, dict) else None
+    if not isinstance(split, str) or split not in ("test", "val"):
+        raise ArtifactValidationError("Remote evaluation has no explicit held-out test/val split")
     matrix = result.get("confusion_matrix")
     predictions = result.get("test_predictions")
     if not isinstance(matrix, dict) or not isinstance(predictions, list):

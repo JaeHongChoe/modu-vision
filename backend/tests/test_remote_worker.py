@@ -324,6 +324,9 @@ def test_evaluate_actual_model_and_snapshot_emits_portable_source_mapping(tmp_pa
     payload = json.loads((op_run / "outputs" / "eval_results.json").read_text())
     assert payload["job_id"] == "job_eval_123"
     assert payload["task"] == "classification"
+    assert payload['evaluation_contract_version'] == 2
+    assert payload['metrics']['evaluated_split'] == 'val'
+    assert payload['metrics']['selection_overlap'] is True
     assert len(payload["test_predictions"]) == 2
     assert all(row["file_path"].startswith("input/data/val/") for row in payload["test_predictions"])
     assert all("thumbnail_url" not in row for row in payload["test_predictions"])
@@ -677,13 +680,19 @@ def _export_spec(tmp_path, *, real_checkpoint=False, with_calibration=False):
         "quantize_fp16": False, "package_name": "test_runtime",
     })
     if with_calibration:
+        from backend.engine.calibration_evidence import mark_calibration_evidence
         evaluation = op_run / "inputs" / "eval_results.json"
         evaluation.parent.mkdir()
-        evaluation.write_text(json.dumps({
-            "job_id": "job_eval_123", "task": "classification", "zero_underkill_calibrated": True,
-            "optimal_threshold": 0.37,
-            "test_predictions": [{"ground_truth": "OK"}, {"ground_truth": "NG"}],
-        }), encoding="utf-8")
+        evidence = {
+            'evaluation_contract_version': 2,
+            'metrics': {'evaluated_split': 'val', 'selection_overlap': True},
+            'binding': {'checkpoint_sha256': hashlib.sha256((train_run / 'outputs' / 'best_model.pt').read_bytes()).hexdigest()},
+            'job_id': 'job_eval_123', 'task': 'classification',
+            'test_predictions': [
+                {'image_id': 'ok', 'file_path': 'input/data/val/OK/ok.png', 'ground_truth': 'OK', 'predicted_class': 'OK', 'confidence': .95},
+                {'image_id': 'ng', 'file_path': 'input/data/val/NG/ng.png', 'ground_truth': 'NG', 'predicted_class': 'NG', 'confidence': .88}],
+        }
+        evaluation.write_text(json.dumps(mark_calibration_evidence(evidence, .37, '2026-10-01T09:00:00Z')), encoding='utf-8')
         request["evaluation_path"] = "inputs/eval_results.json"
         request["evaluation_sha256"] = hashlib.sha256(evaluation.read_bytes()).hexdigest()
     spec.write_text(json.dumps(request), encoding="utf-8")

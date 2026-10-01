@@ -78,13 +78,14 @@ def test_import_transaction_rolls_back_all_images_on_late_save_failure(client_wo
     payload={'documents':[{'imagePath':name,'imageWidth':100,'imageHeight':80,'shapes':[{'label':'NG','shape_type':'rectangle','points':[[1,2],[20,30]]}]} for name in ['a.png','b.png']]}
     preview=client.post('/api/dataset/formats/import',json={'format':'labelme','payload':payload}).json()['preview']
     original=rdm.routes_annotation.save_annotations;calls=[]
-    def fail_later(req):
+    def fail_later(req, request=None):
         calls.append(req.image_id)
         if len(calls)==2: raise rdm.HTTPException(500,detail='injected write failure')
-        return original(req)
+        return original(req, request)
     monkeypatch.setattr(rdm.routes_annotation,'save_annotations',fail_later)
     result=client.post('/api/dataset/formats/import',json={'format':'labelme','payload':payload,'mode':'apply','expected_revisions':{r['image_uuid']:r['revision'] for r in preview}})
     assert result.status_code==500
+    assert len(calls)==2, 'Both saves must run before the injected late failure'
     studio=dataset_annotation_dir(source,Path(project['annotations_dir']),use_scope=False)
     assert not (studio/'a.json').exists() and not (studio/'b.json').exists()
     rows=client.get('/api/dataset/metadata').json()['items']

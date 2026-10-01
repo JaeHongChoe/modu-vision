@@ -628,6 +628,7 @@ def _evaluate_model(spec: dict[str, Any], checkpoint: Path, metadata: dict[str, 
     return {
         "job_id": spec["job_id"],
         "task": task,
+        "evaluation_contract_version": routes_evaluation.EVALUATION_CONTRACT_VERSION,
         "metrics": result["metrics"],
         "confusion_matrix": result["confusion_matrix"],
         "test_predictions": result["test_predictions"],

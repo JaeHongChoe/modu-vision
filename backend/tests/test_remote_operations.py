@@ -22,9 +22,12 @@ from backend.tests.test_remote_coordinator import FakeRemote, _digest, _setup
 
 
 class FakeEvaluationRemote(FakeRemote):
-    def __init__(self, root: Path, *, unsafe_path: bool = False, tamper: bool = False):
+    def __init__(self, root: Path, *, unsafe_path: bool = False, tamper: bool = False,
+                 contract_version=2, evaluated_split="test"):
         super().__init__(root, tamper=tamper)
         self.unsafe_path = unsafe_path
+        self.contract_version = contract_version
+        self.evaluated_split = evaluated_split
 
     def launch(self, profile, argv, run_id):
         if not run_id.startswith("op_"):
@@ -39,6 +42,10 @@ class FakeEvaluationRemote(FakeRemote):
             "test_predictions": [{"file_path": image, "image_id": "training_image"}],
             "evaluated_at": "2026-09-29T00:00:00Z",
         }
+        if self.contract_version is not None:
+            payload["evaluation_contract_version"] = self.contract_version
+        if self.evaluated_split is not None:
+            payload["metrics"]["evaluated_split"] = self.evaluated_split
         data = json.dumps(payload).encode()
         output = run / "outputs" / "eval_results.json"
         output.parent.mkdir(exist_ok=True)
@@ -169,6 +176,75 @@ def test_remote_evaluation_maps_real_snapshot_files_back_to_local_urls(tmp_path,
     assert result["test_predictions"][0]["thumbnail_url"].startswith("/api/dataset/thumbnail/training_image.png?")
     assert (context.output_dir / "eval_results.json").is_file()
     assert fake.launches == 2  # one train, one evaluation
+
+
+def test_remote_evaluation_does_not_reuse_a_legacy_operation_journal(tmp_path, monkeypatch):
+    from backend.remote import operations
+    context, current = _completed_remote(tmp_path, monkeypatch)
+    legacy = FakeEvaluationRemote(Path(context.profile.remote_root), contract_version=1, evaluated_split=None)
+    legacy_artifact = operations.run_remote_operation(context, 'evaluate', {}, 'eval_results.json', transport=legacy)
+    assert json.loads(legacy_artifact.read_text())['evaluation_contract_version'] == 1
+    assert legacy.launches == 1
+
+    result = run_remote_evaluation(context, transport=current)
+    assert current.launches == 2  # Training plus a new evaluation, not the old journal.
+    assert result['evaluation_contract_version'] == 2
+    assert result['metrics']['evaluated_split'] == 'test'
+    journals = [json.loads(path.read_text()) for path in (context.output_dir / 'remote_operations').glob('evaluate_*.json')]
+    assert len(journals) == 2
+    assert sum(row['spec'].get('evaluation_contract_version') == 2 for row in journals) == 1
+    # A current journal remains resumable and does not launch a duplicate worker.
+    run_remote_evaluation(context, transport=current)
+    assert current.launches == 2
+
+
+@pytest.mark.parametrize('version', [None, 1, 3, '2', 2.0, True])
+def test_remote_evaluation_rejects_missing_old_or_invalid_contract(tmp_path, monkeypatch, version):
+    context, fake = _completed_remote(tmp_path, monkeypatch)
+    fake.contract_version = version
+    with pytest.raises(ArtifactValidationError, match='contract'):
+        run_remote_evaluation(context, transport=fake)
+    assert not (context.output_dir / 'eval_results.json').exists()
+
+
+@pytest.mark.parametrize('split', [None, '', 'train', 'training', 'all', ['test']])
+def test_remote_evaluation_rejects_missing_or_unheld_out_split(tmp_path, monkeypatch, split):
+    context, fake = _completed_remote(tmp_path, monkeypatch)
+    fake.evaluated_split = split
+    with pytest.raises(ArtifactValidationError, match='split'):
+        run_remote_evaluation(context, transport=fake)
+    assert not (context.output_dir / 'eval_results.json').exists()
+
+
+@pytest.mark.parametrize('split', ['test', 'val'])
+def test_remote_evaluation_accepts_current_explicit_held_out_contract(tmp_path, monkeypatch, split):
+    context, fake = _completed_remote(tmp_path, monkeypatch)
+    fake.evaluated_split = split
+    result = run_remote_evaluation(context, transport=fake)
+    assert result['evaluation_contract_version'] == 2
+    assert result['metrics']['evaluated_split'] == split
+
+
+def test_remote_worker_records_its_actual_evaluation_contract(tmp_path, monkeypatch):
+    from backend.api import routes_evaluation
+    from backend.engine import device
+    from backend.remote.worker import _evaluate_model
+    source = tmp_path / 'snapshot'; source.mkdir()
+    image = source / 'a.png'; image.write_bytes(b'isolated image fixture')
+    def evaluate(checkpoint, metadata, data_path, selected_device):
+        return {'metrics': {'accuracy': 1., 'evaluated_split': 'test'},
+                'confusion_matrix': {'cell_samples': {'0_0': [str(image)]}},
+                'test_predictions': [{'file_path': str(image), 'ground_truth': 'OK',
+                                      'predicted_class': 'OK', 'confidence': .9}]}
+    monkeypatch.setattr(routes_evaluation, '_evaluate_classification', evaluate)
+    monkeypatch.setattr(routes_evaluation, '_resolve_dataset_dir', lambda path, task: path)
+    monkeypatch.setattr(device, 'get_device', lambda value: 'cpu')
+    result = _evaluate_model({'job_id': 'job_isolated', 'task': 'classification',
+                              'device': 'cpu', 'evaluation_contract_version': 1},
+                             tmp_path / 'unused_checkpoint.pt', {}, source)
+    assert result['evaluation_contract_version'] == 2
+    assert result['metrics']['evaluated_split'] == 'test'
+    assert result['test_predictions'][0]['file_path'] == 'input/data/a.png'
 
 
 def test_remote_context_rejects_changed_local_training_snapshot(tmp_path, monkeypatch):

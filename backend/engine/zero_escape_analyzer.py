@@ -30,6 +30,9 @@ NORMAL_LABELS = {
     "ok_normal",
     "true_ok",
     "ok_chip",
+    "정상",
+    "양품",
+    "합격",
 }
 
 
@@ -209,6 +212,16 @@ def analyze_zero_escape(
             "sample_details": [],
         }
 
+    # A missing/review truth is neither OK nor NG. Use the history contract so
+    # calibration cannot turn unreviewed samples into threshold evidence.
+    from backend.engine.evaluation_history import binary_verdict
+    known_truth = []
+    for idx, prediction in enumerate(predictions):
+        verdict = binary_verdict(prediction.get("ground_truth"))
+        if verdict is None:
+            raise ValueError(f"Prediction {idx} has unknown ground truth; zero-escape analysis needs reviewed OK/NG truth")
+        known_truth.append(verdict == "NG")
+
     # Pre-scan anomaly bounds if anomaly task
     anomaly_min, anomaly_max = None, None
     if str(task).lower().strip() in ("anomaly", "anomaly_detection"):
@@ -227,7 +240,7 @@ def analyze_zero_escape(
 
     for idx, p in enumerate(predictions):
         gt = p.get("ground_truth", "")
-        is_def = is_defect_label(gt)
+        is_def = known_truth[idx]
         score = compute_sample_defect_score(
             p, task=task, anomaly_min=anomaly_min, anomaly_max=anomaly_max
         )

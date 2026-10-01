@@ -5,15 +5,19 @@ Authentic Standalone Runtime Exporter for Modu Vision.
 Exports genuine trained model weights into standalone, self-contained deployment packages:
   - Reconstructs authentic model architecture from trained checkpoint (Classification, Detection, Segmentation, Anomaly).
   - Multi-format export: ONNX (with dynamic batching) and TorchScript (torch.jit).
-  - Calibrated config.json containing zero-escape threshold, preprocessing coefficients, and classes.
+  - config.json containing the decision threshold and its source, preprocessing coefficients, and classes.
   - Standalone executable infer.py runner supporting both ONNXRuntime and TorchScript.
   - Built-in smoke test verifying the exported artifact is non-corrupt before returning success.
 """
 
 from __future__ import annotations
 
+import functools
+import hashlib
 import json
 import logging
+import math
+import numbers
 import os
 import re
 import shutil
@@ -128,26 +132,129 @@ def load_checkpoint_and_reconstruct_model(
     return model, meta, anomaly_obj
 
 
-def resolve_calibrated_threshold(checkpoint_path: Path, meta: Dict[str, Any]) -> float:
-    """Use only an explicitly applied calibration from a two-class validation set."""
+CALIBRATION_REJECTION_TEXT = {
+    "evaluation_results_unreadable": "the saved evaluation results could not be read",
+    "calibration_evidence_missing": "the evaluation has no current calibration evidence (older calibration flags only)",
+    "evaluation_evidence_invalid": "the saved evaluation does not meet the current held-out evaluation contract",
+    "calibration_evidence_mismatch": "the calibration evidence no longer matches the saved predictions, task or evaluation binding",
+    "calibration_requires_both_classes": "the calibrated predictions do not contain both OK and NG truth",
+    "checkpoint_binding_missing": "the evaluation does not record which checkpoint it scored",
+    "checkpoint_binding_mismatch": "the calibration was made for a different checkpoint",
+    "calibrated_threshold_mismatch": "the saved threshold differs from the calibrated value",
+    "classes_unavailable": "the checkpoint does not record its class list",
+    "class_semantics_mismatch": "a class has a different OK/NG meaning in evaluation and in this runtime",
+    "classification_requires_one_normal_one_defect": "this runtime scores 1 - P(all normal classes), which equals the evaluation score only with one normal and one defect class",
+    "detection_requires_defect_classes": "the detector has no defect class",
+    "detection_non_defect_foreground": "the evaluation scores every detected class while this runtime scores defect classes only",
+    "segmentation_area_rule": "this runtime requires min_defect_area_px pixels above the threshold on full-image tiles, while the evaluation score is a single maximum pixel",
+    "patch_score_rule_unverified": "patch scores were not verified to match the evaluation score",
+    "anomaly_uses_saved_model_threshold": "this runtime applies the anomaly model's own saved threshold",
+    "task_not_verified": "this task's evaluation score was not verified against the runtime",
+}
+
+
+@functools.lru_cache(maxsize=None)
+def _shipped_runtime_function(name: str):
+    """Load one pure top-level helper from the shipped infer.py source."""
+    source = generate_standalone_infer_py()
+    match = re.search(rf"^def {re.escape(name)}\(.*?(?=^\S)", source, flags=re.MULTILINE | re.DOTALL)
+    if match is None:
+        raise RuntimeError(f"Shipped inference client has no {name} helper")
+    namespace: Dict[str, Any] = {}
+    exec(compile(match.group(0), f"<infer.py:{name}>", "exec"), namespace)
+    return namespace[name]
+
+
+def runtime_is_defect_class(name: Any) -> bool:
+    """The OK/NG class rule applied by the exported infer.py, read from its own source."""
+    return bool(_shipped_runtime_function("is_defect_class")(name))
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _unit_threshold(value: Any) -> Optional[float]:
+    if isinstance(value, numbers.Real) and not isinstance(value, bool) and math.isfinite(float(value)) \
+            and 0.0 <= float(value) <= 1.0:
+        return float(value)
+    return None
+
+
+def _calibration_rejection(eval_data: Dict[str, Any], checkpoint_path: Path, task: str, classes: Any) -> Optional[str]:
+    from backend.engine.calibration_evidence import (
+        CALIBRATION_EVIDENCE_VERSION, CALIBRATION_ROLE, calibration_transfer_scope, validate_calibration_evidence,
+    )
+
+    scope = calibration_transfer_scope(task, classes, runtime_is_defect_class)
+    if not scope["transferable"]:
+        return scope["reason"]
+    evidence = eval_data.get("calibration_evidence")
+    if (not isinstance(evidence, dict) or type(evidence.get("version")) is not int
+            or evidence["version"] != CALIBRATION_EVIDENCE_VERSION or evidence.get("role") != CALIBRATION_ROLE):
+        return "calibration_evidence_missing"
+    try:
+        current = validate_calibration_evidence(eval_data)
+    except ValueError:
+        return "evaluation_evidence_invalid"
+    for key in ("evaluation_contract_version", "task", "evaluated_split", "selection_overlap", "prediction_count",
+                "truth_counts", "prediction_fingerprint", "evaluation_binding_sha256"):
+        if evidence.get(key) != current[key]:
+            return "calibration_evidence_mismatch"
+    evaluated_task = current["task"].strip().lower() if isinstance(current["task"], str) else None
+    if evaluated_task != str(task).strip().lower() or evidence.get("threshold_space") != "defect_score":
+        return "calibration_evidence_mismatch"
+    if not current["truth_counts"]["ng"] or not current["truth_counts"]["ok"]:
+        return "calibration_requires_both_classes"
+    binding = eval_data.get("binding")
+    expected_checkpoint = binding.get("checkpoint_sha256") if isinstance(binding, dict) else None
+    if not isinstance(expected_checkpoint, str) or not expected_checkpoint:
+        return "checkpoint_binding_missing"
+    if expected_checkpoint != _file_sha256(checkpoint_path):
+        return "checkpoint_binding_mismatch"
+    saved, calibrated = _unit_threshold(eval_data.get("optimal_threshold")), _unit_threshold(evidence.get("threshold"))
+    if saved is None or calibrated is None or saved != calibrated:
+        return "calibrated_threshold_mismatch"
+    return None
+
+
+def resolve_export_threshold(checkpoint_path: Path, meta: Dict[str, Any], task: str, classes: Any) -> Dict[str, Any]:
+    """Choose the exported decision threshold and record its source.
+
+    An evaluation calibration replaces the saved model threshold only when its
+    evidence still matches the saved predictions, evaluation binding and this
+    checkpoint, and the task's evaluation score has the same meaning in the
+    exported runtime. The calibrated predictions are not an independent test,
+    and nothing here certifies on-site quality.
+    """
+    decision = {"threshold": float(meta.get("optimal_threshold", 0.50)), "calibrated": False,
+                "threshold_source": "saved_model_threshold", "calibration_not_transferable": None,
+                "threshold_calibration": None}
     eval_file = checkpoint_path.parent / "eval_results.json"
-    if eval_file.is_file():
-        try:
-            with open(eval_file, "r", encoding="utf-8") as f:
-                eval_data = json.load(f)
-            if eval_data.get("zero_underkill_calibrated") and _has_both_validation_classes(eval_data):
-                return float(eval_data["optimal_threshold"])
-        except Exception as e:
-            logger.warning("Could not read evaluation file for threshold: %s", e)
-
-    return float(meta.get("optimal_threshold", 0.50))
-
-
-def _has_both_validation_classes(eval_data: Dict[str, Any]) -> bool:
-    from backend.engine.zero_escape_analyzer import is_defect_label
-
-    labels = [is_defect_label(p.get("ground_truth")) for p in eval_data.get("test_predictions", [])]
-    return any(labels) and not all(labels)
+    if not eval_file.is_file():
+        return decision
+    try:
+        eval_data = json.loads(eval_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.warning("Could not read evaluation file for threshold: %s", exc)
+        return {**decision, "calibration_not_transferable": "evaluation_results_unreadable"}
+    if not isinstance(eval_data, dict) or not eval_data.get("zero_underkill_calibrated"):
+        return decision
+    reason = _calibration_rejection(eval_data, checkpoint_path, task, classes)
+    if reason:
+        return {**decision, "calibration_not_transferable": reason}
+    evidence = eval_data["calibration_evidence"]
+    summary = {key: evidence.get(key) for key in (
+        "evaluated_split", "selection_overlap", "prediction_count", "truth_counts", "prediction_fingerprint",
+        "calibrated_at")}
+    summary.update(independent_test_required=True, independence_certified=False)
+    return {"threshold": float(evidence["threshold"]), "calibrated": True,
+            "threshold_source": "evaluation_calibration", "calibration_not_transferable": None,
+            "threshold_calibration": summary}
 
 
 class DetectionExportAdapter(nn.Module):
@@ -296,7 +403,7 @@ def is_defect_class(name):
         return True
     compact = clean.replace("_", "").replace(" ", "")
     return not (compact in ("ok", "normal", "pass", "good", "0", "background", "bg",
-                           "nondefect", "nodefect", "정상", "양품")
+                           "nondefect", "nodefect", "정상", "양품", "합격")
                 or clean.startswith(("ok_", "normal_", "good_"))
                 or clean.endswith(("_ok", "_normal", "_good")))
 
@@ -860,20 +967,16 @@ def export_runtime_package(
                 pkg_dir / "anomaly_stats.pt",
             )
 
-    # 4. Resolve Zero-Escape Calibrated Threshold
-    optimal_th = resolve_calibrated_threshold(ckpt_path, meta)
+    # 4. Resolve the decision threshold and record where it came from
+    threshold_decision = resolve_export_threshold(ckpt_path, meta, task, classes)
+    optimal_th = threshold_decision["threshold"]
     if dino_anomaly:
+        # The scope check never transfers an evaluation calibration to this runtime.
         optimal_th = float(meta.get('anomaly_threshold', getattr(anomaly_obj, 'threshold', .5)))
         if not 0 <= optimal_th <= 1:
             raise ValueError('Invalid saved DINO anomaly threshold')
-    eval_file = ckpt_path.parent / "eval_results.json"
-    calibration_applied = False
-    if eval_file.is_file():
-        try:
-            eval_data = json.loads(eval_file.read_text(encoding="utf-8"))
-            calibration_applied = bool(eval_data.get("zero_underkill_calibrated")) and _has_both_validation_classes(eval_data)
-        except (OSError, ValueError):
-            pass
+    calibration_applied = threshold_decision["calibrated"]
+    rejection = threshold_decision["calibration_not_transferable"]
 
     # 5. Write config.json
     config_data = {
@@ -888,9 +991,13 @@ def export_runtime_package(
         },
         "optimal_threshold": round(optimal_th, 4),
         "zero_underkill_calibrated": calibration_applied,
+        "threshold_source": threshold_decision["threshold_source"],
+        "calibration_not_transferable": rejection,
         "exported_from_checkpoint": ckpt_path.name,
         "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if calibration_applied:
+        config_data["threshold_calibration"] = threshold_decision["threshold_calibration"]
     for key in ("backbone", "model_name", "architecture", "encoder_architecture", "encoder_frozen",
                 "adapter_version", "pretrained", "pretrained_source", "pretrained_sha256",
                 "input_normalization", "foreground_label_offset"):
@@ -967,24 +1074,41 @@ def export_runtime_package(
 
 """
 
+    if calibration_applied:
+        calibration = threshold_decision["threshold_calibration"]
+        threshold_note = (f"evaluation calibration on the saved `{calibration['evaluated_split']}` split, "
+                          f"{calibration['prediction_count']} predictions")
+        threshold_section = f"""## Decision Threshold
+- `optimal_threshold` was fitted to the evaluation predictions of the saved `{calibration['evaluated_split']}` split ({calibration['prediction_count']} predictions, fingerprint `{calibration['prediction_fingerprint'][:12]}`). `config.json` records this under `threshold_calibration`.
+- Because the threshold was fitted on those predictions, they are not an independent test of misses or false rejects. Measure both on separate held-out images and on-site images before production use.
+
+"""
+    else:
+        threshold_note = "saved model threshold"
+        reason_text = (f"An evaluation calibration exists but was not applied (`{rejection}`): "
+                       f"{CALIBRATION_REJECTION_TEXT.get(rejection, rejection)}. ") if rejection else ""
+        threshold_section = f"""## Decision Threshold
+- {reason_text}`optimal_threshold` is the saved model threshold. Measure misses and false rejects on separate held-out images and on-site images before production use.
+
+"""
+
     readme_content = f"""# Modu Vision Runtime Package
 
 **Package Name**: `{pkg_name}`
 **Export Date**: {config_data['exported_at']}
 **Format**: {format_clean.upper()} + standalone Python client
 **Task**: {task.upper()}
-**Decision Threshold**: {optimal_th:.4f} ({'validated calibration' if calibration_applied else 'uncalibrated default/checkpoint value'})
+**Decision Threshold**: {optimal_th:.4f} ({threshold_note})
 
 ## Included Files
 - `{model_filename}`: Authentic trained model weights ({format_clean})
-- `config.json`: Preprocessing coefficients & shop-floor zero-escape threshold
+- `config.json`: Preprocessing coefficients, classes, and the decision threshold with its source
 - `infer.py`: Standalone Python inference script (CLI runner)
 - `requirements.txt`: Python packages needed by `infer.py`
 - Native C#/C++ clients: not included
 - `README_DEPLOY.md`: Quickstart deployment guide
 
-{inspection_scope}
-## Standalone Quickstart
+{inspection_scope}{threshold_section}## Standalone Quickstart
 Install Python 3.10 or newer, then from this package directory:
 ```bash
 python -m venv .venv
@@ -1024,4 +1148,7 @@ The exported files include the model and client; a Python runtime and the listed
         "export_format": format_clean,
         "model_file": model_filename,
         "optimal_threshold": round(optimal_th, 4),
+        "zero_underkill_calibrated": calibration_applied,
+        "threshold_source": threshold_decision["threshold_source"],
+        "calibration_not_transferable": rejection,
     }
