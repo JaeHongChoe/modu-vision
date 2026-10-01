@@ -3778,6 +3778,12 @@
           "kind": "final-harness-readback",
           "result": "13 Node passed; E2E own specs 4/4; preflight problems0; teardown leftovers0",
           "scope": "browser and actual macOS Electron isolated profiles; manifest19 source hashes and receipts matched; Windows native and frozen binary pending"
+        },
+        {
+          "kind": "post-acceptance-recheck",
+          "result": "isolated lock-exact environment: Node harness 14/14, real Electron smoke passed; browser smoke failed on main a6d43e21 because a plain browser never reported backend health (renderer startup deadlock since the project-context telemetry change). Fixed in dfdd1c9: same-origin /health probe with bounded backoff, timeout and cleanup; browser and Electron smoke pass with the unchanged harness spec; two independent reviews passed.",
+          "scope": "renderer App.tsx + services/browserHealth.ts; browser specs no longer open the project manager to work around the missing load",
+          "platform": "macOS arm64; Windows native pending"
         }
       ],
       "file_actions": {
@@ -3809,7 +3815,8 @@
         "docs/distribution-license-decision.md",
         "LICENSE",
         "THIRD_PARTY_NOTICES.md",
-        "docs/model-license-matrix.md"
+        "docs/model-license-matrix.md",
+        "scripts/distribution_release_gate.py"
       ],
       "proposed_contract": "DistributionDecision(artifact_scope, license, notices, authority, approval_status)",
       "acceptance": [
@@ -3819,18 +3826,26 @@
       "depends_on": [
         "S6-01"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "in_progress",
+      "evidence": [
+        {
+          "kind": "implementation-reviewed",
+          "result": "decision record (6 artifact scopes, all pending, no authority) and fail-closed release gate published in 6728068; 19 gate tests + 62 S6-01 tests; real gate holds every scope; five independent review rounds, final spec/quality pass",
+          "scope": "no license decision made; LICENSE unchanged; gate not yet wired into CI/release (S6-05/S6-06); notices for optional packs and the remote worker image not generated",
+          "platform": "macOS development"
+        }
+      ],
       "file_actions": {
         "docs/distribution-license-decision.md": "Create",
         "LICENSE": "Modify",
         "THIRD_PARTY_NOTICES.md": "Modify after S6-01 handoff",
-        "docs/model-license-matrix.md": "Modify after S6-01 handoff"
+        "docs/model-license-matrix.md": "Modify after S6-01 handoff",
+        "scripts/distribution_release_gate.py": "Create"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
+        "implementation": "verified",
+        "contract": "verified",
         "gui": "pending",
         "persist": "pending",
         "reopen": "pending",
@@ -8160,7 +8175,7 @@
       "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "main a6d43e21895b71f5948a18c281af8b34f0f58929 reviewed readiness/task-change sources pushed and remote HEAD verified; scoped Windows archive/encoding fixes ready after independent review; persistent-job/account candidates excluded pending coupled main review"
+    "git_publication": "main 6728068a7f033b64316ffbd54dbd7cfe6a57a5e4: Windows restore/fixture fixes (6a716b3), plain-browser health startup fix (dfdd1c9) and the distribution decision record + release gate (6728068) pushed and remote HEAD verified; S2-04 flow workspace and the persistent-job/scheduler/account backend bundle are frozen for review and not yet published"
   },
   "scope_refinements": [
     {
