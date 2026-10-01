@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "program": "product-workflow-upgrade",
-  "baseline_commit": "d0ee8df0fd6c37f4be2e7bc6cb049af4e5da2bea",
+  "baseline_commit": "35d8203c8ee34826461bc4f0bb111841e8526bb1",
   "requirements": [
     {
       "id": "U001",

@@ -74,8 +74,8 @@ Every requirement is integration verified. Native acceptance fields are marked o
 
 The initial publication events below preceded the history cleanup. Commit identifiers are shown using their rewritten equivalents from the verified commit map.
 
-- Implementation commit `25a695c` (current rewritten identifier) was fast-forwarded into the clean local `main` checkout.
+- Implementation commit `8a000bf` (current rewritten identifier) was fast-forwarded into the clean local `main` checkout.
 - HTTPS push failed because no usable credential was found; explicit existing SSH identities also returned `Permission denied (publickey)`. This is an authentication prerequisite, not a test failure.
-- Before authentication recovery, remote `main` remained at baseline `d0ee8df0fd6c37f4be2e7bc6cb049af4e5da2bea` at the readback check.
-- Authentication was then completed through the official CLI browser flow. The push succeeded, and remote HEAD readback matched local `main` at `cec7e46c2d7582851e1bd789712da82f5eee4db1`. The implementation and validation delivery is published. The repository's existing origin now uses HTTPS with the configured credential helper for subsequent normal pushes. No account password, access token or authorization code is stored in project files.
+- Before authentication recovery, remote `main` remained at baseline `35d8203c8ee34826461bc4f0bb111841e8526bb1` at the readback check.
+- Authentication was then completed through the official CLI browser flow. The push succeeded, and remote HEAD readback matched local `main` at `63b612637b32e8d682d54956bc4e77131fbaed32`. The implementation and validation delivery is published. The repository's existing origin now uses HTTPS with the configured credential helper for subsequent normal pushes. No account password, access token or authorization code is stored in project files.
 - The publication checkbox is complete. The initial implementation push preserved history and used a normal fast-forward. Commit identifiers above now refer to the sanitized history. The later user-requested cleanup used an atomic push with explicit expected-head leases; see the separate cleanup receipt.
