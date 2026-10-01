@@ -14,7 +14,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
 import type { FlowchartCrop, FlowchartPipeline, FlowNode } from '../../types';
 
 interface CropDetailModalProps {
@@ -46,7 +46,8 @@ const modelNodeForCrop = (pipeline: FlowchartPipeline | null, crop: FlowchartCro
 };
 
 export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose }) => {
-  const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
+  const { pipeline, executionResult, executionIdentity, setInspectedCrop } = useFlowchartStore();
+  const resultIsCurrent = isExecutionResultCurrent({ pipeline, executionResult, executionIdentity });
 
   const crops = useMemo(() => {
     return executionResult?.crops ?? [];
@@ -83,7 +84,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const isNg = crop.verdict === 'NG';
 
   // Read the threshold from the model that produced this ROI, including detector-only flows.
-  const inspectNode = modelNodeForCrop(pipeline, crop);
+  const inspectNode = resultIsCurrent ? modelNodeForCrop(pipeline, crop) : undefined;
   const threshold = crop.score_spec?.threshold ?? inspectNode?.data.threshold;
   const distance = crop.score_spec?.domain === 'distance';
   const scoreUnit = crop.score_spec?.unit || 'probability';
@@ -91,8 +92,8 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const hasBlobCount = typeof crop.blob_count === 'number' && Number.isFinite(crop.blob_count);
   const hasLargestBlobArea = typeof crop.largest_blob_area_px === 'number' && Number.isFinite(crop.largest_blob_area_px);
   const confidence = typeof crop.confidence === 'number' && Number.isFinite(crop.confidence) ? crop.confidence : null;
-  const isSegmentation = inspectNode?.data.task === 'segmentation' || hasBlobCount || hasLargestBlobArea;
-  const isFullImageSegmentation = isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
+  const isSegmentation = inspectNode?.data.task === 'segmentation' || hasDefectArea || hasBlobCount || hasLargestBlobArea;
+  const isFullImageSegmentation = resultIsCurrent && isSegmentation && !pipeline?.nodes.some((n) => n.data.node_type === 'detection_crop');
   const minimumDefectArea = Number(inspectNode?.data.params?.min_defect_area_px ?? 8);
   const scale = distance ? Math.max(crop.defect_score, threshold || 0, 1e-9) * 1.1 : 1;
   const scorePercent = crop.defect_score / scale * 100;
@@ -101,7 +102,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const deltaPercent = thresholdPercent === null ? null : scorePercent - thresholdPercent;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#000000]/80 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
+    <div role="dialog" aria-modal="true" aria-label="검사 영역 상세 결과" className="fixed inset-0 z-50 bg-[#000000]/80 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
       <div className="bg-[#1A212E] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden">
         {/* =================================================================== */}
         {/* Modal Header */}
@@ -121,6 +122,8 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {!resultIsCurrent && <p role="status" className="border-b border-amber-700/50 bg-amber-950/30 px-5 py-3 text-xs text-amber-200">이전 규칙의 실행 결과입니다. 현재 판정에 사용하려면 다시 실행하세요. 임계값은 결과에 기록된 값만 표시합니다.</p>}
 
         {/* =================================================================== */}
         {/* Modal Body: 2-Column Inspection View */}

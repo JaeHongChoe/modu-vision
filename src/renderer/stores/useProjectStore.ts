@@ -15,6 +15,71 @@ import { projectViewScope, readProjectStep, rememberProjectStep } from './projec
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
+export type TaskChangeOutcome =
+  | { ok: true; task: VisionTask; changed: boolean }
+  | { ok: false; task: VisionTask; error: string; applied: boolean };
+
+// A project sync requested while a task change holds the lock runs once it settles.
+let taskChangeInFlight = false;
+let syncAfterTaskChange = false;
+let deferredSync = false;
+
+// A failed task change stays reported only in its own project and server scope: a refusal
+// through the sync deferred behind it, a change already applied on the server until the
+// import for the active task is verified again or a later change succeeds.
+type TaskFailure = { scope: string; message: string; applied: boolean };
+let taskFailure: TaskFailure | null = null;
+
+function importVerified(task: VisionTask): boolean {
+  const dataset = useDatasetStore.getState();
+  const key = `${dataset.folderPath}\0${task}`;
+  return Boolean(dataset.hasSelectedFolder && !dataset.isLoading && !dataset.importError
+    && dataset.datasetKey === key && dataset.lastImportedKey === key);
+}
+
+/** The failure reported for the current scope; a failure of another project or server is dropped. */
+function currentTaskFailure(state: { project: ProjectConfig | null; projectDir: string | null }): TaskFailure | null {
+  if (taskFailure && taskFailure.scope !== taskChangeScope(state)) taskFailure = null;
+  return taskFailure;
+}
+
+/** An unverified applied failure of this scope stays visible; see settledProjectError for verification. */
+function carriedProjectError(state: { project: ProjectConfig | null; projectDir: string | null }): string | null {
+  const failure = currentTaskFailure(state);
+  return failure?.applied ? failure.message : null;
+}
+
+/** After a project action succeeds: a verified import for the active task clears the failure; the rest stays. */
+function settledProjectError(state: { project: ProjectConfig | null; projectDir: string | null }, task: VisionTask): string | null {
+  if (currentTaskFailure(state)?.applied && importVerified(task)) taskFailure = null;
+  return carriedProjectError(state);
+}
+
+/** The project and server a task change belongs to; the task itself is what changes. */
+export function taskChangeScope(state: { project: ProjectConfig | null; projectDir: string | null }): string {
+  return [getApiPersistenceIdentity(), state.project?.id ?? '', state.project?.project_dir ?? '', state.projectDir ?? ''].join('\0');
+}
+
+/** Edits made while a selection request was in flight still belong to the visible project; never switch over them. */
+function refuseEditsMadeDuringSelection(): void {
+  if (useAnnotationStore.getState().isDirty || useFlowchartStore.getState().pipelineDirty) {
+    throw new Error('프로젝트를 전환하는 동안 새 편집이 생겼습니다. 현재 프로젝트에 먼저 저장한 뒤 다시 시도하세요.');
+  }
+}
+
+/**
+ * Accepts a selected project after the store's guards: the request context (HTTP and telemetry) and the
+ * visible project change in one synchronous step, before any dataset, annotation or flow read for it. A
+ * refused or stale acceptance binds nothing, so the UI and the API both stay on the previous project.
+ */
+function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } = {}): void {
+  // acceptContext validates the selection, binds its request context, runs this synchronous setter and only
+  // then notifies telemetry; a stale selection or a failing setter throws and leaves the previous binding.
+  api.project.acceptContext(project, () => useProjectStore.setState({
+    project, projectName: project.name, projectDir: project.project_dir, task: project.task, ...view,
+  }));
+}
+
 function viewStorage(): Storage | undefined {
   try { return typeof localStorage === 'undefined' ? undefined : localStorage; }
   catch { return undefined; }
@@ -36,7 +101,9 @@ interface ProjectState {
 
   setStep: (step: WizardStep) => Promise<void>;
   openImageForLabeling: (imageId: string, filePath: string) => Promise<boolean>;
-  setTask: (task: VisionTask) => Promise<void>;
+  /** Changes the project task; the outcome always names the task that is actually active. */
+  updateTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
+  setTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
   setLanguage: (lang: Language) => void;
   setBackendStatus: (status: BackendStatus) => void;
   showError: (error: ErrorCatalogItem) => void;
@@ -86,6 +153,8 @@ export async function saveOpenEdits(): Promise<void> {
       if (reopened.id !== currentProject.id || reopened.project_dir !== currentProject.project_dir) {
         throw new Error('편집 중인 프로젝트를 백엔드에서 다시 열지 못해 저장을 중단했습니다.');
       }
+      // The daemon reopened the project being edited; bind its requests to that same project.
+      api.project.acceptContext(reopened);
     }
   }
   let verifiedSource = currentProject?.source_dataset_dir || null;
@@ -222,22 +291,63 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  setTask: async (task) => {
-    if (task === get().task) return;
-    set({ projectError: null });
+  updateTask: async (task) => {
+    if (task === get().task) return { ok: true, task, changed: false };
+    // Like other project changes this holds the project lock: a second task
+    // change or a project switch is refused until this one settles.
+    if (get().isProjectBusy) {
+      return { ok: false, task: get().task, error: '다른 프로젝트 작업이 진행 중입니다. 완료 후 모델 종류를 바꾸세요.', applied: false };
+    }
+    const origin = get().project;
+    const originScope = taskChangeScope(get());
+    const sameScope = () => taskChangeScope(get()) === originScope;
+    // A reply for a project or server that is no longer open never touches the current one.
+    const leftScope = (applied: boolean): TaskChangeOutcome => {
+      // The message shown now belongs to the project that is open, not the one this change started in.
+      set({ projectError: settledProjectError(get(), get().task) });
+      return { ok: false, task: get().task, applied,
+        error: '모델 종류를 바꾸는 동안 프로젝트 또는 연결 서버가 바뀌어 결과를 적용하지 않았습니다. 이전 프로젝트를 다시 열어 모델 종류를 확인하세요.' };
+    };
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
+    taskChangeInFlight = true;
+    let applied = false;
     try {
       await saveOpenEdits();
+      if (!sameScope()) return leftScope(false);
       const project = await api.project.update({ task });
+      applied = true;
+      if (!sameScope() || (origin && (project.id !== origin.id || project.project_dir !== origin.project_dir))) return leftScope(true);
       set({ task: project.task, project, projectName: project.name });
       useAnnotationStore.getState().setTask(project.task);
       const dataset = useDatasetStore.getState();
       if (dataset.hasSelectedFolder) {
         await dataset.importFolder(dataset.folderPath, project.task);
       }
+      if (!sameScope()) return leftScope(true);
+      taskFailure = null;
+      set({ projectError: null });
+      return { ok: true, task: project.task, changed: true };
     } catch (error) {
-      set({ projectError: projectErrorMessage(error) });
+      if (!sameScope()) return leftScope(applied);
+      const message = projectErrorMessage(error);
+      set({ projectError: message });
+      // A retry that changed nothing is reported now, but an earlier unverified applied change
+      // stays the recorded failure, so later syncs keep showing what is still unresolved.
+      const earlierApplied = Boolean(taskFailure?.applied && taskFailure.scope === originScope);
+      if (applied || !earlierApplied) taskFailure = { scope: originScope, message, applied };
+      // A refused change keeps the previous task; a later failure keeps the new one.
+      return { ok: false, task: get().task, error: message, applied };
+    } finally {
+      taskChangeInFlight = false;
+      set({ isProjectBusy: false });
+      if (syncAfterTaskChange) {
+        syncAfterTaskChange = false;
+        deferredSync = true;
+        void get().syncCurrentProject();
+      }
     }
   },
+  setTask: (task) => get().updateTask(task),
 
   setLanguage: (language) => set({ language }),
   setBackendStatus: (status) => {
@@ -246,11 +356,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
   showError: (activeError) => set({ activeError }),
   clearError: () => set({ activeError: null }),
-  clearProjectError: () => set({ projectError: null }),
+  clearProjectError: () => set({ projectError: settledProjectError(get(), get().task) }),
 
   syncCurrentProject: async () => {
-    if (get().isProjectBusy) return;
-    set({ isProjectBusy: true, projectError: null });
+    // Consumed first, so the flag never carries over to a later, unrelated sync.
+    const deferred = deferredSync;
+    deferredSync = false;
+    if (get().isProjectBusy) {
+      // A task change holds the lock only for one request; do not drop a server-side switch.
+      if (taskChangeInFlight) syncAfterTaskChange = true;
+      return;
+    }
+    settledProjectError(get(), get().task);
+    const failure = currentTaskFailure(get());
+    const kept = failure && (failure.applied || deferred) ? failure.message : null;
+    set({ isProjectBusy: true, projectError: kept });
     try {
       const project = await api.project.getCurrent();
       const previous = get().project;
@@ -266,18 +386,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (changed && (useAnnotationStore.getState().isDirty || useFlowchartStore.getState().pipelineDirty)) {
         throw new Error('프로젝트 동기화 중 새 편집이 생겼습니다. 이전 프로젝트의 편집 내용을 먼저 저장하세요.');
       }
-      await applyProject(project, previous, true);
       const identity = getApiPersistenceIdentity();
-      set({
-        project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: previous && projectViewScope(previous, identity) === projectViewScope(project, identity)
-          ? get().activeStep : readProjectStep(viewStorage(), project, identity),
-      });
+      acceptSelectedProject(project, { activeStep: previous && projectViewScope(previous, identity) === projectViewScope(project, identity)
+        ? get().activeStep : readProjectStep(viewStorage(), project, identity) });
+      await applyProject(project, previous, true);
       if (project.source_dataset_dir && get().activeStep !== 1) {
         // Later stages also need the daemon's restored source and effective split;
         // DatasetStudio is not mounted when returning directly to those stages.
         await useDatasetStore.getState().ensureImported(project.task);
       }
+      // A refusal is shown through the sync deferred behind it; another open project drops the
+      // failure; otherwise only a verified import for the active task clears an applied failure.
+      const refusal = failure && !failure.applied ? failure : null;
+      if (refusal) taskFailure = null;
+      set({ projectError: changed ? carriedProjectError(get())
+        : refusal && deferred ? refusal.message : settledProjectError(get(), project.task) });
       await get().loadRecentProjects();
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });
@@ -297,13 +420,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (data) => {
     if (get().isProjectBusy) return false;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       const project = await api.project.create(data);
-      await applyProject(project, get().project);
-      set({ project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: 1 });
+      const previous = get().project;
+      refuseEditsMadeDuringSelection();
+      acceptSelectedProject(project, { activeStep: 1 });
+      await applyProject(project, previous);
+      set({ projectError: settledProjectError(get(), project.task) });
       await get().loadRecentProjects();
       return true;
     } catch (error) {
@@ -316,16 +441,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   openProject: async (projectDir) => {
     if (get().isProjectBusy) return false;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       const project = await api.project.open(projectDir);
-      await applyProject(project, get().project);
-      set({ project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
+      const previous = get().project;
+      refuseEditsMadeDuringSelection();
+      acceptSelectedProject(project, { activeStep: readProjectStep(viewStorage(), project, getApiPersistenceIdentity()) });
+      await applyProject(project, previous);
       if (project.source_dataset_dir && get().activeStep !== 1) {
         await useDatasetStore.getState().ensureImported(project.task);
       }
+      // Reopening the same project does not hide a change applied on the server until its import is verified.
+      set({ projectError: settledProjectError(get(), project.task) });
       await get().loadRecentProjects();
       return true;
     } catch (error) {
@@ -338,7 +466,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   activateLabelset: async (id) => {
     if (get().isProjectBusy) return false;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       const previous = get().project;
@@ -349,6 +477,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (project.source_dataset_dir) {
         await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
       }
+      set({ projectError: settledProjectError(get(), project.task) });
       return true;
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });
@@ -360,7 +489,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createAndActivateLabelset: async (name) => {
     if (get().isProjectBusy) return false;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       const previous = get().project;
@@ -372,6 +501,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       if (project.source_dataset_dir) {
         await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
       }
+      set({ projectError: settledProjectError(get(), project.task) });
       return true;
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });
@@ -383,7 +513,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   backupProject: async (destinationDir) => {
     if (get().isProjectBusy) return null;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       return await api.project.backup(destinationDir);
@@ -397,17 +527,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   restoreProject: async (archivePath, targetDir) => {
     if (get().isProjectBusy) return false;
-    set({ isProjectBusy: true, projectError: null });
+    set({ isProjectBusy: true, projectError: settledProjectError(get(), get().task) });
     try {
       await saveOpenEdits();
       const project = await api.project.restore(archivePath, targetDir);
-      await applyProject(project, get().project, true);
-      set({ project, projectName: project.name, projectDir: project.project_dir,
-        task: project.task, activeStep: 1 });
+      const previous = get().project;
+      refuseEditsMadeDuringSelection();
+      acceptSelectedProject(project, { activeStep: 1 });
+      await applyProject(project, previous, true);
       await get().loadRecentProjects();
       if (project.source_dataset_dir) {
         await useDatasetStore.getState().importFolder(project.source_dataset_dir, project.task);
       }
+      set({ projectError: settledProjectError(get(), project.task) });
       return true;
     } catch (error) {
       set({ projectError: projectErrorMessage(error) });

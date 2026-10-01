@@ -171,10 +171,19 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
             _ACTIVE_TRANSACTIONS.reset(token)
 
 def _visible_path(dataset_root, image_path):
-    source = Path(dataset_root).expanduser().resolve()
+    visible_source = Path(os.path.abspath(Path(dataset_root).expanduser()))
+    source = visible_source.resolve()
     image = Path(os.path.abspath(Path(image_path).expanduser()))
-    if not image.is_relative_to(source) or image.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS or not image.is_file():
+    resolved_image = image.resolve()
+    if not resolved_image.is_relative_to(source) or image.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS or not image.is_file():
         raise ValueError('Image must be a file inside the selected dataset')
+    # Canonicalize only the dataset ancestor. Visible entries (including internal
+    # symlink names) are ledger keys whose UUIDs and review histories must survive.
+    if image.is_relative_to(visible_source):
+        image = source / image.relative_to(visible_source)
+    elif not image.is_relative_to(source):
+        ancestor = next((parent for parent in reversed(image.parents) if parent.resolve().is_relative_to(source)), None)
+        image = ancestor.resolve() / image.relative_to(ancestor) if ancestor is not None else resolved_image
     return source, image
 
 def _annotation_hash(project_root, source, image, annotation_root=None):

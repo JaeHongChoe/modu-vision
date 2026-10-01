@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from PIL import Image
 from backend.engine.dicom_input import open_source_image
@@ -1069,3 +1069,32 @@ def get_thumbnail(
             status_code=400,
             detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Cannot decode image {candidate_path}: {e}"),
         )
+
+
+class DatasetArtifactIngestRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    source_name: str = Field(min_length=1, max_length=4096)
+    sha256: str = Field(pattern=r'^[a-f0-9]{64}$')
+
+
+@router.post('/artifacts/ingest')
+def ingest_source_artifact(body: DatasetArtifactIngestRequest, request: Request):
+    """Copy one registered source file into managed storage; no source/label edits."""
+    from backend.api.routes_artifacts import authorize_artifact, get_artifact_store, receipt, storage_errors
+    from backend.api.routes_project import get_current_project
+    from backend.engine.dataset_fingerprint import source_artifact_identity
+    context = authorize_artifact(request, write=True)
+    project = get_current_project(request)
+    if not project.get('source_dataset_dir'):
+        raise HTTPException(409, 'Select a project source dataset before ingesting artifacts')
+    with storage_errors():
+        try:
+            with source_artifact_identity(Path(project['source_dataset_dir']), body.source_name) as (source, digest, size):
+                if digest != body.sha256:
+                    raise HTTPException(409, 'Source content hash does not match')
+                ref = get_artifact_store(request).put_verified(context, source, digest, size, kind='source',
+                                                              authorize=lambda: authorize_artifact(request, write=True))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return receipt(context, artifact_ref=ref.model_dump(), state='referenced',
+                       source_identity={'version': 'sha256-v1', 'sha256': digest, 'size_bytes': size})

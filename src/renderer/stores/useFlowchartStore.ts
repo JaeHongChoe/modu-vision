@@ -26,11 +26,64 @@ let flowchartRunInputRevision = 0;
 let flowchartRunSequence = 0;
 const HISTORY_LIMIT = 50;
 
+/** Versions of the edited flow: semantic edits change what it computes, layout
+ * edits only move nodes. Results are bound to the semantic key they ran with. */
+export interface FlowIdentity { semantic_revision: number; layout_revision: number }
+export interface ExecutionIdentity { semantic_key: string; semantic_revision: number }
+
+const semanticKeys = new WeakMap<FlowchartPipeline, string>();
+
+function stable(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort()
+      .map(key => [key, stable((value as Record<string, unknown>)[key])]));
+  }
+  return value;
+}
+
+/** Everything that changes what a flow computes; node positions and the flow's
+ * display name are layout. */
+export function flowSemanticKey(pipeline: FlowchartPipeline | null): string {
+  if (!pipeline) return '';
+  const cached = semanticKeys.get(pipeline);
+  if (cached !== undefined) return cached;
+  const { nodes, edges, name: _name, description: _description, ...rest } = pipeline;
+  void _name; void _description;
+  const key = JSON.stringify(stable({
+    ...rest,
+    nodes: [...nodes].map(({ position: _position, ...node }) => node).sort((a, b) => a.id.localeCompare(b.id)),
+    edges: [...edges].sort((a, b) => a.id.localeCompare(b.id)),
+  }));
+  semanticKeys.set(pipeline, key);
+  return key;
+}
+
+/** A result is current only when it ran with the flow's present semantics. */
+export function isExecutionResultCurrent(state: {
+  executionResult: FlowchartExecutionResult | null; executionIdentity: ExecutionIdentity | null; pipeline: FlowchartPipeline | null;
+}): boolean {
+  return Boolean(state.executionResult && state.executionIdentity
+    && state.executionIdentity.semantic_key === flowSemanticKey(state.pipeline));
+}
+
+function editedIdentity(state: { flowIdentity: FlowIdentity; pipeline: FlowchartPipeline | null }, next: FlowchartPipeline): FlowIdentity {
+  return flowSemanticKey(next) === flowSemanticKey(state.pipeline)
+    ? { ...state.flowIdentity, layout_revision: state.flowIdentity.layout_revision + 1 }
+    : { ...state.flowIdentity, semantic_revision: state.flowIdentity.semantic_revision + 1 };
+}
+
+function loadedIdentity(state: { flowIdentity: FlowIdentity }): Pick<FlowchartState, 'flowIdentity' | 'executionIdentity'> {
+  return { flowIdentity: { semantic_revision: state.flowIdentity.semantic_revision + 1, layout_revision: 0 }, executionIdentity: null };
+}
+
 interface FlowchartState {
   executionChoiceOverride: FlowExecutionChoice | null;
   setExecutionChoice: (choice: FlowExecutionChoice | null) => void;
   pipeline: FlowchartPipeline | null;
   executionResult: FlowchartExecutionResult | null;
+  executionIdentity: ExecutionIdentity | null;
+  flowIdentity: FlowIdentity;
   lastRunSource: { kind: 'draft' | 'saved'; versionId: string | null } | null;
   isLoading: boolean;
   isSaving: boolean;
@@ -107,6 +160,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   setExecutionChoice: (choice) => { get().resetExecution(); set({ executionChoiceOverride: choice }); },
   pipeline: null,
   executionResult: null,
+  executionIdentity: null,
+  flowIdentity: { semantic_revision: 0, layout_revision: 0 },
   lastRunSource: null,
   isLoading: false,
   isSaving: false,
@@ -145,7 +200,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
           if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
           data = draft.pipeline;
-          set({ pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
+          set({ ...loadedIdentity(get()), pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
             persistedDraftHash: draft.draft_sha256,
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
             pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
@@ -167,6 +222,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       }
       if (generation !== flowchartGeneration) return null;
       set({
+        ...loadedIdentity(get()),
         pipeline: data,
         cleanPipeline: data,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
@@ -196,7 +252,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
       if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
       if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
-      set({ pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
+      set({ ...loadedIdentity(get()), pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
         persistedDraftHash: draft.draft_sha256,
         pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: null, errorMessage: null });
@@ -245,6 +301,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (generation !== flowchartGeneration) return null;
       flowchartRunInputRevision += 1;
       set({
+        ...loadedIdentity(get()),
         pipeline: data, cleanPipeline: data, pipelineIsDraft: false,
         persistedDraftHash: null,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
@@ -268,6 +325,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         : await api.flowchart.getSingleSegmentationTemplate(jobId, inspectionTask);
       if (generation !== flowchartGeneration) return;
       set({
+        ...loadedIdentity(get()),
         pipeline,
         cleanPipeline: jobId ? null : pipeline, pipelineIsDraft: true,
         persistedDraftHash: null,
@@ -291,6 +349,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       const pipeline = await api.flowchart.getDetectorRoiTemplate(inspectionTask);
       if (generation !== flowchartGeneration) return;
       set({
+        ...loadedIdentity(get()),
         pipeline,
         cleanPipeline: pipeline, pipelineIsDraft: true,
         persistedDraftHash: null,
@@ -373,6 +432,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const generation = ++flowchartGeneration;
     const inputRevision = flowchartRunInputRevision;
     const runSequence = ++flowchartRunSequence;
+    // The result is bound to the semantics it ran with; later edits mark it earlier.
+    const ranWith: ExecutionIdentity = { semantic_key: flowSemanticKey(pipeline), semantic_revision: get().flowIdentity.semantic_revision };
     const discardStaleRun = () => {
       // Data invalidation can start a newer run. Never clear that newer run's state.
       if (runSequence === flowchartRunSequence) {
@@ -413,6 +474,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
 
       set({
         executionResult: res,
+        executionIdentity: ranWith,
         lastRunSource: savedVersionId
           ? { kind: 'saved', versionId: savedVersionId }
           : { kind: 'draft', versionId: null },
@@ -453,15 +515,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       }
       return node;
     });
-    flowchartRunInputRevision += 1;
+    const next = { ...current, nodes: nextNodes };
+    // The earlier result stays visible as an earlier version (isExecutionResultCurrent).
     set({
       ...editedHistory(state),
-      pipeline: {
-        ...current,
-        nodes: nextNodes,
-      },
+      flowIdentity: editedIdentity(state, next),
+      pipeline: next,
       pipelineDirty: true,
-      executionResult: null,
       inspectedCrop: null,
     });
   },
@@ -470,15 +530,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const state = get();
     const current = state.pipeline;
     if (!current) return;
-    flowchartRunInputRevision += 1;
+    const next = { ...current, nodes: [...current.nodes, newNode] };
     set({
       ...editedHistory(state),
-      pipeline: {
-        ...current,
-        nodes: [...current.nodes, newNode],
-      },
+      flowIdentity: editedIdentity(state, next),
+      pipeline: next,
       pipelineDirty: true,
-      executionResult: null,
       inspectedCrop: null,
     });
   },
@@ -486,15 +543,14 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   replacePipeline: (pipeline) => {
     const state = get();
     if (!state.pipeline || state.pipeline === pipeline) return;
-    flowchartRunInputRevision += 1;
     const selectedNodeId = state.selectedNodeId;
     set({
       ...editedHistory(state),
+      flowIdentity: editedIdentity(state, pipeline),
       pipeline,
       pipelineDirty: true,
       persistedDraftHash: null,
       selectedNodeId: selectedNodeId && pipeline.nodes.some((node) => node.id === selectedNodeId) ? selectedNodeId : null,
-      executionResult: null,
       inspectedCrop: null,
       errorMessage: null,
       saveMessage: null,
@@ -511,13 +567,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const nextNodes = current.nodes.map((node) => node.id === id
       ? { ...node, position: clamped }
       : node);
-    flowchartRunInputRevision += 1;
+    const next = { ...current, nodes: nextNodes };
+    // Moving a node is a layout edit: results and running inspections stay valid.
     set({
       ...editedHistory(state),
-      pipeline: { ...current, nodes: nextNodes },
+      flowIdentity: editedIdentity(state, next),
+      pipeline: next,
       pipelineDirty: true,
-      executionResult: null,
-      inspectedCrop: null,
       saveMessage: null,
     });
   },
@@ -541,14 +597,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const previous = state.historyPast[state.historyPast.length - 1];
     const historyPast = state.historyPast.slice(0, -1);
     const historyFuture = [...state.historyFuture, state.pipeline].slice(-HISTORY_LIMIT);
-    flowchartRunInputRevision += 1;
     set({
+      flowIdentity: editedIdentity(state, previous),
       pipeline: previous, pipelineDirty: previous !== state.cleanPipeline,
       historyPast, historyFuture, canUndo: historyPast.length > 0, canRedo: true,
       selectedNodeId: state.selectedNodeId && previous.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
-      executionResult: null, lastRunSource: null, inspectedCrop: null,
-      errorMessage: null, saveMessage: null,
+      inspectedCrop: null, errorMessage: null, saveMessage: null,
     });
   },
   redo: () => {
@@ -558,14 +613,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const next = state.historyFuture[state.historyFuture.length - 1];
     const historyFuture = state.historyFuture.slice(0, -1);
     const historyPast = [...state.historyPast, state.pipeline].slice(-HISTORY_LIMIT);
-    flowchartRunInputRevision += 1;
     set({
+      flowIdentity: editedIdentity(state, next),
       pipeline: next, pipelineDirty: next !== state.cleanPipeline,
       historyPast, historyFuture, canUndo: true, canRedo: historyFuture.length > 0,
       selectedNodeId: state.selectedNodeId && next.nodes.some((node) => node.id === state.selectedNodeId)
         ? state.selectedNodeId : null,
-      executionResult: null, lastRunSource: null, inspectedCrop: null,
-      errorMessage: null, saveMessage: null,
+      inspectedCrop: null, errorMessage: null, saveMessage: null,
     });
   },
 
@@ -587,6 +641,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     flowchartRunInputRevision += 1;
     flowchartRunSequence += 1;
     set({
+      ...loadedIdentity(get()),
       pipeline: null,
       cleanPipeline: null,
       historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,

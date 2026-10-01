@@ -43,7 +43,7 @@ function renderCropDetail(pipeline, crop) {
   component.paths = Module._nodeModulePaths(__dirname);
   const originalRequire = component.require.bind(component);
   component.require = (name) => name === '../../stores/useFlowchartStore'
-    ? { useFlowchartStore: () => ({ pipeline, executionResult: { crops: [crop] }, setInspectedCrop: () => {} }) }
+    ? { useFlowchartStore: () => ({ pipeline, executionResult: { crops: [crop] }, setInspectedCrop: () => {} }), isExecutionResultCurrent: () => true }
     : originalRequire(name);
   component._compile(code, file);
   const React = require('react');

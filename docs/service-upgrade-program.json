@@ -284,7 +284,15 @@
         "src/renderer/components/flowchart/FlowchartStudio.tsx",
         "src/renderer/stores/useFlowchartStore.ts",
         "src/renderer/components/training/TrainingController.tsx",
-        "src/renderer/stores/useProjectStore.ts"
+        "src/renderer/stores/useProjectStore.ts",
+        "src/renderer/components/training/TaskCenter.tsx",
+        "src/renderer/components/wizard/WizardHeader.tsx",
+        "src/renderer/components/common/taskChangeConsumers.test.cjs",
+        "src/renderer/components/flowchart/CropDetailModal.tsx",
+        "src/renderer/components/flowchart/cropResultVersion.test.cjs",
+        "src/renderer/components/compute/SharedProjectPanel.tsx",
+        "src/renderer/components/compute/sharedSourceScope.test.cjs",
+        "src/renderer/stores/contextCommit.test.cjs"
       ],
       "proposed_contract": "FlowIdentity(semantic_revision, layout_revision) / updateTask(...) -> explicit success-or-error",
       "acceptance": [
@@ -295,12 +303,39 @@
         "S0-02",
         "S0-09"
       ],
-      "status": "in_progress",
+      "status": "verification_pending",
       "evidence": [
         {
           "kind": "implementation-candidate",
           "result": "190 renderer tests passed; browser evidence in progress",
           "scope": "semantic/layout result identity, prior-version evaluation, real viewer navigation and explicit task change outcome; independent review and final GUI handoff pending"
+        },
+        {
+          "kind": "consumer-scope-candidate",
+          "result": "7 actual TSX consumer tests, 3 historical crop cases and 24 focused renderer tests passed; root nine-source independent review passed",
+          "scope": "applied import failure persists across second click; live busy guard; old crop keeps saved score criteria; lexical/canonical image aliases preserve image IDs and reject outside symlinks; no native GUI/Windows claim",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "shared-source-context-candidate",
+          "result": "13 source-scope tests and 4 transport controls passed; independent final review active",
+          "scope": "source input scoped to committed team context, visible project and transport; busy/deferred switch cannot submit previous project source; real production TSX/store with mocked transport, no native GUI claim",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "final-context-store-review",
+          "result": "independent 29 targeted store cases passed; author 234 renderer cases and typecheck passed;12 merged owned source hashes verified",
+          "scope": "guard rejects labels/flow edits made during awaited open/create/restore before atomic accepted UI+HTTP context commit; comment-only post-freeze move verified; native/model/installer pending"
+        },
+        {
+          "kind": "final-shared-source-review",
+          "result": "independent17focused component/store tests passed;3source hashes verified",
+          "scope": "current context/project/transport required for source input; deferred or busy switch and stale draft cannot write; fixture transport only"
+        },
+        {
+          "kind": "exact-publication-tree-validation",
+          "result": "227 renderer tests, typecheck/e2e typecheck, build,10browser cases and1actualElectron smoke passed",
+          "scope": "approved staged54-file candidate; isolated dependencies Electron44.5.1; browser uses installed Chrome after missing bundled browser preflight; thresholds8/version/canvas/viewer checked with transport fixtures; native macOS shell, no Windows11/model quality claim"
         }
       ],
       "file_actions": {
@@ -308,17 +343,25 @@
         "src/renderer/components/flowchart/FlowchartStudio.tsx": "Modify",
         "src/renderer/stores/useFlowchartStore.ts": "Modify",
         "src/renderer/components/training/TrainingController.tsx": "Modify",
-        "src/renderer/stores/useProjectStore.ts": "Modify"
+        "src/renderer/stores/useProjectStore.ts": "Modify",
+        "src/renderer/components/training/TaskCenter.tsx": "Modify",
+        "src/renderer/components/wizard/WizardHeader.tsx": "Modify",
+        "src/renderer/components/common/taskChangeConsumers.test.cjs": "Create",
+        "src/renderer/components/flowchart/CropDetailModal.tsx": "Modify",
+        "src/renderer/components/flowchart/cropResultVersion.test.cjs": "Create",
+        "src/renderer/components/compute/SharedProjectPanel.tsx": "Modify",
+        "src/renderer/components/compute/sharedSourceScope.test.cjs": "Create",
+        "src/renderer/stores/contextCommit.test.cjs": "Create"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-0-correctness.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
+        "implementation": "verified",
+        "contract": "verified",
         "gui": "pending",
         "persist": "pending",
         "reopen": "pending",
-        "failure": "pending",
-        "handoff": "pending",
+        "failure": "verified",
+        "handoff": "verified",
         "windows_native": "pending",
         "target_execution": "pending"
       },
@@ -486,7 +529,9 @@
         "backend/main.py",
         "backend/api/shared_authorization.py",
         "backend/contracts/context.py",
-        "src/renderer/services/api.ts"
+        "src/renderer/services/api.ts",
+        "backend/api/websocket_telemetry.py",
+        "src/renderer/services/websocket.ts"
       ],
       "proposed_contract": "ProjectContext(workspace_id, project_id, actor_id, mode) / ArtifactRef(id, revision, sha256)",
       "acceptance": [
@@ -496,29 +541,42 @@
       "depends_on": [
         "S0-08"
       ],
-      "status": "in_progress",
+      "status": "verification_pending",
       "evidence": [
         {
           "kind": "implementation-start",
           "result": "existing local/team request context investigation and production-path regression design",
           "scope": "explicit project context/artifact refs; source implementation has not yet been verified"
+        },
+        {
+          "kind": "context-boundary-candidate",
+          "result": "118 fresh CPU cases and 39 renderer cases passed; actual refused selection and socket replacement repros green; final independent rereview active",
+          "scope": "stable workspace/actor namespaces, copied/restored logical project IDs isolated; discovery does not change HTTP authority, accepted synchronous UI commit reconnects scoped WS; prior P1/P2 fixes await frozen independent review",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "final-project-and-socket-review",
+          "result": "spec/code quality passed; original dirty-save and socket repros green; independent9authenticatedWS cases passed",
+          "scope": "seven owned hashes matched; current accepted store callback verified; reused/copy project IDs retain distinct namespaces; native Windows pending"
         }
       ],
       "file_actions": {
         "backend/main.py": "Modify",
         "backend/api/shared_authorization.py": "Modify",
         "backend/contracts/context.py": "Create",
-        "src/renderer/services/api.ts": "Modify"
+        "src/renderer/services/api.ts": "Modify",
+        "backend/api/websocket_telemetry.py": "Modify",
+        "src/renderer/services/websocket.ts": "Modify"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
+        "implementation": "verified",
+        "contract": "verified",
         "gui": "pending",
-        "persist": "pending",
-        "reopen": "pending",
-        "failure": "pending",
-        "handoff": "pending",
+        "persist": "verified",
+        "reopen": "verified",
+        "failure": "verified",
+        "handoff": "verified",
         "windows_native": "pending",
         "target_execution": "pending"
       },
@@ -542,8 +600,20 @@
       "depends_on": [
         "S1-01"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "in_progress",
+      "evidence": [
+        {
+          "kind": "preparation-only",
+          "result": "15 private RED drafts prepared; production implementation not yet started",
+          "scope": "durable job/spec idempotency/attempt/event/cancel-intent plan plus actual route drafts; source mutation starts after context-boundary review",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "unpublished-implementation-start",
+          "result": "job_state/job_store and actual training route/lifecycle source implementation started",
+          "scope": "ongoing working-tree candidate excluded from this publication; author first9ledger contracts green is not independent acceptance"
+        }
+      ],
       "file_actions": {
         "backend/engine/job_store.py": "Create",
         "backend/engine/job_state.py": "Create",
@@ -698,7 +768,9 @@
         "backend/engine/artifact_store.py",
         "backend/engine/dataset_fingerprint.py",
         "backend/api/routes_dataset.py",
-        "backend/remote/transfer.py"
+        "backend/remote/transfer.py",
+        "backend/api/routes_artifacts.py",
+        "backend/tests/test_service_s1_06.py"
       ],
       "proposed_contract": "ArtifactStore.put_verified(stream, expected_hash) -> ArtifactRef / open(ref)",
       "acceptance": [
@@ -709,23 +781,32 @@
       "depends_on": [
         "S1-01"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "verification_pending",
+      "evidence": [
+        {
+          "kind": "verified-storage-candidate",
+          "result": "70 related tests passed; independent 5 EOF resume/revocation cases passed; six owned hashes verified",
+          "scope": "actual API, workspace/actor-bound resume, quota, verified atomic CAS publication, shared refs/pins/grace GC, source descriptor copy; optional S3 fake client only, no real NAS/S3/Windows/GUI acceptance; depends on final S1-01 review",
+          "platform": "macOS development; native target pending"
+        }
+      ],
       "file_actions": {
         "backend/engine/artifact_store.py": "Create",
         "backend/engine/dataset_fingerprint.py": "Modify",
         "backend/api/routes_dataset.py": "Modify",
-        "backend/remote/transfer.py": "Create"
+        "backend/remote/transfer.py": "Create",
+        "backend/api/routes_artifacts.py": "Create",
+        "backend/tests/test_service_s1_06.py": "Create"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
+        "implementation": "verified",
+        "contract": "verified",
         "gui": "pending",
-        "persist": "pending",
-        "reopen": "pending",
-        "failure": "pending",
-        "handoff": "pending",
+        "persist": "verified",
+        "reopen": "verified",
+        "failure": "verified",
+        "handoff": "verified",
         "windows_native": "pending",
         "target_execution": "pending"
       },
@@ -2776,6 +2857,12 @@
           "result": "62 author cases passed; independent16 regression cases passed; notices check exit0",
           "independent_review": "scoped spec/code quality passed;4 source/6 receipts/8 dependency inputs matched",
           "scope": "dependency and model license inventory only; unknown/malformed expression stays unresolved; frozen coverage gap recorded; distribution clearance remains S6-11"
+        },
+        {
+          "kind": "published-license-inventory",
+          "result": "published main 423e3fcfb15550ceadb2e3396deeb94893c941ca; remote HEAD confirmed",
+          "scope": "license inventory and required notices only; current runtime notice refreshed for candidate Electron44; redistribution decision remains S6-11",
+          "platform": "macOS development; native target pending"
         }
       ],
       "file_actions": {
@@ -2941,7 +3028,15 @@
         "package.json",
         "package-lock.json",
         "requirements.txt",
-        "build/remote/requirements-models.lock"
+        "build/remote/requirements-models.lock",
+        "scripts/run_renderer_tests.cjs",
+        "scripts/write_ci_receipt.py",
+        "backend/tests/test_service_s6_05.py",
+        "backend/tests/test_service_ci_dependencies.py",
+        "build/ci/requirements-ci.in",
+        "build/ci/requirements-pytorch-cpu.in",
+        "build/ci/requirements-ubuntu-py313-cpu.lock",
+        "build/ci/requirements-windows-py313-cpu.lock"
       ],
       "proposed_contract": "BuildManifest(source_sha, lockfiles, toolchain, platform, sbom, checksums)",
       "acceptance": [
@@ -2955,8 +3050,27 @@
         "S6-02",
         "S0-09"
       ],
-      "status": "planned",
-      "evidence": [],
+      "status": "in_progress",
+      "evidence": [
+        {
+          "kind": "source-ci-reviewed-subset",
+          "result": "8 source files and 5 dependency inputs/locks independently reviewed; 79 hash-pinned packages per platform; plan gate 6 passed",
+          "scope": "Ubuntu24.04 CPU and WindowsServer2025 native workflow source only; hosted runners read-only token/no GPU/secrets; full protected release workflow still pending",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "isolated-toolchain-upgrade",
+          "result": "Electron44.5.1/builder26.17.0: npm audit0, typecheck/build passed, actual macOS Electron smoke1 passed",
+          "scope": "new dependencies installed in private trial only; shared node_modules still prior Electron33; Windows11 installer/signing/public binary not accepted",
+          "platform": "macOS development; native target pending"
+        },
+        {
+          "kind": "fresh-cpu-runtime-contracts",
+          "result": "267 related backend tests passed in new isolated macOS CPU environment; pip check and CPU NMS/ONNX provider passed",
+          "scope": "matching provider/transitive versions exercised locally; Linux/Windows lock resolution only until actual Actions install; later HTTP/WS boundary corrections verified separately",
+          "platform": "macOS development; native target pending"
+        }
+      ],
       "file_actions": {
         ".github/workflows/ci.yml": "Create",
         ".github/workflows/windows-native.yml": "Create",
@@ -2965,7 +3079,15 @@
         "package.json": "Modify",
         "package-lock.json": "Modify",
         "requirements.txt": "Modify",
-        "build/remote/requirements-models.lock": "Modify"
+        "build/remote/requirements-models.lock": "Modify",
+        "scripts/run_renderer_tests.cjs": "Create",
+        "scripts/write_ci_receipt.py": "Create",
+        "backend/tests/test_service_s6_05.py": "Create",
+        "backend/tests/test_service_ci_dependencies.py": "Create",
+        "build/ci/requirements-ci.in": "Create",
+        "build/ci/requirements-pytorch-cpu.in": "Create",
+        "build/ci/requirements-ubuntu-py313-cpu.lock": "Create",
+        "build/ci/requirements-windows-py313-cpu.lock": "Create"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
       "acceptance_state": {
@@ -7929,13 +8051,13 @@
     "mode": "exclusive-file-ownership",
     "ledger": "docs/implementation-ledger/SERVICE-UPGRADE.md",
     "active_tasks": [
-      "S0-05",
       "S0-08",
-      "S1-01",
-      "S2-02"
+      "S1-02",
+      "S2-02",
+      "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "accepted core wave published on main: 19c2f5fe2c030891c3ae06908e893e6e8e38ece9; S0-05/S1-01 implementation candidates not published"
+    "git_publication": "core published main19c2f5fe2c030891c3ae06908e893e6e8e38ece9; license inventory published main423e3fcfb15550ceadb2e3396deeb94893c941ca; S0-05/S1-01/S1-06/CI candidates not yet published"
   },
   "scope_refinements": [
     {

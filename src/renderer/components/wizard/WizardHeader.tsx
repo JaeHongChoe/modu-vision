@@ -29,6 +29,7 @@ import {
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
+import { getApiPersistenceIdentity } from '../../services/api';
 import { ComputeServerPanel } from '../compute/ComputeServerPanel';
 import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
 import { ProvenancePanel } from '../common/ProvenancePanel';
@@ -38,6 +39,7 @@ export const WizardHeader: React.FC = () => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
   const [showProvenance, setShowProvenance] = useState(false);
+  const [taskFailure, setTaskFailure] = useState<{ scope: string; message: string } | null>(null);
   const {
     activeStep,
     setStep,
@@ -48,12 +50,30 @@ export const WizardHeader: React.FC = () => {
     backendStatus,
     projectName,
     projectError,
+    isProjectBusy,
   } = useProjectStore();
   const {
     profiles, selectedProfileId, isLoaded, isLoading, loadError, error,
     probeResults, load, selectTarget,
   } = useComputeStore();
   const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
+  const taskScope = () => {
+    const currentProject = useProjectStore.getState();
+    const currentCompute = useComputeStore.getState();
+    return JSON.stringify([currentProject.project?.id, currentProject.projectDir,
+      currentCompute.transportRevision, getApiPersistenceIdentity()]);
+  };
+  const taskError = taskFailure?.scope === taskScope() ? taskFailure.message : null;
+  const changeTask = async (nextTask: VisionTask) => {
+    const scope = taskScope();
+    setTaskFailure(null);
+    try {
+      const outcome = await setTask(nextTask);
+      if (!outcome.ok && taskScope() === scope) setTaskFailure({ scope, message: outcome.error });
+    } catch (cause) {
+      if (taskScope() === scope) setTaskFailure({ scope, message: cause instanceof Error ? cause.message : String(cause) });
+    }
+  };
 
   useEffect(() => {
     if (!backendStatus.healthy) return;
@@ -289,8 +309,11 @@ export const WizardHeader: React.FC = () => {
               <CurrentTaskIcon className="w-3.5 h-3.5" />
             </div>
             <select
+              aria-label="검사 작업 종류"
+              aria-describedby={taskError ? 'task-change-error' : undefined}
               value={task}
-              onChange={(e) => setTask(e.target.value as VisionTask)}
+              disabled={isProjectBusy}
+              onChange={(e) => changeTask(e.target.value as VisionTask)}
               className="bg-[#0B0E14] hover:bg-[#161C26] border border-[#2B3547] hover:border-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-xs font-mono font-semibold rounded pl-8 pr-8 py-1.5 text-slate-200 transition-colors duration-75 cursor-pointer appearance-none"
             >
               {tasks.map((t) => (
@@ -360,6 +383,7 @@ export const WizardHeader: React.FC = () => {
           })}
         </nav>
       </div>
+      {taskError && <p id="task-change-error" role="alert" className="border-t border-rose-900/50 bg-rose-950/30 px-4 py-2 text-xs text-rose-200">{taskError}</p>}
       {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
       {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
       {showProvenance && <ProvenancePanel onClose={() => setShowProvenance(false)} />}

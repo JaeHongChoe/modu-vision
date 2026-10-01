@@ -23,14 +23,14 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { api, resolveApiUrl,getApiPersistenceIdentity, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
-import {readModelFlowHandoff,clearModelFlowHandoff,bindModelToFlow,compatibleModelNode} from './modelFlowHandoff';
+import {readModelFlowHandoff,clearModelFlowHandoff,bindModelToFlow,compatibleModelNode,modelScoreBinding,thresholdUpdate} from './modelFlowHandoff';
 import type { FlowNode, FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
 import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} from './FlowGeometryEditors';
 import { CustomNode } from './CustomNode';
@@ -108,6 +108,15 @@ const FixedRoiCoordinateInput: React.FC<{
   </label>;
 };
 
+
+/** Identity and thumbnail of an image inside the project source, as the dataset API names it. */
+function datasetImageReference(imagePath: string) {
+  const fileName = imagePath.split(/[\\/]/).pop() || imagePath;
+  const imageId = fileName.replace(/\.[^.]+$/, '');
+  return { fileName, imageId,
+    thumbnailUrl: `/api/dataset/thumbnail/${encodeURIComponent(imageId)}?file_path=${encodeURIComponent(imagePath)}&size=256` };
+}
+
 export const FlowchartStudio: React.FC = () => {
   const { language, task, setStep } = useProjectStore();
   const { jobId: trainedJobId, status: trainingStatus, isCurrentData } = useTrainingStore();
@@ -123,6 +132,7 @@ export const FlowchartStudio: React.FC = () => {
     persistedDraftHash,
     contextRevision,
     executionResult,
+    executionIdentity,
     lastRunSource,
     isLoading,
     isSaving,
@@ -154,6 +164,10 @@ export const FlowchartStudio: React.FC = () => {
     setInspectedCrop,
     clearError,
   } = useFlowchartStore();
+  // Results stay visible after edits; they are current only for the semantics they ran with.
+  const resultIsCurrent = isExecutionResultCurrent({ executionResult, executionIdentity, pipeline });
+  // The canvas pairs evidence with the current rules, so it only shows a current run.
+  const canvasResult = resultIsCurrent ? executionResult : null;
 
   const [activeTab, setActiveTab] = useState<'flow' | 'results'>('flow');
   const { profiles: computeProfiles, selectedProfileId, isLoaded: isComputeLoaded,
@@ -273,7 +287,12 @@ export const FlowchartStudio: React.FC = () => {
       const binding = result.verifiedJobId && !useFlowchartStore.getState().pipelineIsDraft
         ? singleModelAutoBinding(result.pipeline, task, result.verifiedJobId)
         : null;
-      if (binding) updateNodeData(binding.nodeId, { model_job_id: binding.modelJobId });
+      if (binding) {
+        const catalog = await api.flowchart.modelCatalog(folderPath!);
+        if (!isCurrent()) return;
+        const model = catalog.models.find(row=>row.job_id===binding.modelJobId);
+        updateNodeData(binding.nodeId, model ? modelScoreBinding(model) : {model_job_id:binding.modelJobId,score_spec:undefined,threshold:.5});
+      }
       setZoomScale(null);
       setModelCheck({ status: 'ready' });
     };
@@ -398,7 +417,13 @@ export const FlowchartStudio: React.FC = () => {
     if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 단일 검사 플로우를 불러올까요?')) return;
     const verifiedJobId = useEvaluationStore.getState().jobId;
     await loadSingleSegmentationTemplate(verifiedJobId || undefined, task);
-    if (verifiedJobId) setModelCheck({ status: 'ready' });
+    if (verifiedJobId) {
+      const model=modelCatalog.find(row=>row.job_id===verifiedJobId);
+      const current=useFlowchartStore.getState().pipeline;
+      const node=current?.nodes.find(row=>row.data.model_job_id===verifiedJobId);
+      if(model&&node)updateNodeData(node.id,modelScoreBinding(model));
+      setModelCheck({ status: 'ready' });
+    }
     setSelectedVersionId('');
     setSelectedEdgeId(null);
     setZoomScale(null);
@@ -413,7 +438,8 @@ export const FlowchartStudio: React.FC = () => {
     if (useFlowchartStore.getState().pipeline?.id !== 'detector_roi') return;
     const verifiedJobId = useEvaluationStore.getState().jobId;
     if (verifiedJobId) {
-      updateNodeData(task === 'detection' ? 'node_crop' : 'node_inspect', { model_job_id: verifiedJobId });
+      const model=modelCatalog.find(row=>row.job_id===verifiedJobId);
+      updateNodeData(task === 'detection' ? 'node_crop' : 'node_inspect', model?modelScoreBinding(model):{model_job_id:verifiedJobId,score_spec:undefined,threshold:.5});
       setModelCheck({ status: 'ready' });
     }
     setSelectedVersionId('');
@@ -820,7 +846,7 @@ export const FlowchartStudio: React.FC = () => {
                   : 'text-[#94A3B8] hover:text-[#F8FAFC]'
               }`}
             >
-              <span>{language === 'ko' ? `검사 결과${executionResult ? ` (${executionResult.roi_count} ROI)` : ''}` : 'Inspection Results'}</span>
+              <span>{language === 'ko' ? `검사 결과${executionResult ? ` (${executionResult.roi_count} ROI)` : ''}${executionResult && !resultIsCurrent ? ' · 이전 버전' : ''}` : 'Inspection Results'}</span>
               {executionResult && (
                 <div
                   className={`w-2 h-2 rounded-full ${
@@ -1216,10 +1242,10 @@ export const FlowchartStudio: React.FC = () => {
                   nodes={positionedNodes}
                   edges={pipeline.edges}
                   activeRunningNodeId={activeRunningNodeId}
-                  finalVerdict={executionResult?.final_verdict}
-                  routedOutputNodeId={executionResult?.routed_output_node_id}
+                  finalVerdict={canvasResult?.final_verdict}
+                  routedOutputNodeId={canvasResult?.routed_output_node_id}
                   selectedEdgeId={selectedEdgeId}
-                  executionSteps={executionResult?.execution_steps}
+                  executionSteps={canvasResult?.execution_steps}
                   onSelectEdge={(edgeId) => { setSelectedEdgeId(edgeId); selectNode(null); }}
                 />
               )}
@@ -1228,7 +1254,7 @@ export const FlowchartStudio: React.FC = () => {
               {positionedNodes.map((node) => {
                 const isSelected = selectedNodeId === node.id;
                 const isActive = activeRunningNodeId === node.id;
-                const step = executionResult?.execution_steps?.find((s) => s.node_id === node.id);
+                const step = canvasResult?.execution_steps?.find((s) => s.node_id === node.id);
                 const isStepPassed = step?.status === 'passed';
                 const isFlaggedNg = step && step.status === 'flagged_ng';
                 const pos = node.position;
@@ -1363,7 +1389,7 @@ export const FlowchartStudio: React.FC = () => {
                       <label className="block text-[#94A3B8]">검사 모델 종류
                         <select
                           value={selectedNode.data.task || 'anomaly'}
-                          onChange={(e) => updateNodeData(selectedNode.id, { task: e.target.value, model_job_id: undefined, params: e.target.value === 'ocr' ? { expected_text: '' } : { min_defect_area_px: 8 } })}
+                          onChange={(e) => updateNodeData(selectedNode.id, { task: e.target.value, model_job_id: undefined, score_spec:undefined, threshold:.5, params: e.target.value === 'ocr' ? { expected_text: '' } : { min_defect_area_px: 8 } })}
                           className="mt-1 w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]"
                         >
                           <option value="anomaly">이상 탐지</option>
@@ -1377,7 +1403,7 @@ export const FlowchartStudio: React.FC = () => {
                     )}
                     <label className="block text-[#94A3B8]">완료된 학습 모델
                       <select value={selectedNode.data.model_job_id || ''}
-                        onChange={(event) => updateNodeData(selectedNode.id, { model_job_id: event.target.value || undefined })}
+                        onChange={(event) => {const model=modelCatalog.find(row=>row.job_id===event.target.value);updateNodeData(selectedNode.id,model?modelScoreBinding(model):{model_job_id:undefined,score_spec:undefined,threshold:.5});}}
                         className="mt-1 w-full rounded border border-[#2B3547] bg-[#1A212E] px-2.5 py-1.5 text-[#F8FAFC]">
                         <option value="">모델 선택</option>
                         {selectedNode.data.model_job_id && !modelCatalog.some((model) => model.job_id === selectedNode.data.model_job_id) &&
@@ -1390,7 +1416,7 @@ export const FlowchartStudio: React.FC = () => {
                     <p className="text-xs text-slate-400">{modelCatalogLoading ? '모델을 확인하는 중입니다.' : '현재 데이터와 작업이 검증된 완료 모델만 표시합니다.'}</p>
                     <details className="text-xs text-slate-400"><summary className="cursor-pointer hover:text-slate-200">고급: 작업 ID 직접 입력</summary>
                       <input type="text" value={selectedNode.data.model_job_id || ''}
-                        onChange={(event) => updateNodeData(selectedNode.id, { model_job_id: event.target.value })}
+                        onChange={(event) => updateNodeData(selectedNode.id, { model_job_id: event.target.value,score_spec:undefined,threshold:.5 })}
                         placeholder="job_..."
                         className="mt-1 w-full rounded border border-[#2B3547] bg-[#1A212E] px-2.5 py-1.5 text-[#F8FAFC]" />
                     </details>
@@ -1425,7 +1451,9 @@ export const FlowchartStudio: React.FC = () => {
                 {selectedNode.data.task==='ocr' && <OCRRulesEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
                 {selectedNode.data.node_type==='measurement' && <MeasurementEditor key={selectedNode.id} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})} imagePath={selectedImage?.imagePath} sourcePreview={selectedImage?.thumbnailUrl?resolveApiUrl(selectedImage.thumbnailUrl):undefined} sourceSize={executionResult?.inspected_image_size}/>}
                 {selectedNode.data.node_type==='inspection' && selectedNode.data.task==='anomaly' && <label className="block">이상 검사 방식<select value={selectedNode.data.params?.anomaly_mode || 'classification'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,anomaly_mode:e.target.value}})} className="ml-2 rounded bg-slate-800 p-1"><option value="classification">이미지 점수 분류</option><option value="segmentation">결함 영역 검사·마스크</option></select></label>}
-                {pipeline && <FlowNodeDebugger node={selectedNode} pipeline={pipeline} result={executionResult} />}
+                {pipeline && (executionResult && !resultIsCurrent
+                  ? <section role="status" aria-label="이전 버전 노드 근거" className="rounded border border-amber-700 bg-amber-950/30 p-3 text-xs text-amber-100">마지막 실행은 이전 버전의 검사 규칙으로 계산되어 현재 노드 설정과 함께 표시하지 않습니다. 검사 결과 탭에서 이전 결과를 보거나 다시 실행하세요.</section>
+                  : <FlowNodeDebugger node={selectedNode} pipeline={pipeline} result={canvasResult} />)}
 
                 {selectedNode.data.node_type === 'fixed_roi' && (() => {
                   const [x1, y1, x2, y2] = (selectedNode.data.params?.roi_bbox as number[] | undefined) || [0, 0, 512, 512];
@@ -1456,21 +1484,24 @@ export const FlowchartStudio: React.FC = () => {
                 {shouldShowThreshold(selectedNode) && (
                   <div>
                     <div className="flex justify-between text-[#94A3B8] mb-1">
-                      <span>결함 판정 임계치 (THRESHOLD)</span>
+                      <span>결함 판정 임계치 · {selectedNode.data.score_spec?.unit || 'probability'}</span>
                       <span className="text-cyan-400 font-bold tabular-nums">
                         {(selectedNode.data.threshold ?? 0.5).toFixed(2)}
                       </span>
                     </div>
                     <input
-                      type="range"
-                      min="0.05"
-                      max="0.95"
-                      step="0.01"
+                      type="number"
+                      aria-label="결함 판정 임계치"
+                      min="0"
+                      max={selectedNode.data.score_spec?.domain === 'distance' ? undefined : 1}
+                      step="any"
                       value={selectedNode.data.threshold ?? 0.5}
-                      onChange={(e) =>
-                        updateNodeData(selectedNode.id, { threshold: parseFloat(e.target.value) })
-                      }
-                      className="w-full accent-cyan-400 h-1 bg-[#1A212E] rounded cursor-pointer"
+                      onChange={(e) => {
+                        const value=e.target.valueAsNumber;
+                        if(Number.isFinite(value)&&value>=0&&(selectedNode.data.score_spec?.domain==='distance'||value<=1))
+                          updateNodeData(selectedNode.id, thresholdUpdate(selectedNode.data,value));
+                      }}
+                      className="w-full bg-[#1A212E] rounded p-2"
                     />
                   </div>
                 )}
@@ -1550,7 +1581,7 @@ export const FlowchartStudio: React.FC = () => {
                   <div>
                     <label className="text-[#94A3B8] block mb-1">판정 룰 정책 (RULE POLICY)</label>
                     <select value={selectedNode.data.rule || 'any_defect_is_ng'}
-                      onChange={(event) => updateNodeData(selectedNode.id, decisionRulePatch(selectedNode.data, event.target.value))}
+                      onChange={(event) => updateNodeData(selectedNode.id, decisionRulePatch(selectedNode.data, event.target.value, pipeline?.nodes.filter(node=>['inspection','detection_crop'].includes(node.data.node_type))))}
                       className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-amber-400 font-bold">
                       <option value="any_defect_is_ng">결함 하나라도 NG</option>
                       <option value="score_gt_threshold">최고 점수 임계치</option>
@@ -1596,6 +1627,9 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       ) : (
         <div className="flex min-h-[240px] shrink-0 flex-1 flex-col">
+          {executionResult && !resultIsCurrent && <div role="status" aria-label="이전 버전 실행 결과" className="shrink-0 border-b border-amber-700 bg-amber-950/40 px-5 py-2 text-xs text-amber-100">
+            플로우의 검사 규칙이 이 실행 뒤에 바뀌었습니다. 아래 결과는 이전 버전의 실행 결과이며 현재 플로우의 판정이 아닙니다. 다시 실행하세요.
+          </div>}
           {executionResult && lastRunSource && <div role="status" className={`shrink-0 border-b px-5 py-2 text-xs ${lastRunSource.kind === 'draft'
             ? 'border-amber-700 bg-amber-950/30 text-amber-200'
             : 'border-sky-800 bg-sky-950/30 text-sky-200'}`}>
@@ -1606,6 +1640,9 @@ export const FlowchartStudio: React.FC = () => {
                   || executionResult.compute_profile_id || '모델 학습 서버'} · {executionResult.execution_device || '장치 확인 필요'}
             </span>}
           </div>}
+          {executionResult?.crops.some(crop=>crop.score_spec) && <div className="px-5 py-2 text-xs text-cyan-200" aria-label="실행 점수 기준">
+            {Array.from(new Set(executionResult.crops.filter(crop=>crop.score_spec).map(crop=>`${crop.score_spec!.unit} · 임계값 ${crop.score_spec!.threshold}${crop.score_basis==='saved_model_calibration_legacy_flow'?' · 기존 플로우에 저장된 모델 보정값 적용':''}`))).join(' / ')}
+          </div>}
           <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setActiveTab('flow');}} />
         </div>
       )}
@@ -1614,7 +1651,8 @@ export const FlowchartStudio: React.FC = () => {
       <WorkflowImpactPanel />
       <FlowEvaluationPanel sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
         contextKey={`${useProjectStore.getState().project?.id}:${useProjectStore.getState().project?.active_labelset_id}:${getApiPersistenceIdentity()}`}
-        onOpenImage={imagePath=>{useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:imagePath.split('/').pop()||imagePath});setActiveTab('flow');}}/>
+        onOpenImage={imagePath=>{const image=datasetImageReference(imagePath);return useProjectStore.getState().openImageForLabeling(image.imageId,imagePath);}}
+        onInspectImage={imagePath=>{const image=datasetImageReference(imagePath);useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:image.fileName,imageId:image.imageId,thumbnailUrl:image.thumbnailUrl});setActiveTab('flow');}}/>
       {/* Modals */}
       <ImagePickerModal isOpen={isImagePickerOpen} onClose={() => setImagePickerOpen(false)} />
       <CropDetailModal crop={inspectedCrop} onClose={() => setInspectedCrop(null)} />

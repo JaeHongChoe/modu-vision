@@ -5,7 +5,7 @@
 ## 범위와 상태
 
 - F001–F123: 123개, U001–U033: 33개, 합계 156개. 누락 0개.
-- 신규 계획: 8개 phase/82개 작업 묶음, 전부 planned, accepted 0개.
+- 신규 계획: 8개 phase/82개 작업 묶음. in_progress 4개, planned 67개, verification_pending 11개. accepted 0개.
 - source registry: `docs/feature-program.json`, `docs/product-upgrade-program.json`.
 - source baseline: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`.
 - source registry의 acceptance와 최신 실행 ledger가 충돌하면 개별 최신 evidence를 다시 확인한다.

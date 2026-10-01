@@ -11,17 +11,18 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   const oldLoad=store.getState().load();
   const unsubscribe=store.subscribe((state,previous)=>{if(state.transportRevision!==previous.transportRevision)void state.load();});
   const connected={server_url:'https://old.example',project_id:'old-project',user:{id:'user',username:'tester',administrator:false},expires_at:1};
-  const values=[isLogin?null:connected,'https://new.example','tester','private-test-password',[],isLogin?'':'old-project',[], '', '', '', 'viewer', '', '', false, ''];let cursor=0;
+  const values=[isLogin?null:connected,'https://new.example','tester','private-test-password',[],isLogin?'':'old-project',[], '', '', '', 'viewer', '', {value:'',scope:null}, false, ''];let cursor=0;
   const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{const index=cursor++;if(values[index]===undefined)values[index]=initial;return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;}];}};
   const switchCommit=()=>new Promise(resolve=>{commit=()=>{server='new';resolve({...connected,server_url:'https://new.example',project_id:'new-project'});};});
   const project={source_dataset_dir:'/fixture',id:'new-project'};
-  const projectStore={getState:()=>({project,syncCurrentProject:async()=>{}}),setState:()=>{}};
+  const projectState={project,isProjectBusy:false,syncCurrentProject:async()=>{}};
+  const projectStore=Object.assign(selector=>selector(projectState),{getState:()=>projectState,setState:()=>{}});
   const request=async endpoint=>{if(endpoint==='/api/accounts/me'&&operation==='login_inventory_failure')throw new Error('New server inventory is unavailable');return endpoint==='/api/accounts/me'?{projects:[{id:'new-project',path:'/fixture',role:'trainer'}],selected_project_id:'new-project'}:{};};
   global.window={api:{loginSharedServer:switchCommit,selectSharedProject:isLogin?async()=>({...connected,server_url:'https://new.example',project_id:'new-project'}):switchCommit,disconnectSharedServer:switchCommit}};
   const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
     react:{__esModule:true,default:react,...react},
     'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
-    '../../services/api':{api,request,setSharedApiBase:()=>{}},
+    '../../services/api':{api,request,setSharedApiBase:()=>{},getProjectContext:()=>({workspace_id:'fixture',project_id:project.id,actor_id:'user',mode:'team'}),getApiPersistenceIdentity:()=>`shared:https://${server}.example`},
     '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':compute,
     '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},

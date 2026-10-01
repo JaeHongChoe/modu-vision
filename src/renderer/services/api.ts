@@ -421,9 +421,76 @@ export interface ModelDeploymentRevision {
   is_active?: boolean;
 }
 
+export interface ProjectContext {
+  workspace_id: string;
+  project_id: string;
+  actor_id: string;
+  mode: 'local' | 'team';
+}
+export interface ArtifactRef { id: string; revision: number; sha256: string }
+export interface ContextRequestOptions extends RequestInit {
+  /** null discovers the server's current selection; an object pins this request. */
+  projectContext?: ProjectContext | null;
+  responseType?: 'json' | 'blob';
+}
+let boundProjectContext:ProjectContext|null=null;
+let contextGeneration=0;
+type ContextCandidate={context:ProjectContext;generation:number;transport:string|null};
+const contextCandidates=new WeakMap<object,ContextCandidate>();
+const contextListeners=new Set<(context:ProjectContext|null)=>void>();
+function sameContext(left:ProjectContext|null,right:ProjectContext|null):boolean {
+  return left===right||Boolean(left&&right&&left.workspace_id===right.workspace_id&&left.project_id===right.project_id
+    &&left.actor_id===right.actor_id&&left.mode===right.mode);
+}
+function notifyContext():void {
+  for(const listener of contextListeners)listener(getProjectContext());
+}
+export function subscribeProjectContext(listener:(context:ProjectContext|null)=>void):()=>void {
+  contextListeners.add(listener);return ()=>{contextListeners.delete(listener);};
+}
+function validContext(value:unknown):value is ProjectContext {
+  if(!value||typeof value!=='object')return false;
+  const context=value as ProjectContext;
+  return [context.workspace_id,context.project_id,context.actor_id].every(id=>typeof id==='string'&&/^[A-Za-z0-9_.:-]{1,128}$/.test(id))
+    && (context.mode==='local'||context.mode==='team');
+}
+export function setProjectContext(context:ProjectContext|null):void {
+  if(context&&!validContext(context))throw new Error('프로젝트 요청 문맥을 확인하세요.');
+  if(sameContext(boundProjectContext,context))return;
+  boundProjectContext=context?{...context}:null;contextGeneration++;notifyContext();
+}
+export function getProjectContext():ProjectContext|null {
+  return boundProjectContext?{...boundProjectContext}:null;
+}
+function artifactQuery(ref:ArtifactRef):string {
+  if(!/^[A-Za-z0-9_.:-]{1,128}$/.test(ref.id)||!Number.isSafeInteger(ref.revision)||ref.revision<1||!/^[a-f0-9]{64}$/.test(ref.sha256))
+    throw new Error('파일 참조 ID·버전·해시를 확인하세요.');
+  return new URLSearchParams({revision:String(ref.revision),sha256:ref.sha256}).toString();
+}
 let cachedPort: number | null = null;
 let sharedBase:string|null=null;
-export function setSharedApiBase(base:string|null):void {sharedBase=base;}
+export function setSharedApiBase(base:string|null):void {
+  if(sharedBase===base)return;
+  sharedBase=base;boundProjectContext=null;contextGeneration++;notifyContext();
+}
+/** Commit only an accepted server candidate; discovery alone never changes write authority.
+ * The optional UI setter is synchronous. Validation precedes it, and telemetry
+ * observers are notified after the UI setter and authority commit succeed.
+ */
+function acceptProjectContext(project:ProjectConfig,apply?:()=>void):void {
+  const candidate=contextCandidates.get(project);
+  // Existing servers/test adapters without the additive header retain their
+  // legacy protocol. They cannot provide a new explicit namespace authority.
+  if(!candidate){apply?.();return;}
+  const unchanged=sameContext(boundProjectContext,candidate.context);
+  if(candidate.transport!==sharedBase||(!unchanged&&candidate.generation!==contextGeneration)
+      ||candidate.context.project_id!==project.id)
+    throw new Error('프로젝트 선택 문맥이 바뀌었습니다. 현재 서버의 프로젝트를 다시 확인하세요.');
+  const previous=boundProjectContext;
+  boundProjectContext={...candidate.context};
+  try{apply?.();}catch(error){boundProjectContext=previous;throw error;}
+  if(!unchanged){contextGeneration++;notifyContext();}
+}
 /** Stable storage binding; credentials, tokens and the local process port are excluded. */
 export function getApiPersistenceIdentity():string {
   if(!sharedBase)return 'local';
@@ -476,15 +543,26 @@ export function resolveApiUrl(path: string, port?: number): string {
   return `http://127.0.0.1:${effectivePort}${cleanPath}`;
 }
 
-export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const base = await getApiBaseUrl();
+export async function request<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
+  const {projectContext,responseType='json',...fetchOptions}=options;
+  const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore'].includes(path)
+    && projectContext===undefined;
+  const generation=contextGeneration,transport=sharedBase;
+  const selected=projectContext===null||selecting?null:projectContext??boundProjectContext;
+  if(selected&&!validContext(selected))throw new Error('프로젝트 요청 문맥을 확인하세요.');
+  const captured=selected?{...selected}:null;
+  const headers=new Headers(fetchOptions.headers);
+  if(!headers.has('Content-Type'))headers.set('Content-Type','application/json');
+  if(captured){
+    headers.set('X-Vision-Project',captured.project_id);
+    headers.set('X-Vision-Context',JSON.stringify(captured));
+  }
+  // Capture both transport and project before a port lookup or selection can yield.
+  const base = transport||`http://127.0.0.1:${await getBackendPort()}`;
   const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
   const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    ...fetchOptions,
+    headers,
   });
 
   if (!response.ok) {
@@ -505,11 +583,32 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     throw Object.assign(new Error(errorDetail), { status: response.status });
   }
 
+  const encoded=response.headers?.get('X-Vision-Context');
+  let receivedContext:ProjectContext|null=null;
+  if(encoded){
+    let received:unknown;
+    try{received=JSON.parse(encoded);}catch{throw new Error('서버 프로젝트 문맥이 유효하지 않습니다.');}
+    if(!validContext(received))throw new Error('서버 프로젝트 문맥이 유효하지 않습니다.');
+    if(captured&&!sameContext(received,captured))throw new Error('요청과 응답의 프로젝트 문맥이 다릅니다.');
+    receivedContext={...received};
+  }
   if (response.status === 204) return undefined as T;
-  return response.json();
+  if(responseType==='blob')return response.blob() as Promise<T>;
+  const value:T=await response.json();
+  if(receivedContext&&value&&typeof value==='object')contextCandidates.set(value,{context:receivedContext,generation,transport});
+  return value;
 }
 
 export const api = {
+  context: {
+    get: (context?:ProjectContext) => request<{version:1;project_context:ProjectContext}>('/api/context',{projectContext:context}),
+    registerArtifact: (data:{kind:'source'|'label'|'split'|'model'|'evaluation'|'flow'|'package'|'result';relative_path:string;sha256:string;expected_revision?:number},context?:ProjectContext) =>
+      request<{project_context:ProjectContext;artifact_ref:ArtifactRef}>('/api/context/artifacts',{method:'POST',body:JSON.stringify(data),projectContext:context}),
+    artifact: (ref:ArtifactRef,context?:ProjectContext) => request<{project_context:ProjectContext;artifact_ref:ArtifactRef}>(
+      `/api/context/artifacts/${encodeURIComponent(ref.id)}?${artifactQuery(ref)}`,{projectContext:context}),
+    artifactContent: (ref:ArtifactRef,context?:ProjectContext) => request<Blob>(
+      `/api/context/artifacts/${encodeURIComponent(ref.id)}/content?${artifactQuery(ref)}`,{projectContext:context,responseType:'blob'}),
+  },
   health: {
     check: () => request<{ status: string; version: string; device: string; device_name: string }>('/health'),
   },
@@ -532,6 +631,7 @@ export const api = {
   },
 
   project: {
+    acceptContext: acceptProjectContext,
     getCurrent: () => request<ProjectConfig>('/api/project/current'),
     list: () => request<{ projects: RecentProject[] }>('/api/project/list'),
     create: (data: { name: string; task: VisionTask; project_dir?: string; description?: string }) =>

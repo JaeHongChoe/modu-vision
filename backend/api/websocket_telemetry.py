@@ -21,6 +21,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from backend.engine.device import get_device, get_host_telemetry
 from backend.engine.trainer import TrainingCallback
 from backend.utils.error_catalog import classify_exception
+from backend.contracts.context import current_project_context, originating_context
 
 logger = logging.getLogger("vision_ai_studio.telemetry")
 
@@ -175,6 +176,11 @@ class TelemetryBroadcaster:
         """Recheck session and job ownership before every shared-server frame."""
         scope=getattr(websocket,'scope',{})
         state=scope.get('state',{}) if isinstance(scope,dict) else {}
+        origin=payload.get('project_context')
+        recipient=state.get('project_context')
+        if origin is not None:
+            if not isinstance(origin,dict) or recipient is None:return False
+            if (origin.get('workspace_id'),origin.get('project_id')) != (recipient.workspace_id,recipient.project_id):return False
         if not state.get('account_user'):return True
         try:
             store=scope['app'].state.accounts
@@ -205,6 +211,9 @@ class TelemetryBroadcaster:
             "data": data,
             **data,  # Flatten for universal client compatibility
         }
+        context = originating_context()
+        if context is not None:
+            payload['project_context'] = context
 
         try:
             self._loop.call_soon_threadsafe(self._queue.put_nowait, payload)
@@ -220,6 +229,9 @@ class TelemetryBroadcaster:
             "data": data,
             **data,
         }
+        context = originating_context()
+        if context is not None:
+            payload['project_context'] = context
         text = json.dumps(payload)
         dead = []
         for ws in list(self._active_connections):
@@ -293,6 +305,9 @@ class WebSocketTelemetryCallback(TrainingCallback):
 
     def __init__(self, job_id: str, max_hz: float = 30.0):
         self.job_id = job_id
+        # Legacy training managers launch raw threads. Freeze the authenticated
+        # submission identity here instead of depending on worker inheritance.
+        self._project_context = current_project_context.get()
         self.rate_limiter = RateLimiter(max_hz=max_hz)
         self.training_start_time = time.time()
         self.epoch_start_time = time.time()
@@ -300,11 +315,18 @@ class WebSocketTelemetryCallback(TrainingCallback):
         self.total_steps = 0
         self.epoch_durations: List[float] = []
 
+    def _broadcast(self, event_type: str, data: Dict[str, Any]) -> None:
+        token = current_project_context.set(self._project_context)
+        try:
+            broadcaster.broadcast_sync(event_type, data)
+        finally:
+            current_project_context.reset(token)
+
     def on_training_start(self, config: Dict[str, Any]) -> None:
         self.total_epochs = config.get("epochs", 1)
         self.training_start_time = time.time()
         self.epoch_start_time = time.time()
-        broadcaster.broadcast_sync("training_started", {
+        self._broadcast("training_started", {
             "job_id": self.job_id,
             "total_epochs": self.total_epochs,
             **config,
@@ -323,7 +345,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
         # Force emission on final step of epoch or training
         is_last_step = (step + 1 >= total_steps) or (step_in_epoch + 1 >= steps_per_epoch)
         if self.rate_limiter.should_emit(force=is_last_step):
-            broadcaster.broadcast_sync("step_progress", {
+            self._broadcast("step_progress", {
                 "job_id": self.job_id,
                 "step": step + 1,
                 "total_steps": total_steps,
@@ -351,7 +373,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
         avg_duration = sum(self.epoch_durations) / max(1, len(self.epoch_durations))
         total_eta = remaining_epochs * avg_duration
 
-        broadcaster.broadcast_sync("epoch_progress", {
+        self._broadcast("epoch_progress", {
             "job_id": self.job_id,
             "epoch": epoch + 1,
             "total_epochs": total_epochs,
@@ -363,12 +385,12 @@ class WebSocketTelemetryCallback(TrainingCallback):
         })
 
     def on_hardware_stats(self, stats: Dict[str, Any]) -> None:
-        broadcaster.broadcast_sync("hardware_stats", stats)
+        self._broadcast("hardware_stats", stats)
 
     def on_training_completed(
         self, job_id: str, duration_seconds: float, best_metric: float, model_path: str
     ) -> None:
-        broadcaster.broadcast_sync("training_completed", {
+        self._broadcast("training_completed", {
             "job_id": job_id,
             "duration_seconds": round(float(duration_seconds), 2),
             "best_metric": round(float(best_metric), 5),
@@ -376,7 +398,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
         })
 
     def on_training_aborted(self, epoch: int, reason: str) -> None:
-        broadcaster.broadcast_sync("training_aborted", {
+        self._broadcast("training_aborted", {
             "job_id": self.job_id,
             "epoch": epoch + 1,
             "reason": reason,
@@ -387,7 +409,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
         payload = err_card.to_ws_payload()
         payload["job_id"] = self.job_id
         payload["stage"] = stage
-        broadcaster.broadcast_sync("training_error", payload)
+        self._broadcast("training_error", payload)
 
 
 # Backward compatibility alias

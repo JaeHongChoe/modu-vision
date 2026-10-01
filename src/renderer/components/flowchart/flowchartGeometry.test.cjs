@@ -39,7 +39,7 @@ test('bounded executor and Blob class bounds are validated before save',()=>{
 function renderCrop(crop) {
   const filename=path.join(__dirname,'CropDetailModal.tsx');const loaded=new Module(filename,module);
   loaded.filename=filename;loaded.paths=Module._nodeModulePaths(__dirname);const original=loaded.require.bind(loaded);
-  loaded.require=ref=>ref==='../../stores/useFlowchartStore'?{useFlowchartStore:()=>({pipeline:null,executionResult:{crops:[crop]},setInspectedCrop:()=>{}})}:original(ref);
+  loaded.require=ref=>ref==='../../stores/useFlowchartStore'?{useFlowchartStore:()=>({pipeline:null,executionResult:{crops:[crop]},setInspectedCrop:()=>{}}),isExecutionResultCurrent:()=>false}:original(ref);
   loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,filename);
   return require('react-dom/server').renderToStaticMarkup(require('react').createElement(loaded.exports.CropDetailModal,{crop,onClose:()=>{}}));
 }

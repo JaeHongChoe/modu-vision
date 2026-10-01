@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import secrets
+import re
 from urllib.parse import parse_qs,unquote
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
@@ -38,13 +39,21 @@ class SharedAuthorizationMiddleware:
         if path.startswith('/api/accounts/'):
             return await self.app(scope,receive,send)
         try:
-            selected=store.project_for(account['id'],headers.get('x-vision-project'))
+            from backend.contracts.context import declared_context
+            declared=declared_context(headers,query_string=scope.get('query_string') if scope['type']=='websocket' else None)
+            if declared and (declared.actor_id!=account['id'] or declared.mode!='team'
+                             or declared.workspace_id!=self.project_app.state.context_registry.workspace_id):
+                return await reject(403,'Explicit context does not match the authenticated account workspace')
+            # Electron's legacy selected-project header may change while a
+            # captured request is pending. The explicit contract is authoritative.
+            selected=store.project_for(account['id'],declared.project_id if declared else headers.get('x-vision-project'))
             if selected:
                 from backend.api.routes_project import _load_project
                 project=_load_project(Path(selected['path']));role=store.project_role(account['id'],project['id'])
                 state['scoped_project']=project
             else:project=None;role=None
-        except (ValueError,OSError,HTTPException):return await reject(403,'Project permission required')
+        except HTTPException as exc:return await reject(exc.status_code,exc.detail)
+        except (ValueError,OSError):return await reject(403,'Project permission required')
         if path=='/api/project/create':
             if not account['administrator']:return await reject(403,'Administrator permission required to create shared projects')
             return await self.app(scope,receive,send)
@@ -84,7 +93,12 @@ class SharedAuthorizationMiddleware:
             emergency_rollback=(method=='POST' and len(parts)==5 and parts[:3]==['api','fleet','targets']
                                 and len(parts[3])==32 and all(c in '0123456789abcdef' for c in parts[3])
                                 and parts[4]=='emergency-rollback')
-            allowed=emergency_rollback or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
+            artifact_reference=(method=='POST' and path=='/api/context/artifacts' and role in {'labeler','trainer','reviewer'})
+            artifact_upload=(method=='POST' and path in {'/api/artifacts/uploads','/api/dataset/artifacts/ingest'}
+                or method in {'PUT','DELETE'} and re.fullmatch(r'/api/artifacts/uploads/[a-f0-9]{32}',path)
+                or method=='POST' and re.fullmatch(r'/api/artifacts/uploads/[a-f0-9]{32}/complete',path))
+            artifact_upload=bool(artifact_upload and role in {'labeler','trainer','reviewer'})
+            allowed=emergency_rollback or artifact_reference or artifact_upload or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:return await reject(403,'This project role cannot perform the requested action')
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]
@@ -95,6 +109,9 @@ class SharedAuthorizationMiddleware:
             elif isinstance(value,list):
                 for data in value:check_paths(data,key.removesuffix('s'))
             elif isinstance(value,str) and (key.endswith(('_path','_dir')) or key=='pretrained_checkpoint') and value:
+                # This endpoint validates relative selectors against its
+                # registered kind root, including symlinks, before creating a ref.
+                if path=='/api/context/artifacts' and key=='relative_path':return
                 if account['administrator'] and path in {'/api/project/update','/api/label-candidates/setup'}:return
                 if path=='/api/team-data/books' and key=='relative_path':
                     relative=Path(value)

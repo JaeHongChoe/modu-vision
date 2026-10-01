@@ -12,7 +12,7 @@ This file lists third-party components that the desktop application distributes 
 
 | Component | Version | License | Status | Source |
 | --- | --- | --- | --- | --- |
-| electron | 33.4.11 | MIT (npm package); the Electron binary bundles Chromium, Node.js and FFmpeg under their own licenses | needs_review | https://registry.npmjs.org/electron/-/electron-33.4.11.tgz |
+| electron | 44.5.1 | MIT (npm package); the Electron binary bundles Chromium, Node.js and FFmpeg under their own licenses | needs_review | https://registry.npmjs.org/electron/-/electron-44.5.1.tgz |
 
 ## Renderer runtime (npm)
 

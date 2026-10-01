@@ -31,11 +31,12 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query, Path as ApiPath
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from starlette.datastructures import Headers
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
+from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Compatibility patch for Starlette TestClient with httpx >= 0.28.0
@@ -83,6 +84,7 @@ from backend.api.routes_automated_training import router as automated_training_r
 from backend.api.routes_geometry import router as geometry_router
 from backend.api.routes_accounts import router as accounts_router
 from backend.api.routes_mask_exchange import router as mask_exchange_router
+from backend.api.routes_artifacts import router as artifacts_router
 from backend.api.routes_dicom import router as dicom_router
 from backend.api.routes_report import router as report_router
 from backend.api.routes_training import router as training_router, training_job_manager
@@ -104,6 +106,90 @@ from backend.utils.error_catalog import (
 logger = logging.getLogger("vision_ai_studio.daemon")
 
 VERSION = "0.1.0"
+
+from backend.contracts.context import (
+    ArtifactRef, ArtifactRegistration, ContextRegistry, current_project_context,
+    declared_context, get_project_context,
+)
+
+
+class ProjectContextMiddleware:
+    """Freeze project/actor identity before the existing storage scopes run."""
+    def __init__(self, app, project_app):
+        self.app, self.project_app = app, project_app
+
+    async def __call__(self, scope, receive, send):
+        path = scope.get('path', '')
+        if scope['type'] not in {'http', 'websocket'} or path == '/health' or path.startswith('/api/accounts/') or scope.get('method') == 'OPTIONS':
+            return await self.app(scope, receive, send)
+        scope.setdefault('app', self.project_app)
+        state = scope.setdefault('state', {})
+        registry = self.project_app.state.context_registry
+        account = state.get('account_user')
+        selection = path in {'/api/project/create', '/api/project/open', '/api/project/restore'}
+        async def reject(exc):
+            if scope['type'] == 'websocket':
+                await send({'type': 'websocket.close', 'code': 1008})
+            else:
+                await JSONResponse({'detail': exc.detail}, status_code=exc.status_code)(scope, receive, send)
+        try:
+            headers = Headers(scope=scope)
+            explicit = declared_context(headers, query_string=scope.get('query_string') if scope['type']=='websocket' else None)
+            if explicit and ((account and explicit.workspace_id != registry.workspace_id)
+                             or explicit.actor_id != (account['id'] if account else registry.local_actor_id)
+                             or explicit.mode != ('team' if account else 'local')):
+                raise HTTPException(403, 'Explicit context does not match the authenticated workspace actor')
+            project = state.get('scoped_project')
+            if not selection:
+                if project is None:
+                    identifier = explicit.project_id if explicit else headers.get('x-vision-project')
+                    project = registry.local_project(identifier, HTTPConnection(scope),workspace_id=explicit.workspace_id if explicit else None) if identifier else get_current_project(HTTPConnection(scope))
+                if explicit and explicit.project_id != project['id']:
+                    raise HTTPException(403, 'Explicit context project is not authorized')
+                registry.register_project(project)
+                state['scoped_project'] = project
+                state['project_context'] = registry.context(project, account)
+                if explicit and explicit.workspace_id != state['project_context'].workspace_id:
+                    raise HTTPException(403, 'Explicit workspace context does not identify this project location')
+        except HTTPException as exc:
+            return await reject(exc)
+        token = current_project_context.set(state.get('project_context'))
+        held_start = None
+        selected_body = bytearray()
+        async def emit_start(message):
+            context = state.get('project_context')
+            if context:
+                import json
+                message = {**message, 'headers': [*message.get('headers', []),
+                    (b'x-vision-context', json.dumps(context.model_dump(), separators=(',', ':')).encode('ascii'))]}
+            await send(message)
+        async def contextual_send(message):
+            nonlocal held_start
+            if selection and message['type'] == 'http.response.start':
+                held_start = message
+                return
+            if selection and message['type'] == 'http.response.body':
+                selected_body.extend(message.get('body', b''))
+                if message.get('more_body'):
+                    return
+                if held_start and held_start['status'] < 300:
+                    import json
+                    selected = json.loads(selected_body)
+                    try:
+                        registry.register_project(selected)
+                    except HTTPException as exc:
+                        return await reject(exc)
+                    state['project_context'] = registry.context(selected, account)
+                if held_start:
+                    await emit_start(held_start)
+                return await send({**message, 'body': bytes(selected_body)})
+            if message['type'] == 'http.response.start':
+                return await emit_start(message)
+            await send(message)
+        try:
+            await self.app(scope, receive, contextual_send)
+        finally:
+            current_project_context.reset(token)
 
 
 class DesktopApiAuthMiddleware:
@@ -195,6 +281,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     p_dir = Path(project_dir) if project_dir else (ROOT_DIR / "projects")
     p_dir.mkdir(parents=True, exist_ok=True)
     app.state.project_dir = p_dir
+    app.state.context_registry = ContextRegistry(p_dir)
 
     # The Electron supervisor provides a fresh capability for each daemon process.
     # Standalone invocations generate one too, so a missing environment variable
@@ -203,6 +290,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     from backend.engine.shared_accounts import AccountStore
     app.state.accounts=AccountStore(Path(shared_auth_dir)/'accounts.sqlite') if shared_auth_dir else None
     app.add_middleware(ProjectStorageScopeMiddleware, project_app=app)
+    app.add_middleware(ProjectContextMiddleware, project_app=app)
     if app.state.accounts is not None:
         from backend.api.shared_authorization import SharedAuthorizationMiddleware
         app.add_middleware(SharedAuthorizationMiddleware,project_app=app)
@@ -216,7 +304,8 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
         allow_origins=["http://127.0.0.1:5173", "http://localhost:5173", "null"],
         allow_credentials=False,
         allow_methods=["*"],
-        allow_headers=["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project"],
+        allow_headers=["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context"],
+        expose_headers=["X-Vision-Context"],
     )
 
     # Health check endpoint strictly conforming to PROJECT.md line 144
@@ -234,6 +323,37 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
         }
 
     # Error catalog endpoints
+    @app.get('/api/context')
+    def request_context(request: Request):
+        return {'version': 1, 'project_context': get_project_context(request).model_dump()}
+
+    @app.post('/api/context/artifacts')
+    def register_artifact(body: ArtifactRegistration, request: Request):
+        context = get_project_context(request)
+        ref = app.state.context_registry.register_artifact(get_current_project(request), body)
+        return {'project_context': context.model_dump(), 'artifact_ref': ref.model_dump()}
+
+    @app.get('/api/context/artifacts/{artifact_id}')
+    def artifact_reference(request: Request, artifact_id: str = ApiPath(pattern=r'^[A-Za-z0-9_.:-]{1,128}$'), revision: int = Query(gt=0), sha256: str = Query(pattern=r'^[a-f0-9]{64}$')):
+        ref = ArtifactRef(id=artifact_id, revision=revision, sha256=sha256)
+        app.state.context_registry.resolve_artifact(get_current_project(request), ref)
+        return {'project_context': get_project_context(request).model_dump(), 'artifact_ref': ref.model_dump()}
+
+    @app.get('/api/context/artifacts/{artifact_id}/content')
+    def artifact_content(request: Request, artifact_id: str = ApiPath(pattern=r'^[A-Za-z0-9_.:-]{1,128}$'), revision: int = Query(gt=0), sha256: str = Query(pattern=r'^[a-f0-9]{64}$')):
+        import hashlib
+        ref = ArtifactRef(id=artifact_id, revision=revision, sha256=sha256)
+        path = app.state.context_registry.resolve_artifact(get_current_project(request), ref)
+        # Return the verified bytes, rather than reopening a mutable path after
+        # verification. Large artifact streaming belongs to S1-06's store.
+        with path.open('rb') as handle:
+            content = handle.read(64 * 1024 * 1024 + 1)
+        if len(content) > 64 * 1024 * 1024:
+            raise HTTPException(413, 'Artifact exceeds the context content limit (64 MiB)')
+        if hashlib.sha256(content).hexdigest() != ref.sha256:
+            raise HTTPException(409, 'Artifact content changed during read')
+        return Response(content, media_type='application/octet-stream', headers={'ETag': '"' + ref.sha256 + '"'})
+
     @app.get("/api/errors")
     def list_error_catalog():
         """Lists all registered industrial error catalog definitions."""
@@ -248,6 +368,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
         return item
 
     # Register all modular routers
+    app.include_router(artifacts_router)
     app.include_router(project_router)
     app.include_router(project_preferences_router)
     app.include_router(accounts_router)

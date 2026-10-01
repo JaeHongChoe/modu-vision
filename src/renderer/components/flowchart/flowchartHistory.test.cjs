@@ -35,6 +35,7 @@ loaded.require = (name) => {
 };
 loaded._compile(compiled, filename);
 const store = loaded.exports.useFlowchartStore;
+const { isExecutionResultCurrent } = loaded.exports;
 const graphFilename = path.join(__dirname, 'flowchartGraph.ts');
 const graphModule = new Module(graphFilename, module);
 graphModule.filename = graphFilename;
@@ -102,11 +103,13 @@ test('loading a different graph clears old undo and redo', async () => {
   assert.equal(store.getState().pipeline.nodes[0].data.label, 'Inspect');
 });
 
-test('undo invalidates a displayed execution result', () => {
+test('undo keeps a displayed result but never marks it current without its run identity', () => {
+  // S0-05: results are kept as an earlier version instead of being discarded.
   store.getState().updateNodeData('inspect', { threshold: 0.7 });
-  store.setState({ executionResult: { final_verdict: 'OK' }, inspectedCrop: { roi_id: 'old' } });
+  store.setState({ executionResult: { final_verdict: 'OK' }, executionIdentity: null, inspectedCrop: { roi_id: 'old' } });
   store.getState().undo();
-  assert.equal(store.getState().executionResult, null);
+  assert.equal(store.getState().executionResult.final_verdict, 'OK');
+  assert.equal(isExecutionResultCurrent(store.getState()), false);
   assert.equal(store.getState().inspectedCrop, null);
 });
 
@@ -165,7 +168,10 @@ test('debug run validates models only up to the selected node and sends stop ide
   api.flowchart.run=async data=>{request=data;return {status:'partial',final_verdict:'REVIEW',stop_node_id:'roi',execution_target:'local',execution_device:'cpu',execution_steps:[]};};
   const ok=await store.getState().runPipeline(undefined,undefined,{savedVersionId:null,executionTarget:'local',device:'cpu',stopNodeId:'roi'});
   assert.equal(ok,true);assert.equal(request.stop_node_id,'roi');assert.equal(store.getState().executionResult.status,'partial');
-  store.getState().updateNodeData('roi',{params:{roi_bbox:[1,1,33,33]}});assert.equal(store.getState().executionResult,null);
+  assert.equal(isExecutionResultCurrent(store.getState()),true);
+  store.getState().updateNodeData('roi',{params:{roi_bbox:[1,1,33,33]}});
+  assert.equal(store.getState().executionResult.status,'partial','S0-05: the earlier run stays visible');
+  assert.equal(isExecutionResultCurrent(store.getState()),false,'and is marked as an earlier version');
 });
 
 test('opening a saved version reads it without changing the active inspection recipe', async () => {

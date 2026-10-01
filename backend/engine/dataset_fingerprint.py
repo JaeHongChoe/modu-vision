@@ -8,6 +8,7 @@ Studio labels and the saved split, which live outside the source directory.
 from __future__ import annotations
 
 import hashlib
+from contextlib import contextmanager
 import os
 from pathlib import Path
 from typing import Iterable, Optional
@@ -101,3 +102,33 @@ def fingerprint_dataset(
     else:
         digest.update(b"no-split-manifest\0")
     return f"v1:{digest.hexdigest()}"
+
+
+@contextmanager
+def source_artifact_identity(folder: Path, relative_name: str):
+    """Content identity for managed copies; never changes the legacy v1 fingerprint."""
+    relative = Path(relative_name)
+    if not relative_name or relative.is_absolute() or '..' in relative.parts or '\\' in relative_name or ':' in relative_name:
+        raise ValueError('Source name must stay inside the registered dataset')
+    root = Path(folder).resolve()
+    candidate = root / relative
+    if any(path.is_symlink() for path in (candidate, *candidate.parents) if path != root and path.is_relative_to(root)):
+        raise ValueError('Source ingestion cannot follow symbolic links')
+    path = candidate.resolve()
+    if not path.is_relative_to(root) or not path.is_file():
+        raise ValueError('Source file is unavailable in the registered dataset')
+    digest = hashlib.sha256()
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+    with os.fdopen(descriptor, 'rb') as source:
+        before = os.fstat(source.fileno())
+        for block in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(block)
+        after = os.fstat(source.fileno())
+        identity = lambda stat: (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+        if (identity(before) != identity(after) or identity(after) != identity(path.stat())
+                or not candidate.resolve().is_relative_to(root)):
+            raise ValueError('Source file changed while computing its content identity')
+        source.seek(0)
+        # Keep the verified descriptor open through copying; never reopen a path
+        # that could have been replaced after source validation.
+        yield source, digest.hexdigest(), after.st_size

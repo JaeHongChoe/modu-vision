@@ -27,7 +27,8 @@
     "pretest:e2e:browser": "npm run test:e2e:harness",
     "test:e2e:browser": "playwright test --project=browser",
     "pretest:e2e:electron": "npm run test:e2e:harness",
-    "test:e2e:electron": "playwright test --project=electron"
+    "test:e2e:electron": "playwright test --project=electron",
+    "test:renderer": "node scripts/run_renderer_tests.cjs"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
@@ -43,8 +44,8 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
-    "electron": "^33.3.0",
-    "electron-builder": "^25.1.8",
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",

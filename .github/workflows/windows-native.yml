@@ -1,0 +1,81 @@
+name: Windows unpackaged CPU checks
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    # This is Windows Server x64; Windows 11 installation remains a separate gate.
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-windows-py313-cpu.lock
+      - run: npm ci
+      - name: Type, build, and renderer checks
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python scripts/check_service_plan.py
+          npm run typecheck
+          npm run typecheck:e2e
+          npm run test:renderer
+          npm run build
+          npm run test:e2e:harness
+      - name: Windows context, storage, and recovery checks
+        run: >-
+          python -m pytest -q --junitxml=ci-pytest.xml
+          backend/tests/test_service_s0_06.py
+          backend/tests/test_service_s1_01.py
+          backend/tests/test_service_s1_06.py
+          backend/tests/test_service_image_path_alias.py
+          backend/tests/test_service_ci_dependencies.py
+          backend/tests/test_service_s6_05.py
+      - name: Actual Electron main and preload smoke
+        shell: pwsh
+        run: |
+          $env:MV_E2E_PYTHON = (Get-Command python).Source
+          npm run test:e2e:electron
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record native evidence and inventory
+        if: always()
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python scripts/write_ci_receipt.py --output ci-receipt.json --junit ci-pytest.xml
+          python scripts/license_inventory.py --output ci-license-inventory.json
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-unpackaged-${{ github.sha }}
+          path: |
+            ci-receipt.json
+            ci-license-inventory.json
+            ci-pytest.xml
+            ${{ runner.temp }}/modu-e2e
+          retention-days: 14
+          if-no-files-found: error

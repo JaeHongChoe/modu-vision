@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Server,
 } from 'lucide-react';
-import { useProjectStore } from '../../stores/useProjectStore';
+import { taskChangeScope, useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
@@ -136,7 +136,16 @@ export const TrainingController: React.FC = () => {
     clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
     setSelectedFamily(family);
     if (['classification', 'segmentation', 'detection', 'anomaly'].includes(family) && family !== task) {
-      void useProjectStore.getState().setTask(family as VisionTask).catch(error => {setSelectedFamily(task);setActionError(error instanceof Error ? error.message : String(error));});
+      // The model choice follows the task that is actually active after the change;
+      // a reply that arrives after another project was opened belongs to that earlier project.
+      const scope = taskChangeScope(useProjectStore.getState());
+      void useProjectStore.getState().updateTask(family as VisionTask).then(outcome => {
+        if (taskChangeScope(useProjectStore.getState()) !== scope) return;
+        if (!outcome.ok) {
+          setSelectedFamily(outcome.task as ModelFamily);
+          setActionError(`모델 종류를 바꾸지 못했습니다: ${outcome.error}`);
+        }
+      });
     }
   };
 
