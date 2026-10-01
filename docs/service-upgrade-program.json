@@ -1080,9 +1080,22 @@
       "phase": 2,
       "title": "6단계 진행과 준비도 안내",
       "files": [
-        "src/renderer/components/layout/WizardFooter.tsx",
+        "src/renderer/components/wizard/WizardFooter.tsx",
         "src/renderer/stores/useProjectStore.ts",
-        "src/renderer/components/common/WorkflowImpactPanel.tsx"
+        "src/renderer/components/common/WorkflowImpactPanel.tsx",
+        "src/renderer/components/wizard/workflowReadiness.ts",
+        "src/renderer/components/wizard/useWorkflowReadiness.ts",
+        "src/renderer/components/wizard/TaskChangeImpactDialog.tsx",
+        "src/renderer/components/wizard/workflowReadiness.test.cjs",
+        "src/renderer/components/wizard/taskChangeImpact.test.cjs",
+        "scripts/e2e/service-s2-03.spec.ts",
+        "src/renderer/components/wizard/WizardHeader.tsx",
+        "src/renderer/components/training/TrainingController.tsx",
+        "src/renderer/components/evaluation/ModelDeploymentPanel.tsx",
+        "src/renderer/components/inference/FlowPackagePanel.tsx",
+        "src/renderer/components/runtime/RuntimeServicePanel.tsx",
+        "src/renderer/components/runtime/FleetPanel.tsx",
+        "src/renderer/components/common/taskChangeConsumers.test.cjs"
       ],
       "proposed_contract": "get_next_action(ProjectContext) -> ReadinessAction",
       "acceptance": [
@@ -1102,9 +1115,22 @@
         }
       ],
       "file_actions": {
-        "src/renderer/components/layout/WizardFooter.tsx": "Create",
         "src/renderer/stores/useProjectStore.ts": "Modify",
-        "src/renderer/components/common/WorkflowImpactPanel.tsx": "Modify"
+        "src/renderer/components/common/WorkflowImpactPanel.tsx": "Modify",
+        "src/renderer/components/wizard/WizardFooter.tsx": "Modify",
+        "src/renderer/components/wizard/workflowReadiness.ts": "Create",
+        "src/renderer/components/wizard/useWorkflowReadiness.ts": "Create",
+        "src/renderer/components/wizard/TaskChangeImpactDialog.tsx": "Create",
+        "src/renderer/components/wizard/workflowReadiness.test.cjs": "Create",
+        "src/renderer/components/wizard/taskChangeImpact.test.cjs": "Create",
+        "scripts/e2e/service-s2-03.spec.ts": "Create",
+        "src/renderer/components/wizard/WizardHeader.tsx": "Modify",
+        "src/renderer/components/training/TrainingController.tsx": "Modify",
+        "src/renderer/components/evaluation/ModelDeploymentPanel.tsx": "Modify",
+        "src/renderer/components/inference/FlowPackagePanel.tsx": "Modify",
+        "src/renderer/components/runtime/RuntimeServicePanel.tsx": "Modify",
+        "src/renderer/components/runtime/FleetPanel.tsx": "Modify",
+        "src/renderer/components/common/taskChangeConsumers.test.cjs": "Modify"
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
       "acceptance_state": {
@@ -1118,7 +1144,12 @@
         "windows_native": "pending",
         "target_execution": "pending"
       },
-      "proposed_test_file": "scripts/e2e/service-s2-03.spec.ts"
+      "proposed_test_file": "scripts/e2e/service-s2-03.spec.ts",
+      "placement_refinement": {
+        "original_plan_path": "src/renderer/components/layout/WizardFooter.tsx",
+        "mounted_path": "src/renderer/components/wizard/WizardFooter.tsx",
+        "reason": "App imports the wizard footer; extend mounted component and preserve stage/navigation acceptance"
+      }
     },
     {
       "id": "S2-04",
@@ -3088,6 +3119,11 @@
           "kind": "hosted-workflow-validation-repair",
           "result": "first Linux/Windows runs rejected beforejobs; runner context moved fromjobenvtostepenv; regressionRED1fail6pass thenindependent7pass",
           "scope": "new sourcefix reviewed, actual hosted rerun pending; no Windows execution credited for rejectedruns"
+        },
+        {
+          "kind": "hosted-lock-install-and-renderer-repair",
+          "result": "both hosted CPU lock and npm installs/typechecks passed; renderer225passed2failed frommissinglocalStoragefixture; scopedfixturefix independent2layoutcases passed underabsentglobal andrestoredsentinel",
+          "scope": "Ubuntu24.04/WindowsServer2025 installation proof; backend/build/browser/Electron were skipped afterrendererfailure, remainpending untilrerun"
         }
       ],
       "file_actions": {
@@ -8078,7 +8114,7 @@
       "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "scoped context/storage/flow/CI54-file sourcewave published main e02b00d56b6adbcc76cc2580321c91676974ad83, remoteHEADverified; prior core19c2f5f/license423e3fc retained; unfinished job ledger/auth sources not published"
+    "git_publication": "sourcewave main e02b00d56b6adbcc76cc2580321c91676974ad83 and workflow-contextfix main45422885746ea2078817c494ad27af5a2c110853 pushed/remoteHEADverified; ledger/auth/readiness implementation candidates excluded"
   },
   "scope_refinements": [
     {

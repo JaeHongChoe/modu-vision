@@ -62,3 +62,9 @@ E01–E08은 [설계](../superpowers/specs/2026-10-02-windows-open-source-servic
 ### 소스 게시 및 hosted 검사 수정
 
 54개 검토된 파일은 main의 e02b00d56b6adbcc76cc2580321c91676974ad83에 게시했고 원격 HEAD 일치를 확인했다. 첫 Linux/Windows Actions 실행은 job env에서 runner.temp를 사용한 설정 오류로 실제 job 시작 전에 거절됐다. artifact 임시 경로를 사용 step의 env로 이동하고, 실패를 재현하는 회귀와 독립 7개 테스트를 통과했다. hosted 재실행 및 Windows 실행 근거는 아직 pending이다. 영속 작업 원장·계정/권한 source는 별도 진행 중이며 이 게시본에 섞지 않았다. 단계별 다음 행동 안내도 다음 설계 항목으로 시작했다.
+
+### Hosted 환경의 화면 fixture 보강
+
+main4542288 재실행에서 Linux·Windows Server CPU 의존성 hash 설치와 npm 설치·타입 검사가 성공했다. Node 24의 화면 회귀는 225개 통과·2개 실패였으며, 두 layout 테스트의 브라우저 localStorage fixture 누락이 원인이었다. 실제 component render 범위에만 메모리 storage를 두고 원래 global descriptor를 finally에서 복구했다. global이 없는 경우와 기존 getter가 있는 경우 각각 2개 독립 통과. product 동작과 기존 assertion은 그대로이며 실제 hosted 후속 검사 완료는 아직 주장하지 않는다.
+
+다음 사용자 화면 작업은 단계별 부족한 입력·해결 위치·권장 행동, 작업 종류 변경 전 영향 미리보기다. 실제로 mount된 wizard/WizardFooter를 확장하며 이전 결과 보기와 수동 이동을 보존한다. 저장소·학습 원장·권한 구현과 별도 파일로 진행한다.

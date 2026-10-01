@@ -87,7 +87,7 @@
 
 **Files:**
 
-- Create: `src/renderer/components/layout/WizardFooter.tsx`
+- Create: `src/renderer/components/wizard/WizardFooter.tsx`
 - Modify: `src/renderer/stores/useProjectStore.ts`
 - Modify: `src/renderer/components/common/WorkflowImpactPanel.tsx`
 - Test: `scripts/e2e/service-s2-03.spec.ts`

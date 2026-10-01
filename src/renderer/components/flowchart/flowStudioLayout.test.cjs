@@ -3,6 +3,12 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 // Render the real editor structure without executing its network effects. The
 // regression is its flex/overflow contract, not graph or training behavior.
 function editor(){
+ const previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ const values=new Map();
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{
+  getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key),
+ }});
+ try{
  const pipeline={id:'layout',name:'Layout',nodes:[],edges:[]};
  const store=value=>{const fn=selector=>selector?selector(value):value;fn.getState=()=>value;return fn;};
  const flow=store({pipeline,pipelineDirty:false,pipelineIsDraft:false,executionChoiceOverride:'local_cpu',errorMessage:'Visible error',canUndo:false,canRedo:false});
@@ -11,6 +17,10 @@ function editor(){
   '../../stores/useFlowchartStore':{useFlowchartStore:flow,isExecutionResultCurrent:()=>true},'../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/source',datasetKey:'/source\0segmentation',hasSelectedFolder:true})},'../../stores/useProjectStore':{useProjectStore:store({language:'ko',task:'segmentation'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({})},'../../stores/useTrainingStore':{useTrainingStore:store({})},'../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:null,isLoaded:true})},'../../services/api':{getApiPersistenceIdentity:()=> 'local'},
   './flowchartViewport':{computeFlowchartViewport:()=>({scale:1,contentWidth:800,contentHeight:240,offsetX:0,offsetY:0,layerWidth:800,layerHeight:240}),readableFlowScale:value=>value},'./flowchartStartup':{getFlowchartModelTask:()=>null},'./flowchartGraph':{validateFlowchartGraph:()=>null,locateFlowIssue:()=>null},'./flowHandoff':{flowRecipeLabel:()=> '검사'},'./flowExecution':{}};
  const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>mocks[ref]??new Proxy({}, {get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports.FlowchartStudio();
+ }finally{
+  if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);
+  else delete globalThis.localStorage;
+ }
 }
 const children=node=>[node.props.children].flat(Infinity).filter(value=>value&&typeof value==='object');
 const has=(node,token)=>(node.props.className||'').split(/\s+/).includes(token);
