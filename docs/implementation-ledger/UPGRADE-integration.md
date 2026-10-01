@@ -68,12 +68,14 @@ Two old backend tests initially failed after the new project-image boundary guar
 
 After the final native restart, all 171 original file paths and content hashes still exactly matched the pre-QA manifest. The final serialized manifest SHA256 is `e3d79f35552d28d0b86932a2ae271c0cb950b435f3eb3fa0dd4e8edfc01398ac` (serialization differs from the earlier snapshot; source content did not change).
 
-Every requirement is integration verified. Native acceptance fields are marked only for observed routes; unexercised complete routes stay pending. The release bundle is an unsigned local QA build. New public changes were checked for company references, personal paths, secrets and accidental artifact/symlink inclusion. Existing remote commit history is preserved and is not claimed to have been scrubbed.
+Every requirement is integration verified. Native acceptance fields are marked only for observed routes; unexercised complete routes stay pending. The release bundle is an unsigned local QA build. New public changes were checked for company references, personal paths, secrets and accidental artifact/symlink inclusion. The initial implementation publication preserved remote history. A later user-requested history and branch cleanup is recorded in [REPOSITORY_HISTORY_CLEANUP.md](REPOSITORY_HISTORY_CLEANUP.md).
 
 ## Publication status
 
-- Implementation commit `c603418` was fast-forwarded into the clean local `main` checkout.
+The initial publication events below preceded the history cleanup. Commit identifiers are shown using their rewritten equivalents from the verified commit map.
+
+- Implementation commit `25a695c` (current rewritten identifier) was fast-forwarded into the clean local `main` checkout.
 - HTTPS push failed because no usable credential was found; explicit existing SSH identities also returned `Permission denied (publickey)`. This is an authentication prerequisite, not a test failure.
-- Before authentication recovery, remote `main` remained at baseline `02b67318c834bd364610d409471c2306c2681d24` at the readback check.
-- Authentication was then completed through the official CLI browser flow. The push succeeded, and remote HEAD readback matched local `main` at `d6c7c3a6c5dc6d3c89b29ee4d2ce014761b3095c`. The implementation and validation delivery is published. The repository's existing origin now uses HTTPS with the configured credential helper for subsequent normal pushes. No account password, access token or authorization code is stored in project files.
-- The publication checkbox is complete. Existing history was preserved; no force push was performed. This receipt update is a documentation-only follow-up to the verified delivery.
+- Before authentication recovery, remote `main` remained at baseline `d0ee8df0fd6c37f4be2e7bc6cb049af4e5da2bea` at the readback check.
+- Authentication was then completed through the official CLI browser flow. The push succeeded, and remote HEAD readback matched local `main` at `cec7e46c2d7582851e1bd789712da82f5eee4db1`. The implementation and validation delivery is published. The repository's existing origin now uses HTTPS with the configured credential helper for subsequent normal pushes. No account password, access token or authorization code is stored in project files.
+- The publication checkbox is complete. The initial implementation push preserved history and used a normal fast-forward. Commit identifiers above now refer to the sanitized history. The later user-requested cleanup used an atomic push with explicit expected-head leases; see the separate cleanup receipt.

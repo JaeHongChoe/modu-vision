@@ -61,7 +61,7 @@
 - [x] Validate program coverage and all evidence paths; independently review changes against each requirement.
 - [x] Launch isolated owned app, exercise actual GUI routes with source-derived project fixtures, persist and reopen. Record button actions, screenshot/artifact evidence and remaining external hardware limits.
 - [x] Verify original data hashes unchanged, packaging/SDK contents, application readiness and diagnostics redaction.
-- [x] Mark only evidenced states. Merge/push verified delivery using prior authorization; verify remote HEAD. Do not rewrite history.
+- [x] Mark only evidenced states. Merge/push verified delivery using prior authorization; verify remote HEAD. The initial implementation publication preserves history. A later explicit user request authorized the separate history cleanup recorded in `docs/implementation-ledger/REPOSITORY_HISTORY_CLEANUP.md`.
 
 ## Commands
 - Frontend: `npm run typecheck`, `npm run build`, `node --test <changed *.test.cjs>` (inspect existing harness before invoking).
@@ -82,4 +82,4 @@ Per-owner ledgers persist task steps, tests, changed files, integration mounts a
 
 ## Final execution result
 
-All 33 approved requirements are implemented and integration verified. Final backend 1555 passed/27 skipped; frontend 115 passed; typecheck/build and native bundle integrity 40 passed. Actual native ROI save/reopen, fixed-test selection, task cancellation/lease return, exact model handoff, derived-image preservation, diagnostic export and local protocol ACK are recorded in the integration ledger. Complete unexercised native routes and external hardware/provider execution remain pending in the registry. Existing Git history is preserved.
+All 33 approved requirements are implemented and integration verified. Final backend 1555 passed/27 skipped; frontend 115 passed; typecheck/build and native bundle integrity 40 passed. Actual native ROI save/reopen, fixed-test selection, task cancellation/lease return, exact model handoff, derived-image preservation, diagnostic export and local protocol ACK are recorded in the integration ledger. Complete unexercised native routes and external hardware/provider execution remain pending in the registry. The initial implementation publication preserved Git history. Later user-requested history and branch cleanup is documented separately in `docs/implementation-ledger/REPOSITORY_HISTORY_CLEANUP.md`.
