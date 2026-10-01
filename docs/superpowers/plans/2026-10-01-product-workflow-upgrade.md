@@ -61,7 +61,7 @@
 - [x] Validate program coverage and all evidence paths; independently review changes against each requirement.
 - [x] Launch isolated owned app, exercise actual GUI routes with source-derived project fixtures, persist and reopen. Record button actions, screenshot/artifact evidence and remaining external hardware limits.
 - [x] Verify original data hashes unchanged, packaging/SDK contents, application readiness and diagnostics redaction.
-- [ ] Mark only evidenced states. Merge/push verified delivery using prior authorization; verify remote HEAD. Do not rewrite history.
+- [x] Mark only evidenced states. Merge/push verified delivery using prior authorization; verify remote HEAD. Do not rewrite history.
 
 ## Commands
 - Frontend: `npm run typecheck`, `npm run build`, `node --test <changed *.test.cjs>` (inspect existing harness before invoking).

@@ -74,5 +74,6 @@ Every requirement is integration verified. Native acceptance fields are marked o
 
 - Implementation commit `c603418` was fast-forwarded into the clean local `main` checkout.
 - HTTPS push failed because no usable credential was found; explicit existing SSH identities also returned `Permission denied (publickey)`. This is an authentication prerequisite, not a test failure.
-- Remote `main` remains at baseline `02b67318c834bd364610d409471c2306c2681d24` at the readback check. Do not report the delivery as pushed until a subsequent authenticated push and remote HEAD readback succeed.
-- The complete reviewed source, plan, Korean summary, registry and validation receipts are preserved locally. The publication checkbox remains pending.
+- Before authentication recovery, remote `main` remained at baseline `02b67318c834bd364610d409471c2306c2681d24` at the readback check.
+- Authentication was then completed through the official CLI browser flow. The push succeeded, and remote HEAD readback matched local `main` at `d6c7c3a6c5dc6d3c89b29ee4d2ce014761b3095c`. The implementation and validation delivery is published. The repository's existing origin now uses HTTPS with the configured credential helper for subsequent normal pushes. No account password, access token or authorization code is stored in project files.
+- The publication checkbox is complete. Existing history was preserved; no force push was performed. This receipt update is a documentation-only follow-up to the verified delivery.
