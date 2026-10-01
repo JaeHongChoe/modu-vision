@@ -68,3 +68,7 @@ E01–E08은 [설계](../superpowers/specs/2026-10-02-windows-open-source-servic
 main4542288 재실행에서 Linux·Windows Server CPU 의존성 hash 설치와 npm 설치·타입 검사가 성공했다. Node 24의 화면 회귀는 225개 통과·2개 실패였으며, 두 layout 테스트의 브라우저 localStorage fixture 누락이 원인이었다. 실제 component render 범위에만 메모리 storage를 두고 원래 global descriptor를 finally에서 복구했다. global이 없는 경우와 기존 getter가 있는 경우 각각 2개 독립 통과. product 동작과 기존 assertion은 그대로이며 실제 hosted 후속 검사 완료는 아직 주장하지 않는다.
 
 다음 사용자 화면 작업은 단계별 부족한 입력·해결 위치·권장 행동, 작업 종류 변경 전 영향 미리보기다. 실제로 mount된 wizard/WizardFooter를 확장하며 이전 결과 보기와 수동 이동을 보존한다. 저장소·학습 원장·권한 구현과 별도 파일로 진행한다.
+
+## Hosted process fixture refinement
+
+main763df8715d7ac78502a1f7a0f6ef06eaf1e0f283은 push 후 원격 HEAD를 확인했다. Windows Server에서 화면 회귀227개와 build까지 통과했으나 프로세스 정리 harness는12개 통과·1개 실패였다. backend tree 전체 종료가 먼저 실행되어 detached child fixture도 함께 끝나던 구성 문제였다. workspace marker 검사 대상은 backend와 별도 tree에 두고, 그 자식 종료와 무관한 bystander 생존 assertion을 유지했다. Linux에서는 관련 backend277개 통과·2개 실패였으며 runner의 ambient session에 접근 불가 프로세스가 섞여 검사 불확실로 판정됐다. 두 테스트는 소유한 별도 session을 사용하며 접근 거부 시 unknown을 유지하는 control도 확인한다. production 종료 정책과 작업 원장은 변경하지 않았다. 검토된 fixture로 별도 published production tree의 복구5개와 프로세스 harness 검사를 독립 통과했다. 실제 Windows 후속 실행은 pending이며 Windows11 설치·서명·실장비 완료를 주장하지 않는다.

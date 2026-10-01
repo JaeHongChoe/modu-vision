@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 
 const harness = require('../e2e/fixtures/harness.cjs');
 
@@ -19,14 +19,6 @@ const token=process.env.VISION_AI_STUDIO_API_TOKEN;
 if(process.env.FAKE_MODE==='exit'){process.stderr.write('fake startup failure\n');process.exit(3);}
 const child=spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});
 if(process.env.FAKE_CHILD_PID_FILE)fs.writeFileSync(process.env.FAKE_CHILD_PID_FILE,String(child.pid));
-if(process.env.FAKE_ESCAPE_MARKER){
-  // A worker in its own session, as the training and operations launchers do.
-  // Its own child carries no workspace path, like a DataLoader worker.
-  const script="const c=require('child_process').spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});require('fs').writeFileSync(process.argv[2],String(c.pid));setInterval(()=>{},1000)";
-  const escaped=spawn(process.execPath,['-e',script,process.env.FAKE_ESCAPE_MARKER,process.env.FAKE_ESCAPE_CHILD_FILE],{stdio:'ignore',detached:true});
-  escaped.unref();
-  fs.writeFileSync(process.env.FAKE_ESCAPE_PID_FILE,String(escaped.pid));
-}
 const server=http.createServer((req,res)=>{
   if(req.url==='/health'){res.setHeader('content-type','application/json');res.end(JSON.stringify({status:'ok',device:'cpu'}));return;}
   if(req.url.startsWith('/api/echo')){res.setHeader('content-type','application/json');res.end(JSON.stringify({tokenOk:req.headers['x-vision-token']===token,host:req.headers.host,origin:req.headers.origin||null}));return;}
@@ -138,27 +130,28 @@ test('owned backend reaches health and stop ends only its own processes', async 
   const dir = path.join(scratch('backend'), '작업 공간');
   fs.mkdirSync(dir);
   const childPidFile = path.join(dir, 'child.pid');
-  const escapedPidFile = path.join(dir, 'escaped.pid');
   const escapedChildFile = path.join(dir, 'escaped-child.pid');
   const bystander = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
   // A log viewer that mentions the workspace path is not a harness process.
   const viewer = process.platform === 'win32' ? null
     : spawn('/bin/sh', ['-c', `sleep 30; echo ${path.join(dir, 'backend.stderr.log')}`], { stdio: 'ignore' });
+  let backend, escaped, escapedChildPid;
   try {
-    const backend = await harness.startOwnedBackend(fakeBackendOptions(dir, {
-      FAKE_CHILD_PID_FILE: childPidFile, FAKE_ESCAPE_MARKER: path.join(dir, 'marker'), FAKE_ESCAPE_PID_FILE: escapedPidFile,
-      FAKE_ESCAPE_CHILD_FILE: escapedChildFile,
-    }));
+    // A separate tree must survive Windows taskkill /T on the backend, so the
+    // later workspace-marker scan is exercised on every platform.
+    const script = "const c=require('child_process').spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});require('fs').writeFileSync(process.argv[2],String(c.pid));setInterval(()=>{},1000)";
+    escaped = spawn(process.execPath, ['-e', script, path.join(dir, 'marker'), escapedChildFile], { stdio: 'ignore', detached: true });
+    backend = await harness.startOwnedBackend(fakeBackendOptions(dir, { FAKE_CHILD_PID_FILE: childPidFile }));
     assert.ok(backend.port > 1);
     assert.equal(backend.health.status, 'ok');
     assert.equal(backend.baseUrl, `http://127.0.0.1:${backend.port}`);
     assert.equal(backend.portPolicy, 'os_assigned_announced');
     assert.match(backend.token, /^[0-9a-f]{64}$/);
     assert.doesNotMatch(JSON.stringify(backend), new RegExp(backend.token), 'the token is not enumerable');
-    assert.ok(await waitUntil(() => [childPidFile, escapedPidFile, escapedChildFile].every(file => fs.existsSync(file))));
+    assert.ok(await waitUntil(() => [childPidFile, escapedChildFile].every(file => fs.existsSync(file))));
     const childPid = Number(fs.readFileSync(childPidFile, 'utf8'));
-    const escapedPid = Number(fs.readFileSync(escapedPidFile, 'utf8'));
-    const escapedChildPid = Number(fs.readFileSync(escapedChildFile, 'utf8'));
+    const escapedPid = escaped.pid;
+    escapedChildPid = Number(fs.readFileSync(escapedChildFile, 'utf8'));
     assert.ok(harness.processAlive(childPid) && harness.processAlive(escapedPid));
 
     const stopped = await backend.stop();
@@ -179,8 +172,20 @@ test('owned backend reaches health and stop ends only its own processes', async 
     }
     assert.deepEqual(await backend.stop(), stopped, 'stop is idempotent');
   } finally {
-    bystander.kill();
-    viewer?.kill();
+    try { await backend?.stop(); } finally {
+      if (escaped && harness.processAlive(escaped.pid)) {
+        if (process.platform === 'win32') {
+          try { execFileSync('taskkill', ['/pid', String(escaped.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* fixture already exited */ }
+        } else {
+          try { process.kill(-escaped.pid, 'SIGKILL'); } catch { /* fixture already exited */ }
+        }
+      }
+      if (escapedChildPid && harness.processAlive(escapedChildPid)) {
+        try { process.kill(escapedChildPid, 'SIGKILL'); } catch { /* fixture already exited */ }
+      }
+      bystander.kill();
+      viewer?.kill();
+    }
   }
 });
 

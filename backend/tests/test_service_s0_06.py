@@ -114,9 +114,25 @@ def test_reused_leader_pid_before_exit_confirmation_is_resolved(local_data):
         bystander.wait(5)
 
 
+@pytest.fixture
+def unmarked_session():
+    # The runner's session can contain inaccessible service processes. Own the
+    # complete unrelated session used by these collision controls instead.
+    environment = {key: value for key, value in os.environ.items()
+                   if key != 'MODU_VISION_LOCAL_WORKER_TOKEN'}
+    process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(300)'],
+                               start_new_session=True, env=environment)
+    try:
+        yield process
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(5)
+
+
 @pytest.mark.skipif(os.name == 'nt', reason='POSIX session identifiers')
 @pytest.mark.parametrize('variant', ['boot_id_changed', 'legacy_journal_without_boot_id'])
-def test_reboot_session_collision_before_exit_confirmation(local_data, variant):
+def test_reboot_session_collision_before_exit_confirmation(local_data, variant, unmarked_session):
     """AuditCase: observer crashed before confirming exit, then the machine rebooted."""
     source, root = local_data
     index, journal = _completed_job(source, root, f'job_s006_rebooted_{variant}')
@@ -124,7 +140,7 @@ def test_reboot_session_collision_before_exit_confirmation(local_data, variant):
     gone = subprocess.Popen([sys.executable, '-c', 'pass'])
     gone.wait(5)
     # The recorded session now matches unrelated, unmarked processes.
-    stale.update(owner_pid=gone.pid, owner_session=os.getsid(0))
+    stale.update(owner_pid=gone.pid, owner_session=unmarked_session.pid)
     if variant == 'boot_id_changed':
         stale['owner_boot_id'] = 'an-earlier-boot'
     else:
@@ -132,6 +148,7 @@ def test_reboot_session_collision_before_exit_confirmation(local_data, variant):
         stale['owner_created_at'] = psutil.boot_time() - 3600
     index.write_text(json.dumps(stale))
     _restart_and_assert_available(source, root, f'job_s006_rebooted_{variant}')
+    assert unmarked_session.poll() is None, 'the unrelated session is never signalled'
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='POSIX sessions')
@@ -194,14 +211,23 @@ def test_estimated_boot_time_never_overrides_live_marked_workers(monkeypatch, le
 
 
 @pytest.mark.skipif(os.name == 'nt', reason='POSIX sessions')
-def test_estimated_earlier_boot_with_only_unrelated_session_members_is_exited_without_signals(monkeypatch):
+def test_estimated_earlier_boot_with_only_unrelated_session_members_is_exited_without_signals(monkeypatch, unmarked_session):
     from backend.engine import local_training_worker as worker
     gone = subprocess.Popen([sys.executable, '-c', 'pass'])
     gone.wait(5)
-    journal = {'owner_pid': gone.pid, 'owner_created_at': 1000.0, 'owner_token': 'old-run', 'owner_session': os.getsid(0),
+    journal = {'owner_pid': gone.pid, 'owner_created_at': 1000.0, 'owner_token': 'old-run', 'owner_session': unmarked_session.pid,
                'owner_username': psutil.Process().username()}
     monkeypatch.setattr(worker.psutil, 'boot_time', lambda: journal['owner_created_at'] + 601)
     assert worker._owned_members(journal) == []
+    # Unknown inspection remains unknown even with an earlier-boot estimate.
+    unreadable = psutil.Process(unmarked_session.pid)
+    def denied_environment():
+        raise psutil.AccessDenied(unmarked_session.pid)
+    with monkeypatch.context() as denied:
+        denied.setattr(unreadable, 'environ', denied_environment)
+        denied.setattr(worker.psutil, 'process_iter', lambda attrs: [unreadable])
+        assert worker._owned_members(journal) is None
+    assert unmarked_session.poll() is None, 'the unrelated session is never signalled'
     monkeypatch.setattr(worker.psutil, 'boot_time', lambda: journal['owner_created_at'] - 10)
     assert worker._owned_members(journal) is None, 'without an earlier-boot estimate an unmarked session stays unknown'
 

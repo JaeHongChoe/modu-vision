@@ -3124,6 +3124,11 @@
           "kind": "hosted-lock-install-and-renderer-repair",
           "result": "both hosted CPU lock and npm installs/typechecks passed; renderer225passed2failed frommissinglocalStoragefixture; scopedfixturefix independent2layoutcases passed underabsentglobal andrestoredsentinel",
           "scope": "Ubuntu24.04/WindowsServer2025 installation proof; backend/build/browser/Electron were skipped afterrendererfailure, remainpending untilrerun"
+        },
+        {
+          "kind": "hosted-process-fixture-repair",
+          "result": "main763df hosted Windows227renderer+buildpassed thenharness12pass1fail; Linux277backendpass2fail; marker-tree/private-session fixtures corrected with retained ownership and unknown-inspection assertions; independentfocused process/recovery passed",
+          "scope": "production process cleanup unchanged; WindowsServer rerun pending; no Windows11 installer/signing acceptance"
         }
       ],
       "file_actions": {
@@ -8114,7 +8119,7 @@
       "S6-05"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "sourcewave main e02b00d56b6adbcc76cc2580321c91676974ad83 and workflow-contextfix main45422885746ea2078817c494ad27af5a2c110853 pushed/remoteHEADverified; ledger/auth/readiness implementation candidates excluded"
+    "git_publication": "sourcewave main e02b00d56b6adbcc76cc2580321c91676974ad83, workflow-contextfix45422885746ea2078817c494ad27af5a2c110853 and layoutfixturefix763df8715d7ac78502a1f7a0f6ef06eaf1e0f283 pushed/remoteHEADverified; current2processfixture sources independently reviewed; ledger/auth/readiness candidates excluded"
   },
   "scope_refinements": [
     {
