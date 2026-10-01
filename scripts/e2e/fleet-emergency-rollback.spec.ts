@@ -39,8 +39,7 @@ for (const mode of ['owner', 'reviewer', 'readback'] as const) {
       return route.fallback();
     });
     await page.goto(renderer.url);
-    await page.getByTitle('프로젝트 관리',{exact:true}).click();
-    await page.getByRole('button',{name:/Fleet emergency fixture/}).click();
+    await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('Fleet emergency fixture');
     await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();
     await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();
     await page.getByLabel('현장 장비 선택').selectOption('cell-a');

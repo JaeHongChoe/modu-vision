@@ -26,8 +26,7 @@ for (const viewport of [{ width: 1366, height: 768 }, { width: 1920, height: 108
       await route.continue();
     }, { times: 1 });
     await page.goto(renderer.url, { waitUntil: 'domcontentloaded' });
-    await page.getByTitle('프로젝트 관리', { exact: true }).click();
-    await page.getByRole('button', { name: /Design foundation fixture/ }).click();
+    await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('Design foundation fixture');
     await evidence.screenshot(page, 'impact-before-open');
     const opener = page.getByRole('button', { name: '데이터·모델 변경 영향 확인', exact: true }).first();
     await expect(opener).toBeVisible({ timeout: 10000 });
@@ -103,8 +102,7 @@ for (const resource of ['current', 'legacy'] as const) {
       } else await route.fulfill({ json: report('NEW current evidence') });
     });
     await page.goto(renderer.url);
-    await page.getByTitle('프로젝트 관리', { exact: true }).click();
-    await page.getByRole('button', { name: /Impact request order fixture/ }).click();
+    await expect(page.getByTitle('프로젝트 관리', { exact: true }), 'the backend current project opens on load').toContainText('Impact request order fixture');
     const opener = page.getByRole('button', { name: '데이터·모델 변경 영향 확인', exact: true }).first();
     await opener.click();
     await expect.poll(() => Boolean(release)).toBe(true);

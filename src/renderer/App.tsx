@@ -22,6 +22,8 @@ import { useProjectStore } from './stores/useProjectStore';
 import { useTrainingStore } from './stores/useTrainingStore';
 import { useComputeStore } from './stores/useComputeStore';
 import { telemetryService } from './services/websocket';
+import { getBackendPort, request } from './services/api';
+import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
 
 export default function App() {
   const { activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
@@ -33,6 +35,7 @@ export default function App() {
   useEffect(() => {
     let unsubStatus: (() => void) | undefined;
     let unsubCrash: (() => void) | undefined;
+    let stopHealthProbe: (() => void) | undefined;
 
     // 1. Hook Electron preload IPC events if running under Electron
     if (typeof window !== 'undefined' && window.api) {
@@ -55,6 +58,17 @@ export default function App() {
           auto_fixable: false,
         });
       });
+    } else if (needsBrowserHealthProbe(typeof window === 'undefined' ? undefined : window)) {
+      // 1b. A plain browser has no preload status events; the backend's /health through the same
+      // transport is the status source that starts project discovery (and with it telemetry).
+      stopHealthProbe = startBrowserHealthProbe({
+        check: async signal => {
+          const health = await request<{ status: string; device?: string; device_name?: string }>('/health', { signal, projectContext: null });
+          return { healthy: health.status === 'ok', device: health.device, deviceName: health.device_name };
+        },
+        port: getBackendPort,
+        onStatus: setBackendStatus,
+      });
     }
 
     // 2. Initialize WebSocket telemetry streaming
@@ -69,6 +83,7 @@ export default function App() {
     return () => {
       if (unsubStatus) unsubStatus();
       if (unsubCrash) unsubCrash();
+      if (stopHealthProbe) stopHealthProbe();
       unsubTelemetry();
       telemetryService.disconnect();
     };
