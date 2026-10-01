@@ -58,3 +58,7 @@ E01–E08은 [설계](../superpowers/specs/2026-10-02-windows-open-source-servic
 ### 게시 후보의 통합 확인
 
 승인된 54개 파일을 index에서 별도 tree로 구성했다. 새 Electron 44.5.1 의존성으로 typecheck·E2E typecheck·build와 renderer 227개를 통과했다. Chrome의 플로우 화면 10개와 실제 macOS Electron 전용 profile·backend 시작 1개를 통과했다. 처음 browser preflight는 새 bundled Chromium 미설치로 실행 전에 실패했으며, 설치된 Chrome channel로 다시 실행했다. 브라우저의 모델 응답은 fixture이며 실제 학습 품질 근거가 아니다. 진행 중인 영속 작업 원장 소스는 이 후보에서 제외했다.
+
+### 소스 게시 및 hosted 검사 수정
+
+54개 검토된 파일은 main의 e02b00d56b6adbcc76cc2580321c91676974ad83에 게시했고 원격 HEAD 일치를 확인했다. 첫 Linux/Windows Actions 실행은 job env에서 runner.temp를 사용한 설정 오류로 실제 job 시작 전에 거절됐다. artifact 임시 경로를 사용 step의 env로 이동하고, 실패를 재현하는 회귀와 독립 7개 테스트를 통과했다. hosted 재실행 및 Windows 실행 근거는 아직 pending이다. 영속 작업 원장·계정/권한 source는 별도 진행 중이며 이 게시본에 섞지 않았다. 단계별 다음 행동 안내도 다음 설계 항목으로 시작했다.

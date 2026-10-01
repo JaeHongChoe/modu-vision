@@ -3,6 +3,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("service_plan_gate", ROOT / "scripts/check_service_plan.py")
@@ -68,3 +69,18 @@ def test_ci_receipt_records_failed_skipped_and_missing_tests_without_release_cla
     assert observed["pytest"] == {"tests": 4, "failures": 1, "errors": 0, "skipped": 2, "status": "failed"}
     assert "Windows 11 installer" in observed["gates_not_covered"]
     assert "model quality approval" in observed["gates_not_covered"]
+
+
+def test_runtime_artifact_path_uses_step_context_instead_of_job_context():
+    # The runner context exists in step env, but is not permitted in job env.
+    # YAML parsing alone cannot detect the rejection before a hosted job starts.
+    for name in ["ci.yml", "windows-native.yml"]:
+        workflow = yaml.safe_load((ROOT / ".github/workflows" / name).read_text())
+        for job in workflow["jobs"].values():
+            assert all("runner." not in str(value) for value in job.get("env", {}).values()), name
+            e2e_steps = [step for step in job["steps"] if
+                         "test:e2e:browser" in step.get("run", "") or
+                         "test:e2e:electron" in step.get("run", "")]
+            assert e2e_steps, name
+            assert all(step.get("env", {}).get("MV_E2E_ARTIFACT_DIR") ==
+                       "${{ runner.temp }}/modu-e2e" for step in e2e_steps), name

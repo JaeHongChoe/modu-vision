@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
-      MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
     steps:
@@ -63,6 +62,8 @@ jobs:
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Browser transport and flow checks
+        env:
+          MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
         run: npm run test:e2e:browser
       - name: Record source, toolchain, and license inventory
         if: always()
