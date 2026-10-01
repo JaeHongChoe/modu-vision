@@ -2769,12 +2769,13 @@
         "자사 코드·의존성·가중치·학습 모델·sample data를 구분해 배포 여부와 필요한 고지를 기록한다. license 미확정 pack은 배포하지 않고 사용자 적법한 경로의 가중치 import를 제공한다."
       ],
       "depends_on": [],
-      "status": "in_progress",
+      "status": "verification_pending",
       "evidence": [
         {
-          "kind": "license-inventory-candidate",
-          "result": "46 tests passed and notices check exit0; independent review identified two corrections",
-          "scope": "unknown/malformed license expression must remain unresolved; frozen scan receipt refresh required; package redistribution decision remains S6-11"
+          "kind": "post-review-inventory",
+          "result": "62 author cases passed; independent16 regression cases passed; notices check exit0",
+          "independent_review": "scoped spec/code quality passed;4 source/6 receipts/8 dependency inputs matched",
+          "scope": "dependency and model license inventory only; unknown/malformed expression stays unresolved; frozen coverage gap recorded; distribution clearance remains S6-11"
         }
       ],
       "file_actions": {
@@ -2784,13 +2785,13 @@
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
       "acceptance_state": {
-        "implementation": "pending",
-        "contract": "pending",
+        "implementation": "verified",
+        "contract": "verified",
         "gui": "pending",
         "persist": "pending",
         "reopen": "pending",
-        "failure": "pending",
-        "handoff": "pending",
+        "failure": "verified",
+        "handoff": "verified",
         "windows_native": "pending",
         "target_execution": "pending"
       },
@@ -7931,11 +7932,10 @@
       "S0-05",
       "S0-08",
       "S1-01",
-      "S2-02",
-      "S6-01"
+      "S2-02"
     ],
     "last_verified_on": "2026-10-02",
-    "git_publication": "pending accepted source wave integration"
+    "git_publication": "accepted core wave published on main: 19c2f5fe2c030891c3ae06908e893e6e8e38ece9; S0-05/S1-01 implementation candidates not published"
   },
   "scope_refinements": [
     {
