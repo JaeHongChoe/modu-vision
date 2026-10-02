@@ -751,6 +751,12 @@
      "result": "slice 2 published in 2e009f4: _StatusWriter.acknowledge_cancel decides and writes under the status lock (local watch thread and remote cancel watcher), so a finished run is never reopened; POST /api/training/reservations/confirm-release {job_id, confirm, reason, fence} lets an operator release a reservation left uncertain, refused while the job is active, while its local worker is provably alive (run journal or the user-data copy) or refreshed the reservation within its lease, or when the fence changed; the confirmation and the outcome (released / refused, incl. a store failure answered 503) are separate ledger events and the job's end reason is kept; jobs known only to the ledger are released in their own project (other projects 404); read-backs keep their compute profile; per-job lock; TaskCenter offers the two-step confirmation, labels '작업자 실행 기록 없음' only for finished rows without any journal, and shows when the outcome could not be recorded; three independent review rounds (2 P2 fixed, 1 P2 fixed), final ACCEPT",
      "scope": "frozen tree (60d7768 + 10 files): S1-04/S1-05 47 passed, regression 346 passed / 4 skipped (remote, local process, training engine, compute queue, S1-02/03/07, receipts, cancellation, API endpoints, authorization, shared security), renderer, typecheck; reviewer reproduced the race, changed-reservation, ledger-only, remote, user-data-copy, lock-contention and 503 cases with probes and mutants",
      "platform": "macOS development; Windows native pending (test_service_s1_04.py is now part of the hosted Windows job once S1-09 publishes)"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "published in 423aee4: the operator release reads the run journal first (proof of exit releases even with an expiry ahead of the clock; proof of life refuses), the refresh refusal applies only to an unknown state and names its age in seconds, and the per-job confirmation locks are reference-counted and removed when unused; independent review ACCEPT (future-expiry and 300-request lock probes, all mutants caught)",
+     "scope": "frozen tree (c1b46b3 + 2 files): S1-04/S1-05 49 passed, regression 192 passed; reviewer re-ran both",
+     "platform": "macOS development; Windows hosted run pending"
     }
    ],
    "file_actions": {
@@ -776,7 +782,7 @@
     "ledger events for every evidence step (acknowledged, signalled, exit confirmed) are still recorded in the run journals; only the cancel intent and the operator release confirmation/outcome are ledger events",
     "explicit process-identity (PID reuse) evidence: process_identity_changed is unreachable until a journal records it",
     "observation for restart-interrupted ledger rows in TaskCenter; reopen/handoff gates",
-    "review P3s (freeze 3): an expiry ahead of the clock refuses even with proof of exit (check the journal first); the per-job lock dictionary never shrinks; a stale comment on read-back profiles; remote user-data journal copy not read for facts; queued-failed remote rows still 'unconfirmed'; refusal seconds and read-back profile untested",
+    "review P3s: facts gaps for remote jobs (user-data journal copy, queued-failed rows) and interrupted rows; with no journal an expiry ahead of the clock still refuses ('0 s ago'); the late-arrival refcount case and a TrainingStartRequest-built spec in the profile test are untested",
     "Windows native and hosted evidence"
    ]
   },
