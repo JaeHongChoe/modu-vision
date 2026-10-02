@@ -1785,7 +1785,7 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
 
 
 _RESERVATION_RELEASE_LOCK = threading.Lock()
-_RESERVATION_RELEASE_LOCKS: Dict[str, threading.Lock] = {}
+_RESERVATION_RELEASE_LOCKS: Dict[str, list] = {}  # job id -> [lock, confirmations using it]
 
 
 @router.post("/reservations/confirm-release")
@@ -1795,10 +1795,19 @@ def confirm_reservation_release(req: ReservationReleaseRequest, request: Request
     is provably alive. The confirmation (who, why, what was known) is written to the job ledger before anything is
     released and the outcome after it, as separate events, so the ledger never states a release that did not happen;
     only the reservation the operator saw (same fence, still uncertain) is removed."""
+    # One confirmation per job at a time: a second one is answered from the first one's outcome. The table holds only
+    # jobs with a confirmation in progress.
     with _RESERVATION_RELEASE_LOCK:
-        lock = _RESERVATION_RELEASE_LOCKS.setdefault(req.job_id, threading.Lock())
-    with lock:  # one confirmation per job at a time: a second one is answered from the first one's outcome
-        return _confirm_reservation_release(req, request)
+        entry = _RESERVATION_RELEASE_LOCKS.setdefault(req.job_id, [threading.Lock(), 0])
+        entry[1] += 1
+    try:
+        with entry[0]:
+            return _confirm_reservation_release(req, request)
+    finally:
+        with _RESERVATION_RELEASE_LOCK:
+            entry[1] -= 1
+            if not entry[1]:
+                _RESERVATION_RELEASE_LOCKS.pop(req.job_id, None)
 
 
 def _local_journal(record: "JobRecord") -> Dict[str, Any]:
@@ -1833,22 +1842,23 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
         raise HTTPException(409, "The reservation changed since it was shown; reload and confirm again")
     if record.status in ("queued", "preparing", "running", "stopping", "cancelling"):
         raise HTTPException(409, "The job is still active; cancel it or wait for it to end first")
-    # A server job's process is not inspected from here; a job read back from the ledger carries no profile, so the
-    # reservation's own flag decides.
+    # A server job's process is not inspected from here; the job's profile or, for a read-back without one, the
+    # reservation's own flag says it ran on a server.
     remote = bool(record.remote_profile_id or lease.get("remote"))
     liveness = "not_checked" if remote else "unknown"
     if not remote:
         from backend.engine.local_training_worker import _liveness
-        # A live local worker refreshes its reservation every few seconds; one refreshed until moments ago may still
-        # be running even when no journal can be read.
-        refreshed = float(lease.get("expires") or 0) - training_job_manager._leases.lease_seconds
-        if float(lease.get("expires") or 0) > time.time():
-            raise HTTPException(409, f"The job's worker refreshed this reservation {max(0, round(time.time() - refreshed))} s ago "
-                                     "and may still be running; confirm again once it is no longer refreshed")
         journal = _local_journal(record)
         alive = _liveness(journal) if journal else None
         if alive is True:
             raise HTTPException(409, "The job's worker process is still running; cancel it first")
+        # Without proof of exit, a reservation refreshed until moments ago may belong to a worker that is still running
+        # (a live local worker refreshes it every few seconds). Proof of exit outweighs an expiry ahead of the clock.
+        expires = float(lease.get("expires") or 0)
+        if alive is None and expires > time.time():
+            refreshed = expires - training_job_manager._leases.lease_seconds
+            raise HTTPException(409, f"The job's worker refreshed this reservation {max(0, round(time.time() - refreshed))} s ago "
+                                     "and may still be running; confirm again once it is no longer refreshed")
         liveness = "gone" if alive is False else "unknown"
     link = record.ledger or _existing_ledger_link(req.job_id)
     if link is None:

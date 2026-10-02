@@ -399,8 +399,36 @@ def test_a_real_worker_journal_keeps_the_reservation_until_its_process_has_exite
     finally:
         child.kill()  # only the process this test started
         child.wait(30)
+    # Proof that the worker exited outweighs a reservation expiry ahead of the clock (a stepped clock, a skewed store).
+    with manager._leases.connect() as conn:
+        conn.execute('UPDATE leases SET expires=? WHERE job_id=?', (time.time() + 600, job_id))
     released = api.post('/api/training/reservations/confirm-release', json=body)
     assert released.status_code == 200 and released.json()['liveness'] == 'gone', released.text
+
+
+def test_a_recent_refresh_is_named_with_its_age_and_the_lock_table_empties(tmp_path, monkeypatch):
+    import time
+    from backend.api import routes_training
+    api, manager, job_id = _ended_job(tmp_path, monkeypatch)
+    with manager._leases.connect() as conn:  # refreshed 7 s ago under the 30 s lease
+        conn.execute('UPDATE leases SET expires=? WHERE job_id=?', (time.time() + manager._leases.lease_seconds - 7, job_id))
+    refused = api.post('/api/training/reservations/confirm-release', json={'job_id': job_id, 'confirm': True, 'reason': 'checked'})
+    assert refused.status_code == 409 and ('refreshed this reservation 7 s ago' in refused.text
+                                          or 'refreshed this reservation 8 s ago' in refused.text), refused.text
+    assert routes_training._RESERVATION_RELEASE_LOCKS == {}, 'only jobs with a confirmation in progress hold a lock'
+
+
+def test_a_ledger_read_back_keeps_its_compute_profile(tmp_path, monkeypatch):
+    import json
+    from backend.engine.job_store import ledger
+    api, manager, job_id = _ended_job(tmp_path, monkeypatch)
+    manager._jobs.pop(job_id)
+    store = ledger()
+    with store._connect() as db:  # the stored submission named a server profile
+        spec = json.loads(db.execute('SELECT spec_json FROM jobs WHERE id=?', (job_id,)).fetchone()[0])
+        db.execute('UPDATE jobs SET spec_json=? WHERE id=?', (json.dumps({**spec, 'compute_profile_id': 'server-a'}), job_id))
+    rows = [row for row in api.get('/api/training/jobs').json()['jobs'] if row['job_id'] == job_id]
+    assert rows and rows[0]['compute_profile_id'] == 'server-a', rows
 
 
 def test_releasing_a_reservation_needs_training_rights_in_the_jobs_own_team_project(tmp_path, monkeypatch):
