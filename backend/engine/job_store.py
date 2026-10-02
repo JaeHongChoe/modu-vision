@@ -231,6 +231,15 @@ class JobStore:
         with self._connect() as db:
             return dict(self._job(db, job_id))
 
+    def reserved(self, context: Any, project_key: str, kind: str, idempotency_key: str) -> Optional[dict]:
+        """The job this caller already reserved under that key (read only), so a retry can be answered before any
+        side effect of the original request is repeated."""
+        workspace_id, _project_id, actor_id, _mode = _context_fields(context)
+        with self._connect() as db:
+            row = db.execute('SELECT * FROM jobs WHERE workspace_id=? AND project_key=? AND actor_id=? AND kind=?'
+                             ' AND idempotency_key=?', (workspace_id, project_key, actor_id, kind, idempotency_key)).fetchone()
+        return dict(row) if row is not None else None
+
     def transition(self, job_id: str, expected_revision: int, event: str, payload: Any = None,
                    fencing_token: Optional[int] = None) -> JobRef:
         now = time.time_ns()

@@ -44,6 +44,8 @@ class ImportSpec:
     invalid_policy: str = 'exclude'
     verify: bool = False
     follow_links: bool = False
+    artifact: Optional[dict] = None  # the uploaded archive (id, revision, sha256) an extracted source came from
+    annotation_root: Optional[str] = None  # the project's active annotation folder (Studio overlays label images there)
 
 
 class ImportNotAcceptable(Exception):
@@ -63,7 +65,11 @@ class DatasetImportJobs:
     def submit(self, context: Any, project_key: str, spec: ImportSpec, idempotency_key: Optional[str] = None,
                *, parent_id: Optional[str] = None) -> JobRef:
         """Reserve the job before any work; a repeated key with the same spec returns the same job."""
-        return self.store.submit(context, project_key, KIND, asdict(spec), idempotency_key, parent_id=parent_id,
+        payload = asdict(spec)
+        for optional in ('artifact', 'annotation_root'):
+            if payload[optional] is None:
+                del payload[optional]  # a request keeps the digest it had before these fields existed
+        return self.store.submit(context, project_key, KIND, payload, idempotency_key, parent_id=parent_id,
                                  project_dir=str(Path(spec.project_root).resolve()))
 
     def run(self, job_id: str, *, executor: str = 'local-thread') -> JobRef:
@@ -155,7 +161,8 @@ class DatasetImportJobs:
         # attempt from sealing work the current attempt is still doing.
         receipt = self.index.build_revision(record['project_key'], spec.project_root, spec.source_root, spec.task,
                                             spec.invalid_policy, verify=spec.verify, follow_links=spec.follow_links,
-                                            publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=owns)
+                                            publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=owns,
+                                            overlay_root=spec.annotation_root)
         return self._finish(job_id, fence, 'complete', {'revision': asdict(receipt)})
 
     def _finish(self, job_id: str, fence: int, event: str, payload: dict) -> JobRef:
@@ -210,9 +217,12 @@ class DatasetImportJobs:
                       and record['state'] in TERMINAL), None)
         with self._lock:
             live = dict(self._progress.get(job_id) or {})
+        spec = json.loads(record['spec_json'])
         return {'job_id': job_id, 'state': record['state'], 'revision': record['revision'],
                 'attempts': len(self.store.attempts(job_id)), 'cancel_requested': self.store.cancel_intent(job_id) is not None,
-                'progress': live or None, 'result': ended['payload'] if ended else None}
+                'progress': live or None, 'result': ended['payload'] if ended else None,
+                # what the import read: the registered source, or an uploaded archive extracted into the project
+                'source': {'root': spec['source_root'], 'artifact': spec.get('artifact')}}
 
     def cancel(self, job_id: str, project_key: str, actor_id: str) -> dict:
         """Record the durable intent; the running attempt stops between files and ends the job aborted."""

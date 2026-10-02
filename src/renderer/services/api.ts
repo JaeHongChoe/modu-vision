@@ -126,22 +126,46 @@ export interface DatasetRevisionReceipt {
   revision_id: string; state: 'prepared' | 'rejected'; manifest_sha256: string;
   image_count: number; valid_count: number; error_count: number; invalid_policy: 'reject' | 'exclude'; skipped_links: number;
   unreadable_folders: number; reused_entries: number; verified_all: boolean;
+  /** Absent or null in receipts sealed before source annotations and duplicates were recorded (index schema 2). */
+  annotated?: number | null; annotation_errors?: number | null; duplicate_groups?: number | null; duplicate_images?: number | null;
+  conflicting_duplicates?: number | null; cross_split_duplicates?: number | null;
+  /** Whether annotation errors exclude images: only for tasks whose training reads the annotation files. */
+  annotations_bind?: boolean | null;
 }
 export interface DatasetImportView {
   job_id: string; state: string; revision: number; attempts: number; cancel_requested: boolean;
   progress: { phase?: string; processed?: number; total?: number | null; total_known?: boolean } | null;
   result: { revision?: DatasetRevisionReceipt; reason?: string; error?: { message: string } } | null;
   idempotent_replay?: boolean;
+  /** What the import read: the registered source (artifact null) or an uploaded archive extracted into the project. */
+  source?: { root: string; artifact: ArtifactRef | null };
 }
 export interface DatasetRevisionRow {
   revision_id: string; source_root: string; task: string; invalid_policy: 'reject' | 'exclude'; state: 'prepared' | 'rejected';
   manifest_sha256: string; image_count: number; valid_count: number; error_count: number; skipped_links: number;
   unreadable_folders: number; reused_entries: number; verified_all: number; follow_links: number; created_ns: number; active: boolean;
   publication_key: string | null; parent_revision: string | null;
+  /** False for revisions sealed before schema 3: their annotation and duplicate counts are unknown (null). */
+  annotations_scanned: boolean; annotated: number | null; annotation_errors: number | null; duplicate_groups: number | null;
+  duplicate_images: number | null; conflicting_duplicates: number | null; cross_split_duplicates: number | null;
+  annotations_bind: number | null;
 }
 export interface DatasetRevisionImage {
   relative_path: string; image_uuid: string; sha256: string | null; size: number; width: number | null; height: number | null;
   label: string | null; split: string | null; valid: number; error_code: string | null; error_detail: string | null; via_link: number;
+  annotation_format: 'labelme' | 'coco' | 'yolo' | null; annotation_labels: string[];
+  annotation_files: Array<{ path: string; sha256: string }>; annotation_error: string | null;
+}
+/** A verified, project-scoped reference to stored bytes (an uploaded archive, a model, ...). */
+export interface ArtifactRef { id: string; revision: number; sha256: string }
+/** A resumable upload: the server holds `offset` committed bytes of `size_bytes`. */
+export interface ArtifactUpload {
+  id: string; kind: string; sha256: string; size_bytes: number; offset: number; state: string; artifact_id: string | null;
+  expires_at: number | null;
+}
+/** Valid images of one revision with the same bytes (``members`` is the full count; ``items`` at most 50). */
+export interface DatasetDuplicateGroup {
+  sha256: string; members: number; conflicting: boolean; cross_split: boolean; items: DatasetRevisionImage[];
 }
 /** What the quick folder inspection decoded; only `complete` speaks for every image of the inventory. */
 export interface DatasetQuickValidation { requested: boolean; checked_images: number; complete: boolean; scope: string }
@@ -600,7 +624,9 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
       const errData = await response.json();
       if (errData.detail) {
         if (typeof errData.detail === 'object') {
-          throw errData.detail;
+          // Structured details (FastAPI validation lists, coded errors) keep their shape and gain the HTTP status, so
+          // callers can tell a refusal from a transient failure.
+          throw Object.assign(errData.detail, { status: response.status });
         }
         errorDetail = errData.detail;
       }
@@ -684,6 +710,19 @@ export const api = {
     }),
   },
 
+  artifacts: {
+    beginUpload: (data: { kind: 'source'; sha256: string; size_bytes: number }) =>
+      request<{ upload: ArtifactUpload }>('/api/artifacts/uploads', { method: 'POST', body: JSON.stringify(data) }),
+    uploadStatus: (uploadId: string) => request<{ upload: ArtifactUpload }>(`/api/artifacts/uploads/${encodeURIComponent(uploadId)}`),
+    uploadChunk: (uploadId: string, offset: number, chunk: Blob, signal?: AbortSignal) =>
+      request<{ upload: ArtifactUpload }>(`/api/artifacts/uploads/${encodeURIComponent(uploadId)}?offset=${offset}`, {
+        method: 'PUT', body: chunk, headers: { 'Content-Type': 'application/octet-stream' }, signal,
+      }),
+    completeUpload: (uploadId: string) =>
+      request<{ artifact_ref: ArtifactRef; state: string }>(`/api/artifacts/uploads/${encodeURIComponent(uploadId)}/complete`, { method: 'POST' }),
+    cancelUpload: (uploadId: string) =>
+      request<{ state: string }>(`/api/artifacts/uploads/${encodeURIComponent(uploadId)}`, { method: 'DELETE' }),
+  },
   datasetImports: {
     /** One key per user action: a retried request returns the same job instead of starting another. */
     start: (data: { task: VisionTask; invalid_policy: 'reject' | 'exclude'; verify?: boolean; follow_links?: boolean }, idempotencyKey: string) =>
@@ -699,14 +738,29 @@ export const api = {
     revisions: () => request<{ active_revision: string | null; revisions: DatasetRevisionRow[] }>('/api/dataset/revisions'),
     gaps: (revisionId: string) => request<{ revision_id: string; gaps: Array<{ relative_path: string; reason: string }> }>(
       `/api/dataset/revisions/${encodeURIComponent(revisionId)}/gaps`),
-    images: (revisionId: string, params: { cursor?: string | null; limit?: number; valid?: boolean; label?: string } = {}) => {
+    images: (revisionId: string, params: { cursor?: string | null; limit?: number; valid?: boolean; label?: string; annotationLabel?: string; annotationError?: boolean } = {}) => {
       const query = new URLSearchParams();
       if (params.cursor) query.set('cursor', params.cursor);
       if (params.limit) query.set('limit', String(params.limit));
       if (params.valid !== undefined) query.set('valid', String(params.valid));
       if (params.label) query.set('label', params.label);
+      if (params.annotationLabel) query.set('annotation_label', params.annotationLabel);
+      if (params.annotationError !== undefined) query.set('annotation_error', String(params.annotationError));
       return request<{ revision_id: string; items: DatasetRevisionImage[]; next_cursor: string | null }>(
         `/api/dataset/revisions/${encodeURIComponent(revisionId)}/images${query.size ? `?${query}` : ''}`);
+    },
+    /** Import an uploaded ZIP: the server extracts it into a project folder and validates it like a registered source. */
+    startArchive: (data: { artifact: ArtifactRef; task: VisionTask; invalid_policy: 'reject' | 'exclude'; verify?: boolean }, idempotencyKey: string) =>
+      request<DatasetImportView & { source_root: string }>('/api/dataset/imports/archive', {
+        method: 'POST', body: JSON.stringify(data), headers: { 'Idempotency-Key': idempotencyKey },
+      }),
+    duplicates: (revisionId: string, params: { cursor?: string | null; limit?: number; kind?: 'conflicting' | 'cross_split' } = {}) => {
+      const query = new URLSearchParams();
+      if (params.cursor) query.set('cursor', params.cursor);
+      if (params.limit) query.set('limit', String(params.limit));
+      if (params.kind) query.set('kind', params.kind);
+      return request<{ revision_id: string; groups: DatasetDuplicateGroup[]; next_cursor: string | null }>(
+        `/api/dataset/revisions/${encodeURIComponent(revisionId)}/duplicates${query.size ? `?${query}` : ''}`);
     },
   },
 

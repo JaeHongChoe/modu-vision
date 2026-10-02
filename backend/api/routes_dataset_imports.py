@@ -7,14 +7,17 @@ may (a source that links a NAS folder). A finished import activates nothing: acc
 """
 from __future__ import annotations
 
+import json
 import re
 import threading
+import uuid
+from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.engine.dataset_import_job import DatasetImportJobs, ImportNotAcceptable, ImportSpec
+from backend.engine.dataset_import_job import KIND as IMPORT_KIND, DatasetImportJobs, ImportNotAcceptable, ImportSpec
 from backend.engine.dataset_index import DatasetIndex, RevisionNotActivatable, StaleActiveRevision, index_path
 from backend.engine.job_store import JobConflict, ledger
 
@@ -74,7 +77,8 @@ def submit_import(payload: ImportRequest, request: Request):
     if payload.follow_links and context.mode != "local":
         raise HTTPException(403, "A team server reads only its registered source folder; links are not followed")
     spec = ImportSpec(project_root=project["project_dir"], source_root=project["source_dataset_dir"], task=payload.task,
-                      invalid_policy=payload.invalid_policy, verify=payload.verify, follow_links=payload.follow_links)
+                      invalid_policy=payload.invalid_policy, verify=payload.verify, follow_links=payload.follow_links,
+                      annotation_root=project.get("annotations_dir"))
     jobs = _jobs(request)
     try:
         ref = jobs.submit(context, project_key, spec, key)
@@ -83,6 +87,86 @@ def submit_import(payload: ImportRequest, request: Request):
     if ref.created:
         jobs.start(ref.id)
     return {**_view(jobs, ref.id, project_key), "idempotent_replay": not ref.created}
+
+
+class ArchiveImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    artifact: dict
+    task: Literal["classification", "detection", "segmentation", "anomaly", "patch_classification"]
+    invalid_policy: Literal["reject", "exclude"] = "exclude"
+    verify: bool = False
+
+
+@router.post("/imports/archive")
+def submit_archive_import(payload: ArchiveImportRequest, request: Request):
+    """Import an uploaded ZIP: it is extracted into a project-owned folder (never into a source), then indexed like
+    a registered source. The reference is checked against this project on every request; the same archive content is
+    extracted once, and an existing folder is reused only while it still holds exactly the files of its extraction
+    receipt (otherwise the archive is extracted again into a new folder). The job records which artifact it read.
+
+    Extraction runs inside this request (bounded by the archive limits); very large archives belong in the job thread,
+    which is not implemented yet. Reusing a folder reads every extracted byte again to verify it."""
+    from backend.api.routes_artifacts import authorize_artifact, get_artifact_store
+    from backend.contracts.context import ArtifactRef
+    from backend.engine.artifact_store import ArtifactError
+    from backend.engine.dataset_archive_input import (ArchiveNoSpace, ArchiveRefused, extract_dataset_archive,
+                                                      verify_extraction)
+    context, project_key, project = _scope(request)
+    key = request.headers.get("Idempotency-Key")
+    if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):
+        raise HTTPException(422, "Idempotency-Key must be 1-128 letters, digits or the characters . _ : -")
+    try:
+        ref = ArtifactRef(**payload.artifact)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(422, f"artifact must be an artifact reference (id, revision, sha256): {exc}") from exc
+    authorize_artifact(request)
+    store = get_artifact_store(request)
+    try:
+        store.reference(context, ref)  # a forged or foreign reference never reaches an existing folder
+    except ArtifactError as exc:
+        raise HTTPException(getattr(exc, "status", 409), str(exc)) from exc
+    artifact = {"id": ref.id, "revision": ref.revision, "sha256": ref.sha256}
+    jobs = _jobs(request)
+    if key is not None:  # a retried request is answered before anything is extracted or verified again
+        reserved = jobs.store.reserved(context, project_key, IMPORT_KIND, key)
+        if reserved is not None:
+            spec_json = json.loads(reserved["spec_json"])
+            intended = {"project_root": project["project_dir"], "task": payload.task, "invalid_policy": payload.invalid_policy,
+                        "verify": payload.verify, "follow_links": False, "artifact": artifact,
+                        "annotation_root": project.get("annotations_dir")}
+            recorded = {name: spec_json.get(name) for name in intended}  # every field but the extracted folder
+            if recorded != intended:
+                raise HTTPException(409, "This idempotency key was already used for a different request.")
+            return {**_view(jobs, reserved["id"], project_key), "idempotent_replay": True, "source_root": spec_json["source_root"]}
+    imports = Path(project["project_dir"]) / "dataset_imports"
+    target = imports / ref.sha256
+    if target.exists() and not verify_extraction(target, ref.sha256):
+        # The first folder was changed (files added, moved or edited): keep it as it is, reuse an earlier verified
+        # copy of this archive, or extract a new one.
+        copies = sorted(path for path in imports.glob(f"{ref.sha256}.*") if path.is_dir())
+        target = next((path for path in copies if verify_extraction(path, ref.sha256)),
+                      imports / f"{ref.sha256}.{uuid.uuid4().hex[:12]}")
+    if not target.exists():
+        try:
+            with store.open(context, ref) as handle:
+                extract_dataset_archive(handle, target, archive_sha256=ref.sha256)
+        except ArtifactError as exc:
+            raise HTTPException(getattr(exc, "status", 409), str(exc)) from exc
+        except ArchiveNoSpace as exc:
+            raise HTTPException(507, str(exc)) from exc
+        except ArchiveRefused as exc:
+            raise HTTPException(422, str(exc)) from exc
+    spec = ImportSpec(project_root=project["project_dir"], source_root=str(target), task=payload.task,
+                      invalid_policy=payload.invalid_policy, verify=payload.verify, follow_links=False, artifact=artifact,
+                      annotation_root=project.get("annotations_dir"))
+    try:
+        submitted = jobs.submit(context, project_key, spec, key)
+    except JobConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if submitted.created:
+        jobs.start(submitted.id)
+    return {**_view(jobs, submitted.id, project_key), "idempotent_replay": not submitted.created,
+            "source_root": str(target)}
 
 
 @router.get("/imports/{job_id}")
@@ -121,12 +205,30 @@ def list_revisions(request: Request):
 @router.get("/revisions/{revision_id}/images")
 def revision_images(revision_id: str, request: Request, cursor: Optional[str] = Query(None, max_length=4096),
                     limit: int = Query(100, ge=1, le=500), label: Optional[str] = Query(None, max_length=512),
-                    split: Optional[Literal["train", "val", "test"]] = None, valid: Optional[bool] = None):
-    """Rows of one immutable revision, in relative-path order; the cursor is bound to the revision and filters."""
+                    split: Optional[Literal["train", "val", "test"]] = None, valid: Optional[bool] = None,
+                    annotation_label: Optional[str] = Query(None, max_length=512), annotation_error: Optional[bool] = None):
+    """Rows of one immutable revision with their source annotations, in relative-path order; the cursor is bound to
+    the revision and filters. label is the folder label, annotation_label a label of the source annotations."""
     _context, project_key, _project = _scope(request)
     try:
         return _jobs(request).index.page(project_key, revision_id, cursor=cursor, limit=limit, label=label,
-                                         split=split, valid=valid)
+                                         split=split, valid=valid, annotation_label=annotation_label,
+                                         annotation_error=annotation_error)
+    except KeyError:
+        raise HTTPException(404, "Revision not found in this project") from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/revisions/{revision_id}/duplicates")
+def revision_duplicates(revision_id: str, request: Request, cursor: Optional[str] = Query(None, max_length=4096),
+                        limit: int = Query(50, ge=1, le=200),
+                        kind: Optional[Literal["conflicting", "cross_split"]] = None):
+    """Groups of valid images with the same bytes; conflicting groups carry different labels, cross-split groups sit in
+    more than one split. Duplicates are reported, never removed."""
+    _context, project_key, _project = _scope(request)
+    try:
+        return _jobs(request).index.duplicates(project_key, revision_id, cursor=cursor, limit=limit, kind=kind)
     except KeyError:
         raise HTTPException(404, "Revision not found in this project") from None
     except ValueError as exc:

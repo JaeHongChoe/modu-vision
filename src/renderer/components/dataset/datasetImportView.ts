@@ -1,4 +1,4 @@
-import type { DatasetImportView, DatasetQuickValidation, DatasetRevisionRow } from '../../services/api';
+import type { DatasetImportView, DatasetQuickValidation, DatasetRevisionReceipt, DatasetRevisionRow } from '../../services/api';
 
 const ENDED = new Set(['completed', 'failed', 'aborted', 'interrupted']);
 const STATE_TEXT: Record<string, string> = {
@@ -39,12 +39,49 @@ export function acceptBlocker(view: DatasetImportView | null, revisions: Dataset
   if (!view || view.state !== 'completed' || !receipt) return '완료된 가져오기의 결과만 채택할 수 있습니다.';
   if (receipt.state === 'rejected') {
     const folders = receipt.unreadable_folders ? ` · 읽지 못한 폴더 ${receipt.unreadable_folders}개` : '';
-    return `손상 이미지 ${receipt.error_count}장${folders} 때문에 거부 정책이 이 버전을 막았습니다. 원본을 고치거나 제외 정책으로 다시 실행하세요.`;
+    return `손상·주석 오류 ${receipt.error_count}장${folders} 때문에 거부 정책이 이 버전을 막았습니다. 원본을 고치거나 제외 정책으로 다시 실행하세요.`;
   }
   if (receipt.image_count === 0) return '이미지가 하나도 없는 버전은 채택할 수 없습니다.';
+  if (receipt.valid_count === 0) return '정상 이미지가 하나도 없는 버전은 채택할 수 없습니다(모두 제외됩니다).';
   const row = revisions.find((item) => item.revision_id === receipt.revision_id);
   if (row?.active) return '이미 활성 버전입니다.';
   return null;
+}
+
+/** What a receipt says about the source's own annotation files; receipts sealed before they were recorded say so. */
+export function annotationSummary(receipt: DatasetRevisionReceipt | null | undefined): string | null {
+  if (!receipt) return null;
+  if (receipt.annotated == null) return '이 버전은 주석 파일을 기록하기 전에 만들어졌습니다. 다시 검증하면 기록됩니다.';
+  const effect = receipt.annotations_bind === false
+    ? '이 작업은 폴더 라벨로 학습하므로 이미지를 제외하지 않음'
+    : '손상 수에 포함, 제외 목록에 이유 표시';
+  const errors = receipt.annotation_errors ? ` · 주석 오류 ${receipt.annotation_errors.toLocaleString()}장(${effect})` : '';
+  return `주석 파일(LabelMe·COCO·YOLO)이 연결된 이미지 ${receipt.annotated.toLocaleString()}장${errors}`;
+}
+
+/** Duplicate groups as counts: same bytes, labels that differ, or splits that mix (train/test leakage). */
+export function duplicateSummary(receipt: DatasetRevisionReceipt | null | undefined): string | null {
+  if (!receipt || receipt.duplicate_groups == null) return null;
+  if (!receipt.duplicate_groups) return '같은 내용의 이미지가 없습니다.';
+  const parts = [`같은 내용 그룹 ${receipt.duplicate_groups.toLocaleString()}개(이미지 ${(receipt.duplicate_images || 0).toLocaleString()}장)`];
+  if (receipt.conflicting_duplicates) parts.push(`라벨이 다른 그룹 ${receipt.conflicting_duplicates.toLocaleString()}개`);
+  if (receipt.cross_split_duplicates) parts.push(`train/val/test가 섞인 그룹 ${receipt.cross_split_duplicates.toLocaleString()}개`);
+  return `${parts.join(' · ')} · 중복은 지우지 않고 보고만 합니다.`;
+}
+
+/** Which source a job read, so a ZIP import is never mistaken for the registered folder shown beside it. */
+export function importSourceText(view: DatasetImportView | null): string | null {
+  if (!view?.source) return null;
+  return view.source.artifact ? `읽은 원본: 업로드한 ZIP · ${view.source.artifact.sha256.slice(0, 12)}` : '읽은 원본: 등록된 원본 폴더';
+}
+
+/** The upload step of a ZIP import, as text (a percentage only while the size is known and non-zero). */
+export function archiveProgressText(progress: { phase: 'hashing' | 'uploading' | 'verifying'; done: number; total: number } | null): string {
+  if (!progress) return '';
+  const percent = progress.total ? Math.floor((progress.done / progress.total) * 100) : 100;
+  if (progress.phase === 'hashing') return `파일 확인 중(SHA-256) ${percent}%`;
+  if (progress.phase === 'uploading') return `업로드 중 ${percent}% · 끊기면 저장된 위치부터 이어서 보냅니다`;
+  return '서버에서 파일 해시 확인 중';
 }
 
 /** What the quick folder inspection may claim; a sample or partial check never reads as "no corrupt images". */

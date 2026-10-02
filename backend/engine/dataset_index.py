@@ -22,6 +22,17 @@ inode, size, mtime, ctime, validator version) is written as the build goes, so a
 is trusted only where those fields are change evidence (POSIX with a nonzero inode); on Windows, where ctime is the
 creation time, every file is read again. Each revision records whether all bytes were read and how many entries were
 reused from the cache. ``verify=True`` reads every file.
+
+Each decodable image also records what the source's own annotation files say (``dataset_annotations``: LabelMe, COCO,
+YOLO; format, label names, and every binding file with its SHA-256, read fresh at every build because label files can
+change without the image changing). For tasks whose training reads those files (detection, segmentation) an annotation
+error (a broken document, an ambiguous binding, a class id outside the list) makes the entry invalid with that code, so
+the policy above applies to it; other tasks label by folder, so the error is recorded but excludes nothing. Valid entries with the same
+digest form duplicate groups; groups whose members carry different labels, or sit in different splits (train/test
+leakage), are counted separately. Duplicates are reported, not removed: which copy to keep is the user's decision.
+
+Schema 3 adds the annotation and duplicate tables; a schema-2 index is upgraded in place by adding them, and its
+older revisions report ``annotations_scanned = false``. An older app then refuses the upgraded index explicitly.
 """
 from __future__ import annotations
 
@@ -42,7 +53,8 @@ from PIL import Image
 
 from backend.engine.dataset_inventory import TASKS, excluded_folder, folder_label_split, is_inventory_path, scan_root
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+_UPGRADABLE = (2,)
 VALIDATOR = 'decode-v1'
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS dataset_revisions(
@@ -74,8 +86,40 @@ CREATE TABLE IF NOT EXISTS dataset_stat_cache(
     dev INTEGER NOT NULL, ino INTEGER NOT NULL, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL, ctime_ns INTEGER NOT NULL,
     sha256 TEXT, width INTEGER, height INTEGER, valid INTEGER NOT NULL, error_code TEXT, error_detail TEXT,
     last_build TEXT NOT NULL, PRIMARY KEY(project_key, source_root, relative_path));
+CREATE INDEX IF NOT EXISTS dataset_index_digest ON dataset_index_images(revision_id, sha256);
+CREATE TABLE IF NOT EXISTS dataset_index_annotations(
+    revision_id TEXT NOT NULL REFERENCES dataset_revisions(revision_id), relative_path TEXT NOT NULL, format TEXT,
+    labels TEXT NOT NULL, files TEXT NOT NULL, error TEXT, PRIMARY KEY(revision_id, relative_path));
+CREATE TABLE IF NOT EXISTS dataset_annotation_staging(
+    build_id TEXT NOT NULL, relative_path TEXT NOT NULL, format TEXT, labels TEXT NOT NULL, files TEXT NOT NULL, error TEXT,
+    PRIMARY KEY(build_id, relative_path));
+CREATE TABLE IF NOT EXISTS dataset_revision_details(
+    revision_id TEXT PRIMARY KEY REFERENCES dataset_revisions(revision_id), annotated INTEGER NOT NULL,
+    annotation_errors INTEGER NOT NULL, duplicate_groups INTEGER NOT NULL, duplicate_images INTEGER NOT NULL,
+    conflicting_duplicates INTEGER NOT NULL, cross_split_duplicates INTEGER NOT NULL, annotations_bind INTEGER NOT NULL);
 '''
+_DETAILS = ('annotated', 'annotation_errors', 'duplicate_groups', 'duplicate_images', 'conflicting_duplicates',
+            'cross_split_duplicates', 'annotations_bind')
+# Tasks whose training reads the source's annotation files; other tasks label by folder, so a broken annotation file is
+# recorded but never excludes an image there.
+ANNOTATED_TASKS = frozenset({'detection', 'segmentation'})
 POLICIES = ('reject', 'exclude')
+# Valid entries sharing a digest. A group is conflicting when its members carry different folder or annotation labels,
+# and cross-split when they sit in more than one explicit split (unsplit members prove no leakage).
+_GROUPS = """WITH groups AS (
+    SELECT i.sha256 AS sha256, COUNT(*) AS members,
+           COUNT(DISTINCT COALESCE(i.label, '') || char(31) || COALESCE(a.labels, '[]')) AS labelings,
+           COUNT(DISTINCT i.split) AS splits
+    FROM dataset_index_images i LEFT JOIN dataset_index_annotations a
+         ON a.revision_id = i.revision_id AND a.relative_path = i.relative_path
+    WHERE i.revision_id = ? AND i.valid = 1 AND i.sha256 IS NOT NULL
+    GROUP BY i.sha256 HAVING COUNT(*) > 1)"""
+_REVISION_ROWS = ('SELECT r.*, ' + ', '.join(f'd.{name}' for name in _DETAILS) +
+                  ' FROM dataset_revisions r LEFT JOIN dataset_revision_details d ON d.revision_id = r.revision_id')
+_IMAGE_ROWS = ('SELECT i.*, a.format AS annotation_format, a.labels AS annotation_labels, a.files AS annotation_files, '
+               'a.error AS annotation_error FROM dataset_index_images i LEFT JOIN dataset_index_annotations a '
+               'ON a.revision_id = i.revision_id AND a.relative_path = i.relative_path')
+_GROUP_MEMBERS = 50
 _COLUMNS = ('relative_path', 'image_uuid', 'sha256', 'size', 'width', 'height', 'label', 'split', 'valid', 'error_code',
             'error_detail', 'via_link')
 _BATCH = 500
@@ -93,7 +137,8 @@ class StaleActiveRevision(Exception):
 
 
 class RevisionNotActivatable(Exception):
-    """A rejected revision (invalid entries or gaps under the reject policy) or an empty one can never become active."""
+    """A rejected revision (invalid entries or gaps under the reject policy), or one without a valid image, can never
+    become active."""
 
 
 @dataclass(frozen=True)
@@ -109,6 +154,14 @@ class RevisionReceipt:
     unreadable_folders: int = 0
     reused_entries: int = 0
     verified_all: bool = True
+    # None: sealed before schema 3, so annotations and duplicates were never examined (not "none found").
+    annotated: Optional[int] = None
+    annotation_errors: Optional[int] = None
+    duplicate_groups: Optional[int] = None
+    duplicate_images: Optional[int] = None
+    conflicting_duplicates: Optional[int] = None
+    cross_split_duplicates: Optional[int] = None
+    annotations_bind: Optional[bool] = None
 
 
 def index_path(registry_root: Path | str) -> Path:
@@ -302,10 +355,22 @@ class DatasetIndex:
         with self._connect() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dataset_revisions'").fetchone()
-            if exists and version != SCHEMA_VERSION:
+            if exists and version != SCHEMA_VERSION and version not in _UPGRADABLE:
                 raise RuntimeError(f'{self.path} uses index schema {version}; this build reads schema {SCHEMA_VERSION}')
-            db.executescript(SCHEMA)
-            db.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
+            # Additive upgrade (new tables and an index only): existing revisions and rows are not rewritten.
+            db.execute('BEGIN IMMEDIATE')
+            try:
+                for statement in SCHEMA.split(';'):
+                    if statement.strip():
+                        db.execute(statement)
+                columns = {row[1] for row in db.execute('PRAGMA table_info(dataset_revision_details)')}
+                if 'annotations_bind' not in columns:  # a schema-3 index written before this column existed
+                    db.execute('ALTER TABLE dataset_revision_details ADD COLUMN annotations_bind INTEGER NOT NULL DEFAULT 1')
+                db.execute(f'PRAGMA user_version = {SCHEMA_VERSION}')
+            except BaseException:
+                db.execute('ROLLBACK')
+                raise
+            db.execute('COMMIT')
 
     @contextmanager
     def _connect(self):
@@ -337,8 +402,11 @@ class DatasetIndex:
                        parent_revision: Optional[str] = None, publication_key: Optional[str] = None,
                        progress: Optional[Callable[[int, int], None]] = None,
                        cancelled: Optional[Callable[[], bool]] = None,
-                       before_seal: Optional[Callable[[], None]] = None) -> RevisionReceipt:
-        """Read every image of the inventory and seal an immutable revision of it."""
+                       before_seal: Optional[Callable[[], None]] = None,
+                       overlay_root: Optional[Path | str] = None) -> RevisionReceipt:
+        """Read every image of the inventory and seal an immutable revision of it. ``overlay_root`` is the project's
+        active annotation folder: an image with a Studio overlay there is labelled by it in training, so a broken source
+        annotation of that image is recorded without excluding it."""
         if invalid_policy not in POLICIES:
             raise ValueError(f'invalid_policy must be one of {POLICIES}')
         if task not in TASKS:
@@ -362,38 +430,54 @@ class DatasetIndex:
                 stale = [row[0] for row in db.execute('SELECT build_id FROM dataset_builds WHERE heartbeat_ns < ?',
                                                       (started - _STALE_BUILD_NS,))]
                 for old in stale:
-                    db.execute('DELETE FROM dataset_index_staging WHERE build_id=?', (old,))
-                    db.execute('DELETE FROM dataset_builds WHERE build_id=?', (old,))
+                    self._drop_build(db, old)
                 db.execute('INSERT INTO dataset_builds VALUES(?, ?, ?, ?)', (build_id, project_key, started, started))
             try:
                 root = scan_root(source, task)
                 scan_prefix = '' if root == source else root.relative_to(source).as_posix() + '/'
                 receipt = self._stage_and_seal(db, build_id, project_key, project, source, task, invalid_policy, follow_links,
                                                parent_revision, publication_key, inventory, identity_prefix, trusted, verify,
-                                               progress, cancelled, before_seal, scan_prefix)
+                                               progress, cancelled, before_seal, scan_prefix, overlay_root)
             except BaseException:
                 with self._tx(db):
-                    db.execute('DELETE FROM dataset_index_staging WHERE build_id=?', (build_id,))
-                    db.execute('DELETE FROM dataset_builds WHERE build_id=?', (build_id,))
+                    self._drop_build(db, build_id)
                 raise
         return receipt
 
+    @staticmethod
+    def _drop_build(db, build_id: str) -> None:
+        db.execute('DELETE FROM dataset_index_staging WHERE build_id=?', (build_id,))
+        db.execute('DELETE FROM dataset_annotation_staging WHERE build_id=?', (build_id,))
+        db.execute('DELETE FROM dataset_builds WHERE build_id=?', (build_id,))
+
     def _stage_and_seal(self, db, build_id, project_key, project, source, task, invalid_policy, follow_links, parent_revision,
                         publication_key, inventory, identity_prefix, trusted, verify, progress, cancelled, before_seal,
-                        scan_prefix) -> RevisionReceipt:
+                        scan_prefix, overlay_root=None) -> RevisionReceipt:
+        from backend.engine.annotation_storage import dataset_annotation_dir
+        from backend.engine.dataset_annotations import SourceAnnotationScanner
+
+        def overlaid(path: Path) -> bool:
+            return overlay_root is not None and (
+                dataset_annotation_dir(path.parent, Path(overlay_root), use_scope=False) / f'{path.stem}.json').is_file()
+
+        scanner = SourceAnnotationScanner(source, follow_links=follow_links)
         manifest = hashlib.sha256()
-        rows, cache_rows, touched = [], [], []
-        counts = {'images': 0, 'valid': 0, 'reused': 0}
+        rows, cache_rows, touched, notes = [], [], [], []
+        counts = {'images': 0, 'valid': 0, 'reused': 0, 'annotated': 0, 'annotation_errors': 0, 'notes': 0}
         total = len(inventory.entries)
+
+        def write_batch() -> None:
+            db.executemany(f'INSERT INTO dataset_index_staging VALUES({", ".join("?" * 13)})', [(build_id, *row) for row in rows])
+            db.executemany('INSERT INTO dataset_annotation_staging VALUES(?, ?, ?, ?, ?, ?)', [(build_id, *note) for note in notes])
+            db.executemany('INSERT OR REPLACE INTO dataset_stat_cache VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', cache_rows)
+            db.executemany('UPDATE dataset_stat_cache SET last_build=? WHERE project_key=? AND source_root=? AND relative_path=?',
+                           touched)
 
         def flush() -> None:
             with self._tx(db):
                 db.execute('UPDATE dataset_builds SET heartbeat_ns=? WHERE build_id=?', (time.time_ns(), build_id))
-                db.executemany(f'INSERT INTO dataset_index_staging VALUES({", ".join("?" * 13)})', [(build_id, *row) for row in rows])
-                db.executemany('INSERT OR REPLACE INTO dataset_stat_cache VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', cache_rows)
-                db.executemany('UPDATE dataset_stat_cache SET last_build=? WHERE project_key=? AND source_root=? AND relative_path=?',
-                               touched)
-            rows.clear(), cache_rows.clear(), touched.clear()
+                write_batch()
+            rows.clear(), cache_rows.clear(), touched.clear(), notes.clear()
 
         for index, (relative, path, via_link, storable) in enumerate(inventory.entries, start=1):
             if cancelled is not None and cancelled():
@@ -423,9 +507,24 @@ class DatasetIndex:
                     cache_rows.append((project_key, str(source), relative, VALIDATOR, *key[:2], size, key[3], key[4], digest,
                                        width, height, int(valid), code, detail, build_id))
             digest, size, width, height, valid, code, detail, _key = entry
+            note = None
+            if valid:  # the stat cache above keeps the decode result; annotations are read fresh at every build
+                found = scanner.scan(path, relative, (width, height))
+                if found.format is not None or found.error is not None:
+                    note = (relative, found.format, json.dumps(list(found.labels)), json.dumps([list(item) for item in found.files]),
+                            found.error)
+                    notes.append(note)
+                    counts['notes'] += 1
+                    counts['annotated'] += int(found.format is not None and found.error is None)
+                if found.error is not None:
+                    counts['annotation_errors'] += 1
+                    if task in ANNOTATED_TASKS and not overlaid(path):  # training reads these files: the entry cannot be used
+                        code, _, detail = found.error.partition(': ')
+                        valid = False
             row = (relative, image_uuid, digest, size, width, height, label, split, int(valid), code, detail, via_link)
             rows.append(row)
-            manifest.update(json.dumps(row[:9], separators=(',', ':')).encode() + b'\n')
+            line = list(row[:9]) + ([] if note is None else [list(note[1:])])
+            manifest.update(json.dumps(line, separators=(',', ':')).encode() + b'\n')
             counts['images'] += 1
             counts['valid'] += int(valid)
             if len(rows) >= _BATCH:
@@ -442,28 +541,28 @@ class DatasetIndex:
             before_seal()  # e.g. the import job confirms it still owns its attempt
         try:
             with self._tx(db):
-                db.executemany(f'INSERT INTO dataset_index_staging VALUES({", ".join("?" * 13)})', [(build_id, *row) for row in rows])
-                db.executemany('INSERT OR REPLACE INTO dataset_stat_cache VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', cache_rows)
-                db.executemany('UPDATE dataset_stat_cache SET last_build=? WHERE project_key=? AND source_root=? AND relative_path=?', touched)
+                write_batch()
                 staged = db.execute('SELECT COUNT(*) FROM dataset_index_staging WHERE build_id=?', (build_id,)).fetchone()[0]
-                if db.execute('SELECT 1 FROM dataset_builds WHERE build_id=?', (build_id,)).fetchone() is None or staged != counts['images']:
+                staged_notes = db.execute('SELECT COUNT(*) FROM dataset_annotation_staging WHERE build_id=?', (build_id,)).fetchone()[0]
+                if db.execute('SELECT 1 FROM dataset_builds WHERE build_id=?', (build_id,)).fetchone() is None or (
+                        staged, staged_notes) != (counts['images'], counts['notes']):
                     raise RuntimeError(f'This build lost staged rows ({staged} of {counts["images"]}); no revision was recorded')
-                self._seal(db, revision_id, build_id, project_key, source, project, task, invalid_policy, state, manifest,
-                           counts, errors, inventory, follow_links, parent_revision, publication_key, scan_prefix)
+                details = self._seal(db, revision_id, build_id, project_key, source, project, task, invalid_policy, state,
+                                     manifest, counts, errors, inventory, follow_links, parent_revision, publication_key,
+                                     scan_prefix)
         except sqlite3.IntegrityError:
             replay = self._published(project_key, publication_key) if publication_key is not None else None
             if replay is None:
                 raise
             with self._tx(db):  # this build's own staged rows are not part of any revision
-                db.execute('DELETE FROM dataset_index_staging WHERE build_id=?', (build_id,))
-                db.execute('DELETE FROM dataset_builds WHERE build_id=?', (build_id,))
+                self._drop_build(db, build_id)
             return replay  # another attempt of the same publication sealed first: its revision is the published one
         return RevisionReceipt(revision_id, state, manifest.hexdigest(), counts['images'], counts['valid'], errors,
                                invalid_policy, inventory.skipped_links, len(inventory.gaps), counts['reused'],
-                               counts['reused'] == 0)
+                               counts['reused'] == 0, **details)
 
     def _seal(self, db, revision_id, build_id, project_key, source, project, task, invalid_policy, state, manifest, counts,
-              errors, inventory, follow_links, parent_revision, publication_key, scan_prefix) -> None:
+              errors, inventory, follow_links, parent_revision, publication_key, scan_prefix) -> dict:
         db.execute('INSERT INTO dataset_revisions VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                    (revision_id, project_key, str(source), str(project), task, invalid_policy, state, manifest.hexdigest(),
                     counts['images'], counts['valid'], errors, len(inventory.gaps), inventory.skipped_links,
@@ -471,27 +570,38 @@ class DatasetIndex:
                     time.time_ns()))
         db.execute(f'INSERT INTO dataset_index_images SELECT ?, {", ".join(_COLUMNS)} FROM dataset_index_staging WHERE build_id=?',
                    (revision_id, build_id))
+        db.execute('INSERT INTO dataset_index_annotations SELECT ?, relative_path, format, labels, files, error '
+                   'FROM dataset_annotation_staging WHERE build_id=?', (revision_id, build_id))
         db.executemany('INSERT INTO dataset_index_gaps VALUES(?, ?, ?)', [(revision_id, *gap) for gap in inventory.gaps])
-        db.execute('DELETE FROM dataset_index_staging WHERE build_id=?', (build_id,))
-        db.execute('DELETE FROM dataset_builds WHERE build_id=?', (build_id,))
+        groups = db.execute(_GROUPS + ' SELECT COUNT(*), COALESCE(SUM(members), 0), COALESCE(SUM(labelings > 1), 0), '
+                            'COALESCE(SUM(splits > 1), 0) FROM groups', (revision_id,)).fetchone()
+        details = dict(zip(_DETAILS, (counts['annotated'], counts['annotation_errors'], *groups, task in ANNOTATED_TASKS)))
+        db.execute('INSERT INTO dataset_revision_details VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+                   (revision_id, *(int(value) for value in details.values())))
+        self._drop_build(db, build_id)
         # Cache rows of files this build no longer found under its own scan root are dropped.
         db.execute("DELETE FROM dataset_stat_cache WHERE project_key=? AND source_root=? AND last_build<>? "
                    "AND (?='' OR substr(relative_path, 1, length(?))=?)",
                    (project_key, str(source), build_id, scan_prefix, scan_prefix, scan_prefix))
+        return details
 
     def _published(self, project_key: str, publication_key: str) -> Optional[RevisionReceipt]:
         with self._connect() as db:
-            row = db.execute('SELECT * FROM dataset_revisions WHERE project_key=? AND publication_key=?',
+            row = db.execute(f'{_REVISION_ROWS} WHERE r.project_key=? AND r.publication_key=?',
                              (project_key, publication_key)).fetchone()
         return None if row is None else RevisionReceipt(
             row['revision_id'], row['state'], row['manifest_sha256'], row['image_count'], row['valid_count'], row['error_count'],
-            row['invalid_policy'], row['skipped_links'], row['unreadable_folders'], row['reused_entries'], bool(row['verified_all']))
+            row['invalid_policy'], row['skipped_links'], row['unreadable_folders'], row['reused_entries'], bool(row['verified_all']),
+            **{name: (None if row[name] is None else bool(row[name]) if name == 'annotations_bind' else row[name])
+               for name in _DETAILS})
 
     def revisions(self, project_key: str) -> list[dict]:
+        """Revisions newest first; ``annotations_scanned`` is false for revisions sealed before schema 3."""
         with self._connect() as db:
             active = db.execute('SELECT revision_id FROM dataset_active WHERE project_key=?', (project_key,)).fetchone()
-            return [{**dict(row), 'active': bool(active and active[0] == row['revision_id'])} for row in db.execute(
-                'SELECT * FROM dataset_revisions WHERE project_key=? ORDER BY created_ns DESC', (project_key,))]
+            return [{**dict(row), 'annotations_scanned': row['annotated'] is not None,
+                     'active': bool(active and active[0] == row['revision_id'])} for row in db.execute(
+                f'{_REVISION_ROWS} WHERE r.project_key=? ORDER BY r.created_ns DESC', (project_key,))]
 
     def active(self, project_key: str) -> Optional[str]:
         with self._connect() as db:
@@ -501,7 +611,7 @@ class DatasetIndex:
     def activate(self, project_key: str, revision_id: str, expected_active: Optional[str]) -> str:
         """Make a prepared revision active, only if the active revision is still the expected one (a repeat is a no-op)."""
         with self._tx() as db:
-            row = db.execute('SELECT state, image_count FROM dataset_revisions WHERE revision_id=? AND project_key=?',
+            row = db.execute('SELECT state, image_count, valid_count FROM dataset_revisions WHERE revision_id=? AND project_key=?',
                              (revision_id, project_key)).fetchone()
             if row is None:
                 raise KeyError(revision_id)
@@ -509,6 +619,8 @@ class DatasetIndex:
                 raise RevisionNotActivatable('This revision has invalid entries or unreadable folders under the reject policy')
             if row['image_count'] == 0:
                 raise RevisionNotActivatable('This revision has no images')
+            if row['valid_count'] == 0:
+                raise RevisionNotActivatable('No image of this revision is valid; every entry would be excluded')
             current = db.execute('SELECT revision_id FROM dataset_active WHERE project_key=?', (project_key,)).fetchone()
             current = current[0] if current else None
             if current == revision_id:
@@ -520,43 +632,94 @@ class DatasetIndex:
 
     def gaps(self, project_key: str, revision_id: str) -> list[dict]:
         with self._connect() as db:
-            if db.execute('SELECT 1 FROM dataset_revisions WHERE revision_id=? AND project_key=?', (revision_id, project_key)).fetchone() is None:
-                raise KeyError(revision_id)
+            self._owned(db, project_key, revision_id)
             return [dict(row) for row in db.execute(
                 'SELECT relative_path, reason FROM dataset_index_gaps WHERE revision_id=? ORDER BY relative_path', (revision_id,))]
 
+    @staticmethod
+    def _cursor(cursor: Optional[str], binding: str) -> str:
+        if not cursor:
+            return ''
+        if len(cursor) > _MAX_CURSOR:
+            raise ValueError('Invalid cursor')
+        try:
+            bound, after = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
+        except (ValueError, TypeError) as exc:
+            raise ValueError('Invalid cursor') from exc
+        if bound != binding:
+            raise ValueError('The cursor belongs to another revision or filter')
+        if not isinstance(after, str):
+            raise ValueError('Invalid cursor')
+        return after
+
+    @staticmethod
+    def _owned(db, project_key: str, revision_id: str) -> None:
+        if db.execute('SELECT 1 FROM dataset_revisions WHERE revision_id=? AND project_key=?', (revision_id, project_key)).fetchone() is None:
+            raise KeyError(revision_id)
+
+    @staticmethod
+    def _image_row(row) -> dict:
+        item = dict(row)
+        item['annotation_labels'] = json.loads(item['annotation_labels']) if item['annotation_labels'] is not None else []
+        item['annotation_files'] = [{'path': path, 'sha256': digest} for path, digest in json.loads(item['annotation_files'])] \
+            if item['annotation_files'] is not None else []
+        return item
+
     def page(self, project_key: str, revision_id: str, *, cursor: Optional[str] = None, limit: int = 100,
-             label: Optional[str] = None, split: Optional[str] = None, valid: Optional[bool] = None) -> dict:
-        """Rows of one immutable revision in (relative_path) order; the cursor is bound to the revision and filters."""
+             label: Optional[str] = None, split: Optional[str] = None, valid: Optional[bool] = None,
+             annotation_label: Optional[str] = None, annotation_error: Optional[bool] = None) -> dict:
+        """Rows of one immutable revision in (relative_path) order with their source annotations; the cursor is bound to
+        the revision and filters. ``label`` is the folder label, ``annotation_label`` a label of the source annotations."""
         limit = max(1, min(int(limit), 500))
         filters = {'label': label, 'split': split, 'valid': valid}
+        if annotation_label is not None:
+            filters['annotation_label'] = annotation_label
+        if annotation_error is not None:
+            filters['annotation_error'] = annotation_error
         binding = hashlib.sha256(json.dumps([project_key, revision_id, filters], sort_keys=True).encode()).hexdigest()[:16]
-        after = ''
-        if cursor:
-            if len(cursor) > _MAX_CURSOR:
-                raise ValueError('Invalid cursor')
-            try:
-                bound, after = json.loads(base64.urlsafe_b64decode(cursor.encode()).decode())
-            except (ValueError, TypeError) as exc:
-                raise ValueError('Invalid cursor') from exc
-            if bound != binding:
-                raise ValueError('The cursor belongs to another revision or filter')
-            if not isinstance(after, str):
-                raise ValueError('Invalid cursor')
+        after = self._cursor(cursor, binding)
         with self._connect() as db:
-            if db.execute('SELECT 1 FROM dataset_revisions WHERE revision_id=? AND project_key=?', (revision_id, project_key)).fetchone() is None:
-                raise KeyError(revision_id)
-            clauses, params = ['revision_id=?', 'relative_path>?'], [revision_id, after]
-            for column, value in (('label', label), ('split', split)):
+            self._owned(db, project_key, revision_id)
+            clauses, params = ['i.revision_id=?', 'i.relative_path>?'], [revision_id, after]
+            for column, value in (('i.label', label), ('i.split', split)):
                 if value is not None:
                     clauses.append(f'{column}=?')
                     params.append(value)
             if valid is not None:
-                clauses.append('valid=?')
+                clauses.append('i.valid=?')
                 params.append(int(valid))
-            rows = [dict(row) for row in db.execute(
-                f'SELECT * FROM dataset_index_images WHERE {" AND ".join(clauses)} ORDER BY relative_path LIMIT ?', (*params, limit + 1))]
+            if annotation_label is not None:
+                clauses.append('EXISTS (SELECT 1 FROM json_each(a.labels) WHERE json_each.value=?)')
+                params.append(annotation_label)
+            if annotation_error is not None:
+                clauses.append('a.error IS NOT NULL' if annotation_error else 'a.error IS NULL')
+            rows = [self._image_row(row) for row in db.execute(
+                f'{_IMAGE_ROWS} WHERE {" AND ".join(clauses)} ORDER BY i.relative_path LIMIT ?', (*params, limit + 1))]
         more = len(rows) > limit
         rows = rows[:limit]
         token = base64.urlsafe_b64encode(json.dumps([binding, rows[-1]['relative_path']]).encode()).decode() if more and rows else None
         return {'revision_id': revision_id, 'items': rows, 'next_cursor': token}
+
+    def duplicates(self, project_key: str, revision_id: str, *, cursor: Optional[str] = None, limit: int = 50,
+                   kind: Optional[str] = None) -> dict:
+        """Duplicate groups of one revision in digest order, each with up to 50 members (``members`` is the full count).
+        ``kind`` = 'conflicting' or 'cross_split' keeps only those groups."""
+        if kind not in (None, 'conflicting', 'cross_split'):
+            raise ValueError("kind must be 'conflicting' or 'cross_split'")
+        limit = max(1, min(int(limit), 200))
+        binding = hashlib.sha256(json.dumps([project_key, revision_id, 'duplicates', kind]).encode()).hexdigest()[:16]
+        after = self._cursor(cursor, binding)
+        having = {'conflicting': ' AND labelings > 1', 'cross_split': ' AND splits > 1'}.get(kind, '')
+        with self._connect() as db:
+            self._owned(db, project_key, revision_id)
+            groups = [dict(row) for row in db.execute(
+                f'{_GROUPS} SELECT * FROM groups WHERE sha256 > ?{having} ORDER BY sha256 LIMIT ?', (revision_id, after, limit + 1))]
+            more = len(groups) > limit
+            groups = groups[:limit]
+            for group in groups:
+                group['conflicting'], group['cross_split'] = group.pop('labelings') > 1, group.pop('splits') > 1
+                group['items'] = [self._image_row(row) for row in db.execute(
+                    f'{_IMAGE_ROWS} WHERE i.revision_id=? AND i.sha256=? AND i.valid=1 ORDER BY i.relative_path LIMIT ?',
+                    (revision_id, group['sha256'], _GROUP_MEMBERS))]
+        token = base64.urlsafe_b64encode(json.dumps([binding, groups[-1]['sha256']]).encode()).decode() if more and groups else None
+        return {'revision_id': revision_id, 'groups': groups, 'next_cursor': token}

@@ -337,6 +337,13 @@ class ArtifactStore:
             db.execute("UPDATE artifact_uploads SET state='cancelled',updated=? WHERE id=?", (self.clock(), identifier))
         self._stage(identifier).unlink(missing_ok=True)
 
+    def reference(self, context, ref):
+        """The managed artifact's metadata once the reference is checked against this project (nothing is copied)."""
+        meta = self.registry.managed_reference(self._context(context), ref)
+        if meta is None:
+            raise ArtifactError('Use the context API for legacy file references', 409)
+        return meta
+
     @contextmanager
     def open(self, context, ref):
         self._context(context)
