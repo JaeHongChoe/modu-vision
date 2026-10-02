@@ -54,7 +54,7 @@ def _shape(item,width,height):
 def _row(row):
     if not isinstance(row,dict): raise ValueError('Image entry must be an object')
     name=safe_name(row['file_name']); width=int(row.get('width') or 0); height=int(row.get('height') or 0)
-    if width<=0 or height<=0: raise ValueError('Image dimensions are required')
+    if width<=0 or height<=0: raise ValueError(f'Image dimensions are required: {name} has no size (it may not decode)')
     return {'file_name':name,'width':width,'height':height,
             'annotations':[_shape(a,width,height) for a in row.get('annotations',[])]}
 
@@ -211,8 +211,11 @@ def source_annotations_for_image(source,image):
     source=Path(source).resolve();image=Path(image);relative=image.relative_to(source).as_posix()
     split=next((part for part in Path(relative).parts[:-1] if part in {'train','val','test'}),None)
     files=source_annotation_files(source,image)
-    from backend.engine.dicom_input import open_source_image
-    with open_source_image(image) as pil: width,height=pil.size
+    if not any(path.suffix in {'.json','.txt'} for path in files):return None
+    from backend.engine.dicom_input import IMAGE_OPEN_ERRORS,open_source_image
+    try:
+        with open_source_image(image) as pil: width,height=pil.size
+    except IMAGE_OPEN_ERRORS:return None  # an undecodable image has no source labels to bind
     matched=[]
     for path in files:
         if path.suffix!='.json':continue

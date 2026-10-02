@@ -48,7 +48,7 @@ def mask_annotations(pixels,classes):
 def load_mask_bundle(directory):
     root=Path(directory).expanduser().resolve()
     manifest=_safe_file(root,'mask_manifest.json')
-    doc=json.loads(manifest.read_text())
+    doc=json.loads(manifest.read_text(encoding='utf-8'))
     if doc.get('schema_version')!=1:raise ValueError('Mask manifest schema_version must be 1')
     classes=_classes(doc['classes']);rows=[];seen=set()
     for row in doc['images']:
@@ -70,6 +70,8 @@ def load_mask_bundle(directory):
 
 def annotation_pixels(row):
     if row.get('mask_pixels') is not None:return np.asarray(row['mask_pixels'],dtype=np.uint8)
+    if not row.get('width') or not row.get('height'):
+        raise ValueError(f"Image dimensions are required: {row.get('file_name')} has no size (it may not decode)")
     pixels=np.zeros((row['height'],row['width']),np.uint8)
     for ann in row['annotations']:
         cid=ann.get('category_id') or 1

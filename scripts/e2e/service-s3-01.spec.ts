@@ -10,6 +10,8 @@ test('a validated revision reads every image, a reject policy holds it, and only
  fs.writeFileSync(path.join(workspace.dataset,'ng','broken.png'),'not an image');
  const created=await page.request.post(`${renderer.origin}/api/project/create`,{data:{name:'S301 import',task:'classification'}});expect(created.ok()).toBe(true);
  expect((await page.request.put(`${renderer.origin}/api/project/update`,{data:{source_dataset_dir:workspace.dataset}})).ok()).toBe(true);
+ const serverErrors:string[]=[];
+ page.on('response',response=>{const path=new URL(response.url()).pathname;if(path.startsWith('/api/')&&response.status()>=500)serverErrors.push(`${response.status()} ${path}`);});
  await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
  await page.getByRole('button',{name:/01.*데이터 관리/}).click();
  const open=page.getByRole('button',{name:'검증된 데이터 버전',exact:true});
@@ -46,6 +48,9 @@ test('a validated revision reads every image, a reject policy holds it, and only
  const active=after.revisions.find((row:{active:boolean})=>row.active);
  expect(active.invalid_policy).toBe('exclude');expect(active.error_count).toBe(1);expect(after.active_revision).toBe(active.revision_id);
  await evidence.screenshot(page,'s301-accepted');
+ expect(serverErrors,'no server error while the dataset screen lists a corrupt image').toEqual([]);
+ const statistics=await page.request.get(`${renderer.origin}/api/dataset/metadata/statistics?folder_path=${encodeURIComponent(workspace.dataset)}`);
+ expect(statistics.status(),'statistics still answer with a corrupt image in the source').toBe(200);
  for(const image of (workspace as unknown as {images:Array<{path:string;sha256:string}>}).images)
   expect(crypto.createHash('sha256').update(fs.readFileSync(image.path)).digest('hex'),'the source is only read').toBe(image.sha256);
 });

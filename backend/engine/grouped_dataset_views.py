@@ -41,15 +41,16 @@ def is_anomaly_normal(image,source=None):
 def _annotations(source,image):
     studio=dataset_annotation_dir(image.parent)/f'{image.stem}.json'
     if studio.is_file():
-        data=json.loads(studio.read_text());annotations=data.get('annotations')
+        data=json.loads(studio.read_text(encoding='utf-8'));annotations=data.get('annotations')
         if not isinstance(annotations,list):raise ValueError(f'Invalid Studio labels: {image.name}')
         return annotations,data.get('mask_file')
     adjacent=image.with_suffix('.json')
     if adjacent.is_file():
-        document=json.loads(adjacent.read_text())
+        document=json.loads(adjacent.read_text(encoding='utf-8'))
         document.setdefault('imagePath',image.name)
-        with open_source_image(image) as opened:width,height=opened.size
-        document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)
+        if 'imageWidth' not in document or 'imageHeight' not in document:  # the image is opened only for a missing size
+            with open_source_image(image) as opened:width,height=opened.size
+            document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)
         return import_annotations(document,'labelme')[0]['annotations'],None
     annotations=source_annotations_for_image(source,image)
     return annotations,None
@@ -64,7 +65,7 @@ def _paired_mask(source,image):
 def _mask_class_mapping(image):
     studio=dataset_annotation_dir(Path(image).parent)/f'{Path(image).stem}.json'
     if not studio.is_file():return {}
-    classes=json.loads(studio.read_text()).get('mask_classes',[])
+    classes=json.loads(studio.read_text(encoding='utf-8')).get('mask_classes',[])
     return {c['id']:c['name'] for c in classes if c['id']>0}
 
 def _mask_pixels(path,explicit_ids=None):

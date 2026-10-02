@@ -68,6 +68,12 @@ def read_dicom(path, *, window_center=None, window_width=None, frame_index=None)
     return Image.fromarray(rgb),metadata
 
 
+# Everything opening a source image for display or geometry can raise: unreadable or truncated files (OSError, incl.
+# UnidentifiedImageError), unsupported DICOM (ValueError), malformed headers (SyntaxError), and images above Pillow's
+# pixel limit (DecompressionBombError, which is none of those).
+IMAGE_OPEN_ERRORS = (OSError, ValueError, SyntaxError, Image.DecompressionBombError)
+
+
 def open_source_image(path):
     return read_dicom(path)[0] if is_dicom(path) else Image.open(path)
 
@@ -84,5 +90,5 @@ def normalized_view(path, owned_root, **options):
     if not target.exists():image.save(target,format='PNG')
     receipt={**metadata,'view_id':key,'view_path':str(target),'view_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
         'view_transform':[[1,0,0],[0,1,0],[0,0,1]]}
-    (root/f'{key}.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2))
+    (root/f'{key}.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     return receipt

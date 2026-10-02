@@ -550,7 +550,7 @@ def test_a_dicom_decode_failure_is_never_cached(index, tmp_path, monkeypatch):
 def test_a_link_back_inside_the_source_spelled_differently_is_not_walked_twice(index, tmp_path):
     """Case-insensitive volume: a link to /source spelled /SOURCE reaches the same folder; only identity shows it."""
     source = _classification_tree(tmp_path / 'source', per_class=1)
-    _link(source / 'train' / 'ok' / 'BACK', Path(str(source).replace('/source', '/SOURCE')))
+    _link(source / 'train' / 'ok' / 'up', Path(str(source / 'train').replace('/train', '/TRAIN')))  # inside the source
     receipt = index.build_revision('ns:a', tmp_path / 'project', source, 'classification', follow_links=True)
     assert receipt.image_count == 2, _paths(index, receipt)
 

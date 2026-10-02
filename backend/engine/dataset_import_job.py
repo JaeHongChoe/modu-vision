@@ -112,7 +112,7 @@ class DatasetImportJobs:
                 return self.store.transition(job_id, ref.revision, 'start')
             except StaleRevision:
                 continue
-        return self.store.get(job_id)
+        raise RuntimeError('The import could not start: its record kept changing; start it again')
 
     def _begin_attempt(self, job_id: str, executor: str) -> int:
         """A new fenced attempt at the job's current revision (a cancel intent recorded meanwhile moves the revision)."""
@@ -189,8 +189,14 @@ class DatasetImportJobs:
             ref = self.store.get(job_id)
             if self.index._published(self.store.record(job_id)['project_key'], job_id) is not None:
                 return  # its revision is sealed: the next start completes the job with it
-            if ref.state not in TERMINAL:
-                self.store.transition(job_id, ref.revision, 'fail', {'error': {'message': f'{type(exc).__name__}: {exc}'}})
+            for _ in range(4):  # a cancel intent recorded meanwhile moves the revision: read it again
+                if ref.state in TERMINAL:
+                    break
+                try:
+                    self.store.transition(job_id, ref.revision, 'fail', {'error': {'message': f'{type(exc).__name__}: {exc}'}})
+                    break
+                except StaleRevision:
+                    ref = self.store.get(job_id)
         except Exception:
             logger.exception('Could not record the end of dataset import %s; the next start recovers it', job_id)
         self._set_progress(job_id, {'phase': 'failed'})

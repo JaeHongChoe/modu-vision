@@ -290,3 +290,41 @@ def test_a_stop_recorded_before_the_start_transition_aborts(imports, tmp_path, m
 
     monkeypatch.setattr(store, 'get', cancel_after_read)
     assert jobs.run(ref.id).state == 'aborted' and index.revisions('ns:a') == []
+
+
+def test_a_start_that_keeps_conflicting_fails_with_its_reason_instead_of_staying_accepted(imports, tmp_path, monkeypatch):
+    from backend.engine.job_store import StaleRevision
+    jobs, store, index = imports
+    source = _source(tmp_path / 'source')
+    ref = jobs.submit(_context(), 'ns:a', _spec(tmp_path, source), 'conflicting')
+    real_transition = store.transition
+
+    def always_stale(job_id, revision, event, *args, **kwargs):
+        if event == 'start':
+            raise StaleRevision('moved again')
+        return real_transition(job_id, revision, event, *args, **kwargs)
+
+    monkeypatch.setattr(store, 'transition', always_stale)
+    jobs.start(ref.id).join(10)
+    assert store.get(ref.id).state == 'failed'
+
+
+def test_the_failure_is_recorded_even_when_its_first_write_meets_a_moved_revision(imports, tmp_path, monkeypatch):
+    from backend.engine.job_store import StaleRevision
+    jobs, store, index = imports
+    source = _source(tmp_path / 'source')
+    ref = jobs.submit(_context(), 'ns:a', _spec(tmp_path, source), 'fail-write')
+    real_transition = store.transition
+    fails = []
+
+    def stale_then_real(job_id, revision, event, *args, **kwargs):
+        if event == 'start':
+            raise StaleRevision('moved again')
+        if event == 'fail' and not fails:
+            fails.append(revision)
+            raise StaleRevision('a cancel intent moved the revision')
+        return real_transition(job_id, revision, event, *args, **kwargs)
+
+    monkeypatch.setattr(store, 'transition', stale_then_real)
+    jobs.start(ref.id).join(10)
+    assert fails and store.get(ref.id).state == 'failed'

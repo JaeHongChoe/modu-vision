@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 from PIL import Image
-from backend.engine.dicom_input import open_source_image
+from backend.engine.dicom_input import IMAGE_OPEN_ERRORS, open_source_image
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.annotation_transactions import AnnotationFileTransaction
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
@@ -128,7 +128,7 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
     lock_name = hashlib.sha256(key.encode()).hexdigest()
     with _file_lock(locks/f'{lock_name}.lock'):
         if path.is_symlink(): raise ValueError('Metadata ledger cannot be a symbolic link')
-        ledger = json.loads(path.read_text()) if path.exists() else {'schema_version':1, 'images':{}}
+        ledger = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'schema_version':1, 'images':{}}
         if not isinstance(ledger.get('images'),dict): raise ValueError('Invalid metadata ledger')
         before = json.dumps(ledger, sort_keys=True)
         state = _MetadataTransactionState(ledger)
@@ -214,6 +214,15 @@ def _event(row, actor, action, changes):
     row['audit'].append({'id':str(uuid.uuid4()),'at':_now(),'actor':actor,'action':action,
                          'revision':row['revision'],'changes':changes})
 
+def _geometry(image):
+    """(width, height, decode error): an image that cannot be decoded is listed with its error, never a failed request."""
+    try:
+        with open_source_image(image) as pil:
+            return pil.size[0], pil.size[1], None
+    except IMAGE_OPEN_ERRORS as exc:
+        return None, None, f'{type(exc).__name__}: {exc}'
+
+
 def _ensure(ledger, project_root, dataset_root, image_path, annotation_root=None):
     source,image = _visible_path(dataset_root,image_path)
     relative = image.relative_to(source).as_posix()
@@ -222,8 +231,8 @@ def _ensure(ledger, project_root, dataset_root, image_path, annotation_root=None
     mask = _mask_hash(project_root,source,image,annotation_root)
     row = ledger['images'].get(relative)
     if row is None:
-        with open_source_image(image) as pil: width,height=pil.size
-        row={'image_uuid':str(uuid.uuid5(uuid.NAMESPACE_URL,f'{Path(project_root).resolve()}\0{source}\0{relative}')),
+        width,height,decode_error=_geometry(image)
+        row={'decode_error':decode_error,'image_uuid':str(uuid.uuid5(uuid.NAMESPACE_URL,f'{Path(project_root).resolve()}\0{source}\0{relative}')),
              'file_path':str(image),'relative_path':relative,'content_hash':content,'content_version':1,
              'width':width,'height':height,'revision':0,'tags':[], 'product':'','lot':'','group':'',
              'workflow_state':'unworked','usage_state':'active','reviewer':None,'review_history':[],'audit':[],
@@ -232,7 +241,7 @@ def _ensure(ledger, project_root, dataset_root, image_path, annotation_root=None
     else:
         changes={}
         if row['content_hash'] != content:
-            with open_source_image(image) as pil: row['width'],row['height']=pil.size
+            row['width'],row['height'],row['decode_error']=_geometry(image)
             row['content_hash']=content; row['content_version']+=1; changes['content_hash']=content
         if row.get('annotation_hash') != annotation:
             row['annotation_hash']=annotation; changes['annotation_hash']=annotation

@@ -617,3 +617,14 @@ def test_a_volume_without_inode_numbers_is_still_walked_completely(dataset_clien
     monkeypatch.setattr(routes.os, 'stat', lambda path, *args, **kwargs: NoInode(real_stat(path, *args, **kwargs)))
     body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
     assert body['validation']['checked_images'] == 4 and body['validation']['complete'] is True
+
+
+def test_a_corrupt_header_reported_without_an_errno_is_remembered(dataset_client, tmp_path, monkeypatch):
+    from backend.api import routes_dataset as routes
+    source = tmp_path / 'broken.bmp'
+    source.write_bytes(b'BM' + b'\xff' * 60)
+    probes = []
+    real_probe = routes._probe_header
+    monkeypatch.setattr(routes, '_probe_header', lambda path: probes.append(path) or real_probe(path))
+    assert [thumbnail(dataset_client, source).status_code for _ in range(2)] == [400, 400]
+    assert len(probes) == 1, 'the second view is answered from the failure memo'

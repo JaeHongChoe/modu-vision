@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from PIL import Image
-from backend.engine.dicom_input import open_source_image
+from backend.engine.dicom_input import IMAGE_OPEN_ERRORS, open_source_image
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_loaders import (
@@ -827,7 +827,7 @@ def list_dataset_images(
     from backend.engine.annotation_storage import request_project_root,scoped_annotation_root
     selected_project=request_project_root()
     if selected_project and (selected_project/'project.json').is_file():
-        project=json.loads((selected_project/'project.json').read_text())
+        project=json.loads((selected_project/'project.json').read_text(encoding='utf-8'))
         if project.get('source_dataset_dir') and Path(project['source_dataset_dir']).resolve()==target_dir and requested_task:
             from backend.engine.dataset_summary import dataset_summary
             from backend.engine.dataset_metadata import list_metadata
@@ -840,7 +840,10 @@ def list_dataset_images(
             paged=[]
             for row in filtered[offset:offset+limit]:
                 item=ImageMeta(**row)
-                with open_source_image(item.file_path) as opened:item.width,item.height=opened.size
+                try:
+                    with open_source_image(item.file_path) as opened:item.width,item.height=opened.size
+                except IMAGE_OPEN_ERRORS:
+                    pass  # an undecodable image is listed without geometry; the import inspection reports it
                 paged.append(item.model_dump())
             return {'total':len(filtered),'limit':limit,'offset':offset,'items':paged,
                     'class_split_counts':_class_split_counts([ImageMeta(**r) for r in all_rows]) if include_class_splits else None}
@@ -887,8 +890,11 @@ def list_dataset_images(
                 continue
             if label_status in ('labeled','unlabeled') and bool(label) != (label_status == 'labeled'):
                 continue
-            with open_source_image(image) as pil:
-                width,height=pil.size
+            try:
+                with open_source_image(image) as pil:
+                    width,height=pil.size
+            except IMAGE_OPEN_ERRORS:
+                width=height=None  # listed without geometry, as in the project-source listing
             all_images.append(ImageMeta(image_id=image.stem,file_name=image.name,file_path=str(image),width=width,height=height,
                 split=partition,label=label,labels=labels,thumbnail_url=f'/api/dataset/thumbnail/{image.name}?file_path={image}'))
         total=len(all_images)
@@ -1036,7 +1042,7 @@ def list_dataset_images(
             try:
                 with open_source_image(item.file_path) as source_image:
                     item.width, item.height = source_image.size
-            except (OSError, ValueError):
+            except IMAGE_OPEN_ERRORS:
                 pass
     return {
         "total": total,
