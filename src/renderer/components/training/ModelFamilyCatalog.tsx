@@ -33,7 +33,7 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
         <h3 className="font-semibold text-white">{family.label}<span className="ml-2 font-normal text-cyan-300">{family.model}</span></h3>
         <p className="mt-2 leading-5 text-slate-300">{family.prerequisite}</p>
         <p className="mt-2 break-words text-slate-400">구조: {family.architectures.join(' · ')} · 기본 {family.default_architecture}</p>
-        <p className="mt-2 text-slate-400">{family.remote_training ? '로컬·서버 학습' : '로컬 학습'} · {family.devices.map(device => device.toUpperCase()).join(' / ')}</p>
+        <p className="mt-2 text-slate-400">{family.remote_training ? '로컬·서버 학습' : '로컬 학습'} · 이 컴퓨터 {family.devices.map(device => device.toUpperCase()).join(' / ')}</p>
         <p className="mt-1 text-slate-400">{family.stages.map(stage => stageNames[stage] || stage).join(' → ')}</p>
         {!family.methods && family.continuation === 'statistical_refit' && <p className="mt-1 text-slate-400">검증된 부모 특징 추출기로 정상 통계를 다시 구성합니다.</p>}
         {family.methods?.map(method => <div key={method.method} className="mt-2 border-t border-[#314155] pt-2">

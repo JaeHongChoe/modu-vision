@@ -495,6 +495,13 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
             if status.get('job_id') != record.job_id or status.get('spec_sha256') != digest:
                 raise ValueError('Local worker status differs from its immutable launch')
             _observe(record, status, callback, seen)
+            acknowledged = status.get('cancel_acknowledged_at')
+            if isinstance(acknowledged, (int, float)) and not journal.get('cancel_acknowledged_at'):
+                journal['cancel_acknowledged_at'] = acknowledged
+                try:
+                    _save(journal)
+                except OSError:
+                    logger.exception('Could not record the cancel acknowledgement of %s', record.job_id)
             if status['status'] in {'completed', 'failed', 'aborted'}:
                 terminal = status
         try:
@@ -578,6 +585,10 @@ def execute_basic(spec_path):
     def watch():
         while not stop.wait(.05):
             if _cancelled(root, spec['job_id']):
+                # The worker's acknowledgement, recorded apart from the signals sent and from the confirmed exit (S1-04);
+                # a status that is already terminal is kept.
+                terminal = writer._payload.get('status') in ('completed', 'failed', 'aborted')
+                writer.update(cancel_acknowledged_at=time.time(), **({} if terminal else {'status': 'stopping'}))
                 event.set()
                 if trainer is not None:
                     trainer.abort()
@@ -595,7 +606,7 @@ def execute_basic(spec_path):
             parent = dict(parent, checkpoint_path=Path(parent['checkpoint_path']), classes=tuple(parent['classes']))
             parent = WarmStartParent(**parent)
         if _cancelled(root, spec['job_id']):
-            result = writer.update(status='aborted')
+            result = writer.update(status='aborted', cancel_acknowledged_at=time.time())
         else:
             validate_training_binding(spec.get('dataset_binding'))
             trainer = UnifiedAutoMLTrainer(task=spec['task'], dataset_path=spec['dataset_path'], output_dir=root,

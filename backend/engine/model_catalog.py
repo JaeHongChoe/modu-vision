@@ -1,7 +1,15 @@
 """Public model capabilities; no models, data or credentials are loaded here."""
 from __future__ import annotations
 
+from functools import lru_cache
 from importlib.util import find_spec
+
+
+@lru_cache(maxsize=1)
+def _device_kinds() -> tuple:
+    """Devices this computer's runtime can use; MPS is offered only on macOS where it is available (S1-05)."""
+    from backend.contracts.capabilities import local_device_kinds
+    return tuple(local_device_kinds())
 
 
 def model_family_catalog():
@@ -26,7 +34,7 @@ def model_family_catalog():
             "architectures": architectures, "default_architecture": default,
             "prerequisite": prerequisite, "remote_training": task in _RUNNERS,
             "continuation": continuation,
-            "devices": ["cpu", "cuda", "mps"],
+            "devices": list(_device_kinds()),
             "stages": ["label", "train", "evaluate", "generate", "review", "export"] if task == "defect_gan" else ["label", "train", "evaluate", "flow", "export"],
             "dependencies": dependencies, "missing_dependencies": missing,
             "quality_approved": False,

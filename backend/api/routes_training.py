@@ -1547,6 +1547,18 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
                 status_code=422,
                 detail=f"Compute server is not ready: {exc}",
             ) from exc
+    else:
+        # An explicitly requested accelerator this computer does not have is refused, never replaced by another
+        # device (S1-05); "auto" keeps its documented meaning.
+        explicit_device = str(req.device or "").strip().lower()  # the trainer uses this parameter, not config_overrides
+        if explicit_device and explicit_device not in ("auto", "cpu"):
+            from backend.contracts.capabilities import local_device_kinds
+            kind = ("cuda" if explicit_device.startswith("cuda") else "mps" if explicit_device.startswith("mps")
+                    else explicit_device)
+            if kind not in local_device_kinds():
+                raise HTTPException(status_code=409, detail=(
+                    f"이 컴퓨터에는 {kind.upper()} 장치가 없습니다. 다른 장치로 바꿔 실행하지 않습니다. "
+                    "CPU 또는 자동을 고르거나 해당 장치가 있는 서버를 선택하세요."))
 
     if req.output_dir:
         out_dir = Path(req.output_dir).resolve()
@@ -1928,11 +1940,44 @@ def training_queue(request: Request):
     return {"jobs": rows}
 
 
+def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, Any]:
+    """What happened to the job from evidence only, with one next action (S1-04): run journal, cancel intent, reservation."""
+    from dataclasses import asdict
+    from backend.engine.job_observation import cancellation_evidence, classify_observation
+    journal: Dict[str, Any] = {}
+    for name in ("local_job.json", "remote_job.json"):
+        path = Path(record.output_dir) / name if record.output_dir else None
+        if path is not None and path.is_file():
+            try:
+                loaded = json.loads(path.read_text())
+            except (OSError, ValueError):
+                continue
+            journal = loaded if isinstance(loaded, dict) else {}
+            break
+    try:
+        intent = job_ledger().cancel_intent(record.job_id)
+    except _LEDGER_ERRORS:
+        intent = None
+    evidence = cancellation_evidence(journal, intent, None if reserved is None else record.job_id in reserved)
+    # A failed local job stores the error catalog payload: its text is in details/message_en, its kind in error_code.
+    payload = record.error if isinstance(record.error, dict) else {"message": record.error} if record.error else {}
+    error = " | ".join(str(payload[key]) for key in ("message", "details", "message_en") if payload.get(key)) or None
+    observed = classify_observation(
+        record.status, exit_code=journal.get("worker_exit_code"), error=error, error_code=payload.get("error_code"),
+        connection_lost=record.status == "disconnected", remote=getattr(record, "remote_profile_id", None) is not None,
+        app_restarted="restart" in (error or ""), cancel=evidence, cancel_reason=(intent or {}).get("reason"))
+    return {**asdict(observed), "cancel": asdict(evidence)}
+
+
 @router.get("/jobs")
 def list_training_jobs(request:Request=None):
     """Expose active and queued jobs so clients can reconnect by original ID."""
     queue_position = 0
     jobs = []
+    try:
+        reserved = {row["job_id"] for row in training_job_manager._leases.list()}
+    except (OSError, sqlite3.Error):
+        reserved = None  # the reservation table could not be read: release is not claimed either way
     records = [record for record in training_job_manager.list_jobs() if _record_in_request_project(record,request)]
     known = {record.job_id for record in records}
     records += [record for record in _ledger_readback(request)
@@ -1952,5 +1997,6 @@ def list_training_jobs(request:Request=None):
             "queue_position": position,
             "wait_reason": _ledger_wait_reason(record.job_id) if record.status == "queued" else None,
             "output_dir": record.output_dir,
+            "observation": _job_observation(record, reserved),
         })
     return {"jobs": jobs}

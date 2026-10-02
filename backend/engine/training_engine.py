@@ -137,12 +137,14 @@ def workspace_scope(project):
 
 def capabilities():
     from backend.engine.automated_trials import _RUNNERS
+    from backend.engine.model_catalog import _device_kinds
+    devices=list(_device_kinds())  # this computer's devices; MPS never off macOS (S1-05)
     return {'schema_version':1,'tasks':{task:{'architectures':list(_RUNNERS[task].architectures),
         'search_dimensions':list(_RUNNERS[task].search_defaults or {'architectures':0,'learning_rates':0,'weight_decays':0,'image_sizes':0,'batch_sizes':0,'augmentation_profiles':0}),
         'metric_key':_RUNNERS[task].metric_key,'direction':_RUNNERS[task].direction,
         'config_fields':sorted(CONFIG_FIELDS[task]|{'objective','latency_weight'}),
         'labels':'native task layout or explicit samples JSON' if task in TASKS[:4] else 'source-linked region JSON' if task=='patch_classification' else 'optional image selection JSON' if task=='enhancement' else 'explicit samples JSON',
-        'devices':['cpu','mps','cuda'],'modes':['quick','search','fast_retrain']} for task in TASKS},
+        'devices':devices,'modes':['quick','search','fast_retrain']} for task in TASKS},
         'label_formats':['samples','coco','labelme'],'progress':'JSONL event records; durable run journals',
         'output_files':['model.pt','model_meta.json','configuration.json','evaluation.json','predictions.json','artifacts.json']}
 

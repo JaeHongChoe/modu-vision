@@ -456,12 +456,12 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         if isinstance(trainer,_FamilyTrainer):trainer.local_model_id=spec.get('local_model_id',spec['job_id'])
         if cancel_path.exists():
             trainer.abort()
-            return status.update(status="aborted")
+            return status.update(status="aborted", cancel_acknowledged_at=time.time())
 
         def watch_cancel() -> None:
             while not stop_watcher.wait(0.05):
                 if cancel_path.exists():
-                    status.update(status="stopping")
+                    status.update(status="stopping", cancel_acknowledged_at=time.time())
                     trainer.abort()
                     break
 

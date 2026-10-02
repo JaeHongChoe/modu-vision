@@ -39,7 +39,7 @@ function harness(kind, outcome) {
     '../../services/api':{getApiPersistenceIdentity:()=>transport,request:async()=>{}},
     './taskCenterModel':{taskSnapshotForScope:(saved,current,rows)=>saved===current?rows:[],
       taskLifecycle:()=>({cancellation:'none',termination:'confirmed',resource:'released'}),
-      terminalTask:()=>true,taskSelection:()=>'',tasksForScope:rows=>rows,normalizeTask:(_,row)=>row},
+      terminalTask:()=>true,taskSelection:()=>'',tasksForScope:rows=>rows,normalizeTask:(_,row)=>row,observationSummary:()=>null},
     './taskHandoff':{taskHandoffScope:scopeFor,taskHandoffContextScope:scopeFor,
       taskDestination:()=>({family:'segmentation',step:4}),modelFamilies:['segmentation'],
       saveTaskHandoff:()=>writes.push(job)},

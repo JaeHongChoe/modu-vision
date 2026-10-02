@@ -402,6 +402,16 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
                 journal.update(remote_handle=handle, state='launched', launch_acknowledgment_recovered=True)
                 _save_journal(journal)
         state = status.get("status") if status else None
+        if (journal.get("cancel_requested_at") and not journal.get("cancel_acknowledged_at")
+                and state in {"stopping", "aborted"} and status.get("job_id") == job_id):
+            # The worker reports 'stopping' (or an immediate 'aborted') only after it has seen the cancel file: that is
+            # its acknowledgement, recorded apart from the signals sent and from the confirmed exit.
+            acknowledged = status.get("cancel_acknowledged_at")
+            journal["cancel_acknowledged_at"] = acknowledged if isinstance(acknowledged, (int, float)) else time.time()
+            try:
+                _save_journal(journal)
+            except OSError:
+                logger.exception("Could not record the cancel acknowledgement of %s", job_id)
         if state not in {"completed", "aborted", "failed"}:
             if status is None:
                 missing_status_polls += 1

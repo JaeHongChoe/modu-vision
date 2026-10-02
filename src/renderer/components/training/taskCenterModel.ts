@@ -20,3 +20,18 @@ export function taskLifecycle(row:TaskRow,reservations:Reservation[]|null) {
 export function taskSelection(storage:Pick<Storage,'getItem'|'setItem'>,scope:string,value?:string):string|null {
   const key=`vision-task-center:${scope}`;if(value!==undefined)storage.setItem(key,value);return storage.getItem(key);
 }
+
+/** S1-04: the cancel chain and next action the backend derived from evidence; null when the row has none.
+ *  Each step is done only when its own evidence was recorded, never because a later stage was reached. */
+export function observationSummary(row:TaskRow):{steps:Array<{label:string;done:boolean}>;nextAction:string|null;cause:string|null}|null {
+  const observation=row.raw?.observation;if(!observation)return null;
+  const cancel=observation.cancel||{};
+  const steps=(cancel.stage||'none')==='none'?[]:[
+    {label:'요청 저장',done:Boolean(cancel.requested_at)||cancel.stage!=='none'},
+    {label:'작업자 확인',done:Boolean(cancel.acknowledged_at)},
+    {label:'종료 신호',done:Array.isArray(cancel.signals)&&cancel.signals.length>0},
+    {label:'종료 확인',done:cancel.exit_confirmed===true},
+    {label:'예약 반환',done:cancel.reservation_released===true},
+  ];
+  return {steps,nextAction:observation.next_action||null,cause:observation.cause||null};
+}

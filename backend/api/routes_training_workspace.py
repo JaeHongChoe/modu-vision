@@ -1,4 +1,5 @@
 """Common first-use preparation and same-job reopen inventory."""
+import sqlite3
 from pathlib import Path
 from typing import Literal
 from fastapi import APIRouter,HTTPException,Request
@@ -130,15 +131,17 @@ def tasks(request:Request):
     from backend.api import routes_training,routes_automated_training
     from backend.engine.shared_scheduler import shared_leases
     rows=[];errors=[]
+    try:reserved={row['job_id'] for row in routes_training.training_job_manager._leases.list()}
+    except (OSError,sqlite3.Error):reserved=None  # release is then never claimed
     for record in routes_training.training_job_manager.list_jobs():
         binding=record.dataset_binding or {}
         if not Path(record.output_dir).resolve().is_relative_to(models.resolve()) or record.source_dataset_path!=source or binding.get('labelset_id','default')!=labelset:continue
-        rows.append(task_record(record))
+        rows.append({**task_record(record),'observation':routes_training._job_observation(record,reserved)})  # S1-04
     # Saved completion uses the existing hash/source verifier; reading does not launch work.
     for folder in models.glob('job_*'):
         if any(row.get('job_id')==folder.name for row in rows):continue
         record=routes_training._completed_receipt_record(folder.name,request)
-        if record:rows.append(task_record(record))
+        if record:rows.append({**task_record(record),'observation':routes_training._job_observation(record,reserved)})
     for row in persisted_task_rows(models,source,labelset):
         try:
             kind=row['kind'];identifier=row['job_id']
@@ -187,7 +190,7 @@ def tasks(request:Request):
                 'scope_kind':'project','cancel_supported':False})
     except (ImportError,HTTPException,ValueError,OSError,KeyError,TypeError) as exc:errors.append({'kind':'delivery','message':str(exc)})
     try:reservations=[{k:v for k,v in row.items() if k!='owner'} for row in shared_leases().list() if row.get('project_id')==project['id'] or any((item.get('job_id') or item.get('search_id'))==row['job_id'] for item in rows)]
-    except (ValueError,OSError) as exc:reservations=None;errors.append({'kind':'reservations','message':str(exc)})
+    except (ValueError,OSError,sqlite3.Error) as exc:reservations=None;errors.append({'kind':'reservations','message':str(exc)})
     return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':source,'labelset_id':labelset}
 
 
