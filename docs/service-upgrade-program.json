@@ -1352,8 +1352,15 @@
     "S1-05",
     "S2-04"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in 875c78b: flowGraphIssues collects every node's and connection's own problem with the validator's checks, messages and order (its first issue is validateFlowchartGraph's answer), attaches each to its target, and reports malformed saved data per target instead of throwing; nodes with problems get an amber frame and a badge, connections an amber dotted wire with the problems in their aria-label, and the inspector lists the selected item's problems; typed ports (IMAGE / ROI / RESULT / VERDICT) come from the payload rules, a connection started from the wrong port is refused at once naming what the target accepts, edges without a stored payload resolve it as the backend does, and wires are drawn from the measured pin positions; independent review freeze 1 ACCEPT WITH FIXES (2 P2: untyped edges from the wrong port, wires off their ports), freeze 2 ACCEPT; 600k-graph differential fuzzer equal to the old validator except format messages where it threw; wires within 0.05 px of their pins at 7 zoom levels in headless Chromium",
+     "scope": "frozen tree (0e09c6c + 9 files): renderer suite, typecheck, backend flow suites 119, e2e 17 (S2-05 incl. wires-at-ports, S2-04, S0-05); reviewer re-ran 120 flowchart renderer tests",
+     "platform": "macOS development; Windows hosted run pending for this commit"
+    }
+   ],
    "file_actions": {
     "backend/engine/flowchart_engine.py": "Modify",
     "backend/engine/flow_operators.py": "Modify",
@@ -1377,6 +1384,14 @@
     "E01",
     "E02",
     "E03"
+   ],
+   "remaining": [
+    "class errors (predicate class not in the source model's classes), coordinate errors (fixed ROI beyond the source image) and range errors against model metadata at connection time",
+    "task compatibility beyond the Blob rule (measurement accepts any model)",
+    "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
+    "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
+    "review P3s: a label-less node with a problem breaks CustomNode; the refusal particle '결과을(를)'; an edge with an empty id keeps its problem off the canvas; the connection problem marks, locateFlowIssue targeting and the detector's other port label are not covered by a test",
+    "Windows native and hosted evidence"
    ]
   },
   {
