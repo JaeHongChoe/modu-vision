@@ -582,6 +582,12 @@
      "result": "published in e93cc9b: the archive restore test reads restored flow version, job receipt and prepared annotation JSON as UTF-8 (Windows hosted run 37009844446 failed at test_service_s1_01.py:240 with cp1252 UnicodeDecodeError after restore 200 and checkpoint bytes had passed); reproduced on macOS with a US-ASCII default (fails at :240 before, 28/28 after in both locales); independent review ACCEPT",
      "scope": "test-only change: no assertion removed, no global UTF-8 mode",
      "platform": "Windows hosted rerun pending; not recorded as Windows verified"
+    },
+    {
+     "kind": "windows-hosted-ci-passed",
+     "result": "Windows unpackaged CPU run 37021912594 on 08a9d48 passed every step: the archive restore test that failed with cp1252 (run 37009844446) passes after the UTF-8 fix; Windows context, storage and recovery suite 85 passed / 9 skipped; real Electron main/preload smoke 2 passed",
+     "scope": "GitHub-hosted Windows Server 2025 runner (windows-2025-vs2026), unpackaged source tree, CPU; not an installed Windows 11 x64 build",
+     "platform": "Windows hosted (unpackaged); installed/packaged Windows 11 x64 pending"
     }
    ],
    "file_actions": {
@@ -858,6 +864,12 @@
      "result": "published in 8350453: the content-identity check of managed copies compared a path stat with an open-handle stat; Windows fills st_dev/st_ino differently for the two (hosted run 37014514960: ingest 422 \"Source file changed while computing its content identity\"), so the check now compares two handle stats (backend/engine/file_identity.py) and the remote operation lock uses the same helper; a file replaced between reading and checking is still refused (POSIX test; Windows cannot replace an open file); two independent review rounds, final ACCEPT",
      "scope": "Windows divergence emulated by a path stat reporting another device; mutants of both sites and the helper are killed",
      "platform": "macOS development; Windows hosted rerun pending"
+    },
+    {
+     "kind": "windows-hosted-ci-passed",
+     "result": "Windows unpackaged CPU run 37021912594 on 08a9d48 passed: S1-06 ingest of a read-only source (refused with 'Source file changed' in run 37014514960) and the new open-file identity tests pass on Windows (the two replacement tests are skipped there by design: Windows cannot replace an open file)",
+     "scope": "GitHub-hosted Windows Server 2025 runner, unpackaged source tree, CPU",
+     "platform": "Windows hosted (unpackaged); installed/packaged Windows 11 x64 pending"
     }
    ],
    "file_actions": {
@@ -3298,6 +3310,12 @@
      "result": "published in 8350453: every backend and build-script text read/write names an encoding (253 production + 13 script sites, keyword-only rewrite), text pipes decode explicitly (our own Python child UTF-8 with PYTHONIOENCODING, remote output UTF-8, local OS tools locale with replacement), user label text decodes UTF-8 then only the non-UTF-8 platform default (backend/engine/source_text.py), and backend/tests/test_service_text_encoding.py guards backend/ and scripts/ against default-encoding I/O and runs a Korean project in a process without a UTF-8 default; the Windows job now also runs the encoding and file-identity tests; two independent review rounds, final ACCEPT",
      "scope": "frozen trees: full backend 2790 passed (one failure from a git-less export, confirmed by review), delta 443 passed / 4 skipped, Windows job list 94/94 in normal and US-ASCII locales",
      "platform": "macOS; Windows hosted run pending (not recorded as verified)"
+    },
+    {
+     "kind": "windows-hosted-ci-passed",
+     "result": "Windows unpackaged CPU run 37021912594 on 08a9d48 passed every step for the first time since the storage step started failing: type/build/renderer checks (renderer 304, harness 14), Windows context/storage/recovery suite including the text-encoding guard, the Korean non-UTF-8 scenario and the file-identity tests (85 passed / 9 skipped), and the real Electron main/preload smoke (2 passed); Linux run on the same commit still running at the time of recording",
+     "scope": "GitHub-hosted Windows Server 2025 runner (windows-2025-vs2026), unpackaged, CPU",
+     "platform": "Windows hosted (unpackaged); signed installer and Windows 11 x64 device runs pending"
     }
    ],
    "file_actions": {
@@ -3335,7 +3353,8 @@
     "test code still has about 810 default-encoding reads outside the Windows job list",
     "user label reads in routes_annotation, routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (unchanged from before; cp949 files work in some paths only)",
     "Pillow reports some truncated headers as errno-less OSError, outside the undecodable set (size-less LabelMe case can still 500)",
-    "the Electron smoke step of the Windows job has not been reached since the storage step started failing"
+    "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
+    "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design"
    ]
   },
   {
