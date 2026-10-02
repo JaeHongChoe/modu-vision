@@ -15,6 +15,10 @@ import os
 import random
 import shutil
 import tempfile
+import threading
+import time
+import uuid
+from collections import OrderedDict
 from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -31,7 +35,7 @@ from backend.engine.dataset_loaders import (
     inspect_dataset,
     scoped_split_root,
     split_dataset,
-    validate_image_file,
+    decode_image_file,
 )
 from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
 from backend.engine.annotation_storage import dataset_annotation_dir
@@ -442,6 +446,54 @@ def generate_dataset(req: DatasetGenerateRequest):
         )
 
 
+def _contains(parent: str, child: str) -> bool:
+    try:
+        return os.path.commonpath([parent, child]) == parent
+    except ValueError:  # different drives on Windows
+        return False
+
+
+_QUICK_VALIDATION_LIMIT = 201  # this quick inspection samples beyond it; the dataset index validates every image
+_QUICK_VALIDATION_FOLDERS = 2000
+
+
+def _validate_folder_images(folder: Path):
+    """Decode every supported image file under the folder in a stable order, following folder links (each real folder
+    once) and hidden folders, so the decoded set covers every image a folder-scanned inventory can contain.
+
+    A link to a folder that contains the selection is not followed (it would read the selection's siblings); it makes
+    the result partial instead. The walk stops after _QUICK_VALIDATION_LIMIT images or _QUICK_VALIDATION_FOLDERS folders.
+    Returns (corrupted, checked, sampled, gaps): gaps name what the walk could not cover.
+    """
+    corrupted, checked, gaps, seen, folders = [], 0, [], set(), 0
+    selection = os.path.realpath(folder)
+    for root, dirs, files in os.walk(folder, followlinks=True, onerror=lambda error: gaps.append("unreadable folder")):
+        real = os.path.realpath(root)
+        if real in seen:  # a link back to a folder already walked
+            dirs[:] = []
+            continue
+        if real != selection and _contains(real, selection):
+            gaps.append("a folder link points to a folder that contains the selection")
+            dirs[:] = []
+            continue
+        seen.add(real)
+        folders += 1
+        if folders > _QUICK_VALIDATION_FOLDERS:
+            return corrupted, checked, True, gaps
+        dirs.sort()
+        for name in sorted(files):
+            path = Path(root) / name
+            if path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+                continue
+            if checked >= _QUICK_VALIDATION_LIMIT:
+                return corrupted, checked, True, gaps
+            result = decode_image_file(path)  # every pixel: header checks alone pass truncated JPEG/BMP/TIFF data
+            if not result.valid:
+                corrupted.append({"file_path": str(path), "error_code": result.error_code, "details": result.details})
+            checked += 1
+    return corrupted, checked, False, gaps
+
+
 @router.post("/import")
 def import_dataset(req: DatasetImportRequest):
     """Scans dataset directory and returns total_images, classes, and split."""
@@ -463,6 +515,9 @@ def import_dataset(req: DatasetImportRequest):
         )
 
     effective_folder = _resolve_task_folder(folder, req.task)
+    # An inventory listed by annotation files may name images that are missing or outside the folder; a folder-scanned
+    # one is a subset of the image files under the folder, which the validation below decodes.
+    listed_inventory = False
     if req.task == "detection":
         named_annotations = any(
             (effective_folder / parent / f"annotations_{partition}.json").is_file()
@@ -470,6 +525,9 @@ def import_dataset(req: DatasetImportRequest):
         )
         if named_annotations and not _detection_train_val_ready(effective_folder):
             raise HTTPException(status_code=422, detail=DETECTION_SPLIT_LAYOUT_MESSAGE)
+        # Every detection inventory except paired LabelMe files is read from a COCO annotation file, which may list
+        # images that are missing or outside the folder.
+        listed_inventory = not flat_labelme
 
     try:
         if flat_labelme and req.task == "detection":
@@ -490,6 +548,7 @@ def import_dataset(req: DatasetImportRequest):
             if summary.total_images == 0:
                 ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
                 if ind_res and ind_res.get("total_images", 0) > 0:
+                    listed_inventory = True
                     summary.total_images = ind_res["total_images"]
                     summary.classes = ind_res.get("classes", {})
                     ind_split = ind_res.get("split", {})
@@ -541,21 +600,22 @@ def import_dataset(req: DatasetImportRequest):
             summary.total_images = len(selected_paths)
 
     # Optional image validation scanning
-    corrupted_images = []
-    if req.validate_images:
-        count_checked = 0
-        for p in folder.rglob("*"):
-            if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
-                val_res = validate_image_file(p)
-                if not val_res.valid:
-                    corrupted_images.append({
-                        "file_path": str(p),
-                        "error_code": val_res.error_code,
-                        "details": val_res.details,
-                    })
-                count_checked += 1
-                if count_checked > 200:  # Sample-based check for quick responsiveness
-                    break
+    corrupted_images, count_checked, sampled, gaps = (
+        _validate_folder_images(folder) if req.validate_images else ([], 0, False, []))
+    if not req.validate_images:
+        scope = "not requested"
+    elif sampled:
+        scope = (f"sampled: first {_QUICK_VALIDATION_LIMIT} images in folder order" if count_checked >= _QUICK_VALIDATION_LIMIT
+                 else f"sampled: stopped after {_QUICK_VALIDATION_FOLDERS} folders ({count_checked} image files decoded)")
+    elif gaps:
+        scope = f"partial: {count_checked} image files decoded; {'; '.join(sorted(set(gaps)))}"
+    elif listed_inventory:
+        scope = (f"partial: {count_checked} image files under the folder decoded; the inventory is listed by "
+                 "annotation files, which the dataset index validates")
+    elif count_checked < summary.total_images:
+        scope = f"partial: {count_checked} image files decoded for {summary.total_images} counted images"
+    else:
+        scope = "all images: every image file under the folder was decoded"
 
     split_supported, split_unavailable_reason = _split_capability(req.task, flat_labelme)
 
@@ -571,6 +631,9 @@ def import_dataset(req: DatasetImportRequest):
             "test": split_counts.get("test", 0),
         },
         "corrupted_images": corrupted_images,
+        # An empty corrupted list after a sampled check is not a statement about the unchecked images.
+        "validation": {"requested": req.validate_images, "checked_images": count_checked,
+                       "complete": scope.startswith("all images"), "scope": scope},
         "split_supported": split_supported,
         "split_unavailable_reason": split_unavailable_reason,
     }
@@ -1011,13 +1074,161 @@ def get_raw_image(
     )
 
 
+_THUMBNAIL_VERSION = "v3"
+_DIGEST_LOCK = threading.Lock()
+_DIGESTS: "OrderedDict[tuple, tuple[str, float]]" = OrderedDict()
+# An unchanged (device, inode, ctime, mtime, size) only lets a cached digest be reused for a while: POSIX ctime moves on
+# every write, but FAT/exFAT/SMB and Windows (where ctime is the creation time) give weaker signals, so the bytes are
+# hashed again after the bound. The memo lives in memory: after a restart the first request reads the file once.
+_DIGEST_TTL = 60.0 if os.name == "nt" else 600.0
+# Source bytes are never held whole by this route: the hash is streamed, and a render of a source up to _COPY_LIMIT
+# keeps one private copy (in memory up to _SPOOL_IN_MEMORY, then in an anonymous temporary file) that decides both the
+# key and the pixels. A larger source (a TIFF stack, say) is decoded from the file itself and hashed again afterwards;
+# a change in between refuses the thumbnail. Decoded pixels are bounded by Pillow's decompression-bomb limit, checked
+# from the header; Pillow's WebP reader loads the whole file to read its header, so WebP costs its file size twice.
+_COPY_LIMIT = 768 * 1024 * 1024
+_SPOOL_IN_MEMORY = 16 * 1024 * 1024
+_CHUNK = 1024 * 1024
+_FAILURES: "OrderedDict[tuple, tuple[int, Any, float]]" = OrderedDict()
+
+
+def _memo_key(path: Path, stat: os.stat_result) -> tuple:
+    return (str(path), stat.st_dev, stat.st_ino, stat.st_ctime_ns, stat.st_mtime_ns, stat.st_size)
+
+
+def _memo_get(path: Path, stat: os.stat_result) -> Optional[str]:
+    key, now = _memo_key(path, stat), time.monotonic()
+    with _DIGEST_LOCK:
+        hit = _DIGESTS.pop(key, None)
+        if hit is not None and now - hit[1] < _DIGEST_TTL:
+            _DIGESTS[key] = hit  # most recently used
+            return hit[0]
+    return None
+
+
+def _memo_put(path: Path, before: os.stat_result, digest: str) -> None:
+    try:
+        after = path.stat()
+    except OSError:
+        return
+    if _memo_key(path, after) != _memo_key(path, before):
+        return  # changed while it was read: the digest may describe bytes that are no longer there
+    with _DIGEST_LOCK:
+        _DIGESTS[_memo_key(path, before)] = (digest, time.monotonic())
+        while len(_DIGESTS) > 4096:
+            _DIGESTS.popitem(last=False)
+
+
+def _failure_get(path: Path, stat: os.stat_result) -> Optional[tuple[int, Any]]:
+    """A decode failure of these exact bytes (same identity, within the trust bound) is answered without a read."""
+    key, now = _memo_key(path, stat), time.monotonic()
+    with _DIGEST_LOCK:
+        hit = _FAILURES.get(key)
+        if hit is not None and now - hit[2] < _DIGEST_TTL:
+            return hit[0], hit[1]
+        _FAILURES.pop(key, None)
+    return None
+
+
+def _failure_put(path: Path, before: os.stat_result, error: HTTPException) -> None:
+    try:
+        after = path.stat()
+    except OSError:
+        return
+    if _memo_key(path, after) != _memo_key(path, before):
+        return
+    with _DIGEST_LOCK:
+        _FAILURES[_memo_key(path, before)] = (error.status_code, error.detail, time.monotonic())
+        while len(_FAILURES) > 4096:
+            _FAILURES.popitem(last=False)
+
+
+def _decoder_tag(dicom: bool) -> str:
+    """Which decoder draws the pixels: identical bytes read as DICOM and as TIFF are different thumbnails."""
+    if not dicom:
+        return f"pillow-{Image.__version__}"
+    try:
+        import pydicom
+        return f"dicom-{pydicom.__version__}"
+    except ImportError:
+        return "dicom-unavailable"
+
+
+def _thumbnail_key(digest: str, size: int, decoder: str) -> str:
+    """Content digest + size + thumbnail format version + decoder and its version."""
+    return hashlib.sha256(f"{digest}:{size}:{_THUMBNAIL_VERSION}:{decoder}".encode("utf-8")).hexdigest()
+
+
+def _etag_matches(header: Optional[str], etag: str) -> bool:
+    if not header:
+        return False
+    tags = [tag.strip() for tag in header.split(",")]
+    return "*" in tags or any((tag[2:] if tag.startswith("W/") else tag) == etag for tag in tags)
+
+
+def _source_error(path: Path, exc: BaseException) -> HTTPException:
+    if isinstance(exc, FileNotFoundError):
+        return HTTPException(status_code=404, detail="Image file not found")
+    return HTTPException(status_code=400, detail=format_error_response(
+        "ERR_CORRUPT_IMAGE", details=f"Cannot read image {path}: {exc}"))
+
+
+def _changed_while_read(path: Path) -> HTTPException:
+    return HTTPException(status_code=409, detail=f"{path} changed while its thumbnail was drawn; request it again")
+
+
+def _hash_source(path: Path, copy=None) -> str:
+    """sha256 of the source read in chunks; with ``copy``, the same chunks are kept there for decoding."""
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            while chunk := handle.read(_CHUNK):
+                digest.update(chunk)
+                if copy is None:
+                    continue
+                try:
+                    copy.write(chunk)
+                except OSError as exc:  # the backend's own temporary storage, not the source
+                    raise HTTPException(status_code=507, detail=(
+                        "The backend's temporary storage is full; free space in its temporary folder and request "
+                        f"the thumbnail again ({exc})")) from None
+                if copy.tell() > _COPY_LIMIT:  # grew past the copy budget while being read
+                    raise _changed_while_read(path)
+    except OSError as exc:
+        raise _source_error(path, exc) from None
+    return digest.hexdigest()
+
+
+def _probe_header(path: Path) -> None:
+    """Pillow reads only the header: a file it cannot identify, or a decompression bomb, is refused before any read."""
+    try:
+        with Image.open(path) as probe:
+            probe.size
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image file not found") from None
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=format_error_response(
+            "ERR_CORRUPT_IMAGE", details=f"Cannot decode image {path}: {exc}")) from None
+
+
+def _render_jpeg(image: Image.Image, size: int) -> bytes:
+    with image:
+        image.draft("RGB", (size, size))  # JPEG sources decode at a reduced scale that still covers the size
+        rendered = image.convert("RGB")
+        rendered.thumbnail((size, size), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        rendered.save(buffer, format="JPEG", quality=85)
+        return buffer.getvalue()
+
+
 @router.get("/thumbnail/{image_path:path}")
 def get_thumbnail(
     image_path: str,
+    request: Request,
     file_path: Optional[str] = Query(None),
     size: int = Query(128, ge=32, le=4096),
 ):
-    """Generates and serves a downsampled thumbnail image with aggressive caching headers."""
+    """A downsampled thumbnail keyed by the content and decoder it was drawn from; the browser revalidates by ETag."""
     # Resolve image file location
     candidate_path = None
     if file_path and Path(file_path).is_file():
@@ -1036,39 +1247,105 @@ def get_thumbnail(
         raise HTTPException(status_code=404, detail="Image file not found")
 
     # Reject 0-byte files with HTTP 400 ERR_CORRUPT_IMAGE
-    stat = candidate_path.stat()
+    try:
+        stat = candidate_path.stat()
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image file not found")
     if stat.st_size == 0:
         raise HTTPException(
             status_code=400,
             detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Image file is empty (0 bytes): {candidate_path}"),
         )
 
-    cache_key = hashlib.md5(f"{candidate_path}:{stat.st_mtime}:{size}".encode("utf-8")).hexdigest()
-    cached_thumb = THUMBNAIL_CACHE_DIR / f"{cache_key}.jpg"
+    def respond(key: str, rendered: Optional[bytes] = None):
+        cached = THUMBNAIL_CACHE_DIR / f"{key}.jpg"
+        headers = {"Cache-Control": "private, no-cache", "ETag": f'"{key}"'}
+        if _etag_matches(request.headers.get("if-none-match"), headers["ETag"]) and (rendered is not None or cached.exists()):
+            return Response(status_code=304, headers=headers)
+        if rendered is not None:
+            return Response(content=rendered, media_type="image/jpeg", headers=headers)
+        if not cached.exists():
+            return None
+        return FileResponse(cached, media_type="image/jpeg", headers=headers)
 
-    if cached_thumb.exists():
-        return FileResponse(
-            cached_thumb,
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
+    from backend.engine.dicom_input import is_dicom, read_dicom
+    dicom = is_dicom(candidate_path)
+    decoder = _decoder_tag(dicom)
+    known = _memo_get(candidate_path, stat)
+    if known is not None:
+        hit = respond(_thumbnail_key(known, size, decoder))
+        if hit is not None:
+            return hit  # a warm hit reads no source bytes
+    failed = _failure_get(candidate_path, stat)
+    if failed is not None:
+        raise HTTPException(status_code=failed[0], detail=failed[1])  # the same bytes failed to decode a moment ago
 
     try:
-        with open_source_image(candidate_path) as img:
-            img = img.convert("RGB")
-            img.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img.save(cached_thumb, format="JPEG", quality=85)
-        return FileResponse(
-            cached_thumb,
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=86400"},
-        )
+        return _render_thumbnail(candidate_path, stat, size, dicom, decoder, read_dicom, respond)
+    except HTTPException as error:
+        if error.status_code == 400:
+            _failure_put(candidate_path, stat, error)
+        raise
+
+
+def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dicom: bool, decoder: str, read_dicom,
+                      respond):
+    if not dicom:
+        _probe_header(candidate_path)  # refused from the header: nothing more is read, so a failure stays cheap
+    digest = _hash_source(candidate_path)  # streamed; nothing is kept
+    hit = respond(_thumbnail_key(digest, size, decoder))
+    if hit is not None:
+        _memo_put(candidate_path, stat, digest)
+        return hit
+
+    # A render decides the key and the pixels from one read, so a rewrite in between cannot attach new pixels to an old key.
+    try:
+        if dicom:
+            image, metadata = read_dicom(candidate_path)
+            digest = metadata["source_sha256"]
+            rendered = _render_jpeg(image, size)
+        elif stat.st_size > _COPY_LIMIT:
+            # Too large to copy: decode from the file, then confirm the bytes did not change while it was read.
+            before = digest
+            rendered = _render_jpeg(Image.open(candidate_path), size)
+            if _hash_source(candidate_path) != before:
+                raise _changed_while_read(candidate_path)
+        else:
+            with tempfile.SpooledTemporaryFile(max_size=_SPOOL_IN_MEMORY) as copy:
+                digest = _hash_source(candidate_path, copy)
+                copy.seek(0)
+                rendered = _render_jpeg(Image.open(copy), size)
+    except HTTPException:
+        raise
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Image file not found") from None
     except Exception as e:
         logger.warning("Failed to render thumbnail for %s: %s", candidate_path, e)
         raise HTTPException(
             status_code=400,
             detail=format_error_response("ERR_CORRUPT_IMAGE", details=f"Cannot decode image {candidate_path}: {e}"),
-        )
+        ) from None
+    _memo_put(candidate_path, stat, digest)
+    key = _thumbnail_key(digest, size, decoder)
+    cached = THUMBNAIL_CACHE_DIR / f"{key}.jpg"
+    if not cached.exists():
+        staging = THUMBNAIL_CACHE_DIR / f".{key}.{uuid.uuid4().hex}.jpg"
+        try:
+            staging.write_bytes(rendered)
+            try:
+                os.replace(staging, cached)  # a reader never sees a half-written thumbnail
+            except OSError:
+                if not cached.exists():  # Windows refuses to replace a file being served; the same bytes are there
+                    raise
+        except OSError as e:
+            logger.warning("Could not cache the thumbnail of %s: %s", candidate_path, e)  # served from memory below
+        finally:
+            try:
+                staging.unlink(missing_ok=True)
+            except OSError as e:  # Windows may refuse while a scanner holds it; the thumbnail is still served
+                logger.warning("Could not remove the thumbnail staging file %s: %s", staging, e)
+    served = respond(key)
+    return served if served is not None else respond(key, rendered)  # the cache file can vanish before it is served
 
 
 class DatasetArtifactIngestRequest(BaseModel):

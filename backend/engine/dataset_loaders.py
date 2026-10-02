@@ -244,6 +244,24 @@ def validate_image_file(file_path: Union[str, Path]) -> ValidationResult:
     return ValidationResult(valid=True, error_code="OK", dimensions=(w, h), details="Valid image")
 
 
+def decode_image_file(file_path: Union[str, Path]) -> ValidationResult:
+    """validate_image_file, then a full pixel decode.
+
+    Pillow's verify() checks PNG checksums but decodes no JPEG, BMP or TIFF pixel data, so a truncated or corrupt
+    bitstream passes the header checks; only decoding every pixel shows it (DECODE_ERROR). DICOM pixel data is already
+    decoded by the header check. Decoded pixels stay within Pillow's decompression-bomb limit.
+    """
+    result = validate_image_file(file_path)
+    if not result.valid or is_dicom(Path(file_path)):
+        return result
+    try:
+        with Image.open(file_path) as image:
+            image.load()
+    except Exception as exc:
+        return ValidationResult(valid=False, error_code="DECODE_ERROR", dimensions=result.dimensions, details=str(exc))
+    return result
+
+
 # ============================================================================
 # Stratified Split Engine
 # ============================================================================
