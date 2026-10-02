@@ -3,7 +3,7 @@ import {RefreshCw,Square,ListChecks} from 'lucide-react';
 import {request,getApiPersistenceIdentity} from '../../services/api';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useComputeStore} from '../../stores/useComputeStore';
-import {normalizeTask,tasksForScope,taskLifecycle,taskSelection,terminalTask,taskSnapshotForScope,observationSummary,type TaskRow,type Reservation} from './taskCenterModel';
+import {normalizeTask,tasksForScope,taskLifecycle,taskSelection,terminalTask,taskSnapshotForScope,observationSummary,releasableReservation,type TaskRow,type Reservation} from './taskCenterModel';
 import {saveTaskHandoff,taskHandoffScope,taskHandoffContextScope,taskDestination,modelFamilies,type TaskStep} from './taskHandoff';
 import type {VisionTask} from '../../types';
 import {programButton,programInput} from './ProgramWorkbenchControls';
@@ -19,6 +19,11 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   const [familyFilter,setFamilyFilter]=useState('all');
   const [opened,setOpened]=useState(initialOpen);const generation=useRef(0);const [rows,setRows]=useState<TaskRow[]>([]);const [leases,setLeases]=useState<Reservation[]|null>(null);const [selected,setSelected]=useState('');const [error,setError]=useState('');const [checked,setChecked]=useState<number|null>(null);const [busy,setBusy]=useState(false);
   const [snapshotScope,setSnapshotScope]=useState(scope);const visibleRows=taskSnapshotForScope(snapshotScope,scope,rows);
+  // S1-04: the operator's confirmation that a job whose exit could not be proven no longer uses its device (null = closed)
+  const [releaseReason,setReleaseReason]=useState<string|null>(null);
+  // A release whose outcome could not be written to the job ledger says so until another job or scope is selected.
+  const [releaseNotice,setReleaseNotice]=useState('');
+  useEffect(()=>{setReleaseReason(null);setReleaseNotice('');},[selected,scope]);
   const refresh=async()=>{
     if(!source)return;const sequence=++generation.current;
     try {
@@ -54,6 +59,16 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
       saveTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()},job);await setStep(target.step);if(navigationIsCurrent())await onNavigate?.(target.step);
     }catch(cause){if(current.current===scope)setError(cause instanceof Error?cause.message:String(cause));}finally{if(current.current===scope)setBusy(false);}
   };
+  const releaseReservation=async(lease:Reservation)=>{
+    if(!job||busy||releaseReason===null)return;const started=scope;setBusy(true);setError('');
+    try {
+      // the fence the operator saw: a reservation re-taken meanwhile is refused, never released
+      const answer=await request<{outcome_recorded?:boolean}>('/api/training/reservations/confirm-release',{method:'POST',body:JSON.stringify({job_id:job.id,confirm:true,reason:releaseReason.trim(),fence:lease.fence??null})});
+      if(current.current!==started)return;setReleaseReason(null);await refresh();
+      if(current.current===started)setReleaseNotice(answer?.outcome_recorded===false?'예약은 해제했지만 해제 결과를 작업 기록에 남기지 못했습니다. 해제 확인 기록은 남아 있습니다.':'');
+    }catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(current.current===started)setBusy(false);}
+  };
   const control=async(action:'cancel'|'reconnect')=>{
     if(!job||busy)return;setBusy(true);setError('');
     try {
@@ -74,7 +89,16 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
     {job&&lifecycle&&<div role="status" className="rounded border border-slate-600 p-3"><strong>{labels[job.status]||job.status}</strong><p className="mt-2">{familyLabels[job.task]||job.task} · {job.transport==='local'?'이 컴퓨터':profiles.find(row=>row.id===job.transport)?.name || '저장 서버'} · Epoch {job.epoch}/{job.totalEpochs||'미기록'}</p>{!observationSummary(job)&&<p className="mt-1">취소: {lifecycle.cancellation==='requested'?'요청 접수':lifecycle.cancellation==='acknowledged'?'종료 응답 확인':'요청 없음'} · 실행 종료: {lifecycle.termination==='confirmed'?'확인':lifecycle.termination==='unconfirmed'?'미확인':'진행 중'} · {resourceLabels[lifecycle.resource]}</p>}
       {(()=>{const summary=observationSummary(job);if(!summary)return null;return <div className="mt-2 space-y-1">
         {summary.steps.length>0&&<ol aria-label="취소 확인 단계" className="flex flex-wrap gap-2 text-xs">{summary.steps.map(step=><li key={step.label} className={step.done?'text-emerald-300':'text-slate-500'}>{step.done?'✓':'○'} {step.label}</li>)}</ol>}
+        {summary.facts.length>0&&<p className="text-xs text-slate-300">{summary.facts.join(' · ')}</p>}
         {summary.nextAction&&<p className="text-amber-200">다음 행동: {summary.nextAction}</p>}
+      </div>;})()}
+      {releaseNotice&&<p role="status" className="mt-2 text-xs text-amber-300">{releaseNotice}</p>}
+      {(()=>{const lease=releasableReservation(job,leases);if(!lease)return null;return <div className="mt-2 rounded border border-amber-700/60 bg-amber-950/20 p-2 text-xs">
+        <p className="text-amber-200">이 작업의 종료를 확인하지 못해 장치 예약이 유지되고 있습니다. 작업이 더 이상 장치를 쓰지 않는 것을 확인했다면 사유를 남기고 예약을 해제할 수 있습니다. {lease.remote?'서버 작업은 이 화면에서 실행 여부를 확인하지 않으므로, 서버에서 작업이 끝난 것을 먼저 확인하세요.':'이 컴퓨터에서 실행 중인 작업자가 확인되면 해제하지 않습니다.'}</p>
+        {releaseReason===null?<button type="button" className={`${programButton} mt-2`} disabled={busy} onClick={()=>setReleaseReason('')}>예약 해제 확인</button>
+        :<div className="mt-2 flex flex-wrap items-center gap-2"><input aria-label="예약 해제 사유" value={releaseReason} maxLength={500} onChange={event=>setReleaseReason(event.target.value)} placeholder="예: PC를 재시작해 작업이 끝난 것을 확인함" className={`${programInput} min-w-[240px] flex-1`}/>
+          <button type="button" className={programButton} disabled={busy||releaseReason.trim().length<3} onClick={()=>void releaseReservation(lease)}>해제 확정</button>
+          <button type="button" className={programButton} disabled={busy} onClick={()=>setReleaseReason(null)}>취소</button></div>}
       </div>;})()}
       <div className="mt-3 flex flex-wrap gap-2">{job.raw.cancel_supported!==false&&!terminalTask(job.status)&&job.status!=='interrupted'&&<button type="button" disabled={busy||['stopping','cancelling'].includes(job.status)} onClick={()=>void control('cancel')} className={programButton}><Square className="mr-1 inline h-3 w-3" />취소 요청</button>}{job.status==='disconnected'&&job.kind==='training'&&<button type="button" className={programButton} disabled={busy} onClick={()=>void control('reconnect')}>같은 서버 작업 재연결</button>}<button type="button" disabled={busy||isProjectBusy} onClick={()=>navigate()} className={programButton}>{job.kind==='inspection'?'검사 기록 화면':job.task==='labeling'?'라벨 검토 화면':['optimization','export'].includes(job.kind)?'패키지·배포 화면':job.status==='completed'?'완료 후보 평가로 이동':'학습 화면으로 이동'}</button></div>
       <details className="mt-3 text-slate-400"><summary className="cursor-pointer">작업 식별자·저장 근거</summary><p className="mt-2 break-all">{job.key}</p><p className="break-all">출처: {job.source} · 정답 버전: {job.labelset || '작업 기록에 없음 · 프로젝트 범위'}</p>{job.raw.error&&<p role="alert" className="mt-2 text-rose-200">{typeof job.raw.error==='string'?job.raw.error:JSON.stringify(job.raw.error)}</p>}</details></div>}

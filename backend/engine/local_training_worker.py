@@ -586,9 +586,8 @@ def execute_basic(spec_path):
         while not stop.wait(.05):
             if _cancelled(root, spec['job_id']):
                 # The worker's acknowledgement, recorded apart from the signals sent and from the confirmed exit (S1-04);
-                # a status that is already terminal is kept.
-                terminal = writer._payload.get('status') in ('completed', 'failed', 'aborted')
-                writer.update(cancel_acknowledged_at=time.time(), **({} if terminal else {'status': 'stopping'}))
+                # a status that is already terminal is kept (checked and written under the writer's lock).
+                writer.acknowledge_cancel()
                 event.set()
                 if trainer is not None:
                     trainer.abort()

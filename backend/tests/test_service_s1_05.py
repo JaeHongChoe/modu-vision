@@ -91,7 +91,7 @@ def test_the_training_engine_advertises_only_this_computers_devices(monkeypatch)
         model_catalog._device_kinds.cache_clear()
 
 
-def test_a_training_start_on_a_device_this_computer_lacks_is_refused_not_moved_to_the_cpu(tmp_path, monkeypatch):
+def _devices_app(tmp_path, monkeypatch, launcher):
     from fastapi.testclient import TestClient
     from PIL import Image
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
@@ -103,7 +103,7 @@ def test_a_training_start_on_a_device_this_computer_lacks_is_refused_not_moved_t
     monkeypatch.setattr(routes_training, 'training_job_manager', manager)
     monkeypatch.setattr(main, 'training_job_manager', manager)
     monkeypatch.setattr(capabilities, 'local_device_kinds', lambda *args, **kwargs: ['cpu'])
-    monkeypatch.setattr(local_training_worker, 'run_owned_training', lambda *args, **kwargs: pytest.fail('nothing may launch'))
+    monkeypatch.setattr(local_training_worker, 'run_owned_training', launcher)
     source = tmp_path / 'source'
     for split in ('train', 'val'):
         for label in ('ok', 'ng'):
@@ -114,7 +114,20 @@ def test_a_training_start_on_a_device_this_computer_lacks_is_refused_not_moved_t
     api = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
     api.post('/api/project/create', json={'name': 'Devices'})
     assert api.put('/api/project/update', json={'source_dataset_dir': str(source)}).status_code == 200
-    body = {'task': 'classification', 'dataset_path': str(source), 'preset': 'fast'}
+    return api, {'task': 'classification', 'dataset_path': str(source), 'preset': 'fast'}
+
+
+def test_a_training_start_on_a_device_this_computer_lacks_is_refused_not_moved_to_the_cpu(tmp_path, monkeypatch):
+    api, body = _devices_app(tmp_path, monkeypatch, lambda *args, **kwargs: pytest.fail('nothing may launch'))
     for request in ({**body, 'device': 'cuda'}, {**body, 'device': 'mps'}, {**body, 'device': 'cuda:3'}):
         refused = api.post('/api/training/start', json=request)
         assert refused.status_code == 409 and '바꿔 실행하지 않습니다' in refused.text, refused.text
+
+
+def test_no_device_auto_and_cpu_starts_pass_the_device_check(tmp_path, monkeypatch):
+    launched = []
+    api, body = _devices_app(tmp_path, monkeypatch,
+                             lambda *args, **kwargs: launched.append(kwargs) or {'status': 'aborted', 'worker_exit_confirmed': True})
+    for request in ({**body}, {**body, 'device': 'auto'}, {**body, 'device': 'cpu'}):
+        response = api.post('/api/training/start', json=request)
+        assert response.status_code == 200 and '바꿔 실행하지 않습니다' not in response.text, (request.get('device'), response.text)

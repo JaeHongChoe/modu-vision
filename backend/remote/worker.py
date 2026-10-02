@@ -116,24 +116,37 @@ class _StatusWriter:
 
     def update(self, **changes: Any) -> dict[str, Any]:
         with self._lock:
-            self._payload.update(changes)
-            self._payload["updated_at"] = _timestamp()
-            try:
-                _atomic_json(self.path, self._payload)
-            except OSError as exc:
-                if exc.errno not in (errno.ENOSPC, errno.EDQUOT) or self._payload["status"] not in {"failed", "aborted"}:
-                    raise
-                terminal = {key: self._payload[key] for key in
-                            ("protocol_version", "job_id", "operation", "spec_sha256", "status", "error", "updated_at")}
-                terminal["status_storage"] = "reserved_blocks"
+            return self._apply(changes)
+
+    def acknowledge_cancel(self, at: float | None = None) -> dict[str, Any]:
+        """Record the worker's cancel acknowledgement (S1-04). The status becomes 'stopping' unless it is already
+        terminal; the check and the write happen under the same lock, so a finishing run is never reopened."""
+        with self._lock:
+            changes: dict[str, Any] = {"cancel_acknowledged_at": time.time() if at is None else at}
+            if self._payload.get("status") not in ("completed", "failed", "aborted"):
+                changes["status"] = "stopping"
+            return self._apply(changes)
+
+    def _apply(self, changes: dict[str, Any]) -> dict[str, Any]:
+        """Write the payload with these changes; the caller holds self._lock."""
+        self._payload.update(changes)
+        self._payload["updated_at"] = _timestamp()
+        try:
+            _atomic_json(self.path, self._payload)
+        except OSError as exc:
+            if exc.errno not in (errno.ENOSPC, errno.EDQUOT) or self._payload["status"] not in {"failed", "aborted"}:
+                raise
+            terminal = {key: self._payload[key] for key in
+                        ("protocol_version", "job_id", "operation", "spec_sha256", "status", "error", "updated_at")}
+            terminal["status_storage"] = "reserved_blocks"
+            encoded = json.dumps(terminal, ensure_ascii=True).encode("utf-8")
+            if len(encoded) > 4096:
+                terminal["error"] = str(terminal.get("error") or "")[:500]
                 encoded = json.dumps(terminal, ensure_ascii=True).encode("utf-8")
-                if len(encoded) > 4096:
-                    terminal["error"] = str(terminal.get("error") or "")[:500]
-                    encoded = json.dumps(terminal, ensure_ascii=True).encode("utf-8")
-                with self.terminal_path.open("r+b", buffering=0) as reserve:
-                    reserve.write(encoded.ljust(4096, b" "))
-                    os.fsync(reserve.fileno())
-            return self._payload.copy()
+            with self.terminal_path.open("r+b", buffering=0) as reserve:
+                reserve.write(encoded.ljust(4096, b" "))
+                os.fsync(reserve.fileno())
+        return self._payload.copy()
 
 
 class _TrainingStatusCallback:
@@ -461,7 +474,7 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         def watch_cancel() -> None:
             while not stop_watcher.wait(0.05):
                 if cancel_path.exists():
-                    status.update(status="stopping", cancel_acknowledged_at=time.time())
+                    status.acknowledge_cancel()  # a run that already ended keeps its terminal status
                     trainer.abort()
                     break
 

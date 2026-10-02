@@ -1182,12 +1182,16 @@ def _ledger_job_record(row: Dict[str, Any], status: str, message: str) -> JobRec
         dataset_path=spec.get("dataset_path", ""), output_dir=row["output_dir"] or "", status=status,
         phase=status, error={"message": message},
         source_dataset_path=spec.get("dataset_path"), dataset_fingerprint=spec.get("dataset_fingerprint"),
+        remote_profile_id=spec.get("compute_profile_id"),
     )
 
 
 def _ledger_end_message(store: JobStore, row: Dict[str, Any]) -> str:
     for event in reversed(store.events(row["id"])):
-        if event["to_state"] == row["state"] and isinstance(event["payload"], dict):
+        # Only the transition into the end state explains it; events recorded in that state afterwards (an operator's
+        # reservation release, a retained publication failure) keep their own reasons.
+        if (event["to_state"] == row["state"] and event["from_state"] != event["to_state"]
+                and isinstance(event["payload"], dict)):
             error = event["payload"].get("error")
             message = event["payload"].get("reason") or (error.get("message") if isinstance(error, dict) else None)
             if message:
@@ -1271,6 +1275,15 @@ class TrainingStartRequest(BaseModel):
 class TrainingStopRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
     job_id: Optional[str] = None
+
+
+class ReservationReleaseRequest(BaseModel):
+    """An operator's confirmation that a job whose exit could not be proven no longer uses its device (S1-04)."""
+    model_config = ConfigDict(extra="forbid")
+    job_id: str = Field(min_length=1, max_length=128)
+    confirm: Literal[True]
+    reason: str = Field(min_length=3, max_length=500)
+    fence: Optional[int] = None
 
 
 def _warm_start_scope(request: Request, dataset_path: Path) -> Path:
@@ -1771,6 +1784,107 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
     }
 
 
+_RESERVATION_RELEASE_LOCK = threading.Lock()
+_RESERVATION_RELEASE_LOCKS: Dict[str, threading.Lock] = {}
+
+
+@router.post("/reservations/confirm-release")
+def confirm_reservation_release(req: ReservationReleaseRequest, request: Request = None):
+    """Release a reservation left uncertain because the worker's exit could not be proven (a crash, a reboot, a lost
+    server), after an operator confirms the device is free. Refused while the job is active or its owned local worker
+    is provably alive. The confirmation (who, why, what was known) is written to the job ledger before anything is
+    released and the outcome after it, as separate events, so the ledger never states a release that did not happen;
+    only the reservation the operator saw (same fence, still uncertain) is removed."""
+    with _RESERVATION_RELEASE_LOCK:
+        lock = _RESERVATION_RELEASE_LOCKS.setdefault(req.job_id, threading.Lock())
+    with lock:  # one confirmation per job at a time: a second one is answered from the first one's outcome
+        return _confirm_reservation_release(req, request)
+
+
+def _local_journal(record: "JobRecord") -> Dict[str, Any]:
+    """The run journal of a local job: its run folder copy, else the copy kept in the user data folder."""
+    from backend.engine.local_training_worker import _index
+    for path in ((Path(record.output_dir) / "local_job.json") if record.output_dir else None,
+                 _index() / f"{record.job_id}.json"):
+        try:
+            if path is not None and path.is_file():
+                journal = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(journal, dict) and journal.get("job_id", record.job_id) == record.job_id:
+                    return journal
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def _confirm_reservation_release(req: ReservationReleaseRequest, request: Optional[Request]) -> Dict[str, Any]:
+    record = training_job_manager.get_job(req.job_id)
+    if record is None:
+        # A job whose run journal could not be recovered after a restart is known only to the ledger, while its
+        # uncertain reservation survives: read it back in the request's own workspace and project.
+        record = next(iter(_ledger_readback(request, req.job_id)), None)
+    if record is None or not _record_in_request_project(record, request):
+        raise HTTPException(404, "Job unavailable in this project")
+    lease = next((row for row in training_job_manager._leases.list() if row["job_id"] == req.job_id), None)
+    if lease is None:
+        raise HTTPException(409, "This job holds no reservation")
+    if not lease.get("uncertain"):
+        raise HTTPException(409, "The reservation is not uncertain: it is returned when the worker's exit is confirmed")
+    if req.fence != lease.get("fence"):
+        raise HTTPException(409, "The reservation changed since it was shown; reload and confirm again")
+    if record.status in ("queued", "preparing", "running", "stopping", "cancelling"):
+        raise HTTPException(409, "The job is still active; cancel it or wait for it to end first")
+    # A server job's process is not inspected from here; a job read back from the ledger carries no profile, so the
+    # reservation's own flag decides.
+    remote = bool(record.remote_profile_id or lease.get("remote"))
+    liveness = "not_checked" if remote else "unknown"
+    if not remote:
+        from backend.engine.local_training_worker import _liveness
+        # A live local worker refreshes its reservation every few seconds; one refreshed until moments ago may still
+        # be running even when no journal can be read.
+        refreshed = float(lease.get("expires") or 0) - training_job_manager._leases.lease_seconds
+        if float(lease.get("expires") or 0) > time.time():
+            raise HTTPException(409, f"The job's worker refreshed this reservation {max(0, round(time.time() - refreshed))} s ago "
+                                     "and may still be running; confirm again once it is no longer refreshed")
+        journal = _local_journal(record)
+        alive = _liveness(journal) if journal else None
+        if alive is True:
+            raise HTTPException(409, "The job's worker process is still running; cancel it first")
+        liveness = "gone" if alive is False else "unknown"
+    link = record.ledger or _existing_ledger_link(req.job_id)
+    if link is None:
+        raise HTTPException(409, "The job ledger is unavailable, so the release cannot be recorded; nothing was released")
+    context = getattr(getattr(request, "state", None), "project_context", None)
+    actor = context.actor_id if context is not None else "local"
+    try:
+        link.store.record_event(req.job_id, "reservation_release_confirmed",
+                                {"actor": actor, "reason": req.reason, "liveness": liveness, "fence": lease.get("fence"),
+                                 "remote": remote, "host": lease.get("host"), "at": time.time()})
+    except _LEDGER_ERRORS as exc:
+        raise HTTPException(409, f"The release could not be recorded in the job ledger ({exc}); nothing was released") from exc
+    failure = None
+    try:
+        released = training_job_manager._leases.release_uncertain(req.job_id, lease.get("fence"))
+    except (OSError, sqlite3.Error) as exc:
+        released, failure = False, exc
+    outcome = {"actor": actor, "fence": lease.get("fence"), "at": time.time()}
+    if not released:
+        outcome["reason"] = (f"the reservation store could not be written: {failure}" if failure is not None
+                             else "the reservation changed or was already returned before it was released")
+    try:
+        link.store.record_event(req.job_id, "reservation_released" if released else "reservation_release_refused", outcome)
+        outcome_recorded = True
+    except _LEDGER_ERRORS as exc:
+        # The confirmation is on record either way; it alone never claims that anything was released.
+        logger.warning("Job ledger could not record the release outcome of %s: %s", req.job_id, exc)
+        outcome_recorded = False
+    if failure is not None:
+        raise HTTPException(503, f"The reservation could not be released ({failure}); nothing was released")
+    if not released:
+        raise HTTPException(409, "The reservation changed while it was being released; reload and check again")
+    return {"job_id": req.job_id, "released": True, "liveness": liveness, "recorded_by": actor,
+            "outcome_recorded": outcome_recorded}
+
+
 @router.post("/reconnect")
 def reconnect_training(req: TrainingStopRequest,request:Request=None):
     if not req.job_id:
@@ -1945,15 +2059,26 @@ def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, 
     from dataclasses import asdict
     from backend.engine.job_observation import cancellation_evidence, classify_observation
     journal: Dict[str, Any] = {}
+    unreadable = False
     for name in ("local_job.json", "remote_job.json"):
         path = Path(record.output_dir) / name if record.output_dir else None
         if path is not None and path.is_file():
             try:
                 loaded = json.loads(path.read_text(encoding='utf-8'))
             except (OSError, ValueError):
+                unreadable = True
                 continue
             journal = loaded if isinstance(loaded, dict) else {}
             break
+    if not journal and not getattr(record, "remote_profile_id", None):
+        from backend.engine.local_training_worker import _index
+        copy = _index() / f"{record.job_id}.json"  # the copy a local worker's journal keeps in the user data folder
+        try:
+            loaded = json.loads(copy.read_text(encoding='utf-8')) if copy.is_file() else {}
+            if isinstance(loaded, dict) and loaded.get("job_id") == record.job_id:
+                journal = loaded
+        except (OSError, ValueError):
+            unreadable = True
     try:
         intent = job_ledger().cancel_intent(record.job_id)
     except _LEDGER_ERRORS:
@@ -1966,7 +2091,10 @@ def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, 
         record.status, exit_code=journal.get("worker_exit_code"), error=error, error_code=payload.get("error_code"),
         connection_lost=record.status == "disconnected", remote=getattr(record, "remote_profile_id", None) is not None,
         app_restarted="restart" in (error or ""), cancel=evidence, cancel_reason=(intent or {}).get("reason"))
-    return {**asdict(observed), "cancel": asdict(evidence)}
+    # Without any run journal no worker of this job was ever recorded (it failed while preparing, or its folder is gone),
+    # so there is no process exit to confirm; a journal that exists but cannot be read leaves that unknown (None).
+    worker_recorded = True if journal else None if unreadable else False
+    return {**asdict(observed), "cancel": asdict(evidence), "worker_recorded": worker_recorded}
 
 
 @router.get("/jobs")

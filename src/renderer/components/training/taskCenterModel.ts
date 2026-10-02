@@ -1,6 +1,13 @@
 export type TaskRow = {key:string; id:string; kind:string; task:string; status:string; phase:string; source:string; labelset:string;
   transport:string; epoch:number; totalEpochs:number; raw:Record<string,any>};
-export type Reservation = {job_id:string; remote?:boolean; uncertain?:boolean; requires_reconciliation?:boolean};
+export type Reservation = {job_id:string; remote?:boolean; uncertain?:boolean; requires_reconciliation?:boolean; fence?:number|null};
+
+/** S1-04: an operator may settle a reservation only when it is uncertain and its job is no longer active. */
+export function releasableReservation(row:TaskRow,reservations:Reservation[]|null):Reservation|null {
+  if(row.kind!=='training'||['queued','preparing','running','stopping','cancelling'].includes(row.status))return null;
+  const lease=reservations?.find(item=>item.job_id===row.id);
+  return lease&&lease.uncertain?lease:null;
+}
 export const terminalTask = (status:string) => ['completed','aborted','cancelled','stopped','failed'].includes(status);
 export function normalizeTask(kind:string, raw:Record<string,any>):TaskRow {
   const id=String(raw.search_id || raw.job_id);const transport=String(raw.compute_profile_id || 'local');
@@ -23,7 +30,7 @@ export function taskSelection(storage:Pick<Storage,'getItem'|'setItem'>,scope:st
 
 /** S1-04: the cancel chain and next action the backend derived from evidence; null when the row has none.
  *  Each step is done only when its own evidence was recorded, never because a later stage was reached. */
-export function observationSummary(row:TaskRow):{steps:Array<{label:string;done:boolean}>;nextAction:string|null;cause:string|null}|null {
+export function observationSummary(row:TaskRow):{steps:Array<{label:string;done:boolean}>;facts:string[];nextAction:string|null;cause:string|null}|null {
   const observation=row.raw?.observation;if(!observation)return null;
   const cancel=observation.cancel||{};
   const steps=(cancel.stage||'none')==='none'?[]:[
@@ -33,5 +40,13 @@ export function observationSummary(row:TaskRow):{steps:Array<{label:string;done:
     {label:'종료 확인',done:cancel.exit_confirmed===true},
     {label:'예약 반환',done:cancel.reservation_released===true},
   ];
-  return {steps,nextAction:observation.next_action||null,cause:observation.cause||null};
+  // Without a cancel, the row still says whether its process exit and its reservation release were recorded.
+  const facts:string[]=[];
+  if(!steps.length){
+    if(cancel.exit_confirmed===true)facts.push('실행 종료 확인');
+    else if(terminalTask(row.status))facts.push(observation.worker_recorded===false?'작업자 실행 기록 없음':'실행 종료 미확인');
+    if(cancel.reservation_released===true)facts.push('예약 반환');
+    else if(cancel.reservation_released===false)facts.push('예약 보유 중');
+  }
+  return {steps,facts,nextAction:observation.next_action||null,cause:observation.cause||null};
 }
