@@ -559,7 +559,13 @@
      "result": "spec/code quality passed; original dirty-save and socket repros green; independent9authenticatedWS cases passed",
      "scope": "seven owned hashes matched; current accepted store callback verified; reused/copy project IDs retain distinct namespaces; native Windows pending"
     },
-    "Hosted Windows Server 복원 staging rename 실패를 추적해 SQLite rebind 5곳의 연결 수명을 수정했다. 실제 API와 retained-handle RED 2개 및 archive/context 42개 통과, 독립 5개에서 부분 변경 롤백·닫힌 handle·복원본 분리를 확인했다. 새 Windows 실행은 pending."
+    "Hosted Windows Server 복원 staging rename 실패를 추적해 SQLite rebind 5곳의 연결 수명을 수정했다. 실제 API와 retained-handle RED 2개 및 archive/context 42개 통과, 독립 5개에서 부분 변경 롤백·닫힌 handle·복원본 분리를 확인했다. 새 Windows 실행은 pending.",
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "25235a2: a frozen inspection run executes under its own project after a project switch (regression since the scoped context middleware); a shared account reaches only runs of its selected project, before any database or file of another project is opened",
+     "scope": "inspection suites 38 passed on clean main + 2 files; two independent review rounds",
+     "platform": "macOS development"
+    }
    ],
    "file_actions": {
     "backend/main.py": "Modify",
@@ -1526,8 +1532,15 @@
     "S1-02",
     "S1-06"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in 3d42284: content-addressed thumbnails (digest+size+format+decoder key, ETag revalidation, bounded memory, failure memo) and a quick import inspection that fully decodes and reports complete only for folder-scanned inventories; four independent review rounds, final spec/quality pass",
+     "scope": "clean main + 3 files: 651 passed / 7 skipped (slice tests 34 + dataset-route suites); index engine (slice 2), durable import job and panel (slice 3) in review, not published",
+     "platform": "macOS development; Windows native pending"
+    }
+   ],
    "file_actions": {
     "backend/api/routes_dataset.py": "Modify",
     "backend/engine/dataset_index.py": "Create",
@@ -8201,7 +8214,7 @@
    "S6-05"
   ],
   "last_verified_on": "2026-10-02",
-  "git_publication": "main 91033b23d83efe5ba9a3dfb731edf81e83251516: persistent job ledger, job scheduler and account/authorization bundle (S1-02, S1-03, S1-07) pushed after independent review and a clean-clone full backend run; S3-01 slices and the inspection scope fix are frozen for review and not yet published"
+  "git_publication": "main 3d42284: job ledger/scheduler/account bundle (91033b2), inspection scope fix (25235a2) and S3-01 slice 1 (3d42284) pushed after independent review and clean-clone runs; S3-01 index engine and import job are in review"
  },
  "scope_refinements": [
   {
