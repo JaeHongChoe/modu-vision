@@ -252,16 +252,30 @@ def _verified_execution_choice(run: Dict[str, Any], project: Dict[str, Any]):
 
 @contextmanager
 def _execution_request(request: Request, project: Dict[str, Any], frozen_profile):
-    """Scope nested flow execution without changing the app's active project."""
+    """Scope nested flow execution to the run's own project without changing the app's active project.
+
+    The request's project scope (the selected project, its context and the context variable) is replaced as a whole:
+    nested routes resolve the project from it before the app state. A shared account executes only runs of the
+    project it selected and was authorized for.
+    """
+    from backend.contracts.context import current_project_context
     from backend.engine.annotation_storage import (
         set_request_annotation_root, reset_request_annotation_root,
         set_request_project_root, reset_request_project_root,
     )
     from backend.engine.dataset_loaders import set_request_split_root, reset_request_split_root
+    state = {**request.scope.get("state", {}), "frozen_execution_profile": frozen_profile}
+    selected = state.get("scoped_project")
+    if state.get("account_user") is not None and (selected is None or selected.get("id") != project["id"]):
+        raise HTTPException(status_code=409, detail="Select this inspection run's project to execute it.")
+    state["scoped_project"] = project
+    registry = getattr(request.app.state, "context_registry", None)
+    if registry is not None:
+        state["project_context"] = registry.context(project, state.get("account_user"))
     app_state = dict(request.app.state._state)
     app_state["current_project"] = project
-    scope = {**request.scope, "app": SimpleNamespace(state=State(app_state)),
-             "state": {**request.scope.get("state", {}), "frozen_execution_profile": frozen_profile}}
+    scope = {**request.scope, "app": SimpleNamespace(state=State(app_state)), "state": state}
+    context_token = current_project_context.set(state.get("project_context"))
     project_token = set_request_project_root(Path(project["project_dir"]))
     annotation_token = set_request_annotation_root(Path(project["annotations_dir"]))
     split_token = set_request_split_root(Path(project["dataset_dir"]) / "splits")
@@ -271,6 +285,7 @@ def _execution_request(request: Request, project: Dict[str, Any], frozen_profile
         reset_request_split_root(split_token)
         reset_request_annotation_root(annotation_token)
         reset_request_project_root(project_token)
+        current_project_context.reset(context_token)
 
 
 class UpdateRow(BaseModel):
@@ -337,6 +352,12 @@ def _run_project(request: Request, run_id: str) -> Dict[str, Any]:
         if owner is None:
             # Runs created before the index was introduced remain readable in their active project.
             return project
+    # A shared account reaches only runs of the project it selected and was authorized for: knowing another project's
+    # run ID never opens that project's database, rows or files.
+    if getattr(request.state, "account_user", None) is not None:
+        selected = getattr(request.state, "scoped_project", None)
+        if selected is None or selected.get("id") != owner["project_id"]:
+            raise HTTPException(status_code=403, detail="This inspection run belongs to a project this account has not selected.")
     try:
         project = _load_project(Path(owner["project_dir"]).expanduser().resolve())
     except HTTPException as exc:

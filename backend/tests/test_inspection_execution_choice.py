@@ -82,3 +82,56 @@ def test_batch_refuses_changed_frozen_execution_or_wrong_device(monkeypatch,tmp_
     assert response.status_code==(502 if damage=='device_readback' else 409),response.text
     assert len(calls)==(1 if damage=='device_readback' else 0)
     assert client.get(f'/api/inspections/runs/{run_id}').json()['rows'][0]['state']=='pending'
+
+
+def test_nested_execution_is_scoped_to_the_runs_project_and_a_shared_account_needs_it_selected():
+    from types import SimpleNamespace
+    from fastapi import HTTPException
+    from starlette.datastructures import State
+    from starlette.requests import Request
+    from backend.api.routes_inspections import _execution_request
+    from backend.contracts.context import current_project_context
+    run_project={'id':'run-project','project_dir':'/runs/a','annotations_dir':'/runs/a/annotations','dataset_dir':'/runs/a/dataset'}
+    selected={'id':'selected-project','project_dir':'/runs/b'}
+
+    class Registry:
+        def context(self,project,account):
+            return ('context',project['id'],account['id'] if account else 'local')
+
+    def request(**state):
+        app=SimpleNamespace(state=State({'context_registry':Registry(),'current_project':selected}))
+        return Request({'type':'http','method':'POST','path':'/','headers':[],'app':app,'state':{'scoped_project':selected,**state}})
+
+    with _execution_request(request(),run_project,None) as bound:
+        assert get_current_project(bound)['id']=='run-project'
+        assert current_project_context.get()==('context','run-project','local')
+    assert current_project_context.get() is None
+    with pytest.raises(HTTPException) as refused:
+        with _execution_request(request(account_user={'id':'account-1'}),run_project,None):
+            pass
+    assert refused.value.status_code==409
+
+
+def test_a_shared_account_reaches_only_runs_of_its_selected_project(monkeypatch,tmp_path):
+    from fastapi import HTTPException
+    from starlette.requests import Request
+    from backend.api import routes_inspections
+    client,project,source,image,payload,profile=selected_run(monkeypatch,tmp_path)
+    run_id=client.post('/api/inspections/runs',json=payload).json()['run_id']
+    other=client.post('/api/project/create',json={'name':'Other scope','task':'segmentation'}).json()
+    opened=[]
+    real_connect=sqlite3.connect
+    monkeypatch.setattr(sqlite3,'connect',lambda database,*args,**kwargs:opened.append(str(database)) or real_connect(database,*args,**kwargs))
+
+    def request(selected):
+        return Request({'type':'http','method':'GET','path':'/','headers':[],'app':client.app,
+                        'state':{'account_user':{'id':'member'},'scoped_project':selected}})
+
+    with pytest.raises(HTTPException) as refused:
+        routes_inspections._run_project(request(other),run_id)
+    assert refused.value.status_code==403
+    assert not any(str(Path(project['project_dir'])) in database for database in opened),'the run project database is never opened'
+    with pytest.raises(HTTPException):
+        with routes_inspections._store(request(other),run_id):
+            pass
+    assert routes_inspections._run_project(request(project),run_id)['id']==project['id']
