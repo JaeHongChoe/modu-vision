@@ -1539,6 +1539,12 @@
      "result": "slice 1 published in 3d42284: content-addressed thumbnails (digest+size+format+decoder key, ETag revalidation, bounded memory, failure memo) and a quick import inspection that fully decodes and reports complete only for folder-scanned inventories; four independent review rounds, final spec/quality pass",
      "scope": "clean main + 3 files: 651 passed / 7 skipped (slice tests 34 + dataset-route suites); index engine (slice 2), durable import job and panel (slice 3) in review, not published",
      "platform": "macOS development; Windows native pending"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 2 published in 8716df7: persistent image index with immutable revisions (single read: streamed hash into a bounded copy + full decode; gaps for unreadable folders; staged build sealed in one transaction; stat cache trusted only where stat fields are change evidence; CAS activation; publication-key replay); inventory rules shared with the source listing and dataset summary; three independent review rounds, final spec/quality pass",
+     "scope": "clean main + 9 files (slice 2 and the slice-1/inspection follow-up 021b5e5): 735 passed / 7 skipped; durable import job, routes and panel (slice 3) in review, not published; Windows stat semantics, junctions and undecodable names verified by emulation only",
+     "platform": "macOS development; Windows native pending"
     }
    ],
    "file_actions": {
@@ -8214,7 +8220,7 @@
    "S6-05"
   ],
   "last_verified_on": "2026-10-02",
-  "git_publication": "main 3d42284: job ledger/scheduler/account bundle (91033b2), inspection scope fix (25235a2) and S3-01 slice 1 (3d42284) pushed after independent review and clean-clone runs; S3-01 index engine and import job are in review"
+  "git_publication": "main 8716df7: bundle (91033b2), inspection scope (25235a2, 021b5e5), S3-01 slices 1-2 (3d42284, 021b5e5, 8716df7) pushed after independent review and clean-clone runs; S3-01 import job/panel, S1-04 cancel/failure observation and S1-05 capability slice are in progress"
  },
  "scope_refinements": [
   {
