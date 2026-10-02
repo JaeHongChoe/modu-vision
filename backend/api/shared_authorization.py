@@ -127,7 +127,8 @@ class SharedAuthorizationMiddleware:
                 or method in {'PUT','DELETE'} and re.fullmatch(r'/api/artifacts/uploads/[a-f0-9]{32}',path)
                 or method=='POST' and re.fullmatch(r'/api/artifacts/uploads/[a-f0-9]{32}/complete',path))
             artifact_upload=bool(artifact_upload and role in {'labeler','trainer','reviewer'})
-            allowed=emergency_rollback or artifact_reference or artifact_upload or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
+            library_read=method=='POST' and path=='/api/dataset/library/resolve'  # reads saved selections: any member
+            allowed=emergency_rollback or library_read or artifact_reference or artifact_upload or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
             if not allowed:
                 denied=store.authorize(account['id'],permission_action(path,method),project['id'],session_token=token)
                 if denied.allowed:denied=replace(denied,allowed=False,reason='route_policy_required')

@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS dataset_stat_cache(
     sha256 TEXT, width INTEGER, height INTEGER, valid INTEGER NOT NULL, error_code TEXT, error_detail TEXT,
     last_build TEXT NOT NULL, PRIMARY KEY(project_key, source_root, relative_path));
 CREATE INDEX IF NOT EXISTS dataset_index_digest ON dataset_index_images(revision_id, sha256);
+CREATE INDEX IF NOT EXISTS dataset_index_identity ON dataset_index_images(revision_id, image_uuid);
 CREATE TABLE IF NOT EXISTS dataset_index_annotations(
     revision_id TEXT NOT NULL REFERENCES dataset_revisions(revision_id), relative_path TEXT NOT NULL, format TEXT,
     labels TEXT NOT NULL, files TEXT NOT NULL, error TEXT, PRIMARY KEY(revision_id, relative_path));

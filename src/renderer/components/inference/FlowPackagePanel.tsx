@@ -18,6 +18,8 @@ import {productDeliveryApi} from '../../services/productDeliveryApi';
 import {reopenOptimizationTask} from './deliveryTaskSelection';
 import { flowPackageExport, type FlowApprovalPrerequisites, type FlowExportResult } from '../../services/flowPackageExport';
 import { defaultCohort, MAX_PARITY_IMAGES, parityFields, parityHeadline, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
+import { ImageLibraryBrowser } from '../common/ImageLibraryBrowser';
+import type { LibraryImage } from '../../services/api';
 
 export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask }> = ({ sourceFolder, task }) => {
   const {key:deliveryKey,scope:deliveryScope,project}=useDeliveryScope(sourceFolder+task);
@@ -33,6 +35,10 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [selectedImagePath, setSelectedImagePath] = useState('');
   const [parityMode, setParityMode] = useState<ParityMode>('cohort');
   const [cohortPaths, setCohortPaths] = useState<string[]>([]);
+  // The parity cohort is picked from the whole validated revision (search, split filter); without an accepted revision
+  // the first 32 listed images are offered as before.
+  const [cohortPicks, setCohortPicks] = useState<LibraryImage[]>([]);
+  const [cohortLibrary, setCohortLibrary] = useState<'available' | 'unavailable'>('available');
   const [release, setRelease] = useState<FlowApprovalPrerequisites | null>(null);
   const [releaseError, setReleaseError] = useState<string | null>(null);
   const [releaseSelection, setReleaseSelection] = useState<Record<string, string>>({});
@@ -130,7 +136,10 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   // Parity runs on the device the package will use; the backend rejects any other device.
   const packageDevice = deploymentProfile === 'edge_cpu' ? 'cpu' : deploymentProfile === 'edge_cuda' ? 'cuda:0' : runtimeDevice;
   const effectiveParityMode: ParityMode = canVerify ? parityMode : 'none';
-  const cohortImages = images.filter((item) => cohortPaths.includes(item.file_path));
+  // image_id stays the file stem the listing always sent, so a library pick runs the flow exactly as a listed one.
+  const cohortImages = cohortLibrary === 'available'
+    ? cohortPicks.map((item) => ({ file_path: item.file_path, image_id: item.file_name.replace(/\.[^.]+$/, '') }))
+    : images.filter((item) => cohortPaths.includes(item.file_path));
   const approvalIds = includeApprovals ? releaseApprovalIds(release, releaseSelection) : null;
   const exportFlow = async () => {
     if (!sourceFolder || !selectedVersion || identity?.versionId !== selectedVersion.version_id || isExporting) return;
@@ -297,7 +306,21 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
             onChange={() => { setParityMode(mode); setResult(null); }} className="border-[#455670] bg-[#0F1723] text-sky-500" />{label}</label>)}
       </div>
       <p className="mt-2 text-slate-400">대상 장치 <span className="font-mono text-slate-200">{packageDevice}</span> · 패키지 실행 장치와 같은 장치로만 비교합니다.</p>
-      {effectiveParityMode === 'cohort' && <div className="mt-2">
+      {effectiveParityMode === 'cohort' && cohortLibrary === 'available' && <div className="mt-2 space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증된 데이터 버전 전체에서 선택</span>
+          <button type="button" onClick={() => setCohortPicks([])} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+        </div>
+        {cohortPicks.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
+        <div className="flex h-[320px] flex-col">
+          <ImageLibraryBrowser selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
+            onPick={(item) => setCohortPicks((current) => current.some((pick) => pick.image_uuid === item.image_uuid)
+              ? current.filter((pick) => pick.image_uuid !== item.image_uuid)
+              : current.length >= MAX_PARITY_IMAGES || !item.valid ? current : [...current, item])}  // a corrupt image cannot be compared
+            onUnavailable={() => setCohortLibrary('unavailable')} />
+        </div>
+      </div>}
+      {effectiveParityMode === 'cohort' && cohortLibrary === 'unavailable' && <div className="mt-2">
         <div className="flex flex-wrap items-center gap-2">
           <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장)</span>
           <button type="button" onClick={() => setCohortPaths(images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}

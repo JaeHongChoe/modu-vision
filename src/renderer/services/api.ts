@@ -156,6 +156,26 @@ export interface DatasetRevisionImage {
   annotation_format: 'labelme' | 'coco' | 'yolo' | null; annotation_labels: string[];
   annotation_files: Array<{ path: string; sha256: string }>; annotation_error: string | null;
 }
+/** One image of a validated revision as the library serves it (identity, content digest, validity, ledger fields). */
+export interface LibraryImage {
+  relative_path: string; image_uuid: string; sha256: string | null; size: number; width: number | null; height: number | null;
+  label: string | null; split: string | null; valid: boolean; error_code: string | null; error_detail: string | null;
+  file_name: string; file_path: string; annotation_labels: string[]; annotation_error: string | null; tags: string[];
+  product: string | null; lot: string | null; workflow_state: 'unworked' | 'needs_review' | 'approved'; usage_state: 'active' | 'not_used';
+}
+export interface LibraryQuery {
+  q?: string; label?: string; split?: 'train' | 'val' | 'test'; state?: 'valid' | 'invalid'; annotation_label?: string; tag?: string;
+  product?: string; lot?: string; workflow_state?: 'unworked' | 'needs_review' | 'approved'; usage_state?: 'active' | 'not_used';
+  cursor?: string | null; limit?: number; revision_id?: string;
+}
+/** A saved image choice: kept by identity and content digest, never by path alone. */
+export interface LibrarySelection { image_uuid: string; sha256: string | null; relative_path: string }
+export interface LibraryResolution extends LibrarySelection {
+  /** unreadable: the image is in the revision but could not be read in that build (kept, not usable until it is). */
+  status: 'found' | 'changed' | 'unreadable' | 'moved' | 'missing';
+  current: { relative_path: string; image_uuid: string; sha256: string | null; valid: number; file_path: string } | null;
+  candidates: Array<{ relative_path: string; image_uuid: string; sha256: string | null; valid: number; file_path: string }>;
+}
 /** A verified, project-scoped reference to stored bytes (an uploaded archive, a model, ...). */
 export interface ArtifactRef { id: string; revision: number; sha256: string }
 /** A resumable upload: the server holds `offset` committed bytes of `size_bytes`. */
@@ -710,6 +730,26 @@ export const api = {
     }),
   },
 
+  library: {
+    /** A page of the active (or named) validated revision; `next_cursor` continues it, `scanned_to` shows scan progress. */
+    images: (query: LibraryQuery = {}) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+      return request<{ revision_id: string; active: boolean; source_root: string; items: LibraryImage[]; next_cursor: string | null;
+        scanned: number; scanned_to: string | null; complete_page: boolean }>(`/api/dataset/library/images${params.size ? `?${params}` : ''}`);
+    },
+    resolve: async (selections: LibrarySelection[], revisionId?: string) => {
+      // Only the identity is sent (id and digest; a path is never matched and the shared server refuses path fields);
+      // each result gets back the path it was saved with, for the notices.
+      const answer = await request<{ revision_id: string; active: boolean; results: LibraryResolution[] }>('/api/dataset/library/resolve', {
+        method: 'POST', body: JSON.stringify({
+          selections: selections.map(({ image_uuid, sha256 }) => ({ image_uuid, sha256 })),
+          ...(revisionId ? { revision_id: revisionId } : {}),
+        }),
+      });
+      return { ...answer, results: answer.results.map((result, index) => ({ ...result, relative_path: selections[index]?.relative_path ?? '' })) };
+    },
+  },
   artifacts: {
     beginUpload: (data: { kind: 'source'; sha256: string; size_bytes: number }) =>
       request<{ upload: ArtifactUpload }>('/api/artifacts/uploads', { method: 'POST', body: JSON.stringify(data) }),

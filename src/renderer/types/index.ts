@@ -395,6 +395,10 @@ export interface SelectedInspectionImage {
   imageId?: string;
   fileName: string;
   thumbnailUrl?: string;
+  /** Identity in a validated revision (S2-07): a saved choice is resolved by these, never by its path alone. */
+  imageUuid?: string;
+  sha256?: string | null;
+  relativePath?: string;
 }
 
 export interface RuntimeExportResult {

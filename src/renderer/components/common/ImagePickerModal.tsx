@@ -3,7 +3,7 @@
  * Steel Instrument Inspection Image Selection Dialog.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Check,
   Database,
@@ -15,8 +15,10 @@ import {
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
-import { api, resolveApiUrl } from '../../services/api';
+import { api, resolveApiUrl, type LibraryResolution } from '../../services/api';
 import type { ImageMeta, SelectedInspectionImage } from '../../types';
+import { ImageLibraryBrowser } from './ImageLibraryBrowser';
+import { identityOf, recallSelection, rememberSelection, resolutionNotice, selectionFromImage } from './librarySelection';
 
 export interface ImagePickerModalProps {
   isOpen: boolean;
@@ -26,7 +28,15 @@ export interface ImagePickerModalProps {
 export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onClose }) => {
   const folderPath = useDatasetStore((state) => state.folderPath);
   const task = useProjectStore((state) => state.task);
+  const projectId = useProjectStore((state) => state.project?.id ?? null);
   const { selectedImage, setSelectedImage } = useFlowchartStore();
+  // The validated revision is browsed by identity; without an accepted revision the older path listing is shown.
+  const [library, setLibrary] = useState<'available' | 'unavailable'>('available');
+  const [libraryReason, setLibraryReason] = useState<string | null>(null);
+  const [savedCheck, setSavedCheck] = useState<LibraryResolution | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const userPicked = useRef(false);
+  const pick = (selection: SelectedInspectionImage | null) => { userPicked.current = true; setTempSelected(selection); };
 
   const [activeTab, setActiveTab] = useState<'dataset' | 'local'>('dataset');
   const [localPathInput, setLocalPathInput] = useState<string>(
@@ -48,6 +58,29 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     setLocalPathInput(selectedImage?.source === 'file' ? selectedImage.imagePath : '');
     setDatasetPage(1);
     setDatasetSplit('all');
+    setLibrary('available');
+    setLibraryReason(null);
+    setSavedCheck(null);
+    // A saved choice is checked against the current revision before it is offered again: a moved, replaced or missing
+    // image is reported and never silently swapped for whatever now sits at its path.
+    const saved = identityOf(selectedImage) ? selectedImage : projectId ? recallSelection(projectId) : null;
+    const identity = identityOf(saved);
+    userPicked.current = false;
+    setResolveError(null);
+    if (!saved || !identity) return;
+    let cancelled = false;
+    api.library.resolve([identity]).then(({ results }) => {
+      if (cancelled) return;
+      const [result] = results;
+      setSavedCheck(result);
+      // a choice the user made while the check ran is theirs; the answer only explains the saved one
+      if (!userPicked.current) setTempSelected(result.status === 'found' && result.current ? { ...saved, imagePath: result.current.file_path } : null);
+    }).catch((caught) => {
+      if (cancelled || (caught as { status?: number }).status === 409) return;  // no accepted revision: said below
+      setResolveError(`저장된 선택을 확인하지 못했습니다(${caught instanceof Error ? caught.message : String(caught)}). 확인되지 않은 경로는 쓰지 않으니 다시 선택하세요.`);
+      if (!userPicked.current) setTempSelected(null);
+    });
+    return () => { cancelled = true; };
   }, [isOpen]);
 
   useEffect(() => {
@@ -55,7 +88,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   }, [folderPath]);
 
   useEffect(() => {
-    if (!isOpen || activeTab !== 'dataset') return;
+    if (!isOpen || activeTab !== 'dataset' || library !== 'unavailable') return;
     let cancelled = false;
     setDatasetLoading(true);
     setDatasetError(null);
@@ -78,12 +111,12 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       if (!cancelled) setDatasetLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit]);
+  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit, library]);
 
   if (!isOpen) return null;
 
   const handleSelectFromDataset = (img: ImageMeta) => {
-    setTempSelected({
+    pick({
       source: 'dataset',
       imagePath: img.file_path,
       imageId: img.image_id,
@@ -100,7 +133,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       });
       if (file) {
         setLocalPathInput(file);
-        setTempSelected({
+        pick({
           source: 'file',
           imagePath: file,
           fileName: file.split('/').pop() || 'local_image.jpg',
@@ -113,6 +146,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   const handleConfirm = () => {
     if (tempSelected) {
       setSelectedImage(tempSelected);
+      if (projectId) rememberSelection(projectId, tempSelected);
     } else if (localPathInput.trim()) {
       setSelectedImage({
         source: 'file',
@@ -126,7 +160,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
-      <div className="bg-[#131822] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
+      <div role="dialog" aria-modal="true" aria-label="검사 대상 이미지 선택" className="bg-[#131822] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
         {/* Modal Header */}
         <div className="h-12 px-5 bg-[#0B0E14] border-b border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -155,7 +189,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
             }`}
           >
             <Database className="w-3.5 h-3.5" />
-            <span>임포트 데이터셋 ({datasetTotal})</span>
+            <span>{library === 'available' ? '검증된 데이터 버전' : `임포트 데이터셋 (${datasetTotal})`}</span>
           </button>
 
           <button
@@ -173,8 +207,43 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5 bg-[#131822]">
-          {activeTab === 'dataset' ? (
+          {activeTab === 'dataset' && library === 'available' ? (
+            <div className="flex h-[52vh] flex-col gap-2">
+              {resolveError && <div role="alert" className="rounded border border-red-600/50 bg-red-950/30 p-2 text-[11px] leading-5 text-red-200">{resolveError}</div>}
+              {resolutionNotice(savedCheck) && (
+                <div role="status" className="rounded border border-amber-600/50 bg-amber-950/30 p-2 text-[11px] leading-5 text-amber-200">
+                  <p>{resolutionNotice(savedCheck)}</p>
+                  {savedCheck?.status === 'moved' && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {savedCheck.candidates.map((candidate) => (
+                        <button key={candidate.image_uuid} type="button" className="rounded border border-amber-500/60 px-2 py-0.5 font-mono text-[10px]"
+                          onClick={() => pick({ source: 'dataset', imagePath: candidate.file_path, imageId: candidate.image_uuid,
+                            imageUuid: candidate.image_uuid, sha256: candidate.sha256, relativePath: candidate.relative_path,
+                            fileName: candidate.relative_path.split('/').pop() || candidate.relative_path,
+                            thumbnailUrl: `/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(candidate.file_path)}` })}>
+                          {candidate.relative_path} 선택
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {tempSelected?.source === 'dataset' && tempSelected.imageUuid && (
+                <div className="truncate text-[11px] text-slate-400">선택: <span className="font-mono text-slate-200">{tempSelected.relativePath}</span></div>
+              )}
+              <ImageLibraryBrowser
+                selectedIds={new Set(tempSelected?.imageUuid ? [tempSelected.imageUuid] : [])}
+                onPick={(item) => pick(selectionFromImage(item))}
+                onUnavailable={(reason) => { setLibrary('unavailable'); setLibraryReason(reason); }}
+              />
+            </div>
+          ) : activeTab === 'dataset' ? (
             <div>
+              {libraryReason && (
+                <div role="status" className="mb-3 rounded border border-slate-600/60 bg-[#1A212E] p-2 text-[11px] leading-5 text-slate-300">
+                  검증된 데이터 버전이 없어 폴더 목록을 보여 줍니다. 이 목록에서 고른 이미지는 경로로만 기억되므로, '검증된 데이터 버전'에서 전체 검증 후 채택하면 이미지가 옮겨지거나 바뀌어도 알 수 있습니다.
+                </div>
+              )}
               {/* Split Filters */}
               <div className="flex items-center space-x-1.5 mb-3.5">
                 {(['all', 'train', 'val', 'test'] as const).map((split) => {
@@ -283,7 +352,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                     value={localPathInput}
                     onChange={(e) => {
                       setLocalPathInput(e.target.value);
-                      setTempSelected(e.target.value.trim() ? {
+                      pick(e.target.value.trim() ? {
                         source: 'file',
                         imagePath: e.target.value,
                         fileName: e.target.value.split('/').pop() || 'image.png',

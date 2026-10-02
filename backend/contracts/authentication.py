@@ -97,6 +97,7 @@ def permission_action(path, method):
     """Name the existing routing policy without accepting arbitrary actions."""
     import re
     if method in {'GET','HEAD','OPTIONS'}:return 'project.read'
+    if method=='POST' and path=='/api/dataset/library/resolve':return 'project.read'  # resolving saved selections only reads
     if re.fullmatch(r'/api/fleet/targets/[a-f0-9]{32}/emergency-rollback',path):
         # The accepted endpoint audits requests then applies owner/admin gating.
         return 'fleet.emergency.request'

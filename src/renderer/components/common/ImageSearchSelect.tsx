@@ -1,0 +1,85 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { api, type LibraryImage } from '../../services/api';
+import type { ImageMeta, VisionTask } from '../../types';
+
+interface Props {
+  /** Accessible name of the control (also the list's name). */
+  label: string;
+  /** The chosen image's file path ('' when none). */
+  value: string;
+  onChange: (path: string) => void;
+  disabled?: boolean;
+  /** Pick the first image of the first page when nothing is chosen yet (a convenience for checks that need any image). */
+  autoSelectFirst?: boolean;
+  /** Only used without an accepted revision: the older listing of the first images of this folder. */
+  folder?: string | null;
+  task?: VisionTask;
+}
+
+const PAGE = 20;
+
+/**
+ * One image of the project's validated revision, found by searching its name on the server instead of scrolling the
+ * first 64 entries. Without an accepted revision it shows the older list of the first images and says so.
+ */
+export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, disabled, autoSelectFirst, folder, task }) => {
+  const [text, setText] = useState('');
+  const [items, setItems] = useState<LibraryImage[]>([]);
+  const [legacy, setLegacy] = useState<ImageMeta[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const change = useRef(onChange);
+  change.current = onChange;
+  const initial = useRef(value);
+  initial.current = value;
+
+  useEffect(() => {
+    let live = true;
+    const timer = window.setTimeout(() => {
+      api.library.images({ q: text.trim() || undefined, limit: PAGE }).then((page) => {
+        if (!live) return;
+        setItems(page.items);
+        setError(null);
+        const firstValid = page.items.find((item) => item.valid);  // never an image the revision found corrupt
+        if (autoSelectFirst && !initial.current && firstValid) change.current(firstValid.file_path);
+      }).catch((caught) => {
+        if (!live) return;
+        if ((caught as { status?: number }).status === 409 && folder) {
+          api.dataset.getImages({ folder_path: folder, task, limit: 64 }).then((response) => {
+            if (!live) return;
+            setLegacy(response.items || []);
+            if (autoSelectFirst && !initial.current && response.items?.[0]) change.current(response.items[0].file_path);
+          }).catch((inner) => live && setError(inner instanceof Error ? inner.message : String(inner)));
+        } else {
+          setError(caught instanceof Error ? caught.message : String(caught));
+        }
+      });
+    }, 250);
+    return () => { live = false; window.clearTimeout(timer); };
+  }, [text, folder, task, autoSelectFirst]);
+
+  if (legacy) {
+    return (
+      <div className="space-y-1">
+        <select aria-label={label} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded bg-slate-800 p-2">
+          <option value="">원본 이미지 선택</option>
+          {legacy.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
+        </select>
+        <p className="text-[11px] text-slate-500">검증된 데이터 버전이 없어 처음 64장만 보입니다. 전체 검증 후 채택하면 이름으로 찾을 수 있습니다.</p>
+      </div>
+    );
+  }
+  const chosen = items.find((item) => item.file_path === value);
+  return (
+    <div className="space-y-1">
+      <input type="search" aria-label={`${label} 검색`} disabled={disabled} value={text} onChange={(event) => setText(event.target.value)}
+        placeholder="파일 이름이나 폴더로 검색" className="w-full rounded bg-slate-800 p-2" />
+      <select aria-label={label} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} size={Math.min(6, Math.max(2, items.length + 1))}
+        className="w-full rounded bg-slate-800 p-1">
+        <option value="">{items.length ? '이미지 선택' : '조건에 맞는 이미지가 없습니다'}</option>
+        {value && !chosen && <option value={value}>{value.split(/[\\/]/).pop()} (현재 선택)</option>}
+        {items.map((item) => <option key={item.image_uuid} value={item.file_path}>{item.relative_path}{item.valid ? '' : ` · ${item.error_code}`}</option>)}
+      </select>
+      {error && <p role="alert" className="text-[11px] text-red-300">{error}</p>}
+    </div>
+  );
+};
