@@ -1630,6 +1630,12 @@
      "result": "slice 4 published in 11372a9: ZIP dataset imports (browser-side incremental SHA-256, resumable 4 MiB chunks, cancelled reservation on stop/failure; server-side extraction into the project folder with traversal/link/device/encrypted/method/Windows-name/collision/size/ratio/free-space checks, a receipt kept with the files, verified reuse, ledger replay before extraction); every revision records the source annotations (LabelMe/COCO/YOLO format, labels, binding files with SHA-256; read inside the source; parsed once per document), annotation errors invalidate detection/segmentation entries unless a Studio overlay labels the image, folder-labelled tasks record them without excluding; duplicate groups (conflicting labels, cross-split) reported and listed, never removed; no valid image = never activatable; index schema 3 with in-place upgrade; five independent review rounds, final ACCEPT",
      "scope": "frozen tree (base + 21 files): green 170, regression 742 passed / 4 skipped (home guard empty), renderer, typecheck, e2e 3 passed (ZIP picked through the real file input, duplicates, import); verified again on main 6698818 + the files: green 179 incl. the encoding guard, e2e 3 passed",
      "platform": "macOS development; Windows native pending"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "published in 1e23881: a transient completion failure of an archive upload is retried before the reservation is cancelled; an upload stopped during server verification starts no import; structured server errors show message_ko or validation messages; the source annotation scanner reads label files with the training decoder (UTF-8/BOM, else the non-UTF-8 platform code page); independent review ACCEPT",
+     "scope": "frozen tree (08a9d48 + 5 files): green 82 incl. the encoding guard, renderer, typecheck, e2e 2 passed",
+     "platform": "macOS development; Windows hosted run pending for this commit"
     }
    ],
    "file_actions": {
@@ -1657,7 +1663,10 @@
     "archive extraction runs inside the HTTP request (job-thread extraction pending); a transient completeUpload failure cancels the staged upload (re-upload needed); closing the panel during server verification still starts the import; an unreachable cancel or quitting mid-upload leaves the reservation until it expires",
     "mask binding as source annotations; nested COCO documents relative to themselves; stale .partial staging sweep",
     "dataset_annotations reads source JSON as utf-8-sig without the locale fallback of read_source_text",
-    "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)"
+    "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
+    "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
+    "error display edge cases: a catalog dict without message_ko, an empty list, null",
+    "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"
    ]
   },
   {
