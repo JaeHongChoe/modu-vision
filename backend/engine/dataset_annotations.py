@@ -32,6 +32,7 @@ from typing import Optional
 
 from backend.engine.annotation_formats import safe_name, source_annotation_files
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+from backend.engine.source_text import read_source_text
 
 SPLITS = ('train', 'val', 'test')
 _CHUNK = 1024 * 1024
@@ -90,7 +91,7 @@ class SourceAnnotationScanner:
         return self._relative(path), self._sha(path)
 
     def _load(self, path: Path):
-        return json.loads(self._readable(path).read_text(encoding='utf-8-sig'))  # tolerate a BOM some Windows tools write
+        return json.loads(read_source_text(self._readable(path)))  # UTF-8 (BOM allowed), else this machine's code page
 
     def _coco_index(self, path: Path) -> Optional[dict]:
         """{file name: ('labels', names, width, height) | ('error', message)}, None when the document is not COCO, or
@@ -133,7 +134,7 @@ class SourceAnnotationScanner:
     def _class_list(self, path: Path) -> list:
         key = str(path)
         if key not in self._classes:
-            text = self._readable(path).read_text(encoding='utf-8')
+            text = read_source_text(self._readable(path))
             if path.name == 'classes.txt':
                 classes = text.splitlines()
             else:
@@ -232,7 +233,7 @@ class SourceAnnotationScanner:
         if disagreeing:
             return SourceAnnotation('yolo', (), recorded + tuple(self._record(path) for path in disagreeing),
                                     'AMBIGUOUS_ANNOTATION: the class lists of this image disagree')
-        ids = [int(line.split()[0]) for line in self._readable(label_file).read_text(encoding='utf-8').splitlines() if line.strip()]
+        ids = [int(line.split()[0]) for line in read_source_text(self._readable(label_file)).splitlines() if line.strip()]
         if any(not 0 <= value < len(classes) for value in ids):
             return SourceAnnotation('yolo', (), recorded, 'INVALID_ANNOTATION: a YOLO class id is outside the class list')
         if any(not classes[value].strip() for value in ids):

@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 function load(file){const name=path.join(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(path.dirname(name));m.require=ref=>ref.startsWith('.')?load(path.relative(__dirname,path.join(path.dirname(name),ref))+'.ts'):require(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return m.exports;}
 const {uploadArchive,UPLOAD_CHUNK}=load('archiveUpload.ts');
 // A server that keeps committed bytes like ArtifactStore.append: chunks at the committed offset extend it.
-function server(size,{dropAt=null,refuse=null,statusDownOnce=false}={}){const state={offset:0,chunks:[],calls:0,statusCalls:0,completed:false,stored:[],cancelled:0};
+function server(size,{dropAt=null,refuse=null,statusDownOnce=false,completeFailures=0}={}){const state={offset:0,chunks:[],calls:0,statusCalls:0,completed:false,stored:[],cancelled:0,completeCalls:0};
  const upload=()=>({id:'u1',kind:'source',sha256:state.sha256,size_bytes:size,offset:state.offset,state:'staging',artifact_id:null,expires_at:null});
  return {state,client:{
   beginUpload:async data=>{state.sha256=data.sha256;assert.equal(data.size_bytes,size);return {upload:upload()};},
@@ -14,7 +14,7 @@ function server(size,{dropAt=null,refuse=null,statusDownOnce=false}={}){const st
    if(offset===state.offset){state.stored.push(bytes);state.offset+=bytes.length;}
    if(dropAt!==null&&state.calls===dropAt)throw new Error('connection reset after the server committed the chunk');
    state.chunks.push([offset,bytes.length]);return {upload:upload()};},
-  completeUpload:async()=>{state.completed=true;return {artifact_ref:{id:'a'.repeat(32),revision:1,sha256:state.sha256}};},
+  completeUpload:async()=>{state.completeCalls+=1;if(state.completeCalls<=completeFailures)throw Object.assign(new Error('busy'),{status:503});state.completed=true;return {artifact_ref:{id:'a'.repeat(32),revision:1,sha256:state.sha256}};},
  }};}
 const zip=bytes=>new File([bytes],'set.zip',{type:'application/zip'});
 test('an archive is hashed locally, sent in 4 MiB chunks and completed with the same digest',async()=>{
@@ -49,3 +49,10 @@ test('a stopped, refused or failed upload releases its server reservation, and a
  // the status call fails, so the committed chunk is sent again; the server answers it with its offset (as ArtifactStore does)
  assert.ok(flaky.state.completed&&flaky.state.cancelled===0&&flaky.state.statusCalls===1&&flaky.state.calls===4,'one unreachable status call does not end the upload');
  assert.ok(Buffer.concat(flaky.state.stored).equals(bytes));});
+test('a transient failure at completion is retried instead of discarding the uploaded bytes',async()=>{
+ const bytes=crypto.randomBytes(UPLOAD_CHUNK+3),busy=server(bytes.length,{completeFailures:2});
+ const result=await uploadArchive(zip(bytes),busy.client,{wait:async()=>{}});
+ assert.ok(result.artifact&&busy.state.completeCalls===3&&busy.state.cancelled===0,'two 503s at completion, then completed, nothing cancelled');
+ const down=server(bytes.length,{completeFailures:9});
+ await assert.rejects(uploadArchive(zip(bytes),down.client,{wait:async()=>{}}),/busy/);
+ assert.equal(down.state.cancelled,1,'after the retries the reservation is released');});

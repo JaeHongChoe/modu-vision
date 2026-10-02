@@ -183,3 +183,15 @@ def test_labelme_documents_are_not_kept_in_memory(tmp_path):
     scanner._hash.clear()  # the digest memo is per path; the document itself is read again
     assert scanner.scan(image, 'lm/a.png').labels == ('scratch',)
     assert not hasattr(scanner, '_json') and scanner._coco == {}
+
+
+def test_label_files_saved_in_this_machines_code_page_read_as_training_reads_them(tmp_path, monkeypatch):
+    import locale
+    source = tmp_path / 'source'
+    image = _yolo(source)
+    (source / 'lineA' / 'classes.txt').write_bytes('불량\n양품\n'.encode('cp949'))  # saved by a tool on Korean Windows
+    monkeypatch.setattr(locale, 'getpreferredencoding', lambda do_setlocale=True: 'cp949')
+    assert SourceAnnotationScanner(source).scan(image, 'lineA/images/p.png').labels == ('불량',)
+    monkeypatch.setattr(locale, 'getpreferredencoding', lambda do_setlocale=True: 'UTF-8')
+    found = SourceAnnotationScanner(source).scan(image, 'lineA/images/p.png')
+    assert found.labels == () and found.error.startswith('INVALID_ANNOTATION') and 'UTF-8' in found.error

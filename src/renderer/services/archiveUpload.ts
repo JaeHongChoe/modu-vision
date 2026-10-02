@@ -77,8 +77,16 @@ export async function uploadArchive(file: File, client: UploadClient, options: O
       onProgress?.({ phase: 'uploading', done: offset, total: file.size });
     }
     onProgress?.({ phase: 'verifying', done: file.size, total: file.size });
-    const { artifact_ref } = await client.completeUpload(upload.id);
-    return { artifact: artifact_ref, sha256, size: file.size };
+    // A dropped connection or a busy server at completion is retried: the staged bytes stay on the server until then.
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        const { artifact_ref } = await client.completeUpload(upload.id);
+        return { artifact: artifact_ref, sha256, size: file.size };
+      } catch (caught) {
+        if (signal?.aborted || !retryable(caught) || attempt > retries) throw caught;
+        await wait(500 * attempt);
+      }
+    }
   } catch (caught) {
     // A stopped or failed upload releases its reservation (staged bytes and project quota) instead of holding it until
     // it expires; a failure to cancel does not hide the original error.

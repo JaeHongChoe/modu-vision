@@ -18,11 +18,13 @@ interface Props {
 const storageKey = (projectId: string) => `modu.datasetImport.lastJob.${projectId}`;
 const readLastJob = (projectId: string) => { try { return window.localStorage.getItem(storageKey(projectId)); } catch { return null; } };
 const writeLastJob = (projectId: string, jobId: string) => { try { window.localStorage.setItem(storageKey(projectId), jobId); } catch { /* per-viewer convenience only */ } };
-const message = (caught: unknown) => {
+const message = (caught: unknown): string => {
   if (caught instanceof Error) return caught.message;
+  // structured server details: a validation list ({msg} entries) or a catalog error (Korean message first)
+  if (Array.isArray(caught)) return caught.map((entry) => message(entry)).join(' · ');
   if (caught && typeof caught === 'object') {
-    const detail = caught as { message?: unknown; msg?: unknown };
-    return String(detail.message ?? detail.msg ?? JSON.stringify(caught));  // a structured server detail, readable
+    const detail = caught as { message_ko?: unknown; message?: unknown; msg?: unknown };
+    return String(detail.message_ko ?? detail.message ?? detail.msg ?? JSON.stringify(caught));
   }
   return String(caught);
 };
@@ -146,6 +148,7 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
     setBusy('archive'); setError(null); setConfirming(false);
     try {
       const uploaded = await uploadArchive(archive, api.artifacts, { signal: controller.signal, onProgress: (progress) => mounted.current && setArchiveProgress(progress) });
+      if (controller.signal.aborted) return;  // stopped (or the panel closed) while the server verified it: no import
       const settings = `${projectId}|zip|${uploaded.sha256}|${task}|${policy}|${verify}`;
       const view = await api.datasetImports.startArchive({ artifact: uploaded.artifact, task, invalid_policy: policy, verify }, importKeyFor(settings, newKey));
       clearImportKey(settings);
