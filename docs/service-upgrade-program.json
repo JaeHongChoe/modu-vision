@@ -715,8 +715,15 @@
     "S1-02",
     "S1-03"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in c0a7088: every training row (live, ledger and receipt rows) carries an observation built only from recorded evidence: cancel requested, worker acknowledgement (local watch thread and remote worker), signals, confirmed exit and reservation release are separate steps; failure causes (out of memory incl. ERR_001, disk full, network lost for remote jobs) are read from the stored failure payload and error code; when the worker state cannot be proven the next action says so (worker_state_unknown, cancel_unconfirmed) instead of claiming completion; TaskCenter marks each step only from its own evidence; two independent review rounds, final ACCEPT with three P3 notes",
+     "scope": "clean main + 16 files (shared with S1-05): backend 430 passed / 4 skipped (S1 suites + training/remote regressions, home-store guard empty), renderer 295, typecheck clean",
+     "platform": "macOS development; Windows native pending; remote ack verified with the in-process remote harness only (servers unreachable)"
+    }
+   ],
    "file_actions": {
     "backend/engine/local_training_worker.py": "Modify",
     "backend/remote/coordinator.py": "Modify",
@@ -725,17 +732,23 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",
     "reopen": "pending",
-    "failure": "pending",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s1_04.py"
+   "proposed_test_file": "backend/tests/test_service_s1_04.py",
+   "remaining": [
+    "ledger events per evidence step and an operator confirm-release action for uncertain reservations",
+    "explicit process-identity (PID reuse) evidence: process_identity_changed is unreachable until a journal records it",
+    "observation for restart-interrupted ledger rows in TaskCenter; reopen/handoff gates",
+    "review P3s: terminal-status check outside the writer lock in the watch thread; non-cancel rows lost the exit/release line; tests for the watch-thread guard, ack-at-start and auto/cpu pass-through"
+   ]
   },
   {
    "id": "S1-05",
@@ -758,8 +771,15 @@
     "S1-01",
     "S1-03"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in c0a7088: one capability record per worker (devices, model families, operations, support state); this computer's devices are probed (no MPS off macOS, no CUDA without a visible device); a training start that names an accelerator this computer does not have is refused (409) instead of silently falling back; the model catalog shows \"this computer\" devices",
+     "scope": "clean main + 16 files (shared with S1-04): backend 430 passed / 4 skipped, renderer 295, typecheck clean",
+     "platform": "macOS development (CPU/MPS probe); Windows native and CUDA hosts pending; SSH/Docker workers not reachable in this environment"
+    }
+   ],
    "file_actions": {
     "backend/remote/coordinator.py": "Modify",
     "backend/remote/operations.py": "Modify",
@@ -769,7 +789,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",
@@ -779,7 +799,13 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s1_05.py"
+   "proposed_test_file": "backend/tests/test_service_s1_05.py",
+   "remaining": [
+    "local and SSH/Docker worker registration with a real preflight (the verified support state is unreachable in production until then)",
+    "support states exposed to clients; remote device decisions on remote start",
+    "HTTPS pull-worker transport, per-worker ACL, credential rotation, TLS/auth/trust gate",
+    "the catalog device list is cached per process (the start check probes live)"
+   ]
   },
   {
    "id": "S1-06",
