@@ -78,7 +78,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
     }
   };
   // Messages name the node they belong to; on the node itself the name is redundant.
-  const ownIssues = issues.map((message) => message.startsWith(`${node.data.label}: `) ? message.slice(node.data.label.length + 2) : message);
+  // (an unnamed or emptied node's messages carry the same prefix the validator wrote, so it is stripped as written)
+  const prefix = `${node.data.label}: `;
+  const ownIssues = issues.map((message) => message.startsWith(prefix) ? message.slice(prefix.length) : message);
 
   // Node Icon
   const getNodeIcon = () => {

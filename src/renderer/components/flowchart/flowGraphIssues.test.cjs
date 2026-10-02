@@ -78,11 +78,51 @@ test('S2-05 review: a cycle is named even when a node in it has its own problem,
  assert.doesNotThrow(()=>graph.validateFlowchartGraph(malformed));});
 test('S2-05 review: an unsupported node pair names what the target accepts, and issues point at the node to fix',()=>{
  const draft={id:'p',name:'p',nodes:[node('blob','blob_measure'),node('cls','inspection',{task:'classification'})],edges:[]};
- assert.throws(()=>graph.connectFlowNodes(draft,'blob','cls',['result']),/이 노드 사이의 연결은 지원하지 않습니다\. cls 입력은 이미지·ROI을\(를\) 받으며, blob에서 바로 연결할 수 없습니다\./);
+ assert.throws(()=>graph.connectFlowNodes(draft,'blob','cls',['result']),/이 노드 사이의 연결은 지원하지 않습니다\. cls 입력은 이미지·ROI를 받으며, blob에서 바로 연결할 수 없습니다\./);
  const outputs=valid();outputs.nodes.push(node('out2','output'));outputs.edges.push({id:'e6',source:'judge',target:'out2',payload_type:'result',isBranch:'fail'});outputs.edges[4].isBranch='pass';
  outputs.edges.push({id:'e7',source:'cls',target:'out2',payload_type:'result'});
  const message=graph.validateFlowchartGraph(outputs);assert.ok(message);const located=graph.locateFlowIssue(outputs,message);
  assert.deepEqual(located,graph.flowGraphIssues(outputs,{first:true}).map(issue=>({kind:issue.kind,id:issue.id}))[0],'the banner jumps to the collected target');});
+test('S2-05 review P3: the refusal takes the object particle of what the target accepts',()=>{
+ const draft={id:'p',name:'p',nodes:[node('in','input'),node('out','output'),node('blob','blob_measure')],edges:[]};
+ assert.throws(()=>graph.connectFlowNodes(draft,'in','out'),/out 입력은 판정을 받으며/);
+ assert.throws(()=>graph.connectFlowNodes(draft,'in','blob'),/blob 입력은 결과를 받으며/);});
+test('S2-05 review P3: a connection saved without an id shows its problem on its own wire, with nothing to jump to',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ const saved=valid();saved.edges[2]={...saved.edges[2],id:''};
+ const {edges}=graph.flowIssuesByTarget(saved);const key=graph.flowEdgeKey(saved.edges[2],2);
+ assert.deepEqual([...edges.keys()],[key]);assert.match(edges.get(key)[0],/연결선 ID가 중복되었거나 비었습니다/);
+ assert.equal(graph.locateFlowIssue(saved,graph.validateFlowchartGraph(saved)),null,'no connection to select');
+ assert.equal(graph.flowEdgeKey(saved.edges[0],0),'e1','a saved id is the key');
+ const {DAGCircuitOverlay}=compile('DAGCircuitOverlay.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
+ const html=renderToStaticMarkup(React.createElement(DAGCircuitOverlay,{nodes:saved.nodes,edges:saved.edges,activeRunningNodeId:null,edgeIssues:edges}));
+ assert.match(html,/aria-label="Select connection seg to judge: 연결선 ID가 중복되었거나 비었습니다\."/);
+ assert.equal((html.match(/stroke-dasharray="2 3"/g)||[]).length,1,'only that wire is marked');
+ const marked=valid();marked.edges[2].payload_type='image';
+ const markedHtml=renderToStaticMarkup(React.createElement(DAGCircuitOverlay,{nodes:marked.nodes,edges:marked.edges,activeRunningNodeId:null,edgeIssues:graph.flowIssuesByTarget(marked).edges}));
+ assert.match(markedHtml,/data-flow-edge="e3"[^>]*stroke-dasharray="2 3"/,'a connection with an id is marked on its wire');
+ assert.deepEqual(graph.locateFlowIssue(marked,graph.validateFlowchartGraph(marked)),{kind:'edge',id:'e3'});});
+test('S2-05 review P3: a node saved without a label still renders its problems',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const {CustomNode}=compile('CustomNode.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
+ const pipeline=valid();const bare=node('bare','inspection',{task:'classification',threshold:0.5});delete bare.data.label;pipeline.nodes.push(bare);
+ const issues=graph.flowIssuesByTarget(pipeline).nodes.get('bare');assert.ok(issues?.length);
+ const html=renderToStaticMarkup(React.createElement(CustomNode,{node:bare,issues,isSelected:false,isActive:false,isPassed:false,isFlaggedNg:false,onSelect(){}}));
+ assert.match(html,/모델 입력 연결선이 정확히 하나/);assert.doesNotMatch(html,/title="undefined: /,'the validator prefix is stripped');
+ const emptied=node('emptied','inspection',{task:'classification',threshold:0.5,label:''});const withEmpty=valid();withEmpty.nodes.push(emptied);
+ const emptiedIssues=graph.flowIssuesByTarget(withEmpty).nodes.get('emptied');
+ const emptiedHtml=renderToStaticMarkup(React.createElement(CustomNode,{node:emptied,issues:emptiedIssues,isSelected:false,isActive:false,isPassed:false,isFlaggedNg:false,onSelect(){}}));
+ assert.match(emptiedHtml,/title="모델 입력 연결선이 정확히 하나/,'a name cleared in the inspector leaves no ": " in front');});
+test('S2-05 review P3: connection keys, jump targets and wire marks hold with dangling and repeated connections',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ assert.equal(graph.flowEdgeKey({id:'',source:'a',target:'b'},3),'\u00003','a positional key cannot be typed as an id');
+ const repeated=valid();repeated.edges.push({id:'dup',source:'in',target:'seg',payload_type:'image'});
+ assert.match(graph.validateFlowchartGraph(repeated),/같은 노드 사이의 연결선이 중복/);
+ assert.deepEqual(graph.locateFlowIssue(repeated,graph.validateFlowchartGraph(repeated)),{kind:'edge',id:'dup'},'a connection problem no message rule finds still jumps to its connection');
+ const dangling=valid();dangling.edges.unshift({id:'ghost',source:'nowhere',target:'judge',payload_type:'result'});dangling.edges[3]={...dangling.edges[3],id:''};
+ const {edges}=graph.flowIssuesByTarget(dangling);assert.ok(edges.get('ghost')?.length);assert.ok(edges.get(graph.flowEdgeKey(dangling.edges[3],3))?.length);
+ const {DAGCircuitOverlay}=compile('DAGCircuitOverlay.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
+ const html=renderToStaticMarkup(React.createElement(DAGCircuitOverlay,{nodes:dangling.nodes,edges:dangling.edges,activeRunningNodeId:null,edgeIssues:edges}));
+ assert.match(html,/aria-label="Select connection seg to judge: 연결선 ID가 중복되었거나 비었습니다\."/,'the id-less wire keeps its own position behind a wire that cannot be drawn');});
 test('S2-05 review: DEFECT BOXES only for a detection model feeding the decision, and the node frame (not the badge) turns amber',()=>{
  const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const {CustomNode}=compile('CustomNode.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
  const render=(props)=>renderToStaticMarkup(React.createElement(CustomNode,{isSelected:false,isActive:false,isPassed:false,isFlaggedNg:false,onSelect(){},...props}));

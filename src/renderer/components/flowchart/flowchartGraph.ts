@@ -218,6 +218,15 @@ function firstUnvisitedNode(
 /** A problem of an editable graph, attached to the node or connection where the user can fix it. */
 export interface FlowIssue { kind: 'node' | 'edge' | 'graph'; id: string | null; message: string }
 
+/** The key a connection's problems are filed under: its id, or its position for saved data without one. */
+export const flowEdgeKey = (edge: FlowEdge, index: number): string => edge.id || `\u0000${index}`;
+
+/** 을 after a final consonant, 를 after a vowel or a Latin abbreviation (ROI). */
+const objectParticle = (word: string): string => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code >= 0 && code < 11172 && code % 28 ? '을' : '를';
+};
+
 /** A check over saved data the editor never writes (a predicate without a class name, a non-text calibration id) reports
  *  that data's format instead of throwing during render. */
 function guarded(message: string, check: () => string | null): string | null {
@@ -259,7 +268,7 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
   if (inputs.length !== 1 || decisions.length !== 1) return issues;  // the checks below need the one input and decision
   const edgeIds = new Set<string>();
   const connections = new Set<string>();
-  for (const edge of pipeline.edges) {
+  for (const [index, edge] of pipeline.edges.entries()) {
     const issue = guarded('연결선의 저장된 조건·데이터 형식을 확인하세요.', () => {
       if (!edge.id || edgeIds.has(edge.id)) return '연결선 ID가 중복되었거나 비었습니다.';
       edgeIds.add(edge.id);
@@ -280,7 +289,7 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
       }
       return null;
     });
-    if (issue && report(issue, 'edge', edge.id || null)) return issues;
+    if (issue && report(issue, 'edge', flowEdgeKey(edge, index))) return issues;
   }
   const inputId = inputs[0].id;
   const decisionId = decisions[0].id;
@@ -461,7 +470,9 @@ export function locateFlowIssue(
 ): { kind: 'node' | 'edge'; id: string } | null {
   if (!message) return null;
   const first = flowGraphIssues(pipeline, { first: true })[0];
-  if (first && first.message === message && first.id && first.kind !== 'graph') return { kind: first.kind, id: first.id };
+  // A connection saved without an id has only a positional key on the canvas; there is nothing to select.
+  const selectable = first?.kind === 'node' || pipeline.edges.some((edge) => edge.id && edge.id === first?.id);
+  if (first && first.message === message && first.id && first.kind !== 'graph' && selectable) return { kind: first.kind, id: first.id };
   const named = pipeline.nodes.find((node) => message.startsWith(`${node.data.label}:`));
   if (named) return { kind: 'node', id: named.id };
   if (message === '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.') {
@@ -503,7 +514,7 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
   if (!allowed.length) {
     // The payloads may look compatible (a result into a model input, say) while the node pair is not supported.
     const accepted = (flowNodePorts(target).inputs[0]?.payloads || []).map((payload) => PORT_KOREAN[payload]).join('·');
-    throw new Error(`이 노드 사이의 연결은 지원하지 않습니다.${accepted ? ` ${target.data.label} 입력은 ${accepted}을(를) 받으며, ${source.data.label}에서 바로 연결할 수 없습니다.` : ''}`);
+    throw new Error(`이 노드 사이의 연결은 지원하지 않습니다.${accepted ? ` ${target.data.label} 입력은 ${accepted}${objectParticle(accepted)} 받으며, ${source.data.label}에서 바로 연결할 수 없습니다.` : ''}`);
   }
   // The output port the connection was started from decides the payload; the wrong port is refused at once.
   const payloads = sourcePort ? allowed.filter((payload) => edgePayloads(sourcePort).includes(payload)) : allowed;

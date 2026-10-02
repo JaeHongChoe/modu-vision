@@ -12,7 +12,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { FlowEdge, FlowNode, FlowchartExecutionStep } from '../../types';
 import { FLOW_NODE_WIDTH } from './flowchartViewport';
-import { flowEdgeSourcePort, flowNodePorts } from './flowchartGraph';
+import { flowEdgeKey, flowEdgeSourcePort, flowNodePorts } from './flowchartGraph';
 
 interface DAGCircuitOverlayProps {
   nodes: FlowNode[];
@@ -125,7 +125,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         `}</style>
       </defs>
 
-      {edges.map((edge) => {
+      {edges.map((edge, index) => {
         const sourceNode = nodeMap.get(edge.source);
         const targetNode = nodeMap.get(edge.target);
         if (!sourceNode || !targetNode) return null;
@@ -137,7 +137,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const sourcePort = flowEdgeSourcePort(sourceNode, edge, targetNode);
         const p1 = getPortCoord(edge.source, 'out', sourcePort, sourcePortCount);
         const p2 = getPortCoord(edge.target, 'in', 0, targetPortCount);
-        const issues = edgeIssues?.get(edge.id) || [];
+        const issues = edgeIssues?.get(flowEdgeKey(edge, index)) || [];
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
@@ -163,7 +163,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const midY = (p1.y + p2.y) / 2;
 
         return (
-          <g key={edge.id} className="transition-all duration-300">
+          <g key={flowEdgeKey(edge, index)} className="transition-all duration-300">
             {/* Layer 1: PCB Substrate Base Copper (Wide 5px) */}
             <path
               d={pathD}
