@@ -39,6 +39,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   // the first 32 listed images are offered as before.
   const [cohortPicks, setCohortPicks] = useState<LibraryImage[]>([]);
   const [cohortLibrary, setCohortLibrary] = useState<'available' | 'unavailable'>('available');
+  const [cohortRefusal, setCohortRefusal] = useState('');
   const [release, setRelease] = useState<FlowApprovalPrerequisites | null>(null);
   const [releaseError, setReleaseError] = useState<string | null>(null);
   const [releaseSelection, setReleaseSelection] = useState<Record<string, string>>({});
@@ -312,11 +313,17 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
           <button type="button" onClick={() => setCohortPicks([])} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
         </div>
         {cohortPicks.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
+        {cohortRefusal && <p role="status" className="text-amber-300">{cohortRefusal}</p>}
         <div className="flex h-[320px] flex-col">
           <ImageLibraryBrowser selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
-            onPick={(item) => setCohortPicks((current) => current.some((pick) => pick.image_uuid === item.image_uuid)
-              ? current.filter((pick) => pick.image_uuid !== item.image_uuid)
-              : current.length >= MAX_PARITY_IMAGES || !item.valid ? current : [...current, item])}  // a corrupt image cannot be compared
+            onPick={(item) => {
+              const picked = cohortPicks.some((pick) => pick.image_uuid === item.image_uuid);
+              // a corrupt image cannot be compared; the click is answered instead of ignored
+              setCohortRefusal(!picked && !item.valid ? `잘못된 이미지는 동일성 비교에 쓸 수 없습니다: ${item.relative_path}` : '');
+              setCohortPicks((current) => current.some((pick) => pick.image_uuid === item.image_uuid)
+                ? current.filter((pick) => pick.image_uuid !== item.image_uuid)
+                : current.length >= MAX_PARITY_IMAGES || !item.valid ? current : [...current, item]);
+            }}
             onUnavailable={() => setCohortLibrary('unavailable')} />
         </div>
       </div>}

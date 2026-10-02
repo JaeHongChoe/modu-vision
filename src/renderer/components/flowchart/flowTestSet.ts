@@ -39,6 +39,14 @@ export function legacySavedPaths(...raws: Array<string | null>): string[] {
 /** Where the legacy path list is saved, apart from the identity set (so neither overwrites the other). */
 export const legacyStorageKey = (storageKey: string) => `${storageKey}:paths`;
 
+/** Copy the plain paths an older version saved under the identity key to the legacy key before that key is rewritten,
+ *  so a later load without an accepted revision can still offer them. */
+export function preserveLegacyPaths(storage: Pick<Storage, 'getItem' | 'setItem'>, storageKey: string, raw: string | null): void {
+  const key = legacyStorageKey(storageKey);
+  const paths = legacySavedPaths(storage.getItem(key), raw);
+  if (paths.length) storage.setItem(key, JSON.stringify(paths));
+}
+
 export function testImageFrom(item: LibraryImage): TestImage {
   return { image_uuid: item.image_uuid, sha256: item.sha256, relative_path: item.relative_path, file_name: item.file_name, file_path: item.file_path };
 }
@@ -65,4 +73,12 @@ export function applyResolution(saved: TestImage[], results: LibraryResolution[]
 export function toggleTestImage(current: TestImage[], item: TestImage, unresolvedCount = 0): TestImage[] {
   if (current.some((entry) => entry.image_uuid === item.image_uuid)) return current.filter((entry) => entry.image_uuid !== item.image_uuid);
   return current.length + unresolvedCount >= TEST_SET_LIMIT ? current : [...current, item];
+}
+
+/** A pick from the library. Picking again a saved image that needed checking replaces that entry with the confirmed
+ *  one, so the image is never saved twice. */
+export function pickTestImage(current: TestImage[], unresolved: UnresolvedTestImage[], item: TestImage):
+  { testSet: TestImage[]; unresolved: UnresolvedTestImage[] } {
+  const rest = unresolved.filter((entry) => entry.image_uuid !== item.image_uuid);
+  return { testSet: toggleTestImage(current, item, rest.length), unresolved: rest };
 }

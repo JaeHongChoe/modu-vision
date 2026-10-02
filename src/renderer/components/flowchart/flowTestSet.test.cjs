@@ -24,3 +24,17 @@ test('legacy paths are read from every key, deduplicated, and kept apart from th
  assert.deepEqual(t.legacySavedPaths(JSON.stringify(['/a','/b']),JSON.stringify(['/b','/c']),'{broken',null),['/a','/b','/c']);
  assert.equal(t.legacyStorageKey('flow-test-set:v2:x'),'flow-test-set:v2:x:paths');
  assert.deepEqual(t.parseSavedTestSet(JSON.stringify([{...image(1),status:'missing',extra:1}])).saved,[image(1)],'only identity fields are kept');});
+test('picking again an image that needed checking replaces its entry instead of saving it twice',()=>{
+ const changed={...image(2),status:'changed'};
+ const repicked=t.pickTestImage([image(1)],[changed,{...image(3),status:'missing'}],{...image(2),sha256:'f'.repeat(64)});
+ assert.deepEqual(repicked.testSet.map(e=>[e.image_uuid,e.sha256]),[['u1','1'.repeat(64)],['u2','f'.repeat(64)]]);
+ assert.deepEqual(repicked.unresolved.map(e=>e.image_uuid),['u3']);
+ const full=Array.from({length:19},(_,n)=>image(n+10));
+ assert.equal(t.pickTestImage(full,[changed],image(2)).testSet.length,20,'the replaced entry frees its place');
+ assert.equal(t.pickTestImage(full,[changed],image(50)).testSet.length,19,'another image still counts the entry needing a check');});
+test('older plain paths are copied to the legacy key before the identity key is rewritten',()=>{
+ const storage=new Map([['k:paths',JSON.stringify(['/b'])]]);const store={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
+ t.preserveLegacyPaths(store,'k',JSON.stringify(['/a',image(1),'/b']));
+ assert.deepEqual(JSON.parse(storage.get('k:paths')),['/b','/a']);
+ const empty=new Map();t.preserveLegacyPaths({getItem:key=>empty.get(key)??null,setItem:(key,value)=>empty.set(key,value)},'k',JSON.stringify([image(1)]));
+ assert.equal(empty.size,0,'nothing to copy writes nothing');});
