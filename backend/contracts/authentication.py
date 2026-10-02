@@ -114,6 +114,8 @@ def permission_action(path, method):
         if suffix.startswith('servers/') and suffix.endswith('/preflight'):return 'delivery.preflight'
         return 'review.approve'
     if re.fullmatch(r'/api/export/flow/optimization-jobs/[^/]+/approve',path):return 'review.approve'
+    if path=='/api/dataset/imports' or path.startswith('/api/dataset/imports/'):
+        return 'review.approve' if path.endswith('/accept') else 'label.write'
     if path.startswith(('/api/annotations/','/api/label-candidates/','/api/label-suggestions/','/api/dataset/metadata/','/api/dataset/formats/','/api/data-workbench/')):return 'label.write'
     if path.startswith(('/api/training/','/api/engine/','/api/automated-training/','/api/patch-classification/','/api/rotation/','/api/ocr/','/api/rotated-detection/','/api/enhancement/','/api/defect-gan/','/api/evaluation/','/api/training-workspace/')):return 'training.execute'
     if path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/','/api/flow-evaluations')):return 'flow.execute'

@@ -92,6 +92,11 @@ class SharedAuthorizationMiddleware:
             flow=not precision_review and path.startswith(('/api/flowchart/','/api/inspections/','/api/export/','/api/geometry/','/api/flow-workspace/'))
             review=precision_review or path == '/api/image-truth' or path.startswith(('/api/image-truth/','/api/model-deployments/','/api/runtime-services/','/api/model-operations/','/api/fleet/','/api/product-delivery/'))
             flow=flow or path == '/api/flow-evaluations' or path.startswith('/api/flow-evaluations/')
+            # Durable dataset imports: starting or stopping one prepares a revision (labelers and up); adopting it
+            # changes the project's active dataset (reviewers).
+            import_accept=path.startswith('/api/dataset/imports/') and path.endswith('/accept')
+            labeling=labeling or (path=='/api/dataset/imports' or path.startswith('/api/dataset/imports/')) and not import_accept
+            review=review or import_accept
             compute_jobs=path.startswith('/api/compute/jobs')
             delivery_allowed=False
             team_allowed=False

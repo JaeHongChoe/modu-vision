@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FolderArchive,
+  ListChecks,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
@@ -20,6 +21,8 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { resolveApiUrl } from '../../services/api';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
+import { DatasetImportPanel } from './DatasetImportPanel';
+import { quickValidationNotice } from './datasetImportView';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import {CaptureIntakePanel} from './CaptureIntakePanel';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
@@ -34,7 +37,7 @@ import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
-  const { task, language, projectDir, openImageForLabeling } = useProjectStore();
+  const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
   const {
     folderPath,
     hasSelectedFolder,
@@ -61,6 +64,7 @@ export const DatasetStudio: React.FC = () => {
     isLoading,
     isSplitting,
     corruptedImages,
+    quickValidation,
     setSplitFilter,
     setClassFilter,
     setLabelFilter,
@@ -77,6 +81,8 @@ export const DatasetStudio: React.FC = () => {
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+  const [showImports, setShowImports] = useState(false);
+  const validationNotice = quickValidationNotice(quickValidation);
   const [imageOpenError, setImageOpenError] = useState<string | null>(null);
   const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);
   const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
@@ -218,6 +224,17 @@ export const DatasetStudio: React.FC = () => {
             <span>데이터 버전</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setShowImports(true)}
+            disabled={!hasSelectedFolder || !project?.id || isLoading}
+            title={hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+            className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ListChecks className="h-4 w-4" />
+            <span>검증된 데이터 버전</span>
+          </button>
+
           <span className="text-xs text-slate-400 font-mono truncate max-w-sm" title={folderPath}>
             {folderPath}
           </span>
@@ -306,6 +323,11 @@ export const DatasetStudio: React.FC = () => {
           {task === 'segmentation' && !splitUnavailableForTask && classes.defect_mask && !classes.OK && !classes.good && (
             <div className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
               결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
+            </div>
+          )}
+          {validationNotice && (
+            <div role="status" className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
+              {validationNotice}
             </div>
           )}
           {corruptedImages.length > 0 && (
@@ -882,6 +904,9 @@ export const DatasetStudio: React.FC = () => {
       </div>
 
       <ProceduralGeneratorModal />
+      {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
+        registeredSource={project.source_dataset_dir || null} task={task}
+        onClose={() => setShowImports(false)} onAccepted={() => undefined} />}
       {showVersions && <DatasetVersionPanel datasetPath={folderPath} onClose={() => setShowVersions(false)} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}

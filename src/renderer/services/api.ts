@@ -121,6 +121,31 @@ export interface ProjectBackupResult {
 
 export type RecentProject = Pick<ProjectConfig, 'id' | 'name' | 'task' | 'project_dir' | 'updated_at'>;
 
+/** A durable dataset import (S3-01): a ledger job that builds one prepared, completely validated revision. */
+export interface DatasetRevisionReceipt {
+  revision_id: string; state: 'prepared' | 'rejected'; manifest_sha256: string;
+  image_count: number; valid_count: number; error_count: number; invalid_policy: 'reject' | 'exclude'; skipped_links: number;
+  unreadable_folders: number; reused_entries: number; verified_all: boolean;
+}
+export interface DatasetImportView {
+  job_id: string; state: string; revision: number; attempts: number; cancel_requested: boolean;
+  progress: { phase?: string; processed?: number; total?: number | null; total_known?: boolean } | null;
+  result: { revision?: DatasetRevisionReceipt; reason?: string; error?: { message: string } } | null;
+  idempotent_replay?: boolean;
+}
+export interface DatasetRevisionRow {
+  revision_id: string; source_root: string; task: string; invalid_policy: 'reject' | 'exclude'; state: 'prepared' | 'rejected';
+  manifest_sha256: string; image_count: number; valid_count: number; error_count: number; skipped_links: number;
+  unreadable_folders: number; reused_entries: number; verified_all: number; follow_links: number; created_ns: number; active: boolean;
+  publication_key: string | null; parent_revision: string | null;
+}
+export interface DatasetRevisionImage {
+  relative_path: string; image_uuid: string; sha256: string | null; size: number; width: number | null; height: number | null;
+  label: string | null; split: string | null; valid: number; error_code: string | null; error_detail: string | null; via_link: number;
+}
+/** What the quick folder inspection decoded; only `complete` speaks for every image of the inventory. */
+export interface DatasetQuickValidation { requested: boolean; checked_images: number; complete: boolean; scope: string }
+
 export interface DatasetVersionSummary {
   id: string;
   name: string;
@@ -659,6 +684,32 @@ export const api = {
     }),
   },
 
+  datasetImports: {
+    /** One key per user action: a retried request returns the same job instead of starting another. */
+    start: (data: { task: VisionTask; invalid_policy: 'reject' | 'exclude'; verify?: boolean; follow_links?: boolean }, idempotencyKey: string) =>
+      request<DatasetImportView>('/api/dataset/imports', {
+        method: 'POST', body: JSON.stringify(data), headers: { 'Idempotency-Key': idempotencyKey },
+      }),
+    get: (jobId: string) => request<DatasetImportView>(`/api/dataset/imports/${encodeURIComponent(jobId)}`),
+    cancel: (jobId: string) => request<DatasetImportView>(`/api/dataset/imports/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' }),
+    accept: (jobId: string, revisionId: string, expectedActive: string | null) =>
+      request<{ active_revision: string; job_id: string }>(`/api/dataset/imports/${encodeURIComponent(jobId)}/accept`, {
+        method: 'POST', body: JSON.stringify({ revision_id: revisionId, expected_active: expectedActive }),
+      }),
+    revisions: () => request<{ active_revision: string | null; revisions: DatasetRevisionRow[] }>('/api/dataset/revisions'),
+    gaps: (revisionId: string) => request<{ revision_id: string; gaps: Array<{ relative_path: string; reason: string }> }>(
+      `/api/dataset/revisions/${encodeURIComponent(revisionId)}/gaps`),
+    images: (revisionId: string, params: { cursor?: string | null; limit?: number; valid?: boolean; label?: string } = {}) => {
+      const query = new URLSearchParams();
+      if (params.cursor) query.set('cursor', params.cursor);
+      if (params.limit) query.set('limit', String(params.limit));
+      if (params.valid !== undefined) query.set('valid', String(params.valid));
+      if (params.label) query.set('label', params.label);
+      return request<{ revision_id: string; items: DatasetRevisionImage[]; next_cursor: string | null }>(
+        `/api/dataset/revisions/${encodeURIComponent(revisionId)}/images${query.size ? `?${query}` : ''}`);
+    },
+  },
+
   datasetVersions: {
     create: (data: { name: string; note?: string; dataset_path?: string }) =>
       request<DatasetVersionSummary>('/api/dataset/versions', {
@@ -760,6 +811,7 @@ export const api = {
         classes: Record<string, number>;
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
+        validation?: DatasetQuickValidation;
       }>('/api/dataset/import', { method: 'POST', body: JSON.stringify(data) }),
 
     generate: (data: {

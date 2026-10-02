@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
-import { api } from '../services/api';
+import { api, type DatasetQuickValidation } from '../services/api';
 import type {DatasetPartition} from '../services/projectPreferences';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
@@ -42,6 +42,8 @@ interface DatasetState {
   isSplitting: boolean;
   showGeneratorModal: boolean;
   corruptedImages: any[];
+  /** What the quick inspection decoded; null when it was not requested or the backend predates the field. */
+  quickValidation: DatasetQuickValidation | null;
 
   setFolderPath: (path: string) => void;
   setShowGeneratorModal: (show: boolean) => void;
@@ -120,6 +122,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   isSplitting: false,
   showGeneratorModal: false,
   corruptedImages: [],
+  quickValidation: null,
 
   setFolderPath: (folderPath) => {
     if (folderPath === get().folderPath) return;
@@ -132,7 +135,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
-      images: [], totalImagesCount: 0, corruptedImages: [],
+      images: [], totalImagesCount: 0, corruptedImages: [], quickValidation: null,
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: false, isSplitting: false,
     });
   },
@@ -172,7 +175,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
-      sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [],
+      sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [], quickValidation: null,
       split: { train: 0, val: 0, test: 0 },
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
@@ -208,6 +211,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           test: res.split.test || 0,
         },
         corruptedImages: res.corrupted_images || [],
+        quickValidation: res.validation ?? null,
         lastImportedKey: key,
         page: 1,
       });

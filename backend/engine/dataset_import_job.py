@@ -1,0 +1,240 @@
+"""Durable dataset import (S3-01): one ledger job builds one prepared, completely validated index revision.
+
+The job is a JobStore record of kind ``dataset_import``. Submission is idempotent and captures the server-resolved
+project scope (namespace, project folder, registered source) before any work. A run holds a fenced attempt: it
+heartbeats the attempt while files are read, checks the durable cancel intent between files, and publishes the
+revision receipt only under its own fence, so a stale attempt can neither complete the job nor attach a receipt.
+
+Acceptance is a separate, explicit action: a finished scan never activates anything. ``accept`` activates exactly the
+revision the job published, for the job's own project namespace, with a compare-and-swap on the active revision.
+
+The index and the ledger are separate databases, so this is not one global transaction. The job's id is the
+revision's publication key: if a run crashed after the revision was sealed and before the job was completed, the next
+run of the same job returns that revision instead of building another. A job the next start reports as interrupted is
+resumed by a continuation job, whose unchanged files are reused from the stat cache.
+Live progress is held in memory by the process that runs the job; the ledger records states, attempts and receipts.
+"""
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+import json
+import logging
+import os
+import threading
+import time
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+from backend.engine.dataset_index import DatasetIndex, StaleActiveRevision
+from backend.engine.job_store import JobRef, JobStore, StaleFencingToken, StaleRevision
+from backend.engine.job_state import TERMINAL
+
+logger = logging.getLogger(__name__)
+KIND = 'dataset_import'
+_HEARTBEAT_SECONDS = 2.0
+_CANCEL_CHECK_SECONDS = 0.5
+
+
+@dataclass(frozen=True)
+class ImportSpec:
+    """What an import reads and how; every path is resolved by the server, never taken from the caller."""
+    project_root: str
+    source_root: str
+    task: str
+    invalid_policy: str = 'exclude'
+    verify: bool = False
+    follow_links: bool = False
+
+
+class ImportNotAcceptable(Exception):
+    """The job did not publish a prepared revision of this project that can be accepted."""
+
+
+class _AttemptLost(Exception):
+    """A newer attempt owns the job; this run stops without reporting anything."""
+
+
+class DatasetImportJobs:
+    def __init__(self, store: JobStore, index: DatasetIndex, *, lease_seconds: float = 30.0):
+        self.store, self.index, self.lease_seconds = store, index, lease_seconds
+        self._lock = threading.Lock()
+        self._progress: dict[str, dict] = {}
+
+    def submit(self, context: Any, project_key: str, spec: ImportSpec, idempotency_key: Optional[str] = None,
+               *, parent_id: Optional[str] = None) -> JobRef:
+        """Reserve the job before any work; a repeated key with the same spec returns the same job."""
+        return self.store.submit(context, project_key, KIND, asdict(spec), idempotency_key, parent_id=parent_id,
+                                 project_dir=str(Path(spec.project_root).resolve()))
+
+    def run(self, job_id: str, *, executor: str = 'local-thread') -> JobRef:
+        """Build the revision under a fenced attempt and finish the job with its receipt (or the reason it ended).
+
+        Every way out of a run that owns its attempt ends the job with a recorded reason; only a newer attempt's
+        ownership makes a run stop without reporting.
+        """
+        record = self.store.record(job_id)
+        if record['kind'] != KIND:
+            raise ValueError(f'{job_id} is not a dataset import')
+        spec = ImportSpec(**json.loads(record['spec_json']))
+        ref = self.store.get(job_id)
+        if ref.state in TERMINAL:
+            return ref
+        if ref.state == 'accepted':
+            ref = self.store.transition(job_id, ref.revision, 'start')
+        fence = self._begin_attempt(job_id, executor)
+        try:
+            return self._run_attempt(job_id, fence, record, spec)
+        except _AttemptLost:
+            self._set_progress(job_id, {'phase': 'superseded'})
+            return self.store.get(job_id)
+        except InterruptedError:
+            return self._finish(job_id, fence, 'abort', {'reason': 'cancelled before a revision was recorded'})
+        except Exception as exc:
+            sealed = self.index._published(record['project_key'], job_id)
+            if sealed is not None:  # the revision exists: the job is never failed; complete it now or at startup
+                try:
+                    return self._finish(job_id, fence, 'complete', {'revision': asdict(sealed)})
+                except Exception:
+                    logger.exception('Dataset import %s sealed its revision but could not record it; the next start completes it', job_id)
+                    return self.store.get(job_id)
+            return self._finish(job_id, fence, 'fail', {'error': {'message': f'{type(exc).__name__}: {exc}'}})
+
+    def _begin_attempt(self, job_id: str, executor: str) -> int:
+        """A new fenced attempt at the job's current revision (a cancel intent recorded meanwhile moves the revision)."""
+        for _ in range(3):
+            ref = self.store.get(job_id)
+            try:
+                return self.store.begin_attempt(job_id, ref.revision, executor, None, os.getpid()).fencing_token
+            except StaleRevision:
+                continue
+        ref = self.store.get(job_id)
+        return self.store.begin_attempt(job_id, ref.revision, executor, None, os.getpid()).fencing_token
+
+    def _run_attempt(self, job_id: str, fence: int, record: dict, spec: ImportSpec) -> JobRef:
+        def owns() -> None:
+            try:
+                self.store.heartbeat(job_id, fence, self.lease_seconds)
+            except StaleFencingToken as exc:
+                raise _AttemptLost(str(exc)) from None
+
+        owns()
+        if self.store.cancel_intent(job_id) is not None:  # a stop that landed while the attempt was starting
+            raise InterruptedError('cancelled before reading started')
+        clock = {'beat': time.monotonic(), 'cancel': time.monotonic(), 'cancelled': False}
+        self._set_progress(job_id, {'phase': 'listing', 'processed': 0, 'total': None, 'total_known': False})
+
+        def progress(done: int, total: int) -> None:
+            self._set_progress(job_id, {'phase': 'reading', 'processed': done, 'total': total, 'total_known': True})
+            if time.monotonic() - clock['beat'] >= _HEARTBEAT_SECONDS:
+                owns()
+                clock['beat'] = time.monotonic()
+
+        def cancelled() -> bool:
+            if time.monotonic() - clock['cancel'] >= _CANCEL_CHECK_SECONDS:
+                clock['cancel'] = time.monotonic()
+                clock['cancelled'] = self.store.cancel_intent(job_id) is not None
+            return clock['cancelled']
+
+        # The job id is the publication key: whichever attempt seals first defines this job's revision, and a later
+        # attempt (or a crash recovery) receives that same receipt; owns() right before sealing keeps a superseded
+        # attempt from sealing work the current attempt is still doing.
+        receipt = self.index.build_revision(record['project_key'], spec.project_root, spec.source_root, spec.task,
+                                            spec.invalid_policy, verify=spec.verify, follow_links=spec.follow_links,
+                                            publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=owns)
+        return self._finish(job_id, fence, 'complete', {'revision': asdict(receipt)})
+
+    def _finish(self, job_id: str, fence: int, event: str, payload: dict) -> JobRef:
+        try:
+            ref = self.store.finish(job_id, event, payload, fencing_token=fence)
+        except StaleFencingToken:
+            ref = self.store.get(job_id)  # a newer attempt owns the job: this run reports nothing
+        self._set_progress(job_id, {'phase': ref.state})
+        return ref
+
+    def start(self, job_id: str, *, on_error: Optional[Callable[[BaseException], None]] = None) -> threading.Thread:
+        """Run the job on a daemon thread of this process (the desktop backend executes imports in-process).
+
+        A failure before the attempt could record its own end (a busy ledger at the first write, say) ends the job
+        failed here; if even that cannot be written, the next start recovers the job.
+        """
+        def target() -> None:
+            try:
+                self.run(job_id)
+            except BaseException as exc:
+                logger.exception('Dataset import %s stopped unexpectedly', job_id)
+                self._fail_unfinished(job_id, exc)
+                if on_error is not None:
+                    on_error(exc)
+        thread = threading.Thread(target=target, daemon=True, name=f'DatasetImport-{job_id[:8]}')
+        thread.start()
+        return thread
+
+    def _fail_unfinished(self, job_id: str, exc: BaseException) -> None:
+        try:
+            ref = self.store.get(job_id)
+            if self.index._published(self.store.record(job_id)['project_key'], job_id) is not None:
+                return  # its revision is sealed: the next start completes the job with it
+            if ref.state not in TERMINAL:
+                self.store.transition(job_id, ref.revision, 'fail', {'error': {'message': f'{type(exc).__name__}: {exc}'}})
+        except Exception:
+            logger.exception('Could not record the end of dataset import %s; the next start recovers it', job_id)
+        self._set_progress(job_id, {'phase': 'failed'})
+
+    def view(self, job_id: str, project_key: str) -> dict:
+        """The job as its own project sees it; another namespace reads nothing (KeyError)."""
+        record = self.store.record(job_id)
+        if record['kind'] != KIND or record['project_key'] != project_key:
+            raise KeyError(job_id)
+        ended = next((event for event in reversed(self.store.events(job_id)) if event['to_state'] == record['state']
+                      and record['state'] in TERMINAL), None)
+        with self._lock:
+            live = dict(self._progress.get(job_id) or {})
+        return {'job_id': job_id, 'state': record['state'], 'revision': record['revision'],
+                'attempts': len(self.store.attempts(job_id)), 'cancel_requested': self.store.cancel_intent(job_id) is not None,
+                'progress': live or None, 'result': ended['payload'] if ended else None}
+
+    def cancel(self, job_id: str, project_key: str, actor_id: str) -> dict:
+        """Record the durable intent; the running attempt stops between files and ends the job aborted."""
+        self.view(job_id, project_key)
+        self.store.request_cancel(job_id, actor_id, 'cancelled by the user')
+        return self.view(job_id, project_key)
+
+    def accept(self, job_id: str, project_key: str, revision_id: str, expected_active: Optional[str]) -> str:
+        """Activate the revision this job published, only if the project's active revision is still the expected one."""
+        result = self.view(job_id, project_key)
+        published = (result['result'] or {}).get('revision') if result['state'] == 'completed' else None
+        if not published or published.get('revision_id') != revision_id:
+            raise ImportNotAcceptable('Only the revision this completed import published can be accepted')
+        return self.index.activate(project_key, revision_id, expected_active)
+
+    def recover_orphans(self, reason: str = 'the backend restarted while the import was running') -> dict:
+        """At startup no import thread survives. An import whose revision was already sealed under its job id is
+        completed with that receipt under a new attempt; every other unfinished import ends interrupted (resuming is
+        an explicit continuation). Only the backend that owns the data folder may call this.
+        """
+        outcome = {'completed': [], 'interrupted': []}
+        for row in self.store.active(KIND):
+            try:
+                sealed = self.index._published(row['project_key'], row['id'])
+                if sealed is not None:
+                    ref = self.store.get(row['id'])
+                    if ref.state == 'accepted':
+                        ref = self.store.transition(row['id'], ref.revision, 'start')
+                    fence = self.store.begin_attempt(row['id'], ref.revision, 'startup-recovery', None, os.getpid()).fencing_token
+                    self.store.finish(row['id'], 'complete', {'revision': asdict(sealed), 'recovered': True}, fencing_token=fence)
+                    outcome['completed'].append(row['id'])
+                else:
+                    self.store.transition(row['id'], row['revision'], 'interrupt', {'reason': reason})
+                    outcome['interrupted'].append(row['id'])
+            except Exception:  # changed concurrently; the next start reconciles it
+                logger.exception('Could not recover dataset import %s', row['id'])
+        return outcome
+
+    def _set_progress(self, job_id: str, value: dict) -> None:
+        with self._lock:
+            self._progress[job_id] = {**self._progress.pop(job_id, {}), **value}
+            while len(self._progress) > 256:  # live progress is a convenience; the ledger keeps the record
+                self._progress.pop(next(iter(self._progress)))
+
+
+__all__ = ['DatasetImportJobs', 'ImportNotAcceptable', 'ImportSpec', 'KIND', 'StaleActiveRevision']

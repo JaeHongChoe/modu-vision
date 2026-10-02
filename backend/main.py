@@ -48,6 +48,7 @@ httpx.Client.__init__ = _compat_httpx_init
 from backend.api.routes_annotation import router as annotation_router
 from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
+from backend.api.routes_dataset_imports import router as dataset_imports_router
 from backend.api.routes_dataset_versions import router as dataset_versions_router
 from backend.api.routes_dataset_metadata import router as dataset_metadata_router, format_router as dataset_format_router
 from backend.api.routes_evaluation import router as evaluation_router
@@ -259,6 +260,8 @@ async def lifespan(app: FastAPI):
     recover_remote_jobs(training_job_manager)
     from backend.engine.local_training_worker import recover_local_jobs
     recover_local_jobs(training_job_manager)
+    from backend.api.routes_dataset_imports import recover_imports_at_startup
+    recover_imports_at_startup(app)
     logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
     yield
     # Graceful Shutdown Sequence
@@ -398,6 +401,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(dicom_router)
     app.include_router(compute_router)
     app.include_router(dataset_router)
+    app.include_router(dataset_imports_router)
     app.include_router(dataset_versions_router)
     app.include_router(dataset_metadata_router)
     app.include_router(dataset_format_router)
