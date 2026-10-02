@@ -129,8 +129,11 @@ def test_a_shared_account_reaches_only_runs_of_its_selected_project(monkeypatch,
 
     with pytest.raises(HTTPException) as refused:
         routes_inspections._run_project(request(other),run_id)
-    assert refused.value.status_code==403
+    assert refused.value.status_code==404,'a run of another project is not confirmed to exist'
     assert not any(str(Path(project['project_dir'])) in database for database in opened),'the run project database is never opened'
+    copy=dict(project,project_dir=str(tmp_path/'restored-copy'))
+    with pytest.raises(HTTPException):
+        routes_inspections._run_project(request(copy),run_id)  # same project ID at another folder
     with pytest.raises(HTTPException):
         with routes_inspections._store(request(other),run_id):
             pass

@@ -356,8 +356,10 @@ def _run_project(request: Request, run_id: str) -> Dict[str, Any]:
     # run ID never opens that project's database, rows or files.
     if getattr(request.state, "account_user", None) is not None:
         selected = getattr(request.state, "scoped_project", None)
-        if selected is None or selected.get("id") != owner["project_id"]:
-            raise HTTPException(status_code=403, detail="This inspection run belongs to a project this account has not selected.")
+        same = (selected is not None and selected.get("id") == owner["project_id"]
+                and Path(selected.get("project_dir", "")).expanduser().resolve() == Path(owner["project_dir"]).expanduser().resolve())
+        if not same:  # a restored copy keeps the ID at another folder; 404 does not confirm the run exists elsewhere
+            raise HTTPException(status_code=404, detail="Inspection run not found in the selected project.")
     try:
         project = _load_project(Path(owner["project_dir"]).expanduser().resolve())
     except HTTPException as exc:

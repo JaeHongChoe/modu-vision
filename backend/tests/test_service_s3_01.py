@@ -520,3 +520,46 @@ def test_a_truncated_bitstream_that_passes_the_header_checks_is_reported(dataset
     body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
     reported = {row['file_path']: row['error_code'] for row in body['corrupted_images']}
     assert reported.get(str(cut)) == 'DECODE_ERROR', reported
+
+
+def test_a_transient_read_error_is_not_remembered_as_a_broken_image(dataset_client, tmp_path, monkeypatch):
+    from backend.api import routes_dataset as routes
+    source = tmp_path / 'share.png'
+    Image.new('RGB', (30, 30), 'green').save(source)
+    real_open = Path.open
+    hiccups = []
+
+    def share(self, *args, **kwargs):
+        if self == source and not hiccups:
+            hiccups.append(1)
+            raise OSError(5, 'Input/output error')
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'open', share)
+    assert thumbnail(dataset_client, source).status_code == 400
+    assert thumbnail(dataset_client, source).status_code == 200, 'the next view reads the file again'
+
+
+def test_a_huge_webp_is_refused_before_pillow_reads_it_whole(dataset_client, tmp_path, monkeypatch):
+    from backend.api import routes_dataset as routes
+    source = tmp_path / 'huge.webp'
+    Image.new('RGB', (64, 64), 'white').save(source, format='WEBP')
+    monkeypatch.setattr(routes, '_WEBP_LIMIT', 16)
+    monkeypatch.setattr(routes, '_probe_header', lambda path: pytest.fail('read'))
+    assert thumbnail(dataset_client, source).status_code == 400
+
+
+def test_a_parent_link_is_caught_by_identity_not_spelling(dataset_client, tmp_path, monkeypatch):
+    """Case-insensitive volumes let a link spell the parent differently; emulated by making spelling never match."""
+    from backend.api import routes_dataset as routes
+    parent = tmp_path / 'datasets'
+    source = parent / 'line-a'
+    _folder(source, 2)
+    sibling = parent / 'line-b' / 'good'
+    sibling.mkdir(parents=True)
+    (sibling / 'broken.png').write_bytes(b'not an image')
+    _link(source / 'good' / 'up', parent)
+    monkeypatch.setattr(routes, '_contains', lambda parent_path, child: False)
+    body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
+    assert all('line-b' not in row['file_path'] for row in body['corrupted_images'])
+    assert body['validation']['complete'] is False

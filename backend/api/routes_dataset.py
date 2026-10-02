@@ -446,6 +446,29 @@ def generate_dataset(req: DatasetGenerateRequest):
         )
 
 
+def _folder_ids(path: str) -> set:
+    """(device, inode) of a folder and of every folder above it: identity, not spelling (case-insensitive volumes)."""
+    ids, current = set(), os.path.realpath(path)
+    while True:
+        try:
+            stat = os.stat(current)
+            ids.add((stat.st_dev, stat.st_ino))
+        except OSError:
+            pass
+        parent = os.path.dirname(current)
+        if parent == current:
+            return ids
+        current = parent
+
+
+def _folder_id(path: str) -> tuple:
+    try:
+        stat = os.stat(path)
+        return stat.st_dev, stat.st_ino
+    except OSError:
+        return None, None
+
+
 def _contains(parent: str, child: str) -> bool:
     try:
         return os.path.commonpath([parent, child]) == parent
@@ -467,12 +490,13 @@ def _validate_folder_images(folder: Path):
     """
     corrupted, checked, gaps, seen, folders = [], 0, [], set(), 0
     selection = os.path.realpath(folder)
+    above = _folder_ids(selection) - {_folder_id(selection)}  # the selection's parents, by identity
     for root, dirs, files in os.walk(folder, followlinks=True, onerror=lambda error: gaps.append("unreadable folder")):
         real = os.path.realpath(root)
         if real in seen:  # a link back to a folder already walked
             dirs[:] = []
             continue
-        if real != selection and _contains(real, selection):
+        if real != selection and (_contains(real, selection) or _folder_id(real) in above):
             gaps.append("a folder link points to a folder that contains the selection")
             dirs[:] = []
             continue
@@ -1087,6 +1111,7 @@ _DIGEST_TTL = 60.0 if os.name == "nt" else 600.0
 # a change in between refuses the thumbnail. Decoded pixels are bounded by Pillow's decompression-bomb limit, checked
 # from the header; Pillow's WebP reader loads the whole file to read its header, so WebP costs its file size twice.
 _COPY_LIMIT = 768 * 1024 * 1024
+_WEBP_LIMIT = 256 * 1024 * 1024
 _SPOOL_IN_MEMORY = 16 * 1024 * 1024
 _CHUNK = 1024 * 1024
 _FAILURES: "OrderedDict[tuple, tuple[int, Any, float]]" = OrderedDict()
@@ -1166,10 +1191,14 @@ def _etag_matches(header: Optional[str], etag: str) -> bool:
     return "*" in tags or any((tag[2:] if tag.startswith("W/") else tag) == etag for tag in tags)
 
 
+class _ReadFailure(HTTPException):
+    """The source could not be read (a share hiccup, a sharing violation): never remembered as a broken image."""
+
+
 def _source_error(path: Path, exc: BaseException) -> HTTPException:
     if isinstance(exc, FileNotFoundError):
         return HTTPException(status_code=404, detail="Image file not found")
-    return HTTPException(status_code=400, detail=format_error_response(
+    return _ReadFailure(status_code=400, detail=format_error_response(
         "ERR_CORRUPT_IMAGE", details=f"Cannot read image {path}: {exc}"))
 
 
@@ -1283,13 +1312,17 @@ def get_thumbnail(
     try:
         return _render_thumbnail(candidate_path, stat, size, dicom, decoder, read_dicom, respond)
     except HTTPException as error:
-        if error.status_code == 400:
+        if error.status_code == 400 and not isinstance(error, _ReadFailure):
             _failure_put(candidate_path, stat, error)
         raise
 
 
 def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dicom: bool, decoder: str, read_dicom,
                       respond):
+    if candidate_path.suffix.lower() == ".webp" and stat.st_size > _WEBP_LIMIT:
+        # Pillow's WebP reader loads the whole file even to read its header: no memory bound applies to it.
+        raise HTTPException(status_code=400, detail=format_error_response(
+            "ERR_CORRUPT_IMAGE", details=f"{candidate_path} is a WebP file over {_WEBP_LIMIT} bytes; no thumbnail is drawn"))
     if not dicom:
         _probe_header(candidate_path)  # refused from the header: nothing more is read, so a failure stays cheap
     digest = _hash_source(candidate_path)  # streamed; nothing is kept
