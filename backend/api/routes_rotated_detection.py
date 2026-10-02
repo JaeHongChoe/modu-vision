@@ -282,17 +282,17 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                 from backend.engine.specialized_training_jobs import persist_training_configuration
                 persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
                 checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
-                meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text())
+                meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text(encoding='utf-8'))
                 meta.update(checkpoint_sha256=checksum,source_dataset_path=job.source_dataset_path,dataset_path=str(job.dataset_path),
                             training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
-                meta_path.write_text(json.dumps(meta))
+                meta_path.write_text(json.dumps(meta),encoding='utf-8')
                 receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
                     'source_dataset_path':job.source_dataset_path,'dataset_path':str(job.dataset_path),
                     'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
                     'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
                 if job.warm_start:
                     receipt['warm_start'] = job.warm_start.lineage()
-                (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt))
+                (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
                 result.update(checkpoint_sha256=checksum,model_sha256=checksum)
                 _set_job(job, "completed", result=result)
     except RotatedTrainingCancelled:

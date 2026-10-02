@@ -420,7 +420,7 @@ def verified_approval_revision(
             with evidence_context(project):
                 if _fingerprint(source) != row["evaluation_dataset_fingerprint"]:
                     return None
-                verify_evidence_binding(project, source, json.loads(report_path.read_text()))
+                verify_evidence_binding(project, source, json.loads(report_path.read_text(encoding='utf-8')))
         except (ValueError, OSError, KeyError, TypeError):
             return None
     return dict(row)

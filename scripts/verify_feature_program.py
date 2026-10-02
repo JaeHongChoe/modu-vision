@@ -20,7 +20,7 @@ def _repository_file(value,feature_id,kind):
 
 
 def verify(path: Path) -> dict:
-    program=json.loads(path.read_text())
+    program=json.loads(path.read_text(encoding='utf-8'))
     rows=program['features']
     expected={f'F{i:03}' for i in range(1,124)}
     ids=[r['id'] for r in rows]

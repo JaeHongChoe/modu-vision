@@ -152,7 +152,7 @@ def _project(output,source,task):
     from backend.engine.project_labelsets import load_labelsets
     path=output/'project.json'
     if path.is_file():
-        project=json.loads(path.read_text())
+        project=json.loads(path.read_text(encoding='utf-8'))
         if project.get('engine_task')!=task or project.get('source_dataset_dir')!=str(source):raise ValueError('Output workspace is bound to a different task or source')
         return project
     primary=task if task in TASKS[:4] else 'classification'
@@ -232,7 +232,7 @@ def prepare(*,task,source_dataset_path,output_dir,labels=None,labels_path=None,p
     source=Path(source_dataset_path).expanduser().resolve();output=_root(output_dir)
     if not source.is_dir() or output.is_relative_to(source) or source.is_relative_to(output):raise ValueError('Engine output and original source must be separate directory trees')
     if labels is not None and labels_path is not None:raise ValueError('Choose inline labels or a labels file')
-    if labels_path is not None:labels=json.loads(Path(labels_path).read_text())
+    if labels_path is not None:labels=json.loads(Path(labels_path).read_text(encoding='utf-8'))
     rows=_labels(labels,source);options=dict(prepare_options or {})
     allowed={'patch_size','stride','normal_class','minimum_overlap'} if task=='patch_classification' else {'seed','noise_sigma'} if task=='enhancement' else set()
     if set(options)-allowed:raise ValueError('Unsupported preparation option for this family')
@@ -299,10 +299,10 @@ def prepare(*,task,source_dataset_path,output_dir,labels=None,labels_path=None,p
             return {key:value for key,value in record.items() if key not in {'project','labels'}}
 
 def _prepared(output,identifier=None):
-    output=_root(output);pointer=json.loads((output/'engine.json').read_text());identifier=_id(identifier or pointer['prepared_id'])
+    output=_root(output);pointer=json.loads((output/'engine.json').read_text(encoding='utf-8'));identifier=_id(identifier or pointer['prepared_id'])
     path=output/'preparations'/f'{identifier}.json'
     if path.is_symlink():raise ValueError('Prepared engine record cannot be linked')
-    record=json.loads(path.read_text())
+    record=json.loads(path.read_text(encoding='utf-8'))
     if record['prepared_id']!=identifier or record['task']!=pointer['task'] or record['source_dataset_path']!=pointer['source_dataset_path']:raise ValueError('Prepared engine identity differs')
     project=record['project'];dataset=Path(record['dataset_path']).resolve();source=Path(record['source_dataset_path']).resolve()
     if (Path(project['project_dir']).resolve()!=output or Path(project['models_dir']).resolve()!=output/'models'
@@ -351,7 +351,7 @@ def _path(output,identifier):
     return path
 
 def read_run(output,identifier):
-    path=_path(output,identifier);record=json.loads(path.read_text())
+    path=_path(output,identifier);record=json.loads(path.read_text(encoding='utf-8'))
     if record.get('run_id')!=identifier or record.get('output_dir')!=str(_root(output)):raise ValueError('Engine job identity differs')
     if record['status'] in ACTIVE:
         try:
@@ -364,7 +364,7 @@ def read_run(output,identifier):
     if record['status']=='completed':
         for artifact in record['artifacts'].values():_verify_artifact(output,artifact)
         if 'predictions' in record['artifacts']:
-            predictions=json.loads(Path(record['artifacts']['predictions']['path']).read_text())
+            predictions=json.loads(Path(record['artifacts']['predictions']['path']).read_text(encoding='utf-8'))
             for artifact in predictions.get('output_files',[]):_verify_artifact(output,artifact)
     return record
 
@@ -483,7 +483,7 @@ def _link_evaluation_sources(result,prepared):
     source=Path(prepared['source_dataset_path']);dataset=Path(prepared['dataset_path']);mapping={}
     manifest=dataset/'source_manifest.json'
     if manifest.is_file():
-        for row in json.loads(manifest.read_text()):
+        for row in json.loads(manifest.read_text(encoding='utf-8')):
             for key in ('image','prepared_image','image_path','output_image'):
                 if row.get(key) and row.get('source_image'):mapping[str(Path(row[key]).resolve())]=Path(row['source_image'])
     if prepared['task'] in FAMILIES:
@@ -527,7 +527,7 @@ def evaluate(output,identifier,*,device='cpu',split='test'):
         else:
             import torch
             from backend.api import routes_evaluation as core
-            meta=json.loads(checkpoint.with_name('model_meta.json').read_text())
+            meta=json.loads(checkpoint.with_name('model_meta.json').read_text(encoding='utf-8'))
             evaluator={'classification':core._evaluate_classification,'patch_classification':core._evaluate_patch_classification,
                 'detection':core._evaluate_detection,'segmentation':core._evaluate_segmentation,'anomaly':core._evaluate_anomaly}[task]
             if split!='test':raise ValueError('Primary task evaluator uses the saved test partition')

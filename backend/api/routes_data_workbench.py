@@ -104,7 +104,7 @@ def saved_diagnostics(request:Request):
     if not path.is_file():return {'report':None}
     try:
         if path.is_symlink():raise ValueError('Diagnostic report cannot be a symbolic link')
-        report=json.loads(path.read_text())
+        report=json.loads(path.read_text(encoding='utf-8'))
         if report['scope']!={'source':str(source),'task':project['task'],'labelset_id':project.get('active_labelset_id','default')}:raise ValueError('Diagnostic scope changed')
         current={r['relative_path']:r for r in _rows(project,source)}
         assignments=_split_assignments(project,source,list(current.values()))
@@ -163,7 +163,7 @@ def _comparisons(project,source):
     records=[]
     for path in _report_dir(project).glob('comparison_*.json'):
         if path.is_symlink() or not re.fullmatch(r'comparison_[0-9a-f]{32}',path.stem):continue
-        row=json.loads(path.read_text())
+        row=json.loads(path.read_text(encoding='utf-8'))
         if row.get('comparison_id')!=path.stem:raise ValueError('Saved comparison identity changed')
         if row.get('project_id')==project['id'] and row.get('source_dataset_path')==str(source) and row.get('task')==project['task'] and row.get('labelset_id','default')==project.get('active_labelset_id','default'):
             records.append({**row,'evidence_sha256':hashlib.sha256(dw.canonical(row)).hexdigest()})

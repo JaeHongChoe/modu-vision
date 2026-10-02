@@ -107,7 +107,7 @@ def comparisons(request:Request):
     rows=[]
     for file in _comparisons(project).glob('*.json'):
         try:
-            record=json.loads(file.read_text())
+            record=json.loads(file.read_text(encoding='utf-8'))
             if record['project_id']==project['id'] and record.get('source_dataset_path')==project.get('source_dataset_dir') and record.get('labelset_id','default')==project.get('active_labelset_id','default'):
                 rows.append(record)
         except (OSError,ValueError,KeyError): continue

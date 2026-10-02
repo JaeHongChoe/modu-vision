@@ -396,7 +396,7 @@ def list_reviews(request: Request):
             manifest=review/'review_manifest.json'
             if manifest.is_symlink() or not manifest.is_file():continue
             try:
-                value=json.loads(manifest.read_text());rows=value['candidates']
+                value=json.loads(manifest.read_text(encoding='utf-8'));rows=value['candidates']
                 result.append({'job_id':job.name,'review_id':review.name,'review_dir':str(review.resolve()),'candidate_count':len(rows),'unreviewed_count':sum(row.get('status')=='synthetic_unreviewed' for row in rows),'modified_at':manifest.stat().st_mtime})
             except (OSError,ValueError,KeyError,TypeError):continue
     return {'reviews':sorted(result,key=lambda row:row['modified_at'],reverse=True)}
@@ -410,7 +410,7 @@ def open_review(job_id:str,review_id:str,request:Request):
     manifest=root/'review_manifest.json'
     if root.is_symlink() or manifest.is_symlink() or not manifest.is_file():raise HTTPException(status_code=404,detail='Review group is unavailable')
     try:
-        result=json.loads(manifest.read_text())
+        result=json.loads(manifest.read_text(encoding='utf-8'))
         validate_composition_source(root, result)
         for row in result['candidates']:
             path=Path(row['path'])

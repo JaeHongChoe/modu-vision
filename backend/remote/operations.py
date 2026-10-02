@@ -35,6 +35,7 @@ from backend.remote.coordinator import (
     _sha256,
     _confirm_owned_exit,
 )
+from backend.engine.file_identity import names_descriptor
 from backend.remote.profiles import ComputeProfile
 from backend.remote.ssh_transport import SSHTransport
 from backend.remote.snapshot import SnapshotValidationError, verify_snapshot_tree
@@ -362,7 +363,7 @@ def _open_operation_lock(path: Path) -> int:
     try:
         # O_NOFOLLOW is unavailable on Windows; reject substitution between
         # the precheck and open before accessing any journal or worker.
-        if path.is_symlink() or not os.path.samestat(os.stat(path), os.fstat(descriptor)):
+        if path.is_symlink() or not names_descriptor(path, descriptor):
             raise ArtifactValidationError("Remote operation lock changed while opening")
         if fcntl is not None:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -405,7 +406,7 @@ def run_remote_operation_artifacts(
         host=f"ssh:{context.profile.ssh_target.rsplit('@',1)[-1].lower()}:{context.profile.ssh_port}"
         from backend.engine.annotation_storage import request_project_root
         project=request_project_root();project_id=None
-        if project and (project/'project.json').is_file():project_id=json.loads((project/'project.json').read_text()).get('id')
+        if project and (project/'project.json').is_file():project_id=json.loads((project/'project.json').read_text(encoding='utf-8')).get('id')
         if not leases.acquire(lease_key,host,context.profile.gpu_selector or 'all',remote=True,
                 memory_budget_mb=context.profile.memory_budget_mb or 0,allow_sharing=context.profile.allow_sharing,
                 task=operation,project_id=project_id):
@@ -424,7 +425,7 @@ def run_remote_operation_artifacts(
         stop.set()
         if thread:thread.join(timeout=1)
         if acquired:
-            try:journal=json.loads(journal_path.read_text()) if journal_path.is_file() else {'state':'preparing'}
+            try:journal=json.loads(journal_path.read_text(encoding='utf-8')) if journal_path.is_file() else {'state':'preparing'}
             except (OSError,ValueError):journal={'state':'unknown'}
             state=journal.get('state')
             if not worker_exit_confirmed and not journal.get('worker_exit_confirmed') and (journal.get('remote_handle') or state in ('launching','launched','unknown')):leases.mark_uncertain(lease_key)
@@ -647,7 +648,7 @@ def run_verified_flowchart_on_compute(
         if not 0<size<=512*1024*1024 or not 0<meta_size<=4*1024*1024 or total>2*1024*1024*1024:
             raise ArtifactValidationError('Portable model assets exceed transfer limits')
         payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
-        meta=json.loads(metadata.read_text())
+        meta=json.loads(metadata.read_text(encoding='utf-8'))
         digest=_sha256(checkpoint)
         if (not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(payload.get('model_state_dict'),dict)
                 or not isinstance(meta,dict) or meta.get('task')!=task or meta.get('checkpoint_sha256',digest)!=digest):
@@ -673,7 +674,7 @@ def run_verified_flowchart_on_compute(
     },transport=transport,input_files=inputs)
     result_file=artifacts.get('outputs/flowchart_result.json')
     if result_file is None:raise ArtifactValidationError('Portable flow result is missing')
-    result=json.loads(result_file.read_text())
+    result=json.loads(result_file.read_text(encoding='utf-8'))
     if (not isinstance(result,dict) or result.get('image_path')!=relative or result.get('image_sha256')!=image_hash
             or result.get('model_job_ids')!=sorted(job for job,_ in needed)):
         raise ArtifactValidationError('Portable flow result has a different image or model binding')

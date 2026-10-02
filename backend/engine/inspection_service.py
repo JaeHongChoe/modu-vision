@@ -495,7 +495,7 @@ def create_service_app(
     validate_deadline(deadline_ms)
     package_dir = Path(package_dir).expanduser().resolve()
     pipeline, checkpoints = verify_flow_package(package_dir)
-    device=device or json.loads((package_dir/'manifest.json').read_text()).get('runtime',{}).get('device','cpu')
+    device=device or json.loads((package_dir/'manifest.json').read_text(encoding='utf-8')).get('runtime',{}).get('device','cpu')
     from backend.engine.edge_runtime import enforce_edge_device
     enforce_edge_device(package_dir, device)
     if require_approved_release and release_policy is None:

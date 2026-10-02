@@ -205,7 +205,7 @@ def read_derived(project,source,identifier,scope=None):
     if not re.fullmatch(r'derived_[0-9a-f]{32}',identifier):raise ValueError('Invalid derived version ID')
     root=_storage(project,source);directory=root/'derived'/identifier;path=directory/'version.json'
     if directory.is_symlink() or path.is_symlink() or not path.is_file():raise ValueError('Derived version not found in active source scope')
-    record=json.loads(path.read_text());digest=record.pop('evidence_sha256',None)
+    record=json.loads(path.read_text(encoding='utf-8'));digest=record.pop('evidence_sha256',None)
     if digest!=hashlib.sha256(canonical(record)).hexdigest():raise ValueError('Derived version integrity failure')
     record['evidence_sha256']=digest
     if scope is not None and record.get('scope')!=scope:raise ValueError('Derived version task or labelset scope changed')
@@ -220,7 +220,7 @@ def derived_history(project,source,image_path,scope=None):
     image=_source_image(source,image_path);root=_storage(project,source)/'derived';rows=[]
     for path in root.glob('derived_*/version.json'):
         if path.is_symlink() or path.parent.is_symlink():raise ValueError('Derived version cannot be a symbolic link')
-        hint=json.loads(path.read_text())
+        hint=json.loads(path.read_text(encoding='utf-8'))
         if hint.get('source_path')!=str(image) or (scope is not None and hint.get('scope')!=scope):continue
         row=read_derived(project,source,path.parent.name)
         if row['source_path']==str(image) and (scope is None or row.get('scope')==scope):rows.append(row)
@@ -314,7 +314,7 @@ def create_review_queue(project,source,task,labelset_id,rows,origin,threshold=.5
 def read_review_queue(project,source,task,labelset_id,identifier):
     path=_queue_path(project,source,identifier)
     if path.is_symlink() or not path.is_file():raise ValueError('Review queue not found in active source scope')
-    queue=json.loads(path.read_text())
+    queue=json.loads(path.read_text(encoding='utf-8'))
     if queue.get('scope')!={'source':str(Path(source).resolve()),'task':task,'labelset_id':labelset_id}:raise ValueError('Review queue scope changed')
     for row in queue['items']:
         image=_source_image(source,row['file_path'])
@@ -328,7 +328,7 @@ def list_review_queues(project,source,task,labelset_id):
         try:result.append(read_review_queue(project,source,task,labelset_id,path.stem))
         except ValueError as exc:
             # A stale saved queue is visible but cannot be resumed or silently replaced.
-            raw=json.loads(path.read_text())
+            raw=json.loads(path.read_text(encoding='utf-8'))
             if raw.get('scope',{}).get('task')==task and raw.get('scope',{}).get('labelset_id')==labelset_id:result.append({**raw,'stale':True,'error':str(exc)})
     return sorted(result,key=lambda q:q['created_at'],reverse=True)
 

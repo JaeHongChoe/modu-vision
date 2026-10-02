@@ -91,7 +91,7 @@ def train(req:TrainRequest,request:Request):
     _scope(request,req.output_dir)
     options=req.model_dump(exclude={'background','config_path'})
     if req.config_path:
-        recipe=_call(lambda:engine.configuration_recipe(json.loads(Path(req.config_path).read_text())))
+        recipe=_call(lambda:engine.configuration_recipe(json.loads(Path(req.config_path).read_text(encoding='utf-8'))))
         options={**recipe,**req.model_dump(include=req.model_fields_set-{'background','config_path'})}
         if options.get('mode')!='search' and 'search_space' not in req.model_fields_set:options['search_space']=None
     _scope_recipe(request,options)
@@ -140,7 +140,7 @@ def artifact_file(name:Literal['model','metadata','configuration','evaluation','
 def image_artifact(index:int,output_dir:str,run_id:str,request:Request):
     _scope(request,output_dir);record=_call(engine.read_run,output_dir,run_id)
     if 'predictions' not in record['artifacts']:raise HTTPException(404,'Predict before requesting an image artifact')
-    outputs=json.loads(Path(record['artifacts']['predictions']['path']).read_text()).get('output_files',[])
+    outputs=json.loads(Path(record['artifacts']['predictions']['path']).read_text(encoding='utf-8')).get('output_files',[])
     if index<0 or index>=len(outputs):raise HTTPException(404,'Image artifact does not exist')
     artifact=outputs[index];path=Path(artifact['path'])
     return FileResponse(path,filename=path.name,headers={'X-Content-SHA256':artifact['sha256']})

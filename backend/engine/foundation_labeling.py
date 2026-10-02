@@ -76,7 +76,7 @@ def foundation_readiness(setup, device='cpu'):
     else:
         try:
             root = Path(directory)
-            if json.loads((root / 'config.json').read_text()).get('model_type') not in ('sam2','sam2_video') or not (root / 'model.safetensors').is_file():
+            if json.loads((root / 'config.json').read_text(encoding='utf-8')).get('model_type') not in ('sam2','sam2_video') or not (root / 'model.safetensors').is_file():
                 error = 'SAM2 config.json and model.safetensors are required; download official weights before use.'
         except (OSError, ValueError):
             error = 'SAM2 model configuration is missing or invalid.'
@@ -100,7 +100,7 @@ class _Sam2Adapter:
         # The official repository also distributes the video superset. Use its
         # image encoder/prompt decoder configuration and require every image
         # model parameter to have loaded; unused video-memory keys are benign.
-        config=Sam2Config.from_dict(json.loads((Path(directory)/'config.json').read_text()))
+        config=Sam2Config.from_dict(json.loads((Path(directory)/'config.json').read_text(encoding='utf-8')))
         self.model,loading=Sam2Model.from_pretrained(directory,config=config,local_files_only=True,
             trust_remote_code=False,output_loading_info=True)
         if loading['missing_keys'] or loading['mismatched_keys']:

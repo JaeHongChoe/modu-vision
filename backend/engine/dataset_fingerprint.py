@@ -15,6 +15,7 @@ from typing import Iterable, Optional
 
 from backend.engine.annotation_storage import dataset_annotation_dir, dataset_overlay_scopes, request_project_root
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+from backend.engine.file_identity import stat_by_handle
 
 
 _LABEL_EXTENSIONS = {".json", ".txt", ".xml", ".csv", ".yaml", ".yml"}
@@ -125,7 +126,8 @@ def source_artifact_identity(folder: Path, relative_name: str):
             digest.update(block)
         after = os.fstat(source.fileno())
         identity = lambda stat: (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
-        if (identity(before) != identity(after) or identity(after) != identity(path.stat())
+        current = stat_by_handle(path)  # a descriptor stat, like before/after (a path stat differs on Windows)
+        if (identity(before) != identity(after) or current is None or identity(after) != identity(current)
                 or not candidate.resolve().is_relative_to(root)):
             raise ValueError('Source file changed while computing its content identity')
         source.seek(0)

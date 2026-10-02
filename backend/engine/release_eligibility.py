@@ -35,7 +35,7 @@ def authorize_release_action(package, project, *, action, source=None):
     from backend.engine.flow_package_runtime import verify_flow_package
     root = Path(package)
     _, checkpoints = verify_flow_package(root)
-    manifest = json.loads((root / 'manifest.json').read_text())
+    manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
     approvals = manifest.get('release', {}).get('approval_revisions')
     if (not isinstance(approvals, list) or not approvals or len(approvals) != len(checkpoints)
             or {row.get('job_id') for row in approvals} != set(checkpoints)):

@@ -46,7 +46,7 @@ def main(argv=None):
     try:
         if options.command=='basic-execute':
             if options.launch_handshake:
-                spec=json.loads(Path(options.spec).read_text())
+                spec=json.loads(Path(options.spec).read_text(encoding='utf-8'))
                 if sys.stdin.readline().strip()!=spec['job_id']:raise RuntimeError('Basic training launcher ended before publishing its owner')
             from backend.engine.local_training_worker import execute_basic
             result=execute_basic(options.spec)
@@ -55,7 +55,7 @@ def main(argv=None):
             result=engine.prepare(task=options.task,source_dataset_path=options.source,output_dir=options.output,
                 labels_path=options.labels,prepare_options=json.loads(options.prepare_json))
         elif options.command=='train':
-            recipe=json.loads(Path(options.config_path).read_text()) if options.config_path else {}
+            recipe=json.loads(Path(options.config_path).read_text(encoding='utf-8')) if options.config_path else {}
             # Delivered recipes include descriptive task/source fields; preparation
             # remains a separate explicit operation when inputs or truth change.
             recipe=engine.configuration_recipe(recipe)

@@ -184,7 +184,7 @@ def models(request:Request):
     for metadata_path in root.glob('**/model_meta.json'):
         if metadata_path.is_symlink():continue
         try:
-            meta=json.loads(metadata_path.read_text());identifier=metadata_path.parent.name;task=meta.get('task')
+            meta=json.loads(metadata_path.read_text(encoding='utf-8'));identifier=metadata_path.parent.name;task=meta.get('task')
             checkpoint=_checkpoint(current,task,identifier)
             receipt=completed_job_receipt(checkpoint.parent) or {}
             items.append({'job_id':identifier,'task':task,'family_dataset_path':(meta.get('dataset_path') or receipt.get('dataset_path')) if task in ('patch_classification','ocr','rotated_detection','enhancement','rotation','defect_gan') else None,

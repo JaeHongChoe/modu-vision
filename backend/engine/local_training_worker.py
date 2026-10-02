@@ -49,7 +49,7 @@ def _save(journal):
         root = Path(journal['output_dir'])
         path = root / 'local_job.json'
         if path.is_file():
-            previous = json.loads(path.read_text())
+            previous = json.loads(path.read_text(encoding='utf-8'))
             if previous.get('job_id') == journal['job_id']:
                 for key, value in previous.items():
                     if key.startswith('cancel_') and key not in journal:
@@ -73,7 +73,7 @@ def request_local_cancellation(record):
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         path = root / 'local_job.json'
         if path.is_file():
-            journal = json.loads(path.read_text())
+            journal = json.loads(path.read_text(encoding='utf-8'))
             if journal.get('job_id') != record.job_id:
                 raise ValueError('Local cancel intent belongs to another job')
             journal.setdefault('cancel_requested_at', time.time())
@@ -85,7 +85,7 @@ def _cancelled(root, job_id):
     path = root / 'local_cancel.json'
     if not path.exists():
         return False
-    return json.loads(path.read_text()).get('job_id') == job_id
+    return json.loads(path.read_text(encoding='utf-8')).get('job_id') == job_id
 
 
 def _owned(journal):
@@ -144,10 +144,10 @@ def _boot_id():
     """
     try:
         if sys.platform.startswith('linux'):
-            return Path('/proc/sys/kernel/random/boot_id').read_text().strip() or None
+            return Path('/proc/sys/kernel/random/boot_id').read_text(encoding='utf-8').strip() or None
         if sys.platform == 'darwin':
             value = subprocess.run(['/usr/sbin/sysctl', '-n', 'kern.bootsessionuuid'], capture_output=True, text=True,
-                                   timeout=5).stdout.strip()
+                                   encoding='utf-8', errors='replace', timeout=5).stdout.strip()
             return value or None
     except (OSError, subprocess.SubprocessError):
         return None
@@ -286,7 +286,7 @@ def _restore_confirmed_terminal(manager, record, journal, root, leases):
     status_path = root / 'status.json'
     try:
         if status_path.is_file() and not status_path.is_symlink():
-            candidate = json.loads(status_path.read_text())
+            candidate = json.loads(status_path.read_text(encoding='utf-8'))
             if candidate.get('job_id') == record.job_id and candidate.get('spec_sha256') == journal['spec_sha256']:
                 status = candidate
     except (OSError, ValueError):
@@ -336,7 +336,7 @@ def _recover_local_journals(manager, *, job_id=None):
         return
     for path in sorted(index.glob('job_*.json')):
         try:
-            journal = json.loads(path.read_text())
+            journal = json.loads(path.read_text(encoding='utf-8'))
             if job_id is not None and journal['job_id'] != job_id:
                 continue
             existing = manager.get_job(journal['job_id'])
@@ -348,7 +348,7 @@ def _recover_local_journals(manager, *, job_id=None):
             if (spec_path.is_symlink() or spec_path.resolve() != root / 'local_spec.json'
                     or hashlib.sha256(spec_path.read_bytes()).hexdigest() != journal['spec_sha256']):
                 raise ValueError('Recovered local launch specification differs from its journal')
-            spec = json.loads(spec_path.read_text())
+            spec = json.loads(spec_path.read_text(encoding='utf-8'))
             if (spec['job_id'] != journal['job_id'] or Path(spec['output_dir']).resolve() != root
                     or Path(spec['lease_path']).resolve() != manager._leases.path.resolve()):
                 raise ValueError('Recovered local specification differs from its job or reservation store')
@@ -491,7 +491,7 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
             cancellation_started = time.monotonic()
         status_path = root / 'status.json'
         if status_path.is_file():
-            status = json.loads(status_path.read_text())
+            status = json.loads(status_path.read_text(encoding='utf-8'))
             if status.get('job_id') != record.job_id or status.get('spec_sha256') != digest:
                 raise ValueError('Local worker status differs from its immutable launch')
             _observe(record, status, callback, seen)
@@ -529,7 +529,7 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
             # Reserved terminal blocks handle a disk-full stale progress file.
             fallback = root / 'terminal_status.json'
             if terminal is None and fallback.is_file():
-                status = json.loads(fallback.read_text())
+                status = json.loads(fallback.read_text(encoding='utf-8'))
                 if (status.get('job_id') == record.job_id and status.get('spec_sha256') == digest
                         and status.get('status') in {'failed', 'aborted'}):
                     terminal = status
@@ -569,7 +569,7 @@ def execute_basic(spec_path):
     from backend.api.routes_training import JobRecord, _write_job_receipt
     from backend.engine.device import clear_device_cache
     spec_path = Path(spec_path).resolve()
-    spec = json.loads(spec_path.read_text())
+    spec = json.loads(spec_path.read_text(encoding='utf-8'))
     root = spec_path.parent
     if spec.get('protocol_version') != 1 or Path(spec['output_dir']).resolve() != root:
         raise ValueError('Basic training specification differs from its owned directory')
@@ -639,7 +639,7 @@ def execute_basic(spec_path):
         clear_device_cache()
         path = root / 'local_job.json'
         try:
-            journal = json.loads(path.read_text())
+            journal = json.loads(path.read_text(encoding='utf-8'))
             journal.update(status=writer._payload['status'], training_terminal_confirmed=True)
             _save(journal)
         except (OSError, ValueError):

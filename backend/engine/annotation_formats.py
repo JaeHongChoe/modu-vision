@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import PurePosixPath
+from backend.engine.source_text import read_source_text
 
 def safe_name(name):
     if not isinstance(name,str) or not name or '\\' in name: raise ValueError('Invalid image filename')
@@ -219,7 +220,7 @@ def source_annotations_for_image(source,image):
     matched=[]
     for path in files:
         if path.suffix!='.json':continue
-        data=json.loads(path.read_text(encoding='utf-8'))
+        data=json.loads(read_source_text(path))
         if not isinstance(data,dict) or not {'images','categories','annotations'}<=set(data):continue
         split_bound=bool(split and path.stem==f'annotations_{split}')
         images=[row for row in data['images'] if safe_name(row['file_name']) in {relative,relative.removeprefix('images/')} or (split_bound and row['file_name']==image.name)]
@@ -234,17 +235,17 @@ def source_annotations_for_image(source,image):
     txt=next((p for p in files if p.suffix=='.txt' and p.name!='classes.txt'),None)
     if txt is None:return None
     classes_path=next((p for p in files if p.name=='classes.txt'),None)
-    if classes_path:classes=classes_path.read_text(encoding='utf-8').splitlines()
+    if classes_path:classes=read_source_text(classes_path).splitlines()
     else:
         config=next((p for p in files if p.suffix=='.yaml'),None)
         if config is None:raise ValueError('YOLO source labels require classes.txt or data.yaml names')
         import yaml
-        names=yaml.safe_load(config.read_text(encoding='utf-8')).get('names')
+        names=yaml.safe_load(read_source_text(config)).get('names')
         if isinstance(names,list):classes=names
         elif isinstance(names,dict):
             indexed={int(k):v for k,v in names.items()}
             if set(indexed)!=set(range(len(indexed))):raise ValueError('YOLO class IDs must be contiguous')
             classes=[indexed[i] for i in range(len(indexed))]
         else:raise ValueError('YOLO names are missing')
-    payload={'classes':classes,'images':[{'file_name':relative,'width':width,'height':height}], 'labels':{str(Path(relative).with_suffix('.txt')):txt.read_text(encoding='utf-8')}}
+    payload={'classes':classes,'images':[{'file_name':relative,'width':width,'height':height}], 'labels':{str(Path(relative).with_suffix('.txt')):read_source_text(txt)}}
     return import_annotations(payload,'yolo')[0]['annotations']

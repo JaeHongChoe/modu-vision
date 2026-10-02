@@ -26,7 +26,7 @@ def bind_training_version(project, source, supplied_version=None):
     team_digest=hashlib.sha256(json.dumps(team_binding,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
     if receipt.is_symlink():raise ValueError('Team-data training receipt cannot be linked')
     if receipt.exists():
-        previous=json.loads(receipt.read_text())
+        previous=json.loads(receipt.read_text(encoding='utf-8'))
         if previous!=team_binding:raise ValueError('Team-data policy differs from the selected training version; create a new version')
     else:
         with tempfile.NamedTemporaryFile('w',encoding='utf-8',dir=directory,prefix='team-data-',delete=False) as handle:
@@ -58,11 +58,11 @@ def persist_model_binding(output,binding,*,checkpoint=True):
         finally:temporary.unlink(missing_ok=True)
     metadata=output/'model_meta.json'
     if metadata.is_file() and not metadata.is_symlink():
-        payload=json.loads(metadata.read_text());payload['training_provenance']=binding
+        payload=json.loads(metadata.read_text(encoding='utf-8'));payload['training_provenance']=binding
         if model.is_file() and not model.is_symlink():
             from backend.api.routes_dataset_versions import _file_hash
             payload['checkpoint_sha256']=_file_hash(model)
-        temporary=metadata.with_suffix('.tmp');temporary.write_text(json.dumps(payload));os.replace(temporary,metadata)
+        temporary=metadata.with_suffix('.tmp');temporary.write_text(json.dumps(payload),encoding='utf-8');os.replace(temporary,metadata)
 
 
 def validate_training_binding(binding):
@@ -71,7 +71,7 @@ def validate_training_binding(binding):
     if binding.get('team_data'):
         receipt=directory/'team-data.json'
         if receipt.is_symlink() or not receipt.is_file():raise ValueError('Team-data training receipt is unavailable')
-        frozen=json.loads(receipt.read_text())
+        frozen=json.loads(receipt.read_text(encoding='utf-8'))
         digest=hashlib.sha256(json.dumps(frozen,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
         if frozen!=binding['team_data'] or digest!=binding.get('team_data_sha256'):
             raise ValueError('Team-data training receipt changed')
@@ -79,7 +79,7 @@ def validate_training_binding(binding):
             from backend.engine.team_data import training_binding
             from backend.engine.project_labelsets import labelset_root
             project_root=directory.parent.parent
-            configuration=json.loads((project_root/'project.json').read_text())
+            configuration=json.loads((project_root/'project.json').read_text(encoding='utf-8'))
             configured_set=configuration.get('active_labelset_id','default')
             selected_set=frozen['scope']['labelset_id']
             if configuration.get('id')!=frozen['scope']['project_id']:
@@ -98,7 +98,7 @@ def validate_training_binding(binding):
             current=training_binding(configuration,Path(frozen['scope']['source']))
             if any(current[key]!=frozen[key] for key in ('book_sha256','policy_sha256','eligibility_sha256')):
                 raise ValueError('Team-data guidance, review policy or eligible cohort changed during training')
-    manifest=json.loads((directory/'manifest.json').read_text())
+    manifest=json.loads((directory/'manifest.json').read_text(encoding='utf-8'))
     from backend.api.routes_dataset_versions import _manifest_digest, _file_hash, _safe_backup_path
     if manifest.get('content_digest')!=binding['manifest_sha256'] or _manifest_digest(manifest)!=binding['manifest_sha256']:
         raise ValueError('Bound training version manifest changed')
@@ -126,7 +126,7 @@ def validate_training_binding(binding):
             if 'restored_source_sha256' in row:
                 if binding.get('family_task')!='enhancement' or row['relative_path']!='pairs.json':
                     raise ValueError('Only relocated enhancement manifest paths may use a source alias')
-                original=json.loads(backup.read_text());current=json.loads(Path(row['source_path']).read_text())
+                original=json.loads(backup.read_text(encoding='utf-8'));current=json.loads(Path(row['source_path']).read_text(encoding='utf-8'))
                 omitted={'source_dataset_path','dataset_path','provenance'}
                 if {k:v for k,v in original.items() if k not in omitted}!={k:v for k,v in current.items() if k not in omitted}:
                     raise ValueError('Relocated enhancement manifest content differs from frozen labels')
@@ -166,7 +166,7 @@ def bind_family_training(project,dataset,task,supplied_version=None):
         if not configured_source or Path(configured_source).resolve()!=source:
             raise ValueError('Prepared family data must link to the active project source')
         if task=='rotation':
-            raw=json.loads(manifest_path.read_text())
+            raw=json.loads(manifest_path.read_text(encoding='utf-8'))
             for row in raw.get('samples',[]):
                 relative=row.get('source_relative_path',row.get('image',''))
                 original=source/relative
@@ -225,7 +225,7 @@ def bind_family_training(project,dataset,task,supplied_version=None):
         for row in provenance['source_map'].values():
             original_paths.append(source/row['source_relative_path'])
     elif task=='rotation':
-        original_paths=[source/row.get('source_relative_path',row['image']) for row in json.loads(manifest_path.read_text())['samples']]
+        original_paths=[source/row.get('source_relative_path',row['image']) for row in json.loads(manifest_path.read_text(encoding='utf-8'))['samples']]
     elif task=='enhancement':
         original_paths=[source/row['source_relative_path'] for row in manifest['records']]
     elif task=='defect_gan':
@@ -267,7 +267,7 @@ def frozen_annotation_root(binding,source,output):
     import shutil
     from backend.engine.annotation_storage import dataset_annotation_dir
     version=Path(binding['version_dir'])
-    manifest=json.loads((version/'manifest.json').read_text())
+    manifest=json.loads((version/'manifest.json').read_text(encoding='utf-8'))
     root=Path(output)/'bound_annotations'
     target=dataset_annotation_dir(source,root,use_scope=False)
     frozen=[]
@@ -277,7 +277,7 @@ def frozen_annotation_root(binding,source,output):
         elif row['origin']=='studio_scoped':destination=target.parent/row['relative_path']
         elif row['origin']=='source' and row['kind']=='label' and Path(row['relative_path']).suffix.lower()=='.json':
             backup=version/row['snapshot_path']
-            try:label=json.loads(backup.read_text())
+            try:label=json.loads(backup.read_text(encoding='utf-8'))
             except (ValueError,UnicodeError):continue
             if not isinstance(label,dict) or not isinstance(label.get('shapes'),list):continue
             annotations=[]
@@ -301,7 +301,7 @@ def frozen_annotation_root(binding,source,output):
         else:continue
         destination.parent.mkdir(parents=True,exist_ok=True)
         if source_label is None:shutil.copyfile(version/row['snapshot_path'],destination)
-        else:destination.write_text(json.dumps(source_label,ensure_ascii=False))
+        else:destination.write_text(json.dumps(source_label,ensure_ascii=False),encoding='utf-8')
     binding['frozen_source_labels']=frozen
     return root
 

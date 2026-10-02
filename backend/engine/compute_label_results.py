@@ -16,12 +16,12 @@ def verified_result(record):
     if root.is_symlink() or target.is_symlink() or manifest_path.is_symlink() or not target.is_file() or not manifest_path.is_file():
         raise HTTPException(409,'Verified remote result receipt is unavailable')
     try:
-        manifest=json.loads(manifest_path.read_text())
+        manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
         row=next(row for row in manifest['artifacts'] if row['path']=='outputs/'+name)
         if (manifest.get('job_id')!=record.job_id or manifest.get('operation')!=(record.launch_spec or {}).get('operation','train')
                 or target.stat().st_size!=row['size'] or hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']):
             raise ValueError('Result bytes differ from the verified remote receipt')
-        payload=json.loads(target.read_text())
+        payload=json.loads(target.read_text(encoding='utf-8'))
         if name=='label_results.json' and (payload.get('job_id')!=record.job_id or payload.get('input_manifest_sha256')!=manifest.get('input_manifest_sha256') or payload.get('automatically_approved') is not False):
             raise ValueError('Remote label result identity changed')
         return payload,row['sha256']
@@ -78,7 +78,7 @@ def import_label_proposals(project,record):
     with _VERSION_LOCK,suggestions._REVIEW_LOCK:
         if mapping.is_symlink():raise HTTPException(409,'Invalid label import receipt')
         if mapping.is_file():
-            prior=json.loads(mapping.read_text())
+            prior=json.loads(mapping.read_text(encoding='utf-8'))
             if prior['result_sha256']!=result_hash:raise HTTPException(409,'Imported remote receipt changed')
             return {'batch_id':prior['batch_id'],'proposals':[suggestions._read_proposal(project,p) for p in prior['proposal_ids']]}
         if suggestions._dataset_fingerprint(project)!=baseline['dataset_fingerprint']:raise HTTPException(409,'Source images or labels changed; generate remote candidates again')

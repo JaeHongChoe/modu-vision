@@ -35,8 +35,8 @@ def request(port, route, token, payload=None):
 
 
 def launch(executable, arguments, directory, environment, *, port=None, timeout=60):
-    process=subprocess.Popen([str(executable),*arguments],cwd=directory,env=environment,
-                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    process=subprocess.Popen([str(executable),*arguments],cwd=directory,env={**environment,'PYTHONIOENCODING':'utf-8'},
+                             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
     lines=[];port_holder=[port]
     def consume():
         for line in process.stdout:
@@ -86,7 +86,7 @@ def verify_known_image_execution(runtime,job,package_sha,image_sha,device,build_
 
 def validate(directory, *, package=None, image=None, device='cpu'):
     directory=Path(directory).resolve()
-    release=json.loads((directory/'backend-release.json').read_text())
+    release=json.loads((directory/'backend-release.json').read_text(encoding='utf-8'))
     inventory=release['inventory'];executable=directory/release['executable']
     if platform.system()!=inventory['platform'] or platform.machine()!=inventory['architecture']:
         raise ValueError('requires_target: execute acceptance on the recorded operating system and architecture')
@@ -105,8 +105,8 @@ def validate(directory, *, package=None, image=None, device='cpu'):
         env=dict(os.environ,HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',PYTHONDONTWRITEBYTECODE='1',
                  VISION_AI_STUDIO_API_TOKEN=secrets.token_hex(32),VISION_INSPECTION_TOKEN=secrets.token_hex(32),
                  VISION_AI_STUDIO_USER_DATA_DIR=str(state/'user'),YOLO_CONFIG_DIR=str(state/'yolo'))
-        check=subprocess.run([str(executable),'--backend-diagnostics'],cwd=state,env=env,
-                             capture_output=True,text=True,timeout=120)
+        check=subprocess.run([str(executable),'--backend-diagnostics'],cwd=state,env={**env,'PYTHONIOENCODING':'utf-8'},
+                             capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=120)
         diagnostic=next((json.loads(line) for line in reversed(check.stdout.splitlines()) if line.startswith('{')),None)
         if check.returncode or not diagnostic or not diagnostic.get('frozen') or diagnostic.get('status')!='ready':
             raise RuntimeError('Frozen dependency diagnostics failed: '+(check.stderr+check.stdout)[-3000:])
@@ -163,7 +163,7 @@ def main():
     except Exception as exc:
         report={'schema_version':1,'status':'failed','platform':platform.system(),'architecture':platform.machine(),
                 'error':str(exc),'error_type':type(exc).__name__}
-    args.output.write_text(json.dumps(report,indent=2))
+    args.output.write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps({'status':report['status'],'report':str(args.output),'error':report.get('error')}))
     return 0 if report['status']=='passed' else 1
 

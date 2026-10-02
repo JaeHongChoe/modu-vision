@@ -93,8 +93,8 @@ def resolve_family_parent(models_dir, job_id, task, source, dataset, options=Non
             or not all(path.is_file() for path in (checkpoint, metadata_path, receipt_path))):
         raise ValueError('Specialist parent must be a completed candidate in the active project')
     require_completed_checkpoint(checkpoint)
-    metadata = json.loads(metadata_path.read_text())
-    receipt = json.loads(receipt_path.read_text())
+    metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
+    receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
     if receipt.get('job_id') != job_id or receipt.get('task') != task or receipt.get('status') != 'completed':
         raise ValueError('Specialist parent completed receipt identity differs')
     if not receipt.get('source_dataset_path') or Path(receipt['source_dataset_path']).resolve() != Path(source).resolve():

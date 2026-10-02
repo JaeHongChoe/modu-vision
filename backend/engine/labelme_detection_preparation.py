@@ -10,6 +10,7 @@ from typing import Callable, Dict, Optional
 from PIL import Image
 
 from backend.engine.labelme_preparation import prepare_labelme_segmentation
+from backend.engine.source_text import read_source_text
 
 
 def _box(points: object, crop_box: list[int], image_size: int) -> list[float] | None:
@@ -36,7 +37,7 @@ def _box(points: object, crop_box: list[int], image_size: int) -> list[float] | 
 
 
 def _annotations(row: dict, image_size: int) -> tuple[list[tuple[str, list[float]]], bool]:
-    source = json.loads(Path(row["source_json"]).read_text(encoding="utf-8"))
+    source = json.loads(read_source_text(row["source_json"]))
     shapes = source.get("annotations", []) if row["annotation_source"] == "studio" else source.get("shapes", [])
     results: list[tuple[str, list[float]]] = []
     has_normal_marker = any(isinstance(shape, dict) and

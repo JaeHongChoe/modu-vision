@@ -429,7 +429,7 @@ def generate_composited_candidates(checkpoint_path, source_image_path, output_di
         review.update({'generation_mode': 'source_composition', 'source_image_path': str(source), 'source_image_sha256': original_hash,
                       'source_size': [width, height], 'source_snapshot': str(snapshot.resolve()), 'source_snapshot_sha256': _hash(snapshot),
                       'regions': regions, 'candidates': candidates, 'seed': seed, 'quality_status': 'unvalidated'})
-        (output / 'review_manifest.json').write_text(json.dumps(review, ensure_ascii=False, indent=2))
+        (output / 'review_manifest.json').write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding='utf-8')
         return review
     except BaseException:
         shutil.rmtree(output, ignore_errors=True)
@@ -460,7 +460,7 @@ def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path
     review=Path(review_dir).resolve(); source=Path(source_dataset).resolve(); output=Path(output_dir)
     manifest_path=review/'review_manifest.json'
     if manifest_path.is_symlink() or not manifest_path.is_file() or not decisions: raise ValueError('Reviewed candidate manifest and decisions are required')
-    manifest=json.loads(manifest_path.read_text())
+    manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
     validate_composition_source(review, manifest)
     candidates={row['id']:row for row in manifest['candidates']}
     real={split:ClassificationDataset(source,split=split) for split in ('train','val','test')}
@@ -498,10 +498,10 @@ def adopt_reviewed_candidates(review_dir: str | Path, source_dataset: str | Path
             rows.append({'kind':'synthetic_reviewed','image':destination.relative_to(output).as_posix(),'split':'train','label':decision['label'],'candidate_id':row['id'],'source_sha256':row['sha256'],'generator_sha256':manifest['generator_sha256'],'reviewer':decision['reviewer'],'reason':decision['reason'],
                 'source_image_sha256': manifest.get('source_image_sha256'), 'composition_regions': row.get('composition_regions', []), 'generation_seed': manifest.get('seed')})
         audit={'task':'classification','source_dataset_path':str(source),'generator_sha256':manifest['generator_sha256'],'reviewed_at':datetime.now(timezone.utc).isoformat(),'samples':rows,'decisions':decisions}
-        (output/'synthetic_provenance.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2))
+        (output/'synthetic_provenance.json').write_text(json.dumps(audit,ensure_ascii=False,indent=2),encoding='utf-8')
         for decision in decisions:
             row=candidates[decision['candidate_id']];row['status']='synthetic_adopted' if decision['decision']=='adopt' else 'synthetic_rejected';row['review']={**decision,'dataset_path':str(output.resolve()),'reviewed_at':audit['reviewed_at']}
-        temporary=manifest_path.with_name(f'.review-{uuid.uuid4().hex}.tmp');temporary.write_text(json.dumps(manifest,ensure_ascii=False,indent=2));os.replace(temporary,manifest_path)
+        temporary=manifest_path.with_name(f'.review-{uuid.uuid4().hex}.tmp');temporary.write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8');os.replace(temporary,manifest_path)
     except BaseException:
         shutil.rmtree(output,ignore_errors=True);raise
     return {'status':'adopted','dataset_path':str(output.resolve()),'adopted_count':len(selected),'real_image_count':sum(len(ds) for ds in real.values()),'task':'classification'}
@@ -514,7 +514,7 @@ def evaluate_defect_generator(checkpoint: str | Path, dataset_path: str | Path,
     if split not in ('val','test'): raise ValueError('GAN evaluation requires held-out val or test crops')
     root=Path(dataset_path).resolve();manifest=load_defect_gan_manifest(root)
     checkpoint=Path(checkpoint)
-    metadata=json.loads(checkpoint.with_name('model_meta.json').read_text())
+    metadata=json.loads(checkpoint.with_name('model_meta.json').read_text(encoding='utf-8'))
     if metadata.get('source_manifest_sha256')!=_hash(root/MANIFEST_NAME): raise ValueError('GAN evaluation dataset differs from checkpoint')
     rows=[r for r in manifest['samples'] if r['split']==split]
     if not rows: raise ValueError(f'GAN {split} split has no ground-truth crops')

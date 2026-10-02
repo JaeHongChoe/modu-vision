@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import locale
 import csv
 import io
 import errno
@@ -176,7 +177,7 @@ print(json.dumps({
     'cuda_device_count':cuda_device_count,
 }))
 """
-_PROBE_SCRIPT=(Path(__file__).resolve().parents[1]/'engine'/'compute_inventory.py').read_text()+'\n'+_PROBE_SCRIPT
+_PROBE_SCRIPT=(Path(__file__).resolve().parents[1]/'engine'/'compute_inventory.py').read_text(encoding='utf-8')+'\n'+_PROBE_SCRIPT
 
 
 class SSHTransportError(RuntimeError):
@@ -272,7 +273,8 @@ def _stop_transfer(process: subprocess.Popen[str]) -> None:
         else:
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                capture_output=True, text=True, shell=False, timeout=5, check=False,
+                capture_output=True, text=True, encoding=locale.getpreferredencoding(False), errors="replace",
+                shell=False, timeout=5, check=False,
             )
     try:
         process.communicate(timeout=2)
@@ -344,7 +346,7 @@ class SSHTransport:
         command = shlex.join(list(argv))
         return subprocess.run(
             [*self._ssh_base(profile), command],
-            capture_output=True, text=True, shell=False, timeout=timeout, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False, timeout=timeout, check=False,
         )
 
     def _ensure_private_directories(self, profile: ComputeProfile, last_directory: str) -> None:
@@ -535,7 +537,7 @@ class SSHTransport:
             *self._scp_base(profile), str(source), f"{profile.ssh_target}:{remote}"]
         process = subprocess.Popen(
             argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, shell=False, start_new_session=os.name == "posix",
+            text=True, encoding="utf-8", errors="replace", shell=False, start_new_session=os.name == "posix",
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
         )
         deadline = time.monotonic() + 3600
@@ -567,7 +569,7 @@ class SSHTransport:
         result = subprocess.run(
             self._rsync_argv(profile, f'{profile.ssh_target}:{remote}', str(destination))
             if self.supports_resumable_transfer(profile) else [*self._scp_base(profile), f"{profile.ssh_target}:{remote}", str(destination)],
-            capture_output=True, text=True, shell=False, timeout=300, check=False,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", shell=False, timeout=300, check=False,
         )
         # Downloads write at the local receiver. Keep an exhausted local
         # artifact volume distinct from uncertain SSH/worker connectivity.
@@ -645,7 +647,7 @@ class SSHTransport:
             return None
         # The source is embedded so a lost/unfinished code transfer cannot load
         # another installed application's module for a control operation.
-        source = (Path(__file__).with_name('process_control.py')).read_text()
+        source = (Path(__file__).with_name('process_control.py')).read_text(encoding='utf-8')
         try:
             return self.exec(profile, [profile.runtime_value, '-B', '-c', source,
                                       run_dir, pid, action, *parts[1:]], timeout=10)

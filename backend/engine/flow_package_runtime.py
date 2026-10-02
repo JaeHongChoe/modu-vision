@@ -63,7 +63,7 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
         raise ValueError('Flow package contains unlisted runtime code')
     if 'runtime' in manifest:
         from backend.engine.runtime_configuration import runtime_options
-        if 'runtime_config.json' not in seen or runtime_options(json.loads((root/'runtime_config.json').read_text()))!=manifest['runtime']:
+        if 'runtime_config.json' not in seen or runtime_options(json.loads((root/'runtime_config.json').read_text(encoding='utf-8')))!=manifest['runtime']:
             raise ValueError('Runtime configuration differs from the verified manifest')
     pipeline = FlowchartPipeline.model_validate(json.loads((root / "pipeline.json").read_text(encoding="utf-8")))
     ordered_linear_nodes(pipeline)
@@ -88,7 +88,7 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
     if found != expected:
         raise ValueError("Packaged model jobs do not match the saved graph")
     if 'openvino_models.json' in seen:
-        converted=json.loads((root/'openvino_models.json').read_text())
+        converted=json.loads((root/'openvino_models.json').read_text(encoding='utf-8'))
         records=converted.get('models',[]) if isinstance(converted,dict) else []
         if len(records)!=len(models) or {(row.get('job_id'),row.get('task')) for row in records}!=found:
             raise ValueError('OpenVINO model artifacts do not cover the complete saved graph')
@@ -101,7 +101,7 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
         if 'release' in manifest:
             if 'runtime_acceptance.json' not in seen or _sha256(root/'runtime_acceptance.json')!=manifest.get('runtime_acceptance_sha256'):
                 raise ValueError('Approved OpenVINO release requires explicit verified precision acceptance')
-            acceptance=json.loads((root/'runtime_acceptance.json').read_text())
+            acceptance=json.loads((root/'runtime_acceptance.json').read_text(encoding='utf-8'))
             if (acceptance.get('holdout_reviewed') is not True or acceptance.get('models')!=records
                 or acceptance.get('input_receipt')!=converted.get('input_receipt')
                 or acceptance.get('heldout_flow_results_sha256')!=converted.get('heldout_flow_results_sha256')
@@ -117,7 +117,7 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     root=Path(package_dir).expanduser().resolve()
     config=root/'runtime_config.json'
     saved=json.loads(config.read_text(encoding='utf-8')) if config.is_file() else {}
-    manifest=json.loads((root/'manifest.json').read_text())
+    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
     if manifest.get('runtime_acceptance_sha256') and device is not None and device!=saved.get('device'):
         raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
     for key,value in [('device',device),('deadline_ms',deadline_ms),('cpu_threads',cpu_threads)]:
@@ -162,7 +162,7 @@ def _run_isolated(package_dir, image_path, image_id, options):
     root=Path(package_dir).expanduser().resolve()
     # Validate graph and content before executing a packaged Python entry point.
     verify_flow_package(root)
-    manifest=json.loads((root/'manifest.json').read_text())
+    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
     if options['device'].startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
         raise ValueError('OpenVINO requires a verified converted package')
     if manifest.get('runtime_acceptance_sha256') and options['device']!=manifest['runtime']['device']:

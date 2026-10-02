@@ -19,7 +19,7 @@ class ServiceRuntime:
         self.runtime_build=trusted_runtime_identity()
         self.identity=None
         if self.state_file.exists():
-            prior=json.loads(self.state_file.read_text())
+            prior=json.loads(self.state_file.read_text(encoding='utf-8'))
             if self.runtime_root is None: raise ValueError('Recovered runtime requires a managed release root')
             self.apply(prior['package_path'],prior.get('release_policy'),prior['device'],prior['manifest_sha256'],persist=False)
         else:
@@ -34,7 +34,7 @@ class ServiceRuntime:
             if self.runtime_root is None or not package.is_relative_to(self.runtime_root) or policy is None or not policy.is_relative_to(self.runtime_root):
                 raise ValueError('Runtime apply requires a release and policy under the managed root')
         pipeline,checkpoints=verify_flow_package(package)
-        manifest=json.loads((package/'manifest.json').read_text())
+        manifest=json.loads((package/'manifest.json').read_text(encoding='utf-8'))
         if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
             raise ValueError('OpenVINO requires a verified converted package')
         if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
@@ -51,7 +51,7 @@ class ServiceRuntime:
         with self.lock:
             if persist:
                 temporary=self.state_file.with_suffix('.tmp')
-                with temporary.open('w') as writer:
+                with temporary.open('w',encoding='utf-8') as writer:
                     json.dump(identity,writer);writer.flush();os.fsync(writer.fileno())
                 os.replace(temporary,self.state_file)
             self.identity=identity

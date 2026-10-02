@@ -103,7 +103,7 @@ def _get_cpu_brand() -> str:
             if brand:
                 return brand
         elif system == "Linux":
-            with open("/proc/cpuinfo", "r") as f:
+            with open("/proc/cpuinfo", "r", encoding='utf-8') as f:
                 for line in f:
                     if "model name" in line:
                         return line.split(":", 1)[1].strip()

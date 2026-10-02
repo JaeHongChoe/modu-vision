@@ -15,7 +15,7 @@ from pathlib import Path
 def _entry(proc_root: Path, pid: int, *, details: bool = True):
     directory = proc_root / str(pid)
     try:
-        fields = (directory / 'stat').read_text().rsplit(')', 1)[1].split()
+        fields = (directory / 'stat').read_text(encoding='utf-8').rsplit(')', 1)[1].split()
         entry = {'pid': pid, 'state': fields[0], 'group': int(fields[2]),
                  'session': int(fields[3]), 'start_ticks': fields[19]}
         if details:
@@ -29,7 +29,7 @@ def _entry(proc_root: Path, pid: int, *, details: bool = True):
 def owned_members(run_dir: Path, pid: int, proc_root: Path = Path('/proc'), expected_token: str | None = None):
     """Return proven live members, an empty list for exit, None for uncertainty."""
     try:
-        identity = json.loads((run_dir / 'worker_identity.json').read_text())
+        identity = json.loads((run_dir / 'worker_identity.json').read_text(encoding='utf-8'))
         if expected_token is not None and identity['token'] != expected_token:
             return None
         if identity['pid'] != pid or identity['group'] != pid or identity['session'] != pid:

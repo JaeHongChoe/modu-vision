@@ -96,7 +96,7 @@ def load_templates(root):
     result=[]
     for p in Path(root).glob('*.json'):
         try:
-            record=json.loads(p.read_text())
+            record=json.loads(p.read_text(encoding='utf-8'))
             digest=record.pop('sha256')
             if _digest(record)!=digest or record.get('schema_version')!=1: continue
             record['sha256']=digest

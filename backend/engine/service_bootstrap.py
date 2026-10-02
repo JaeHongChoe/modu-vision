@@ -32,7 +32,7 @@ def trusted_runtime_identity():
     if getattr(sys,'frozen',False):
         inventory=Path(getattr(sys,'_MEIPASS',runtime_cwd()))/'backend-build-inventory.json'
         if not inventory.is_file():return {'mode':'frozen','status':'inventory_missing'}
-        value=json.loads(inventory.read_text())
+        value=json.loads(inventory.read_text(encoding='utf-8'))
         return {'mode':'frozen','status':'identified','build_identity_sha256':value['build_identity_sha256'],
                 'inventory_sha256':hashlib.sha256(inventory.read_bytes()).hexdigest()}
     root=runtime_cwd();digest=hashlib.sha256()

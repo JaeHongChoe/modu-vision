@@ -5,7 +5,7 @@ from pathlib import Path
 
 def native_create(package_dir,options_json):
     options=json.loads(options_json or '{}')
-    manifest=json.loads((Path(package_dir)/'manifest.json').read_text())
+    manifest=json.loads((Path(package_dir)/'manifest.json').read_text(encoding='utf-8'))
     if manifest.get('task')=='defect_gan':
         from backend.engine.gan_package_runtime import GeneratorExecutor
         return GeneratorExecutor(package_dir,**options)

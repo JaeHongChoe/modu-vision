@@ -16,7 +16,7 @@ def require_completed_checkpoint(checkpoint):
         journal=directory/name
         if journal.exists():
             if journal.is_symlink():raise ValueError('Model needs a completed training job')
-            record=json.loads(journal.read_text())
+            record=json.loads(journal.read_text(encoding='utf-8'))
             if record.get('status')!='completed':raise ValueError('Model needs a completed training job')
 
 def flow_model_task(node):
@@ -67,7 +67,7 @@ def _verify_historical_source(root, source, payload, metadata):
     if (requested_directory.is_symlink() or (root.parent / 'versions').is_symlink()
             or not directory.is_relative_to(root.parent / 'versions')):
         raise ValueError('Specialized training binding leaves its owning project')
-    manifest = json.loads((directory / 'manifest.json').read_text())
+    manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
     if (manifest.get('id') != binding['dataset_version_id']
             or _manifest_digest(manifest) != binding['manifest_sha256']
             or manifest.get('content_digest') != binding['manifest_sha256']):
@@ -105,7 +105,7 @@ def resolve_specialized_checkpoint(project_models_dir,job_id,task,source_dataset
     if not isinstance(payload,dict) or payload.get('task')!=task or 'model_state_dict' not in payload:
         raise ValueError('Specialized checkpoint task or weights are incompatible')
     metadata_path=directory/'model_meta.json'
-    metadata=json.loads(metadata_path.read_text()) if metadata_path.is_file() and not metadata_path.is_symlink() else payload
+    metadata=json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() and not metadata_path.is_symlink() else payload
     if metadata.get('task')!=task: raise ValueError('Specialized model metadata task differs')
     if metadata.get('checkpoint_sha256') and hashlib.sha256(checkpoint.read_bytes()).hexdigest()!=metadata['checkpoint_sha256']:
         raise ValueError('Specialized checkpoint hash changed')

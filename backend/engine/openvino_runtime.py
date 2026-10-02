@@ -149,7 +149,7 @@ def _compile_properties(core,device,threads):
 class CompiledModel(nn.Module):
     def __init__(self,directory,device,threads):
         super().__init__();self._lock=threading.Lock()
-        metadata=json.loads((directory/'conversion.json').read_text());self.tree=metadata['output_tree']
+        metadata=json.loads((directory/'conversion.json').read_text(encoding='utf-8'));self.tree=metadata['output_tree']
         core=_ov().Core()
         self.compiled=core.compile_model(str(directory/'model.xml'),device,_compile_properties(core,device,threads))
     def forward(self,value):
@@ -166,7 +166,7 @@ class OpenVINOSession:
         from backend.engine.flow_package_runtime import verify_flow_package,_sha256
         verify_flow_package(package);require_openvino_device(device)
         self.root=Path(package);self.device=device;self.threads=threads;self.cache={};self.hooks=[]
-        self.records=json.loads((self.root/'openvino_models.json').read_text())['models']
+        self.records=json.loads((self.root/'openvino_models.json').read_text(encoding='utf-8'))['models']
         self.records={str((self.root/row['checkpoint']).resolve()):row for row in self.records}
         for checkpoint,row in self.records.items():
             if _sha256(Path(checkpoint))!=row['checkpoint_sha256']:raise ValueError('OpenVINO source checkpoint changed')
@@ -297,12 +297,12 @@ def _optimize_flow_package(package_dir,*,output_dir,precision='fp32',calibration
     if precision=='int8' and {_sha256(p) for p in calibration_images}&{_sha256(p) for p in validation_images}:raise ValueError('INT8 calibration and validation images must be distinct')
     input_hashes={str(p):_sha256(p) for p in [*calibration_images,*validation_images]}
     receipt_sha=_sha256(source/'manifest.json');destination.parent.mkdir(parents=True,exist_ok=True)
-    source_manifest=json.loads((source/'manifest.json').read_text())
+    source_manifest=json.loads((source/'manifest.json').read_text(encoding='utf-8'))
     destination.mkdir()
     for row in [*source_manifest['files'],{'path':'manifest.json'}]:
         target=destination/row['path'];target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/row['path'],target,follow_symlinks=False)
     try:
-        manifest=json.loads((destination/'manifest.json').read_text());models=[]
+        manifest=json.loads((destination/'manifest.json').read_text(encoding='utf-8'));models=[]
         for row in manifest['models']:
             checkpoint=destination/row['checkpoint'];model,payload,role,size,channels=_reconstruct(checkpoint,row['task'])
             calibration=[_image_tensor(p,size,channels,row['task']) for p in calibration_images]
@@ -318,14 +318,14 @@ def _optimize_flow_package(package_dir,*,output_dir,precision='fp32',calibration
         info={'schema_version':1,'source_manifest_sha256':receipt_sha,'models':models,'quality_approved':False,
               'calibration_sha256':[_sha256(p) for p in calibration_images],'validation_sha256':[_sha256(p) for p in validation_images],'input_receipt':input_receipt}
         (destination/'openvino_models.json').write_text(json.dumps(info,indent=2)+'\n',encoding='utf-8')
-        config=json.loads((destination/'runtime_config.json').read_text());config.update({'device':'openvino:'+device,'cpu_threads':cpu_threads})
+        config=json.loads((destination/'runtime_config.json').read_text(encoding='utf-8'));config.update({'device':'openvino:'+device,'cpu_threads':cpu_threads})
         (destination/'runtime_config.json').write_text(json.dumps(config,indent=2)+'\n',encoding='utf-8');manifest['runtime']=config
-        requirements=(destination/'requirements.txt').read_text();(destination/'requirements.txt').write_text(requirements+'openvino>=2026.0\n')
+        requirements=(destination/'requirements.txt').read_text(encoding='utf-8');(destination/'requirements.txt').write_text(requirements+'openvino>=2026.0\n',encoding='utf-8')
         if 'deployment' in manifest:
             from backend.engine.edge_runtime import create_edge_profile
             target=manifest['deployment']['target']
-            manifest['deployment']=create_edge_profile(target['os'],target['architecture'],(destination/'requirements.txt').read_text(),device=config['device'])
-            (destination/'edge_deployment.json').write_text(json.dumps(manifest['deployment'],indent=2)+'\n')
+            manifest['deployment']=create_edge_profile(target['os'],target['architecture'],(destination/'requirements.txt').read_text(encoding='utf-8'),device=config['device'])
+            (destination/'edge_deployment.json').write_text(json.dumps(manifest['deployment'],indent=2)+'\n',encoding='utf-8')
         # A converted candidate must be approved separately; never inherit release approval.
         manifest.pop('release',None)
         manifest.pop('runtime_acceptance_sha256',None)

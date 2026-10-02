@@ -1875,8 +1875,8 @@ def _job_device_name(record):
     if record.status!='completed':return (record.launch_spec or {}).get('device')
     try:
         output=Path(record.output_dir)
-        receipt=json.loads((output/'job_receipt.json').read_text())
-        metadata=json.loads((output/'model_meta.json').read_text())
+        receipt=json.loads((output/'job_receipt.json').read_text(encoding='utf-8'))
+        metadata=json.loads((output/'model_meta.json').read_text(encoding='utf-8'))
         value=receipt.get('device') or metadata.get('device')
         return value if isinstance(value,str) and re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?',value) else None
     except (ValueError,OSError,TypeError):return None
@@ -1949,7 +1949,7 @@ def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, 
         path = Path(record.output_dir) / name if record.output_dir else None
         if path is not None and path.is_file():
             try:
-                loaded = json.loads(path.read_text())
+                loaded = json.loads(path.read_text(encoding='utf-8'))
             except (OSError, ValueError):
                 continue
             journal = loaded if isinstance(loaded, dict) else {}

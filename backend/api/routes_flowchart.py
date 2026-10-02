@@ -219,13 +219,13 @@ def _draft_active_version(project: dict, context: dict, checksum: str) -> Option
     if not pointer.is_file():
         return None
     try:
-        active = json.loads(pointer.read_text())
+        active = json.loads(pointer.read_text(encoding='utf-8'))
         version_file = _version_dir(Path(project["project_dir"])) / f"{active['version_id']}.json"
         if (active.get("project_id") != context["project_id"]
                 or active.get("source_dataset_path") != context["source_dataset_path"]
                 or active.get("labelset_id", "default") != context["labelset_id"]):
             return None
-        version = json.loads(version_file.read_text())
+        version = json.loads(version_file.read_text(encoding='utf-8'))
         pipeline = FlowchartPipeline.model_validate(version["pipeline"])
         return active["version_id"] if pipeline_sha256(pipeline) == checksum else None
     except (OSError, ValueError, KeyError, TypeError):
@@ -261,7 +261,7 @@ def get_flow_draft(request: Request) -> dict:
         if not file.is_file():
             raise HTTPException(status_code=404, detail="No draft for this project, source and labelset")
         try:
-            record = json.loads(file.read_text())
+            record = json.loads(file.read_text(encoding='utf-8'))
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
             checksum = pipeline_sha256(pipeline)
             if record.get("context") != context or record.get("draft_sha256") != checksum:
@@ -269,7 +269,7 @@ def get_flow_draft(request: Request) -> dict:
             active_file = _active_flow_file(Path(project["project_dir"]))
             # A later explicit save/activation supersedes an earlier draft.
             if active_file.is_file():
-                active = json.loads(active_file.read_text())
+                active = json.loads(active_file.read_text(encoding='utf-8'))
                 if (active.get("activated_at_ns", 0) > record.get("saved_at_ns", 0)
                         and active.get("source_dataset_path") == context["source_dataset_path"]
                         and active.get("labelset_id", "default") == context["labelset_id"]

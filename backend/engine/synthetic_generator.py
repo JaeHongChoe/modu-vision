@@ -735,9 +735,9 @@ def generate_synthetic_dataset(
     # Save COCO detection JSON annotations
     if gen_detection:
         det_anno_dir = out_path / "detection"
-        with open(det_anno_dir / "annotations_train.json", "w") as f:
+        with open(det_anno_dir / "annotations_train.json", "w", encoding='utf-8') as f:
             json.dump(coco_train, f, indent=2)
-        with open(det_anno_dir / "annotations_val.json", "w") as f:
+        with open(det_anno_dir / "annotations_val.json", "w", encoding='utf-8') as f:
             json.dump(coco_val, f, indent=2)
 
     # Save segmentation class map
@@ -745,7 +745,7 @@ def generate_synthetic_dataset(
         class_map = {"0": "background"}
         for cat in all_categories:
             class_map[str(cat["id"])] = cat["name"]
-        with open(out_path / "segmentation" / "class_map.json", "w") as f:
+        with open(out_path / "segmentation" / "class_map.json", "w", encoding='utf-8') as f:
             json.dump(class_map, f, indent=2)
 
     # Dataset summaries and master manifest
@@ -761,10 +761,10 @@ def generate_synthetic_dataset(
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
 
-    with open(out_path / "dataset_summary.json", "w") as f:
+    with open(out_path / "dataset_summary.json", "w", encoding='utf-8') as f:
         json.dump(summary, f, indent=2)
 
-    with open(out_path / "manifest.json", "w") as f:
+    with open(out_path / "manifest.json", "w", encoding='utf-8') as f:
         json.dump({
             "dataset_name": "VisionAI_Synthetic_Dataset",
             "summary": summary,

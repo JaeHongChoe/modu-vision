@@ -64,9 +64,9 @@ def prepare_family_dataset(task, source, output, rows):
         else:
             from backend.engine.rotated_detection import write_rotated_manifest
             write_rotated_manifest(output,rows)
-        path=output/MANIFESTS[task]; raw=json.loads(path.read_text())
+        path=output/MANIFESTS[task]; raw=json.loads(path.read_text(encoding='utf-8'))
         raw.update(source_dataset_path=str(source),source_map=mapping)
-        path.write_text(json.dumps(raw,ensure_ascii=False,indent=2))
+        path.write_text(json.dumps(raw,ensure_ascii=False,indent=2),encoding='utf-8')
         return load_family_manifest(task,output)
     except BaseException:
         shutil.rmtree(output,ignore_errors=True); raise

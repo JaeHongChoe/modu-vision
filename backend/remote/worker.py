@@ -903,7 +903,7 @@ def _verified_flowchart_models(run_dir: Path, spec: dict[str, Any], pipeline: An
                         or digest!=reference.get(name+'_sha256') or total_size>2*1024*1024*1024):
                     raise SnapshotValidationError('Portable model asset hash, size or transfer bound differs')
                 assets[name]=path
-            checkpoint=assets['checkpoint'];metadata=json.loads(assets['metadata'].read_text())
+            checkpoint=assets['checkpoint'];metadata=json.loads(assets['metadata'].read_text(encoding='utf-8'))
             import torch
             payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
             if (not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(payload.get('model_state_dict'),dict)

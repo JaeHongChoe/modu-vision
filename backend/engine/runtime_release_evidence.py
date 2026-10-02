@@ -10,7 +10,7 @@ from backend.engine.flow_package_runtime import verify_flow_package
 def verify_release_evidence(package,device,*,expected_receipt_sha256=None):
     root=Path(package)
     verify_flow_package(root)
-    manifest=json.loads((root/'manifest.json').read_text())
+    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
     if manifest.get('runtime_acceptance_sha256'):
         path=root/'runtime_acceptance.json';raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest()
         if digest!=manifest['runtime_acceptance_sha256'] or (expected_receipt_sha256 is not None and digest!=expected_receipt_sha256):raise ValueError('Measured precision receipt checksum differs from trusted release')
@@ -22,7 +22,7 @@ def verify_release_evidence(package,device,*,expected_receipt_sha256=None):
     raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest()
     if expected_receipt_sha256 is not None and digest!=expected_receipt_sha256:
         raise ValueError('Release parity receipt checksum differs from approved policy')
-    receipt=json.loads(raw);manifest=json.loads((root/'manifest.json').read_text())
+    receipt=json.loads(raw);manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
     if receipt.get('schema_version')!=1 or receipt.get('contract')!='flow_parity_v1':raise ValueError('Unknown release parity receipt contract')
     if receipt.get('status')!='passed' or receipt.get('scope')!='cohort' or receipt.get('limitation'):
         raise ValueError('Release requires passed cohort parity; single-image compatibility is limited')
@@ -119,9 +119,9 @@ def verify_measured_precision_evidence(package,device,*,acceptance=None,check_so
     import math
     from backend.engine.flow_package_runtime import compare_flow_results
     root=Path(package);verify_flow_package(root)
-    manifest=json.loads((root/'manifest.json').read_text());files={row['path']:row['sha256'] for row in manifest['files']}
+    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'));files={row['path']:row['sha256'] for row in manifest['files']}
     if device!='openvino:CPU' or manifest['runtime']['device']!=device:raise ValueError('Measured precision cohort requires its exact accepted OpenVINO CPU runtime device')
-    info=json.loads((root/'openvino_models.json').read_text());receipt=info.get('input_receipt')
+    info=json.loads((root/'openvino_models.json').read_text(encoding='utf-8'));receipt=info.get('input_receipt')
     cohort=precision_cohort_inputs(receipt,check_source=check_source)
     _verify_precision_source_identity(receipt,info.get('source_manifest_sha256'))
     if check_source:
@@ -129,14 +129,14 @@ def verify_measured_precision_evidence(package,device,*,acceptance=None,check_so
         if _fingerprint(Path(receipt['source_dataset_path']))!=receipt['source_fingerprint']:raise ValueError('Precision source/data/evaluation identity changed during approval')
     if info.get('calibration_sha256')!=[row['sha256'] for row in receipt['calibration_images']] or info.get('validation_sha256')!=[row['sha256'] for row in receipt['validation_images']]:raise ValueError('Precision original input hash catalog differs')
     if _digest(root/'heldout_flow_results.json')!=info.get('heldout_flow_results_sha256'):raise ValueError('Precision heldout output catalog changed')
-    heldout=json.loads((root/'heldout_flow_results.json').read_text())
+    heldout=json.loads((root/'heldout_flow_results.json').read_text(encoding='utf-8'))
     if len(heldout)!=cohort['image_count']:raise ValueError('Precision full-flow heldout evidence is incomplete')
     disagreement=[]
     for index,(row,image) in enumerate(zip(heldout,cohort['images'])):
         relative=f'heldout/heldout_{index:04d}.json'
         if row.get('image_sha256')!=image['sha256'] or row.get('result_path')!=relative or files.get(relative)!=row.get('result_sha256') or _digest(root/relative)!=row['result_sha256']:
             raise ValueError('Precision full-flow output does not match the exact original image/artifact')
-        actual=json.loads((root/relative).read_text())
+        actual=json.loads((root/relative).read_text(encoding='utf-8'))
         if actual.get('image_sha256')!=image['sha256']:raise ValueError('Precision full-flow input identity differs')
         for side in ('reference','candidate'):
             result=actual.get(side)
@@ -154,7 +154,7 @@ def verify_measured_precision_evidence(package,device,*,acceptance=None,check_so
                 or any(row.get('split')!='train' for row in receipt['calibration_images'])
                 or {row['sha256'] for row in receipt['calibration_images']} & {row['sha256'] for row in cohort['images']}):
             raise ValueError('INT8 measured acceptance requires separate saved training calibration and heldout inputs')
-        conversion=json.loads((root/model['directory']/'conversion.json').read_text())
+        conversion=json.loads((root/model['directory']/'conversion.json').read_text(encoding='utf-8'))
         if model.get('device')!='CPU' or model.get('checkpoint_sha256')!=checkpoints.get(model['job_id']) or any(model.get(key)!=value for key,value in conversion.items()):raise ValueError('Precision model/device/conversion identity differs')
         metrics=model.get('metrics',{})
         for metric in ('max_absolute_error','mean_absolute_error'):

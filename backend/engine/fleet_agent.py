@@ -64,12 +64,12 @@ class FieldAgent:
                 if not self.path.exists():
                     with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
                     self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
-        self.config=json.loads(self.path.read_text())
+        self.config=json.loads(self.path.read_text(encoding='utf-8'))
     def save(self,value):
         atomic_private_json(self.path,value)
     def owned(self):
         if self.path.is_symlink():raise ValueError('Agent service config is linked')
-        self.config=json.loads(self.path.read_text())
+        self.config=json.loads(self.path.read_text(encoding='utf-8'))
         return owned_inspection_process(self.config,self.root/'state')
     def client(self):return httpx.Client(base_url=f'http://127.0.0.1:{self.config["port"]}',headers={'X-Vision-Token':self.config['token']},timeout=30)
     def runtime(self):
@@ -92,7 +92,7 @@ class FieldAgent:
             if policy_path.is_symlink():raise ValueError('Release policy is linked')
             temporary=self.releases/('.check-'+secrets.token_hex(12)+'.policy.json')
             try:
-                temporary.write_text(json.dumps(policy));_verify_release_policy(staging,checkpoints,temporary,device=policy['device'])
+                temporary.write_text(json.dumps(policy),encoding='utf-8');_verify_release_policy(staging,checkpoints,temporary,device=policy['device'])
             finally:temporary.unlink(missing_ok=True)
             destination=self.releases/expected
             if destination.exists():
@@ -103,7 +103,7 @@ class FieldAgent:
                 verify_release_evidence(destination,policy['device'],expected_receipt_sha256=(policy.get('parity_receipt_sha256') or policy.get('runtime_acceptance_sha256')))
                 shutil.rmtree(staging)
             else:staging.rename(destination)
-            if policy_path.exists() and json.loads(policy_path.read_text())!=policy:raise ValueError('Existing release policy differs')
+            if policy_path.exists() and json.loads(policy_path.read_text(encoding='utf-8'))!=policy:raise ValueError('Existing release policy differs')
             if not policy_path.exists():atomic_private_json(policy_path,policy)
             return {'manifest_sha256':expected,'status':'staged','model_count':len(checkpoints),'pipeline_id':pipeline.id}
         finally:

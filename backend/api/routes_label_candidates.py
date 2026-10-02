@@ -79,7 +79,7 @@ class CandidateBatchRequest(CandidateRequest):
 
 def _setup(project):
     path=Path(project['project_dir'])/'semantic_labeling.json'
-    try: return json.loads(path.read_text()) if path.is_file() else {}
+    try: return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
     except (OSError,ValueError): raise HTTPException(422,detail='Invalid semantic labeling configuration')
 
 def _can_configure_vlm(request):

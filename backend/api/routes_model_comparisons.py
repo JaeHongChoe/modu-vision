@@ -271,7 +271,7 @@ def _owned_patch_test_images(project, source, models, maximum):
             raise HTTPException(409, 'Patch comparison inputs belong to another project')
         try:
             manifest = load_patch_manifest(dataset)
-            raw = json.loads((dataset / 'patches.json').read_text())
+            raw = json.loads((dataset / 'patches.json').read_text(encoding='utf-8'))
             if Path(manifest.provenance.get('source_dataset_path', '')).resolve() != source:
                 raise ValueError('Patch model source differs')
             copied, total = _patch_test_images(dataset, 2**31)

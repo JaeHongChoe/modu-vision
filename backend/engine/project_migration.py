@@ -71,7 +71,7 @@ def apply_migration(project_dir,expected_manifest_sha256=None):
         if storage.is_dir():
             for record in storage.glob('*/receipt.json'):
                 if record.is_symlink() or record.parent.is_symlink():raise MigrationError('Migration records cannot be linked')
-                receipt=json.loads(record.read_text())
+                receipt=json.loads(record.read_text(encoding='utf-8'))
                 if receipt.get('status')!='prepared':continue
                 backup=record.parent/'project.original.json'
                 if backup.is_symlink() or not backup.is_file() or hashlib.sha256(backup.read_bytes()).hexdigest()!=receipt.get('original_sha256'):

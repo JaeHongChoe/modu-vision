@@ -23,7 +23,7 @@ MANIFEST_NAME = 'rotation.json'
 def _atomic(path, value):
     path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False))
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False), encoding='utf-8')
     temporary.replace(path)
 
 
@@ -94,7 +94,7 @@ def write_rotation_manifest(root, rows, *, source_dataset_path=None):
 def load_rotation_manifest(root):
     root = Path(root).expanduser().resolve(); path = root / MANIFEST_NAME
     if path.is_symlink() or not path.is_file(): raise ValueError('Rotation needs an explicit rotation.json angle manifest')
-    payload = json.loads(path.read_text())
+    payload = json.loads(path.read_text(encoding='utf-8'))
     if payload.get('version') != 1: raise ValueError('Unsupported Rotation manifest version')
     manifest = _manifest(root, payload.get('samples'), require_hash=True)[0]
     if payload.get('source_dataset_path'):
@@ -234,7 +234,7 @@ def load_rotation_model(checkpoint, device='cpu'):
     if payload.get('task') != 'rotation' or payload.get('architecture') != ARCHITECTURE or payload.get('version') != 1 or payload.get('width') not in (8, 16, 32) or type(payload.get('image_size')) is not int or not 16 <= payload['image_size'] <= 512:
         raise ValueError('Invalid Rotation checkpoint architecture or geometry')
     metadata = path.with_name('model_meta.json')
-    if metadata.exists() and json.loads(metadata.read_text()).get('checkpoint_sha256') != _hash(path):
+    if metadata.exists() and json.loads(metadata.read_text(encoding='utf-8')).get('checkpoint_sha256') != _hash(path):
         raise ValueError('Rotation checkpoint checksum differs from metadata')
     model = RotationNet(payload['width']); model.load_state_dict(payload['model_state_dict'], strict=True)
     return model.to(resolve_runtime_device(device)).eval(), payload
@@ -284,15 +284,15 @@ def export_rotation_package(checkpoint, output_dir):
     _atomic(output / 'config.json', {'task': 'rotation', 'architecture': ARCHITECTURE, 'image_size': payload['image_size'], 'checkpoint_sha256': _hash(checkpoint)})
     target = output / 'backend' / 'engine'; target.mkdir(parents=True)
     shutil.copyfile(__file__, target / 'rotation.py')
-    for path in (output / 'backend' / '__init__.py', target / '__init__.py'): path.write_text('')
-    (output / 'requirements.txt').write_text('numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\n')
-    (output / 'infer.py').write_text("import argparse, json\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom backend.engine.rotation import run_rotation_package\np=argparse.ArgumentParser();p.add_argument('--image',required=True);p.add_argument('--output',required=True);a=p.parse_args()\nr=run_rotation_package(Path(__file__).parent,np.asarray(Image.open(a.image).convert('RGB')))\nImage.fromarray(r.pop('aligned_image')).save(a.output)\nr['transform']=r['transform'].tolist();print(json.dumps(r))\n")
+    for path in (output / 'backend' / '__init__.py', target / '__init__.py'): path.write_text('',encoding='utf-8')
+    (output / 'requirements.txt').write_text('numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\n',encoding='utf-8')
+    (output / 'infer.py').write_text("import argparse, json\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom backend.engine.rotation import run_rotation_package\np=argparse.ArgumentParser();p.add_argument('--image',required=True);p.add_argument('--output',required=True);a=p.parse_args()\nr=run_rotation_package(Path(__file__).parent,np.asarray(Image.open(a.image).convert('RGB')))\nImage.fromarray(r.pop('aligned_image')).save(a.output)\nr['transform']=r['transform'].tolist();print(json.dumps(r))\n", encoding='utf-8')
     _atomic(output / 'manifest.json', {'version': 1, 'files': [{'path': p.relative_to(output).as_posix(), 'sha256': _hash(p)} for p in sorted(output.rglob('*')) if p.is_file()]})
     return output
 
 
 def run_rotation_package(package_dir, rgb):
-    root = Path(package_dir).resolve(); manifest = json.loads((root / 'manifest.json').read_text()); seen = set()
+    root = Path(package_dir).resolve(); manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8')); seen = set()
     if manifest.get('version') != 1: raise ValueError('Invalid Rotation package version')
     for row in manifest['files']:
         relative = Path(row['path']); path = root / relative
@@ -300,5 +300,5 @@ def run_rotation_package(package_dir, rgb):
             raise ValueError('Rotation package checksum or path differs')
         seen.add(row['path'])
     if not {'model.ts', 'config.json'}.issubset(seen): raise ValueError('Rotation package is incomplete')
-    config = json.loads((root / 'config.json').read_text()); model = torch.jit.load(str(root / 'model.ts'), map_location='cpu').eval()
+    config = json.loads((root / 'config.json').read_text(encoding='utf-8')); model = torch.jit.load(str(root / 'model.ts'), map_location='cpu').eval()
     return {**_predict(model, config['image_size'], rgb, 'cpu'), 'checkpoint_sha256': config['checkpoint_sha256']}

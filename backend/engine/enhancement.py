@@ -232,7 +232,7 @@ def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epoch
         raise ValueError("Enhancement output must be a new candidate directory")
     receipt=output/'job_receipt.json'
     if receipt.exists():
-        reserved=json.loads(receipt.read_text())
+        reserved=json.loads(receipt.read_text(encoding='utf-8'))
         if receipt.is_symlink() or reserved.get('task')!='enhancement' or reserved.get('job_id')!=output.name or reserved.get('status') not in ('queued','running'):
             raise ValueError('Enhancement candidate reservation differs from this run')
     output.mkdir(parents=True, exist_ok=True)
@@ -341,7 +341,7 @@ def evaluate_enhancement(checkpoint_path: str | Path, dataset_path: str | Path, 
         candidate_paths = [payload.get("dataset_path")]
         metadata_file = Path(checkpoint_path).parent / "model_meta.json"
         if metadata_file.is_file():
-            metadata = json.loads(metadata_file.read_text())
+            metadata = json.loads(metadata_file.read_text(encoding='utf-8'))
             if metadata.get("provenance", {}).get("dataset_sha256") == training_sha:
                 candidate_paths.append(metadata.get("dataset_path"))
         for candidate in candidate_paths:

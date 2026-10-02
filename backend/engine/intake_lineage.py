@@ -16,7 +16,7 @@ from backend.engine.image_truth import image_binding
 def project_for_source(models_dir, source):
     root=Path(models_dir).resolve().parent;path=root/'project.json'
     if path.is_symlink() or not path.is_file():raise ValueError('Intake ancestor source reuse requires a saved owning project')
-    project=json.loads(path.read_text())
+    project=json.loads(path.read_text(encoding='utf-8'))
     if (Path(project.get('project_dir','')).resolve()!=root or Path(project.get('models_dir','')).resolve()!=root/'models'
             or Path(project.get('source_dataset_dir','')).resolve()!=Path(source).resolve()):
         raise ValueError('Intake ancestor source is not the active owning project source')
@@ -114,7 +114,7 @@ def _bound_model(project, checkpoint, task):
     receipt=completed_job_receipt(job)
     metadata_path=intake._owned(project,job/'model_meta.json')
     if not receipt or not metadata_path.is_file():raise ValueError('Intake ancestor completed model receipt/metadata missing')
-    metadata=json.loads(metadata_path.read_text())
+    metadata=json.loads(metadata_path.read_text(encoding='utf-8'))
     try:payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
     except Exception as exc:raise ValueError('Intake ancestor checkpoint is unreadable') from exc
     checksum=dm._hash(checkpoint);classes=metadata.get('classes') or metadata.get('class_names')

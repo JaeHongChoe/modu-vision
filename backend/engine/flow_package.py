@@ -515,8 +515,8 @@ def _run_packaged_image(package: Path, item: Mapping[str, Any], device: str, tim
         output = Path(temporary) / "result.json"
         command, _ = _packaged_runner_command(package, item, output, device)
         completed = subprocess.run(
-            command, cwd=temporary, env={**os.environ, "PYTHONPATH": ""},
-            capture_output=True, text=True, timeout=timeout, check=False,
+            command, cwd=temporary, env={**os.environ, "PYTHONPATH": "", "PYTHONIOENCODING": "utf-8"},
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, check=False,
         )
         if completed.returncode != 0 or not output.is_file():
             raise ValueError(f"Packaged flow execution failed: {completed.stderr.strip()[-1000:]}")

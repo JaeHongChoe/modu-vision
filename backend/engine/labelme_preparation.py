@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 
 from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.industrial_adapters import find_matching_image, is_valid_labelme_file
+from backend.engine.source_text import read_source_text
 
 
 class LabelMePreparationCancelled(RuntimeError):
@@ -74,7 +75,7 @@ def prepare_labelme_segmentation(
     used_images = set()
     for index, (image_path, annotation_path, is_studio) in enumerate(pairs):
         check_cancelled()
-        data = json.loads(annotation_path.read_text(encoding="utf-8"))
+        data = json.loads(read_source_text(annotation_path))
         polygons = []
         studio_mask = None
         is_normal = False

@@ -326,7 +326,7 @@ def verify_parent_status(parent: WarmStartParent) -> None:
     receipt_path = directory / 'job_receipt.json'
     if receipt_path.is_symlink() or not receipt_path.is_file():
         raise ValueError('Warm-start parent needs its completed receipt before training')
-    receipt = json.loads(receipt_path.read_text())
+    receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
     if (not isinstance(receipt, dict) or receipt.get('status') != 'completed'
             or receipt.get('job_id') != parent.job_id or receipt.get('task') != parent.task):
         raise ValueError('Warm-start parent must still be a completed job before training')

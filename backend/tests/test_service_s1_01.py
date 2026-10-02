@@ -178,7 +178,7 @@ global.fetch = async (url, options) => {
  assert.deepEqual(JSON.parse(calls[0].context), {workspace_id:'workspace', project_id:'first', actor_id:'actor', mode:'local'});
 })().catch(error => {console.error(error); process.exitCode=1;});
 '''
-    result = subprocess.run(['node', '-e', script], cwd=root, text=True, capture_output=True)
+    result = subprocess.run(['node', '-e', script], cwd=root, text=True, encoding='utf-8', errors='replace', capture_output=True)
     assert result.returncode == 0, result.stdout + result.stderr
 
 
@@ -460,7 +460,7 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
  telemetry.disconnect();ports[2](8123);await cancelled;await settle();assert.equal(sockets.length,4);
 })().catch(error=>{console.error(error);telemetry.disconnect();process.exitCode=1;});
 '''
-    result = subprocess.run(['node','-e',script],cwd=root,capture_output=True,text=True,timeout=20)
+    result = subprocess.run(['node','-e',script],cwd=root,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=20)
     assert result.returncode == 0,result.stdout + result.stderr
 
 
@@ -544,5 +544,5 @@ global.fetch=async(url,options)=>{const captured=JSON.parse(new Headers(options.
  assert.throws(()=>client.api.project.acceptContext(transportStale,()=>{visible='fifth';}));assert.equal(visible,'second');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 '''
-    result = subprocess.run(['node','-e',script],cwd=root,capture_output=True,text=True,timeout=20)
+    result = subprocess.run(['node','-e',script],cwd=root,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=20)
     assert result.returncode == 0,result.stdout + result.stderr

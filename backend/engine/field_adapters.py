@@ -133,7 +133,7 @@ class FieldAdapterConfig(BaseModel):
 
 
 def load_adapter_config(path:Path|None):
-    config=FieldAdapterConfig.model_validate_json(path.read_text()) if path else FieldAdapterConfig()
+    config=FieldAdapterConfig.model_validate_json(path.read_text(encoding='utf-8')) if path else FieldAdapterConfig()
     if config.modbus:ModbusTCPAdapter(config.modbus)
     if config.mes:HTTPMESAdapter(config.mes)
     return config

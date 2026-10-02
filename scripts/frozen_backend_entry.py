@@ -58,7 +58,7 @@ def run_internal_module(argv):
 def diagnostics():
     root = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
     inventory_path = root / 'backend-build-inventory.json'
-    inventory = json.loads(inventory_path.read_text())
+    inventory = json.loads(inventory_path.read_text(encoding='utf-8'))
     dependencies = []
     for row in inventory['dependencies']:
         result = dict(row)

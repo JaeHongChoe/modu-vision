@@ -11,7 +11,7 @@ from fastapi import HTTPException
 def _read(path):
     if path.is_symlink() or not path.is_file():return None
     try:
-        value=json.loads(path.read_text());return value if isinstance(value,dict) else None
+        value=json.loads(path.read_text(encoding='utf-8'));return value if isinstance(value,dict) else None
     except (OSError,ValueError):return None
 
 

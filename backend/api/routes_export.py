@@ -487,7 +487,7 @@ def _optimization_approval_context(project,job_id):
     candidate=Path(record['result']['package_path']);_,checkpoints=verify_flow_package(candidate)
     if record['result'].get('candidate_manifest_sha256')!=_sha256(candidate/'manifest.json'):raise ValueError('Completed measured optimization candidate has changed')
     if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows'):raise ValueError('Optimization candidate leaves its owning project')
-    info=json.loads((candidate/'openvino_models.json').read_text());receipt=info['input_receipt']
+    info=json.loads((candidate/'openvino_models.json').read_text(encoding='utf-8'));receipt=info['input_receipt']
     source=Path(project['source_dataset_dir']).resolve()
     if receipt['source_dataset_path']!=str(source):raise ValueError('Optimization source differs from this active project')
     current=_optimization_input_receipt(project,source,[str(source/row['relative_path']) for row in receipt['calibration_images']],[str(source/row['relative_path']) for row in receipt['validation_images']])
@@ -524,11 +524,11 @@ def precision_heldout_result(job_id:str,index:int,request:Request):
         if record['status']!='completed' or not record.get('result'):raise ValueError('Conversion has no completed heldout evidence')
         candidate=Path(record['result']['package_path']);verify_flow_package(candidate)
         if not candidate.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports/flows') or _sha256(candidate/'manifest.json')!=record['result'].get('candidate_manifest_sha256'):raise ValueError('Completed optimization candidate has changed')
-        rows=json.loads((candidate/'heldout_flow_results.json').read_text())
+        rows=json.loads((candidate/'heldout_flow_results.json').read_text(encoding='utf-8'))
         if index<0 or index>=len(rows):raise ValueError('Heldout image index is out of range')
         relative=rows[index]['result_path'];path=candidate/relative
         if relative!=f'heldout/heldout_{index:04d}.json' or _sha256(path)!=rows[index]['result_sha256']:raise ValueError('Heldout output hash or path changed')
-        return {'index':index,'total':len(rows),**json.loads(path.read_text())}
+        return {'index':index,'total':len(rows),**json.loads(path.read_text(encoding='utf-8'))}
     except (ValueError,OSError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
 
 

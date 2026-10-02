@@ -11,7 +11,7 @@ def unused_image_paths(source=None):
         return set()
     configuration=project/'project.json'
     if configuration.is_file():
-        configured=json.loads(configuration.read_text()).get('source_dataset_dir')
+        configured=json.loads(configuration.read_text(encoding='utf-8')).get('source_dataset_dir')
         if configured:
             source=Path(configured)
     if source is None:
@@ -22,7 +22,7 @@ def unused_image_paths(source=None):
         raise ValueError('Usage ledger cannot be a symbolic link')
     if not ledger.is_file():
         return set()
-    rows=json.loads(ledger.read_text()).get('images',{})
+    rows=json.loads(ledger.read_text(encoding='utf-8')).get('images',{})
     if not isinstance(rows,dict):
         raise ValueError('Invalid image usage ledger')
     excluded=set()
@@ -37,7 +37,7 @@ def unused_image_paths(source=None):
     # saved split readers and remote preparation instead of a UI-only warning.
     from backend.engine.team_data import training_excluded_paths
     from backend.engine.annotation_storage import scoped_annotation_root
-    configuration_data=json.loads(configuration.read_text()) if configuration.is_file() else {}
+    configuration_data=json.loads(configuration.read_text(encoding='utf-8')) if configuration.is_file() else {}
     scoped={**configuration_data,'project_dir':str(project),'source_dataset_dir':str(source),
             'annotations_dir':str(scoped_annotation_root(project/'annotations'))}
     excluded.update(training_excluded_paths(scoped,source))

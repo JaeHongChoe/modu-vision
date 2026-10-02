@@ -1304,7 +1304,7 @@ def get_defect_heatmap(
     task = "classification"
     meta_path = model_file.parent / "model_meta.json"
     if meta_path.is_file():
-        task = json.loads(meta_path.read_text()).get('task', 'classification')
+        task = json.loads(meta_path.read_text(encoding='utf-8')).get('task', 'classification')
     from backend.engine.score_contract import resolve_inference_score
     try:
         requested_spec = json.loads(score_spec) if isinstance(score_spec, str) else None

@@ -29,7 +29,7 @@ def load_feature_model(project, model_id):
     if directory.is_symlink(): raise ValueError('Feature model directory cannot be a symbolic link')
     meta_path = directory / 'model_meta.json'; checkpoint = directory / 'classifier.pt'
     if meta_path.is_symlink() or checkpoint.is_symlink(): raise ValueError('Feature model files cannot be symbolic links')
-    meta = json.loads(meta_path.read_text())
+    meta = json.loads(meta_path.read_text(encoding='utf-8'))
     if (not isinstance(meta,dict) or meta.get('id')!=model_id or not isinstance(meta.get('classes'),list)
             or len(meta['classes'])<2 or not all(isinstance(name,str) and name for name in meta['classes'])):
         raise ValueError('Invalid feature classifier metadata')

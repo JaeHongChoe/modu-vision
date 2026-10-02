@@ -454,7 +454,7 @@ def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, s
             receipt=directory/'team-data.json'
             if not receipt.is_file() or receipt.is_symlink():raise ArchiveError('Team-data training receipt is unavailable')
             binding.setdefault('archive_restored_from_team_data_sha256',binding.get('team_data_sha256'))
-            binding['team_data']=json.loads(receipt.read_text())
+            binding['team_data']=json.loads(receipt.read_text(encoding='utf-8'))
             binding['team_data_sha256']=_digest(binding['team_data'])
         if binding.get('family_inputs'):
             for row in binding['family_inputs']:

@@ -382,7 +382,7 @@ def _training_state(ledger, project, source, root, annotations):
             if book:
                 from backend.engine.annotation_storage import dataset_annotation_dir
                 overlay=dataset_annotation_dir(path.parent,annotations,use_scope=False)/f'{path.stem}.json'
-                if overlay.is_file():labels=json.loads(overlay.read_text()).get('annotations',[])
+                if overlay.is_file():labels=json.loads(overlay.read_text(encoding='utf-8')).get('annotations',[])
                 else:
                     from backend.engine.grouped_dataset_views import _annotations
                     labels=_annotations(source,path)[0] or []

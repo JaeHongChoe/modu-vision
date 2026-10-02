@@ -36,7 +36,7 @@ def _safe_record(root, identifier, prefix):
     if not re.fullmatch(prefix + r'_[0-9a-f]{32}', identifier): raise ValueError('Invalid evidence identifier')
     path = root / identifier / 'record.json'
     if path.is_symlink() or path.parent.is_symlink() or not path.is_file(): raise ValueError('Evidence record is unavailable')
-    record = json.loads(path.read_text())
+    record = json.loads(path.read_text(encoding='utf-8'))
     expected = record.get('record_sha256'); value = {key: row for key,row in record.items() if key != 'record_sha256'}
     if digest(value) != expected: raise ValueError('Evidence record hash changed')
     return record
@@ -46,7 +46,7 @@ def saved_graph(project, version_id):
     if not re.fullmatch(r'[0-9a-f]{32}', version_id): raise ValueError('Invalid saved flow version')
     file = Path(project['project_dir']) / 'flowcharts' / 'versions' / f'{version_id}.json'
     if file.is_symlink() or not file.is_file(): raise ValueError('Saved flow version is unavailable')
-    record = json.loads(file.read_text())
+    record = json.loads(file.read_text(encoding='utf-8'))
     source = str(Path(project.get('source_dataset_dir') or '').resolve())
     if (record.get('version_id') != version_id or record.get('source_dataset_path') != source
             or record.get('labelset_id', project.get('active_labelset_id','default')) != project.get('active_labelset_id','default')):
@@ -79,7 +79,7 @@ def verified_models(project, pipeline):
             payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
             if payload.get('task') != task or 'model_state_dict' not in payload: raise ValueError(f'Model {job_id} has an incompatible checkpoint')
             metadata_path = checkpoint.parent/'model_meta.json'
-            metadata = json.loads(metadata_path.read_text()) if metadata_path.is_file() else {}
+            metadata = json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
             classes = catalog_class_vocabulary({**payload,'task':task}).get('class_names') or []
             # Class identities and channel order belong to the checkpoint.
             # Validate each explicitly recorded alias before the merge can
@@ -151,7 +151,7 @@ def _split(project):
     key = hashlib.sha256(str(source).encode()).hexdigest()
     file = Path(project['dataset_dir']) / 'splits' / f'{key}.json'
     if file.is_symlink() or not file.is_file(): raise ValueError('Save an explicit test split before freezing a held-out cohort')
-    record = json.loads(file.read_text())
+    record = json.loads(file.read_text(encoding='utf-8'))
     if record.get('folder_path') != str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('Saved test split belongs to another source')
     return file, normalized_assignments(source, record['assignments'])
 

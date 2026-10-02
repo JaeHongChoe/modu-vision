@@ -30,7 +30,7 @@ def verify_export_files(package,expected):
     if manifest_path.is_symlink() or not manifest_path.is_file():raise ValueError('Missing unlinked package manifest')
     if not re.fullmatch('[0-9a-f]{64}',expected) or _sha(manifest_path)!=expected:
         raise ValueError('Exported manifest checksum does not match trusted invocation')
-    manifest=json.loads(manifest_path.read_text())
+    manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
     if manifest.get('schema_version')!=1 or not isinstance(manifest.get('files'),list):raise ValueError('Invalid exported manifest')
     listed=set()
     for row in manifest['files']:

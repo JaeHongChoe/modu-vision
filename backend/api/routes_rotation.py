@@ -163,7 +163,7 @@ def models(request: Request):
     for checkpoint in sorted(_root(request).glob('*/best_model.pt')):
         try:
             valid=_checkpoint(request,checkpoint.parent.name)
-            rows.append({'job_id':checkpoint.parent.name,'checkpoint_path':str(valid),'metadata':json.loads(valid.with_name('model_meta.json').read_text())})
+            rows.append({'job_id':checkpoint.parent.name,'checkpoint_path':str(valid),'metadata':json.loads(valid.with_name('model_meta.json').read_text(encoding='utf-8'))})
         except HTTPException: continue
     return {'models':rows}
 

@@ -54,7 +54,7 @@ def _root(project):
 
 def _index(project):
     path = _owned(project,_root(project)/'index.json')
-    return json.loads(path.read_text()) if path.is_file() else {'schema_version':1,'candidates':{},'versions':[]}
+    return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'schema_version':1,'candidates':{},'versions':[]}
 
 
 def _files(project):
@@ -74,7 +74,7 @@ def _split(project):
     source=Path(project['source_dataset_dir']).resolve();key=hashlib.sha256(str(source).encode()).hexdigest()
     path=Path(project['dataset_dir'])/'splits'/f'{key}.json'
     if path.is_symlink() or not path.is_file(): raise ValueError('Save a fixed split before registering service captures')
-    record=json.loads(path.read_text())
+    record=json.loads(path.read_text(encoding='utf-8'))
     if record.get('folder_path')!=str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('Saved split source changed')
     record={**record,'assignments':normalized_assignments(source,record['assignments'])}
     if not any(part=='test' for part in record['assignments'].values()): raise ValueError('A fixed held-out test split is required for intake')
@@ -266,7 +266,7 @@ def adopt_candidates(project, identifiers, *, actor, name):
                     if not file.is_file() or relative.parts[0]=='metadata' or file.name.startswith('.'):continue
                     target=new_overlay/relative;target.parent.mkdir(parents=True,exist_ok=True)
                     if file.suffix=='.json':
-                        data=json.loads(file.read_text())
+                        data=json.loads(file.read_text(encoding='utf-8'))
                         if isinstance(data.get('mask_file'),str) and Path(data['mask_file']).is_relative_to(overlay):data['mask_file']=str(new_overlay/Path(data['mask_file']).relative_to(overlay))
                         atomic_json(target,data)
                     else:shutil.copyfile(file,target)
@@ -304,7 +304,7 @@ def read_version(project,identifier):
     if not re.fullmatch(r'intake_[0-9a-f]{32}',identifier):raise ValueError('Invalid intake version identifier')
     directory=_owned(project,_root(project)/'versions'/identifier);path=_owned(project,directory/'record.json')
     if not path.is_file():raise ValueError('Intake version is unavailable')
-    record=json.loads(path.read_text());body={key:value for key,value in record.items() if key!='record_sha256'}
+    record=json.loads(path.read_text(encoding='utf-8'));body={key:value for key,value in record.items() if key!='record_sha256'}
     if digest(body)!=record.get('record_sha256') or record['scope']['project_id']!=project['id']:raise ValueError('Intake version record changed')
     source=_owned(project,Path(record['source_dataset_path']))
     for row in [*record['base_files'],*record['adopted']]:

@@ -28,7 +28,7 @@ def persist_training_configuration(output,config):
     for name in ('model_meta.json','metadata.json'):
         path=output/name
         if path.is_file():
-            metadata=json.loads(path.read_text());metadata.update(training_config=dict(config),checkpoint_sha256=digest);_write(path,metadata)
+            metadata=json.loads(path.read_text(encoding='utf-8'));metadata.update(training_config=dict(config),checkpoint_sha256=digest);_write(path,metadata)
 
 
 def require_training_source(project, requested):
@@ -54,7 +54,7 @@ def read_job(root,identifier):
     directory=Path(root)/identifier;path=directory/'job.json'
     if directory.is_symlink() or path.is_symlink() or not path.is_file():raise FileNotFoundError('Training job is unavailable in the active project')
     with _LOCK:
-        record=json.loads(path.read_text())
+        record=json.loads(path.read_text(encoding='utf-8'))
         if record.get('job_id')!=identifier:raise ValueError('Training job identity differs')
         if record['status'] in ACTIVE and (record.get('owner_instance')!=PROCESS_INSTANCE or str(directory.resolve()) not in _EVENTS):
             record.update(status='interrupted',error='Application stopped before training completed')
@@ -126,7 +126,7 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             persist_training_configuration(output,configuration)
             checkpoint=output/'best_model.pt';digest=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
             metadata=output/'model_meta.json'
-            meta=json.loads(metadata.read_text());meta.update(source_dataset_path=str(source),dataset_path=str(dataset),
+            meta=json.loads(metadata.read_text(encoding='utf-8'));meta.update(source_dataset_path=str(source),dataset_path=str(dataset),
                 training_config=configuration)
             meta['checkpoint_sha256']=digest
             _write(metadata,meta)

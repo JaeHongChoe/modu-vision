@@ -330,7 +330,7 @@ def _copy_artifacts(
             if staged_path.stat().st_size != expected_size or _sha256(staged_path) != expected_hash:
                 raise ArtifactValidationError(f"Remote artifact hash mismatch: {relative}")
         if journal.get('operation')=='label':
-            labels=json.loads(staged['outputs/label_results.json'].read_text())
+            labels=json.loads(staged['outputs/label_results.json'].read_text(encoding='utf-8'))
             if labels.get('job_id')!=job_id or labels.get('input_manifest_sha256')!=journal['input_manifest_sha256'] or labels.get('automatically_approved') is not False:
                 raise ArtifactValidationError('Remote label candidates differ from the owned snapshot')
         else:
@@ -352,7 +352,7 @@ def _copy_artifacts(
                 if isinstance(value,list):return [relocate(child) for child in value]
                 if isinstance(value,str) and (value==remote_root or value.startswith(remote_root+'/')):return local_root+value[len(remote_root):]
                 return value
-            metadata_path=output_dir/'model_meta.json';metadata=relocate(json.loads(metadata_path.read_text()))
+            metadata_path=output_dir/'model_meta.json';metadata=relocate(json.loads(metadata_path.read_text(encoding='utf-8')))
             import torch
             checkpoint=output_dir/'best_model.pt';payload=relocate(torch.load(checkpoint,map_location='cpu',weights_only=True))
             temporary=checkpoint.with_suffix('.relocated');torch.save(payload,temporary);os.replace(temporary,checkpoint)
@@ -837,7 +837,7 @@ def recover_remote_jobs(manager: Any) -> None:
                     error={"message": str(journal["error"])} if journal.get("error") else None,
                 )
                 if receipt_exists:
-                    saved = json.loads((output / "job_receipt.json").read_text())
+                    saved = json.loads((output / "job_receipt.json").read_text(encoding='utf-8'))
                     if saved.get("job_id") == record.job_id:
                         for key in ("current_epoch", "total_epochs", "current_step", "total_steps", "best_metric", "metrics", "loss_history", "error"):
                             if key in saved: setattr(record, key, saved[key])

@@ -62,7 +62,7 @@ def persisted_task_rows(models,source,labelset):
             path=next((folder/name for name in names if (folder/name).is_file() and not (folder/name).is_symlink()),None)
             if path is None:continue
             try:
-                row=json.loads(path.read_text());identifier=row.get('job_id')
+                row=json.loads(path.read_text(encoding='utf-8'));identifier=row.get('job_id')
                 if identifier!=folder.name or len(identifier)!=32 or any(c not in '0123456789abcdef' for c in identifier):continue
                 if row.get('source_dataset_path')!=source or (row.get('training_provenance') or {}).get('labelset_id','default')!=labelset:continue
                 rows.append({**row,'kind':kind})
@@ -83,7 +83,7 @@ def imported_weight(project,task,model):
     root,registry=_weight_registry(project)
     if not registry.is_file() or registry.is_symlink():return None
     try:
-        row=json.loads(registry.read_text()).get(task+':'+model)
+        row=json.loads(registry.read_text(encoding='utf-8')).get(task+':'+model)
         if not isinstance(row,dict):return None
         path=Path(row['pretrained_checkpoint'])
         if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(root.resolve()):return None
@@ -110,7 +110,7 @@ def import_pretrained_weight(project,task,model,supplied,expected_sha256=None):
         os.replace(temporary,target)
     finally:temporary.unlink(missing_ok=True)
     if registry.is_symlink():raise ValueError('Import registry cannot be linked')
-    records=json.loads(registry.read_text()) if registry.is_file() else {}
+    records=json.loads(registry.read_text(encoding='utf-8')) if registry.is_file() else {}
     row={'task':task,'model':model,'pretrained_checkpoint':str(target),'sha256':digest,
          'official_hash_compared':bool(expected_sha256),'content_verified':False,'execution_verified':False}
     records[task+':'+model]=row

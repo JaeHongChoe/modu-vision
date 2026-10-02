@@ -27,7 +27,7 @@ from backend.engine.flow_package import build_flow_package
 from backend.engine.flow_package_runtime import run_flow_package
 
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def save(path,value):path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(engine._json(value),ensure_ascii=False,indent=2,allow_nan=False))
+def save(path,value):path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(engine._json(value),ensure_ascii=False,indent=2,allow_nan=False),encoding='utf-8')
 
 def make_crops(original,output):
     source=output/'native_crops';source.mkdir(parents=True)
@@ -35,7 +35,7 @@ def make_crops(original,output):
     assert len(selected)==6
     rows=[];mapping=[];seen=set()
     for index,path in enumerate(selected):
-        annotation=path.with_suffix('.json');raw=json.loads(annotation.read_text());points=np.array(raw['shapes'][0]['points'],np.float32)
+        annotation=path.with_suffix('.json');raw=json.loads(annotation.read_text(encoding='utf-8'));points=np.array(raw['shapes'][0]['points'],np.float32)
         x,y,w,h=cv2.boundingRect(points);split=('train','val','test')[index%3]
         with Image.open(path) as image:
             image=image.convert('RGB');width,height=image.size

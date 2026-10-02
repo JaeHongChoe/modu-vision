@@ -18,6 +18,7 @@ from backend.engine import dataset_metadata as dm
 from backend.engine.annotation_formats import import_annotations,export_annotations,bundle_files,safe_name
 from backend.engine.annotation_storage import dataset_annotation_dir,set_request_annotation_root,reset_request_annotation_root,set_request_project_root,reset_request_project_root
 from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root
+from backend.engine.source_text import read_source_text
 
 router=APIRouter(prefix='/api/dataset/metadata',tags=['dataset-review'])
 format_router=APIRouter(prefix='/api/dataset/formats',tags=['annotation-formats'])
@@ -123,7 +124,7 @@ def edit_image_metadata(image_uuid:str,req:EditRequest,request:Request):
 def duplicates(request:Request):
     project,source=_context(request)
     split_path=Path(project['dataset_dir'])/'splits'/f'{hashlib.sha256(str(source).encode()).hexdigest()}.json'
-    assignments=json.loads(split_path.read_text()).get('assignments',{}) if split_path.is_file() else {}
+    assignments=json.loads(split_path.read_text(encoding='utf-8')).get('assignments',{}) if split_path.is_file() else {}
     # Structural train/val/test directories are also inspected before a manifest exists.
     for row in _rows(project,source):
         assignments.setdefault(row['relative_path'],next((p for p in Path(row['relative_path']).parts[:-1] if p in {'train','val','test'}),'unassigned'))
@@ -187,7 +188,7 @@ def _directory_payload(req,source,inventory):
         documents=[]
         for path in paths:
             if path.suffix!='.json': continue
-            doc=json.loads(path.read_text(encoding='utf-8'))
+            doc=json.loads(read_source_text(path))
             if not isinstance(doc,dict) or 'shapes' not in doc: continue
             name=doc.get('imagePath') or path.with_suffix('.png').relative_to(root).as_posix()
             safe_name(name)
@@ -203,17 +204,17 @@ def _directory_payload(req,source,inventory):
         candidates=[]
         for path in paths:
             if path.suffix=='.json':
-                doc=json.loads(path.read_text(encoding='utf-8'))
+                doc=json.loads(read_source_text(path))
                 if isinstance(doc,dict) and {'images','categories','annotations'}<=set(doc): candidates.append(doc)
         if len(candidates)!=1: raise ValueError('Select a folder containing exactly one COCO annotation document')
         return candidates[0]
     classes_path=root/'classes.txt'
     if not classes_path.exists(): raise ValueError('YOLO import requires classes.txt')
-    classes=classes_path.read_text().splitlines()
+    classes=read_source_text(classes_path).splitlines()
     manifest=root/'image_manifest.json'
-    images=json.loads(manifest.read_text()) if manifest.exists() else [
+    images=json.loads(read_source_text(manifest)) if manifest.exists() else [
         {'file_name':r['relative_path'],'width':r['width'],'height':r['height']} for r in inventory]
-    labels={p.relative_to(root).as_posix():p.read_text() for p in paths if p.suffix=='.txt' and p.name!='classes.txt'}
+    labels={p.relative_to(root).as_posix():read_source_text(p) for p in paths if p.suffix=='.txt' and p.name!='classes.txt'}
     # Standard labels/ tree may be separate from images/; bind explicit image names.
     for image in images:
         target=str(Path(image['file_name']).with_suffix('.txt'))

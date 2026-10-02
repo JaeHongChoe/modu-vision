@@ -63,7 +63,7 @@ def register_task_runner(task, runner, architectures, *, metric_key='val_loss', 
 
 def _write(path, value):
     path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix('.tmp'); temporary.write_text(json.dumps(value, indent=2, allow_nan=False)); temporary.replace(path)
+    temporary = path.with_suffix('.tmp'); temporary.write_text(json.dumps(value, indent=2, allow_nan=False), encoding='utf-8'); temporary.replace(path)
 
 
 def _fingerprint(source):
@@ -242,7 +242,7 @@ def run_measured_candidate(*, task, dataset_path, output_dir, job_id, config_ove
         raise ValueError('Candidate needs finite measured validation and latency')
     payload=torch.load(checkpoint,map_location='cpu',weights_only=True);payload['training_config']=config
     temporary=checkpoint.with_suffix('.tmp');torch.save(payload,temporary);temporary.replace(checkpoint)
-    metadata_path=checkpoint.with_name('model_meta.json');metadata=json.loads(metadata_path.read_text())
+    metadata_path=checkpoint.with_name('model_meta.json');metadata=json.loads(metadata_path.read_text(encoding='utf-8'))
     digest=sha256(checkpoint.read_bytes()).hexdigest();metadata.update(training_config=config,checkpoint_sha256=digest,dataset_path=str(dataset));_write(metadata_path,metadata)
     return {**result,'status':'completed','job_id':job_id,'task':task,'model_path':str(checkpoint),
             'checkpoint_sha256':digest,'best_metric':float(objective),'metric_key':spec.metric_key,
@@ -284,7 +284,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
         if spec.family and (len(parent_job_id)!=32 or any(c not in '0123456789abcdef' for c in parent_job_id)): raise ValueError('Invalid automated training parent job ID')
         directory = models / spec.family / parent_job_id if spec.family else models / parent_job_id
         if directory.is_symlink(): raise ValueError('Parent directory cannot be linked')
-        metadata = json.loads((directory / 'model_meta.json').read_text())
+        metadata = json.loads((directory / 'model_meta.json').read_text(encoding='utf-8'))
         config = metadata.get('training_config')
         if not isinstance(config, dict): raise ValueError('Parent has no recorded reusable training configuration')
         if metadata.get('automated_training') or spec.family:
@@ -385,14 +385,14 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                     payload['training_config'] = config
                     payload['automated_training'] = {'search_id': search_id, 'trial_id': trial_id, 'configuration_parent': configuration_parent, 'metrics': measured['metrics'], 'latency_ms': latency}
                     temporary = checkpoint.with_suffix('.tmp'); torch.save(payload, temporary); temporary.replace(checkpoint)
-                    metadata_path = checkpoint.with_name('model_meta.json'); metadata = json.loads(metadata_path.read_text())
+                    metadata_path = checkpoint.with_name('model_meta.json'); metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
                     metadata.update(automated_training=payload['automated_training'], training_config=config,
                                     source_dataset_path=str(canonical), dataset_path=str(source)); _write(metadata_path, metadata)
                     if training_binding:
                         from backend.engine.training_provenance import persist_model_binding
                         persist_model_binding(trial_dir, training_binding)
                     digest = sha256(checkpoint.read_bytes()).hexdigest()
-                    metadata = json.loads(metadata_path.read_text()); metadata['checkpoint_sha256'] = digest; _write(metadata_path, metadata)
+                    metadata = json.loads(metadata_path.read_text(encoding='utf-8')); metadata['checkpoint_sha256'] = digest; _write(metadata_path, metadata)
                     _write(trial_dir / 'job_receipt.json', {'job_id': trial_id, 'task': task, 'status': 'completed',
                         'source_dataset_path': str(canonical), 'dataset_path': str(source),
                         'output_dir':str(trial_dir),'current_epoch':measured.get('epochs_completed',epochs_per_trial),'total_epochs':epochs_per_trial,
@@ -428,7 +428,7 @@ def read_search(models_dir, search_id):
     if not isinstance(search_id, str) or len(search_id) != 32 or any(c not in '0123456789abcdef' for c in search_id): raise ValueError('Invalid search ID')
     path = Path(models_dir) / 'automated_training' / search_id / 'search.json'
     if any(p.is_symlink() for p in (path.parent.parent, path.parent, path)) or not path.is_file(): raise FileNotFoundError('Search unavailable in active project')
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 from backend.engine.specialist_automated_trials import register_specialist_runners

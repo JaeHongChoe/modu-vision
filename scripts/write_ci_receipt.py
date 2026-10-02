@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def command_version(command):
     try:
-        return subprocess.check_output(command, cwd=ROOT, text=True, stderr=subprocess.DEVNULL, timeout=15).strip()
+        return subprocess.check_output(command, cwd=ROOT, text=True, encoding='utf-8', errors='replace',
+                                       stderr=subprocess.DEVNULL, timeout=15).strip()
     except (OSError, subprocess.SubprocessError):
         return None
 
@@ -38,7 +39,7 @@ def receipt(root, junit):
         "source_sha": command_version(["git", "rev-parse", "HEAD"]),
         "platform": {"system": platform.system(), "release": platform.release(), "machine": platform.machine()},
         "toolchain": {"python": platform.python_version(), "node": command_version(["node", "--version"]),
-                      "electron": json.loads(electron.read_text())["version"] if electron.is_file() else None},
+                      "electron": json.loads(electron.read_text(encoding='utf-8'))["version"] if electron.is_file() else None},
         "input_sha256": inputs,
         "pytest": test_counts(Path(junit)),
         "run_id": os.environ.get("GITHUB_RUN_ID"),

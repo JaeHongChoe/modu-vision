@@ -142,7 +142,7 @@ def _checkpoint(project,task,identifier):
     directory=Path(project['models_dir'])/spec.family/identifier
     if directory.is_symlink():raise ValueError('Parent model storage is linked')
     checkpoint=directory/'best_model.pt';require_completed_checkpoint(checkpoint)
-    metadata=json.loads((directory/'model_meta.json').read_text())
+    metadata=json.loads((directory/'model_meta.json').read_text(encoding='utf-8'))
     if metadata.get('task')!=task or Path(metadata.get('source_dataset_path','')).resolve()!=Path(project['source_dataset_dir']).resolve():raise ValueError('Parent model belongs to another family or source')
     if not checkpoint.is_file() or checkpoint.is_symlink():raise ValueError('Completed parent checkpoint is missing')
     return checkpoint
@@ -184,7 +184,7 @@ def _authorized_flow(project,policy):
     identifier=policy.get('pipeline_version_id')
     if not identifier:raise ValueError('Choose an immutable saved flow version')
     pipeline=get_saved_pipeline_version(identifier,request=request)
-    record=json.loads((_version_dir(Path(project['project_dir']))/f'{identifier}.json').read_text())
+    record=json.loads((_version_dir(Path(project['project_dir']))/f'{identifier}.json').read_text(encoding='utf-8'))
     if record.get('source_dataset_path')!=str(Path(project['source_dataset_dir']).resolve()):raise ValueError('Saved flow belongs to another source')
     from backend.engine.flow_provenance import pipeline_sha256
     if policy.get('pipeline_sha256') and pipeline_sha256(pipeline)!=policy['pipeline_sha256']:raise ValueError('Authorized saved flow content changed')

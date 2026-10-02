@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib
 import getpass
+import locale
 import json
 import os
 from pathlib import Path
@@ -28,7 +29,7 @@ class NativeAutostart:
     def _journal(self):
         if not self.journal_path.exists():return None
         if self.journal_path.is_symlink():raise ValueError('Native install journal cannot be linked')
-        value=json.loads(self.journal_path.read_text())
+        value=json.loads(self.journal_path.read_text(encoding='utf-8'))
         if value.get('schema_version')!=1 or value.get('native_label')!=self.label or value.get('platform')!=self.system:
             raise ValueError('Native install journal identity differs from this project')
         return value
@@ -47,7 +48,7 @@ class NativeAutostart:
         if self.system=='Linux':return self.home/'.config'/'systemd'/'user'/(self.label+'.service')
         return self.service.root/'install'/(self.label+'.xml')
     def _run(self,args,*,allow_failure=False):
-        result=subprocess.run(args,capture_output=True,text=True,timeout=15)
+        result=subprocess.run(args,capture_output=True,text=True,encoding=locale.getpreferredencoding(False),errors='replace',timeout=15)  # OS tool messages
         if result.returncode and not allow_failure:raise RuntimeError(f'{self.kind} command failed: '+result.stderr.strip()[-1000:])
         return result
     def _descriptor(self):

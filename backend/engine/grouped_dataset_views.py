@@ -10,7 +10,8 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
-from backend.engine.dicom_input import open_source_image
+from backend.engine.dicom_input import UNDECODABLE_IMAGE_ERRORS, open_source_image
+from backend.engine.source_text import read_source_text
 from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.annotation_formats import import_annotations,export_annotations,source_annotations_for_image
 from backend.engine.dataset_loaders import DetectionDataset,AnomalyDataset,_classification_split_assignments,_read_image_rgb,SUPPORTED_IMAGE_EXTENSIONS
@@ -46,10 +47,16 @@ def _annotations(source,image):
         return annotations,data.get('mask_file')
     adjacent=image.with_suffix('.json')
     if adjacent.is_file():
-        document=json.loads(adjacent.read_text(encoding='utf-8'))
+        document=json.loads(read_source_text(adjacent))  # a source LabelMe file: UTF-8, BOM, or this machine's code page
         document.setdefault('imagePath',image.name)
         if 'imageWidth' not in document or 'imageHeight' not in document:  # the image is opened only for a missing size
-            with open_source_image(image) as opened:width,height=opened.size
+            try:
+                with open_source_image(image) as opened:width,height=opened.size
+            except UNDECODABLE_IMAGE_ERRORS:
+                # Bytes that can never decode bind no labels (listings show the image without a size, loaders refuse it).
+                # A transient failure (a file locked by an indexer, a share that dropped) is raised, never turned into
+                # an unlabeled image: training reads these labels too.
+                return [],None
             document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)
         return import_annotations(document,'labelme')[0]['annotations'],None
     annotations=source_annotations_for_image(source,image)

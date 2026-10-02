@@ -74,7 +74,7 @@ def semantic_readiness(model_dir):
     valid=False;error=None
     if configured:
         try:
-            config=json.loads((path/'config.json').read_text())
+            config=json.loads((path/'config.json').read_text(encoding='utf-8'))
             valid=config.get('model_type')=='grounding-dino' and ((path/'model.safetensors').is_file() or (path/'pytorch_model.bin').is_file() or (path/'model.safetensors.index.json').is_file())
             if not valid: error='Grounding DINO config and local model weights are required'
         except (OSError,ValueError): error='Missing or invalid local model config'

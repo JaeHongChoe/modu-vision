@@ -8,7 +8,7 @@ from backend.engine.distributed_training import initialize_distributed,is_primar
 
 def main(argv=None):
     parser=argparse.ArgumentParser();parser.add_argument('--spec',type=Path,required=True);args=parser.parse_args(argv)
-    spec=json.loads(args.spec.read_text());run=args.spec.parent
+    spec=json.loads(args.spec.read_text(encoding='utf-8'));run=args.spec.parent
     context=initialize_distributed(spec.get('device') or 'cuda')
     from backend.engine.trainer import UnifiedAutoMLTrainer
     from backend.remote.worker import _StatusWriter,_TrainingStatusCallback,_atomic_json,_read_train_spec,apply_memory_budget

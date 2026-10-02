@@ -13,14 +13,14 @@ def approve_precision_package(candidate,output,*,revisions,reviewer,reason,maxim
     from backend.engine.flow_package_runtime import verify_flow_package,_sha256
     root=Path(candidate).resolve();_,checkpoints=verify_flow_package(root)
     from backend.engine.runtime_release_evidence import verify_measured_precision_evidence
-    original_manifest=json.loads((root/'manifest.json').read_text())
+    original_manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
     device=original_manifest['runtime']['device']
     measured=verify_measured_precision_evidence(root,device,check_source=True)
     if not isinstance(reviewer,str) or not reviewer.strip() or not isinstance(reason,str) or len(reason.strip())<8 or holdout_reviewed is not True:
         raise ValueError('Explicit reviewer, meaningful reason and reviewed holdout are required')
     if type(maximum_absolute_drift) not in (int,float) or not math.isfinite(maximum_absolute_drift) or maximum_absolute_drift<0:
         raise ValueError('Maximum absolute drift must be explicit, finite and nonnegative')
-    info=json.loads((root/'openvino_models.json').read_text())
+    info=json.loads((root/'openvino_models.json').read_text(encoding='utf-8'))
     receipt=info.get('input_receipt')
     if not receipt or not receipt.get('validation_images') or any(row.get('split') not in ('val','test') for row in receipt['validation_images']):
         raise ValueError('Precision approval requires actual saved heldout validation image evidence')
@@ -28,13 +28,13 @@ def approve_precision_package(candidate,output,*,revisions,reviewer,reason,maxim
         raise ValueError('Conversion calibration/heldout input hashes differ from approval evidence')
     heldout_file=root/'heldout_flow_results.json'
     if not heldout_file.is_file() or _sha256(heldout_file)!=info.get('heldout_flow_results_sha256'):raise ValueError('Actual heldout full-flow evidence is missing or changed')
-    heldout=json.loads(heldout_file.read_text())
+    heldout=json.loads(heldout_file.read_text(encoding='utf-8'))
     if len(heldout)!=len(receipt['validation_images']) or [row['image_sha256'] for row in heldout]!=info['validation_sha256']:raise ValueError('Heldout full-flow evidence differs from selected original images')
     for row in heldout:
         if _sha256(root/row['result_path'])!=row['result_sha256']:raise ValueError('Actual heldout full-flow output changed')
     if set(revisions)!=set(checkpoints):raise ValueError('Every compiled model needs its current active checkpoint approval')
     for row in info['models']:
-        conversion=json.loads((root/row['directory']/'conversion.json').read_text())
+        conversion=json.loads((root/row['directory']/'conversion.json').read_text(encoding='utf-8'))
         if any(row.get(key)!=value for key,value in conversion.items()):raise ValueError('Saved measured conversion evidence differs from the model catalog')
         revision=revisions[row['job_id']]
         drift=row['metrics'].get('max_absolute_error')
@@ -46,7 +46,7 @@ def approve_precision_package(candidate,output,*,revisions,reviewer,reason,maxim
     target=Path(output)
     if target.exists() or target.resolve().is_relative_to(root) or any(p.is_symlink() for p in (target,*target.parents)):raise ValueError('Use a fresh owned approved release directory')
     target.parent.mkdir(parents=True,exist_ok=True)
-    original_manifest=json.loads((root/'manifest.json').read_text());source_hash=_sha256(root/'manifest.json')
+    original_manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'));source_hash=_sha256(root/'manifest.json')
     with tempfile.TemporaryDirectory(prefix='.precision-approval-',dir=target.parent) as temporary:
         staging=Path(temporary)/'release';staging.mkdir()
         for row in original_manifest['files']:

@@ -31,7 +31,7 @@ def validate_program(program,root):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--program',default='docs/product-upgrade-program.json');parser.add_argument('--root',default=str(Path(__file__).resolve().parents[1]));args=parser.parse_args()
-    root=Path(args.root).resolve();program=json.loads((root/args.program).read_text());errors=validate_program(program,root)
+    root=Path(args.root).resolve();program=json.loads((root/args.program).read_text(encoding='utf-8'));errors=validate_program(program,root)
     summary={status:sum(r['status']==status for r in program['requirements']) for status in STATUSES}
     print(json.dumps({'requirements':len(program['requirements']),'states':summary,'errors':errors},ensure_ascii=False,indent=2))
     return int(bool(errors))

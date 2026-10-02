@@ -72,6 +72,9 @@ def read_dicom(path, *, window_center=None, window_width=None, frame_index=None)
 # UnidentifiedImageError), unsupported DICOM (ValueError), malformed headers (SyntaxError), and images above Pillow's
 # pixel limit (DecompressionBombError, which is none of those).
 IMAGE_OPEN_ERRORS = (OSError, ValueError, SyntaxError, Image.DecompressionBombError)
+# The subset that is a property of the bytes, not of the moment: unrecognised or malformed data, unsupported DICOM, too
+# many pixels. PermissionError, a vanished file or a dropped share are OSErrors outside it.
+UNDECODABLE_IMAGE_ERRORS = (Image.UnidentifiedImageError, ValueError, SyntaxError, Image.DecompressionBombError)
 
 
 def open_source_image(path):

@@ -729,7 +729,7 @@ def _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,
     except RotatedTrainingCancelled:
         checkpoint.unlink(missing_ok=True);raise
     meta['checkpoint_sha256']=_sha256(checkpoint)
-    (output/'model_meta.json').write_text(json.dumps(meta))
+    (output/'model_meta.json').write_text(json.dumps(meta),encoding='utf-8')
     receipt={'status':'completed','task':'rotated_detection','epochs_completed':epochs,'checkpoint_sha256':meta['checkpoint_sha256'],'dataset_sha256':meta['dataset_sha256'],'validation':meta['validation']}
-    (output/'job_receipt.json').write_text(json.dumps(receipt))
+    (output/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
     return receipt

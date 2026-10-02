@@ -1,13 +1,14 @@
 """Read physical CUDA UUIDs/capacity and optional NVML MIG child handles."""
 import csv
 import io
+import locale
 import subprocess
 
 
 def device_inventory():
     devices=[];error=None;mig_supported=False
     try:
-        result=subprocess.run(['nvidia-smi','--query-gpu=index,uuid,memory.total','--format=csv,noheader,nounits'],capture_output=True,text=True,timeout=5,check=True)
+        result=subprocess.run(['nvidia-smi','--query-gpu=index,uuid,memory.total','--format=csv,noheader,nounits'],capture_output=True,text=True,encoding=locale.getpreferredencoding(False),errors='replace',timeout=5,check=True)
         for values in csv.reader(io.StringIO(result.stdout)):
             index,identifier,memory=(part.strip() for part in values)
             devices.append({'selector':index,'uuid':identifier,'memory_mb':int(float(memory)),'parent_uuid':None,'kind':'cuda'})

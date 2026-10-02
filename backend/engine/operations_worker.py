@@ -23,7 +23,7 @@ def _owned(project):
     root=_paths(project);owner=root/'owner.json'
     if not owner.is_file():return None
     try:
-        row=json.loads(owner.read_text());process=psutil.Process(row['pid']);args=process.cmdline()
+        row=json.loads(owner.read_text(encoding='utf-8'));process=psutil.Process(row['pid']);args=process.cmdline()
         if abs(process.create_time()-row['created_at'])>.1:return None
         if 'backend.engine.operations_worker' in args and '--project-dir' in args and args[args.index('--project-dir')+1]==str(Path(project['project_dir']).resolve()):return process
     except (ValueError,OSError,KeyError,psutil.Error):pass
@@ -42,7 +42,7 @@ def _start_watcher_locked(project):
         process=subprocess.Popen([sys.executable,'-m','backend.engine.operations_worker','--project-dir',str(Path(project['project_dir']).resolve())],
             cwd=Path(__file__).resolve().parents[2],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
     owner={'pid':process.pid,'created_at':psutil.Process(process.pid).create_time()}
-    temporary=root/'owner.tmp';temporary.write_text(json.dumps(owner));temporary.chmod(0o600);temporary.replace(root/'owner.json')
+    temporary=root/'owner.tmp';temporary.write_text(json.dumps(owner),encoding='utf-8');temporary.chmod(0o600);temporary.replace(root/'owner.json')
     return watcher_state(project)
 
 

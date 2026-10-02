@@ -119,7 +119,7 @@ def configuration_parents(task:str,dataset_path:str,request:Request,family_datas
     for folder in sorted(root.iterdir()):
         try:
             if folder.is_symlink() or not folder.is_dir():continue
-            metadata=json.loads((folder/'model_meta.json').read_text());config=metadata.get('training_config')
+            metadata=json.loads((folder/'model_meta.json').read_text(encoding='utf-8'));config=metadata.get('training_config')
             if metadata.get('task')!=task or not isinstance(config,dict):continue
             lineage=metadata.get('training_provenance') or {}
             if lineage.get('labelset_id','default')!=project.get('active_labelset_id','default'):continue
@@ -146,7 +146,7 @@ def _read(request,identifier):
         except FileNotFoundError:
             path=directory/'submission.json'
             if path.is_symlink() or not path.is_file():raise HTTPException(404,'Search unavailable in active project')
-            record=json.loads(path.read_text())
+            record=json.loads(path.read_text(encoding='utf-8'))
         except ValueError as exc:raise HTTPException(422,str(exc)) from exc
         if record.get('status') in ('queued','running','stopping'):
             key=(str(models.resolve()),identifier);event=_EVENTS.get(key);external_alive=False
@@ -165,7 +165,7 @@ def _read(request,identifier):
                             folder=models/spec.family/trial_id if spec.family else models/trial_id
                             receipt=folder/'job_receipt.json'
                             if folder.is_dir() and not folder.is_symlink() and not receipt.is_symlink():
-                                existing=json.loads(receipt.read_text()) if receipt.is_file() else {}
+                                existing=json.loads(receipt.read_text(encoding='utf-8')) if receipt.is_file() else {}
                                 if existing.get('status')!='completed':_write(receipt,{**existing,'job_id':trial_id,'task':record['task'],'status':'interrupted','search_id':identifier})
                 _write(path,record)
             elif (event is not None and event.is_set()) or (directory/'cancel_requested.json').is_file():record['status']='stopping'

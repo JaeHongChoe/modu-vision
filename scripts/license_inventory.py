@@ -107,7 +107,7 @@ def _sha256(path: Path) -> str | None:
 def _git(root: Path, *args: str) -> str | None:
     try:
         return subprocess.run(['git', '--no-optional-locks', *args], cwd=root, capture_output=True, text=True,
-                              check=True).stdout.strip()
+                              encoding='utf-8', errors='replace', check=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return None
 

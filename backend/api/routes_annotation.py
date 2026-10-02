@@ -679,7 +679,7 @@ def _foundation_selection_setup():
     root = request_project_root()
     if root is None: return {}
     path = Path(root) / 'semantic_labeling.json'
-    return json.loads(path.read_text()) if path.is_file() else {}
+    return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
 
 
 def _foundation_selection_result(path, req, points=None, boxes=None):

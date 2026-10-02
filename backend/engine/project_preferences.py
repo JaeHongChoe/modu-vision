@@ -20,7 +20,7 @@ def read_preferences(project:Path)->dict:
         raise ValueError('Project preferences must not be a symbolic link')
     if not path.exists():
         return {'schema_version':1,'revision':0,'tag_colors':{},'model_flags':{},'labelset_flags':{},'audit':[]}
-    data=json.loads(path.read_text())
+    data=json.loads(path.read_text(encoding='utf-8'))
     if data.get('schema_version')!=1 or type(data.get('revision')) is not int:
         raise ValueError('Invalid preference registry')
     return data

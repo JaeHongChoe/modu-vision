@@ -28,7 +28,7 @@ def read_job(project,job_id):
     with _LOCK:
         path=_path(project,job_id)
         if not path.is_file() or path.is_symlink():raise ValueError('Optimization job not found in this project')
-        record=json.loads(path.read_text())
+        record=json.loads(path.read_text(encoding='utf-8'))
         if record['status'] in ('queued','running','stopping') and (str(path),job_id) not in _EVENTS:
             record.update(status='interrupted',error='Conversion owner was interrupted; create a new candidate',updated_at=time.time())
             _write(path,record)

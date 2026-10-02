@@ -61,7 +61,7 @@ def atomic_private_json(path,value):
     descriptor,name=tempfile.mkstemp(prefix='.'+path.name+'-',suffix='.tmp',dir=path.parent)
     temporary=Path(name)
     try:
-        with os.fdopen(descriptor,'w') as writer:
+        with os.fdopen(descriptor,'w',encoding='utf-8') as writer:
             json.dump(value,writer,allow_nan=False);writer.flush();os.fsync(writer.fileno())
         temporary.chmod(0o600);os.replace(temporary,path)
     finally:temporary.unlink(missing_ok=True)
@@ -101,6 +101,6 @@ def serialized_lifecycle(function):
         with runtime_state_lock(self.root):
             path=getattr(self,'config_path',None) or self.path
             if path.is_symlink():raise ValueError('Runtime state file is linked')
-            self.config=json.loads(path.read_text())
+            self.config=json.loads(path.read_text(encoding='utf-8'))
             return function(self,*args,**kwargs)
     return run

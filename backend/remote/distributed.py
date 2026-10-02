@@ -37,7 +37,7 @@ def _terminate_group(process):
 
 
 def launch_distributed(spec_path,*,cancel_event=None,status_writer=None):
-    spec_path=Path(spec_path).resolve();spec=json.loads(spec_path.read_text())
+    spec_path=Path(spec_path).resolve();spec=json.loads(spec_path.read_text(encoding='utf-8'))
     processes=(spec.get('distributed') or {}).get('processes',0)
     validate_distributed_request(spec['task'],spec.get('device') or 'cuda',processes)
     output=spec_path.parent/'outputs';output.mkdir(exist_ok=True)
@@ -54,7 +54,7 @@ def launch_distributed(spec_path,*,cancel_event=None,status_writer=None):
                 progress=spec_path.parent/'distributed_progress'/'status.json'
                 if status_writer is not None and progress.is_file():
                     try:
-                        values=json.loads(progress.read_text())
+                        values=json.loads(progress.read_text(encoding='utf-8'))
                         status_writer.update(**{key:values[key] for key in ('current_epoch','total_epochs','current_step','total_steps','train_loss','val_loss','loss_history','metrics') if key in values})
                     except (OSError,ValueError):pass
                 if (cancel_event is not None and cancel_event.is_set()) or (spec_path.parent/'cancel').exists():
@@ -63,6 +63,6 @@ def launch_distributed(spec_path,*,cancel_event=None,status_writer=None):
             result_path=output/'distributed_result.json'
             if process.returncode!=0:raise RuntimeError(f'Distributed worker group failed with exit {process.returncode}; inspect distributed.log')
             if not result_path.is_file():raise RuntimeError('Distributed rank zero did not publish a training result')
-            result=json.loads(result_path.read_text());result['distributed']={'processes':processes,'backend':'nccl' if str(spec.get('device')).startswith('cuda') else 'gloo'}
+            result=json.loads(result_path.read_text(encoding='utf-8'));result['distributed']={'processes':processes,'backend':'nccl' if str(spec.get('device')).startswith('cuda') else 'gloo'}
             return result
         finally:_terminate_group(process)

@@ -54,6 +54,8 @@ jobs:
           backend/tests/test_service_image_path_alias.py
           backend/tests/test_service_ci_dependencies.py
           backend/tests/test_service_s6_05.py
+          backend/tests/test_service_text_encoding.py
+          backend/tests/test_service_file_identity.py
       - name: Actual Electron main and preload smoke
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e

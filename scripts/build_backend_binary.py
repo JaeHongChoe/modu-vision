@@ -61,7 +61,7 @@ def dependency_inventory(root: Path) -> dict:
     root = Path(root)
     normalize=lambda name:name.lower().replace('_','-')
     requirements={}
-    for line in (root/'requirements.txt').read_text().splitlines():
+    for line in (root/'requirements.txt').read_text(encoding='utf-8').splitlines():
         value=line.strip()
         if value and not value.startswith('#'):
             requirement=Requirement(value);requirements[normalize(requirement.name)]=requirement
@@ -197,7 +197,7 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
     output.mkdir(parents=True, exist_ok=True)
     (output / '.build').mkdir(exist_ok=True)
     inventory_path = output / '.build' / 'backend-build-inventory.json'
-    inventory_path.write_text(json.dumps(inventory, indent=2))
+    inventory_path.write_text(json.dumps(inventory, indent=2), encoding='utf-8')
     import uuid
     frozen_source = snapshot_sources(ROOT_DIR, output / '.build' / ('source-' + uuid.uuid4().hex), inventory['resources'])
     cmd = pyinstaller_command(frozen_source, output, platform.system())
@@ -218,13 +218,13 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
     release['files'] = [{'path': str(path.relative_to(binary_dir)), 'sha256': sha256(path)}
                         for path in sorted(binary_dir.rglob('*')) if path.is_file()]
     receipt_path = binary_dir / 'backend-release.json'
-    receipt_path.write_text(json.dumps(release, indent=2))
+    receipt_path.write_text(json.dumps(release, indent=2), encoding='utf-8')
     if accept:
         acceptance_path = binary_dir / 'backend-acceptance.json'
         subprocess.run([sys.executable, str(ROOT_DIR / 'scripts' / 'release_backend_acceptance.py'),
                         '--backend-dir', str(binary_dir), '--output', str(acceptance_path)], check=True)
-        release['acceptance'] = json.loads(acceptance_path.read_text())
-        receipt_path.write_text(json.dumps(release, indent=2))
+        release['acceptance'] = json.loads(acceptance_path.read_text(encoding='utf-8'))
+        receipt_path.write_text(json.dumps(release, indent=2), encoding='utf-8')
 
     print("\n" + "=" * 70)
     print(" Compilation Successful!")

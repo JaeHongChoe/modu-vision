@@ -118,7 +118,7 @@ class FleetRegistry:
             if not selected.get('release_policy') or policy_path.is_symlink() or not policy_path.is_file() or policy_path.stat().st_size>65536:
                 raise ValueError('Field release requires its separately trusted approval/device/cohort policy')
             _verify_release_policy(package,verify_flow_package(package)[1],policy_path,device=selected['device'])
-            policy=json.loads(policy_path.read_text())
+            policy=json.loads(policy_path.read_text(encoding='utf-8'))
             if policy['manifest_sha256']!=selected['manifest_sha256']:raise ValueError('Field release policy differs from selected manifest')
             with self.client(identifier) as client:
                 response=client.post('/agent/v1/releases',content=package_archive(package),headers={'Content-Type':'application/zip','X-Manifest-SHA256':selected['manifest_sha256'],
@@ -171,7 +171,7 @@ class FleetRegistry:
 
 def package_archive(package):
     from backend.engine.flow_package_runtime import verify_flow_package
-    verify_flow_package(package);manifest=json.loads((package/'manifest.json').read_text());stream=io.BytesIO()
+    verify_flow_package(package);manifest=json.loads((package/'manifest.json').read_text(encoding='utf-8'));stream=io.BytesIO()
     with zipfile.ZipFile(stream,'w',compression=zipfile.ZIP_DEFLATED) as archive:
         for relative in ['manifest.json',*(['parity_receipt.json'] if not manifest.get('runtime_acceptance_sha256') else []),*[row['path'] for row in manifest['files']]]:
             path=package/relative

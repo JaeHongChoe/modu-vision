@@ -61,7 +61,7 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
             from backend.engine.defect_gan import evaluate_defect_generator
             checkpoint=_checkpoint(request,payload.job_id)
             from backend.engine.defect_gan import load_defect_gan_manifest
-            metadata=json.loads(checkpoint.with_name('model_meta.json').read_text())
+            metadata=json.loads(checkpoint.with_name('model_meta.json').read_text(encoding='utf-8'))
             dataset=Path(payload.dataset_path or metadata.get('dataset_path') or source).resolve()
             if dataset!=source and not dataset.is_relative_to(Path(project['dataset_dir']).resolve()):raise ValueError('GAN evaluation inputs belong to another project')
             manifest=load_defect_gan_manifest(dataset)
@@ -71,7 +71,7 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
             from backend.engine.specialized_models import resolve_specialized_checkpoint
             checkpoint,metadata=resolve_specialized_checkpoint(project['models_dir'],payload.job_id,payload.task)
             state_file=checkpoint.parent/'job.json'
-            if state_file.is_file() and (state_file.is_symlink() or json.loads(state_file.read_text()).get('status')!='completed'):
+            if state_file.is_file() and (state_file.is_symlink() or json.loads(state_file.read_text(encoding='utf-8')).get('status')!='completed'):
                 raise ValueError('Reevaluation requires a completed family model')
             recorded_source=metadata.get('source_dataset_path')
             binding=metadata.get('training_provenance') or {}
@@ -79,7 +79,7 @@ def reevaluate(payload:ReevaluateRequest,request:Request):
                 version=Path(binding['version_dir'])
                 if not version.resolve().is_relative_to(Path(project['project_dir']).resolve()/'versions') or version.is_symlink():
                     raise ValueError('Training version belongs to another project')
-                version_manifest=json.loads((version/'manifest.json').read_text())
+                version_manifest=json.loads((version/'manifest.json').read_text(encoding='utf-8'))
                 from backend.api.routes_dataset_versions import _manifest_digest
                 if (_manifest_digest(version_manifest)!=binding.get('manifest_sha256')
                         or version_manifest.get('project_id')!=project['id']):

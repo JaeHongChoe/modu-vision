@@ -231,7 +231,7 @@ def _job(request: Request, job_id: str) -> tuple[Path, dict]:
     if folder.is_symlink() or path.is_symlink() or not path.is_file():
         raise HTTPException(404, "Enhancement job not found in this project")
     with _JOB_LOCK:
-        record = json.loads(path.read_text())
+        record = json.loads(path.read_text(encoding='utf-8'))
         if record["status"] in {"queued", "running", "stopping"} and record["owner_instance"] != _PROCESS_INSTANCE:
             record.update(status="interrupted", error="Application stopped before training completed")
             _atomic(path, json.dumps(record, ensure_ascii=False).encode())
@@ -273,7 +273,7 @@ def models(request: Request):
         if meta.is_symlink() or checkpoint.is_symlink() or not meta.is_file() or not checkpoint.is_file():
             continue
         try:
-            data = json.loads(meta.read_text())
+            data = json.loads(meta.read_text(encoding='utf-8'))
             journal = folder / 'job.json'
             if journal.is_file() and _job(request, folder.name)[1]['status'] != 'completed':
                 continue
@@ -297,7 +297,7 @@ def evaluate(req: Evaluate, request: Request):
         folder = path.parent / "evaluations"
         folder.mkdir(exist_ok=True)
         # Keep the same immutable ID in the family view and unified history.
-        (folder / f"{result['evaluation_id']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
+        (folder / f"{result['evaluation_id']}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         return result
     except (ValueError, OSError, RuntimeError) as exc:
         raise HTTPException(422, str(exc)) from exc

@@ -107,11 +107,11 @@ def prepare_patch_dataset(source, target, *, patch_size=256, stride=128,
                    'test_image_verdicts': verdicts, 'review_warnings': warnings,
                    'label_semantics': 'background outside supplied complete region annotations',
                    'minimum_overlap': minimum_overlap}
-        (staging/'patches.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+        (staging/'patches.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
         (staging/'source_manifest.json').write_text(json.dumps([
             {'image': str(target/image), 'source_image': str(source/row['source_relative_path']),
              'source_sha256': row['source_sha256']} for image, row in source_map.items()
-        ], ensure_ascii=False, indent=2))
+        ], ensure_ascii=False, indent=2), encoding='utf-8')
         manifest = load_patch_manifest(staging)
         staging.rename(target)
         return {'dataset_path': str(target), 'classes': classes, 'patch_count': len(rows),

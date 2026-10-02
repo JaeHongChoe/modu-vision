@@ -12,7 +12,7 @@ def bind_truth(project, source, task, models, images):
     classes=[];roles={};explicit=False;metadata_hashes={}
     for model in models:
         checkpoint=Path(model['checkpoint_path']);metadata_file=checkpoint.parent/'model_meta.json'
-        metadata=json.loads(metadata_file.read_text())
+        metadata=json.loads(metadata_file.read_text(encoding='utf-8'))
         metadata_hashes[str(metadata_file)]=dm._hash(metadata_file)
         names=metadata.get('classes') or metadata.get('class_names') or []
         model_roles=None
@@ -114,7 +114,7 @@ def verify_evidence_binding(project, source, report):
         metadata_path = Path(project['models_dir']) / job_id / 'model_meta.json'
         if metadata_path.is_symlink():
             raise ValueError('Legacy comparison model metadata is linked')
-        metadata = json.loads(metadata_path.read_text())
+        metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
         if not isinstance(metadata, dict):
             raise ValueError('Legacy comparison model metadata is malformed')
         vocabulary = metadata.get('classes') or metadata.get('class_names') or names

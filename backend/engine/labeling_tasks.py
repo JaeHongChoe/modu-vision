@@ -34,7 +34,7 @@ def read(project, job_id):
     path = _root(project) / (job_id + '.json')
     if path.is_symlink(): raise ValueError('Labeling job file cannot be a symbolic link')
     with _LOCK:
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding='utf-8'))
         if value.get('project_id') != project['id'] or value.get('source_dataset_dir') != project.get('source_dataset_dir'):
             raise ValueError('Labeling job belongs to another project or dataset')
         if job_id not in _LIVE and value['status'] in ('queued', 'running', 'cancelling'):

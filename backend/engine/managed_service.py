@@ -41,7 +41,7 @@ class ManagedService:
                 if not self.config_path.exists():
                     with socket.socket() as probe:probe.bind(('127.0.0.1',0));port=probe.getsockname()[1]
                     self.save({'port':port,'token':secrets.token_urlsafe(32),'pid':None})
-        self.config=json.loads(self.config_path.read_text())
+        self.config=json.loads(self.config_path.read_text(encoding='utf-8'))
         self.ledger=DeploymentLedger(self.root)
     def save(self,config):
         atomic_private_json(self.config_path,config)
@@ -54,7 +54,7 @@ class ManagedService:
         return expected
     def owned_process(self):
         if self.config_path.is_symlink():raise ValueError('Managed service state is linked')
-        self.config=json.loads(self.config_path.read_text())
+        self.config=json.loads(self.config_path.read_text(encoding='utf-8'))
         if self.config.get('native_label'):
             from backend.engine.native_autostart import NativeAutostart
             native=NativeAutostart(self);state=native.query();pid=state.get('pid')
@@ -91,7 +91,7 @@ class ManagedService:
         path=self.root/'inputs.json'
         if path.is_symlink():raise ValueError('Input configuration cannot follow links')
         if not path.exists():return []
-        value=json.loads(path.read_text());scope=value.get('scope',{})
+        value=json.loads(path.read_text(encoding='utf-8'));scope=value.get('scope',{})
         source=release.get('input_root')
         if not source or scope.get('source_dataset_path')!=str(Path(source).resolve()):raise ValueError('Input configuration source changed; configure operator inputs again')
         if value.get('mode')=='folder':
@@ -107,7 +107,7 @@ class ManagedService:
     def validate_accepted_device(package,device,*,expected_receipt_sha256=None):
         from backend.engine.runtime_release_evidence import verify_release_evidence
         verify_release_evidence(package,device,expected_receipt_sha256=expected_receipt_sha256)
-        manifest=json.loads((Path(package)/'manifest.json').read_text())
+        manifest=json.loads((Path(package)/'manifest.json').read_text(encoding='utf-8'))
         if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
             raise ValueError('OpenVINO execution requires a verified package with openvino_models.json')
         if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
@@ -118,7 +118,7 @@ class ManagedService:
         if package.is_symlink():raise ValueError('Linked release package is unsupported')
         package=package.resolve(strict=True)
         _,checkpoints=verify_flow_package(package)
-        manifest=json.loads((package/'manifest.json').read_text())
+        manifest=json.loads((package/'manifest.json').read_text(encoding='utf-8'))
         from backend.engine.runtime_release_evidence import verify_release_evidence
         device=device or manifest.get('runtime',{}).get('device','cpu')
         evidence=verify_release_evidence(package,device)
@@ -151,9 +151,9 @@ class ManagedService:
                             'device':device}
             if evidence['receipt_kind']=='flow_parity':policy_payload['parity_receipt_sha256']=evidence['receipt_sha256']
             if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
-            if policy.exists() and json.loads(policy.read_text())!=policy_payload:raise ValueError('Existing release policy differs')
+            if policy.exists() and json.loads(policy.read_text(encoding='utf-8'))!=policy_payload:raise ValueError('Existing release policy differs')
             if not policy.exists():
-                with policy.open('x') as writer:json.dump(policy_payload,writer)
+                with policy.open('x',encoding='utf-8') as writer:json.dump(policy_payload,writer)
                 policy.chmod(0o600)
             _verify_release_policy(destination,verify_flow_package(destination)[1],policy,device=device)
             return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,'device':device,
@@ -266,7 +266,7 @@ class ManagedService:
         checked=FieldAdapterConfig.model_validate(config)
         previous=self.root/'adapters.json'
         if checked.mes:
-            saved=json.loads(previous.read_text()).get('mes') if previous.is_file() else None
+            saved=json.loads(previous.read_text(encoding='utf-8')).get('mes') if previous.is_file() else None
             if checked.clear_mes_token:checked.mes.token=None
             elif checked.mes.token is None and saved and saved.get('token'):
                 if saved.get('url')!=checked.mes.url:

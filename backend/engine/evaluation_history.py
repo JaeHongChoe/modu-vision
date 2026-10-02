@@ -98,7 +98,7 @@ class EvaluationHistory:
         path = self.directory / (evaluation_id + '.json')
         if path.is_symlink():
             raise ValueError('Evaluation integrity failure')
-        record = json.loads(path.read_text())
+        record = json.loads(path.read_text(encoding='utf-8'))
         evidence = {k: v for k, v in record.items() if k != 'evidence_sha256'}
         if record.get('evaluation_id') != evaluation_id or hashlib.sha256(canonical(evidence)).hexdigest() != record.get('evidence_sha256'):
             raise ValueError('Evaluation integrity failure')
@@ -238,7 +238,7 @@ def archive_specialized_evaluation(project, checkpoint, source, result, *, task=
     from backend.engine.evaluation_evidence import evaluation_analysis
     payload['analysis']=evaluation_analysis(predictions,task)
     metadata_path=checkpoint.parent/'model_meta.json'
-    metadata=json.loads(metadata_path.read_text()) if metadata_path.is_file() else {}
+    metadata=json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
     binding={'source_dataset_path':str(source),'evaluation_dataset_path':str(dataset),
              'dataset_fingerprint':_fingerprint(source),'checkpoint_sha256':_sha256(checkpoint),
              'family_dataset_sha256':payload.get('dataset_sha256',payload.get('manifest_sha256')),
