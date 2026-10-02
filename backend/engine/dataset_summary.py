@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 
 from backend.engine.annotation_storage import dataset_annotation_dir
-from backend.engine.grouped_dataset_views import _annotations,source_image_paths,is_anomaly_normal
+from backend.engine.grouped_dataset_views import _annotations,source_image_paths
+from backend.engine.dataset_inventory import folder_label_split
 
 
 def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
@@ -33,18 +34,17 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
         row=metadata.get(str(image),{})
         if row.get('workflow_state')=='approved':
             labeled=True
-        if task in ('classification','anomaly','anomaly_detection'):
-            parts=image.relative_to(source).parts
-            if task in ('anomaly','anomaly_detection'):
-                labels=['good' if is_anomaly_normal(image,source) else 'defect']
-                labeled=True
-            elif not labels and len(parts)>1 and image.parent.name not in {'images','train','val','test'}:
-                labels=[image.parent.name]
-                labeled=True
+        # Folder label and split follow the same rule as the persistent dataset index (dataset_inventory).
+        folder_label,folder_split=folder_label_split(PurePath(relative),task)
+        if task in ('anomaly','anomaly_detection'):
+            labels=[folder_label]
+            labeled=True
+        elif task=='classification' and not labels and folder_label:
+            labels=[folder_label]
+            labeled=True
         partition=assignments.get(str(image),assignments.get(relative))
         if partition not in {'train','val','test'}:
-            partition=next((p for p in image.relative_to(source).parts[:-1]
-                if p in {'train','val','test'}),'not_split')
+            partition=folder_split or 'not_split'
         state=usage.get(str(image),usage.get(relative,row.get('usage_state','active')))
         if state=='not_used':
             partition='not_used'

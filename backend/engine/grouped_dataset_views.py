@@ -26,10 +26,10 @@ def source_image_paths(source,task,*,include_unused=False):
     exclude_project=project is not None and project.is_relative_to(source)
     from backend.engine.dataset_usage import unused_image_paths
     unused=set() if include_unused else unused_image_paths(source)
-    scan_root=source/task if (source/task).is_dir() else source
-    excluded={'masks','mask','ground_truth','labels','annotations'} if task in {'detection','segmentation','anomaly','anomaly_detection'} else set()
-    return sorted(p for p in scan_root.rglob('*') if p.is_file() and str(p.resolve()) not in unused and (not exclude_project or not p.is_relative_to(project)) and not any(part.startswith('.') for part in p.relative_to(source).parts)
-                  and not (set(p.relative_to(source).parts[:-1]) & excluded) and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS)
+    # The same inventory rules as the persistent dataset index (dataset_inventory).
+    from backend.engine.dataset_inventory import is_inventory_path, scan_root as inventory_root
+    return sorted(p for p in inventory_root(source,task).rglob('*') if p.is_file() and str(p.resolve()) not in unused and (not exclude_project or not p.is_relative_to(project))
+                  and is_inventory_path(p.relative_to(source).parts,task))
 
 def is_anomaly_normal(image,source=None):
     path=Path(image)
