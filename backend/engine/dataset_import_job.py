@@ -76,11 +76,9 @@ class DatasetImportJobs:
         if record['kind'] != KIND:
             raise ValueError(f'{job_id} is not a dataset import')
         spec = ImportSpec(**json.loads(record['spec_json']))
-        ref = self.store.get(job_id)
+        ref = self._start(job_id)
         if ref.state in TERMINAL:
             return ref
-        if ref.state == 'accepted':
-            ref = self.store.transition(job_id, ref.revision, 'start')
         fence = self._begin_attempt(job_id, executor)
         try:
             return self._run_attempt(job_id, fence, record, spec)
@@ -96,8 +94,25 @@ class DatasetImportJobs:
                     return self._finish(job_id, fence, 'complete', {'revision': asdict(sealed)})
                 except Exception:
                     logger.exception('Dataset import %s sealed its revision but could not record it; the next start completes it', job_id)
+                    self._set_progress(job_id, {'phase': 'recording'})
                     return self.store.get(job_id)
             return self._finish(job_id, fence, 'fail', {'error': {'message': f'{type(exc).__name__}: {exc}'}})
+
+    def _start(self, job_id: str) -> JobRef:
+        """Move an accepted job to running; a stop recorded before that ends it aborted (cancel intents move the revision)."""
+        for _ in range(4):
+            ref = self.store.get(job_id)
+            if ref.state != 'accepted':
+                return ref
+            try:
+                if self.store.cancel_intent(job_id) is not None:
+                    ref = self.store.transition(job_id, ref.revision, 'abort', {'reason': 'cancelled before the import started'})
+                    self._set_progress(job_id, {'phase': ref.state})
+                    return ref
+                return self.store.transition(job_id, ref.revision, 'start')
+            except StaleRevision:
+                continue
+        return self.store.get(job_id)
 
     def _begin_attempt(self, job_id: str, executor: str) -> int:
         """A new fenced attempt at the job's current revision (a cancel intent recorded meanwhile moves the revision)."""

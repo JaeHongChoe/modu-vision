@@ -133,7 +133,8 @@ def _folder_ids(path: str) -> set:
     while True:
         try:
             stat = os.stat(current)
-            ids.add((stat.st_dev, stat.st_ino))
+            if stat.st_ino:  # inode 0 (some virtual drives) identifies nothing
+                ids.add((stat.st_dev, stat.st_ino))
         except OSError:
             pass
         parent = os.path.dirname(current)
@@ -143,9 +144,10 @@ def _folder_ids(path: str) -> set:
 
 
 def _same_folder_id(path: str) -> tuple:
+    """(device, inode), or (None, None) when the volume gives no usable identity (inode 0): callers then use the path."""
     try:
         stat = os.stat(path)
-        return stat.st_dev, stat.st_ino
+        return (stat.st_dev, stat.st_ino) if stat.st_ino else (None, None)
     except OSError:
         return None, None
 
@@ -192,14 +194,16 @@ def _discover(source: Path, task: str, project: Path, follow_links: bool,
             raise InterruptedError('Index build cancelled; no revision was recorded')
         here = Path(root)
         real = os.path.realpath(root)
-        if real in seen:  # a link back to a folder already walked
+        identity = _same_folder_id(real)
+        marker = identity if identity != (None, None) else real
+        if marker in seen:  # a link back to a folder already walked (by identity: spelling can differ)
             dirs[:] = []
             continue
         if not follow_links and not _contains(real_source, real):  # defence in depth: never leave the source
             skipped += 1
             dirs[:] = []
             continue
-        seen.add(real)
+        seen.add(marker)
         kept = []
         for name in dirs:
             path = here / name
@@ -265,8 +269,10 @@ def _read_entry(path: Path) -> tuple:
             try:
                 image, metadata = read_dicom(path)
                 digest, (width, height), valid, code, detail = metadata['source_sha256'], image.size, True, None, None
-            except ValueError as exc:  # read_dicom reports undecodable pixel data as ValueError
-                digest, width, height, valid, code, detail = None, None, None, False, 'DECODE_ERROR', str(exc)
+            except ValueError as exc:
+                # read_dicom also reports a missing optional decoder or exhausted memory as ValueError: such a failure
+                # can change without the file changing, so a DICOM decode failure is never cached.
+                return None, before.st_size, None, None, False, 'DECODE_ERROR', str(exc), None
         else:
             hasher = hashlib.sha256()
             with tempfile.SpooledTemporaryFile(max_size=_SPOOL_IN_MEMORY) as copy:

@@ -12,6 +12,9 @@ export const importEnded = (view: DatasetImportView | null) => Boolean(view && E
 export function importProgress(view: DatasetImportView | null): { text: string; percent: number | null } {
   const progress = view?.progress;
   if (!view) return { text: '', percent: null };
+  if (view.state === 'running' && progress?.phase === 'recording') {
+    return { text: '검증 완료 · 결과 기록 대기 (다음 시작 때 자동으로 완료됩니다)', percent: null };
+  }
   if (view.state === 'running' && !progress) {
     return { text: '실행 중 · 진행 상황은 이 작업을 실행하는 앱에서만 보입니다', percent: null };
   }
@@ -59,4 +62,28 @@ export function sourceMismatchNotice(shownFolder: string, registeredSource: stri
   const normalize = (value: string) => value.replace(/[\\/]+$/, '');
   return normalize(shownFolder) === normalize(registeredSource)
     ? null : '화면의 폴더 경로와 프로젝트에 등록된 원본 경로가 다르게 표시됩니다(바로가기 경로일 수도 있습니다). 가져오기는 등록된 원본을 읽습니다.';
+}
+
+/** The panel header: "active" once the job's own revision is the active one. */
+export function importHeadline(view: DatasetImportView | null, revisions: DatasetRevisionRow[]): string {
+  const receipt = view?.result?.revision;
+  if (view?.state === 'completed' && receipt && revisions.some((row) => row.revision_id === receipt.revision_id && row.active)) {
+    return '검증 완료 · 활성 버전';
+  }
+  return importStatusText(view);
+}
+
+// One idempotency key per intended import, kept for the app session (a retried click or a reopened panel returns
+// the same job); dropped once the start succeeded or when the project, source or settings change.
+const pendingKeys = new Map<string, string>();
+export function importKeyFor(settings: string, make: () => string): string {
+  const key = pendingKeys.get(settings) || make();
+  pendingKeys.set(settings, key);
+  return key;
+}
+export function clearImportKey(settings: string): void { pendingKeys.delete(settings); }
+
+/** How a revision row names the import job that sealed it. */
+export function revisionJobLabel(row: Pick<DatasetRevisionRow, 'publication_key'>): string {
+  return row.publication_key ? `작업 ${row.publication_key.slice(0, 8)}` : '작업 기록 없음';
 }

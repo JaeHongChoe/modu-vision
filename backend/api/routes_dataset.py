@@ -452,7 +452,8 @@ def _folder_ids(path: str) -> set:
     while True:
         try:
             stat = os.stat(current)
-            ids.add((stat.st_dev, stat.st_ino))
+            if stat.st_ino:  # inode 0 (some virtual drives) identifies nothing
+                ids.add((stat.st_dev, stat.st_ino))
         except OSError:
             pass
         parent = os.path.dirname(current)
@@ -462,9 +463,10 @@ def _folder_ids(path: str) -> set:
 
 
 def _folder_id(path: str) -> tuple:
+    """(device, inode), or (None, None) when the volume gives no usable identity (inode 0): callers then use the path."""
     try:
         stat = os.stat(path)
-        return stat.st_dev, stat.st_ino
+        return (stat.st_dev, stat.st_ino) if stat.st_ino else (None, None)
     except OSError:
         return None, None
 
@@ -488,19 +490,20 @@ def _validate_folder_images(folder: Path):
     the result partial instead. The walk stops after _QUICK_VALIDATION_LIMIT images or _QUICK_VALIDATION_FOLDERS folders.
     Returns (corrupted, checked, sampled, gaps): gaps name what the walk could not cover.
     """
-    corrupted, checked, gaps, seen, folders = [], 0, [], set(), 0
+    corrupted, checked, gaps, seen, folders = [], 0, [], set(), 0  # seen: (device, inode) of walked folders
     selection = os.path.realpath(folder)
     above = _folder_ids(selection) - {_folder_id(selection)}  # the selection's parents, by identity
     for root, dirs, files in os.walk(folder, followlinks=True, onerror=lambda error: gaps.append("unreadable folder")):
         real = os.path.realpath(root)
-        if real in seen:  # a link back to a folder already walked
+        identity = _folder_id(real)
+        if (identity if identity != (None, None) else real) in seen:  # a link back to a folder already walked
             dirs[:] = []
             continue
         if real != selection and (_contains(real, selection) or _folder_id(real) in above):
             gaps.append("a folder link points to a folder that contains the selection")
             dirs[:] = []
             continue
-        seen.add(real)
+        seen.add(identity if identity != (None, None) else real)
         folders += 1
         if folders > _QUICK_VALIDATION_FOLDERS:
             return corrupted, checked, True, gaps
@@ -1229,15 +1232,34 @@ def _hash_source(path: Path, copy=None) -> str:
 
 
 def _probe_header(path: Path) -> None:
-    """Pillow reads only the header: a file it cannot identify, or a decompression bomb, is refused before any read."""
+    """Pillow reads only the header: a file it cannot identify, or a decompression bomb, is refused before any read.
+    A failure to read the file at all (an I/O error, a sharing violation) is a read failure, not a broken image."""
     try:
         with Image.open(path) as probe:
             probe.size
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Image file not found") from None
+    except (Image.UnidentifiedImageError, Image.DecompressionBombError, SyntaxError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=format_error_response(
+            "ERR_CORRUPT_IMAGE", details=f"Cannot decode image {path}: {exc}")) from None
+    except OSError as exc:
+        if exc.errno is None:  # Pillow reports some corrupt headers as a plain OSError: a property of the bytes
+            raise HTTPException(status_code=400, detail=format_error_response(
+                "ERR_CORRUPT_IMAGE", details=f"Cannot decode image {path}: {exc}")) from None
+        raise _source_error(path, exc) from None
     except Exception as exc:
         raise HTTPException(status_code=400, detail=format_error_response(
             "ERR_CORRUPT_IMAGE", details=f"Cannot decode image {path}: {exc}")) from None
+
+
+def _is_webp(path: Path) -> bool:
+    """WebP by its RIFF....WEBP signature, whatever the file is called (browsers save WebP as .jpg)."""
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(12)
+    except OSError as exc:
+        raise _source_error(path, exc) from None
+    return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
 
 
 def _render_jpeg(image: Image.Image, size: int) -> bytes:
@@ -1319,7 +1341,7 @@ def get_thumbnail(
 
 def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dicom: bool, decoder: str, read_dicom,
                       respond):
-    if candidate_path.suffix.lower() == ".webp" and stat.st_size > _WEBP_LIMIT:
+    if stat.st_size > _WEBP_LIMIT and _is_webp(candidate_path):
         # Pillow's WebP reader loads the whole file even to read its header: no memory bound applies to it.
         raise HTTPException(status_code=400, detail=format_error_response(
             "ERR_CORRUPT_IMAGE", details=f"{candidate_path} is a WebP file over {_WEBP_LIMIT} bytes; no thumbnail is drawn"))

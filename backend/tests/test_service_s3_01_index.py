@@ -457,3 +457,117 @@ def test_two_attempts_sealing_one_publication_key_share_the_first_revision(index
 def dataset_index_db(index):
     import sqlite3
     return sqlite3.connect(index.path)
+
+
+# --- Freeze-3 review: pin the behaviour the surviving mutants left open -----------------------------------
+def test_staging_is_cleaned_by_heartbeat_not_by_start_time(index, tmp_path):
+    import sqlite3
+    import time as _time
+    from backend.engine import dataset_index
+    source = _classification_tree(tmp_path / 'source', per_class=1)
+    day = dataset_index._STALE_BUILD_NS
+    now = _time.time_ns()
+    with sqlite3.connect(index.path) as db:
+        db.execute('INSERT INTO dataset_builds VALUES(?, ?, ?, ?)', ('crashed', 'ns:a', now - 3 * day, now - 2 * day))
+        db.execute('INSERT INTO dataset_builds VALUES(?, ?, ?, ?)', ('long-alive', 'ns:a', now - 3 * day, now))
+        for build in ('crashed', 'long-alive'):
+            db.execute('INSERT INTO dataset_index_staging VALUES(?, ?, ?, NULL, 0, NULL, NULL, NULL, NULL, 1, NULL, NULL, 0)',
+                       (build, 'x.png', 'u'))
+    index.build_revision('ns:a', tmp_path / 'project', source, 'classification')
+    with sqlite3.connect(index.path) as db:
+        builds = {row[0] for row in db.execute('SELECT build_id FROM dataset_builds')}
+        staged = {row[0] for row in db.execute('SELECT build_id FROM dataset_index_staging')}
+    assert builds == staged == {'long-alive'}, 'a build that keeps its heartbeat fresh keeps its rows, however old'
+
+
+def test_cache_rows_are_pruned_for_missing_files_but_kept_for_another_scan_root(index, tmp_path, monkeypatch):
+    import sqlite3
+    from backend.engine import dataset_index
+    source = tmp_path / 'multi'
+    for folder in ('segmentation/images', 'classification/ok'):
+        (source / folder).mkdir(parents=True)
+        for number in range(2):
+            Image.new('RGB', (16, 16), 'white').save(source / folder / f'{number}.png')
+    index.build_revision('ns:a', tmp_path / 'project', source, 'segmentation')
+    index.build_revision('ns:a', tmp_path / 'project', source, 'classification')
+    (source / 'classification' / 'ok' / '1.png').unlink()
+    index.build_revision('ns:a', tmp_path / 'project', source, 'classification')
+    with sqlite3.connect(index.path) as db:
+        cached = sorted(row[0] for row in db.execute('SELECT relative_path FROM dataset_stat_cache'))
+    assert cached == ['classification/ok/0.png', 'segmentation/images/0.png', 'segmentation/images/1.png']
+
+
+def test_a_cache_row_of_another_validator_version_is_read_again(index, tmp_path, monkeypatch):
+    if os.name == 'nt':
+        pytest.skip('the stat cache is not trusted on Windows')
+    from backend.engine import dataset_index
+    source = _classification_tree(tmp_path / 'source', per_class=1)
+    index.build_revision('ns:a', tmp_path / 'project', source, 'classification')
+    reads = []
+    real = dataset_index._read_entry
+    monkeypatch.setattr(dataset_index, '_read_entry', lambda path: reads.append(path) or real(path))
+    monkeypatch.setattr(dataset_index, 'VALIDATOR', 'decode-v2')
+    index.build_revision('ns:a', tmp_path / 'project', source, 'classification')
+    assert len(reads) == 2, 'results of an older validator are not reused'
+
+
+def test_a_same_size_rewrite_during_the_read_is_caught(index, tmp_path, monkeypatch):
+    if os.name == 'nt':
+        pytest.skip('change detection relies on POSIX ctime')
+    from backend.engine import dataset_index
+    source = tmp_path / 'bmp'
+    (source / 'ok').mkdir(parents=True)
+    target = source / 'ok' / 'a.bmp'
+    Image.new('RGB', (20, 18), 'white').save(target)
+    real_open = Image.open
+
+    def rewrite(handle, *args, **kwargs):
+        stat = target.stat()
+        Image.new('RGB', (20, 18), 'black').save(target)
+        assert target.stat().st_size == stat.st_size
+        os.utime(target, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        return real_open(handle, *args, **kwargs)
+
+    monkeypatch.setattr(dataset_index.Image, 'open', rewrite)
+    receipt = index.build_revision('ns:a', tmp_path / 'project', source, 'classification', 'reject')
+    assert [row['error_code'] for row in index.page('ns:a', receipt.revision_id, valid=False)['items']] == ['CHANGED_DURING_SCAN']
+
+
+def test_a_dicom_decode_failure_is_never_cached(index, tmp_path, monkeypatch):
+    from backend.engine import dicom_input, dataset_index
+    source = tmp_path / 'scans'
+    (source / 'ok').mkdir(parents=True)
+    (source / 'ok' / 'scan.dcm').write_bytes(b'DICM' * 32)
+    monkeypatch.setattr(dicom_input, 'is_dicom', lambda path: True)
+    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path: (_ for _ in ()).throw(ValueError('DICOM input requires optional pydicom')))
+    first = index.build_revision('ns:a', tmp_path / 'project', source, 'classification', 'reject')
+    assert first.state == 'rejected'
+    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path: (Image.new('L', (16, 16)), {'source_sha256': 'f' * 64}))
+    assert index.build_revision('ns:a', tmp_path / 'project', source, 'classification', 'reject').state == 'prepared', \
+        'installing the decoder is enough; the failure was not cached'
+
+
+def test_a_link_back_inside_the_source_spelled_differently_is_not_walked_twice(index, tmp_path):
+    """Case-insensitive volume: a link to /source spelled /SOURCE reaches the same folder; only identity shows it."""
+    source = _classification_tree(tmp_path / 'source', per_class=1)
+    _link(source / 'train' / 'ok' / 'BACK', Path(str(source).replace('/source', '/SOURCE')))
+    receipt = index.build_revision('ns:a', tmp_path / 'project', source, 'classification', follow_links=True)
+    assert receipt.image_count == 2, _paths(index, receipt)
+
+
+def test_a_volume_without_inode_numbers_still_walks_every_folder(index, tmp_path, monkeypatch):
+    """Some virtual drives report inode 0 for everything (emulated): identity then falls back to the path."""
+    from backend.engine import dataset_index
+    source = _classification_tree(tmp_path / 'source', per_class=2)
+    real_stat = os.stat
+
+    class NoInode:
+        def __init__(self, stat):
+            self._stat = stat
+
+        def __getattr__(self, name):
+            return 0 if name == 'st_ino' else getattr(self._stat, name)
+
+    monkeypatch.setattr(dataset_index.os, 'stat', lambda path, *args, **kwargs: NoInode(real_stat(path, *args, **kwargs)))
+    receipt = index.build_revision('ns:a', tmp_path / 'project', source, 'classification', verify=True)
+    assert receipt.image_count == 4

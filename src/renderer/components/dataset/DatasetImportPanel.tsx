@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ListChecks, Play, RefreshCw, ShieldCheck, Square, X } from 'lucide-react';
 import { api, type DatasetImportView, type DatasetRevisionImage, type DatasetRevisionRow } from '../../services/api';
 import type { VisionTask } from '../../types';
-import { acceptBlocker, importEnded, importProgress, importStatusText, sourceMismatchNotice } from './datasetImportView';
+import { acceptBlocker, clearImportKey, importEnded, importHeadline, importKeyFor, importProgress, revisionJobLabel, sourceMismatchNotice } from './datasetImportView';
 
 interface Props {
   projectId: string;
@@ -18,8 +18,6 @@ const storageKey = (projectId: string) => `modu.datasetImport.lastJob.${projectI
 const readLastJob = (projectId: string) => { try { return window.localStorage.getItem(storageKey(projectId)); } catch { return null; } };
 const writeLastJob = (projectId: string, jobId: string) => { try { window.localStorage.setItem(storageKey(projectId), jobId); } catch { /* per-viewer convenience only */ } };
 const message = (caught: unknown) => (caught instanceof Error ? caught.message : String(caught));
-// Kept for this app session per project and import settings, so reopening the panel retries with the same key.
-const pendingKeys = new Map<string, string>();
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `import-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 /** Validated dataset revisions: a durable import reads every image; nothing becomes active until it is accepted. */
@@ -93,10 +91,9 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
     if (busy) return;
     setBusy('start'); setError(null); setConfirming(false);
     try {
-      const key = pendingKeys.get(settingsKey) || newKey();
-      pendingKeys.set(settingsKey, key);
-      const view = await api.datasetImports.start({ task, invalid_policy: policy, verify, follow_links: followLinks }, key);
-      pendingKeys.delete(settingsKey);
+      const view = await api.datasetImports.start({ task, invalid_policy: policy, verify, follow_links: followLinks },
+        importKeyFor(settingsKey, newKey));
+      clearImportKey(settingsKey);
       writeLastJob(projectId, view.job_id);
       setJob(view);
     } catch (caught) { setError(message(caught)); } finally { setBusy(null); }
@@ -162,7 +159,7 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
             {error && <div role="alert" className="rounded-md border border-red-500/50 bg-red-950/30 p-3 text-xs text-red-200">{error}</div>}
             {job && (
               <section aria-label="현재 가져오기" className="rounded-lg border border-[#344963] bg-[#152233] p-4">
-                <div className="flex items-center justify-between text-xs"><span className="font-semibold text-slate-100">{importStatusText(job)}</span><span className="font-mono text-[10px] text-slate-500">{job.job_id}</span></div>
+                <div className="flex items-center justify-between text-xs"><span className="font-semibold text-slate-100">{importHeadline(job, revisions)}</span><span className="font-mono text-[10px] text-slate-500">{job.job_id}</span></div>
                 <div className="mt-3" aria-live="polite">
                   {progress.percent === null
                     ? <div className="text-[11px] text-slate-400">{progress.text}</div>
@@ -211,7 +208,7 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
               <ul className="space-y-2">
                 {revisions.map((row) => (
                   <li key={row.revision_id} className="flex items-center justify-between rounded-md border border-[#2F4157] bg-[#142030] px-3 py-2 text-xs">
-                    <span className="font-mono text-slate-300" title={row.publication_key ? `가져오기 작업 ${row.publication_key}` : '작업 기록 없음'}>{row.revision_id.slice(0, 12)}{row.publication_key ? ` · 작업 ${row.publication_key.slice(0, 8)}` : ''}</span>
+                    <span className="font-mono text-slate-300" title={row.publication_key ? `가져오기 작업 ${row.publication_key}` : '작업 기록 없음'}>{row.revision_id.slice(0, 12)} · {revisionJobLabel(row)}</span>
                     <span className="text-slate-400">{row.task} · {row.image_count.toLocaleString()}장 · 손상 {row.error_count} · {row.invalid_policy === 'reject' ? '거부 정책' : '제외 정책'}</span>
                     <span className={row.active ? 'font-semibold text-emerald-300' : row.state === 'rejected' ? 'text-red-300' : 'text-slate-500'}>{row.active ? '활성' : row.state === 'rejected' ? '채택 불가' : '채택 전'}</span>
                   </li>

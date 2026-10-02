@@ -359,7 +359,7 @@ def _run_project(request: Request, run_id: str) -> Dict[str, Any]:
         same = (selected is not None and selected.get("id") == owner["project_id"]
                 and Path(selected.get("project_dir", "")).expanduser().resolve() == Path(owner["project_dir"]).expanduser().resolve())
         if not same:  # a restored copy keeps the ID at another folder; 404 does not confirm the run exists elsewhere
-            raise HTTPException(status_code=404, detail="Inspection run not found in the selected project.")
+            raise HTTPException(status_code=404, detail="Inspection run not found in the active project.")
     try:
         project = _load_project(Path(owner["project_dir"]).expanduser().resolve())
     except HTTPException as exc:

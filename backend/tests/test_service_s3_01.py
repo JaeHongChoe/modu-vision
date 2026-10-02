@@ -563,3 +563,57 @@ def test_a_parent_link_is_caught_by_identity_not_spelling(dataset_client, tmp_pa
     body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
     assert all('line-b' not in row['file_path'] for row in body['corrupted_images'])
     assert body['validation']['complete'] is False
+
+
+def test_a_read_error_at_the_header_probe_is_not_remembered(dataset_client, tmp_path, monkeypatch):
+    import builtins
+    source = tmp_path / 'probe.png'
+    Image.new('RGB', (30, 30), 'green').save(source)
+    real_open = builtins.open
+    hiccups = []
+
+    def share(file, *args, **kwargs):
+        if str(file) == str(source) and not hiccups:
+            hiccups.append(1)
+            raise OSError(5, 'Input/output error')
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, 'open', share)
+    assert thumbnail(dataset_client, source).status_code == 400
+    assert thumbnail(dataset_client, source).status_code == 200
+
+
+def test_a_webp_named_jpg_is_held_to_the_webp_limit(dataset_client, tmp_path, monkeypatch):
+    from backend.api import routes_dataset as routes
+    source = tmp_path / 'saved-from-browser.jpg'
+    Image.new('RGB', (64, 64), 'white').save(source, format='WEBP')
+    monkeypatch.setattr(routes, '_WEBP_LIMIT', 16)
+    monkeypatch.setattr(routes, '_hash_source', lambda *args: pytest.fail('read whole'))
+    assert thumbnail(dataset_client, source).status_code == 400
+
+
+def test_a_link_back_to_the_selection_spelled_differently_is_walked_once(dataset_client, tmp_path):
+    """On a case-insensitive volume a link spelled /ONCE reaches /once; only folder identity shows it was walked."""
+    source = tmp_path / 'once'
+    _folder(source, 2)
+    _link(source / 'good' / 'AGAIN', Path(str(source).replace('/once', '/ONCE')))
+    body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
+    assert body['validation']['checked_images'] == 3 and len(body['corrupted_images']) == 1
+
+
+def test_a_volume_without_inode_numbers_is_still_walked_completely(dataset_client, tmp_path, monkeypatch):
+    from backend.api import routes_dataset as routes
+    source = tmp_path / 'virtual'
+    _folder(source, 3)
+    real_stat = os.stat
+
+    class NoInode:
+        def __init__(self, stat):
+            self._stat = stat
+
+        def __getattr__(self, name):
+            return 0 if name == 'st_ino' else getattr(self._stat, name)
+
+    monkeypatch.setattr(routes.os, 'stat', lambda path, *args, **kwargs: NoInode(real_stat(path, *args, **kwargs)))
+    body = dataset_client.post('/api/dataset/import', json={'folder_path': str(source), 'task': 'classification', 'validate_images': True}).json()
+    assert body['validation']['checked_images'] == 4 and body['validation']['complete'] is True

@@ -30,3 +30,13 @@ test('live progress, a late stop and the registered source are stated as they ar
  assert.equal(v.sourceMismatchNotice('/data/a/','/data/a'),null);
  assert.match(v.sourceMismatchNotice('/data/b','/data/a'),/등록된 원본을 읽습니다/);
  assert.match(v.sourceMismatchNotice('/data/b',null),/등록된 원본 폴더가 없습니다/);});
+test('the header says active, a waiting record is stated, and one key serves one intended import',()=>{const v=view();
+ const done=job('completed',{result:{revision:receipt()}});
+ assert.equal(v.importHeadline(done,[{revision_id:'r1',active:true}]),'검증 완료 · 활성 버전');
+ assert.equal(v.importHeadline(done,[{revision_id:'r1',active:false}]),'검증 완료 · 채택 전');
+ assert.match(v.importProgress(job('running',{progress:{phase:'recording'}})).text,/기록 대기/);
+ let made=0;const make=()=>`k${++made}`;
+ assert.equal(v.importKeyFor('p|src|cls',make),'k1');assert.equal(v.importKeyFor('p|src|cls',make),'k1','a retry reuses the key');
+ assert.equal(v.importKeyFor('p|other|cls',make),'k2','another source is another import');
+ v.clearImportKey('p|src|cls');assert.equal(v.importKeyFor('p|src|cls',make),'k3','after a successful start the next import gets a new key');
+ assert.equal(v.revisionJobLabel({publication_key:'0123456789abcdef'}),'작업 01234567');assert.equal(v.revisionJobLabel({publication_key:null}),'작업 기록 없음');});

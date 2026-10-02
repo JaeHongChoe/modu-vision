@@ -272,3 +272,21 @@ def test_a_stop_between_start_and_the_attempt_aborts_instead_of_failing(imports,
 
     monkeypatch.setattr(store, 'transition', then_cancel)
     assert jobs.run(ref.id).state == 'aborted'
+
+
+def test_a_stop_recorded_before_the_start_transition_aborts(imports, tmp_path, monkeypatch):
+    jobs, store, index = imports
+    source = _source(tmp_path / 'source')
+    ref = jobs.submit(_context(), 'ns:a', _spec(tmp_path, source), 'before-start')
+    real_get = store.get
+    once = []
+
+    def cancel_after_read(job_id):
+        current = real_get(job_id)
+        if not once and current.state == 'accepted':
+            once.append(1)
+            jobs.cancel(job_id, 'ns:a', 'actor-a')  # lands after run() read the job, before its start transition
+        return current
+
+    monkeypatch.setattr(store, 'get', cancel_after_read)
+    assert jobs.run(ref.id).state == 'aborted' and index.revisions('ns:a') == []
