@@ -1450,6 +1450,12 @@
      "result": "published in 6fae111: images saved twice by an earlier build count once at load (the first, usable entry kept) and are confirmed rather than removed when picked again; a moved image picked at its new place replaces its entry by content digest; a non-409 check failure never overwrites saved identities, while a user with only older paths keeps them under the legacy key and can save new picks; the legacy key decides what the legacy list offers once it exists; independent review ACCEPT (340 load orders probed, all mutants caught)",
      "scope": "frozen tree (60d7768 + 4 renderer files): renderer suite, typecheck, e2e 2 passed; reviewer re-ran 324 renderer tests and the typecheck",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "published in f00464e (freezes 5-7): saved legacy paths outside the first 200 listed images stay saved, are left out of comparisons and are listed with a remove button each and '모두 빼기', with an honest summary (saved / compared / unlisted); until the listing answers (loading or failed) nothing is called unlisted, offered for removal or compared; independent review: freeze 5 ACCEPT WITH FIXES (P2 lock-out), freeze 6 ACCEPT (P3 wipe while loading), freeze 7 ACCEPT; the unlisted path is lost in 0 of 340 load orders (freeze 4: 310)",
+     "scope": "frozen trees (6fae111 / c1b46b3 + 3 renderer files): renderer suite, typecheck, e2e 2 passed (freeze 5/6); reviewer re-ran 330 renderer tests and the typecheck on freeze 7",
+     "platform": "macOS development; Windows hosted run pending for this commit"
     }
    ],
    "file_actions": {
@@ -1473,7 +1479,7 @@
    "remaining": [
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
-    "older paths outside the first 200 listed images are lost after a no-revision load (freeze-4 review P3; fix in review as freeze 5)",
+    "a failed legacy listing has no retry within the same context; the panel tests' React stub runs no effect cleanup, so the late-answer guard and the loading resets are verified by the reviewer's cleanup-aware probe only",
     "operator and package cohort selections stay in memory; the test-set browser still offers invalid images; the cohort notice stays after clearing the selection",
     "the flowchart header keeps the previous path until the picker is confirmed",
     "Windows native and hosted evidence for these commits pending"
