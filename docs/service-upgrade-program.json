@@ -1551,6 +1551,12 @@
      "result": "slice 3 published: durable import job (fenced attempt, cancel between files, publication key = job id, crash-after-seal completion at startup), routes with role checks and owner-gated startup recovery, validated-revision panel with explicit two-step accept; three independent review rounds, final spec/quality pass",
      "scope": "clean main + 14 files: backend 256 passed, renderer 293, typecheck clean; real-backend browser e2e (Chrome channel, lock-exact node_modules, S0-09 harness): reject holds a corrupt image, exclude + explicit accept activates, source bytes unchanged",
      "platform": "macOS development; Windows native pending; formats (LabelMe/COCO/YOLO labels in the index), ZIP/uploaded inputs and duplicate reporting remain open"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "review leftovers of slices 1-3 closed (zero-inode identity fallback, identity link checks, DICOM non-caching, probe read vs decode errors, WebP signature, start-window stop, waiting-to-record state, active header) and a real-backend browser e2e for the import panel",
+     "scope": "clean main + 12 files: backend 760 passed / 7 skipped, renderer 294, typecheck clean, import e2e passed; full browser e2e suite 33/33 on the lock-exact environment",
+     "platform": "macOS development; Windows native pending"
     }
    ],
    "file_actions": {
@@ -8226,7 +8232,7 @@
    "S6-05"
   ],
   "last_verified_on": "2026-10-02",
-  "git_publication": "main 8716df7: bundle (91033b2), inspection scope (25235a2, 021b5e5), S3-01 slices 1-2 (3d42284, 021b5e5, 8716df7) pushed after independent review and clean-clone runs; S3-01 import job/panel, S1-04 cancel/failure observation and S1-05 capability slice are in progress"
+  "git_publication": "main 8716df7: bundle (91033b2), inspection scope (25235a2, 021b5e5), S3-01 slices 1-2 (3d42284, 021b5e5, 8716df7) pushed after independent review and clean-clone runs; S3-01 slices 1-3 and follow-ups published; S1-04 cancel/failure observation and S1-05 capability slice in review"
  },
  "scope_refinements": [
   {
