@@ -8,7 +8,7 @@ import {insertSubgraph,flowTestSetStorageKey} from './flowWorkspace';
 import {compatibleModelNode,modelScoreBinding} from './modelFlowHandoff';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {ImageLibraryBrowser} from '../common/ImageLibraryBrowser';
-import {applyResolution,legacySavedPaths,legacyStorageKey,parseSavedTestSet,pickTestImage,preserveLegacyPaths,testImageFrom,toggleTestImage,unresolvedReason,TEST_SET_LIMIT,type TestImage,type UnresolvedTestImage} from './flowTestSet';
+import {applyResolution,legacyStorageKey,offeredLegacyPaths,parseSavedTestSet,pickTestImage,preserveLegacyPaths,testImageFrom,toggleTestImage,unresolvedReason,TEST_SET_LIMIT,type TestImage,type UnresolvedTestImage} from './flowTestSet';
 interface Template {template_id:string;name:string;kind:'flow'|'subgraph';pipeline:FlowchartPipeline;models:Array<{node_id:string;name:string;task:string}>;classes:{names:string[];ids:number[]};classes_by_node?:Record<string,{names:string[];ids:number[]}>;ports:{inputs:Array<{node_id:string;payload_type:string}>;outputs:Array<{node_id:string;payload_type:string}>}}
 interface Comparison {comparison_id:string;name:string;created_at:string;status:string;rows:Array<{image_path:string;file_name:string;image_sha256:string;error?:string;result_a?:FlowchartExecutionResult;result_b?:FlowchartExecutionResult;difference?:{verdict_changed:boolean;roi_changed:boolean;changed_nodes:string[];verdict_a:string;verdict_b:string;reason_a:string;reason_b:string}}>}
 export function FlowWorkspacePanel({versions,models,onOpenImage,area}:{area?:'edit'|'test'|'evaluate'|'release';versions:SavedFlowVersion[];models:FlowModelCatalogItem[];onOpenImage:()=>void}) {
@@ -29,14 +29,21 @@ export function FlowWorkspacePanel({versions,models,onOpenImage,area}:{area?:'ed
   const contextGeneration=getProjectContextGeneration();
   const context=JSON.stringify([storageKey,transport,contextGeneration]);
   // Plain paths saved by older versions, from both keys; offered whenever the panel falls back to the legacy list.
-  const savedLegacyPaths=()=>{let raw:string|null=null,pathsRaw:string|null=null;if(storageKey)try{raw=localStorage.getItem(storageKey);pathsRaw=localStorage.getItem(legacyStorageKey(storageKey));}catch{}return legacySavedPaths(raw,pathsRaw);};
+  const savedLegacyPaths=()=>{if(!storageKey)return [];try{return offeredLegacyPaths(localStorage,storageKey);}catch{return [];}};
   useEffect(()=>{let active=true;setLoadedContext(null);setTarget('local');setDevice('cpu');setTemplates([]);setImages([]);setHistory([]);setComparison(null);setTestImages([]);setTestSet([]);setUnresolved([]);setLibrary('available');setSelected('');setVa('');setVb('');setSubset([]);setError('');setNotice('');setBusy(false);
     if(project&&folder&&storageKey)Promise.all([request<{templates:Template[]}>('/api/flow-workspace/templates'),request<{comparisons:Comparison[]}>('/api/flow-workspace/comparisons')]).then(async([t,h])=>{if(!active)return;setTemplates(t.templates);setHistory(h.comparisons);
       let raw:string|null=null;try{raw=localStorage.getItem(storageKey);}catch{}
       const {saved,legacyPaths}=parseSavedTestSet(raw);
       // asked even when only older paths are saved: the answer says whether a validated revision exists (409 = legacy list)
       try{const resolved=saved.length||legacyPaths||savedLegacyPaths().length?await api.library.resolve(saved):null;if(!active)return;if(legacyPaths){try{preserveLegacyPaths(localStorage,storageKey,raw);}catch{}}const {kept,unresolved:pending,notice:dropped}=applyResolution(saved,resolved?.results||[],legacyPaths);setTestSet(kept);setUnresolved(pending);if(dropped)setNotice(dropped);}
-      catch(e){if(!active)return;if((e as {status?:number}).status!==409)throw e;setLibrary('unavailable');setTestImages(savedLegacyPaths());}
+      catch(e){if(!active)return;
+        if((e as {status?:number}).status!==409){
+          // Saved identities that could not be checked are never overwritten: saving stays off until a load succeeds.
+          if(saved.length)throw e;
+          // Nothing but older paths is saved: keep them under their own key and let new picks be saved.
+          try{preserveLegacyPaths(localStorage,storageKey,raw);}catch{}
+          setError(e instanceof Error?e.message:String(e));setLoadedContext(context);return;}
+        setLibrary('unavailable');setTestImages(savedLegacyPaths());}
       setLoadedContext(context);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};
   },[context]);
   // The identity set and the legacy path list are saved under separate keys, so neither mode erases the other's entries.

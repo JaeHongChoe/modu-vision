@@ -20,7 +20,9 @@ export function parseSavedTestSet(raw: string | null): { saved: TestImage[]; leg
   if (!Array.isArray(parsed)) return { saved: [], legacyPaths: 0 };
   const saved = parsed.filter((entry): entry is TestImage => Boolean(entry) && typeof entry === 'object'
     && typeof (entry as TestImage).image_uuid === 'string' && typeof (entry as TestImage).relative_path === 'string')
-    .map(({ image_uuid, sha256, relative_path, file_name, file_path }) => ({ image_uuid, sha256, relative_path, file_name, file_path }));
+    .map(({ image_uuid, sha256, relative_path, file_name, file_path }) => ({ image_uuid, sha256, relative_path, file_name, file_path }))
+    // an earlier build could save one image twice; it counts once
+    .filter((entry, index, all) => all.findIndex((other) => other.image_uuid === entry.image_uuid) === index);
   return { saved: saved.slice(0, TEST_SET_LIMIT), legacyPaths: parsed.filter((entry) => typeof entry === 'string').length };
 }
 
@@ -39,11 +41,19 @@ export function legacySavedPaths(...raws: Array<string | null>): string[] {
 /** Where the legacy path list is saved, apart from the identity set (so neither overwrites the other). */
 export const legacyStorageKey = (storageKey: string) => `${storageKey}:paths`;
 
+/** The legacy list to offer. Once the legacy key exists it is the list the user edits, so a path unchecked there does
+ *  not come back from the identity key; before that, the paths an older version saved under the identity key. */
+export function offeredLegacyPaths(storage: Pick<Storage, 'getItem'>, storageKey: string): string[] {
+  const kept = storage.getItem(legacyStorageKey(storageKey));
+  return kept !== null ? legacySavedPaths(kept) : legacySavedPaths(storage.getItem(storageKey));
+}
+
 /** Copy the plain paths an older version saved under the identity key to the legacy key before that key is rewritten,
- *  so a later load without an accepted revision can still offer them. */
+ *  so a later load without an accepted revision can still offer them. A legacy key that already exists is kept. */
 export function preserveLegacyPaths(storage: Pick<Storage, 'getItem' | 'setItem'>, storageKey: string, raw: string | null): void {
   const key = legacyStorageKey(storageKey);
-  const paths = legacySavedPaths(storage.getItem(key), raw);
+  if (storage.getItem(key) !== null) return;
+  const paths = legacySavedPaths(raw);
   if (paths.length) storage.setItem(key, JSON.stringify(paths));
 }
 
@@ -76,9 +86,15 @@ export function toggleTestImage(current: TestImage[], item: TestImage, unresolve
 }
 
 /** A pick from the library. Picking again a saved image that needed checking replaces that entry with the confirmed
- *  one, so the image is never saved twice. */
+ *  one (the same image, or the same bytes found at their new place for a moved one), so it is never saved twice. */
 export function pickTestImage(current: TestImage[], unresolved: UnresolvedTestImage[], item: TestImage):
   { testSet: TestImage[]; unresolved: UnresolvedTestImage[] } {
-  const rest = unresolved.filter((entry) => entry.image_uuid !== item.image_uuid);
+  const replaced = (entry: UnresolvedTestImage) => entry.image_uuid === item.image_uuid
+    || (entry.status === 'moved' && Boolean(item.sha256) && entry.sha256 === item.sha256);
+  const rest = unresolved.filter((entry) => !replaced(entry));
+  if (current.some((entry) => entry.image_uuid === item.image_uuid) && rest.length !== unresolved.length) {
+    // already usable (an earlier build saved it in both lists): picking it confirms it instead of removing it
+    return { testSet: current, unresolved: rest };
+  }
   return { testSet: toggleTestImage(current, item, rest.length), unresolved: rest };
 }

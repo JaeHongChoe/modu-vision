@@ -32,9 +32,21 @@ test('picking again an image that needed checking replaces its entry instead of 
  const full=Array.from({length:19},(_,n)=>image(n+10));
  assert.equal(t.pickTestImage(full,[changed],image(2)).testSet.length,20,'the replaced entry frees its place');
  assert.equal(t.pickTestImage(full,[changed],image(50)).testSet.length,19,'another image still counts the entry needing a check');});
-test('older plain paths are copied to the legacy key before the identity key is rewritten',()=>{
- const storage=new Map([['k:paths',JSON.stringify(['/b'])]]);const store={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
- t.preserveLegacyPaths(store,'k',JSON.stringify(['/a',image(1),'/b']));
- assert.deepEqual(JSON.parse(storage.get('k:paths')),['/b','/a']);
+test('older plain paths are copied to the legacy key once, and that key then decides what is offered',()=>{
+ const storage=new Map();const store={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)};
+ storage.set('k',JSON.stringify(['/a',image(1),'/b']));
+ assert.deepEqual(t.offeredLegacyPaths(store,'k'),['/a','/b'],'before the copy, the identity key holds the older paths');
+ t.preserveLegacyPaths(store,'k',storage.get('k'));assert.deepEqual(JSON.parse(storage.get('k:paths')),['/a','/b']);
+ storage.set('k:paths',JSON.stringify(['/b']));t.preserveLegacyPaths(store,'k',storage.get('k'));
+ assert.deepEqual(JSON.parse(storage.get('k:paths')),['/b'],'an existing legacy key is kept');
+ assert.deepEqual(t.offeredLegacyPaths(store,'k'),['/b'],'a path unchecked in the legacy list does not come back');
  const empty=new Map();t.preserveLegacyPaths({getItem:key=>empty.get(key)??null,setItem:(key,value)=>empty.set(key,value)},'k',JSON.stringify([image(1)]));
  assert.equal(empty.size,0,'nothing to copy writes nothing');});
+test('an image saved twice by an earlier build counts once, and a moved image picked at its new place replaces its entry',()=>{
+ assert.deepEqual(t.parseSavedTestSet(JSON.stringify([image(1),image(2),image(2)])).saved.map(e=>e.image_uuid),['u1','u2']);
+ const moved={...image(3),status:'moved'};const found={...image(3),image_uuid:'u3-new',relative_path:'ng/3.png'};
+ const picked=t.pickTestImage([image(1)],[moved],found);assert.deepEqual(picked.testSet.map(e=>e.image_uuid),['u1','u3-new']);assert.deepEqual(picked.unresolved,[]);
+ const other=t.pickTestImage([image(1)],[{...image(4),status:'changed'}],{...image(9),sha256:image(4).sha256});
+ assert.equal(other.unresolved.length,1,'only a moved entry is matched by its bytes');
+ const both=t.pickTestImage([image(2)],[{...image(2),status:'changed'}],image(2));
+ assert.deepEqual([both.testSet.map(e=>e.image_uuid),both.unresolved],[['u2'],[]],'an image in both lists is confirmed, not removed');});
