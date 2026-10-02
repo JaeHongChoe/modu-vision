@@ -24,7 +24,8 @@ function renderNode(flowNode) {
   component.filename = file;
   component.paths = Module._nodeModulePaths(__dirname);
   const originalRequire = component.require.bind(component);
-  component.require = (name) => name === './flowchartViewport' ? { FLOW_NODE_WIDTH: 272 } : originalRequire(name);
+  component.require = (name) => name === './flowchartViewport' ? { FLOW_NODE_WIDTH: 272 }
+    : name === './flowchartGraph' ? loaded.exports : originalRequire(name);
   component._compile(code, file);
   const React = require('react');
   return require('react-dom/server').renderToStaticMarkup(React.createElement(component.exports.CustomNode, {

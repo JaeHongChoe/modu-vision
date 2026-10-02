@@ -21,8 +21,9 @@ import {
   Scan,
   ShieldAlert,
 } from 'lucide-react';
-import type { FlowNode, NodePort, PortType } from '../../types';
+import type { FlowNode } from '../../types';
 import { FLOW_NODE_WIDTH } from './flowchartViewport';
+import { flowNodePorts, type FlowPortPayload } from './flowchartGraph';
 
 interface CustomNodeProps {
   node: FlowNode;
@@ -35,9 +36,12 @@ interface CustomNodeProps {
   latencyMs?: number;
   isDetectorOnly?: boolean;
   onSelect: () => void;
-  onConnectStart?: () => void;
+  /** Called with the payloads of the output port the connection starts from. */
+  onConnectStart?: (payloads: FlowPortPayload[]) => void;
   onConnectFinish?: () => void;
   isConnectionSource?: boolean;
+  /** This node's own validation problems, shown on the node (S2-05). */
+  issues?: string[];
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({
@@ -54,30 +58,27 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   onConnectStart,
   onConnectFinish,
   isConnectionSource = false,
+  issues = [],
 }) => {
   const nodeType = node.data.node_type;
 
-  // Port Color Mapping
-  const getPortColor = (type: PortType): string => {
-    switch (type) {
+  // Port colour by the payload it carries (several payloads: the first one's colour).
+  const getPortColor = (payloads: FlowPortPayload[]): string => {
+    switch (payloads[0]) {
       case 'image':
         return '#06B6D4'; // Cyan
-      case 'trigger':
-        return '#F59E0B'; // Amber
-      case 'mask':
+      case 'roi':
         return '#A855F7'; // Purple
-      case 'data':
+      case 'result':
         return '#3B82F6'; // Cobalt Blue
-      case 'pass':
-        return '#10B981'; // Emerald
-      case 'fail':
-        return '#EF4444'; // Crimson
-      case 'plc':
-        return '#10B981';
+      case 'verdict':
+        return '#F59E0B'; // Amber
       default:
         return '#94A3B8';
     }
   };
+  // Messages name the node they belong to; on the node itself the name is redundant.
+  const ownIssues = issues.map((message) => message.startsWith(`${node.data.label}: `) ? message.slice(node.data.label.length + 2) : message);
 
   // Node Icon
   const getNodeIcon = () => {
@@ -110,74 +111,11 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
     }
   };
 
-  // Default terminal ports fallback based on node_type if not explicitly defined in node.data
-  const getDefaultInputs = (): NodePort[] => {
-    switch (nodeType) {
-      case 'input':
-        return [];
-      case 'detection_crop':
-        return [
-          { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 },
-        ];
-      case 'patch_split':
-      case 'preprocess':
-      case 'fixed_roi':
-        return [{ id: 'in_img', name: 'Original image', type: 'image', direction: 'in', label: 'IMG IN', pinNumber: 1 }];
-      case 'inspection':
-        return [
-          { id: 'in_img', name: 'Image In', type: 'image', direction: 'in', label: 'IMAGE IN', pinNumber: 1 },
-        ];
-      case 'measurement':
-      case 'blob_measure':
-      case 'aggregate':
-        return [{ id: 'in_result', name: 'Result In', type: 'data', direction: 'in', label: 'RESULT IN', pinNumber: 1 }];
-      case 'decision':
-        return [
-          { id: 'in_data', name: 'Scores In', type: 'data', direction: 'in', label: isDetectorOnly ? 'DETECTIONS' : 'SCORES IN', pinNumber: 1 },
-        ];
-      case 'output':
-        return [{ id: 'in_result', name: 'Verdict In', type: 'data', direction: 'in', label: 'VERDICT IN', pinNumber: 1 }];
-      default:
-        return [{ id: 'in_def', name: 'Input', type: 'data', direction: 'in', label: 'IN 1', pinNumber: 1 }];
-    }
-  };
-
-  const getDefaultOutputs = (): NodePort[] => {
-    switch (nodeType) {
-      case 'input':
-        return [
-          { id: 'out_img', name: 'Image Out', type: 'image', direction: 'out', label: 'IMG OUT', pinNumber: 1 },
-        ];
-      case 'detection_crop':
-        return [
-          { id: 'out_img', name: 'ROI Crops Out', type: 'image', direction: 'out', label: isDetectorOnly ? 'DEFECT BOXES' : 'ROI CROPS', pinNumber: 1 },
-        ];
-      case 'patch_split':
-      case 'preprocess':
-      case 'fixed_roi':
-        return [{ id: 'out_roi', name: 'Fixed ROI', type: 'image', direction: 'out', label: 'ROI OUT', pinNumber: 1 }];
-      case 'inspection':
-        return [
-          { id: 'out_data', name: 'Defect Scores', type: 'data', direction: 'out', label: 'DEFECT DATA', pinNumber: 1 },
-        ];
-      case 'measurement':
-      case 'blob_measure':
-      case 'aggregate':
-        return [{ id: 'out_result', name: 'Result Out', type: 'data', direction: 'out', label: 'RESULT OUT', pinNumber: 1 }];
-      case 'decision':
-        return [
-          { id: 'out_verdict', name: 'Verdict Out', type: 'data', direction: 'out', label: 'VERDICT', pinNumber: 1 },
-        ];
-      case 'output':
-        return [];
-      default:
-        return [{ id: 'out_def', name: 'Output', type: 'data', direction: 'out', label: 'OUT 1', pinNumber: 1 }];
-    }
-  };
-
-  const inputs: NodePort[] = node.data.ports?.inputs || getDefaultInputs();
-  const outputs: NodePort[] = node.data.ports?.outputs || getDefaultOutputs();
-
+  // Typed ports from the payload rules connections are checked with (S2-05); the free-form ports older saved flows
+  // carry in node.data.ports are not shown, since they did not say what a connection may carry.
+  const { inputs, outputs } = flowNodePorts(node);
+  // A detection model feeding the decision directly turns its boxes into defects; other models keep 'RESULT OUT'.
+  const outputLabel = (label: string) => nodeType === 'detection_crop' && isDetectorOnly && label === 'RESULT OUT' ? 'DEFECT BOXES' : label;
   // LED Annunciator Optical State
   const getAnnunciatorState = () => {
     if (isActive) return { color: '#06B6D4', pulse: true, label: 'BUSY' };
@@ -205,9 +143,18 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
           ? 'border-rose-500 hover:border-rose-400 z-10'
           : isPassed
           ? 'border-emerald-600/80 hover:border-emerald-500'
+          : ownIssues.length
+          ? 'border-amber-500 hover:border-amber-400'
           : 'border-[#2B3547] hover:border-[#475569]'
       }`}
     >
+      {/* Validation problems of this node: positioned over the frame so the port layout does not move */}
+      {ownIssues.length > 0 && (
+        <div role="note" aria-label={`${node.data.label} 문제 ${ownIssues.length}건: ${ownIssues.join(' / ')}`} title={ownIssues.join('\n')}
+          className="absolute -top-2.5 right-2 z-30 rounded border border-amber-500 bg-[#2A1F0A] px-1.5 py-0.5 text-[10px] font-semibold text-amber-200">
+          ⚠ {ownIssues.length}
+        </div>
+      )}
       {/* Precision 1px Chassis Top Bevel */}
       <div className="h-[2px] w-full bg-[#2B3547] rounded-t-[3px]" />
 
@@ -316,18 +263,19 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
       <div className="px-2 pb-2.5 pt-1 border-t border-[#2B3547] bg-[#151C28] flex justify-between items-start text-[9px] font-mono">
         {/* Left Inputs */}
         <div className="space-y-1.5 flex-1 pr-2">
-          {inputs.map((port) => (
+          {inputs.map((port, index) => (
             <div key={port.id} className="flex items-center space-x-1.5">
               <button
                 type="button"
-                aria-label={`Connect to ${node.data.label}`}
-                title="이 노드의 입력에 연결"
+                data-flow-port={`${node.id}:in:${index}`}
+                aria-label={`Connect to ${node.data.label} ${port.label}`}
+                title={`이 노드의 입력에 연결 (${port.label})`}
                 onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
-                style={{ borderColor: getPortColor(port.type) }}
+                style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
-                  style={{ backgroundColor: getPortColor(port.type) }}
+                  style={{ backgroundColor: getPortColor(port.payloads) }}
                   className="w-1 h-1 rounded-full"
                 />
               </button>
@@ -338,19 +286,20 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
         {/* Right Outputs */}
         <div className="space-y-1.5 flex-1 pl-2 text-right">
-          {outputs.map((port) => (
+          {outputs.map((port, index) => (
             <div key={port.id} className="flex items-center justify-end space-x-1.5">
-              <span className="text-slate-300 font-bold uppercase truncate">{port.label}</span>
+              <span className="text-slate-300 font-bold uppercase truncate">{outputLabel(port.label)}</span>
               <button
                 type="button"
-                aria-label={`Start connection from ${node.data.label}`}
-                title="여기서 연결 시작"
-                onClick={(event) => { event.stopPropagation(); onConnectStart?.(); }}
-                style={{ borderColor: getPortColor(port.type) }}
+                data-flow-port={`${node.id}:out:${index}`}
+                aria-label={`Start connection from ${node.data.label} ${outputLabel(port.label)}`}
+                title={`여기서 연결 시작 (${outputLabel(port.label)})`}
+                onClick={(event) => { event.stopPropagation(); onConnectStart?.(port.payloads); }}
+                style={{ borderColor: getPortColor(port.payloads) }}
                 className="w-3.5 h-3.5 rounded-full bg-[#0B0E14] border-2 flex items-center justify-center shrink-0 hover:scale-125 focus:outline-cyan-400"
               >
                 <div
-                  style={{ backgroundColor: getPortColor(port.type) }}
+                  style={{ backgroundColor: getPortColor(port.payloads) }}
                   className="w-1 h-1 rounded-full"
                 />
               </button>
@@ -361,5 +310,4 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
     </div>
   );
 };
-
 export default CustomNode;

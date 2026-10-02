@@ -54,7 +54,7 @@ import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
-import { connectFlowNodes, decisionRulePatch, layoutFlowchart, locateFlowIssue, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph } from './flowchartGraph';
+import { connectFlowNodes, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -189,6 +189,8 @@ export const FlowchartStudio: React.FC = () => {
   const [actionValidationError, setActionValidationError] = useState<string | null>(null);
   const [zoomScale, setZoomScale] = useState<number | null>(null);
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
+  // The payloads of the output port the connection started from: the wrong port is refused when the target is clicked.
+  const [connectionPayloads, setConnectionPayloads] = useState<FlowPortPayload[] | undefined>(undefined);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [modelCatalog, setModelCatalog] = useState<FlowModelCatalogItem[]>([]);
@@ -347,6 +349,8 @@ export const FlowchartStudio: React.FC = () => {
   const needsModel = !pipeline || missingDetectionModel || missingInspectionModel || pipeline.nodes.some(node=>getFlowchartModelTask(node)!==null&&!node.data.model_job_id);
   const graphError = pipeline ? validateFlowchartGraph(pipeline) : null;
   const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError) : null;
+  // Every node's and connection's own problem, marked where it is (the banner keeps the first one).
+  const flowIssues = pipeline ? flowIssuesByTarget(pipeline) : null;
   const canVerifyGraph = modelCheck.status !== 'checking' && hasSelectedFolder && !datasetIsLoading
     && !importError && datasetKey === `${folderPath}\0${task}`;
 
@@ -636,8 +640,9 @@ export const FlowchartStudio: React.FC = () => {
     setEditorError(null);
   };
 
-  const startConnection = (nodeId: string) => {
+  const startConnection = (nodeId: string, payloads?: FlowPortPayload[]) => {
     setConnectionSourceId(nodeId);
+    setConnectionPayloads(payloads);
     setSelectedEdgeId(null);
     selectNode(nodeId);
     setEditorError(null);
@@ -648,7 +653,7 @@ export const FlowchartStudio: React.FC = () => {
       setEditorError('먼저 출발 노드의 출력 포트를 클릭하세요.'); return;
     }
     try {
-      replacePipeline(connectFlowNodes(pipeline, connectionSourceId, targetId));
+      replacePipeline(connectFlowNodes(pipeline, connectionSourceId, targetId, connectionPayloads));
       setConnectionSourceId(null);
       setEditorError(null);
       selectNode(targetId);
@@ -1184,6 +1189,7 @@ export const FlowchartStudio: React.FC = () => {
                   finalVerdict={canvasResult?.final_verdict}
                   routedOutputNodeId={canvasResult?.routed_output_node_id}
                   selectedEdgeId={selectedEdgeId}
+                  edgeIssues={flowIssues?.edges}
                   executionSteps={canvasResult?.execution_steps}
                   onSelectEdge={(edgeId) => { setSelectedEdgeId(edgeId); selectNode(null); }}
                 />
@@ -1226,8 +1232,9 @@ export const FlowchartStudio: React.FC = () => {
                         pipeline.nodes.some((item) => item.id === edge.target && item.data.node_type === 'decision'))}
                       isConnectionSource={connectionSourceId === node.id}
                       onSelect={() => { selectNode(node.id); setSelectedEdgeId(null); }}
-                      onConnectStart={() => startConnection(node.id)}
+                      onConnectStart={(payloads) => startConnection(node.id, payloads)}
                       onConnectFinish={() => finishConnection(node.id)}
+                      issues={flowIssues?.nodes.get(node.id)}
                     />
                   </div>
                 );
@@ -1246,6 +1253,14 @@ export const FlowchartStudio: React.FC = () => {
               <p className="mt-1 text-xs text-slate-400 truncate" title={selectedEdge?.label || selectedNode?.data.label}>
                 {selectedEdge ? '선택한 연결선의 조건과 전달 데이터' : selectedNode ? `선택한 노드 · ${selectedNode.data.label}` : '그래프의 노드나 연결선을 선택하세요.'}
               </p>
+              {(() => {
+                const selectedIssues = selectedEdge ? flowIssues?.edges.get(selectedEdge.id) : selectedNode ? flowIssues?.nodes.get(selectedNode.id) : undefined;
+                return selectedIssues?.length ? (
+                  <ul aria-label="선택한 항목의 문제" className="mt-2 space-y-1 rounded border border-amber-600/70 bg-amber-950/30 p-2 text-xs text-amber-200">
+                    {selectedIssues.map((message, index) => <li key={index}>{message}</li>)}
+                  </ul>
+                ) : null;
+              })()}
             </div>
 
             {selectedEdge ? (

@@ -18,6 +18,45 @@ function allowedPayloads(from: FlowNodeType, to: FlowNodeType): NonNullable<Flow
   return [];
 }
 
+/** What a port carries: the edge payloads, plus `verdict` for the decision's routed result (S2-05). */
+export type FlowPortPayload = 'image' | 'roi' | 'result' | 'verdict';
+export interface FlowPort { id: string; payloads: FlowPortPayload[]; label: string }
+const PORT_NAMES: Record<FlowPortPayload, string> = { image: 'IMAGE', roi: 'ROI', result: 'RESULT', verdict: 'VERDICT' };
+const PORT_KOREAN: Record<FlowPortPayload, string> = { image: '이미지', roi: 'ROI', result: '결과', verdict: '판정' };
+const flowPort = (direction: 'IN' | 'OUT', ...payloads: FlowPortPayload[]): FlowPort =>
+  ({ id: `${direction.toLowerCase()}_${payloads.join('_')}`, payloads, label: `${payloads.map((payload) => PORT_NAMES[payload]).join('/')} ${direction}` });
+const edgePayloads = (payloads: FlowPortPayload[]) => payloads.map((payload) => payload === 'verdict' ? 'result' : payload);
+
+/** The typed ports of a node, from the same payload rules every connection is checked with. A model passes its image or
+ *  regions on to the next model or operator, and its result to Blob, measurement, aggregate or decision. */
+export function flowNodePorts(node: FlowNode): { inputs: FlowPort[]; outputs: FlowPort[] } {
+  switch (node.data.node_type) {
+    case 'input': return { inputs: [], outputs: [flowPort('OUT', 'image')] };
+    case 'fixed_roi': return { inputs: [flowPort('IN', 'image')], outputs: [flowPort('OUT', 'roi')] };
+    case 'patch_split': case 'preprocess': return { inputs: [flowPort('IN', 'image', 'roi')], outputs: [flowPort('OUT', 'roi')] };
+    case 'detection_crop': case 'inspection':
+      return { inputs: [flowPort('IN', 'image', 'roi')], outputs: [flowPort('OUT', 'image', 'roi'), flowPort('OUT', 'result')] };
+    case 'blob_measure': case 'measurement': case 'aggregate': return { inputs: [flowPort('IN', 'result')], outputs: [flowPort('OUT', 'result')] };
+    case 'decision': return { inputs: [flowPort('IN', 'result')], outputs: [flowPort('OUT', 'verdict')] };
+    case 'output': return { inputs: [flowPort('IN', 'verdict')], outputs: [] };
+    default: return { inputs: [], outputs: [] };
+  }
+}
+
+/** An edge's payload; older saved edges without one carry what the backend resolves for them (_edge_payload_type). */
+export function flowEdgePayload(edge: FlowEdge, target?: FlowNode, source?: FlowNode): NonNullable<FlowEdge['payload_type']> {
+  if (edge.payload_type) return edge.payload_type;
+  if (source?.data.node_type === 'input') return 'image';
+  return target && ['blob_measure', 'measurement', 'aggregate', 'decision', 'output'].includes(target.data.node_type) ? 'result' : 'roi';
+}
+
+/** The output port an edge leaves from (its payload's port), for drawing it. */
+export function flowEdgeSourcePort(node: FlowNode, edge: FlowEdge, target?: FlowNode): number {
+  const payload = flowEdgePayload(edge, target, node);
+  const index = flowNodePorts(node).outputs.findIndex((port) => edgePayloads(port.payloads).includes(payload));
+  return Math.max(0, index);
+}
+
 function scoreSpecIssue(data: FlowNodeData): string | null {
   const spec=data.score_spec, threshold=data.threshold;
   if(!spec)return typeof threshold==='number'&&Number.isFinite(threshold)&&threshold>=0&&threshold<=1?null:'점수 임계치는 0~1이어야 합니다.';
@@ -176,11 +215,32 @@ function firstUnvisitedNode(
   )?.id || unresolved[0].id;
 }
 
-/** Mirrors the backend's supported executable graph, including saved linear flows. */
-export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | null {
-  if (pipeline.execution_config && Object.values(pipeline.execution_config).some((v)=>!Number.isInteger(v)||v<1||v>8)) return '병렬 실행 작업 수와 장치 슬롯은 1~8의 정수여야 합니다.';
+/** A problem of an editable graph, attached to the node or connection where the user can fix it. */
+export interface FlowIssue { kind: 'node' | 'edge' | 'graph'; id: string | null; message: string }
+
+/** A check over saved data the editor never writes (a predicate without a class name, a non-text calibration id) reports
+ *  that data's format instead of throwing during render. */
+function guarded(message: string, check: () => string | null): string | null {
+  try {
+    return check();
+  } catch {
+    return message;
+  }
+}
+
+/** Every problem of the graph in the order the backend reports them (S2-05). With `first`, stops at the first one,
+ *  which is the validator's answer; otherwise each node and connection reports its own first problem, so the editor can
+ *  mark all of them at once. */
+export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: { first?: boolean } = {}): FlowIssue[] {
+  const issues: FlowIssue[] = [];
+  const report = (message: string, kind: FlowIssue['kind'] = 'graph', id: string | null = null) => {
+    issues.push({ kind, id, message });
+    return first;
+  };
+  if (pipeline.execution_config && Object.values(pipeline.execution_config).some((v)=>!Number.isInteger(v)||v<1||v>8)
+    && report('병렬 실행 작업 수와 장치 슬롯은 1~8의 정수여야 합니다.')) return issues;
   const { nodes, incoming, outgoing } = graphParts(pipeline);
-  if (nodes.size !== pipeline.nodes.length) return '노드 ID가 중복되었습니다.';
+  if (nodes.size !== pipeline.nodes.length) { report('노드 ID가 중복되었습니다.'); return issues; }
   const inputs = pipeline.nodes.filter((node) => node.data.node_type === 'input');
   const decisions = pipeline.nodes.filter((node) => node.data.node_type === 'decision');
   const outputs = pipeline.nodes.filter((node) => node.data.node_type === 'output');
@@ -189,166 +249,209 @@ export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | nu
   const blobs = pipeline.nodes.filter((node) => node.data.node_type === 'blob_measure');
   const measurements = pipeline.nodes.filter((node) => node.data.node_type === 'measurement');
   const aggregates = pipeline.nodes.filter((node) => node.data.node_type === 'aggregate');
-  if (inputs.length !== 1) return '입력 노드는 하나여야 합니다.';
-  if (decisions.length !== 1) return '판정 노드는 하나여야 합니다.';
-  if (outputs.length < 1 || outputs.length > 3) return '출력 노드는 1~3개가 필요합니다.';
-  if (models.length < 1 || models.length > 8) return '모델 노드는 1~8개가 필요합니다.';
-  if (fixedRois.length > 8) return '고정 ROI 노드는 최대 8개입니다.';
-  if (blobs.length + measurements.length > 8) return 'Blob·기하 측정 노드는 합계 최대 8개입니다.';
-  if (aggregates.length > 4) return '결과 집계 노드는 최대 4개입니다.';
+  if (inputs.length !== 1 && report('입력 노드는 하나여야 합니다.')) return issues;
+  if (decisions.length !== 1 && report('판정 노드는 하나여야 합니다.')) return issues;
+  if ((outputs.length < 1 || outputs.length > 3) && report('출력 노드는 1~3개가 필요합니다.')) return issues;
+  if ((models.length < 1 || models.length > 8) && report('모델 노드는 1~8개가 필요합니다.')) return issues;
+  if (fixedRois.length > 8 && report('고정 ROI 노드는 최대 8개입니다.')) return issues;
+  if (blobs.length + measurements.length > 8 && report('Blob·기하 측정 노드는 합계 최대 8개입니다.')) return issues;
+  if (aggregates.length > 4 && report('결과 집계 노드는 최대 4개입니다.')) return issues;
+  if (inputs.length !== 1 || decisions.length !== 1) return issues;  // the checks below need the one input and decision
   const edgeIds = new Set<string>();
   const connections = new Set<string>();
   for (const edge of pipeline.edges) {
-    if (!edge.id || edgeIds.has(edge.id)) return '연결선 ID가 중복되었거나 비었습니다.';
-    edgeIds.add(edge.id);
-    if (!nodes.has(edge.source) || !nodes.has(edge.target) || edge.source === edge.target) return '연결선의 시작 또는 끝 노드가 올바르지 않습니다.';
-    const pair = `${edge.source}\0${edge.target}`;
-    if (connections.has(pair)) return '같은 노드 사이의 연결선이 중복되었습니다.';
-    connections.add(pair);
-    if (edge.predicate && (!modelTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType) || !edge.predicate.class_name.trim() || !['present', 'absent'].includes(edge.predicate.operator) ||
-      !Number.isFinite(edge.predicate.min_confidence ?? 0) || (edge.predicate.min_confidence ?? 0) < 0 || (edge.predicate.min_confidence ?? 0) > 1 ||
-      (edge.isBranch && edge.isBranch !== 'default'))) return '클래스 조건과 신뢰도 범위를 확인하세요.';
-    const from = nodes.get(edge.source)?.data.node_type;
-    const to = nodes.get(edge.target)?.data.node_type;
-    const payloads = allowedPayloads(from as FlowNodeType, to as FlowNodeType);
-    if (payloads.length === 0) return '노드 사이의 연결 형식이 올바르지 않습니다.';
-    if (edge.payload_type && !payloads.includes(edge.payload_type)) return '연결선의 데이터 형식(payload)이 노드와 맞지 않습니다.';
-    if ((from === 'input' || from === 'fixed_roi') && edge.isBranch && edge.isBranch !== 'default') {
-      return '입력과 고정 ROI 연결에는 조건 분기를 지정할 수 없습니다.';
-    }
+    const issue = guarded('연결선의 저장된 조건·데이터 형식을 확인하세요.', () => {
+      if (!edge.id || edgeIds.has(edge.id)) return '연결선 ID가 중복되었거나 비었습니다.';
+      edgeIds.add(edge.id);
+      if (!nodes.has(edge.source) || !nodes.has(edge.target) || edge.source === edge.target) return '연결선의 시작 또는 끝 노드가 올바르지 않습니다.';
+      const pair = `${edge.source}\0${edge.target}`;
+      if (connections.has(pair)) return '같은 노드 사이의 연결선이 중복되었습니다.';
+      connections.add(pair);
+      if (edge.predicate && (!modelTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType) || !edge.predicate.class_name.trim() || !['present', 'absent'].includes(edge.predicate.operator) ||
+        !Number.isFinite(edge.predicate.min_confidence ?? 0) || (edge.predicate.min_confidence ?? 0) < 0 || (edge.predicate.min_confidence ?? 0) > 1 ||
+        (edge.isBranch && edge.isBranch !== 'default'))) return '클래스 조건과 신뢰도 범위를 확인하세요.';
+      const from = nodes.get(edge.source)?.data.node_type;
+      const to = nodes.get(edge.target)?.data.node_type;
+      const payloads = allowedPayloads(from as FlowNodeType, to as FlowNodeType);
+      if (payloads.length === 0) return '노드 사이의 연결 형식이 올바르지 않습니다.';
+      if (edge.payload_type && !payloads.includes(edge.payload_type)) return '연결선의 데이터 형식(payload)이 노드와 맞지 않습니다.';
+      if ((from === 'input' || from === 'fixed_roi') && edge.isBranch && edge.isBranch !== 'default') {
+        return '입력과 고정 ROI 연결에는 조건 분기를 지정할 수 없습니다.';
+      }
+      return null;
+    });
+    if (issue && report(issue, 'edge', edge.id || null)) return issues;
   }
   const inputId = inputs[0].id;
   const decisionId = decisions[0].id;
-  if (incoming.get(inputId)?.length || !outgoing.get(inputId)?.length) return '입력 노드에서 모델 노드로 연결하세요.';
-  for (const fixedRoi of fixedRois) {
-    const rectangle = fixedRoi.data.params?.roi_bbox;
-    if (!Array.isArray(rectangle) || rectangle.length !== 4 ||
-      rectangle.some((value) => !Number.isInteger(value)) ||
-      rectangle[0] < 0 || rectangle[1] < 0 ||
-      rectangle[2] - rectangle[0] < 16 || rectangle[3] - rectangle[1] < 16) {
-      return `${fixedRoi.data.label}: 고정 ROI 원본 픽셀 좌표는 16×16 이상인 [x1, y1, x2, y2] 정수여야 합니다.`;
+  if ((incoming.get(inputId)?.length || !outgoing.get(inputId)?.length) && report('입력 노드에서 모델 노드로 연결하세요.', 'node', inputId)) return issues;
+  const nodeChecks: Array<[FlowNode[], (node: FlowNode) => string | null]> = [
+    [fixedRois, (fixedRoi) => {
+      const rectangle = fixedRoi.data.params?.roi_bbox;
+      if (!Array.isArray(rectangle) || rectangle.length !== 4 ||
+        rectangle.some((value) => !Number.isInteger(value)) ||
+        rectangle[0] < 0 || rectangle[1] < 0 ||
+        rectangle[2] - rectangle[0] < 16 || rectangle[3] - rectangle[1] < 16) {
+        return `${fixedRoi.data.label}: 고정 ROI 원본 픽셀 좌표는 16×16 이상인 [x1, y1, x2, y2] 정수여야 합니다.`;
+      }
+      const parents = incoming.get(fixedRoi.id) || [];
+      if (parents.length !== 1 || parents[0].source !== inputId) return `${fixedRoi.data.label}: 원본 이미지 입력 연결선 하나가 필요합니다.`;
+      if (!(outgoing.get(fixedRoi.id) || []).length) return `${fixedRoi.data.label}: 검사 모델로 연결하세요.`;
+      return null;
+    }],
+    [pipeline.nodes.filter((item) => operatorTypes.includes(item.data.node_type)), (node) => {
+      const params = node.data.params || {};
+      if ((incoming.get(node.id) || []).length !== 1 || !(outgoing.get(node.id) || []).length) return `${node.data.label}: 입력 하나와 다음 모델 연결이 필요합니다.`;
+      if (node.data.node_type === 'patch_split') {
+        const width=params.patch_width ?? 224, height=params.patch_height ?? 224, overlap=params.overlap ?? 0;
+        if (![width,height].every((v) => Number.isInteger(v) && v>=16 && v<=8192) || !Number.isInteger(overlap) || overlap<0 || overlap>=Math.min(width,height)) return `${node.data.label}: 패치 크기와 겹침 범위를 확인하세요.`;
+      } else if (!['rotate','align','improve','enhancement','learned_rotation','fitted_roi'].includes(params.operation || 'rotate')) return `${node.data.label}: 전처리 종류를 확인하세요.`;
+      if (params.operation === 'enhancement' && !node.data.model_job_id) return `${node.data.label}: 영상 개선 모델을 선택하세요.`;
+      if (params.operation === 'learned_rotation' && !node.data.model_job_id) return `${node.data.label}: 회전 학습 모델을 선택하세요.`;
+      return null;
+    }],
+    [models, (node) => {
+      const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
+      const scoreIssue=scoreSpecIssue({...node.data,threshold:modelThreshold});
+      if(scoreIssue)return `${node.data.label}: ${scoreIssue}`;
+      if(node.data.score_spec?.domain==='distance'&&(node.data.node_type!=='inspection'||node.data.task!=='anomaly'))return '거리 점수는 이상 탐지 모델에만 적용할 수 있습니다.';
+      if (node.data.crop_padding !== undefined && (!Number.isInteger(node.data.crop_padding) || node.data.crop_padding < 0)) {
+        return `${node.data.label}: ROI 패딩은 0 이상의 정수여야 합니다.`;
+      }
+      const parent = incoming.get(node.id) || [];
+      if (parent.length !== 1) return `${node.data.label}: 모델 입력 연결선이 정확히 하나 필요합니다.`;
+      const parentType = nodes.get(parent[0].source)?.data.node_type;
+      if (parentType !== 'input' && parentType !== 'fixed_roi' && !operatorTypes.includes(parentType as FlowNodeType) && !modelTypes.includes(parentType as FlowNodeType)) {
+        return `${node.data.label}: 지원하지 않는 상류 연결입니다.`;
+      }
+      if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification', 'ocr', 'rotated_detection'].includes(node.data.task || '')) {
+        return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
+      }
+      if (node.data.task === 'ocr') {
+        const issue=ocrRuleIssue(node.data.params || {});if(issue)return `${node.data.label}: ${issue}`;
+      }
+      if(node.data.task==='segmentation'){const issue=classRuleIssue(node.data.params || {},false);if(issue)return `${node.data.label}: ${issue}`;}
+      const targets = outgoing.get(node.id) || [];
+      if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'measurement', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
+        return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
+      }
+      return null;
+    }],
+    [blobs, (node) => {
+      const issue=classRuleIssue(node.data.params || {},true);if(issue)return `${node.data.label}: ${issue}`;
+      const parents = incoming.get(node.id) || [];
+      const source = nodes.get(parents[0]?.source);
+      if (parents.length !== 1 || source?.data.node_type !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || '')) {
+        return `${node.data.label}: Blob 측정에는 분할 모델 결과 연결선 하나가 필요합니다.`;
+      }
+      const targets = outgoing.get(node.id) || [];
+      if (!targets.length || targets.some((edge) => !['aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type || ''))) {
+        return `${node.data.label}: Blob 결과를 집계 또는 판정 노드로 연결하세요.`;
+      }
+      for (const key of ['min_blob_area_px', 'min_blob_count_for_ng'] as const) {
+        const value = node.data.params?.[key] ?? 1;
+        if (!Number.isInteger(value) || value < 1) return `${node.data.label}: Blob 면적과 개수 기준은 1 이상의 정수여야 합니다.`;
+      }
+      return null;
+    }],
+    [measurements, (node) => {
+      const parents=incoming.get(node.id)||[];
+      if(parents.length!==1||!modelTypes.includes(nodes.get(parents[0]?.source)?.data.node_type as FlowNodeType))return `${node.data.label}: 기하 측정에는 모델 결과 하나가 필요합니다.`;
+      const targets=outgoing.get(node.id)||[];
+      if(!targets.length||targets.some(edge=>!['aggregate','decision'].includes(nodes.get(edge.target)?.data.node_type || '')))return `${node.data.label}: 측정 결과를 집계 또는 판정 노드로 연결하세요.`;
+      const issue=measurementIssue(node.data.params||{});if(issue)return `${node.data.label}: ${issue}`;
+      return null;
+    }],
+    [aggregates, (node) => {
+      const parents = incoming.get(node.id) || [];
+      if (parents.length < 1 || parents.length > 8 || parents.some((edge) =>
+        ![...modelTypes, 'blob_measure', 'measurement'].includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
+        return `${node.data.label}: 집계 노드에는 모델 또는 Blob 결과 연결선 1~8개가 필요합니다.`;
+      }
+      const targets = outgoing.get(node.id) || [];
+      if (targets.length !== 1 || targets[0].target !== decisionId) return `${node.data.label}: 집계 결과를 판정 노드에 직접 연결하세요.`;
+      if (node.data.rule !== 'any_ng' && node.data.rule !== 'all_ng') return `${node.data.label}: 집계 룰은 any_ng 또는 all_ng여야 합니다.`;
+      return null;
+    }],
+  ];
+  for (const [group, check] of nodeChecks) {
+    for (const node of group) {
+      const issue = guarded(`${node.data.label}: 저장된 설정 형식을 확인하세요.`, () => check(node));
+      if (issue && report(issue, 'node', node.id)) return issues;
     }
-    const parents = incoming.get(fixedRoi.id) || [];
-    if (parents.length !== 1 || parents[0].source !== inputId) return `${fixedRoi.data.label}: 원본 이미지 입력 연결선 하나가 필요합니다.`;
-    if (!(outgoing.get(fixedRoi.id) || []).length) return `${fixedRoi.data.label}: 검사 모델로 연결하세요.`;
-  }
-  for (const node of pipeline.nodes.filter((item) => operatorTypes.includes(item.data.node_type))) {
-    const params = node.data.params || {};
-    if ((incoming.get(node.id) || []).length !== 1 || !(outgoing.get(node.id) || []).length) return `${node.data.label}: 입력 하나와 다음 모델 연결이 필요합니다.`;
-    if (node.data.node_type === 'patch_split') {
-      const width=params.patch_width ?? 224, height=params.patch_height ?? 224, overlap=params.overlap ?? 0;
-      if (![width,height].every((v) => Number.isInteger(v) && v>=16 && v<=8192) || !Number.isInteger(overlap) || overlap<0 || overlap>=Math.min(width,height)) return `${node.data.label}: 패치 크기와 겹침 범위를 확인하세요.`;
-    } else if (!['rotate','align','improve','enhancement','learned_rotation','fitted_roi'].includes(params.operation || 'rotate')) return `${node.data.label}: 전처리 종류를 확인하세요.`;
-    if (params.operation === 'enhancement' && !node.data.model_job_id) return `${node.data.label}: 영상 개선 모델을 선택하세요.`;
-    if (params.operation === 'learned_rotation' && !node.data.model_job_id) return `${node.data.label}: 회전 학습 모델을 선택하세요.`;
-  }
-  for (const node of models) {
-    const modelThreshold = node.data.threshold === undefined ? 0.5 : node.data.threshold;
-    const scoreIssue=scoreSpecIssue({...node.data,threshold:modelThreshold});
-    if(scoreIssue)return `${node.data.label}: ${scoreIssue}`;
-    if(node.data.score_spec?.domain==='distance'&&(node.data.node_type!=='inspection'||node.data.task!=='anomaly'))return '거리 점수는 이상 탐지 모델에만 적용할 수 있습니다.';
-    if (node.data.crop_padding !== undefined && (!Number.isInteger(node.data.crop_padding) || node.data.crop_padding < 0)) {
-      return `${node.data.label}: ROI 패딩은 0 이상의 정수여야 합니다.`;
-    }
-    const parent = incoming.get(node.id) || [];
-    if (parent.length !== 1) return `${node.data.label}: 모델 입력 연결선이 정확히 하나 필요합니다.`;
-    const parentType = nodes.get(parent[0].source)?.data.node_type;
-    if (parentType !== 'input' && parentType !== 'fixed_roi' && !operatorTypes.includes(parentType as FlowNodeType) && !modelTypes.includes(parentType as FlowNodeType)) {
-      return `${node.data.label}: 지원하지 않는 상류 연결입니다.`;
-    }
-    if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification', 'ocr', 'rotated_detection'].includes(node.data.task || '')) {
-      return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
-    }
-    if (node.data.task === 'ocr') {
-      const issue=ocrRuleIssue(node.data.params || {});if(issue)return `${node.data.label}: ${issue}`;
-    }
-    if(node.data.task==='segmentation'){const issue=classRuleIssue(node.data.params || {},false);if(issue)return `${node.data.label}: ${issue}`;}
-    const targets = outgoing.get(node.id) || [];
-    if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'measurement', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
-      return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
-    }
-  }
-  for (const node of blobs) {
-    const issue=classRuleIssue(node.data.params || {},true);if(issue)return `${node.data.label}: ${issue}`;
-    const parents = incoming.get(node.id) || [];
-    const source = nodes.get(parents[0]?.source);
-    if (parents.length !== 1 || source?.data.node_type !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || '')) {
-      return `${node.data.label}: Blob 측정에는 분할 모델 결과 연결선 하나가 필요합니다.`;
-    }
-    const targets = outgoing.get(node.id) || [];
-    if (!targets.length || targets.some((edge) => !['aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type || ''))) {
-      return `${node.data.label}: Blob 결과를 집계 또는 판정 노드로 연결하세요.`;
-    }
-    for (const key of ['min_blob_area_px', 'min_blob_count_for_ng'] as const) {
-      const value = node.data.params?.[key] ?? 1;
-      if (!Number.isInteger(value) || value < 1) return `${node.data.label}: Blob 면적과 개수 기준은 1 이상의 정수여야 합니다.`;
-    }
-  }
-  for (const node of measurements) {
-    const parents=incoming.get(node.id)||[];
-    if(parents.length!==1||!modelTypes.includes(nodes.get(parents[0]?.source)?.data.node_type as FlowNodeType))return `${node.data.label}: 기하 측정에는 모델 결과 하나가 필요합니다.`;
-    const targets=outgoing.get(node.id)||[];
-    if(!targets.length||targets.some(edge=>!['aggregate','decision'].includes(nodes.get(edge.target)?.data.node_type || '')))return `${node.data.label}: 측정 결과를 집계 또는 판정 노드로 연결하세요.`;
-    const issue=measurementIssue(node.data.params||{});if(issue)return `${node.data.label}: ${issue}`;
-  }
-  for (const node of aggregates) {
-    const parents = incoming.get(node.id) || [];
-    if (parents.length < 1 || parents.length > 8 || parents.some((edge) =>
-      ![...modelTypes, 'blob_measure', 'measurement'].includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
-      return `${node.data.label}: 집계 노드에는 모델 또는 Blob 결과 연결선 1~8개가 필요합니다.`;
-    }
-    const targets = outgoing.get(node.id) || [];
-    if (targets.length !== 1 || targets[0].target !== decisionId) return `${node.data.label}: 집계 결과를 판정 노드에 직접 연결하세요.`;
-    if (node.data.rule !== 'any_ng' && node.data.rule !== 'all_ng') return `${node.data.label}: 집계 룰은 any_ng 또는 all_ng여야 합니다.`;
   }
   const evidence = incoming.get(decisionId) || [];
-  if (!evidence.length || evidence.some((edge) => !resultTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
-    return '판정 노드에 모델, Blob 또는 집계 결과 연결선이 필요합니다.';
-  }
   const decision = decisions[0];
-  const rule = decision.data.rule || 'any_defect_is_ng';
-  if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed', 'aggregate_verdict'].includes(rule)) {
-    return '지원하지 않는 판정 룰입니다.';
-  }
-  if (rule === 'aggregate_verdict' && (evidence.length !== 1 || nodes.get(evidence[0].source)?.data.node_type !== 'aggregate')) {
-    return '집계 판정 룰에는 집계 결과 연결선 하나가 필요합니다.';
-  }
-  if (evidence.some((edge) => nodes.get(edge.source)?.data.node_type === 'aggregate') && rule !== 'aggregate_verdict') {
-    return '집계 결과에는 집계 판정 룰을 선택하세요.';
-  }
-  if (rule === 'score_gt_threshold') {
-    const issue=scoreSpecIssue(decision.data);
-    if(issue)return issue;
-    const spec=decision.data.score_spec;
-    if(models.some(node=>Boolean(node.data.score_spec)!==Boolean(spec)||
-      (spec&&['domain','unit','direction','calibration_id'].some(key=>node.data.score_spec?.[key as keyof typeof spec]!==spec[key as keyof typeof spec]))))return '전역 점수 룰에는 동일한 단위와 보정 식별자가 필요합니다.';
-  }
-  if (rule === 'max_flaws_allowed') {
-    if (models.some((node) => node.data.node_type === 'inspection' && node.data.task === 'segmentation')) {
-      return '분할 검사에서는 결함 덩어리 수를 세지 않으므로 허용 결함 개수 룰을 사용할 수 없습니다. 다른 판정 룰을 선택하세요.';
+  const decisionIssue = guarded('판정 노드의 저장된 룰 형식을 확인하세요.', () => {
+    if (!evidence.length || evidence.some((edge) => !resultTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType))) {
+      return '판정 노드에 모델, Blob 또는 집계 결과 연결선이 필요합니다.';
     }
-    const allowed = decision.data.params?.max_flaws_allowed ?? 0;
-    if (!Number.isInteger(allowed) || allowed < 0) return '허용 결함 개수는 0 이상의 정수여야 합니다.';
-  }
+    const rule = decision.data.rule || 'any_defect_is_ng';
+    if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed', 'aggregate_verdict'].includes(rule)) {
+      return '지원하지 않는 판정 룰입니다.';
+    }
+    if (rule === 'aggregate_verdict' && (evidence.length !== 1 || nodes.get(evidence[0].source)?.data.node_type !== 'aggregate')) {
+      return '집계 판정 룰에는 집계 결과 연결선 하나가 필요합니다.';
+    }
+    if (evidence.some((edge) => nodes.get(edge.source)?.data.node_type === 'aggregate') && rule !== 'aggregate_verdict') {
+      return '집계 결과에는 집계 판정 룰을 선택하세요.';
+    }
+    if (rule === 'score_gt_threshold') {
+      const issue=scoreSpecIssue(decision.data);
+      if(issue)return issue;
+      const spec=decision.data.score_spec;
+      if(models.some(node=>Boolean(node.data.score_spec)!==Boolean(spec)||
+        (spec&&['domain','unit','direction','calibration_id'].some(key=>node.data.score_spec?.[key as keyof typeof spec]!==spec[key as keyof typeof spec]))))return '전역 점수 룰에는 동일한 단위와 보정 식별자가 필요합니다.';
+    }
+    if (rule === 'max_flaws_allowed') {
+      if (models.some((node) => node.data.node_type === 'inspection' && node.data.task === 'segmentation')) {
+        return '분할 검사에서는 결함 덩어리 수를 세지 않으므로 허용 결함 개수 룰을 사용할 수 없습니다. 다른 판정 룰을 선택하세요.';
+      }
+      const allowed = decision.data.params?.max_flaws_allowed ?? 0;
+      if (!Number.isInteger(allowed) || allowed < 0) return '허용 결함 개수는 0 이상의 정수여야 합니다.';
+    }
+    return null;
+  });
+  if (decisionIssue && report(decisionIssue, 'node', decisionId)) return issues;
   const branchEdges = outgoing.get(decisionId) || [];
-  if (branchEdges.length !== outputs.length || branchEdges.some((edge) => nodes.get(edge.target)?.data.node_type !== 'output')) {
-    return '판정 노드를 모든 출력 노드에 연결하세요.';
-  }
+  if ((branchEdges.length !== outputs.length || branchEdges.some((edge) => nodes.get(edge.target)?.data.node_type !== 'output'))
+    && report('판정 노드를 모든 출력 노드에 연결하세요.', 'node', decisionId)) return issues;
   for (const node of outputs) {
     const parents = incoming.get(node.id) || [];
-    if (parents.length !== 1 || parents[0].source !== decisionId || outgoing.get(node.id)?.length) {
-      return `${node.data.label}: 출력 노드는 판정 분기 한 개를 받아야 합니다.`;
-    }
+    if ((parents.length !== 1 || parents[0].source !== decisionId || outgoing.get(node.id)?.length)
+      && report(`${node.data.label}: 출력 노드는 판정 분기 한 개를 받아야 합니다.`, 'node', node.id)) return issues;
   }
   if (outputs.length > 1) {
     const expected = outputs.length === 2 ? ['pass', 'fail'] : ['pass', 'fail', 'review'];
-    if (expected.some((branch) => !branchEdges.some((edge) => edge.isBranch === branch)) ||
-      branchEdges.some((edge) => !expected.includes(edge.isBranch || ''))) {
-      return '출력 분기는 OK(pass), NG(fail), 필요하면 REVIEW(review)를 각각 지정하세요.';
-    }
+    if ((expected.some((branch) => !branchEdges.some((edge) => edge.isBranch === branch)) ||
+      branchEdges.some((edge) => !expected.includes(edge.isBranch || '')))
+      && report('출력 분기는 OK(pass), NG(fail), 필요하면 REVIEW(review)를 각각 지정하세요.', 'node', decisionId)) return issues;
   }
-  return firstUnvisitedNode(pipeline, incoming, outgoing, inputId)
-    ? '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.' : null;
+  const unresolved = firstUnvisitedNode(pipeline, incoming, outgoing, inputId);
+  // An added node with no input that already shows its own problem does not also get the general message; a node in a
+  // cycle, or reached only through one, always does.
+  const ownProblem = issues.some((issue) => issue.kind === 'node' && issue.id === unresolved);
+  if (unresolved && !(ownProblem && !(incoming.get(unresolved) || []).length)) {
+    report('모든 노드를 입력부터 출력까지 순환 없이 연결하세요.', 'node', unresolved);
+  }
+  return issues;
+}
+
+/** Mirrors the backend's supported executable graph, including saved linear flows. */
+export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | null {
+  return flowGraphIssues(pipeline, { first: true })[0]?.message ?? null;
+}
+
+/** The issues of each node and connection, for marking them on the canvas. */
+export function flowIssuesByTarget(pipeline: FlowchartPipeline): { nodes: Map<string, string[]>; edges: Map<string, string[]> } {
+  const nodes = new Map<string, string[]>();
+  const edges = new Map<string, string[]>();
+  for (const issue of flowGraphIssues(pipeline)) {
+    if (!issue.id || issue.kind === 'graph') continue;
+    const target = issue.kind === 'node' ? nodes : edges;
+    target.set(issue.id, [...(target.get(issue.id) || []), issue.message]);
+  }
+  return { nodes, edges };
 }
 
 /** Point an editor validation message at the node or connection the user can fix. */
@@ -357,6 +460,8 @@ export function locateFlowIssue(
   message: string | null,
 ): { kind: 'node' | 'edge'; id: string } | null {
   if (!message) return null;
+  const first = flowGraphIssues(pipeline, { first: true })[0];
+  if (first && first.message === message && first.id && first.kind !== 'graph') return { kind: first.kind, id: first.id };
   const named = pipeline.nodes.find((node) => message.startsWith(`${node.data.label}:`));
   if (named) return { kind: 'node', id: named.id };
   if (message === '모든 노드를 입력부터 출력까지 순환 없이 연결하세요.') {
@@ -385,7 +490,8 @@ export function locateFlowIssue(
 }
 
 /** Add a typed connection. Draft graphs may stay incomplete until all nodes connect. */
-export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, targetId: string): FlowchartPipeline {
+export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, targetId: string,
+  sourcePort?: FlowPortPayload[]): FlowchartPipeline {
   const { nodes, incoming, outgoing } = graphParts(pipeline);
   const source = nodes.get(sourceId);
   const target = nodes.get(targetId);
@@ -393,8 +499,18 @@ export function connectFlowNodes(pipeline: FlowchartPipeline, sourceId: string, 
   if (pipeline.edges.some((edge) => edge.source === sourceId && edge.target === targetId)) throw new Error('이미 연결된 노드입니다.');
   const from = source.data.node_type;
   const to = target.data.node_type;
-  const payloads = allowedPayloads(from, to);
-  if (!payloads.length) throw new Error('이 노드 사이의 연결은 지원하지 않습니다.');
+  const allowed = allowedPayloads(from, to);
+  if (!allowed.length) {
+    // The payloads may look compatible (a result into a model input, say) while the node pair is not supported.
+    const accepted = (flowNodePorts(target).inputs[0]?.payloads || []).map((payload) => PORT_KOREAN[payload]).join('·');
+    throw new Error(`이 노드 사이의 연결은 지원하지 않습니다.${accepted ? ` ${target.data.label} 입력은 ${accepted}을(를) 받으며, ${source.data.label}에서 바로 연결할 수 없습니다.` : ''}`);
+  }
+  // The output port the connection was started from decides the payload; the wrong port is refused at once.
+  const payloads = sourcePort ? allowed.filter((payload) => edgePayloads(sourcePort).includes(payload)) : allowed;
+  if (!payloads.length) {
+    const accepted = (flowNodePorts(target).inputs[0]?.payloads || []).map((payload) => PORT_KOREAN[payload]).join('·');
+    throw new Error(`${source.data.label}의 ${(sourcePort || []).map((payload) => PORT_KOREAN[payload]).join('·')} 출력은 ${target.data.label}에 연결할 수 없습니다. 이 입력은 ${accepted}만 받습니다.`);
+  }
   if (to === 'blob_measure' && (from !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || ''))) {
     throw new Error('Blob 측정은 분할 모델 결과에만 연결할 수 있습니다.');
   }

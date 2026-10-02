@@ -9,9 +9,10 @@
  *  - Saved model fan-out and verdict output branches remain selectable.
  */
 
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { FlowEdge, FlowNode, FlowchartExecutionStep } from '../../types';
 import { FLOW_NODE_WIDTH } from './flowchartViewport';
+import { flowEdgeSourcePort, flowNodePorts } from './flowchartGraph';
 
 interface DAGCircuitOverlayProps {
   nodes: FlowNode[];
@@ -20,6 +21,8 @@ interface DAGCircuitOverlayProps {
   finalVerdict?: 'OK' | 'NG' | 'REVIEW';
   routedOutputNodeId?: string;
   selectedEdgeId?: string | null;
+  /** Each connection's own validation problems (S2-05). */
+  edgeIssues?: Map<string, string[]>;
   executionSteps?: FlowchartExecutionStep[];
   onSelectEdge?: (edgeId: string) => void;
 }
@@ -31,17 +34,41 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   finalVerdict,
   routedOutputNodeId,
   selectedEdgeId,
+  edgeIssues,
   executionSteps,
   onSelectEdge,
 }) => {
   // Map nodes by ID for O(1) coordinate lookup
   const nodeMap = new Map<string, FlowNode>();
   nodes.forEach((n) => nodeMap.set(n.id, n));
+
+  // Node bodies differ in height (their spec rows), so the port pins are measured after each render, in this layer's
+  // own coordinates (the canvas zoom is divided out); the estimate below is used only before the first measurement.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [pins, setPins] = useState<Record<string, { x: number; y: number }>>({});
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    const layer = svg?.parentElement;
+    if (!svg || !layer || typeof svg.getBoundingClientRect !== 'function') return;
+    const frame = svg.getBoundingClientRect();
+    const scale = svg.clientWidth ? frame.width / svg.clientWidth : 1;
+    const next: Record<string, { x: number; y: number }> = {};
+    layer.querySelectorAll<HTMLElement>('[data-flow-port]').forEach((element) => {
+      const box = element.getBoundingClientRect();
+      next[element.dataset.flowPort as string] = {
+        x: Math.round(((box.left + box.width / 2 - frame.left) / (scale || 1)) * 10) / 10,
+        y: Math.round(((box.top + box.height / 2 - frame.top) / (scale || 1)) * 10) / 10,
+      };
+    });
+    setPins((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+  });
   const selectedByRun = new Set(executionSteps?.flatMap((step) => step.selected_edge_ids || []) || []);
   const hasExecutionTrace = Boolean(executionSteps?.some((step) => step.selected_edge_ids && step.selected_edge_ids.length > 0));
 
   // Calculates exact terminal pin coordinates
   const getPortCoord = (nodeId: string, direction: 'out' | 'in', portIndex = 0, totalPorts = 1) => {
+    const measured = pins[`${nodeId}:${direction}:${portIndex}`];
+    if (measured) return measured;
     const node = nodeMap.get(nodeId);
     if (!node) return { x: 0, y: 0 };
 
@@ -84,7 +111,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   };
 
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+    <svg ref={svgRef} className="absolute inset-0 w-full h-full pointer-events-none z-0">
       <defs>
         {/* Animated Signal Packet Pulse Pattern */}
         <style>{`
@@ -103,12 +130,14 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const targetNode = nodeMap.get(edge.target);
         if (!sourceNode || !targetNode) return null;
 
-        // Calculate discrete pin index
-        const sourcePortCount = sourceNode.data.ports?.outputs?.length || 1;
-        const targetPortCount = targetNode.data.ports?.inputs?.length || 1;
+        // The typed port the edge's payload leaves from (a model's image/ROI or result output)
+        const sourcePortCount = Math.max(1, flowNodePorts(sourceNode).outputs.length);
+        const targetPortCount = Math.max(1, flowNodePorts(targetNode).inputs.length);
 
-        const p1 = getPortCoord(edge.source, 'out', 0, sourcePortCount);
+        const sourcePort = flowEdgeSourcePort(sourceNode, edge, targetNode);
+        const p1 = getPortCoord(edge.source, 'out', sourcePort, sourcePortCount);
         const p2 = getPortCoord(edge.target, 'in', 0, targetPortCount);
+        const issues = edgeIssues?.get(edge.id) || [];
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
@@ -128,6 +157,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         if (isVerdictBranch && wasRouted && finalVerdict) {
           traceColor = finalVerdict === 'OK' ? '#10B981' : finalVerdict === 'NG' ? '#EF4444' : '#F59E0B';
         }
+        if (issues.length) traceColor = '#F59E0B';  // a connection with a problem is marked whatever its state
 
         const midX = (p1.x + p2.x) / 2;
         const midY = (p1.y + p2.y) / 2;
@@ -153,10 +183,13 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
             {/* Layer 2: Core Signal Trace (2px) */}
             <path
               d={pathD}
+              data-flow-edge={edge.id}
+              data-flow-from={`${edge.source}:out:${sourcePort}`}
+              data-flow-to={`${edge.target}:in:0`}
               fill="none"
               stroke={traceColor}
-              strokeWidth={selectedEdgeId === edge.id ? 3 : 2}
-              strokeDasharray={edge.isBranch && !isVerdictBranch ? '6 3' : undefined}
+              strokeWidth={selectedEdgeId === edge.id || issues.length ? 3 : 2}
+              strokeDasharray={issues.length ? '2 3' : edge.isBranch && !isVerdictBranch ? '6 3' : undefined}
               strokeLinecap="round"
             />
 
@@ -168,7 +201,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
               role="button"
               tabIndex={0}
-              aria-label={`Select connection ${edge.source} to ${edge.target}${edge.isBranch ? ` when ${edge.isBranch}` : ''}`}
+              aria-label={`Select connection ${edge.source} to ${edge.target}${edge.isBranch ? ` when ${edge.isBranch}` : ''}${issues.length ? `: ${issues.join(' / ')}` : ''}`}
               onClick={() => onSelectEdge?.(edge.id)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
