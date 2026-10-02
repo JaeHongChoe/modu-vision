@@ -8,10 +8,12 @@ and handles clean aborts with GPU/MPS memory clearing.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import re
+import sqlite3
 import subprocess
 import tempfile
 import threading
@@ -32,12 +34,207 @@ from backend.engine.labelme_preparation import LabelMePreparationCancelled, prep
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.engine.patch_classification import load_patch_manifest
 from backend.engine.warm_start import WarmStartParent, architecture_for, resolve_warm_start_parent
+from backend.engine.job_scheduler import JobScheduler
+from backend.engine.job_state import IllegalTransition
+from backend.engine.job_store import JobConflict, JobStore, PublicationFailed, StaleFencingToken, StaleRevision, ledger as _shared_ledger
 from backend.remote.profiles import ComputeProfile
 from backend.utils.error_catalog import classify_exception, format_error_response
 
 logger = logging.getLogger("vision_ai_studio.routes_training")
 
 router = APIRouter(prefix="/api/training", tags=["training"])
+
+def job_ledger() -> JobStore:
+    """The persistent job ledger in the configured application data folder, resolved when first used."""
+    return _shared_ledger()
+
+
+_END_EVENTS = {"completed": "complete", "failed": "fail", "aborted": "abort", "interrupted": "interrupt",
+               "disconnected": "disconnect"}
+# Ledger bookkeeping never stops a job's own bookkeeping, recovery or shutdown; only a launch
+# without a recorded attempt is refused.
+_LEDGER_ERRORS = (KeyError, StaleRevision, StaleFencingToken, IllegalTransition, OSError, sqlite3.Error)
+
+
+def _existing_ledger_link(job_id: str) -> Optional["TrainingLedgerLink"]:
+    """The link of a job the ledger already records, carrying its latest attempt's fencing token."""
+    try:
+        store = job_ledger()
+        attempts = store.attempts(job_id)
+    except _LEDGER_ERRORS:
+        return None
+    link = TrainingLedgerLink(store, job_id)
+    link.fencing_token = attempts[-1]["fencing_token"] if attempts else None
+    return link
+
+
+class StoredScopeUnavailable(Exception):
+    """The project scope verified at submission can no longer be resolved; the failure is kept, never redirected."""
+
+
+def _register_receipt_in_stored_scope(store: JobStore, job_id: str):
+    """Register a job's receipt in the project scope the server verified at submission, never the active selection."""
+    row = store.record(job_id)
+    receipt = Path(row["output_dir"] or "") / "job_receipt.json"
+    if row["source"] != "api" or not row["output_dir"] or not receipt.is_file():
+        return None
+    if not row["registry_root"]:
+        raise StoredScopeUnavailable("the submission did not record its project registry")
+    from backend.contracts.context import ArtifactRegistration, ContextRegistry, ProjectContext
+    root = Path(row["registry_root"])
+    if not (root / ".context.sqlite3").is_file():
+        raise StoredScopeUnavailable(f"the project registry recorded at submission is missing: {root}")
+    registry = ContextRegistry(root)
+    context = ProjectContext(workspace_id=row["workspace_id"], project_id=row["project_id"],
+                             actor_id=row["actor_id"], mode=row["mode"])
+    try:
+        if registry.project_key(context) != row["project_key"]:
+            raise StoredScopeUnavailable("the project namespace recorded at submission changed")
+        project = registry.local_project(row["project_id"], None, workspace_id=row["workspace_id"])
+    except HTTPException as exc:
+        raise StoredScopeUnavailable(str(exc.detail)) from exc
+    if row["project_dir"] and Path(project["project_dir"]).resolve() != Path(row["project_dir"]).resolve():
+        raise StoredScopeUnavailable("the project folder recorded at submission moved")
+    models = Path(project["models_dir"]).resolve()
+    if not receipt.resolve().is_relative_to(models):
+        raise StoredScopeUnavailable("the receipt is outside the project models folder recorded at submission")
+    digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    try:
+        return registry.register_artifact(project, ArtifactRegistration(
+            kind="model", relative_path=receipt.resolve().relative_to(models).as_posix(), sha256=digest))
+    except HTTPException as exc:
+        raise StoredScopeUnavailable(str(exc.detail)) from exc
+
+
+class TrainingLedgerLink:
+    """Ledger side of one training job: an attempt before its worker starts and the state it ends in."""
+
+    def __init__(self, store: JobStore, job_id: str):
+        self.store, self.job_id, self.fencing_token = store, job_id, None
+        self._shutdown_noted = False
+        self._reattached = False
+        self._claim = None
+        self._lock = threading.Lock()
+
+    def _record(self, event: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        try:
+            ref = self.store.get(self.job_id)
+            self.store.transition(self.job_id, ref.revision, event, payload, fencing_token=self.fencing_token)
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not record %s for %s: %s", event, self.job_id, exc)
+
+    def queued(self) -> None:
+        self._record("queue")
+
+    def waiting_for_device(self, resources: Dict[str, Any], priority: int = 0, budget: Optional[Dict[str, Any]] = None) -> None:
+        """The job waits in the ledger queue for the local device; the scheduler claims it when it frees."""
+        try:
+            ref = self.store.get(self.job_id)
+            self.store.enqueue(self.job_id, ref.revision, priority, resources, budget)
+            self.store.set_wait_reasons({self.job_id: "device_reserved"})
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not queue %s: %s", self.job_id, exc)
+
+    def claimed(self, lease: Any) -> None:
+        """The scheduler already recorded this job's attempt and fence; the launch records no second attempt."""
+        self._claim = lease
+        self.fencing_token = lease.fence
+
+    def runtime_budget_spent(self) -> bool:
+        """True once, when the job's runtime budget runs out: the cancel intent is recorded here."""
+        try:
+            budget = json.loads(self.store.record(self.job_id).get("budget_json") or "{}")
+            limit = budget.get("max_runtime_s")
+            attempts = self.store.attempts(self.job_id)
+            if not limit or not attempts or self.store.cancel_intent(self.job_id):
+                return False
+            if time.time_ns() - attempts[-1]["started_ns"] <= float(limit) * 1e9:
+                return False
+            self.store.request_cancel(self.job_id, "scheduler", "runtime budget exceeded")
+            return True
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not check the budget of %s: %s", self.job_id, exc)
+            return False
+
+    def heartbeat(self, lease_seconds: float) -> None:
+        """Extend the attempt lease while this backend owns the attempt (claimed, launched or reattached)."""
+        if self.fencing_token is None:
+            return
+        try:
+            self.store.heartbeat(self.job_id, self.fencing_token, lease_seconds)
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not extend the attempt lease of %s: %s", self.job_id, exc)
+
+    def launched(self, executor: str) -> None:
+        """Commit the attempt before launching; a failure here stops the launch.
+
+        A run recovered after a restart that already has an attempt continues under its latest
+        fencing token (reattach); it is never recorded, or launched, a second time.
+        """
+        if self._claim is not None:
+            return
+        from backend.engine.local_training_worker import _boot_id
+        ref = self.store.get(self.job_id)
+        attempts = self.store.attempts(self.job_id)
+        if attempts and ref.state in ("running", "detached", "disconnected"):
+            self.fencing_token = attempts[-1]["fencing_token"]
+            self.reattached()
+            return
+        attempt = self.store.begin_attempt(self.job_id, ref.revision, executor, _boot_id(), os.getpid())
+        self.fencing_token = attempt.fencing_token
+        ref = self.store.get(self.job_id)
+        self.store.transition(self.job_id, ref.revision, "reattach" if ref.state in ("detached", "disconnected") else "start",
+                              {"attempt": attempt.number}, fencing_token=attempt.fencing_token)
+
+    def reattached(self) -> None:
+        """This backend takes the job's attempt over under a new fence, once: the previous owner (an earlier
+        process that may still be alive) can no longer heartbeat, end the job or publish its receipt."""
+        from backend.engine.shared_scheduler import shared_leases
+        with self._lock:
+            try:
+                state = self.store.get(self.job_id).state
+                # Once per backend while the job keeps running; again after each new detach or disconnect.
+                if state in ("running", "stopping") and self._reattached:
+                    return
+                if state in ("running", "stopping", "detached", "disconnected"):
+                    leases = shared_leases()
+                    self.fencing_token = self.store.reattach(self.job_id, worker_id=f"pid:{os.getpid()}",
+                                                             lease_seconds=leases.lease_seconds)
+                    leases.restamp_fence(self.job_id, self.fencing_token)  # a reservation follows its attempt's fence
+                self._reattached = True
+            except _LEDGER_ERRORS as exc:
+                logger.warning("Job ledger could not reattach %s: %s", self.job_id, exc)
+
+    def detached(self, reason: str) -> None:
+        """A running worker is detached; a job not yet launched keeps its state with a recorded shutdown intent."""
+        try:
+            state = self.store.get(self.job_id).state
+            if state in ("running", "stopping"):
+                self._record("detach", {"reason": reason})
+            elif state != "detached" and not self._shutdown_noted:  # the signal handler and the lifespan both run
+                self.store.record_event(self.job_id, "shutdown_intent", {"reason": reason, "state": state})
+                self._shutdown_noted = True
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not record the shutdown intent of %s: %s", self.job_id, exc)
+
+    def finished(self, status: str, error: Optional[Dict[str, Any]] = None) -> None:
+        """Record the end state and publish the receipt only while this attempt owns the job."""
+        event = _END_EVENTS.get(status)
+        if event is None:
+            return
+
+        def publish():
+            try:
+                return _register_receipt_in_stored_scope(self.store, self.job_id)
+            except (StoredScopeUnavailable, OSError, ValueError, KeyError) as exc:
+                # A retained, visible failure: no reference is created in any other project.
+                raise PublicationFailed(str(exc)) from exc
+        try:
+            self.store.finish(self.job_id, event, {"error": error} if error else None, fencing_token=self.fencing_token,
+                              publish=publish if event != "disconnect" else None)
+        except _LEDGER_ERRORS as exc:
+            # A stale attempt, an already ended job or an unavailable ledger: nothing is published or ended here.
+            logger.warning("Job ledger did not record %s for %s: %s", event, self.job_id, exc)
 
 
 @dataclass
@@ -77,6 +274,7 @@ class JobRecord:
     warm_start: Optional[WarmStartParent] = None
     dataset_binding: Optional[Dict[str, Any]] = None
     process: Optional[subprocess.Popen] = field(default=None, repr=False)
+    ledger: Optional[TrainingLedgerLink] = field(default=None, repr=False)
 
 
 def _write_job_receipt(record: JobRecord) -> None:
@@ -156,9 +354,15 @@ class TrainingJobManager:
         self._jobs: Dict[str, JobRecord] = {}
         self._active_job_id: Optional[str] = None
         self._remote_queue: List[str] = []
+        # Local jobs waiting for the device: their launch arguments, in arrival order (the ledger holds the queue).
+        self._local_waiting: Dict[str, Dict[str, Any]] = {}
+        self._local_watcher = None
         from backend.engine.shared_scheduler import shared_leases
         self._leases = shared_leases()
         self._queue_watcher = None
+        # Set by a normal quit: waiting jobs stay queued in the ledger for the next start instead of being claimed now.
+        self._shutdown = threading.Event()
+        self._maintenance: Optional[threading.Thread] = None
 
     def _lease_host(self, profile):
         return f"ssh:{profile.ssh_target.rsplit('@', 1)[-1].lower()}:{profile.ssh_port}"
@@ -169,7 +373,7 @@ class TrainingJobManager:
             while True:
                 time.sleep(.5)
                 with self._lock:
-                    if not self._remote_queue: return
+                    if not self._remote_queue or self._shutdown.is_set(): return
                     self._start_waiting_remote_jobs_locked()
         self._queue_watcher = threading.Thread(target=watch,daemon=True,name="SharedComputeQueue")
         self._queue_watcher.start()
@@ -177,9 +381,18 @@ class TrainingJobManager:
     def _heartbeat(self, record):
         stop = threading.Event()
         def heartbeat():
-            while not stop.wait(5): self._leases.heartbeat(record.job_id)
+            while not stop.wait(5):
+                self._leases.heartbeat(record.job_id)
+                if record.ledger is not None:
+                    record.ledger.heartbeat(self._leases.lease_seconds)
+                self._enforce_budget(record)
         threading.Thread(target=heartbeat,daemon=True,name=f"Lease-{record.job_id}").start()
         return stop
+
+    def _enforce_budget(self, record: JobRecord) -> None:
+        """A spent runtime budget is recorded as a cancel intent; the job's own manager then stops it the normal way."""
+        if record.ledger is not None and record.status in ("running",) and record.ledger.runtime_budget_spent():
+            self.abort_job(record.job_id)
 
     @staticmethod
     def _profiles_conflict(first: ComputeProfile, second: ComputeProfile) -> bool:
@@ -244,11 +457,19 @@ class TrainingJobManager:
             self._refresh_active_id()
         if runner is None:
             return
+        # The recovered worker reports under the job's existing attempt; it is never a new launch.
+        if record.ledger is None:
+            record.ledger = _existing_ledger_link(record.job_id)
+        if record.ledger is not None:
+            record.ledger.reattached()  # never raises: the monitor below must always start
         def monitor():
             stop = threading.Event()
             def heartbeat():
                 while not stop.wait(5):
                     leases.heartbeat(record.job_id)
+                    if record.ledger is not None:
+                        record.ledger.heartbeat(leases.lease_seconds)
+                    self._enforce_budget(record)
             threading.Thread(target=heartbeat, daemon=True, name=f'Lease-{record.job_id}').start()
             try:
                 record.result = runner(WebSocketTelemetryCallback(job_id=record.job_id, max_hz=30.0))
@@ -270,6 +491,8 @@ class TrainingJobManager:
                     except OSError:
                         logger.exception('Could not persist recovered local receipt for %s', record.job_id)
                     leases.release(record.job_id, terminal=True)
+                if record.ledger is not None:
+                    record.ledger.finished(record.status, record.error)
                 with self._lock:
                     self._refresh_active_id()
         record.thread = threading.Thread(target=monitor, daemon=True, name=f'LocalReconnect-{record.job_id}')
@@ -316,21 +539,26 @@ class TrainingJobManager:
         split_manifest_root: Optional[str] = None,
         warm_start: Optional[WarmStartParent] = None,
         dataset_binding: Optional[Dict[str, Any]] = None,
+        ledger: Optional[TrainingLedgerLink] = None,
+        queue_when_busy: bool = True,
+        priority: int = 0,
+        budget: Optional[Dict[str, Any]] = None,
     ) -> JobRecord:
         with self._lock:
             active_record = next(
                 (record for record in self._jobs.values()
                  if record.remote_profile_id is None and record.status in self.ACTIVE_STATES), None,
             )
-            if active_record is not None:
-                active = active_record.job_id
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Another training job ({active}) is currently in progress.",
-                )
-
-            if not self._leases.acquire(job_id, "local-compute", "all"):
-                raise HTTPException(409, "Another application process holds the local compute lease")
+            if active_record is not None or not self._leases.acquire(job_id, "local-compute", "all"):
+                if ledger is None or not queue_when_busy:  # no ledger record, or the client asked not to wait
+                    if active_record is not None:
+                        raise HTTPException(409, f"Another training job ({active_record.job_id}) is currently in progress.")
+                    raise HTTPException(409, "Another application process holds the local compute lease")
+                return self._wait_for_local_device_locked(job_id, ledger, priority, budget, dict(
+                    task=task, dataset_path=dataset_path, output_dir=output_dir, preset=preset, device=device,
+                    config_overrides=config_overrides, prepare_dataset=prepare_dataset, source_dataset_path=source_dataset_path,
+                    dataset_fingerprint=dataset_fingerprint, split_manifest_root=split_manifest_root, warm_start=warm_start,
+                    dataset_binding=dataset_binding))
             # Build telemetry callback
             cb = WebSocketTelemetryCallback(job_id=job_id, max_hz=30.0)
 
@@ -395,6 +623,7 @@ class TrainingJobManager:
                 dataset_fingerprint=dataset_fingerprint,
                 warm_start=warm_start,
                 dataset_binding=dataset_binding,
+                ledger=ledger,
             )
             self._jobs[job_id] = record
             self._active_job_id = job_id
@@ -414,6 +643,9 @@ class TrainingJobManager:
                             raise LabelMePreparationCancelled("Training preparation cancelled by user request")
                         from backend.engine.training_provenance import validate_training_binding
                         validate_training_binding(record.dataset_binding)
+                        if record.ledger is not None:
+                            # The attempt is committed before any worker exists, so a restart never launches it twice.
+                            record.ledger.launched('local' if self.local_execution == 'subprocess' else 'embedded')
                         if self.local_execution == 'subprocess':
                             from backend.engine.local_training_worker import run_owned_training
                             result = run_owned_training(record, cb, config_overrides=config_overrides, device=device,
@@ -469,12 +701,76 @@ class TrainingJobManager:
                         self._leases.mark_uncertain(job_id)
                     else:
                         self._leases.release(job_id, terminal=True)
+                    if record.ledger is not None:
+                        record.ledger.finished(record.status, record.error)
                     logger.info("Background training thread finished for job %s", job_id)
+                    self._dispatch_local_queue()
 
             t = threading.Thread(target=_worker, name=f"Trainer-{job_id}", daemon=True)
             record.thread = t
             t.start()
             return record
+
+    def _wait_for_local_device_locked(self, job_id: str, ledger: "TrainingLedgerLink", priority: int,
+                                      budget: Optional[Dict[str, Any]], launch: Dict[str, Any]) -> JobRecord:
+        record = JobRecord(
+            job_id=job_id, task=launch["task"], preset=launch["preset"], dataset_path=launch["dataset_path"],
+            output_dir=launch["output_dir"], status="queued", phase="queued",
+            source_dataset_path=launch["source_dataset_path"], dataset_fingerprint=launch["dataset_fingerprint"],
+            warm_start=launch["warm_start"], dataset_binding=launch["dataset_binding"], ledger=ledger,
+        )
+        self._jobs[job_id] = record
+        self._local_waiting[job_id] = launch
+        ledger.waiting_for_device({"host": "local-compute", "selector": "all"}, priority, budget)
+        if self._local_watcher is None or not self._local_watcher.is_alive():
+            def watch():
+                while True:
+                    time.sleep(1)
+                    with self._lock:
+                        if not self._local_waiting or self._shutdown.is_set():
+                            return
+                    self._dispatch_local_queue()
+            self._local_watcher = threading.Thread(target=watch, daemon=True, name="LocalComputeQueue")
+            self._local_watcher.start()
+        return record
+
+    def _dispatch_local_queue(self) -> None:
+        """When the local device is free, the scheduler claims the next waiting local job (attempt + fenced
+        reservation) and it launches under that claim; jobs left waiting keep their recorded reason."""
+        with self._lock:
+            waiting = list(self._local_waiting)
+            if not waiting or self._shutdown.is_set() or any(r.remote_profile_id is None and r.status in self.ACTIVE_STATES for r in self._jobs.values()):
+                return
+        try:
+            lease = JobScheduler(job_ledger(), self._leases).claim_job(
+                f"pid:{os.getpid()}", {"hosts": ["local-compute"], "job_ids": waiting})
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Local queue could not claim a job: %s", exc)
+            return
+        if lease is None:
+            return
+        with self._lock:
+            launch = self._local_waiting.pop(lease.job_id, None)
+            waiting_record = self._jobs.pop(lease.job_id, None) if launch is not None else None
+        if launch is None or waiting_record is None or waiting_record.ledger is None:
+            # Stopped while being claimed: end the claim under its fence and free the device; nothing launches.
+            try:
+                JobScheduler(job_ledger(), self._leases).publish_result(lease, "aborted", {"reason": "stopped while being claimed"})
+            except _LEDGER_ERRORS as exc:
+                logger.warning("Local queue could not end the claim of %s: %s", lease.job_id, exc)
+            return
+        link = waiting_record.ledger
+        link.claimed(lease)
+        try:
+            self.start_job(job_id=lease.job_id, ledger=link, **launch)
+        except Exception as exc:  # the claim is ended under its fence; the job is listed as failed
+            logger.exception("Queued local job %s could not start", lease.job_id)
+            waiting_record.status = waiting_record.phase = "failed"
+            waiting_record.error = {"message": f"Training could not start: {exc}"}
+            with self._lock:
+                self._jobs[lease.job_id] = waiting_record
+            self._leases.release(lease.job_id, terminal=True)
+            link.finished("failed", waiting_record.error)
 
     def start_remote_job(
         self,
@@ -493,6 +789,7 @@ class TrainingJobManager:
         recovery_state: Optional[str] = None,
         warm_start: Optional[WarmStartParent] = None,
         dataset_binding: Optional[Dict[str, Any]] = None,
+        ledger: Optional[TrainingLedgerLink] = None,
     ) -> JobRecord:
         """Track one detached remote run through the existing training contract.
 
@@ -512,6 +809,9 @@ class TrainingJobManager:
                     raise ValueError("Remote profile identity does not match the training job")
                 if launch_spec is None and recovery_state is None:
                     raise ValueError("A durable launch specification is required for queued remote jobs")
+            if ledger is None:
+                # A run resumed at startup keeps its ledger history (first attempt or reattach).
+                ledger = _existing_ledger_link(job_id)
             queued = profile is not None and recovery_state not in ("transferring", "launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
             record = JobRecord(
                 job_id=job_id, task=task, preset=preset, dataset_path=dataset_path,
@@ -520,7 +820,7 @@ class TrainingJobManager:
                 dataset_fingerprint=dataset_fingerprint,
                 remote_runner=remote_runner, remote_profile=profile, launch_spec=launch_spec,
                 split_manifest_root=split_manifest_root,
-                warm_start=warm_start, dataset_binding=dataset_binding,
+                warm_start=warm_start, dataset_binding=dataset_binding, ledger=ledger,
             )
             if profile is not None and recovery_state is None:
                 from backend.remote.coordinator import persist_queued_remote_job
@@ -552,6 +852,8 @@ class TrainingJobManager:
         def _worker() -> None:
             heartbeat = self._heartbeat(record)
             try:
+                if record.ledger is not None:
+                    record.ledger.launched('remote')
                 with split_root_scope(record.split_manifest_root):
                     result = record.remote_runner(record)
                 state = result.get("status", "failed")
@@ -577,11 +879,14 @@ class TrainingJobManager:
                     _write_job_receipt(record)
                 except OSError:
                     logger.exception("Could not persist terminal receipt for remote job %s", job_id)
+            if record.status != "disconnected":
                 with self._lock:
                     if self._active_job_id == job_id:
                         self._active_job_id = None
                     self._start_waiting_remote_jobs_locked()
                     self._refresh_active_id()
+            if record.ledger is not None:
+                record.ledger.finished(record.status, record.error)
 
         thread = threading.Thread(target=_worker, name=f"RemoteTrainer-{job_id}", daemon=True)
         record.thread = thread
@@ -624,6 +929,8 @@ class TrainingJobManager:
         def _worker() -> None:
             heartbeat = self._heartbeat(record)
             try:
+                if record.ledger is not None:
+                    record.ledger.reattached()
                 result = record.remote_runner(record)
                 state = result.get("status", "failed")
                 if state not in ("completed", "aborted", "failed", "disconnected"):
@@ -648,11 +955,14 @@ class TrainingJobManager:
                     _write_job_receipt(record)
                 except OSError:
                     logger.exception("Could not persist terminal receipt for remote job %s", job_id)
+            if record.status != "disconnected":
                 with self._lock:
                     if self._active_job_id == job_id:
                         self._active_job_id = None
                     self._start_waiting_remote_jobs_locked()
                     self._refresh_active_id()
+            if record.ledger is not None:
+                record.ledger.finished(record.status, record.error)
 
         thread = threading.Thread(target=_worker, name=f"RemoteReconnect-{job_id}", daemon=True)
         record.thread = thread
@@ -667,7 +977,10 @@ class TrainingJobManager:
                 record.status = "aborted"
                 record.phase = "aborted"
                 record.result = {"status": "aborted"}
-                self._remote_queue.remove(job_id)
+                if job_id in self._remote_queue:
+                    self._remote_queue.remove(job_id)
+                if self._local_waiting.pop(job_id, None) is not None and record.ledger is not None:
+                    record.ledger.finished("aborted")
                 queued_record = record
             elif not record or record.status not in self.ACTIVE_STATES:
                 return False
@@ -697,9 +1010,210 @@ class TrainingJobManager:
         for job_id in local_ids:
             self.abort_job(job_id)
 
+    def detach_all_for_shutdown(self) -> None:
+        """A normal shutdown keeps job ownership and the recovery policy instead of aborting.
+
+        Owned CLI workers are detached with a recorded intent and reattached on the next start;
+        in-process (embedded) jobs cannot outlive the daemon, so they stop as before. Jobs still waiting
+        for the device are not claimed any more; they stay queued in the ledger for the next start.
+        """
+        self._shutdown.set()
+        with self._lock:
+            local = [record for record in self._jobs.values()
+                     if record.remote_profile_id is None and record.status in self.ACTIVE_STATES]
+        for record in local:
+            if self.local_execution == 'subprocess':
+                if record.ledger is not None:
+                    record.ledger.detached('normal shutdown')
+                if record.process is not None:  # a worker that never launched leaves an ordinary expiring reservation
+                    self._leases.mark_uncertain_local(record.job_id)
+            else:
+                self.abort_job(record.job_id)
+
 
 # Global singleton instance
 training_job_manager = TrainingJobManager()
+
+
+def reconcile_job_ledger(manager: TrainingJobManager) -> List[str]:
+    """After worker recovery, every job the ledger accepted is accounted for and none is launched again.
+
+    A recovered worker or receipt is authoritative for its job; a job with neither becomes interrupted
+    and stays readable in its own project through the ledger. Cancel intents recorded while a worker was
+    unreachable are applied once it is back.
+    """
+    store = job_ledger()
+    if isinstance(manager, TrainingJobManager):
+        _start_ledger_maintenance(manager, store)
+    if not _own_data_folder(store.path.parent):
+        # Another live backend uses this data folder and owns its jobs: interrupting or freeing anything here
+        # without exit evidence could stop or double-book its work. Maintenance takes over once that backend exits.
+        logger.warning("Another backend owns %s; job reconciliation waits until it exits", store.path.parent)
+        return []
+    known = {record.job_id: record for record in manager.list_jobs()}
+    interrupted: List[str] = []
+    for row in store.active("training"):
+        try:
+            _reconcile_one(store, manager, known, row, interrupted)
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not reconcile %s: %s", row["id"], exc)
+    try:  # a claim whose worker never launched (or that ended) must not keep the device reserved
+        from backend.engine.shared_scheduler import shared_leases
+        JobScheduler(store, getattr(manager, "_leases", None) or shared_leases()).sweep_orphaned_reservations()
+    except _LEDGER_ERRORS as exc:
+        logger.warning("Job ledger could not sweep orphaned reservations: %s", exc)
+    return interrupted
+
+
+_FOLDER_LOCKS: Dict[str, Any] = {}
+_MAINTENANCE_SECONDS = 10.0
+
+
+def _configured_folders() -> Dict[str, str]:
+    return {key: value for key, value in os.environ.items() if key.startswith("VISION_")}
+
+
+def _start_ledger_maintenance(manager: TrainingJobManager, store: JobStore) -> None:
+    """One maintenance thread per manager session; a later startup of the same manager replaces it."""
+    if threading.current_thread() is manager._maintenance:
+        return  # the takeover recovery below runs reconcile from this thread
+    manager._shutdown.clear()  # startup: this manager serves a new session
+    thread = threading.Thread(target=_maintain_job_ledger, args=(manager, store, _configured_folders()),
+                              daemon=True, name="JobLedgerMaintenance")
+    manager._maintenance = thread
+    thread.start()
+
+
+def _maintain_job_ledger(manager: TrainingJobManager, store: JobStore, folders: Dict[str, str]) -> None:
+    while not manager._shutdown.wait(_MAINTENANCE_SECONDS):
+        if threading.current_thread() is not manager._maintenance or _configured_folders() != folders:
+            return  # replaced by a later startup, or the configured data folders changed: never touch another folder
+        try:
+            _ledger_maintenance_tick(manager, store)
+        except Exception:  # one bad tick (a locked file, a busy database) never ends maintenance for the session
+            logger.exception("Job ledger maintenance tick failed; retrying at the next tick")
+
+
+def _ledger_maintenance_tick(manager: TrainingJobManager, store: JobStore) -> bool:
+    """A backend that found the data folder owned takes it over once that backend exits, recovering as at startup;
+    the owner keeps freeing reservations of ended jobs once nothing refreshes them any more."""
+    folder = store.path.parent
+    took_over = str(Path(folder).resolve()) not in _FOLDER_LOCKS
+    if not _own_data_folder(folder):
+        return True
+    try:
+        if took_over:
+            logger.warning("The backend that owned %s exited; recovering its jobs", folder)
+            from backend.engine.local_training_worker import recover_local_jobs
+            recover_local_jobs(manager)  # observe its workers first, then reconcile and sweep
+        else:
+            JobScheduler(store, manager._leases).sweep_orphaned_reservations()
+    except _LEDGER_ERRORS as exc:
+        logger.warning("Job ledger maintenance failed: %s", exc)
+    return True
+
+
+def _own_data_folder(folder: Path) -> bool:
+    """Hold an exclusive, process-lifetime lock on the jobs folder; False when another process holds it."""
+    key = str(Path(folder).resolve())
+    if key in _FOLDER_LOCKS:
+        return True
+    try:
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        handle = open(Path(folder) / "owner.lock", "a+b")  # an antivirus or indexer may hold it for a moment
+    except OSError as exc:
+        logger.warning("Could not open the data folder lock in %s: %s", folder, exc)
+        return False
+    try:
+        if os.name == "nt":
+            import msvcrt
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+    _FOLDER_LOCKS[key] = handle  # released when the process exits
+    return True
+
+
+def _reconcile_one(store: JobStore, manager: TrainingJobManager, known: Dict[str, JobRecord], row: Dict[str, Any],
+                   interrupted: List[str]) -> None:
+    job_id = row["id"]
+    attempts = store.attempts(job_id)
+    record = known.get(job_id)
+    if record is not None:
+        # Reuse the link recovery attached (it may already hold the rotated fence); otherwise start from the latest attempt.
+        link = record.ledger if isinstance(record.ledger, TrainingLedgerLink) and record.ledger.job_id == job_id else None
+        if link is None:
+            link = TrainingLedgerLink(store, job_id)
+            link.fencing_token = attempts[-1]["fencing_token"] if attempts else None
+        record.ledger = link
+        if record.status in TrainingJobManager.ACTIVE_STATES and record.status != "disconnected":
+            link.reattached()
+        else:
+            link.finished(record.status, record.error)
+        if store.cancel_intent(job_id) and record.status in TrainingJobManager.ACTIVE_STATES:
+            manager.abort_job(job_id)
+        return
+    reason = ("no worker or receipt was found after the restart" if attempts
+              else "accepted but not launched before the restart")
+    try:
+        store.transition(job_id, row["revision"], "interrupt", {"reason": reason})
+    except (StaleRevision, IllegalTransition) as exc:
+        logger.warning("Job ledger could not interrupt %s: %s", job_id, exc)
+        return
+    # Readback comes from the ledger, guarded by project namespace (_ledger_readback), never from an unscoped
+    # in-memory record that every project of a local backend would list.
+    interrupted.append(job_id)
+
+
+# Ended without a receipt to verify, these jobs exist only in the ledger after a later restart. A ledger
+# "completed" never becomes completed UI state without its verified receipt (_completed_receipt_record).
+_LEDGER_READBACK_STATES = ("interrupted", "failed", "aborted")
+
+
+def _ledger_job_record(row: Dict[str, Any], status: str, message: str) -> JobRecord:
+    spec = json.loads(row["spec_json"])
+    return JobRecord(
+        job_id=row["id"], task=spec.get("task", "classification"), preset=spec.get("preset", "fast"),
+        dataset_path=spec.get("dataset_path", ""), output_dir=row["output_dir"] or "", status=status,
+        phase=status, error={"message": message},
+        source_dataset_path=spec.get("dataset_path"), dataset_fingerprint=spec.get("dataset_fingerprint"),
+    )
+
+
+def _ledger_end_message(store: JobStore, row: Dict[str, Any]) -> str:
+    for event in reversed(store.events(row["id"])):
+        if event["to_state"] == row["state"] and isinstance(event["payload"], dict):
+            error = event["payload"].get("error")
+            message = event["payload"].get("reason") or (error.get("message") if isinstance(error, dict) else None)
+            if message:
+                return f"Training was {row['state']}: {message}."
+    return f"Training was {row['state']} before the backend restarted."
+
+
+def _ledger_readback(request: Optional[Request], job_id: Optional[str] = None) -> List[JobRecord]:
+    """Ended jobs the ledger keeps for the request's own workspace and project namespace only."""
+    if request is None:
+        return []
+    from backend.contracts.context import get_project_context
+    try:
+        context = get_project_context(request)
+        project_key = request.app.state.context_registry.project_key(context)
+        store = job_ledger()
+        rows = [store.record(job_id)] if job_id else store.ended("training", project_key, _LEDGER_READBACK_STATES)
+        return [_ledger_job_record(row, row["state"], _ledger_end_message(store, row)) for row in rows
+                if row["kind"] == "training" and row["project_key"] == project_key
+                and row["workspace_id"] == context.workspace_id and row["state"] in _LEDGER_READBACK_STATES]
+    except HTTPException:
+        return []  # no project context: nothing from the ledger is shown
+    except (*_LEDGER_ERRORS, ValueError) as exc:
+        if not isinstance(exc, KeyError):
+            logger.warning("Job ledger readback failed: %s", exc)
+        return []
 
 
 class TrainingConfigOverrides(BaseModel):
@@ -747,6 +1261,11 @@ class TrainingStartRequest(BaseModel):
     compute_profile_id: Optional[str] = None
     warm_start_job_id: Optional[str] = None
     dataset_version_id: Optional[str] = None
+    # Scheduling: wait in the queue when the device is busy (false keeps the immediate refusal), the queue
+    # priority, and a runtime budget that becomes a cancel intent (never a signal) once spent.
+    queue: bool = True
+    priority: int = Field(0, ge=-10, le=10)
+    max_runtime_s: Optional[float] = Field(None, gt=0, le=7 * 24 * 3600)
 
 
 class TrainingStopRequest(BaseModel):
@@ -814,9 +1333,57 @@ def list_warm_start_parents(
     return {"parents": parents, "total": len(parents)}
 
 
+_IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
+
+
 @router.post("/start")
 def start_training(req: TrainingStartRequest, request: Request = None):
     """Initiates an asynchronous background AutoML training job."""
+    reserved: List[TrainingLedgerLink] = []
+    try:
+        return _start_training(req, request, reserved)
+    except Exception as exc:
+        # A reserved job that could not be started ends as failed; a retry with the same key names it.
+        if reserved and reserved[0].store.get(reserved[0].job_id).state == "accepted":
+            detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+            reserved[0].finished("failed", {"message": detail if isinstance(detail, str) else json.dumps(detail, default=str)})
+        raise
+
+
+def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: Path,
+                          out_dir: Path) -> tuple[Optional[TrainingLedgerLink], Optional[Dict[str, Any]]]:
+    """Record the job, and reserve its idempotency key, before any folder, project or process side effect."""
+    from backend.contracts.context import get_project_context
+    key = request.headers.get("Idempotency-Key")
+    if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):
+        raise HTTPException(422, "Idempotency-Key must be 1-128 letters, digits or the characters . _ : -")
+    context = get_project_context(request)
+    project_key = request.app.state.context_registry.project_key(context)
+    # The key identifies the client's request; server-derived values (data fingerprint, imported
+    # weights, resolved devices) may change between a request and its retry.
+    spec = {**req.model_dump(), "dataset_path": str(d_path), "output_dir": str(out_dir.resolve())}
+    from backend.api.routes_project import get_current_project
+    store = job_ledger()
+    job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
+    try:
+        # The server-verified scope is stored with the job, so its receipt is registered there even after a restart.
+        ref = store.submit(context, project_key, "training", spec, key, job_id=job_id, output_dir=str(out_dir / job_id),
+                           parent_id=req.warm_start_job_id,
+                           registry_root=str(request.app.state.context_registry.root),
+                           project_dir=str(Path(get_current_project(request)["project_dir"]).resolve()))
+    except JobConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if ref.created:
+        return TrainingLedgerLink(store, ref.id), None
+    replay = store.response(ref.id) or {
+        "job_id": ref.id, "status": ref.state, "preset": req.preset, "task": req.task,
+        "output_dir": store.record(ref.id)["output_dir"], "compute_profile_id": req.compute_profile_id,
+    }
+    return None, {**replay, "idempotent_replay": True}
+
+
+def _start_training(req: TrainingStartRequest, request: Optional[Request], reserved: List[TrainingLedgerLink]):
+    requested = req.model_copy(deep=True)  # the client request, before server defaults are filled in
     if req.config_overrides:
         # Origin aliases are populated only by the worker after verifying its transferred input.
         req.config_overrides = {key: value for key, value in req.config_overrides.items() if key != 'pretrained_origin'}
@@ -990,7 +1557,6 @@ def start_training(req: TrainingStartRequest, request: Request = None):
     else:
         # Direct Python calls used by backend tests retain their historical default.
         out_dir = Path("./models").resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
     warm_start = None
     if req.warm_start_job_id:
         if request is None:
@@ -1008,6 +1574,13 @@ def start_training(req: TrainingStartRequest, request: Request = None):
                 raise ValueError('Warm-start parent classes differ from current training classes')
         except (OSError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+    ledger = None
+    if request is not None:
+        ledger, replay = _reserve_training_job(request, requested, d_path, out_dir)
+        if replay is not None:
+            return replay
+        reserved.append(ledger)
+    out_dir.mkdir(parents=True, exist_ok=True)
     dataset_binding = None
     if request is not None:
         from backend.api.routes_project import get_current_project, update_project, ProjectUpdateRequest
@@ -1018,7 +1591,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
         dataset_binding = bind_training_version(project, d_path, req.dataset_version_id)
         if dataset_binding["dataset_fingerprint"] != source_fingerprint:
             raise HTTPException(409, "Training version fingerprint differs from selected source")
-    job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
+    job_id = ledger.job_id if ledger is not None else f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     job_dir = out_dir / job_id
     job_dir.mkdir(parents=True, exist_ok=False)
     if dataset_binding:
@@ -1091,7 +1664,7 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             split_manifest_root=str(split_manifest_root),
             profile=profile,
             launch_spec=launch_spec,
-            warm_start=warm_start, dataset_binding=dataset_binding,
+            warm_start=warm_start, dataset_binding=dataset_binding, ledger=ledger,
         )
     else:
         record = training_job_manager.start_job(
@@ -1106,20 +1679,40 @@ def start_training(req: TrainingStartRequest, request: Request = None):
             source_dataset_path=str(d_path),
             dataset_fingerprint=source_fingerprint,
             split_manifest_root=str(split_manifest_root),
-            warm_start=warm_start, dataset_binding=dataset_binding,
+            warm_start=warm_start, dataset_binding=dataset_binding, ledger=ledger,
+            queue_when_busy=req.queue, priority=req.priority,
+            budget={"max_runtime_s": req.max_runtime_s, "max_attempts": 1} if req.max_runtime_s else None,
         )
+        if ledger is not None and req.max_runtime_s and getattr(record, "status", None) != "queued":
+            try:
+                ledger.store.set_budget(job_id, {"max_runtime_s": req.max_runtime_s, "max_attempts": 1})
+            except _LEDGER_ERRORS as exc:
+                logger.warning("Job ledger could not record the budget of %s: %s", job_id, exc)
 
-    return {
+    response = {
         "job_id": job_id,
-        "status": "queued" if profile is not None and record.status == "queued" else "started",
+        "status": "queued" if getattr(record, "status", None) == "queued" else "started",
         "preset": req.preset,
         "task": req.task,
         "output_dir": str(job_dir),
         "compute_profile_id": profile.id if profile is not None else None,
-        "phase": record.phase if profile is not None else None,
+        "phase": record.phase if profile is not None or getattr(record, "status", None) == "queued" else None,
         "training_provenance": dataset_binding,
         "warm_start_parent_job_id": warm_start.job_id if warm_start is not None else None,
     }
+    if ledger is not None:
+        # Only a remote job can wait in the queue; a local job starts in its own worker.
+        if profile is not None and record.status == "queued" and ledger.store.get(job_id).state == "accepted":
+            ledger.queued()
+        ledger.store.set_response(job_id, response)
+    return response
+
+
+def _ledger_wait_reason(job_id: str) -> Optional[str]:
+    try:
+        return job_ledger().record(job_id).get("wait_reason")
+    except _LEDGER_ERRORS:
+        return None
 
 
 def _record_in_request_project(record,request):
@@ -1145,6 +1738,15 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
     if not _record_in_request_project(previous,request):
         return {'status':'not_running','job_id':None}
     disconnected = previous is not None and previous.status == "disconnected"
+    if previous is not None and previous.status in TrainingJobManager.ACTIVE_STATES + ("queued",):
+        # The intent survives a restart or an unreachable worker; recovery applies it.
+        link = previous.ledger or _existing_ledger_link(job_id)
+        if link is not None:
+            context = getattr(getattr(request, "state", None), "project_context", None)
+            try:
+                link.store.request_cancel(job_id, context.actor_id if context is not None else "local", "stop requested")
+            except _LEDGER_ERRORS as exc:
+                logger.warning("Job ledger could not record the stop intent for %s: %s", job_id, exc)
     success = training_job_manager.abort_job(job_id)
     if success and disconnected:
         if previous.remote_profile_id:
@@ -1274,6 +1876,8 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
         record = training_job_manager.get_job(job_id)
         if record is None and request is not None:
             record = _completed_receipt_record(job_id, request)
+        if record is None:
+            record = next(iter(_ledger_readback(request, job_id)), None)
     else:
         record = training_job_manager.get_active_job()
 
@@ -1312,13 +1916,28 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
     }
 
 
+@router.get("/queue")
+def training_queue(request: Request):
+    """The current project's waiting training jobs: position, priority, budget and why each waits."""
+    from backend.contracts.context import get_project_context
+    project_key = request.app.state.context_registry.project_key(get_project_context(request))
+    try:
+        rows = JobScheduler(job_ledger(), training_job_manager._leases).queue_view(project_key)
+    except _LEDGER_ERRORS as exc:
+        raise HTTPException(503, f"The job ledger could not be read: {exc}") from exc
+    return {"jobs": rows}
+
+
 @router.get("/jobs")
 def list_training_jobs(request:Request=None):
     """Expose active and queued jobs so clients can reconnect by original ID."""
     queue_position = 0
     jobs = []
-    for record in training_job_manager.list_jobs():
-        if not _record_in_request_project(record,request):continue
+    records = [record for record in training_job_manager.list_jobs() if _record_in_request_project(record,request)]
+    known = {record.job_id for record in records}
+    records += [record for record in _ledger_readback(request)
+                if record.job_id not in known and _record_in_request_project(record,request)]
+    for record in records:
         position = None
         if record.status == "queued":
             queue_position += 1
@@ -1331,6 +1950,7 @@ def list_training_jobs(request:Request=None):
             "task": record.task,
             "preset": record.preset,
             "queue_position": position,
+            "wait_reason": _ledger_wait_reason(record.job_id) if record.status == "queued" else None,
             "output_dir": record.output_dir,
         })
     return {"jobs": jobs}

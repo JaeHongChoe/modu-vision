@@ -14,6 +14,7 @@ import logging
 import os
 from pathlib import Path
 import signal
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -316,6 +317,18 @@ def _restore_confirmed_terminal(manager, record, journal, root, leases):
 
 def recover_local_jobs(manager, *, job_id=None):
     """Observe persisted owned children; never replay preparation or training."""
+    _recover_local_journals(manager, job_id=job_id)
+    if job_id is None:
+        # Startup: once workers are observed, every job the ledger accepted is accounted for and
+        # none is launched again (S1-02). A ledger problem never blocks worker recovery.
+        from backend.api.routes_training import reconcile_job_ledger
+        try:
+            reconcile_job_ledger(manager)
+        except (OSError, sqlite3.Error, ValueError, KeyError):
+            logger.exception('Could not reconcile the persistent job ledger after worker recovery')
+
+
+def _recover_local_journals(manager, *, job_id=None):
     from backend.api.routes_training import JobRecord
     from backend.engine.shared_scheduler import ResourceLeases
     index = _index()

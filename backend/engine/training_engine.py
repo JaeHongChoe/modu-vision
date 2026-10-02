@@ -10,6 +10,7 @@ from contextvars import copy_context
 from functools import wraps
 from hashlib import sha256
 import json
+import logging
 import os
 from pathlib import Path, PurePosixPath
 import shutil
@@ -37,6 +38,60 @@ CONFIG_FIELDS={
 ACTIVE={'queued','running','stopping'}
 _EVENTS={}
 _LOCK=threading.RLock()
+logger=logging.getLogger(__name__)
+# Engine run states as job ledger events (S1-02).
+_LEDGER_END={'completed':'complete','failed':'fail','cancelled':'abort','interrupted':'interrupt'}
+
+def _ledger_scope(output):
+    """Engine runs are namespaced by their output folder; a request context names its workspace and actor."""
+    from backend.contracts.context import current_project_context
+    context=current_project_context.get();fields={'workspace_id':'engine','project_id':'engine','actor_id':'engine','mode':'local'}
+    if context is not None:fields.update(context.model_dump())
+    return fields,f'engine:{output}'
+
+def _reserve_run(output,identifier,spec,idempotency_key):
+    """Reserve the run, and its idempotency key, before its folder is written; a repeat names the first run."""
+    from backend.engine.job_store import ledger
+    fields,namespace=_ledger_scope(output)
+    ref=ledger().submit(fields,namespace,'engine_run',spec,idempotency_key,job_id=identifier,output_dir=str(output/'runs'/identifier),parent_id=spec.get('parent_job_id'))
+    if not ref.created:
+        # A concurrent first request writes its run right after reserving it.
+        for _ in range(100):
+            if _path(output,ref.id).is_file():break
+            time.sleep(.05)
+        else:raise ValueError('The run reserved for this idempotency key was never created; retry with a new key')
+    return ref.id
+
+def _ledger_attempt(identifier):
+    """Commit the attempt before the run executes; runs created before the ledger have no row."""
+    from backend.engine.job_store import UnknownJob,ledger
+    from backend.engine.local_training_worker import _boot_id
+    store=ledger()
+    try:ref=store.get(identifier)
+    except UnknownJob:return None
+    attempt=store.begin_attempt(identifier,ref.revision,'engine',_boot_id(),os.getpid())
+    store.transition(identifier,store.get(identifier).revision,'start',fencing_token=attempt.fencing_token)
+    return attempt.fencing_token
+
+def _ledger_end(identifier,record,token=None):
+    import sqlite3
+    from backend.engine.job_store import StaleFencingToken,StaleRevision,UnknownJob,ledger
+    from backend.engine.job_state import TERMINAL
+    event=_LEDGER_END.get(record.get('status'))
+    if event is None:return
+    store=ledger()
+    try:
+        ref=store.get(identifier)
+        if ref.state not in TERMINAL:store.transition(identifier,ref.revision,event,{'error':record['error']} if record.get('error') else None,fencing_token=token)
+    except (UnknownJob,StaleRevision,StaleFencingToken,ValueError,OSError,sqlite3.Error) as exc:logger.warning('Job ledger could not record %s for engine run %s: %s',event,identifier,exc)
+
+def _ledger_cancel(identifier):
+    import sqlite3
+    from backend.engine.job_store import UnknownJob,ledger
+    fields,_namespace=_ledger_scope('')
+    try:ledger().request_cancel(identifier,fields['actor_id'],'engine run cancel requested')
+    except UnknownJob:return
+    except (OSError,sqlite3.Error) as exc:logger.warning('Job ledger could not record the cancel intent of engine run %s: %s',identifier,exc)
 
 def _write(path,value):
     from backend.engine.project_labelsets import _atomic_json
@@ -259,7 +314,7 @@ def _prepared(output,identifier=None):
         validate_training_binding(record['training_binding'])
     return record
 
-def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='cpu',config=None,search_space=None,budget=None,epochs_per_trial=1,parent_job_id=None):
+def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='cpu',config=None,search_space=None,budget=None,epochs_per_trial=1,parent_job_id=None,idempotency_key=None):
     from backend.engine.automated_trials import _space,validated_budget
     from backend.engine.runtime_device import resolve_runtime_device
     output=_root(output_dir);prepared=_prepared(output,prepared_id)
@@ -274,10 +329,14 @@ def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='
     if prepared['task']=='anomaly' and controls.get('anomaly_method','dino_synthetic')!='dino_synthetic':raise ValueError('Measured anomaly training uses the genuine pretrained DINO synthetic detector')
     next(_space(prepared['task'],search_space,controls,mode))
     budget=validated_budget(budget or {'max_trials':4 if mode=='search' else 1,'max_total_epochs':epochs_per_trial*(4 if mode=='search' else 1),'max_seconds':600},epochs_per_trial)
-    identifier=uuid.uuid4().hex
+    identifier=uuid.uuid4().hex;resolved=str(resolve_runtime_device(device))
+    spec={'output_dir':str(output),'prepared_id':prepared['prepared_id'],'mode':mode,'preset':preset,'device':device,'config':controls,
+        'search_space':search_space,'budget':budget,'epochs_per_trial':epochs_per_trial,'parent_job_id':parent_job_id}
+    reserved=_reserve_run(output,identifier,spec,idempotency_key)
+    if reserved!=identifier:return {**read_run(output,reserved),'idempotent_replay':True}
     record={'schema_version':1,'run_id':identifier,'status':'queued','task':prepared['task'],'prepared_id':prepared['prepared_id'],
         'source_dataset_path':prepared['source_dataset_path'],'dataset_path':prepared['dataset_path'],'output_dir':str(output),
-        'mode':mode,'preset':preset,'device':str(resolve_runtime_device(device)),'config':controls,'search_space':search_space,
+        'mode':mode,'preset':preset,'device':resolved,'config':controls,'search_space':search_space,
         'budget':budget,
         'epochs_per_trial':epochs_per_trial,'parent_job_id':parent_job_id,'created_at':time.time(),'owner_pid':os.getpid(),
         'owner_created_at':psutil.Process().create_time(),'winner':None,'artifacts':{}}
@@ -299,6 +358,7 @@ def read_run(output,identifier):
             if record.get('owner_created_at')!=process.create_time() or not process.is_running() or process.status()==psutil.STATUS_ZOMBIE:raise OSError('Execution owner changed')
         except (OSError,TypeError,psutil.Error):
             record.update(status='interrupted',winner=None,error='Training process ended before publishing a result');_write(path,record)
+            _ledger_end(identifier,record)
     if record['status']=='completed':
         for artifact in record['artifacts'].values():_verify_artifact(output,artifact)
         if 'predictions' in record['artifacts']:
@@ -322,6 +382,7 @@ def cancel_run(output,identifier):
             _write(_root(output)/'models'/'automated_training'/identifier/'cancel_requested.json',{'at':time.time()})
             if (event:=_EVENTS.get(str(directory))) is not None:event.set()
             record.update(status='cancelled' if record['status']=='queued' else 'stopping',winner=None);_write(directory/'run.json',record)
+            _ledger_cancel(identifier);_ledger_end(identifier,record)
         return record
 
 def _artifact(path):return {'path':str(path),'sha256':_hash(path),'bytes':path.stat().st_size}
@@ -338,7 +399,9 @@ def execute_run(output,identifier,on_progress=None):
         record.update(status='running',owner_pid=os.getpid(),owner_created_at=psutil.Process().create_time());_write(path,record)
     event=threading.Event();_EVENTS[str(path.parent)]=event
     if (path.parent/'cancel_requested.json').is_file():event.set()
+    token=None
     try:
+        token=_ledger_attempt(identifier)
         prepared=_prepared(output,record['prepared_id'])
         def progress(search):
             record.update(search=search)
@@ -362,16 +425,20 @@ def execute_run(output,identifier,on_progress=None):
                 record['artifacts']={name:_artifact(delivery/file) for name,file in [('model','model.pt'),('metadata','model_meta.json'),('configuration','configuration.json')]}
                 _write(delivery/'artifacts.json',record['artifacts'])
             _write(path,record)
+        _ledger_end(identifier,record,token)
         return record
     except Exception as exc:
         with _LOCK,_file_lock(path.parent/'.journal.lock'):
             record.update(status='cancelled' if event.is_set() or (path.parent/'cancel_requested.json').is_file() else 'failed',winner=None,error=str(exc),finished_at=time.time());_write(path,record)
+        _ledger_end(identifier,record,token)
         if on_progress:on_progress({'event':'error','run_id':identifier,'error':str(exc)})
         return record
     finally:_EVENTS.pop(str(path.parent),None)
 
 def start_run(**options):
-    record=create_run(**options);context=copy_context()
+    record=create_run(**options)
+    if record.get('idempotent_replay'):return record  # the reserved run was already started by the first request
+    context=copy_context()
     thread=threading.Thread(target=lambda:context.run(execute_run,options['output_dir'],record['run_id']),name=f"engine-{record['run_id'][:8]}",daemon=True)
     thread.start();return record
 

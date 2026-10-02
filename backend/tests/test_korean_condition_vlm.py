@@ -60,10 +60,21 @@ def test_shared_provider_configuration_is_admin_only_and_members_use_saved_provi
     monkeypatch.setenv('MODU_TEST_VLM_KEY','approved-provider-key')
     monkeypatch.setenv('MODU_SERVER_SENTINEL_SECRET','must-not-leave-server')
     class Accounts:
+        """The account store contract the middleware uses; decisions follow the real role policy."""
+        def bind_workspace(self,workspace_id):pass
         def authenticate(self,token):return {'id':token,'username':token,'administrator':token=='admin'}
         def project_for(self,*args):return {'path':project['project_dir']}
         def project_role(self,user,*args):return 'owner' if user=='admin' else role
+        def authorize(self,actor,action,project_id,resource_revision=None,*,session_token=None,revision_lookup=None):
+            from backend.contracts.authentication import PermissionDecision
+            from backend.engine.shared_accounts import ACTIONS
+            member_role=self.project_role(actor,project_id);allowed=member_role in ACTIONS.get(action,set())
+            return PermissionDecision(allowed,'allowed' if allowed else 'role_or_membership_required',actor,action,
+                                      'workspace',project_id,member_role,1,None,False)
+        def record_decision(self,decision):pass
     app.state.accounts=Accounts()
+    from backend.contracts.context import ContextRegistry
+    app.state.context_registry=ContextRegistry(Path(project['project_dir']).parent/'context-registry')
     wrapped=SharedAuthorizationMiddleware(app,app)
     class Opener:
         def open(self,request,timeout):

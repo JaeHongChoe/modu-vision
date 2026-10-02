@@ -17,12 +17,19 @@ class ResourceLeases:
         with self.connect() as conn:
             conn.execute('CREATE TABLE IF NOT EXISTS leases(job_id TEXT PRIMARY KEY,host TEXT,selector TEXT,owner TEXT,expires REAL,remote INTEGER,uncertain INTEGER DEFAULT 0)')
             columns={row[1] for row in conn.execute('PRAGMA table_info(leases)')}
+            # Additive only: an older app shares this file and keeps inserting with its own column list.
+            # fence: the ledger attempt holding the row; ledger_job: written by the job scheduler;
+            # app_schema: NULL for rows an older app wrote (its version predates the column).
             for name,definition in {'memory_budget_mb':'INTEGER NOT NULL DEFAULT 0','allow_sharing':'INTEGER NOT NULL DEFAULT 0',
-                                    'task':'TEXT','project_id':'TEXT','account_id':'TEXT'}.items():
-                if name not in columns:conn.execute(f'ALTER TABLE leases ADD COLUMN {name} {definition}')
+                                    'task':'TEXT','project_id':'TEXT','account_id':'TEXT',
+                                    'fence':'INTEGER','ledger_job':'INTEGER NOT NULL DEFAULT 0','app_schema':'INTEGER'}.items():
+                if name not in columns:
+                    try:conn.execute(f'ALTER TABLE leases ADD COLUMN {name} {definition}')
+                    except sqlite3.OperationalError as exc:
+                        if 'duplicate column' not in str(exc):raise
             conn.execute('CREATE TABLE IF NOT EXISTS devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))')
-    def connect(self):
-        conn = sqlite3.connect(self.path, timeout=10); conn.row_factory = sqlite3.Row
+    def connect(self, timeout=10):
+        conn = sqlite3.connect(self.path, timeout=timeout); conn.row_factory = sqlite3.Row
         conn.execute('PRAGMA journal_mode=WAL'); return conn
     @staticmethod
     def conflict(a, b):
@@ -74,6 +81,10 @@ class ResourceLeases:
         return self.conflict(a,b)
 
     def _available(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None):
+        return self._assess(conn,host,selector,memory_budget_mb,allow_sharing,job_id)[0]
+
+    def _assess(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None):
+        """(available, overlapping rows): the rows decide why a claim waits."""
         identities=self._identities(conn,host,selector)
         if allow_sharing:
             if type(memory_budget_mb) is not int or memory_budget_mb<=0:raise ValueError('Shared jobs require a positive memory budget')
@@ -89,11 +100,12 @@ class ResourceLeases:
                 previous=self._identities(conn,row['host'],row['selector'])
                 overlap=any(a['memory_mb'] and b['memory_mb'] and (a['uuid']==b['uuid'] or a['uuid']==b['parent_uuid'] or b['uuid']==a['parent_uuid']) for a in identities for b in previous)
             if overlap:overlapping.append(row)
-        if not overlapping:return True
-        if not allow_sharing or any(not row['allow_sharing'] for row in overlapping):return False
+        if not overlapping:return True,[]
+        if not allow_sharing or any(not row['allow_sharing'] for row in overlapping):return False,overlapping
         target=identities[0]['uuid']
-        if any(self._identities(conn,row['host'],row['selector'])[0]['uuid']!=target for row in overlapping):return False
-        return sum(row['memory_budget_mb'] for row in overlapping)+memory_budget_mb<=capacity
+        if any(self._identities(conn,row['host'],row['selector'])[0]['uuid']!=target for row in overlapping):return False,overlapping
+        fits=sum(row['memory_budget_mb'] for row in overlapping)+memory_budget_mb<=capacity
+        return fits,([] if fits else overlapping)
 
     def available(self,host,selector='all',*,memory_budget_mb=0,allow_sharing=False):
         with self.connect() as conn:
@@ -102,7 +114,8 @@ class ResourceLeases:
     def acquire(self, job_id, host, selector='all', *, remote=False,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None):
         with self.connect() as conn:
             conn.execute('BEGIN IMMEDIATE')
-            conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<?', (time.time(),))
+            # A fenced row belongs to a ledger attempt: it never expires into free capacity (expiry makes it uncertain).
+            conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<? AND fence IS NULL', (time.time(),))
             row=conn.execute('SELECT * FROM leases WHERE job_id=?',(job_id,)).fetchone()
             if row:
                 if row['owner']!=self.owner:return False
@@ -110,9 +123,69 @@ class ResourceLeases:
                     raise ValueError('An existing reservation cannot change its device or memory claim')
                 conn.execute('UPDATE leases SET expires=? WHERE job_id=?',(time.time()+self.lease_seconds,job_id));return True
             if not self._available(conn,host,selector,memory_budget_mb,allow_sharing):return False
-            conn.execute('INSERT INTO leases(job_id,host,selector,owner,expires,remote,memory_budget_mb,allow_sharing,task,project_id,account_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+            conn.execute('INSERT INTO leases(job_id,host,selector,owner,expires,remote,memory_budget_mb,allow_sharing,task,project_id,account_id,app_schema) VALUES(?,?,?,?,?,?,?,?,?,?,?,2)',
                          (job_id,host,selector,self.owner,time.time()+self.lease_seconds,int(remote),memory_budget_mb,int(allow_sharing),task,project_id,account_id))
             return True
+
+    # --- Ledger-scheduled reservations (S1-03) ---------------------------------------------------------------
+    def older_app_active(self,host,timeout=10):
+        """An unexpired local reservation written by an older app version on this host (drain: claim nothing there)."""
+        with self.connect(timeout) as conn:
+            return conn.execute('SELECT 1 FROM leases WHERE host=? AND app_schema IS NULL AND remote=0 AND expires>=?',
+                                (host,time.time())).fetchone() is not None
+
+    def acquire_for_job(self,job_id,host,selector='all',*,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None,timeout=10):
+        """Reserve devices for a scheduler claim: (acquired, blocking rows). The row is fenced after the ledger claim."""
+        with self.connect(timeout) as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<? AND fence IS NULL', (time.time(),))
+            row=conn.execute('SELECT * FROM leases WHERE job_id=?',(job_id,)).fetchone()
+            if row:
+                if row['owner']==self.owner and row['ledger_job']:
+                    conn.execute('UPDATE leases SET expires=? WHERE job_id=?',(time.time()+self.lease_seconds,job_id));return True,[]
+                return False,[dict(row)]
+            available,blocking=self._assess(conn,host,selector,memory_budget_mb,allow_sharing)
+            if not available:return False,[dict(row) for row in blocking]
+            conn.execute('INSERT INTO leases(job_id,host,selector,owner,expires,remote,memory_budget_mb,allow_sharing,task,project_id,account_id,ledger_job,app_schema) VALUES(?,?,?,?,?,0,?,?,?,?,?,1,2)',
+                         (job_id,host,selector,self.owner,time.time()+self.lease_seconds,memory_budget_mb,int(allow_sharing),task,project_id,account_id))
+            return True,[]
+
+    def stamp_fence(self,job_id,fence):
+        with self.connect() as conn:
+            return conn.execute('UPDATE leases SET fence=? WHERE job_id=? AND owner=?',(fence,job_id,self.owner)).rowcount==1
+
+    def adopt_fenced(self,job_id,fence):
+        """A restarted owner takes the reservation over under the attempt's new fence."""
+        with self.connect() as conn:
+            return conn.execute('UPDATE leases SET owner=?,fence=?,expires=?,uncertain=0 WHERE job_id=?',
+                                (self.owner,fence,time.time()+self.lease_seconds,job_id)).rowcount==1
+
+    def heartbeat_fenced(self,job_id,fence):
+        with self.connect() as conn:
+            return conn.execute('UPDATE leases SET expires=? WHERE job_id=? AND fence=?',(time.time()+self.lease_seconds,job_id,fence)).rowcount==1
+
+    def mark_uncertain_fenced(self,job_id,fence):
+        with self.connect() as conn:
+            conn.execute('UPDATE leases SET uncertain=1 WHERE job_id=? AND fence=?',(job_id,fence))
+
+    def release_fenced(self,job_id,fence):
+        with self.connect() as conn:
+            conn.execute('DELETE FROM leases WHERE job_id=? AND fence=?',(job_id,fence))
+
+    def restamp_fence(self,job_id,fence):
+        """A reattached attempt carries its new fence onto the reservation; the owner (the worker's heartbeat) is kept."""
+        with self.connect() as conn:
+            return conn.execute('UPDATE leases SET fence=?,uncertain=0,app_schema=2 WHERE job_id=? AND remote=0',(fence,job_id)).rowcount==1
+
+    def mark_uncertain_local(self,job_id):
+        """A launched local worker outlives this backend: its reservation stays held until exit evidence."""
+        with self.connect() as conn:
+            conn.execute('UPDATE leases SET uncertain=1 WHERE job_id=? AND remote=0',(job_id,))
+
+    def release_unfenced(self,job_id):
+        """Undo a reservation whose ledger claim did not happen (owned by this process, never fenced)."""
+        with self.connect() as conn:
+            conn.execute('DELETE FROM leases WHERE job_id=? AND owner=? AND fence IS NULL',(job_id,self.owner))
     def adopt(self, job_id):
         # Remote ownership changes only for expired leases, after durable journal recovery.
         with self.connect() as conn:
@@ -120,10 +193,11 @@ class ResourceLeases:
             row = conn.execute('SELECT * FROM leases WHERE job_id=?', (job_id,)).fetchone()
             if row is None: return True
             if row['owner'] != self.owner and row['expires'] > time.time(): return False
-            conn.execute('UPDATE leases SET owner=?,expires=? WHERE job_id=?', (self.owner,time.time()+self.lease_seconds,job_id)); return True
+            conn.execute('UPDATE leases SET owner=?,expires=?,app_schema=2 WHERE job_id=?', (self.owner,time.time()+self.lease_seconds,job_id)); return True
     def heartbeat(self, job_id):
         with self.connect() as conn:
-            return conn.execute('UPDATE leases SET expires=? WHERE job_id=? AND owner=?', (time.time()+self.lease_seconds,job_id,self.owner)).rowcount == 1
+            # A row this version keeps alive is no longer an older app's reservation (drain does not apply to it).
+            return conn.execute('UPDATE leases SET expires=?,app_schema=2 WHERE job_id=? AND owner=?', (time.time()+self.lease_seconds,job_id,self.owner)).rowcount == 1
     def mark_uncertain(self, job_id):
         with self.connect() as conn:
             conn.execute('UPDATE leases SET uncertain=1 WHERE job_id=? AND owner=?', (job_id,self.owner))

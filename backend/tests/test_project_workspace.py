@@ -31,10 +31,14 @@ def workspace(tmp_path: Path):
     root.mkdir()
 
     def client() -> TestClient:
+        from backend.contracts.context import ContextRegistry
+        from backend.main import ProjectContextMiddleware
         app = FastAPI()
         app.state.project_dir = root
+        app.state.context_registry = ContextRegistry(root)
         app.include_router(routes_project.router)
         app.include_router(routes_training.router)
+        app.add_middleware(ProjectContextMiddleware, project_app=app)  # a start is recorded in its project's job ledger
         return TestClient(app)
 
     return client, root

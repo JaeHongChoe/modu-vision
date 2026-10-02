@@ -1,8 +1,11 @@
 """Authorization and request-scoped project selection for optional shared servers."""
 import json
+from dataclasses import replace
 from pathlib import Path
 import secrets
 import re
+from http.cookies import SimpleCookie
+from backend.contracts.authentication import browser_origin_allowed, permission_action
 from urllib.parse import parse_qs,unquote
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
@@ -21,7 +24,7 @@ class SharedAuthorizationMiddleware:
     async def __call__(self,scope,receive,send):
         if scope['type'] not in {'http','websocket'}:return await self.app(scope,receive,send)
         path=scope.get('path','');method=scope.get('method','GET');headers=Headers(scope=scope)
-        if path in {'/health','/api/accounts/config','/api/accounts/login'} or method=='OPTIONS':return await self.app(scope,receive,send)
+        if path in {'/health','/api/accounts/config','/api/accounts/login','/api/accounts/oidc/start','/api/accounts/oidc/callback'} or method=='OPTIONS':return await self.app(scope,receive,send)
         async def reject(code,message):
             if scope['type']=='websocket':await send({'type':'websocket.close','code':1008})
             else:await JSONResponse({'detail':message},status_code=code)(scope,receive,send)
@@ -32,7 +35,28 @@ class SharedAuthorizationMiddleware:
         if scope['type']=='websocket' and not token:
             token=next((p.removeprefix('vision.') for p in scope.get('subprotocols',[]) if p.startswith('vision.')),'')
         store=self.project_app.state.accounts
-        try:account=store.authenticate(token)
+        try:
+            store.bind_workspace(self.project_app.state.context_registry.workspace_id)
+            browser=False
+            if not token:
+                cookies=SimpleCookie()
+                try:cookies.load(headers.get('cookie',''))
+                except Exception:return await reject(401,'Browser session unavailable')
+                token=cookies['vision_session'].value if 'vision_session' in cookies else ''
+                browser=bool(token)
+            account=store.cookie_session(token) if browser else store.authenticate(token)
+            if browser:
+                # A cookie handshake also needs a trusted Origin; a CSRF token
+                # is required for unsafe HTTP mutations, never a URL token.
+                origin=headers.get('origin','')
+                if scope.get('scheme','') not in {'https','wss'}:
+                    return await reject(403,'Browser cookies require HTTPS')
+                if origin or scope['type']=='websocket' or method not in {'GET','HEAD','OPTIONS'}:
+                    if not browser_origin_allowed(self.project_app,origin,scope.get('scheme','')):
+                        return await reject(403,'Browser origin is not authorized')
+                if scope['type']=='http' and method not in {'GET','HEAD','OPTIONS'}:
+                    try:store.cookie_session(token,headers.get('x-vision-csrf',''))
+                    except ValueError:return await reject(403,'Browser CSRF verification required')
         except ValueError:return await reject(401,'Account session expired or unavailable')
         state=scope.setdefault('state',{});state['account_user']=account
         state['account_session_token']=token
@@ -99,7 +123,21 @@ class SharedAuthorizationMiddleware:
                 or method=='POST' and re.fullmatch(r'/api/artifacts/uploads/[a-f0-9]{32}/complete',path))
             artifact_upload=bool(artifact_upload and role in {'labeler','trainer','reviewer'})
             allowed=emergency_rollback or artifact_reference or artifact_upload or team_allowed or delivery_allowed or (labeling and role in {'labeler','trainer','reviewer'}) or ((training or flow) and role in {'trainer','reviewer'}) or (review and role=='reviewer') or (compute_jobs and role in {'labeler','trainer','reviewer'})
-            if not allowed:return await reject(403,'This project role cannot perform the requested action')
+            if not allowed:
+                denied=store.authorize(account['id'],permission_action(path,method),project['id'],session_token=token)
+                if denied.allowed:denied=replace(denied,allowed=False,reason='route_policy_required')
+                store.record_decision(denied)
+                return await reject(403,'This project role cannot perform the requested action')
+        # Recheck session and membership after routing policy. This contract
+        # deliberately does not claim resource revision verification: artifact,
+        # job and release owners retain their existing authoritative checks.
+        decision=store.authorize(account['id'],permission_action(path,method),project['id'],session_token=token)
+        if not decision.allowed or decision.role!=role:
+            if decision.allowed:decision=replace(decision,allowed=False,reason='permission_changed')
+            store.record_decision(decision)
+            return await reject(403,'Project permission changed; retry with current authority')
+        state['permission_decision']=decision
+        if method not in {'GET','HEAD','OPTIONS'}:store.record_decision(decision)
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]
         if project.get('source_dataset_dir'):roots.append(Path(project['source_dataset_dir']).resolve())

@@ -174,10 +174,14 @@ def test_training_api_only_accepts_project_parent_and_records_lineage(tmp_path: 
             folder = source / split / label
             folder.mkdir(parents=True)
             Image.new("RGB", (16, 16), color=(100 if label == "OK" else 200, 0, 0)).save(folder / f"{split}_{label}.png")
+    from backend.contracts.context import ContextRegistry
+    from backend.main import ProjectContextMiddleware
     app = FastAPI()
     app.state.project_dir = tmp_path / "projects"
+    app.state.context_registry = ContextRegistry(tmp_path / "projects")
     app.include_router(routes_project.router)
     app.include_router(routes_training.router)
+    app.add_middleware(ProjectContextMiddleware, project_app=app)  # a start is recorded in its project's job ledger
     client = TestClient(app)
     created = client.post("/api/project/create", json={
         "name": "Retraining QA", "task": "classification", "project_dir": str(tmp_path / "project"),

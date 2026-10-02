@@ -36,7 +36,7 @@ def rollback_capabilities(request,project):
         role=accounts.project_role(account['id'],project['id'])
         return {'authentication':'shared_account_session','actor_id':account['id'],'actor_name':account['username'],
                 'actor_role':role or 'unavailable','can_rollback':role in {'owner','reviewer'},
-                'can_emergency_rollback':role=='owner'}
+                'can_emergency_rollback':bool(role and (role=='owner' or account['administrator']))}
     import secrets
     expected=getattr(request.app.state,'api_token',None)
     if accounts is not None or not expected or not secrets.compare_digest(request.headers.get('x-vision-token',''),expected):

@@ -1,11 +1,15 @@
 """External UI contract, independent of the desktop's active project state."""
 from pathlib import Path
 import json
+import re
 from typing import Any,Literal
 from fastapi import APIRouter,HTTPException,Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel,ConfigDict,Field
 from backend.engine import training_engine as engine
+from backend.engine.job_store import JobConflict
+
+_IDEMPOTENCY_KEY=re.compile(r'^[A-Za-z0-9_.:-]{1,128}$')
 
 router=APIRouter(prefix='/api/engine',tags=['training-engine'])
 
@@ -57,6 +61,7 @@ def _scope(request,output,source=None):
 
 def _call(function,*args,**kwargs):
     try:return function(*args,**kwargs)
+    except JobConflict as exc:raise HTTPException(409,str(exc)) from exc
     except FileNotFoundError as exc:raise HTTPException(404,str(exc)) from exc
     except (ValueError,OSError,KeyError,TypeError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
 
@@ -90,8 +95,13 @@ def train(req:TrainRequest,request:Request):
         options={**recipe,**req.model_dump(include=req.model_fields_set-{'background','config_path'})}
         if options.get('mode')!='search' and 'search_space' not in req.model_fields_set:options['search_space']=None
     _scope_recipe(request,options)
+    # The job ledger reserves the key before the run folder is written; a repeat returns the reserved run.
+    key=request.headers.get('Idempotency-Key')
+    if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):raise HTTPException(422,'Idempotency-Key must be 1-128 letters, digits or the characters . _ : -')
+    options['idempotency_key']=key
     if req.background:return _call(engine.start_run,**options)
     record=_call(engine.create_run,**options)
+    if record.get('idempotent_replay'):return record
     return _call(engine.execute_run,req.output_dir,record['run_id'])
 
 @router.get('/jobs')

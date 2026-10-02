@@ -263,7 +263,8 @@ async def lifespan(app: FastAPI):
     yield
     # Graceful Shutdown Sequence
     logger.info("Initiating Vision AI Studio backend shutdown...")
-    training_job_manager.abort_all()
+    # A normal quit keeps job ownership: owned workers are detached with a recorded intent and reattached on restart.
+    training_job_manager.detach_all_for_shutdown()
     await broadcaster.shutdown()
     clear_device_cache()
     logger.info("Shutdown cleanup complete.")
@@ -299,14 +300,35 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
 
     # CORS is outermost so permitted renderers can read authentication errors.
     # "null" is needed by packaged file://, but the process token still gates it.
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://127.0.0.1:5173", "http://localhost:5173", "null"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context"],
-        expose_headers=["X-Vision-Context"],
-    )
+    cors_options = {
+        "allow_origins": ["http://127.0.0.1:5173", "http://localhost:5173", "null"],
+        "allow_credentials": False,
+        "allow_methods": ["*"],
+        "allow_headers": ["Content-Type", "X-Vision-Token", "Authorization", "X-Vision-Project", "X-Vision-Context"],
+        "expose_headers": ["X-Vision-Context"],
+    }
+    configured_origins = os.environ.get("MODU_BROWSER_ORIGINS", "")
+    if configured_origins:
+        import json
+        from backend.contracts.authentication import configure_browser_origins
+        try:
+            origins = json.loads(configured_origins)
+            if not isinstance(origins, list) or any(
+                not isinstance(origin, str) or "*" in origin for origin in origins
+            ):
+                raise ValueError("Expected an array of exact origins")
+            from urllib.parse import urlsplit
+            for origin in origins:
+                authority = urlsplit(origin)
+                # Accessing port validates its syntax and range.
+                _ = authority.port
+                if authority.netloc.endswith(":"):
+                    raise ValueError("Origin port must not be empty")
+            if origins:
+                cors_options = configure_browser_origins(app, origins)
+        except (ValueError, TypeError) as exc:
+            raise ValueError("MODU_BROWSER_ORIGINS must be a JSON array of exact HTTPS origins") from exc
+    app.add_middleware(CORSMiddleware, **cors_options)
 
     # Health check endpoint strictly conforming to PROJECT.md line 144
     @app.get("/health")
@@ -462,8 +484,8 @@ def run_server():
 
     # Signal handlers for direct SIGINT/SIGTERM termination
     def _sig_handler(sig, frame):
-        logger.info("Received signal %d, aborting training and triggering exit...", sig)
-        training_job_manager.abort_all()
+        logger.info("Received signal %d, detaching owned training and triggering exit...", sig)
+        training_job_manager.detach_all_for_shutdown()
         server.should_exit = True
 
     for s in (signal.SIGINT, signal.SIGTERM):

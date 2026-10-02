@@ -409,7 +409,10 @@ class TestUnifiedInferenceAPI:
     def test_infer_anomaly(self, synthetic_models):
         pt = synthetic_models["anomaly"]
         sample = np.full((128, 128, 3), 100, dtype=np.uint8)
-        res = infer("anomaly", pt, sample, threshold=0.5)
+        # A distance-scored model decides with its own calibrated threshold; a raw 0.5 is not a probability.
+        with pytest.raises(ValueError, match="calibration binding"):
+            infer("anomaly", pt, sample, threshold=0.5)
+        res = infer("anomaly", pt, sample)
 
         assert res.task == "anomaly"
         assert "is_anomaly" in res.predictions

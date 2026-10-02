@@ -33,10 +33,20 @@ def test_workspace_role_policy(tmp_path,monkeypatch,role,path,allowed):
     project={'id':'p','project_dir':str(tmp_path)}
     monkeypatch.setattr(routes_project,'_load_project',lambda _:project)
     class Accounts:
+        """The account store contract the middleware uses; decisions follow the real role policy."""
+        def bind_workspace(self,workspace_id):pass
         def authenticate(self,token):return {'id':'user','administrator':False}
         def project_for(self,*args):return {'path':str(tmp_path)}
         def project_role(self,*args):return role
-    app=FastAPI();app.state.accounts=Accounts()
+        def authorize(self,actor,action,project_id,resource_revision=None,*,session_token=None,revision_lookup=None):
+            from backend.contracts.authentication import PermissionDecision
+            from backend.engine.shared_accounts import ACTIONS
+            allowed=role in ACTIONS.get(action,set())
+            return PermissionDecision(allowed,'allowed' if allowed else 'role_or_membership_required',actor,action,
+                                      'workspace',project_id,role,1,None,False)
+        def record_decision(self,decision):pass
+    from backend.contracts.context import ContextRegistry
+    app=FastAPI();app.state.accounts=Accounts();app.state.context_registry=ContextRegistry(tmp_path/'context-registry')
     @app.post(path)
     def endpoint():return {'action':'performed'}
     app.add_middleware(SharedAuthorizationMiddleware,project_app=app)
