@@ -44,6 +44,8 @@ test('older plain paths are copied to the legacy key once, and that key then dec
  assert.equal(empty.size,0,'nothing to copy writes nothing');});
 test('an image saved twice by an earlier build counts once, and a moved image picked at its new place replaces its entry',()=>{
  assert.deepEqual(t.parseSavedTestSet(JSON.stringify([image(1),image(2),image(2)])).saved.map(e=>e.image_uuid),['u1','u2']);
+ const firstKept=t.parseSavedTestSet(JSON.stringify([{...image(2),sha256:'a'.repeat(64)},{...image(2),sha256:'b'.repeat(64)}])).saved;
+ assert.deepEqual(firstKept.map(e=>e.sha256),['a'.repeat(64)],'the first entry (usable entries are saved first) is the one kept');
  const moved={...image(3),status:'moved'};const found={...image(3),image_uuid:'u3-new',relative_path:'ng/3.png'};
  const picked=t.pickTestImage([image(1)],[moved],found);assert.deepEqual(picked.testSet.map(e=>e.image_uuid),['u1','u3-new']);assert.deepEqual(picked.unresolved,[]);
  const other=t.pickTestImage([image(1)],[{...image(4),status:'changed'}],{...image(9),sha256:image(4).sha256});
