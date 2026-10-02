@@ -1545,6 +1545,12 @@
      "result": "slice 2 published in 8716df7: persistent image index with immutable revisions (single read: streamed hash into a bounded copy + full decode; gaps for unreadable folders; staged build sealed in one transaction; stat cache trusted only where stat fields are change evidence; CAS activation; publication-key replay); inventory rules shared with the source listing and dataset summary; three independent review rounds, final spec/quality pass",
      "scope": "clean main + 9 files (slice 2 and the slice-1/inspection follow-up 021b5e5): 735 passed / 7 skipped; durable import job, routes and panel (slice 3) in review, not published; Windows stat semantics, junctions and undecodable names verified by emulation only",
      "platform": "macOS development; Windows native pending"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 3 published: durable import job (fenced attempt, cancel between files, publication key = job id, crash-after-seal completion at startup), routes with role checks and owner-gated startup recovery, validated-revision panel with explicit two-step accept; three independent review rounds, final spec/quality pass",
+     "scope": "clean main + 14 files: backend 256 passed, renderer 293, typecheck clean; real-backend browser e2e (Chrome channel, lock-exact node_modules, S0-09 harness): reject holds a corrupt image, exclude + explicit accept activates, source bytes unchanged",
+     "platform": "macOS development; Windows native pending; formats (LabelMe/COCO/YOLO labels in the index), ZIP/uploaded inputs and duplicate reporting remain open"
     }
    ],
    "file_actions": {
@@ -1554,12 +1560,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
+    "gui": "verified",
+    "persist": "verified",
     "reopen": "pending",
-    "failure": "pending",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
