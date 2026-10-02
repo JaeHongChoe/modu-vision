@@ -236,8 +236,8 @@ def test_archive_copies_preserve_ids_and_explicit_contexts_isolate_labels_refs_a
         context = client.get('/api/context').json()['project_context']; contexts.append(context)
         assert project['id'] == original['id'] == context['project_id']
         assert (Path(project['models_dir']) / job_id / 'best_model.pt').read_bytes() == original_model_bytes
-        assert json.loads((Path(project['models_dir']) / job_id / 'job_receipt.json').read_text())['job_id'] == job_id
-        assert json.loads((Path(project['project_dir']) / 'flowcharts/versions' / (version_id+'.json')).read_text())['version_id'] == version_id
+        assert json.loads((Path(project['models_dir']) / job_id / 'job_receipt.json').read_text(encoding='utf-8'))['job_id'] == job_id
+        assert json.loads((Path(project['project_dir']) / 'flowcharts/versions' / (version_id+'.json')).read_text(encoding='utf-8'))['version_id'] == version_id
     assert len({c['workspace_id'] for c in [original_context,*contexts]}) == 3
     assert client.get('/api/project/current',headers={'X-Vision-Project':original['id']}).status_code == 409
     assert client.get('/api/project/current',headers=original_header).json()['project_dir'] == original['project_dir']
@@ -390,9 +390,9 @@ def test_parallel_training_submissions_and_context_free_callbacks_keep_origin(tm
         kwargs, callback = submissions[project['id']]
         assert Path(kwargs['output_dir']).is_relative_to(Path(project['models_dir']))
         kwargs['prepare_dataset'](threading.Event())
-        rows = json.loads((Path(kwargs['dataset_path'])/'source_manifest.json').read_text())
+        rows = json.loads((Path(kwargs['dataset_path'])/'source_manifest.json').read_text(encoding='utf-8'))
         row = next(row for row in rows if row['source_image']==str(image.resolve()))
-        assert json.loads(Path(row['source_json']).read_text())['annotations'][0]['label'] == project['name']
+        assert json.loads(Path(row['source_json']).read_text(encoding='utf-8'))['annotations'][0]['label'] == project['name']
         callback.on_training_start({'epochs':1})
         assert current_project_context.get() is None
     with ThreadPoolExecutor(max_workers=2) as executor:
