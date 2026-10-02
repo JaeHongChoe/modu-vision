@@ -745,6 +745,12 @@
      "result": "slice 1 published in c0a7088: every training row (live, ledger and receipt rows) carries an observation built only from recorded evidence: cancel requested, worker acknowledgement (local watch thread and remote worker), signals, confirmed exit and reservation release are separate steps; failure causes (out of memory incl. ERR_001, disk full, network lost for remote jobs) are read from the stored failure payload and error code; when the worker state cannot be proven the next action says so (worker_state_unknown, cancel_unconfirmed) instead of claiming completion; TaskCenter marks each step only from its own evidence; two independent review rounds, final ACCEPT with three P3 notes",
      "scope": "clean main + 16 files (shared with S1-05): backend 430 passed / 4 skipped (S1 suites + training/remote regressions, home-store guard empty), renderer 295, typecheck clean",
      "platform": "macOS development; Windows native pending; remote ack verified with the in-process remote harness only (servers unreachable)"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 2 published in 2e009f4: _StatusWriter.acknowledge_cancel decides and writes under the status lock (local watch thread and remote cancel watcher), so a finished run is never reopened; POST /api/training/reservations/confirm-release {job_id, confirm, reason, fence} lets an operator release a reservation left uncertain, refused while the job is active, while its local worker is provably alive (run journal or the user-data copy) or refreshed the reservation within its lease, or when the fence changed; the confirmation and the outcome (released / refused, incl. a store failure answered 503) are separate ledger events and the job's end reason is kept; jobs known only to the ledger are released in their own project (other projects 404); read-backs keep their compute profile; per-job lock; TaskCenter offers the two-step confirmation, labels '작업자 실행 기록 없음' only for finished rows without any journal, and shows when the outcome could not be recorded; three independent review rounds (2 P2 fixed, 1 P2 fixed), final ACCEPT",
+     "scope": "frozen tree (60d7768 + 10 files): S1-04/S1-05 47 passed, regression 346 passed / 4 skipped (remote, local process, training engine, compute queue, S1-02/03/07, receipts, cancellation, API endpoints, authorization, shared security), renderer, typecheck; reviewer reproduced the race, changed-reservation, ledger-only, remote, user-data-copy, lock-contention and 503 cases with probes and mutants",
+     "platform": "macOS development; Windows native pending (test_service_s1_04.py is now part of the hosted Windows job once S1-09 publishes)"
     }
    ],
    "file_actions": {
@@ -767,10 +773,11 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_04.py",
    "remaining": [
-    "ledger events per evidence step and an operator confirm-release action for uncertain reservations",
+    "ledger events for every evidence step (acknowledged, signalled, exit confirmed) are still recorded in the run journals; only the cancel intent and the operator release confirmation/outcome are ledger events",
     "explicit process-identity (PID reuse) evidence: process_identity_changed is unreachable until a journal records it",
     "observation for restart-interrupted ledger rows in TaskCenter; reopen/handoff gates",
-    "review P3s: terminal-status check outside the writer lock in the watch thread; non-cancel rows lost the exit/release line; tests for the watch-thread guard, ack-at-start and auto/cpu pass-through"
+    "review P3s (freeze 3): an expiry ahead of the clock refuses even with proof of exit (check the journal first); the per-job lock dictionary never shrinks; a stale comment on read-back profiles; remote user-data journal copy not read for facts; queued-failed remote rows still 'unconfirmed'; refusal seconds and read-back profile untested",
+    "Windows native and hosted evidence"
    ]
   },
   {
@@ -1437,6 +1444,12 @@
      "result": "published in 60d7768: re-picking a test image that needed checking replaces its entry (no duplicate, its place freed); plain paths saved by older versions are copied to the legacy key before the identity key is rewritten, the load asks when only legacy paths are saved, and a library 'no revision' answer loads them before switching so a save cannot erase them; an invalid cohort pick is announced; independent review ACCEPT (all four fixes reproduced against freeze 2, each mutant caught)",
      "scope": "frozen tree (db9942a + 6 renderer files): renderer suite, typecheck, backend S2-07 9, e2e 2 passed; reviewer re-ran 322 renderer tests and typecheck",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "published in 6fae111: images saved twice by an earlier build count once at load (the first, usable entry kept) and are confirmed rather than removed when picked again; a moved image picked at its new place replaces its entry by content digest; a non-409 check failure never overwrites saved identities, while a user with only older paths keeps them under the legacy key and can save new picks; the legacy key decides what the legacy list offers once it exists; independent review ACCEPT (340 load orders probed, all mutants caught)",
+     "scope": "frozen tree (60d7768 + 4 renderer files): renderer suite, typecheck, e2e 2 passed; reviewer re-ran 324 renderer tests and the typecheck",
+     "platform": "macOS development; Windows hosted run pending for this commit"
     }
    ],
    "file_actions": {
@@ -1460,9 +1473,8 @@
    "remaining": [
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
-    "images saved twice by the freeze-2 build disappear from both lists when re-picked; a moved image picked at its new place keeps the old entry (review P3)",
-    "a non-409 load failure for a user with only a legacy path list leaves new picks unsaved; an unchecked old path under the identity key returns on every load (review P3)",
-    "operator and package cohort selections stay in memory",
+    "older paths outside the first 200 listed images are lost after a no-revision load (freeze-4 review P3; fix in review as freeze 5)",
+    "operator and package cohort selections stay in memory; the test-set browser still offers invalid images; the cohort notice stays after clearing the selection",
     "the flowchart header keeps the previous path until the picker is confirmed",
     "Windows native and hosted evidence for these commits pending"
    ]
