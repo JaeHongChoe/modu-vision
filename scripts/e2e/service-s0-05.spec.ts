@@ -1,3 +1,5 @@
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Page, Request, Route } from '@playwright/test';
 import { expect, test, type Evidence, type RendererServer, type Workspace } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
@@ -94,9 +96,28 @@ async function createProject(page: Page, base: string, task: string, dataset: st
   return await updated.json() as Json;
 }
 
+// The anomaly importer reads train/<normal> and test/<normal|defect>; the harness ok/ng tree is refused (422).
+function anomalyDataset(workspace: Workspace): string {
+  const root = join(workspace.root, 'anomaly-dataset');
+  const ok = workspace.images.find(image => image.label === 'ok')!.path;
+  const ng = workspace.images.find(image => image.label === 'ng')!.path;
+  const layout: Array<[string, Array<[string, string]>]> = [
+    ['train/good', [['sample-ok-1.png', ok], ['sample-ok-2.png', ok], ['sample-ok-3.png', ok]]],
+    ['test/good', [['sample-ok.png', ok]]],
+    ['test/defect', [['sample-ng.png', ng]]],
+  ];
+  for (const [folder, files] of layout) {
+    mkdirSync(join(root, folder), { recursive: true });
+    for (const [name, from] of files) copyFileSync(from, join(root, folder, name));
+  }
+  return root;
+}
+
 async function openStep(page: Page, port: number, url: string, step: RegExp) {
   await installDesktopHostShim(page, port);
+  const imported=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/import'&&response.request().method()==='POST');
   await page.goto(url);
+  expect((await imported).status()).toBe(200);
   await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
   await page.getByRole('button', { name: step }).click();
 }
@@ -106,7 +127,7 @@ const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /thresh
 const decisionNode = (page: Page) => flowNodes(page).filter({ hasText: /rule:/i });
 const nodeStatus = (node: ReturnType<typeof flowNodes>) => node.locator('[title^="Status:"]');
 const resultsTab = (page: Page) => page.getByRole('button', { name: /^검사 결과/ });
-const flowTab = (page: Page) => page.getByRole('button', { name: '플로우차트', exact: true });
+const flowTab = (page: Page) => page.getByRole('tab', { name: '편집', exact: true });
 const thresholdInput = (page: Page) => page.getByLabel('결함 판정 임계치');
 
 async function waitForFlow(page: Page) {
@@ -115,6 +136,7 @@ async function waitForFlow(page: Page) {
 }
 
 async function connectFixtureModel(page: Page) {
+  await flowTab(page).click();
   await inspectionNode(page).click();
   await page.getByLabel('완료된 학습 모델').selectOption(MODEL);
   await expect(page.getByText('모델 1/1 연결')).toBeVisible();
@@ -152,6 +174,7 @@ test.describe('S0-05 flow canvas versions', () => {
     await connectFixtureModel(page);
     await chooseImage(page, 'sample-ng.png');
 
+    await page.getByRole('tab', { name: '테스트', exact: true }).click();
     await runButton(page).click();
     await expect(resultsTab(page)).toHaveText(/검사 결과 \(1 ROI\)$/);
     await evidence.screenshot(page, '01-run-result');
@@ -195,8 +218,10 @@ test.describe('S0-05 flow canvas versions', () => {
     await chooseImage(page, 'sample-ng.png');
 
     gate.hold();
+    await page.getByRole('tab', { name: '테스트', exact: true }).click();
     await runButton(page).click();
     await gate.reached();
+    await flowTab(page).click();
     await dragNode(page, decisionNode(page), 120, 40);
     gate.release();
     await expect(resultsTab(page), 'the run that was moving still lands').toHaveText(/검사 결과 \(1 ROI\)$/);
@@ -206,8 +231,10 @@ test.describe('S0-05 flow canvas versions', () => {
     await flowTab(page).click();
     await inspectionNode(page).click();
     gate.hold();
+    await page.getByRole('tab', { name: '테스트', exact: true }).click();
     await runButton(page).click();
     await gate.reached();
+    await flowTab(page).click();
     await thresholdInput(page).fill('0.8');
     gate.release();
     await expect(resultsTab(page), 'a run whose rules changed lands as an earlier version').toHaveText(/검사 결과 \(1 ROI\) · 이전 버전$/);
@@ -223,7 +250,7 @@ async function openEvaluation({ page, renderer, workspace, evidence }: { page: P
   options: { failReadAfterTruth?: boolean } = {}) {
   const log = fixtureLog(evidence);
   const project = await createProject(page, renderer.origin, 'classification', workspace.dataset);
-  const ngImage = workspace.images.find(image => image.label === 'ng')!.path;
+  const ngImage = join(project.source_dataset_dir,'ng','sample-ng.png');
   const scope = {
     project_id: project.id, source_dataset_path: project.source_dataset_dir, labelset_id: project.active_labelset_id || 'default',
     task: 'classification', classes: ['ng', 'ok'],
@@ -311,15 +338,15 @@ async function openEvaluation({ page, renderer, workspace, evidence }: { page: P
 
   await openStep(page, renderer.port, renderer.url, /05.*플로우차트/);
   await waitForFlow(page);
-  await page.getByRole('button', { name: '전체 흐름 평가 · 정답 검토' }).click();
+  await page.getByRole('tab', { name: '일괄 평가', exact: true }).click();
   const panel = page.locator('section[aria-label="전체 흐름 평가"]');
   const versionSelect = panel.getByLabel('전체 흐름 평가 버전');
   await expect(versionSelect).toHaveValue(versionA);
   const chooseCohort = () => panel.getByLabel('전체 흐름 시험 코호트').selectOption(cohort.cohort_id);
   await chooseCohort();
   return {
-    panel, versionSelect, versionA, versionB, gate, chooseCohort,
-    run: () => panel.getByRole('button', { name: '전체 흐름 평가 실행' }).click(),
+    panel, versionSelect, versionA, versionB, gate, chooseCohort, ngImage,
+    run: () => panel.getByRole('button', { name: '선택 코호트 평가' }).click(),
     valid: panel.getByText(/^저장된 평가 근거 유효/),
     notThisVersion: panel.getByText(/^선택한 버전의 평가 아님/),
     reviewQueue: panel.getByRole('button', { name: '오류·검토·미확인 이미지를 검토 큐로 보내기' }),
@@ -411,28 +438,30 @@ test.describe('S0-05 whole-flow evaluation', () => {
     await view.panel.getByRole('button', { name: '노드·ROI 보기' }).click();
     await evidence.screenshot(page, '01-error-evidence');
     // The labeling viewer draws the exact source image on its canvas from the raw image endpoint.
-    const ngImage = workspace.images.find(image => image.label === 'ng')!.path;
-    const viewerLoad = page.waitForRequest(request => {
-      const url = new URL(request.url());
+    const ngImage = view.ngImage;
+    const viewerLoad = page.waitForResponse(response => {
+      const url = new URL(response.url());
       return url.pathname === '/api/dataset/raw/sample-ng.png' && url.searchParams.get('file_path') === ngImage;
     });
     await view.panel.getByRole('button', { name: '원본 이미지 열기' }).click();
-    await expect(page.getByText(/STAGE\s+02\s*\/\s*06/)).toBeVisible();
-    await viewerLoad;
+    await expect(page.locator('canvas').first()).toBeVisible();
+    await expect(page.getByTitle('선택 및 이동 (Select / Move - 1)', {exact:true})).toBeVisible();
+    expect((await viewerLoad).status()).toBe(200);
     await evidence.screenshot(page, '02-error-image-in-viewer');
   });
 
   test('an error image can be run on the flow canvas', async ({ page, renderer, workspace, evidence }) => {
     const runs: Json[] = [];
-    const ngImage = workspace.images.find(image => image.label === 'ng')!.path;
     await routeModelFixtures(page, fixtureLog(evidence), { task: 'classification', source: workspace.dataset, runGate: new Gate(), runs });
     const view = await openEvaluation({ page, renderer, workspace, evidence });
+    const ngImage = view.ngImage;
     await view.run();
     await view.panel.getByRole('button', { name: '노드·ROI 보기' }).click();
     await view.panel.getByRole('button', { name: '흐름에서 이 이미지로 실행' }).click();
-    await expect(view.panel.getByRole('button', { name: '전체 흐름 평가 실행' })).toHaveCount(0);
+    await expect(view.panel.getByRole('button', { name: '선택 코호트 평가' })).toHaveCount(0);
     await expect(page.getByText('sample-ng.png').first()).toBeVisible();
     await connectFixtureModel(page);
+    await page.getByRole('tab', { name: '테스트', exact: true }).click();
     await runButton(page).click();
     await expect(resultsTab(page)).toHaveText(/검사 결과 \(1 ROI\)$/);
     expect(runs.at(-1)!.image_path, 'the flow runs the exact error image').toBe(ngImage);
@@ -468,9 +497,10 @@ test('a refused model family change keeps the active family and says why', async
 test('S0-02: a raw distance threshold of 8 is saved, reopened and used for the run', async ({ page, renderer, workspace, evidence }) => {
   const log = fixtureLog(evidence);
   const runs: Json[] = [];
-  const project = await createProject(page, renderer.origin, 'anomaly', workspace.dataset);
+  const project = await createProject(page, renderer.origin, 'anomaly', anomalyDataset(workspace));
   const scoreSpec: ScoreSpec = { domain: 'distance', unit: 'mahalanobis_distance', direction: 'higher_is_defect', calibration_id: 'fixture-calibration', threshold: 3.5 };
-  await routeModelFixtures(page, log, { task: 'anomaly', source: workspace.dataset, scoreSpec, runGate: new Gate(), runs });
+  // The canonical source the backend recorded (macOS resolves /var to /private/var) binds the model fixture.
+  await routeModelFixtures(page, log, { task: 'anomaly', source: project.source_dataset_dir, scoreSpec, runGate: new Gate(), runs });
   await openStep(page, renderer.port, renderer.url, /05.*플로우차트/);
   await waitForFlow(page);
   await connectFixtureModel(page);
@@ -479,7 +509,7 @@ test('S0-02: a raw distance threshold of 8 is saved, reopened and used for the r
   await expect(page.getByText('결함 판정 임계치 · mahalanobis_distance')).toBeVisible();
   await expect(page.getByText('8.00', { exact: true })).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
-  await page.getByRole('button', { name: '플로우 저장' }).click();
+  await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
   expect((await saved).status()).toBe(200);
   await evidence.screenshot(page, '01-threshold-8-saved');
 
@@ -499,6 +529,7 @@ test('S0-02: a raw distance threshold of 8 is saved, reopened and used for the r
   await evidence.screenshot(page, '02-threshold-8-reopened');
 
   await chooseImage(page, 'sample-ng.png');
+  await page.getByRole('tab', { name: '테스트', exact: true }).click();
   await runButton(page).click();
   await expect(resultsTab(page)).toHaveText(/검사 결과 \(1 ROI\)$/);
   const sent = runs.at(-1)!.pipeline.nodes.find((node: Json) => node.data.node_type === 'inspection').data;

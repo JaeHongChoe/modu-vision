@@ -23,15 +23,15 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
+import { flowSemanticKey, isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
-import { api, resolveApiUrl,getApiPersistenceIdentity, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
+import { api, resolveApiUrl,getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
 import {readModelFlowHandoff,clearModelFlowHandoff,bindModelToFlow,compatibleModelNode,modelScoreBinding,thresholdUpdate} from './modelFlowHandoff';
-import type { FlowNode, FlowchartPipeline, FlowModelTask, VisionTask } from '../../types';
+import type { FlowNode, FlowchartPipeline, FlowModelTask } from '../../types';
 import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} from './FlowGeometryEditors';
 import { CustomNode } from './CustomNode';
 import { DAGCircuitOverlay } from './DAGCircuitOverlay';
@@ -42,6 +42,11 @@ import { FlowWorkspacePanel } from './FlowWorkspacePanel';
 import { FlowEvaluationPanel } from './FlowEvaluationPanel';
 import {nodeClassChoices} from './flowWorkspace';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
+import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
+import {FlowRecipeDialog} from './FlowRecipeDialog';
+import {createFlowRecipe, FLOW_RECIPES, type FlowRecipeKind} from './flowRecipes';
+import type {FlowEvaluation} from '../../services/flowEvaluation';
+import {flowPackageExport, type FlowApprovalPrerequisites} from '../../services/flowPackageExport';
 import {FlowDraftControls,flowDraftStatus} from './FlowDraftControls';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
@@ -147,7 +152,6 @@ export const FlowchartStudio: React.FC = () => {
     loadPipeline,
     loadPipelineVersion,
     loadSingleSegmentationTemplate,
-    loadDetectorRoiTemplate,
     savePipeline,
     runPipeline,
     selectNode,
@@ -169,7 +173,7 @@ export const FlowchartStudio: React.FC = () => {
   // The canvas pairs evidence with the current rules, so it only shows a current run.
   const canvasResult = resultIsCurrent ? executionResult : null;
 
-  const [activeTab, setActiveTab] = useState<'flow' | 'results'>('flow');
+  const [activeTab, setActiveTab] = useState<FlowWorkspaceTab>('edit');
   const { profiles: computeProfiles, selectedProfileId, isLoaded: isComputeLoaded,
     load: loadCompute, loadError: computeLoadError } = useComputeStore();
   const executionChoiceOverride = useFlowchartStore(state => state.executionChoiceOverride);
@@ -205,7 +209,7 @@ export const FlowchartStudio: React.FC = () => {
       const current=readModelFlowHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
       if(current?.scope!==captured||current.modelId!==offeredModel.job_id)throw new Error('프로젝트 또는 선택 모델이 바뀌었습니다. 다시 선택하세요.');
       const graph=useFlowchartStore.getState().pipeline;if(!graph)throw new Error('플로우를 먼저 여세요.');
-      const result=bindModelToFlow(graph,offeredModel,handoffNode||undefined);replacePipeline(result.pipeline);selectNode(result.nodeId);setActiveTab('flow');dismissModelHandoff();
+      const result=bindModelToFlow(graph,offeredModel,handoffNode||undefined);replacePipeline(result.pipeline);selectNode(result.nodeId);setActiveTab('edit');dismissModelHandoff();
     }catch(cause){const current=readModelFlowHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});if(current?.scope===captured)setEditorError(cause instanceof Error?cause.message:String(cause));}
     finally{setIsVerifyingAction(false);}
   };
@@ -218,7 +222,7 @@ export const FlowchartStudio: React.FC = () => {
   } | null>(null);
 
   useLayoutEffect(() => {
-    if (activeTab !== 'flow' || !canvasRef.current) return;
+    if (activeTab !== 'edit' || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const measure = () => {
       const rect = canvas.getBoundingClientRect();
@@ -307,7 +311,7 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(() => { setActionValidationError(null); }, [pipeline]);
 
   useEffect(() => {
-    if (activeTab !== 'flow') return;
+    if (activeTab !== 'edit') return;
     const onHistoryKeyDown = (event: KeyboardEvent) => {
       if (isLoading || isSaving || isRunning || isVerifyingAction || !(event.metaKey || event.ctrlKey) || event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -396,7 +400,7 @@ export const FlowchartStudio: React.FC = () => {
       const activeVersionId = !pipelineDirty && !useFlowchartStore.getState().pipelineIsDraft
         ? savedVersions.find((version) => version.version_id === selectedVersionId && version.is_active)?.version_id || null
         : null;
-      if (await runPipeline(undefined, undefined, { savedVersionId: activeVersionId, ...execution })) setActiveTab('results');
+      if (await runPipeline(undefined, undefined, { savedVersionId: activeVersionId, ...execution })) setActiveTab('test');
     } catch (error) {
       setActionValidationError(error instanceof Error ? error.message : '모델의 데이터 출처를 확인할 수 없습니다.');
     } finally {
@@ -410,81 +414,78 @@ export const FlowchartStudio: React.FC = () => {
     if (!executionReady) {setActionValidationError('실행 컴퓨터 또는 서버를 먼저 선택하세요.');return;}
     const execution = executionChoice==='model_compute' ? {executionTarget:'local' as const,device:'cpu' as const} : flowExecutionOptions(executionChoice,selectedProfileId);
     const ok = await runPipeline(undefined,undefined,{savedVersionId:null,...execution,stopNodeId:selectedNodeId});
-    if (ok) setActiveTab('flow');
+    if (ok) setActiveTab('edit');
   };
 
-  const handleSingleModel = async () => {
-    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 단일 검사 플로우를 불러올까요?')) return;
-    const verifiedJobId = useEvaluationStore.getState().jobId;
-    await loadSingleSegmentationTemplate(verifiedJobId || undefined, task);
-    if (verifiedJobId) {
-      const model=modelCatalog.find(row=>row.job_id===verifiedJobId);
-      const current=useFlowchartStore.getState().pipeline;
-      const node=current?.nodes.find(row=>row.data.model_job_id===verifiedJobId);
-      if(model&&node)updateNodeData(node.id,modelScoreBinding(model));
-      setModelCheck({ status: 'ready' });
-    }
-    setSelectedVersionId('');
-    setSelectedEdgeId(null);
-    setZoomScale(null);
-    setActionValidationError(null);
-    setActiveTab('flow');
+  const recipeScope = () => JSON.stringify([getProjectContextGeneration(),getProjectContext(),getApiPersistenceIdentity(),
+    useProjectStore.getState().project?.id,useProjectStore.getState().projectDir,useProjectStore.getState().project?.active_labelset_id,
+    useDatasetStore.getState().datasetKey,useProjectStore.getState().task]);
+  const scopeKey=recipeScope();
+  const [recipe,setRecipe]=useState<{preview:FlowchartPipeline;scope:string;graph:FlowchartPipeline|null;token:number}|null>(null);
+  const recipeToken=useRef(0);
+  const [evaluationReceipt,setEvaluationReceipt]=useState<FlowEvaluation|null>(null);
+  const [approval,setApproval]=useState<{scope:string;version:string;semantic:string;receipt:FlowApprovalPrerequisites}|null>(null);
+  const [approvalBusy,setApprovalBusy]=useState(false);
+  const [approvalError,setApprovalError]=useState('');
+  const approvalRequest=useRef(0);
+  const semanticKey=flowSemanticKey(pipeline);
+  useEffect(()=>()=>{recipeToken.current++;approvalRequest.current++;},[]);
+  useEffect(()=>{setActiveTab('edit');recipeToken.current++;setRecipe(null);setEvaluationReceipt(null);},[scopeKey]);
+  useEffect(()=>{approvalRequest.current++;setApproval(null);setApprovalError('');setApprovalBusy(false);},[scopeKey,selectedVersionId,semanticKey]);
+  const closeRecipe=()=>{recipeToken.current++;setRecipe(null);};
+  const openRecipe=(kind:FlowRecipeKind)=>{
+    const live=useFlowchartStore.getState();if(live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
+    if(!live.pipeline){setEditorError('현재 플로우를 불러온 뒤 레시피를 적용하세요.');return;}
+    setRecipe({preview:createFlowRecipe(kind,task),scope:recipeScope(),graph:live.pipeline,token:++recipeToken.current});
   };
-
-  const handleDetectorRoi = async () => {
-    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 검출 ROI 플로우를 불러올까요?')) return;
-    const inspectionTask: Exclude<VisionTask, 'detection'> = task === 'detection' ? 'segmentation' : task;
-    await loadDetectorRoiTemplate(inspectionTask);
-    if (useFlowchartStore.getState().pipeline?.id !== 'detector_roi') return;
-    const verifiedJobId = useEvaluationStore.getState().jobId;
-    if (verifiedJobId) {
-      const model=modelCatalog.find(row=>row.job_id===verifiedJobId);
-      updateNodeData(task === 'detection' ? 'node_crop' : 'node_inspect', model?modelScoreBinding(model):{model_job_id:verifiedJobId,score_spec:undefined,threshold:.5});
-      setModelCheck({ status: 'ready' });
-    }
-    setSelectedVersionId('');
-    setSelectedEdgeId(null);
-    setZoomScale(null);
-    setActionValidationError(null);
-    setActiveTab('flow');
+  const adoptRecipe=async(next:FlowchartPipeline)=>{
+    if(!recipe)return;const captured=recipe;
+    const current=()=>captured.token===recipeToken.current&&recipeScope()===captured.scope&&useFlowchartStore.getState().pipeline===captured.graph;
+    const idle=()=>{const live=useFlowchartStore.getState();return !live.isRunning&&!live.isSaving&&!live.isLoading&&!useProjectStore.getState().isProjectBusy;};
+    if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
+    if(!captured.graph)throw new Error('현재 플로우를 불러온 뒤 레시피를 적용하세요.');
+    await verifyModelReferences(folderPath,getFlowchartModelReferences(next));
+    if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
+    replacePipeline(next);selectNode(next.nodes.find(node=>node.data.node_type==='fixed_roi')?.id||next.nodes.find(node=>node.data.model_job_id)?.id||null);
+    setSelectedVersionId('');setSelectedEdgeId(null);setZoomScale(null);setActionValidationError(null);setActiveTab('edit');closeRecipe();
   };
-
-  const handleFixedRoi = async () => {
-    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 고정 ROI 플로우를 불러올까요?')) return;
-    setEditorError(null);
-    try {
-      const inspectionTask: Exclude<VisionTask, 'detection'> = task === 'detection' ? 'segmentation' : task;
-      const jobId = task === 'detection' ? undefined : useEvaluationStore.getState().jobId || undefined;
-      const template = await api.flowchart.getFixedRoiTemplate(inspectionTask, jobId);
-      replacePipeline(template);
-      selectNode('node_fixed_roi');
-      setSelectedVersionId('');
-      setSelectedEdgeId(null);
-      setZoomScale(null);
-      setActionValidationError(null);
-      setActiveTab('flow');
-    } catch (cause) {
-      setEditorError(cause instanceof Error ? cause.message : String(cause));
-    }
+  const handleSingleModel=()=>openRecipe('single');
+  const handleDetectorRoi=()=>openRecipe('detector');
+  const handleFixedRoi=()=>openRecipe('fixed');
+  const handleExampleTemplate=async(kind:'chain'|'conditional')=>{
+    const live=useFlowchartStore.getState();if(live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
+    const captured=recipeScope(),graph=live.pipeline,token=++recipeToken.current;
+    try{const preview=await (kind==='chain'?api.flowchart.getFiveModelChainTemplate():api.flowchart.getConditionalInspectionTemplate());
+      if(token!==recipeToken.current||captured!==recipeScope()||graph!==useFlowchartStore.getState().pipeline)return;
+      setRecipe({preview,scope:captured,graph,token});
+    }catch(cause){if(token===recipeToken.current&&captured===recipeScope())setEditorError(cause instanceof Error?cause.message:String(cause));}
   };
-
-  const handleExampleTemplate = async (kind: 'chain' | 'conditional') => {
-    if (pipelineDirty && !window.confirm('현재 플로우의 저장하지 않은 변경 사항을 버리고 예시 플로우를 열까요?')) return;
-    setEditorError(null);
-    try {
-      const example = kind === 'chain'
-        ? await api.flowchart.getFiveModelChainTemplate()
-        : await api.flowchart.getConditionalInspectionTemplate();
-      replacePipeline(example);
-      setZoomScale(null);
-      setSelectedVersionId('');
-      setSelectedEdgeId(null);
-      setActionValidationError(null);
-      setActiveTab('flow');
-    } catch (cause) {
-      setEditorError(cause instanceof Error ? cause.message : String(cause));
-    }
+  const checkApproval=async()=>{
+    const version=savedVersions.find(row=>row.version_id===selectedVersionId);
+    if(!version||pipelineDirty||pipelineIsDraft||approvalBusy)return;
+    const captured=recipeScope(),graph=flowSemanticKey(useFlowchartStore.getState().pipeline),requestId=++approvalRequest.current;
+    setApprovalBusy(true);setApprovalError('');
+    try{const receipt=await flowPackageExport.prerequisites({source_dataset_path:folderPath,recipe_task:version.recipe_task,version_id:version.version_id});
+      if(requestId===approvalRequest.current&&captured===recipeScope()&&graph===flowSemanticKey(useFlowchartStore.getState().pipeline))setApproval({scope:captured,version:version.version_id,semantic:graph,receipt});
+    }catch(cause){if(requestId===approvalRequest.current&&captured===recipeScope())setApprovalError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(requestId===approvalRequest.current&&captured===recipeScope())setApprovalBusy(false);}
   };
+  const selectedSaved=savedVersions.find(row=>row.version_id===selectedVersionId);
+  const savedIsExact=Boolean(selectedSaved&&!pipelineDirty&&!pipelineIsDraft);
+  const currentApproval=approval?.scope===scopeKey&&approval.version===selectedVersionId&&approval.semantic===semanticKey&&savedIsExact?approval.receipt:null;
+  const identity=flowWorkspaceIdentity({
+    revision:useFlowchartStore.getState().flowIdentity?.semantic_revision||0,
+    draft:flowDraftStatus(pipelineDirty,persistedDraftHash,!pipelineIsDraft&&Boolean(selectedSaved?.is_active),Boolean(selectedVersionId)),
+    dirty:pipelineDirty, isDraft:pipelineIsDraft, savedVersions, selectedVersionId,
+    modelNodes:pipeline?.nodes.filter(node=>node.data.model_job_id).map(node=>({id:node.id,job:node.data.model_job_id!,task:String(node.data.task||node.data.params?.operation||'')}))||[],
+    resultLabel:`검사 결과${executionResult?` (${executionResult.roi_count} ROI)`: ''}${executionResult&&!resultIsCurrent?' · 이전 버전':''}`,
+    lastImage:executionResult?.image_path||executionResult?.image_id||undefined, nextImage:selectedImage?.imagePath,
+    inspection:executionResult?`${resultIsCurrent?'현재 규칙':'이전 버전'} · ${executionResult.image_path||executionResult.image_id||'이미지 식별자 미기록'} · ${lastRunSource?.kind||'출처 미기록'} ${lastRunSource?.versionId||''} · 그래프 ${executionResult.graph_sha256||'미기록'} · ${executionResult.execution_target||'대상 미기록'}/${executionResult.execution_device||'장치 미기록'}`:undefined,
+    evaluation:evaluationReceipt, approval:currentApproval,
+  });
+  const exactSaved=identity.exactSaved;
+  const currentEvaluation=identity.evaluationCurrent;
+  const approvalLabel=identity.approval;
 
   const handleRestoreSaved = async () => {
     if (!canVerifyGraph) return;
@@ -506,7 +507,7 @@ export const FlowchartStudio: React.FC = () => {
       setSelectedVersionId(savedVersions.find((version) => version.is_active)?.version_id || '');
     }
     else if (result.status === 'blocked') setModelCheck({ status: 'blocked', reason: result.reason });
-    setActiveTab('flow');
+    setActiveTab('edit');
   };
 
   const openSavedVersion = async (versionId: string) => {
@@ -527,7 +528,7 @@ export const FlowchartStudio: React.FC = () => {
       catch { setModelCheck({ status: 'blocked', reason: 'saved_model_mismatch' }); }
       setSelectedEdgeId(null);
       setActionValidationError(null);
-      setActiveTab('flow');
+      setActiveTab('edit');
     } catch (cause) {
       setActionValidationError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -787,6 +788,7 @@ export const FlowchartStudio: React.FC = () => {
 
   return (
     <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
+      <FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity}/>
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
       <div className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
@@ -803,9 +805,9 @@ export const FlowchartStudio: React.FC = () => {
           </div>
         </div>
 
-        <FlowDraftControls blocked={isVerifyingAction||dragViewport!==null||isRoiEditing} activeVersion={!pipelineDirty&&!pipelineIsDraft&&savedVersions.some(v=>v.version_id===selectedVersionId&&v.is_active)} hasSavedVersion={Boolean(selectedVersionId)}/>
+        <div hidden={activeTab!=='edit'}><FlowDraftControls blocked={isVerifyingAction||dragViewport!==null||isRoiEditing} activeVersion={!pipelineDirty&&!pipelineIsDraft&&savedVersions.some(v=>v.version_id===selectedVersionId&&v.is_active)} hasSavedVersion={Boolean(selectedVersionId)}/></div>
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div hidden={activeTab!=='edit'} className={activeTab==='edit'?"flex flex-wrap items-center justify-end gap-2":"hidden"}>
           <div className="flex rounded border border-[#2B3547] bg-[#0B0E14] p-0.5" aria-label="플로우 편집 기록">
             <button type="button" onClick={() => applyHistoryAction('undo')}
               disabled={!canUndo || isLoading || isSaving || isRunning || isVerifyingAction}
@@ -826,38 +828,6 @@ export const FlowchartStudio: React.FC = () => {
             </span>
           )}
 
-          {/* Tab Selector */}
-          <div className="flex bg-[#0B0E14] p-0.5 rounded border border-[#2B3547]">
-            <button
-              onClick={() => setActiveTab('flow')}
-              className={`px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
-                activeTab === 'flow'
-                  ? 'bg-[#1A212E] text-cyan-400 border border-[#2B3547]'
-                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-              }`}
-            >
-              {language === 'ko' ? '플로우차트' : 'Flowchart'}
-            </button>
-            <button
-              onClick={() => setActiveTab('results')}
-              className={`px-3 py-1 rounded text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1.5 ${
-                activeTab === 'results'
-                  ? 'bg-[#1A212E] text-cyan-400 border border-[#2B3547]'
-                  : 'text-[#94A3B8] hover:text-[#F8FAFC]'
-              }`}
-            >
-              <span>{language === 'ko' ? `검사 결과${executionResult ? ` (${executionResult.roi_count} ROI)` : ''}${executionResult && !resultIsCurrent ? ' · 이전 버전' : ''}` : 'Inspection Results'}</span>
-              {executionResult && (
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    executionResult.final_verdict === 'REVIEW' ? 'bg-amber-400' :
-                      executionResult.is_ok ? 'bg-emerald-400' : 'bg-rose-500'
-                  }`}
-                />
-              )}
-            </button>
-          </div>
-
           {/* Save Pipeline Button */}
           <button type="button" onClick={handleLayout}
             disabled={!pipeline || isLoading || isSaving || isRunning || isVerifyingAction}
@@ -866,57 +836,23 @@ export const FlowchartStudio: React.FC = () => {
             <ListTree className="h-3.5 w-3.5" /> <span>흐름 정렬</span>
           </button>
           <button
-            onClick={handleSave}
+            data-primary-action="true" onClick={handleSave}
             disabled={!canVerifyGraph || isVerifyingAction || isSaving || isLoading || isRunning || !pipeline || needsModel || !!graphError}
             title={!canVerifyGraph ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 완료 모델을 선택하세요.' : undefined)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] text-[#E2E8F0] rounded border border-[#2B3547] text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-800 hover:bg-cyan-700 text-white rounded border border-cyan-600 text-xs font-bold cursor-pointer transition-colors disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5 text-[#94A3B8]" />
             <span>{isSaving ? (language === 'ko' ? '저장 중...' : 'Saving...') : (language === 'ko' ? '플로우 저장' : 'Save')}</span>
           </button>
 
-          {/* Industrial Solid Run Button (Zero Gradients / Zero Diffuse Shadows) */}
-          <label className="flex items-center gap-1.5 text-xs text-slate-300">
-            실행 위치
-            <select aria-label="플로우 실행 위치" value={executionChoice}
-              disabled={isRunning || isVerifyingAction}
-              onChange={(event) => { setExecutionChoiceOverride(event.target.value as FlowExecutionChoice);
-                useFlowchartStore.getState().resetExecution(); }}
-              className="max-w-56 rounded border border-[#3B4B60] bg-[#152033] px-2 py-1.5 text-xs text-slate-100">
-              <option value="selected_compute" disabled={!executionProfile}>
-                선택 서버 · {executionProfile?.name || selectedProfileId || '서버 미선택'} (CUDA{executionProfile?.gpu_selector ? ` GPU ${executionProfile.gpu_selector}` : ''})
-              </option>
-              <option value="local_cpu">이 컴퓨터 · CPU</option>
-              <option value="local_mps">이 컴퓨터 · Apple MPS</option>
-              <option value="local_cuda">이 컴퓨터 · CUDA</option>
-              <option value="model_compute">모델 학습 서버 · 기존 방식</option>
-            </select>
-          </label>
-          <button type="button" onClick={()=>setStep(6)} disabled={!selectedVersionId||pipelineDirty||pipelineIsDraft||isSaving||isRunning} title="저장하고 활성화한 플로우를 실행 패키지로 묶고 배포합니다." className="rounded border border-slate-600 px-3 py-1.5 disabled:opacity-40">실행 패키지·배포</button>
-          <button type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
-            className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
-          <button
-            onClick={handleRun}
-            disabled={!canVerifyGraph || !executionReady || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
-            title={!canVerifyGraph ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 완료 모델을 선택하세요.' : undefined)}
-            className="flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
-            <span>
-              {isRunning
-                ? language === 'ko'
-                  ? '검사 실행 중...'
-                  : 'Inspecting...'
-                : language === 'ko'
-                ? '선택 이미지 검사'
-                : 'Run Circuit'}
-            </span>
-          </button>
+
         </div>
       </div>
 
+      <div hidden={activeTab!=='edit'}>
+      <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-4 py-1 text-slate-400">빠른 노드 추가·연결·실행 자원</summary>
       {pipeline && <div className="shrink-0 border-b border-slate-700 px-4 py-2"><FlowResourcesEditor pipeline={pipeline} onChange={replacePipeline} disabled={isRunning||isSaving||isLoading}/></div>}
-      <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-4 py-1 text-slate-400">빠른 노드 추가·연결 도구</summary>
+
       <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
         <span className="mr-1 text-xs font-bold tracking-wider text-slate-400">노드 추가</span>
         <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
@@ -1003,6 +939,8 @@ export const FlowchartStudio: React.FC = () => {
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">검출 ROI 검사</button>
               <button onClick={handleFixedRoi} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-sky-100 hover:bg-[#293B51] disabled:opacity-50">고정 ROI 검사 · 원본 픽셀 좌표</button>
+              <button onClick={()=>openRecipe('rotation')} disabled={isLoading||isSaving||isRunning} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51]">학습 회전 → OCR·검사</button>
+              <button onClick={()=>openRecipe('multi')} disabled={isLoading||isSaving||isRunning} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51]">전처리 → 다중 모델 → 집계</button>
               <span className="mt-1 border-t border-[#344255] px-2 pt-2 text-xs font-bold uppercase tracking-wider text-slate-400">복합 검사 예시</span>
               <button onClick={() => handleExampleTemplate('chain')} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">5개 모델 연속 검사</button>
@@ -1020,6 +958,7 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       </div>
 
+      </div>
       {modelHandoff&&!offeredModel&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`&&!modelCatalogLoading&&<div role="alert" className="border-b border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">선택한 완료 모델이 현재 프로젝트·정답 버전의 모델 목록에 없습니다. 학습 화면에서 출처를 확인하세요.<button className="ml-3 underline" onClick={dismissModelHandoff}>선택 닫기</button></div>}
       {offeredModel&&<section aria-label="선택 모델 플로우 연결" className="shrink-0 border-b border-cyan-800 bg-cyan-950/30 p-3 text-sm text-slate-200"><strong>{offeredModel.label} · 선택한 완료 모델</strong><p className="mt-1 text-slate-400">기존 연결을 유지하며 모델을 추가하거나 호환 노드에 지정합니다. 새 노드는 연결선을 직접 지정하세요.</p><div className="mt-2 flex flex-wrap gap-2"><select aria-label="선택 모델 연결 대상" value={handoffNode} onChange={event=>setHandoffNode(event.target.value)} className="rounded border border-slate-600 bg-slate-950 p-2"><option value="">새 모델 노드 추가</option>{pipeline?.nodes.filter(node=>compatibleModelNode(node,offeredModel)).map(node=><option key={node.id} value={node.id}>{node.data.label}</option>)}</select><button disabled={!pipeline||isRunning||isSaving||isVerifyingAction} onClick={()=>void applyModelHandoff()} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">선택 모델 연결</button><button onClick={dismissModelHandoff} className="rounded border border-slate-600 px-3 py-2">선택 닫기</button></div></section>}
       {modelCheck.status !== 'ready' && (
@@ -1048,7 +987,7 @@ export const FlowchartStudio: React.FC = () => {
           <span>연결을 완성하면 저장·실행할 수 있습니다: {graphError}</span>
           {graphIssue && <button type="button" className="shrink-0 rounded border border-amber-600 px-2 py-1 hover:bg-amber-900/60"
             onClick={() => {
-              setActiveTab('flow');
+              setActiveTab('edit');
               if (graphIssue.kind === 'edge') {
                 setSelectedEdgeId(graphIssue.id);
                 selectNode(null);
@@ -1100,7 +1039,7 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {/* Target Image Selector Bar */}
-      <div className="shrink-0 min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div style={{display:activeTab==='edit'||activeTab==='test'?undefined:'none'}} className="shrink-0 min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
           <span className="shrink-0 text-xs font-bold tracking-wide text-[#94A3B8]">검사 대상</span>
           {selectedImage ? (
@@ -1196,16 +1135,16 @@ export const FlowchartStudio: React.FC = () => {
       )}
 
       {/* Main Flow Canvas or Results View */}
-      {activeTab === 'flow' ? (
+      <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
         <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
           <aside aria-label="검사 노드 팔레트" className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
             <h3 className="font-semibold text-slate-200">검사 노드</h3>
             {([['fixed_roi','고정 ROI'],['patch_split','패치 분할'],['preprocess','영상 전처리'],['detection_crop','검출 모델'],['inspection','검사 모델'],['blob_measure','Blob 규칙'],['measurement','치수 측정'],['aggregate','결과 집계'],['output','판정 출력']] as const).map(([type,label])=>
               <button key={type} disabled={!pipeline||isRunning||isSaving||isLoading} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}
-            <h3 className="pt-2 font-semibold text-slate-200">기본 흐름</h3>
-            <button onClick={handleSingleModel} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">단일 모델 검사</button>
-            <button onClick={handleDetectorRoi} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">검출 ROI 검사</button>
-            <button onClick={handleFixedRoi} disabled={isRunning||isSaving||isLoading} className="w-full rounded border border-slate-600 px-2 py-2 text-left">고정 ROI 검사</button>
+            <h3 className="pt-2 font-semibold text-slate-200">목적 레시피</h3>
+            <ul aria-label="목적 레시피" className="space-y-2">{FLOW_RECIPES.map(card=><li key={card.id}><button onClick={()=>openRecipe(card.id)} disabled={!pipeline||isRunning||isSaving||isLoading}
+              aria-describedby={`recipe-card-${card.id}`} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">
+              <span className="block font-semibold text-slate-100">{card.title}</span><span id={`recipe-card-${card.id}`} className="block text-[11px] leading-snug text-slate-400">{card.description}</span></button></li>)}</ul>
             <p className="pt-2 text-slate-400 leading-relaxed">노드를 추가하고 출력 포트 → 입력 포트로 연결하세요. 내 템플릿은 아래에서 관리합니다.</p>
           </aside>
           {/* 2D PCB DAG Circuit Canvas */}
@@ -1625,7 +1564,49 @@ export const FlowchartStudio: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
+      </section>
+      <section role="tabpanel" id="flow-panel-test" aria-labelledby="flow-area-test" hidden={activeTab!=='test'}>
+        <div className="shrink-0 flex flex-wrap items-center gap-3 border-b border-slate-700 p-3">
+          {/* Industrial Solid Run Button (Zero Gradients / Zero Diffuse Shadows) */}
+          <label className="flex items-center gap-1.5 text-xs text-slate-300">
+            실행 위치
+            <select aria-label="플로우 실행 위치" value={executionChoice}
+              disabled={isRunning || isVerifyingAction}
+              onChange={(event) => { setExecutionChoiceOverride(event.target.value as FlowExecutionChoice);
+                useFlowchartStore.getState().resetExecution(); }}
+              className="max-w-56 rounded border border-[#3B4B60] bg-[#152033] px-2 py-1.5 text-xs text-slate-100">
+              <option value="selected_compute" disabled={!executionProfile}>
+                선택 서버 · {executionProfile?.name || selectedProfileId || '서버 미선택'} (CUDA{executionProfile?.gpu_selector ? ` GPU ${executionProfile.gpu_selector}` : ''})
+              </option>
+              <option value="local_cpu">이 컴퓨터 · CPU</option>
+              <option value="local_mps">이 컴퓨터 · Apple MPS</option>
+              <option value="local_cuda">이 컴퓨터 · CUDA</option>
+              <option value="model_compute">모델 학습 서버 · 기존 방식</option>
+            </select>
+          </label>
+          <button type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
+            className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
+          <button
+            data-primary-action="true" onClick={handleRun}
+            disabled={!selectedImage || !canVerifyGraph || !executionReady || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
+            title={!canVerifyGraph ? modelCheckMessage : graphError || (needsModel ? '각 모델 노드에 완료 모델을 선택하세요.' : undefined)}
+            className="flex items-center space-x-2 px-4 py-1.5 bg-[#10B981] hover:bg-[#059669] active:bg-[#047857] text-[#0B0E14] font-black rounded border border-[#34D399] text-xs transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
+            <span>
+              {isRunning
+                ? language === 'ko'
+                  ? '검사 실행 중...'
+                  : 'Inspecting...'
+                : language === 'ko'
+                ? '선택 이미지 검사'
+                : 'Run Circuit'}
+            </span>
+          </button>
+        </div>
+        {!selectedImage&&<p className="px-4 py-2 text-sm text-amber-200">먼저 검사할 이미지를 선택하세요.</p>}
+        {!executionResult&&<p className="p-4 text-sm text-slate-400">검사 결과가 없습니다. 선택 이미지 검사로 현재 초안을 확인하세요. 저장된 일괄 평가·승인과 구분됩니다.</p>}
+        {selectedImage?.thumbnailUrl&&<details className="px-4 py-2"><summary className="cursor-pointer text-sm text-cyan-300">다음 검사 이미지 미리보기</summary><img alt="다음 검사 이미지 원본 보기" src={resolveApiUrl(selectedImage.thumbnailUrl)} className="max-h-64 object-contain"/></details>}
         <div className="flex min-h-[240px] shrink-0 flex-1 flex-col">
           {executionResult && !resultIsCurrent && <div role="status" aria-label="이전 버전 실행 결과" className="shrink-0 border-b border-amber-700 bg-amber-950/40 px-5 py-2 text-xs text-amber-100">
             플로우의 검사 규칙이 이 실행 뒤에 바뀌었습니다. 아래 결과는 이전 버전의 실행 결과이며 현재 플로우의 판정이 아닙니다. 다시 실행하세요.
@@ -1643,16 +1624,33 @@ export const FlowchartStudio: React.FC = () => {
           {executionResult?.crops.some(crop=>crop.score_spec) && <div className="px-5 py-2 text-xs text-cyan-200" aria-label="실행 점수 기준">
             {Array.from(new Set(executionResult.crops.filter(crop=>crop.score_spec).map(crop=>`${crop.score_spec!.unit} · 임계값 ${crop.score_spec!.threshold}${crop.score_basis==='saved_model_calibration_legacy_flow'?' · 기존 플로우에 저장된 모델 보정값 적용':''}`))).join(' / ')}
           </div>}
-          <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setActiveTab('flow');}} />
+          <IntermediateCropDrawer onSelectNode={id=>{selectNode(id);setActiveTab('edit');}} />
         </div>
-      )}
+      </section>
 
-      <FlowWorkspacePanel versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('flow')}/>
-      <WorkflowImpactPanel />
-      <FlowEvaluationPanel sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
-        contextKey={`${useProjectStore.getState().project?.id}:${useProjectStore.getState().project?.active_labelset_id}:${getApiPersistenceIdentity()}`}
+      <FlowWorkspacePanel area={activeTab} versions={savedVersions} models={modelCatalog} onOpenImage={()=>setActiveTab('edit')}/>
+      <div hidden={activeTab!=='release'}><WorkflowImpactPanel /></div>
+      <section role="tabpanel" id="flow-panel-evaluate" aria-labelledby="flow-area-evaluate" hidden={activeTab!=='evaluate'}>
+      <FlowEvaluationPanel embedded visible={activeTab==='evaluate'} onEvidence={setEvaluationReceipt} sourceDatasetPath={folderPath} savedVersionId={selectedVersionId || null}
+        contextKey={scopeKey}
         onOpenImage={imagePath=>{const image=datasetImageReference(imagePath);return useProjectStore.getState().openImageForLabeling(image.imageId,imagePath);}}
-        onInspectImage={imagePath=>{const image=datasetImageReference(imagePath);useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:image.fileName,imageId:image.imageId,thumbnailUrl:image.thumbnailUrl});setActiveTab('flow');}}/>
+        onInspectImage={imagePath=>{const image=datasetImageReference(imagePath);useFlowchartStore.getState().setSelectedImage({source:'dataset',imagePath,fileName:image.fileName,imageId:image.imageId,thumbnailUrl:image.thumbnailUrl});setActiveTab('test');}}/>
+      </section>
+      <section role="tabpanel" id="flow-panel-release" aria-labelledby="flow-area-release" hidden={activeTab!=='release'} className="space-y-4 p-4 text-sm">
+        <h3 className="font-semibold">저장 버전에서 패키지·배포로</h3>
+        <p>저장 {selectedVersionId||'미선택'} · 활성 {savedVersions.find(row=>row.is_active)?.version_id||'없음'}</p>
+        <p className="break-all text-slate-400">저장 그래프 {selectedSaved?.pipeline_hash||'식별 근거 없음'}</p>
+        <p>평가: {currentEvaluation?'현재 저장 버전의 유효 근거':'현재 저장 버전 근거 확인 필요'} · 승인: {approvalLabel}</p>
+        <p className="text-slate-400">평가·승인·대상 적용은 별도 근거입니다. 이 화면의 조회는 승인이나 배포를 수행하지 않습니다.</p>
+        {!exactSaved&&<p className="text-amber-200">현재 초안을 저장하거나 확인할 저장 버전을 여세요.</p>}
+        <button className="workspace-button" disabled={!exactSaved||approvalBusy} onClick={()=>void checkApproval()}>{approvalBusy?'승인 근거 조회 중…':'이 저장 버전의 승인 근거 확인'}</button>
+        {approvalError&&<p role="alert" className="text-amber-200">{approvalError}</p>}
+        {currentApproval&&<details><summary className="cursor-pointer text-cyan-300">승인 조회 응답 · 모델/체크포인트/revision</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(currentApproval,null,2)}</pre></details>}
+        <p className="text-slate-400">배포: 대상 적용 응답 확인 필요. 다음 화면에서 패키지 생성·동등성 검증·대상 상태를 확인하세요.</p>
+        <button data-primary-action="true" className="workspace-button workspace-button--primary" disabled={!exactSaved||isSaving||isRunning} aria-describedby={!exactSaved||isSaving||isRunning?'flow-release-reason':undefined} onClick={()=>setStep(6)}>패키지·배포로 이동</button>
+        {(!exactSaved||isSaving||isRunning)&&<p id="flow-release-reason" className="text-amber-200">{isSaving||isRunning?'저장·실행이 끝난 뒤 이동하세요.':'저장된 버전을 연 상태에서만 패키지·배포로 이동합니다.'}</p>}
+      </section>
+      {recipe&&<FlowRecipeDialog key={recipe.token} preview={recipe.preview} models={modelCatalog} onClose={closeRecipe} onAdopt={adoptRecipe}/>}
       {/* Modals */}
       <ImagePickerModal isOpen={isImagePickerOpen} onClose={() => setImagePickerOpen(false)} />
       <CropDetailModal crop={inspectedCrop} onClose={() => setInspectedCrop(null)} />
