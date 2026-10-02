@@ -852,6 +852,12 @@
      "result": "70 related tests passed; independent 5 EOF resume/revocation cases passed; six owned hashes verified",
      "scope": "actual API, workspace/actor-bound resume, quota, verified atomic CAS publication, shared refs/pins/grace GC, source descriptor copy; optional S3 fake client only, no real NAS/S3/Windows/GUI acceptance; depends on final S1-01 review",
      "platform": "macOS development; native target pending"
+    },
+    {
+     "kind": "windows-hosted-fix-reviewed-published",
+     "result": "published in 8350453: the content-identity check of managed copies compared a path stat with an open-handle stat; Windows fills st_dev/st_ino differently for the two (hosted run 37014514960: ingest 422 \"Source file changed while computing its content identity\"), so the check now compares two handle stats (backend/engine/file_identity.py) and the remote operation lock uses the same helper; a file replaced between reading and checking is still refused (POSIX test; Windows cannot replace an open file); two independent review rounds, final ACCEPT",
+     "scope": "Windows divergence emulated by a path stat reporting another device; mutants of both sites and the helper are killed",
+     "platform": "macOS development; Windows hosted rerun pending"
     }
    ],
    "file_actions": {
@@ -3274,7 +3280,13 @@
      "result": "Windows Server dependencies, type checks, renderer227 and build passed; harness12 passed1 failed on fixed two-PID assumption; independently verified subtree-aware fixture3 cases passed",
      "scope": "OS parent-chain snapshot determines exact test-owned root and descendant set; bystander/ancestor protection retained; production cleanup unchanged; Windows hosted rerun pending"
     },
-    "main a6d43e의 실제 hosted Windows는 renderer/build 성공 후 backend 69 pass,8 fail,7 skip; Linux는 CPU 계약 성공 후 browser 24 pass,3 fail. restore handle와 descriptor-swap/UTF8 fixture를 수정하고 독립 5개/9개 통과. browser fixture는 후속 수정 중이며 hosted 전체 성공으로 처리하지 않는다."
+    "main a6d43e의 실제 hosted Windows는 renderer/build 성공 후 backend 69 pass,8 fail,7 skip; Linux는 CPU 계약 성공 후 browser 24 pass,3 fail. restore handle와 descriptor-swap/UTF8 fixture를 수정하고 독립 5개/9개 통과. browser fixture는 후속 수정 중이며 hosted 전체 성공으로 처리하지 않는다.",
+    {
+     "kind": "windows-text-encoding-reviewed-published",
+     "result": "published in 8350453: every backend and build-script text read/write names an encoding (253 production + 13 script sites, keyword-only rewrite), text pipes decode explicitly (our own Python child UTF-8 with PYTHONIOENCODING, remote output UTF-8, local OS tools locale with replacement), user label text decodes UTF-8 then only the non-UTF-8 platform default (backend/engine/source_text.py), and backend/tests/test_service_text_encoding.py guards backend/ and scripts/ against default-encoding I/O and runs a Korean project in a process without a UTF-8 default; the Windows job now also runs the encoding and file-identity tests; two independent review rounds, final ACCEPT",
+     "scope": "frozen trees: full backend 2790 passed (one failure from a git-less export, confirmed by review), delta 443 passed / 4 skipped, Windows job list 94/94 in normal and US-ASCII locales",
+     "platform": "macOS; Windows hosted run pending (not recorded as verified)"
+    }
    ],
    "file_actions": {
     ".github/workflows/ci.yml": "Create",
@@ -3306,7 +3318,13 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s6_05.py"
+   "proposed_test_file": "backend/tests/test_service_s6_05.py",
+   "remaining": [
+    "test code still has about 810 default-encoding reads outside the Windows job list",
+    "user label reads in routes_annotation, routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (unchanged from before; cp949 files work in some paths only)",
+    "Pillow reports some truncated headers as errno-less OSError, outside the undecodable set (size-less LabelMe case can still 500)",
+    "the Electron smoke step of the Windows job has not been reached since the storage step started failing"
+   ]
   },
   {
    "id": "S6-06",
