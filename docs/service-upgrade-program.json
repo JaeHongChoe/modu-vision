@@ -1431,6 +1431,12 @@
      "result": "published in 1d6f5ef: GET /api/dataset/library/images (query_images over the accepted revision: file-name search in NFC and NFD forms with LIKE escaping, split/class/state/review-status filters, keyset cursors bound to the revision, bounded ledger scans) and POST /api/dataset/library/resolve (resolve_image_ids by image_uuid + sha256 only: found/changed/moved/unreadable/missing through batched indexed lookups; project.read, so team viewers resolve and another project's revision stays 404); virtual grid ImageLibraryBrowser and ImageSearchSelect used by the image picker, operator workspace and connection wizard; flowchart test set keeps saved identities, lists unconfirmed images with their reason outside comparisons, legacy path list under its own key; package cohort opens on valid images and refuses invalid ones; independent review freeze 1 ACCEPT WITH FIXES (3 P2 fixed), freeze 2 ACCEPT",
      "scope": "frozen tree (086ca16 + 26 files): green 97, regression 214, renderer tests, typecheck, e2e 4 passed (service-s2-07 2 scenarios + S3-01 archive/import); reviewer re-ran green 97 and 34 renderer tests, 210 bounded-paging comparisons, 20 selections on a 201k-row revision in 0.04 s",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "published in 60d7768: re-picking a test image that needed checking replaces its entry (no duplicate, its place freed); plain paths saved by older versions are copied to the legacy key before the identity key is rewritten, the load asks when only legacy paths are saved, and a library 'no revision' answer loads them before switching so a save cannot erase them; an invalid cohort pick is announced; independent review ACCEPT (all four fixes reproduced against freeze 2, each mutant caught)",
+     "scope": "frozen tree (db9942a + 6 renderer files): renderer suite, typecheck, backend S2-07 9, e2e 2 passed; reviewer re-ran 322 renderer tests and typecheck",
+     "platform": "macOS development; Windows hosted run pending for this commit"
     }
    ],
    "file_actions": {
@@ -1453,12 +1459,12 @@
    "proposed_test_file": "scripts/e2e/service-s2-07.spec.ts",
    "remaining": [
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
-    "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py)",
-    "re-picking a 'changed' test-set image keeps the old unresolved entry, so the image is saved twice (review P3)",
-    "an older path-only test set is erased on the first load once a revision exists instead of being copied to the legacy key (review P3)",
-    "the package cohort ignores a click on an invalid image without a notice; operator and cohort selections stay in memory",
+    "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
+    "images saved twice by the freeze-2 build disappear from both lists when re-picked; a moved image picked at its new place keeps the old entry (review P3)",
+    "a non-409 load failure for a user with only a legacy path list leaves new picks unsaved; an unchecked old path under the identity key returns on every load (review P3)",
+    "operator and package cohort selections stay in memory",
     "the flowchart header keeps the previous path until the picker is confirmed",
-    "Windows native and hosted evidence for this commit pending"
+    "Windows native and hosted evidence for these commits pending"
    ]
   },
   {
