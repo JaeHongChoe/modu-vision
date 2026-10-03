@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from PIL import Image
 from backend.engine.dicom_input import UNDECODABLE_IMAGE_ERRORS, open_source_image
+from backend.engine.source_geometry import is_corrupt_source_header
 from backend.engine.source_text import read_source_text
 from backend.engine.annotation_storage import dataset_annotation_dir
 from backend.engine.annotation_formats import import_annotations,export_annotations,source_annotations_for_image
@@ -58,11 +59,9 @@ def _annotations(source,image):
                 # an unlabeled image: training reads these labels too.
                 return [],None
             except OSError as exc:
-                # Pillow's short header read uses a plain, errno-less OSError.
-                # Only this known decoder failure is permanent content damage;
-                # permission, missing file, OS I/O and unknown share errors stay visible.
-                if (type(exc) is OSError and exc.errno is None and getattr(exc,'winerror',None) is None
-                        and str(exc)=='Truncated File Read'):
+                # Known raster header failures carry no OS error code. Access failures
+                # and unknown decoder/share messages must still be raised.
+                if is_corrupt_source_header(exc):
                     return [],None
                 raise
             document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)

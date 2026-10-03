@@ -1626,6 +1626,12 @@
      "result": "afddfcf plus its loading follow-up: package comparison choices persist in a backend/workspace/actor/project/source/task/label-set namespace as UUID and SHA-256; changed/missing/moved/unreadable choices remain unresolved until explicit removal or reselection. Invalid storage remains recoverable without automatic overwrite. Legacy paths have a separate key. Late first-32 listings do not reset identity picks; explicit saved refresh rechecks identities and independent modes remain available during restore.",
      "scope": "Actual renderer with an isolated backend and synthetic images: delayed initial restore, mode changes, selection/reload, changed source revision and explicit refresh, warning/reload, reselection, clear/reload and project separation. No export or GPU run is claimed by this scenario.",
      "platform": "macOS browser with desktop host shim; cross-browser synchronization and native Windows pending"
+    },
+    {
+     "kind": "parallel-slice-reviewed",
+     "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
+     "result": "Operator manual image choices persist locally by UUID and SHA-256 in backend/workspace/actor/project/source/task/label-set scope. Unresolved identities stay visible and block inspection until explicit reselection or removal; stored failures preserve bytes. No-index path choices have their own namespace and first-64 limitation. Selection is revalidated immediately before explicit inspection; permission and active-runtime gates remain.",
+     "scope": "Bounded operator selection follow-up; independent source review and actual renderer browser selection scenario recorded in docs/implementation-ledger/2026-10-03-operator-source-reliability.md. Health response is a UI fixture; library/revisions use the owned backend. No model inspection or runtime start is claimed. Resolution checks accepted revision metadata, without live source rehashing."
     }
    ],
    "file_actions": {
@@ -1650,9 +1656,9 @@
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
     "a failed legacy listing has no retry within the same context; the panel tests' React stub runs no effect cleanup, so the late-answer guard and the loading resets are verified by the reviewer's cleanup-aware probe only",
-    "operator inspection image selections stay in memory; package comparison choices now persist locally, with unresolved identities retained and comparison blocked until explicit reselection or removal",
     "the flowchart header keeps the previous path until the picker is confirmed",
-    "Windows native and hosted evidence for these commits pending"
+    "Windows native and hosted evidence for these commits pending",
+    "Operator selection synchronization across browser instances and native Windows acceptance remain pending; legacy path-only choices cannot detect changed image bytes."
    ]
   },
   {
@@ -1879,6 +1885,12 @@
      "result": "afddfcf: segmentation index revisions bind trainer-selected grayscale PNG masks and optional class maps by source-relative path and SHA-256; native dimensions/channels, naming and containment are checked using the reject/exclude policy. LabelMe/COCO/YOLO retain precedence, flat/split layouts use trainer pairing including masks/train fallback. Background-only masks add no foreground labels or OK verdict. Classification/detection do not acquire raster mask bindings.",
      "scope": "33 new mask cases and affected index/annotation suites; source files unchanged. Palette/color masks remain in the explicit mask exchange path. Independent review reproduced and closed the flat-image trainer fallback gap.",
      "platform": "macOS CPU; Windows native and GPU acceptance pending"
+    },
+    {
+     "kind": "parallel-slice-reviewed",
+     "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
+     "result": "Failed LabelMe/COCO/YOLO parsing, decoding and class validation retain source-relative bindings and SHA-256 of bytes actually read. Cached documents retain the digest of parsed bytes across replacement; incomplete reads fabricate no digest. Default external-link refusal and explicitly opted-in link policy remain. UTF-8-only decoding errors no longer duplicate the UTF-8 fallback wording.",
+     "scope": "Synthetic scanner/index and affected CPU regressions; source files unchanged except intentional replacement fixtures. Successful YOLO binding scope/order and raster-mask callback preserved. Existing containment-check/open race unchanged."
     }
    ],
    "file_actions": {
@@ -1906,8 +1918,7 @@
     "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
     "stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021); palette/color source masks require the existing explicit mask exchange path",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
-    "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
-    "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"
+    "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel"
    ]
   },
   {
@@ -3584,6 +3595,12 @@
      "result": "955e302: grouped dataset views treat Pillow's errno-less OSError 'Truncated File Read' (a short image header) for a LabelMe file without image size as damaged content and list it without geometry instead of failing; permission, missing-file, OS I/O and other share errors still raise. backend/tests/test_annotation_truncated_source.py joins both CI pytest lists",
      "scope": "Codex freeze on 2115263 + 7 files: red backend 1 failed; green backend 51 across 10 annotation, gallery and text-encoding modules; independent review ACCEPT",
      "platform": "macOS backend checks; native Windows and GPU not run"
+    },
+    {
+     "kind": "parallel-slice-reviewed",
+     "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
+     "result": "Size-less source LabelMe geometry recognizes reproduced plain Pillow WebP decoder and BMP header/depth/compression/bitfields failures in addition to Truncated File Read. Damaged images remain listed without geometry; OS errno/winerror, permission, missing-file and unknown failures propagate. New failure-binding regression is registered in both CPU CI lists.",
+     "scope": "Narrow geometry-header follow-up, actual malformed synthetic files and gallery API checks. Training decode and DICOM behavior unchanged; unknown decoder messages remain outside the classifier."
     }
    ],
    "file_actions": {
@@ -3620,7 +3637,7 @@
    "remaining": [
     "test code still has about 810 default-encoding reads outside the Windows job list",
     "user label reads in routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (routes_annotation's adjacent LabelMe read uses read_source_text since e7fce1c)",
-    "Pillow reports other truncated headers as errno-less OSError outside the undecodable set: since 955e302 only the exact 'Truncated File Read' case of a size-less LabelMe image is treated as damaged content (listed without geometry); other errno-less decoder errors still raise",
+    "Unknown or unreproduced decoder-header errors remain visible; the narrow source geometry classifier covers only tested plain Pillow messages. Native Windows execution of the new header regressions remains pending.",
     "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
     "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design",
     "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test",

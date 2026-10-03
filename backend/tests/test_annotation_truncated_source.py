@@ -18,6 +18,36 @@ def labelme_source(tmp_path):
     return image, labels
 
 
+def malformed_header(kind):
+    stream = io.BytesIO()
+    Image.new('RGB', (8, 8), 'white').save(stream, format='WEBP' if kind == 'webp' else 'BMP')
+    data = bytearray(stream.getvalue())
+    if kind == 'webp':
+        return bytes(data[:16]), 'could not create decoder object'
+    offset, width, number, message = {
+        'bmp-header': (14, 4, 13, 'Unsupported BMP header type (13)'),
+        'bmp-depth': (28, 2, 33, 'Unsupported BMP pixel depth (33)'),
+        'bmp-compression': (30, 4, 100, 'Unsupported BMP compression (100)'),
+        'bmp-bitfields': (30, 4, 3, 'Unsupported BMP bitfields layout'),
+    }[kind]
+    data[offset:offset + width] = number.to_bytes(width, 'little')
+    return bytes(data), message
+
+
+@pytest.mark.parametrize('kind', ['webp', 'bmp-header', 'bmp-depth', 'bmp-compression', 'bmp-bitfields'])
+def test_proven_unsupported_or_truncated_headers_bind_no_source_labels(tmp_path, kind):
+    image, labels = labelme_source(tmp_path)
+    content, message = malformed_header(kind)
+    image.write_bytes(content)
+    before = image.read_bytes(), labels.read_bytes()
+    with pytest.raises(OSError) as raised:
+        Image.open(io.BytesIO(content))
+    assert type(raised.value) is OSError and raised.value.errno is None
+    assert str(raised.value) == message
+    assert views._annotations(tmp_path, image) == ([], None)
+    assert (image.read_bytes(), labels.read_bytes()) == before
+
+
 def test_real_truncated_png_header_without_labelme_size_binds_no_labels(tmp_path):
     image, labels = labelme_source(tmp_path)
     image.write_bytes(image.read_bytes()[:24])
@@ -61,6 +91,25 @@ def test_temporary_or_unknown_read_failure_is_never_an_empty_annotation(tmp_path
     assert (image.read_bytes(), labels.read_bytes()) == before
 
 
+@pytest.mark.parametrize('message', ['could not create decoder object', 'Unsupported BMP header type (13)', 'Unsupported BMP bitfields layout'])
+@pytest.mark.parametrize('kind', ['permission', 'missing', 'errno', 'winerror', 'unknown'])
+def test_header_message_does_not_hide_file_access_or_unknown_failures(tmp_path, monkeypatch, message, kind):
+    image, labels = labelme_source(tmp_path)
+    before = image.read_bytes(), labels.read_bytes()
+    failure = {'permission': PermissionError(message), 'missing': FileNotFoundError(message),
+        'errno': OSError(errno.EIO, message), 'winerror': OSError(message),
+        'unknown': OSError(message + ': share disconnected')}[kind]
+    if kind == 'winerror':
+        failure.winerror = 32
+    def fail(_path):
+        raise failure
+    monkeypatch.setattr(views, 'open_source_image', fail)
+    with pytest.raises(type(failure)) as raised:
+        views._annotations(tmp_path, image)
+    assert raised.value is failure
+    assert (image.read_bytes(), labels.read_bytes()) == before
+
+
 def test_valid_korean_labelme_without_size_keeps_the_original_regions(tmp_path):
     image, labels = labelme_source(tmp_path)
     before = image.read_bytes(), labels.read_bytes()
@@ -72,14 +121,15 @@ def test_valid_korean_labelme_without_size_keeps_the_original_regions(tmp_path):
     assert (image.read_bytes(), labels.read_bytes()) == before
 
 
-def test_saved_split_gallery_keeps_truncated_source_visible_without_geometry(tmp_path, monkeypatch):
+@pytest.mark.parametrize('kind', ['png', 'webp', 'bmp-header', 'bmp-depth', 'bmp-compression', 'bmp-bitfields'])
+def test_saved_split_gallery_keeps_truncated_source_visible_without_geometry(tmp_path, monkeypatch, kind):
     from fastapi.testclient import TestClient
     from backend.main import create_app
 
     source = tmp_path / 'source'
     source.mkdir()
     broken, _ = labelme_source(source)
-    broken.write_bytes(broken.read_bytes()[:24])
+    broken.write_bytes(broken.read_bytes()[:24] if kind == 'png' else malformed_header(kind)[0])
     for index in range(6):
         image = source / f'{index}.png'
         Image.new('RGB', (8, 8), 'white').save(image)

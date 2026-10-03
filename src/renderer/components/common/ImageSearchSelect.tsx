@@ -8,6 +8,10 @@ interface Props {
   /** The chosen image's file path ('' when none). */
   value: string;
   onChange: (path: string) => void;
+  /** Opt-in identity selection. Existing consumers continue receiving paths through onChange. */
+  onIdentityChange?: (image: LibraryImage | null) => void;
+  /** Explicit path-only selection when no validated revision exists. */
+  onLegacyChange?: (path: string) => void;
   disabled?: boolean;
   /** Pick the first image of the first page when nothing is chosen yet (a convenience for checks that need any image). */
   autoSelectFirst?: boolean;
@@ -22,13 +26,17 @@ const PAGE = 20;
  * One image of the project's validated revision, found by searching its name on the server instead of scrolling the
  * first 64 entries. Without an accepted revision it shows the older list of the first images and says so.
  */
-export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, disabled, autoSelectFirst, folder, task }) => {
+export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, onIdentityChange, onLegacyChange, disabled, autoSelectFirst, folder, task }) => {
   const [text, setText] = useState('');
   const [items, setItems] = useState<LibraryImage[]>([]);
   const [legacy, setLegacy] = useState<ImageMeta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const change = useRef(onChange);
   change.current = onChange;
+  const identityChange = useRef(onIdentityChange);
+  identityChange.current = onIdentityChange;
+  const legacyChange = useRef(onLegacyChange);
+  legacyChange.current = onLegacyChange;
   const initial = useRef(value);
   initial.current = value;
 
@@ -38,16 +46,23 @@ export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, dis
       api.library.images({ q: text.trim() || undefined, limit: PAGE }).then((page) => {
         if (!live) return;
         setItems(page.items);
+        setLegacy(null);
         setError(null);
         const firstValid = page.items.find((item) => item.valid);  // never an image the revision found corrupt
-        if (autoSelectFirst && !initial.current && firstValid) change.current(firstValid.file_path);
+        if (autoSelectFirst && !initial.current && firstValid) {
+          if (identityChange.current) identityChange.current(firstValid); else change.current(firstValid.file_path);
+        }
       }).catch((caught) => {
         if (!live) return;
         if ((caught as { status?: number }).status === 409 && folder) {
           api.dataset.getImages({ folder_path: folder, task, limit: 64 }).then((response) => {
             if (!live) return;
             setLegacy(response.items || []);
-            if (autoSelectFirst && !initial.current && response.items?.[0]) change.current(response.items[0].file_path);
+            setItems([]);
+            setError(null);
+            if (autoSelectFirst && !initial.current && response.items?.[0]) {
+              if (legacyChange.current) legacyChange.current(response.items[0].file_path); else change.current(response.items[0].file_path);
+            }
           }).catch((inner) => live && setError(inner instanceof Error ? inner.message : String(inner)));
         } else {
           setError(caught instanceof Error ? caught.message : String(caught));
@@ -60,8 +75,9 @@ export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, dis
   if (legacy) {
     return (
       <div className="space-y-1">
-        <select aria-label={label} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded bg-slate-800 p-2">
+        <select aria-label={label} disabled={disabled} value={value} onChange={(event) => (onLegacyChange || onChange)(event.target.value)} className="w-full rounded bg-slate-800 p-2">
           <option value="">원본 이미지 선택</option>
+          {value && !legacy.some((item) => item.file_path === value) && <option value={value}>{value.split(/[\\/]/).pop()} (현재 선택 · 목록에 없음)</option>}
           {legacy.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
         </select>
         <p className="text-[11px] text-slate-500">검증된 데이터 버전이 없어 처음 64장만 보입니다. 전체 검증 후 채택하면 이름으로 찾을 수 있습니다.</p>
@@ -73,12 +89,19 @@ export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, dis
     <div className="space-y-1">
       <input type="search" aria-label={`${label} 검색`} disabled={disabled} value={text} onChange={(event) => setText(event.target.value)}
         placeholder="파일 이름이나 폴더로 검색" className="w-full rounded bg-slate-800 p-2" />
-      <select aria-label={label} disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} size={Math.min(6, Math.max(2, items.length + 1))}
+      <select aria-label={label} disabled={disabled} value={value} onChange={(event) => {
+        if (!onIdentityChange) { onChange(event.target.value); return; }
+        if (!event.target.value) { onIdentityChange(null); return; }
+        const image = items.find((item) => item.file_path === event.target.value);
+        if (image) onIdentityChange(image);
+      }} size={Math.min(6, Math.max(2, items.length + 1))}
         className="w-full rounded bg-slate-800 p-1">
         <option value="">{items.length ? '이미지 선택' : '조건에 맞는 이미지가 없습니다'}</option>
         {value && !chosen && <option value={value}>{value.split(/[\\/]/).pop()} (현재 선택)</option>}
-        {items.map((item) => <option key={item.image_uuid} value={item.file_path}>{item.relative_path}{item.valid ? '' : ` · ${item.error_code}`}</option>)}
+        {items.map((item) => <option key={item.image_uuid} value={item.file_path} disabled={Boolean(onIdentityChange && (!item.valid || !item.sha256))}>{item.relative_path}{item.valid ? '' : ` · ${item.error_code}`}</option>)}
       </select>
+      {onIdentityChange && chosen?.valid && chosen.sha256 && /^[a-f0-9]{64}$/.test(chosen.sha256) && <button type="button" disabled={disabled}
+        onClick={() => onIdentityChange(chosen)} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">현재 이미지 다시 선택</button>}
       {error && <p role="alert" className="text-[11px] text-red-300">{error}</p>}
     </div>
   );

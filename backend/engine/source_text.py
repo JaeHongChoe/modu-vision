@@ -25,12 +25,14 @@ def decode_source_text(data: bytes, name: str = 'file') -> str:
         return data.decode('utf-8')
     except UnicodeDecodeError as exc:
         fallback = locale.getpreferredencoding(False)
+        alternative = ''
         if codecs.lookup(fallback).name != 'utf-8':
+            alternative = f' (nor {fallback})'
             try:
                 return data.decode(fallback)
             except UnicodeDecodeError:
                 pass
-        raise SourceTextError(f'{name} is not UTF-8 text (nor {fallback}); save it as UTF-8 and try again') from exc
+        raise SourceTextError(f'{name} is not UTF-8 text{alternative}; save it as UTF-8 and try again') from exc
 
 
 def read_source_text(path: Path | str) -> str:

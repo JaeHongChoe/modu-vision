@@ -34,7 +34,7 @@ from typing import Optional
 
 from backend.engine.annotation_formats import safe_name, source_annotation_files, source_coco_image_names, validate_source_coco_binding
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
-from backend.engine.source_text import read_source_text
+from backend.engine.source_text import decode_source_text
 
 SPLITS = ('train', 'val', 'test')
 _CHUNK = 1024 * 1024
@@ -63,7 +63,11 @@ class SourceAnnotationScanner:
         self._real_source = os.path.realpath(self.source)
         self._hash: dict = {}
         self._coco: dict = {}
+        self._coco_hash: dict = {}
         self._classes: dict = {}
+        self._class_errors: dict = {}
+        self._class_hash: dict = {}
+        self._consumed: dict = {}
         from backend.engine.source_mask_annotations import SourceMaskScanner
         self._source_masks = SourceMaskScanner(self.source, readable=self._readable, record=self._record)
 
@@ -95,13 +99,39 @@ class SourceAnnotationScanner:
     def _record(self, path: Path) -> tuple:
         return self._relative(path), self._sha(path)
 
+    def _read_bytes(self, path: Path) -> bytes:
+        """Bind only a completed read, before decoding/parsing can fail.
+
+        The digest is of these bytes, never a second read of a file that may
+        have been replaced. The separate streaming _record callback remains
+        available to the folder mask scanner.
+        """
+        data = self._readable(path).read_bytes()
+        self._hash[str(path)] = hashlib.sha256(data).hexdigest()
+        self._consumed[str(path)] = self._hash[str(path)]
+        return data
+
+    def _read_text(self, path: Path) -> str:
+        return decode_source_text(self._read_bytes(path), path.name)
+
+    def _remember(self, path: Path, digest):
+        """Reuse the digest belonging to cached parsed bytes, if read safely."""
+        self._readable(path)
+        if digest is not None:
+            self._consumed[str(path)] = digest
+
+    def _bindings(self) -> tuple:
+        return tuple((self._relative(Path(path)), digest) for path, digest in self._consumed.items())
+
     def _load(self, path: Path):
-        return json.loads(read_source_text(self._readable(path)))  # UTF-8 (BOM allowed), else this machine's code page
+        return json.loads(self._read_text(path))  # UTF-8 (BOM allowed), else this machine's code page
 
     def _coco_index(self, path: Path) -> Optional[dict]:
         """{file name: ('labels', names, width, height) | ('error', message)}, None when the document is not COCO, or
         ('invalid', message) when it cannot be read (kept, so a broken document is parsed once per build)."""
         key = str(path)
+        if key in self._coco:
+            self._remember(path, self._coco_hash[key])
         if key not in self._coco:
             try:
                 self._coco[key] = self._build_coco_index(path)
@@ -111,6 +141,8 @@ class SourceAnnotationScanner:
                 raise
             except Exception as exc:  # parsed once: every image it may bind gets the same error without a re-parse
                 self._coco[key] = ('invalid', f'INVALID_ANNOTATION: {self._relative(path)}: {type(exc).__name__}: {exc}')
+            finally:
+                self._coco_hash[key] = self._consumed.get(key)
         return self._coco[key]
 
     def _build_coco_index(self, path: Path) -> Optional[dict]:
@@ -138,36 +170,57 @@ class SourceAnnotationScanner:
 
     def _class_list(self, path: Path) -> list:
         key = str(path)
+        if key in self._classes or key in self._class_errors:
+            self._remember(path, self._class_hash[key])
+        if key in self._class_errors:
+            raise _Refused(self._class_errors[key])
         if key not in self._classes:
-            text = read_source_text(self._readable(path))
-            if path.name == 'classes.txt':
-                classes = text.splitlines()
-            else:
-                import yaml
-                document = yaml.safe_load(text)
-                declared = document.get('names') if isinstance(document, dict) else None
-                if isinstance(declared, list):
-                    classes = [str(name) for name in declared]
-                elif isinstance(declared, dict):
-                    indexed = {int(number): str(name) for number, name in declared.items()}
-                    if set(indexed) != set(range(len(indexed))):
-                        raise _Refused(f'INVALID_ANNOTATION: {self._relative(path)} class ids must be contiguous from 0')
-                    classes = [indexed[number] for number in range(len(indexed))]
-                else:
-                    raise _Refused(f'INVALID_ANNOTATION: {self._relative(path)} has no names list')
-            self._classes[key] = classes
+            try:
+                self._classes[key] = self._read_class_list(path)
+            except MemoryError:
+                raise
+            except Exception as exc:
+                # Cache the message, not a traceback retaining decoded source
+                # bytes and the parser's temporary objects.
+                self._class_errors[key] = str(exc) if isinstance(exc, _Refused) else (
+                    f'INVALID_ANNOTATION: {type(exc).__name__}: {exc}')
+                raise
+            finally:
+                self._class_hash[key] = self._consumed.get(key)
         return self._classes[key]
+
+    def _read_class_list(self, path: Path) -> list:
+        text = self._read_text(path)
+        if path.name == 'classes.txt':
+            classes = text.splitlines()
+        else:
+            import yaml
+            document = yaml.safe_load(text)
+            declared = document.get('names') if isinstance(document, dict) else None
+            if isinstance(declared, list):
+                classes = [str(name) for name in declared]
+            elif isinstance(declared, dict):
+                indexed = {int(number): str(name) for number, name in declared.items()}
+                if set(indexed) != set(range(len(indexed))):
+                    raise _Refused(f'INVALID_ANNOTATION: {self._relative(path)} class ids must be contiguous from 0')
+                classes = [indexed[number] for number in range(len(indexed))]
+            else:
+                raise _Refused(f'INVALID_ANNOTATION: {self._relative(path)} has no names list')
+        return classes
 
     def scan(self, image: Path, relative: str, size: Optional[tuple] = None) -> SourceAnnotation:
         """The source annotation of one image; ``size`` (width, height) lets COCO sizes be checked as the importer does."""
+        self._consumed = {}
         try:
             return self._scan(Path(image), relative, size)
         except _Refused as exc:
-            return SourceAnnotation(None, (), (), str(exc))
+            return SourceAnnotation(None, (), self._bindings(), str(exc))
         except MemoryError:
             raise
         except Exception as exc:  # a user's annotation file must never stop the build
-            return SourceAnnotation(None, (), (), f'INVALID_ANNOTATION: {type(exc).__name__}: {exc}')
+            return SourceAnnotation(None, (), self._bindings(), f'INVALID_ANNOTATION: {type(exc).__name__}: {exc}')
+        finally:
+            self._consumed = {}
 
     def _labelme(self, image: Path) -> Optional[SourceAnnotation]:
         adjacent = image.with_suffix('.json')
@@ -175,10 +228,12 @@ class SourceAnnotationScanner:
             return None
         document = self._load(adjacent)
         if not isinstance(document, dict) or not isinstance(document.get('shapes'), list):
+            self._consumed.pop(str(adjacent), None)
             return None
         named = document.get('imagePath')
         if isinstance(named, str) and named:
             if PurePosixPath(named.replace('\\', '/')).name.casefold() != image.name.casefold():
+                self._consumed.pop(str(adjacent), None)
                 return None  # this document describes another image
         else:
             siblings = [image.with_suffix(suffix) for suffix in SUPPORTED_IMAGE_EXTENSIONS if suffix != image.suffix.lower()]
@@ -199,19 +254,22 @@ class SourceAnnotationScanner:
                 continue
             index = self._coco_index(path)
             if index is None:
+                self._consumed.pop(str(path), None)
                 continue
             if isinstance(index, tuple):  # a document that cannot be read may bind this image: say so
-                return SourceAnnotation('coco', (), (self._record(path),), index[1])
+                return SourceAnnotation('coco', (), self._bindings(), index[1])
             candidates = source_coco_image_names(self.source, image, path)
             matched = [name for name in candidates if name in index]
             if matched:
                 hits.append((path, matched))
+            else:
+                self._consumed.pop(str(path), None)
         if len(hits) > 1:
-            return SourceAnnotation('coco', (), tuple(self._record(path) for path, _ in hits),
+            return SourceAnnotation('coco', (), self._bindings(),
                                     'AMBIGUOUS_ANNOTATION: more than one COCO document binds this image')
         if hits:
             path, matched = hits[0]
-            recorded = (self._record(path),)
+            recorded = self._bindings()
             if len(matched) > 1:
                 return SourceAnnotation('coco', (), recorded, 'AMBIGUOUS_ANNOTATION: the COCO document maps this image more than once')
             try:
@@ -234,18 +292,20 @@ class SourceAnnotationScanner:
             return NONE if mask is None else SourceAnnotation('mask', *mask)
         sources = [path for path in files if path.name == 'classes.txt'] + [path for path in files if path.suffix == '.yaml']
         if not sources:
-            return SourceAnnotation('yolo', (), (self._record(label_file),),
+            self._read_bytes(label_file)
+            return SourceAnnotation('yolo', (), self._bindings(),
                                     'INVALID_ANNOTATION: YOLO labels need classes.txt or a data.yaml names list')
         chosen = sources[0]
         classes = self._class_list(chosen)
-        recorded = (self._record(label_file), self._record(chosen))
         disagreeing = [path for path in sources[1:] if self._class_list(path) != classes]
         if disagreeing:
-            return SourceAnnotation('yolo', (), recorded + tuple(self._record(path) for path in disagreeing),
+            return SourceAnnotation('yolo', (), self._bindings(),
                                     'AMBIGUOUS_ANNOTATION: the class lists of this image disagree')
-        ids = [int(line.split()[0]) for line in read_source_text(self._readable(label_file)).splitlines() if line.strip()]
+        ids = [int(line.split()[0]) for line in self._read_text(label_file).splitlines() if line.strip()]
+        recorded = self._bindings()
         if any(not 0 <= value < len(classes) for value in ids):
             return SourceAnnotation('yolo', (), recorded, 'INVALID_ANNOTATION: a YOLO class id is outside the class list')
         if any(not classes[value].strip() for value in ids):
             return SourceAnnotation('yolo', (), recorded, 'INVALID_ANNOTATION: a YOLO class id names a blank class')
-        return SourceAnnotation('yolo', tuple(sorted({classes[value] for value in ids})), recorded)
+        return SourceAnnotation('yolo', tuple(sorted({classes[value] for value in ids})),
+                                (self._record(label_file), self._record(chosen)))
