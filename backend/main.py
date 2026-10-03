@@ -77,6 +77,7 @@ from backend.api.routes_model_deployments import router as model_deployments_rou
 from backend.api.routes_ocr import router as ocr_router
 from backend.api.routes_enhancement import router as enhancement_router
 from backend.api.routes_model_catalog import router as model_catalog_router
+from backend.api.routes_workers import router as workers_router
 from backend.api.routes_provenance import router as provenance_router
 from backend.api.routes_defect_gan import router as defect_gan_router
 from backend.api.routes_rotated_detection import router as rotated_detection_router
@@ -265,12 +266,17 @@ async def lifespan(app: FastAPI):
     recover_local_jobs(training_job_manager)
     from backend.api.routes_dataset_imports import recover_imports_at_startup
     recover_imports_at_startup(app)
+    from backend.engine.worker_preflight import stop_running_preflights, sweep_stale_runs
+    # Run folders of preflights an earlier app stopped mid-run (its child exited with it) are removed off the event loop.
+    threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
     logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
     yield
     # Graceful Shutdown Sequence
     logger.info("Initiating Vision AI Studio backend shutdown...")
     # A normal quit keeps job ownership: owned workers are detached with a recorded intent and reattached on restart.
     training_job_manager.detach_all_for_shutdown()
+    # A running worker preflight is not a job to reattach: its child is stopped through its handle.
+    stop_running_preflights()
     await broadcaster.shutdown()
     clear_device_cache()
     logger.info("Shutdown cleanup complete.")
@@ -428,6 +434,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(geometry_router)
     app.include_router(enhancement_router)
     app.include_router(model_catalog_router)
+    app.include_router(workers_router)
     app.include_router(provenance_router)
     app.include_router(defect_gan_router)
     app.include_router(rotated_detection_router)

@@ -272,6 +272,7 @@ def _frozen_entry(*arguments):
 
 @pytest.mark.parametrize(('module', 'marker'), [
     ('backend.engine.operations_worker', 'Watch one owned project'),
+    ('backend.engine.worker_preflight', 'Run one worker preflight'),
     ('backend.training_cli', 'execute'),
 ])
 def test_frozen_entry_runs_internal_module_launches(module, marker):

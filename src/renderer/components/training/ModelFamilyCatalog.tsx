@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { request } from '../../services/api';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
+import { WorkerSupportPanel } from './WorkerSupportPanel';
 
 type Method = {method: string; architectures: string[]; continuation: string; prerequisite: string; missing_dependencies: string[]};
 type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]};
@@ -44,6 +45,7 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
           {!!method.missing_dependencies.length && <p className="mt-1 text-amber-300">추가 설치 필요: {method.missing_dependencies.join(', ')}</p>}
         </div>)}
         {!!family.missing_dependencies.length && <p className="mt-2 text-amber-300">추가 설치 필요: {family.missing_dependencies.join(', ')}</p>}
+        {onSelect && selectedFamily === family.task && <WorkerSupportPanel task={family.task} />}
       </article>)}</div>
     </div></details>
     {error && <p role="alert" className="mt-3 text-amber-300">모델 종류 확인 실패: {error}</p>}

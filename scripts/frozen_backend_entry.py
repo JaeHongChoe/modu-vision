@@ -42,7 +42,7 @@ def remote_bundle_diagnostic(inventory):
 # Internal children are launched as `<executable> -m <module>` in both source
 # and frozen builds, which keeps their command lines identifiable by owners.
 # Only these modules may be run this way from the frozen executable.
-FROZEN_MODULES = frozenset({'backend.engine.operations_worker', 'backend.training_cli'})
+FROZEN_MODULES = frozenset({'backend.engine.operations_worker', 'backend.engine.worker_preflight', 'backend.training_cli'})
 
 
 def run_internal_module(argv):
