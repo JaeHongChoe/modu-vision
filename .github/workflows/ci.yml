@@ -48,6 +48,8 @@ jobs:
       - name: CPU contract and recovery regressions
         run: >-
           python -m pytest -q --junitxml=ci-pytest.xml
+          backend/tests/test_flow_class_save_validation.py
+          backend/tests/test_source_mask_annotations.py
           backend/tests/test_service_joint_augmentation.py
           backend/tests/test_service_score_contract.py
           backend/tests/test_service_release_eligibility.py

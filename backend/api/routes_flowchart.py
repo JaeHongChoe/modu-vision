@@ -13,6 +13,7 @@ import hashlib
 import logging
 import math
 import os
+import pickle
 from pathlib import Path
 import re
 import tempfile
@@ -56,6 +57,7 @@ from backend.engine.checkpoint_paths import is_job_id, trusted_checkpoint
 from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.specialized_models import SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.flow_workspace import catalog_class_vocabulary
+from backend.engine.flow_class_validation import validate_recorded_flow_classes
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -626,6 +628,39 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     return {"models": models, "total": len(models)}
 
 
+def _save_class_model_metadata(node, project, source_dataset_path):
+    """Resolve only model references used by class rules, without loading inference models."""
+    job_id = node.data.model_job_id
+    task = flow_model_task(node)
+    if not valid_flow_job(job_id, task):
+        raise ValueError(f"Model node {node.id} has an invalid model job ID for its class rules.")
+    try:
+        if task in SPECIALIZED_TASKS:
+            if project is None:
+                raise ValueError("Specialized class rules require an active project")
+            _, metadata = resolve_specialized_checkpoint(project["models_dir"], job_id, task, source_dataset_path)
+        else:
+            checkpoint = trusted_checkpoint(job_id)
+            if checkpoint is None:
+                raise ValueError("The bound model checkpoint is unavailable")
+            metadata_path = checkpoint.parent / "model_meta.json"
+            if metadata_path.is_symlink():
+                raise ValueError("The bound model metadata is symlinked")
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8")) if metadata_path.is_file() else {}
+            if not isinstance(metadata, dict):
+                raise ValueError("The bound model metadata must be an object")
+            _, _, _, resolved_task, _, _ = _resolve_job_artifacts(
+                job_id, source_dataset_path=source_dataset_path, source_task=task,
+            )
+            if resolved_task != task:
+                raise ValueError("The bound model task differs from the class rule source")
+        if not isinstance(metadata, dict) or metadata.get("task", task) != task:
+            raise ValueError("The bound model class metadata task is incompatible")
+    except (HTTPException, OSError, ValueError, RuntimeError, KeyError, TypeError, AttributeError, EOFError, pickle.UnpicklingError) as exc:
+        raise ValueError(f"Model node {node.id} class rules need an available completed {task} model with valid metadata.") from exc
+    return {"metadata": metadata, "task": task}
+
+
 @router.post("/pipeline")
 def save_pipeline(
     pipeline: FlowchartPipeline, recipe_task: Optional[PipelineTask] = None,
@@ -647,6 +682,12 @@ def save_pipeline(
     if source_dataset_path and project_source and str(Path(source_dataset_path).expanduser().resolve()) != project_source:
         raise HTTPException(status_code=409, detail="Flowchart source differs from the active project dataset.")
     effective_source = source_dataset_path or project_source
+    try:
+        validate_recorded_flow_classes(
+            pipeline, lambda node: _save_class_model_metadata(node, project, effective_source),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     target_path = _recipe_file(task, effective_source, project_dir)
     with _FLOW_SAVE_LOCK:
         version_id: Optional[str] = None

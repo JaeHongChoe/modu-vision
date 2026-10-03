@@ -1,7 +1,7 @@
 """Source annotations of dataset images, as the training importer would read them (S3-01).
 
 For each image of an index build this records what the source's own annotation files say: the format (LabelMe,
-COCO, YOLO), the label names, and every annotation file that binds the image with its SHA-256, so a revision states
+COCO, YOLO, folder mask), the label names, and every annotation file that binds the image with its SHA-256, so a revision states
 exactly which label bytes it saw. Project overlays (Studio edits) are not source annotations; label sets that combine
 them belong to dataset snapshots (S3-02).
 
@@ -15,6 +15,8 @@ Discovery and binding follow ``annotation_formats.source_annotations_for_image``
   make the document invalid for that image;
 - YOLO ``.txt`` labels take their names from the first ``classes.txt``, else the first ``data.yaml``/``dataset.yaml``
   (the importer's precedence); class lists that disagree, blank or missing names and ids outside the list are errors.
+- folder masks bind by the segmentation loader's image/mask layout and stem precedence after the standard
+  annotation formats; native geometry, grayscale PNG channels and class_map.json are validated without conversion.
 
 Annotation files are read only inside the source (a local desktop may follow links, like the image walk), and paths
 are recorded relative to the source. COCO documents and class lists are parsed once per scanner and only their index
@@ -54,13 +56,16 @@ class _Refused(Exception):
 
 
 class SourceAnnotationScanner:
-    def __init__(self, source: Path | str, *, follow_links: bool = False):
+    def __init__(self, source: Path | str, *, follow_links: bool = False, task: Optional[str] = None):
         self.source = Path(source).resolve()
         self.follow_links = follow_links
+        self.task = task
         self._real_source = os.path.realpath(self.source)
         self._hash: dict = {}
         self._coco: dict = {}
         self._classes: dict = {}
+        from backend.engine.source_mask_annotations import SourceMaskScanner
+        self._source_masks = SourceMaskScanner(self.source, readable=self._readable, record=self._record)
 
     def _relative(self, path: Path) -> str:
         try:
@@ -223,7 +228,10 @@ class SourceAnnotationScanner:
             return SourceAnnotation('coco', labels, recorded)
         label_file = next((path for path in files if path.suffix == '.txt' and path.name != 'classes.txt'), None)
         if label_file is None:
-            return NONE
+            if self.task not in (None, 'segmentation'):
+                return NONE
+            mask = self._source_masks.scan(image, size)
+            return NONE if mask is None else SourceAnnotation('mask', *mask)
         sources = [path for path in files if path.name == 'classes.txt'] + [path for path in files if path.suffix == '.yaml']
         if not sources:
             return SourceAnnotation('yolo', (), (self._record(label_file),),

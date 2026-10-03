@@ -17,9 +17,10 @@ import {useTaskHandoff} from '../training/useTaskHandoff';
 import {productDeliveryApi} from '../../services/productDeliveryApi';
 import {reopenOptimizationTask} from './deliveryTaskSelection';
 import { flowPackageExport, type FlowApprovalPrerequisites, type FlowExportResult } from '../../services/flowPackageExport';
-import { defaultCohort, MAX_PARITY_IMAGES, parityFields, parityHeadline, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
+import { MAX_PARITY_IMAGES, parityFields, parityHeadline, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
 import { ImageLibraryBrowser } from '../common/ImageLibraryBrowser';
-import type { LibraryImage } from '../../services/api';
+import {useParityCohort} from './useParityCohort';
+import {parityUnresolvedReason} from './parityCohort';
 
 export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask }> = ({ sourceFolder, task }) => {
   const {key:deliveryKey,scope:deliveryScope,project}=useDeliveryScope(sourceFolder+task);
@@ -34,17 +35,12 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [images, setImages] = useState<ImageMeta[]>([]);
   const [selectedImagePath, setSelectedImagePath] = useState('');
   const [parityMode, setParityMode] = useState<ParityMode>('cohort');
-  const [cohortPaths, setCohortPaths] = useState<string[]>([]);
-  // The parity cohort is picked from the whole validated revision (search, split filter); without an accepted revision
-  // the first 32 listed images are offered as before.
-  const [cohortPicks, setCohortPicks] = useState<LibraryImage[]>([]);
-  const [cohortLibrary, setCohortLibrary] = useState<'available' | 'unavailable'>('available');
   const [cohortRefusal, setCohortRefusal] = useState('');
   const [release, setRelease] = useState<FlowApprovalPrerequisites | null>(null);
   const [releaseError, setReleaseError] = useState<string | null>(null);
   const [releaseSelection, setReleaseSelection] = useState<Record<string, string>>({});
   const [includeApprovals, setIncludeApprovals] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(Boolean(sourceFolder));
   const [isExporting, setIsExporting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +48,10 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[]; status?: string } | null>(null);
   const [result, setResult] = useState<FlowExportResult | null>(null);
   useEffect(()=>{if(result?.package_path)setLibraryRefresh(value=>value+1);},[result?.package_path]);
+  const cohort=useParityCohort({projectId:project?.id,projectDir,source:sourceFolder,task,labelset:project?.active_labelset_id,deliveryKey,legacyImages:images,legacyReady:!isLoading});
+  const cohortPicks=cohort.picks,cohortPaths=cohort.paths,cohortLibrary=cohort.mode;
+  const unresolvedPaths=cohortPaths.filter(path=>!images.some(image=>image.file_path===path));
+  const cohortBlocker=!cohort.ready?'저장된 검증 이미지 선택을 확인하고 있습니다.':cohort.unresolved.length||unresolvedPaths.length?'확인이 필요한 검증 이미지를 다시 선택하거나 목록에서 빼세요.':null;
   const [identity, setIdentity] = useState<SavedFlowIdentity | null>(null);
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [deploymentProfile, setDeploymentProfile] = useState<FlowDeploymentProfile>('standard');
@@ -101,7 +101,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         || saved.pipelines.find((item) => item.is_latest)?.version_id || saved.pipelines[0]?.version_id || '');
       setImages(availableImages);
       setSelectedImagePath(availableImages[0]?.file_path || '');
-      setCohortPaths(defaultCohort(availableImages.map((item) => item.file_path)));
+
     }).catch((cause) => {
       if (active) setError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => {
@@ -144,6 +144,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const approvalIds = includeApprovals ? releaseApprovalIds(release, releaseSelection) : null;
   const exportFlow = async () => {
     if (!sourceFolder || !selectedVersion || identity?.versionId !== selectedVersion.version_id || isExporting) return;
+    if(effectiveParityMode==='cohort'&&cohortBlocker){setError(cohortBlocker);return;}
     const parity = parityFields(effectiveParityMode, cohortImages, selectedImage, packageDevice);
     if ('error' in parity) {
       setError(parity.error);
@@ -188,7 +189,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     }
   };
 
-  const exportBlocker = !sourceFolder?'현재 데이터 원본이 필요합니다.':!selectedVersion || identity?.versionId!==selectedVersion.version_id?'저장된 플로우 버전을 선택하세요.':includeApprovals&&!approvalIds?'모든 모델의 검증된 승인 revision을 선택하세요.':effectiveParityMode==='single'&&!selectedImage?'동일성 확인 이미지를 선택하세요.':effectiveParityMode==='cohort'&&cohortImages.length<2?'고정 검증 이미지를 2장 이상 선택하세요.':null;
+  const exportBlocker = !sourceFolder?'현재 데이터 원본이 필요합니다.':!selectedVersion || identity?.versionId!==selectedVersion.version_id?'저장된 플로우 버전을 선택하세요.':includeApprovals&&!approvalIds?'모든 모델의 검증된 승인 revision을 선택하세요.':effectiveParityMode==='single'&&!selectedImage?'동일성 확인 이미지를 선택하세요.':effectiveParityMode==='cohort'&&cohortBlocker?cohortBlocker:effectiveParityMode==='cohort'&&cohortImages.length<2?'고정 검증 이미지를 2장 이상 선택하세요.':null;
   return <section id="workflow-package" tabIndex={-1} className="rounded-lg border border-[#344255] bg-[#151E2B] p-5" aria-label="전체 검사 플로우 패키지">
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#344255] pb-4">
       <div className="flex items-start gap-3">
@@ -270,7 +271,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       </label>
       {exportBlocker&&<div className="text-xs text-amber-200"><p id="flow-export-reason">내보내기 보류: {exportBlocker}</p><button className="workspace-button mt-2" onClick={()=>void setStep(!sourceFolder?1:!selectedVersion?5:includeApprovals&&!approvalIds?4:6)}>{!sourceFolder?'데이터 원본 확인 (1단계)':!selectedVersion?'플로우 저장·평가 (5단계)':includeApprovals&&!approvalIds?'평가·승인 확인 (4단계)':'검증 이미지 선택 (6단계)'}</button></div>}
       <button type="button" aria-describedby={exportBlocker?'flow-export-reason':undefined} onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
-          || (effectiveParityMode === 'single' && !selectedImage) || (effectiveParityMode === 'cohort' && cohortImages.length < 2) || (includeApprovals && !approvalIds)}
+          || (effectiveParityMode === 'single' && !selectedImage) || (effectiveParityMode === 'cohort' && (Boolean(cohortBlocker) || cohortImages.length < 2)) || (includeApprovals && !approvalIds)}
         className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">
         {isExporting ? '패키지 생성·검증 중...' : '전체 플로우 내보내기'}
       </button>
@@ -310,37 +311,40 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       {effectiveParityMode === 'cohort' && cohortLibrary === 'available' && <div className="mt-2 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증된 데이터 버전 전체에서 선택</span>
-          <button type="button" onClick={() => { setCohortPicks([]); setCohortRefusal(''); }} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+          <button type="button" onClick={() => { cohort.clear(); setCohortRefusal(''); }} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
         </div>
-        {cohortPicks.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
+        {cohortPicks.length>0&&<ul aria-label="선택한 패키지 검증 이미지" className="flex flex-wrap gap-1">{cohortPicks.map(item=><li key={item.image_uuid}><button type="button" onClick={()=>cohort.remove(item.image_uuid)} className="rounded border border-sky-800 px-2 py-1 text-sky-200" title="선택 해제">{item.relative_path} ✕</button></li>)}</ul>}
+        {cohort.unresolved.length>0&&<div className="rounded border border-amber-800 bg-amber-950/20 p-2"><p className="text-amber-200">저장된 이미지 {cohort.unresolved.length}장의 확인이 필요합니다. 재선택하거나 빼기 전에는 비교 패키지를 만들 수 없습니다.</p><ul aria-label="확인이 필요한 패키지 검증 이미지" className="mt-2 flex flex-wrap gap-1">{cohort.unresolved.map(item=><li key={item.image_uuid}><button type="button" onClick={()=>cohort.remove(item.image_uuid)} className="rounded border border-amber-700 px-2 py-1 text-amber-200" title="저장 목록에서 빼기">{item.relative_path} · {parityUnresolvedReason(item.status)} ✕</button></li>)}</ul></div>}
+        {cohortPicks.length + cohort.unresolved.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
         {cohortRefusal && <p role="status" className="text-amber-300">{cohortRefusal}</p>}
         <div className="flex h-[320px] flex-col">
-          <ImageLibraryBrowser selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
+          <ImageLibraryBrowser key={cohort.token} selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
             onPick={(item) => {
               const picked = cohortPicks.some((pick) => pick.image_uuid === item.image_uuid);
               // a corrupt image cannot be compared; the click is answered instead of ignored
               setCohortRefusal(!picked && !item.valid ? `잘못된 이미지는 동일성 비교에 쓸 수 없습니다: ${item.relative_path}` : '');
-              setCohortPicks((current) => current.some((pick) => pick.image_uuid === item.image_uuid)
-                ? current.filter((pick) => pick.image_uuid !== item.image_uuid)
-                : current.length >= MAX_PARITY_IMAGES || !item.valid ? current : [...current, item]);
+              if(cohort.ready)cohort.pick(item);
             }}
-            onUnavailable={() => setCohortLibrary('unavailable')} />
+            onUnavailable={cohort.unavailable} />
         </div>
       </div>}
       {effectiveParityMode === 'cohort' && cohortLibrary === 'unavailable' && <div className="mt-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장)</span>
-          <button type="button" onClick={() => setCohortPaths(images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}
+          <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증 버전 없음: 처음 32장 목록을 경로로 기억</span>
+          <button type="button" onClick={() => cohort.pathsChange(() => images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}
             className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">목록 전체</button>
-          <button type="button" onClick={() => setCohortPaths([])} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+          <button type="button" onClick={() => cohort.clear()} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
         </div>
+        {unresolvedPaths.length>0&&<div className="mt-2 text-amber-200"><p>목록 밖 저장 경로는 확인 후 빼거나 데이터 버전을 검증해 다시 선택하세요.</p><ul aria-label="목록 밖 패키지 검증 경로">{unresolvedPaths.map(path=><li key={path}><button type="button" className="underline" onClick={()=>cohort.pathsChange(rows=>rows.filter(row=>row!==path))}>{path} ✕</button></li>)}</ul></div>}
         <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto sm:grid-cols-2">
           {images.map((item) => <li key={item.file_path}><label className="flex min-w-0 items-center gap-1.5">
-            <input type="checkbox" checked={cohortPaths.includes(item.file_path)} onChange={() => setCohortPaths((current) => toggleCohort(current, item.file_path))}
+            <input type="checkbox" checked={cohortPaths.includes(item.file_path)} onChange={() => cohort.pathsChange((current) => toggleCohort(current, item.file_path))}
               className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
             <span className="truncate">{item.file_name}</span></label></li>)}
         </ul>
       </div>}
+      {effectiveParityMode==='cohort'&&!cohort.ready&&!cohort.error&&<p role="status" className="mt-2 text-slate-400">저장된 검증 이미지 선택을 확인하고 있습니다.</p>}
+      {cohort.error&&<p role="alert" className="mt-2 text-amber-300">{cohort.error} <button type="button" onClick={cohort.retry} className="underline">선택 다시 확인</button></p>}
       {effectiveParityMode === 'single' && <p className="mt-2 text-amber-300">한 장 CPU 확인은 호환용 제한 검증이며 여러 장·대상 장치 수락 근거로 쓰이지 않습니다.</p>}
     </fieldset>
     {!canVerify && <p role="status" className="mt-2 text-xs text-amber-300">선택한 Edge 대상과 현재 앱의 OS/CPU가 다르거나 현재 대상 정보가 없습니다. 이미지 결과 비교는 대상 장비에서 실행하세요.</p>}

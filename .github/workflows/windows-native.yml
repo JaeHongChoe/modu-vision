@@ -48,6 +48,8 @@ jobs:
       - name: Windows context, storage, and recovery checks
         run: >-
           python -m pytest -q --junitxml=ci-pytest.xml
+          backend/tests/test_flow_class_save_validation.py
+          backend/tests/test_source_mask_annotations.py
           backend/tests/test_service_s0_06.py
           backend/tests/test_service_s0_08.py
           backend/tests/test_service_s1_01.py

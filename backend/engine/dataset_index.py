@@ -464,7 +464,7 @@ class DatasetIndex:
             return overlay_root is not None and (
                 dataset_annotation_dir(path.parent, Path(overlay_root), use_scope=False) / f'{path.stem}.json').is_file()
 
-        scanner = SourceAnnotationScanner(source, follow_links=follow_links)
+        scanner = SourceAnnotationScanner(source, follow_links=follow_links, task=task)
         manifest = hashlib.sha256()
         rows, cache_rows, touched, notes = [], [], [], []
         counts = {'images': 0, 'valid': 0, 'reused': 0, 'annotated': 0, 'annotation_errors': 0, 'notes': 0}
