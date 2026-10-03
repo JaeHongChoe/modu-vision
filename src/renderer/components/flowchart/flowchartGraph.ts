@@ -224,14 +224,17 @@ export type FlowModelVocabulary = { job_id: string; class_names?: string[]; clas
  *  without background 0; empty when unknown or when two upstream models disagree. */
 export function nodeClassChoices(pipeline:FlowchartPipeline,nodeId:string,models:FlowModelVocabulary[]):{id:number;name:string}[]{
   const own=pipeline.nodes.find(node=>node.id===nodeId)?.data.model_job_id;
-  const jobs=new Set<string>();const visited=new Set<string>();
+  const jobs=new Set<string>();const visited=new Set<string>();let unbound=false;
   const visit=(id:string)=>{
     if(visited.has(id))return;visited.add(id);
     const node=pipeline.nodes.find(row=>row.id===id);
     if(node?.data.model_job_id){jobs.add(node.data.model_job_id);return;}
+    // The nearest model node decides the classes: one without its model yet has no vocabulary (never a model above it).
+    if(node&&modelTypes.includes(node.data.node_type as FlowNodeType)){unbound=true;return;}
     pipeline.edges.filter(edge=>edge.target===id).forEach(edge=>visit(edge.source));
   };
   if(own)jobs.add(own);else visit(nodeId);
+  if(unbound)return [];
   const vocabulary=new Map<number,string>();
   for(const job of jobs){
     const model=models.find(row=>row.job_id===job);
@@ -338,7 +341,7 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
         if (names && !names.includes(wanted)) {
           return names.includes(wanted.trim())
             ? `연결 조건 클래스 '${wanted}'의 앞뒤 공백을 지우세요. 실행 시 클래스 이름은 공백까지 그대로 비교됩니다.`
-            : `연결 조건 클래스 '${wanted}': ${source?.data.label || edge.source} 모델에 없는 이름입니다. 모델 클래스: ${names.join(', ')}`;
+            : `연결 조건 클래스 '${wanted}': ${source?.data.label?.trim() || edge.source} 모델에 없는 이름입니다. 모델 클래스: ${names.join(', ')}`;
         }
       }
       const from = nodes.get(edge.source)?.data.node_type;

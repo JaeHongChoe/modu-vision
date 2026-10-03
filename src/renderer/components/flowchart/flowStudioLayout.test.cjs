@@ -37,3 +37,16 @@ test('toolbar, resource, state, input and error rows retain natural height witho
  const tree=editor();const rows=[...children(tree),...children(tree).filter(node=>node.type==='div'&&node.props.hidden!==undefined).flatMap(children)].filter(node=>typeof node.type==='string'&&node.type==='div'&&has(node,'border-b'));
  assert.ok(rows.length>=5,'toolbar/resources/version/input/error regions are rendered');for(const row of rows)assert.ok(has(row,'shrink-0'),`fixed region can shrink: ${row.props.className}`);
 });
+test('recipes and example templates stay closed while the flow is still opening (its model check and binding)',()=>{
+ const tree=editor();
+ const all=node=>[node,...children(node).flatMap(all)];
+ const recipes=all(tree).find(node=>node.props['aria-label']==='목적 레시피');assert.ok(recipes,'the recipe list is rendered');
+ const buttons=all(recipes).filter(node=>node.type==='button');assert.ok(buttons.length>0);
+ // The first render is before the opening check finished: a recipe adopted now would be refused when the check binds.
+ for(const button of buttons)assert.equal(button.props.disabled,true,'a recipe opened during the check is refused at adoption');
+ const templates=all(tree).filter(node=>node.type==='button'&&String(node.props.onClick).includes('handleExampleTemplate'));
+ assert.ok(templates.length===2&&templates.every(button=>button.props.disabled===true),'example templates too');
+ const menu=all(tree).find(node=>node.type==='details'&&all(node).some(child=>child.type==='summary'&&String(child.props.children).includes('새 플로우')));
+ assert.ok(menu,'the new-flow menu is rendered');const items=all(menu).filter(node=>node.type==='button');
+ assert.ok(items.length>=7&&items.every(button=>button.props.disabled===true),`every new-flow item is held (${items.length})`);
+});

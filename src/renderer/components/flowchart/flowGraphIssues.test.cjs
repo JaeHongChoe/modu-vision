@@ -193,3 +193,17 @@ test('S2-05 review: class names are compared exactly as the engine does, and a m
  unbound.nodes[2].data.model_job_id='job_seg';
  assert.ok((graph.flowIssuesByTarget(unbound,[...detector,...catalog]).nodes.get('seg')||[]).some(message=>/없는 클래스 ID: 3\. 선택 가능한 클래스: 1 scratch$/.test(message)),'a bound node is judged by its own model');
 });
+test('S2-05 review 2: the nearest model node decides the classes, and a blank label is named by the id',()=>{
+ const pipeline={nodes:[{id:'det',data:{node_type:'detection_crop',model_job_id:'job_det'}},{id:'seg',data:{node_type:'inspection',task:'segmentation'}},{id:'blob',data:{node_type:'blob_measure'}}],
+  edges:[{source:'det',target:'seg'},{source:'seg',target:'blob'}]};
+ const models=[{job_id:'job_det',class_names:['chip','pad'],class_ids:[1,2]},{job_id:'job_seg',class_names:['background','scratch'],class_ids:[0,1]}];
+ assert.deepEqual(graph.nodeClassChoices(pipeline,'blob',models),[],'a Blob behind an unbound segmentation node gets no detector classes');
+ assert.deepEqual(graph.nodeClassChoices(pipeline,'seg',models),[],'nor does the unbound node itself');
+ pipeline.nodes[1].data.model_job_id='job_seg';
+ assert.deepEqual(graph.nodeClassChoices(pipeline,'blob',models),[{id:1,name:'scratch'}],'bound: the segmentation model decides');
+ const behindDetector={nodes:[{id:'seg2',data:{node_type:'inspection',task:'segmentation',model_job_id:'job_seg'}},{id:'det2',data:{node_type:'detection_crop'}},{id:'blob2',data:{node_type:'blob_measure'}}],edges:[{source:'seg2',target:'det2'},{source:'det2',target:'blob2'}]};
+ assert.deepEqual(graph.nodeClassChoices(behindDetector,'blob2',models),[],'an unbound detector stops the walk too');
+ const catalog=[{job_id:'job_cls',class_names:['OK','NG'],class_ids:[0,1]}];
+ const flow=valid();flow.nodes[2].data.model_job_id='job_cls';flow.nodes[2].data.label='   ';flow.edges[3]={...flow.edges[3],predicate:{kind:'class',operator:'present',class_name:'Crack'}};
+ assert.ok((graph.flowIssuesByTarget(flow,catalog).edges.get('e4')||[]).some(message=>/'Crack': cls 모델에 없는 이름입니다/.test(message)));
+});

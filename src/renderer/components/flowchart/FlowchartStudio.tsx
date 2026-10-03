@@ -293,10 +293,15 @@ export const FlowchartStudio: React.FC = () => {
         ? singleModelAutoBinding(result.pipeline, task, result.verifiedJobId)
         : null;
       if (binding) {
+        const loadedModel = result.pipeline.nodes.find((node) => node.id === binding.nodeId)?.data.model_job_id;
         const catalog = await api.flowchart.modelCatalog(folderPath!);
         if (!isCurrent()) return;
-        const model = catalog.models.find(row=>row.job_id===binding.modelJobId);
-        updateNodeData(binding.nodeId, model ? modelScoreBinding(model) : {model_job_id:binding.modelJobId,score_spec:undefined,threshold:.5});
+        // A model chosen while the catalog was read (by the user, a hand-off or another opened flow) is never overwritten.
+        const shownModel = useFlowchartStore.getState().pipeline?.nodes.find((node) => node.id === binding.nodeId)?.data.model_job_id;
+        if (shownModel === loadedModel) {
+          const model = catalog.models.find(row=>row.job_id===binding.modelJobId);
+          updateNodeData(binding.nodeId, model ? modelScoreBinding(model) : {model_job_id:binding.modelJobId,score_spec:undefined,threshold:.5});
+        }
       }
       setZoomScale(null);
       setModelCheck({ status: 'ready' });
@@ -436,8 +441,11 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(()=>{setActiveTab('edit');recipeToken.current++;setRecipe(null);setEvaluationReceipt(null);},[scopeKey]);
   useEffect(()=>{approvalRequest.current++;setApproval(null);setApprovalError('');setApprovalBusy(false);},[scopeKey,selectedVersionId,semanticKey]);
   const closeRecipe=()=>{recipeToken.current++;setRecipe(null);};
+  // While the flow opens (load, model check and the completed model's automatic binding) the graph is still about to
+  // change; a recipe or template opened then would be refused at adoption, so neither opens until the check ends.
+  const flowOpening=modelCheck.status==='checking';
   const openRecipe=(kind:FlowRecipeKind)=>{
-    const live=useFlowchartStore.getState();if(live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
+    const live=useFlowchartStore.getState();if(flowOpening||live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
     if(!live.pipeline){setEditorError('현재 플로우를 불러온 뒤 레시피를 적용하세요.');return;}
     setRecipe({preview:createFlowRecipe(kind,task),scope:recipeScope(),graph:live.pipeline,token:++recipeToken.current});
   };
@@ -456,7 +464,7 @@ export const FlowchartStudio: React.FC = () => {
   const handleDetectorRoi=()=>openRecipe('detector');
   const handleFixedRoi=()=>openRecipe('fixed');
   const handleExampleTemplate=async(kind:'chain'|'conditional')=>{
-    const live=useFlowchartStore.getState();if(live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
+    const live=useFlowchartStore.getState();if(flowOpening||live.isRunning||live.isSaving||live.isLoading||useProjectStore.getState().isProjectBusy)return;
     const captured=recipeScope(),graph=live.pipeline,token=++recipeToken.current;
     try{const preview=await (kind==='chain'?api.flowchart.getFiveModelChainTemplate():api.flowchart.getConditionalInspectionTemplate());
       if(token!==recipeToken.current||captured!==recipeScope()||graph!==useFlowchartStore.getState().pipeline)return;
@@ -910,7 +918,7 @@ export const FlowchartStudio: React.FC = () => {
           {savedVersions.length > 0 && <label className="ml-2 flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
             저장 버전
             <select aria-label="저장 버전" value={selectedVersionId} onChange={(event) => openSavedVersion(event.target.value)}
-              disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
               className="max-w-[220px] rounded border border-[#364357] bg-[#1A212E] px-2 py-1 text-xs text-slate-100 disabled:opacity-50">
               <option value="">버전 선택</option>
               {savedVersions.map((version) => <option key={version.version_id} value={version.version_id}>
@@ -935,20 +943,20 @@ export const FlowchartStudio: React.FC = () => {
             </summary>
             <div className="absolute right-0 top-full mt-2 grid w-64 gap-1 rounded-lg border border-[#3B4B60] bg-[#192333] p-2 shadow-xl">
               <span className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-400">기본</span>
-              <button onClick={handleSingleModel} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              <button onClick={handleSingleModel} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">
                 {task === 'classification' ? '원본 이미지 분류' : task === 'anomaly' ? '원본 이미지 이상 탐지' : task === 'detection' ? '결함 검출' : '원본 타일 분할'}
               </button>
-              <button onClick={handleDetectorRoi} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              <button onClick={handleDetectorRoi} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">검출 ROI 검사</button>
-              <button onClick={handleFixedRoi} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              <button onClick={handleFixedRoi} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-sky-100 hover:bg-[#293B51] disabled:opacity-50">고정 ROI 검사 · 원본 픽셀 좌표</button>
-              <button onClick={()=>openRecipe('rotation')} disabled={isLoading||isSaving||isRunning} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51]">학습 회전 → OCR·검사</button>
-              <button onClick={()=>openRecipe('multi')} disabled={isLoading||isSaving||isRunning} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51]">전처리 → 다중 모델 → 집계</button>
+              <button onClick={()=>openRecipe('rotation')} disabled={flowOpening||isLoading||isSaving||isRunning||isVerifyingAction} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">학습 회전 → OCR·검사</button>
+              <button onClick={()=>openRecipe('multi')} disabled={flowOpening||isLoading||isSaving||isRunning||isVerifyingAction} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">전처리 → 다중 모델 → 집계</button>
               <span className="mt-1 border-t border-[#344255] px-2 pt-2 text-xs font-bold uppercase tracking-wider text-slate-400">복합 검사 예시</span>
-              <button onClick={() => handleExampleTemplate('chain')} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              <button onClick={() => handleExampleTemplate('chain')} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">5개 모델 연속 검사</button>
-              <button onClick={() => handleExampleTemplate('conditional')} disabled={isLoading || isSaving || isRunning || isVerifyingAction}
+              <button onClick={() => handleExampleTemplate('conditional')} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
                 className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">조건 분기 검사</button>
             </div>
           </details>
@@ -964,7 +972,7 @@ export const FlowchartStudio: React.FC = () => {
 
       </div>
       {modelHandoff&&!offeredModel&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`&&!modelCatalogLoading&&<div role="alert" className="border-b border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">선택한 완료 모델이 현재 프로젝트·정답 버전의 모델 목록에 없습니다. 학습 화면에서 출처를 확인하세요.<button className="ml-3 underline" onClick={dismissModelHandoff}>선택 닫기</button></div>}
-      {offeredModel&&<section aria-label="선택 모델 플로우 연결" className="shrink-0 border-b border-cyan-800 bg-cyan-950/30 p-3 text-sm text-slate-200"><strong>{offeredModel.label} · 선택한 완료 모델</strong><p className="mt-1 text-slate-400">기존 연결을 유지하며 모델을 추가하거나 호환 노드에 지정합니다. 새 노드는 연결선을 직접 지정하세요.</p><div className="mt-2 flex flex-wrap gap-2"><select aria-label="선택 모델 연결 대상" value={handoffNode} onChange={event=>setHandoffNode(event.target.value)} className="rounded border border-slate-600 bg-slate-950 p-2"><option value="">새 모델 노드 추가</option>{pipeline?.nodes.filter(node=>compatibleModelNode(node,offeredModel)).map(node=><option key={node.id} value={node.id}>{node.data.label}</option>)}</select><button disabled={!pipeline||isRunning||isSaving||isVerifyingAction} onClick={()=>void applyModelHandoff()} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">선택 모델 연결</button><button onClick={dismissModelHandoff} className="rounded border border-slate-600 px-3 py-2">선택 닫기</button></div></section>}
+      {offeredModel&&<section aria-label="선택 모델 플로우 연결" className="shrink-0 border-b border-cyan-800 bg-cyan-950/30 p-3 text-sm text-slate-200"><strong>{offeredModel.label} · 선택한 완료 모델</strong><p className="mt-1 text-slate-400">기존 연결을 유지하며 모델을 추가하거나 호환 노드에 지정합니다. 새 노드는 연결선을 직접 지정하세요.</p><div className="mt-2 flex flex-wrap gap-2"><select aria-label="선택 모델 연결 대상" value={handoffNode} onChange={event=>setHandoffNode(event.target.value)} className="rounded border border-slate-600 bg-slate-950 p-2"><option value="">새 모델 노드 추가</option>{pipeline?.nodes.filter(node=>compatibleModelNode(node,offeredModel)).map(node=><option key={node.id} value={node.id}>{node.data.label}</option>)}</select><button disabled={!pipeline||flowOpening||isRunning||isSaving||isVerifyingAction} onClick={()=>void applyModelHandoff()} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">선택 모델 연결</button><button onClick={dismissModelHandoff} className="rounded border border-slate-600 px-3 py-2">선택 닫기</button></div></section>}
       {modelCheck.status !== 'ready' && (
         <div className="shrink-0 min-h-11 bg-amber-950/40 border-b border-amber-800 px-5 py-2 flex items-center justify-between gap-3 text-xs text-amber-200" role="status">
           <span>{modelCheck.status === 'checking'
@@ -1146,7 +1154,7 @@ export const FlowchartStudio: React.FC = () => {
             {([['fixed_roi','고정 ROI'],['patch_split','패치 분할'],['preprocess','영상 전처리'],['detection_crop','검출 모델'],['inspection','검사 모델'],['blob_measure','Blob 규칙'],['measurement','치수 측정'],['aggregate','결과 집계'],['output','판정 출력']] as const).map(([type,label])=>
               <button key={type} disabled={!pipeline||isRunning||isSaving||isLoading} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}
             <h3 className="pt-2 font-semibold text-slate-200">목적 레시피</h3>
-            <ul aria-label="목적 레시피" className="space-y-2">{FLOW_RECIPES.map(card=><li key={card.id}><button onClick={()=>openRecipe(card.id)} disabled={!pipeline||isRunning||isSaving||isLoading}
+            <ul aria-label="목적 레시피" className="space-y-2">{FLOW_RECIPES.map(card=><li key={card.id}><button onClick={()=>openRecipe(card.id)} disabled={!pipeline||flowOpening||isRunning||isSaving||isLoading}
               aria-describedby={`recipe-card-${card.id}`} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">
               <span className="block font-semibold text-slate-100">{card.title}</span><span id={`recipe-card-${card.id}`} className="block text-[11px] leading-snug text-slate-400">{card.description}</span></button></li>)}</ul>
             <p className="pt-2 text-slate-400 leading-relaxed">노드를 추가하고 출력 포트 → 입력 포트로 연결하세요. 내 템플릿은 아래에서 관리합니다.</p>
