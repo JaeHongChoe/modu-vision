@@ -33,17 +33,35 @@ test('package comparison choices survive reload, retain changed images and requi
     params: { source_dataset_path: workspace.dataset }, data: await template.json(),
   });
   expect(saved.ok()).toBe(true);
+  let releaseRestore!: () => void;
+  const restoreGate = new Promise<void>(resolve => { releaseRestore = resolve; });
+  let firstRestore = true;
+  await page.route('**/api/dataset/library/resolve', async route => {
+    if (firstRestore) { firstRestore = false; await restoreGate; }
+    await route.continue();
+  });
   await installDesktopHostShim(page, renderer.port);
   await page.goto(renderer.url);
-  const open = async () => {
-    await page.getByRole('button', { name: /06.*추론/ }).click();
+  const open = async (navigate = true) => {
+    if (navigate) await page.getByRole('button', { name: /06.*추론/ }).click();
     const panel = page.getByRole('region', { name: '전체 검사 플로우 패키지' });
     await expect(panel).toBeVisible();
     await panel.getByLabel('고정 이미지 여러 장', { exact: true }).check();
     await panel.getByLabel('현장 서비스에 적용할 승인 포함 패키지로 만들기', { exact: true }).uncheck();
     return panel;
   };
-  let panel = await open();
+  await page.getByRole('button', { name: /06.*추론/ }).click();
+  const waiting = page.getByRole('region', { name: '전체 검사 플로우 패키지' });
+  try {
+    await expect(waiting.getByLabel('고정 이미지 여러 장', { exact: true })).toBeEnabled();
+    await expect(waiting.getByRole('button', { name: '선택 해제', exact: true })).toBeDisabled();
+    await waiting.getByLabel('한 장 (제한된 확인)', { exact: true }).check();
+    await expect(waiting).toContainText('한 장 CPU 확인');
+    await waiting.getByLabel('검증 안 함', { exact: true }).check();
+    await waiting.getByLabel('고정 이미지 여러 장', { exact: true }).check();
+    await expect(waiting.getByRole('list', { name: '데이터 버전 이미지' })).toHaveCount(0);
+  } finally { releaseRestore(); }
+  let panel = await open(false);
   const chosen = () => panel.getByRole('list', { name: '선택한 패키지 검증 이미지' });
   const grid = () => panel.getByRole('list', { name: '데이터 버전 이미지' });
   await expect(grid().getByRole('listitem')).toHaveCount(2);
@@ -62,8 +80,7 @@ test('package comparison choices survive reload, retain changed images and requi
   const ng = workspace.images.find(image => image.label === 'ng')!;
   fs.copyFileSync(ng.path, ok.path);
   await acceptSource(page.request, renderer.origin);
-  await page.reload();
-  panel = await open();
+  await panel.getByRole('button', { name: '저장본 새로고침', exact: true }).click();
   const pending = () => panel.getByRole('list', { name: '확인이 필요한 패키지 검증 이미지' });
   await expect(chosen().getByRole('listitem')).toHaveCount(1);
   await expect(pending()).toContainText('ok/sample-ok.png · 내용 바뀜');

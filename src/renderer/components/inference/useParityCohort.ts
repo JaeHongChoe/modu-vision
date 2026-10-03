@@ -4,7 +4,7 @@ import type {ImageMeta} from '../../types';
 import {defaultCohort} from './flowPackageRelease';
 import {parityCohortStorageKey,pickParityImage,readParityCohort,readParityPaths,resolveParityCohort,type ParityPick,type UnresolvedParityPick} from './parityCohort';
 
-interface Scope {projectId?:string;projectDir:string|null;source:string;task:string;labelset?:string;deliveryKey:string;legacyImages:ImageMeta[];legacyReady?:boolean}
+interface Scope {projectId?:string;projectDir:string|null;source:string;task:string;labelset?:string;deliveryKey:string;legacyImages:ImageMeta[];legacyReady?:boolean;refreshKey?:number}
 interface State {token:string;phase:'loading'|'ready'|'failed';mode:'available'|'unavailable';picks:ParityPick[];unresolved:UnresolvedParityPick[];paths:string[];error:string}
 const empty=(token:string):State=>({token,phase:'loading',mode:'available',picks:[],unresolved:[],paths:[],error:''});
 /** Browser-local convenience selection. Identity resolution is mandatory before any saved image becomes executable. */
@@ -13,11 +13,17 @@ export function useParityCohort(scope:Scope){
   useEffect(()=>subscribeProjectContext(setAuthority),[]);
   const generation=getProjectContextGeneration();
   const key=scope.projectId&&scope.source&&(!authority||authority.project_id===scope.projectId)?parityCohortStorageKey({backend:getApiPersistenceIdentity(),workspace:authority?.workspace_id||'local',actor:authority?.actor_id||'local',project:scope.projectId,projectDir:scope.projectDir||'',source:scope.source,task:scope.task,labelset:scope.labelset||'default'}):null;
-  const token=JSON.stringify([key,scope.deliveryKey,generation]);
+  const token=JSON.stringify([key,scope.deliveryKey,generation,scope.refreshKey??0]);
   const live=useRef(token);live.current=token;
   const current=()=>live.current===token&&getProjectContextGeneration()===generation;
   const [attempt,setAttempt]=useState(0),[state,setState]=useState<State>(()=>empty(token));
   const legacySignature=JSON.stringify(scope.legacyImages.map(row=>row.file_path));
+  const latestLegacy=useRef({ready:scope.legacyReady,images:scope.legacyImages});
+  latestLegacy.current={ready:scope.legacyReady,images:scope.legacyImages};
+  const legacyPaths=()=>{
+    const raw=localStorage.getItem(key+':paths');
+    return raw===null?defaultCohort(latestLegacy.current.images.map(row=>row.file_path)):readParityPaths(raw,true);
+  };
   useEffect(()=>{
     let active=true;setState(empty(token));if(!key)return;
     const valid=()=>active&&current();
@@ -29,15 +35,20 @@ export function useParityCohort(scope:Scope){
           if(valid())setState({...empty(token),phase:'ready',...resolveParityCohort(saved,answer.results)});
         }catch(cause){
           if((cause as {status?:number}).status!==409)throw cause;
-          if(!valid()||scope.legacyReady===false)return;
-          const raw=localStorage.getItem(key+':paths');
-          const paths=raw===null?defaultCohort(scope.legacyImages.map(row=>row.file_path)):readParityPaths(raw,true);
-          setState({...empty(token),phase:'ready',mode:'unavailable',paths});
+          if(!valid())return;
+          if(latestLegacy.current.ready===false)setState({...empty(token),mode:'unavailable'});
+          else setState({...empty(token),phase:'ready',mode:'unavailable',paths:legacyPaths()});
         }
       }catch(cause){if(valid())setState({...empty(token),phase:'failed',error:`저장된 검증 이미지 선택을 확인하지 못했습니다: ${cause instanceof Error?cause.message:String(cause)}`});}
     };
     void restore();return()=>{active=false;};
-  },[token,attempt,legacySignature,scope.legacyReady]);
+  },[token,attempt]);
+  // A late first-32 listing can finish the fallback, but must never restart identity resolution.
+  useEffect(()=>{
+    if(!key||state.token!==token||state.phase!=='loading'||state.mode!=='unavailable'||scope.legacyReady===false||!current())return;
+    try{const paths=legacyPaths();setState(previous=>previous.token===token&&previous.phase==='loading'&&previous.mode==='unavailable'?{...previous,phase:'ready',paths}:previous);}
+    catch(cause){setState(previous=>previous.token===token?{...previous,phase:'failed',error:`저장된 검증 이미지 선택을 확인하지 못했습니다: ${cause instanceof Error?cause.message:String(cause)}`}:previous);}
+  },[token,key,state.token,state.phase,state.mode,legacySignature,scope.legacyReady]);
   const visible=state.token===token?state:empty(token);
   useEffect(()=>{
     if(!key||state.token!==token||state.phase!=='ready'||!current())return;

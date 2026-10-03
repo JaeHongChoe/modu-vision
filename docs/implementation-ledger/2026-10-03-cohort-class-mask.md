@@ -8,6 +8,7 @@ This records bounded follow-ups to S2-07, S2-05 and S3-01. The three parent task
 - Changed, missing, moved and unreadable images remain visible. A comparison package is blocked until they are removed or explicitly selected again. Late responses and actions from a previous authority cannot enter the next scope.
 - When no accepted index exists, paths have an independent storage key and the UI states the first-32-image limitation. Explicit empty choices remain empty after reopening.
 - Failed network reads or malformed saved data preserve the original selection bytes. An explicit clear action provides recovery; restoration never silently overwrites damaged storage.
+- A delayed initial library listing cannot reset new choices. Restore loading blocks cohort editing while leaving single-image and no-comparison modes available. Explicit saved refresh rechecks the selected identities against the accepted revision.
 - Browser QA uses the actual renderer and an owned backend with synthetic source images: choose, reload, replace a source image, accept a new revision, preserve the warning through another reload, reselect, clear and reopen, and switch between projects.
 
 ## S2-05 save-time class rules
@@ -28,6 +29,6 @@ This records bounded follow-ups to S2-07, S2-05 and S3-01. The three parent task
 
 ## Verification and remaining scope
 
-The development checks ran on macOS with CPU fixtures: 408 affected backend tests, 426 renderer tests, TypeScript checks, renderer/main build and the package-cohort browser scenario. The new backend tests are registered in both CPU CI workflows. Local runs of a Windows-selected test list are not native Windows evidence.
+The development checks ran on macOS with CPU fixtures: 408 affected backend tests, 431 renderer tests, TypeScript checks and renderer/main build. The Linux CI-selected list passed 690 tests with 2 existing skips; the Windows-selected list passed 467 tests with 2 existing skips on this Mac (the lists overlap). Three real-backend browser scenarios passed, including the package-cohort scenario with delayed restore and explicit refresh. The new backend tests are registered in both CPU CI workflows. Local runs of a Windows-selected test list are not native Windows evidence.
 
 This slice does not establish GPU model quality, real-device training, Windows installation acceptance, field operation, cross-browser selection sync or completion of the full service plan. Package selections remain a local convenience; accepted data revisions and execution receipts retain their existing authority.

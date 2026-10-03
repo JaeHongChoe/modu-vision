@@ -1489,6 +1489,12 @@
      "result": "28145c7: while step 05 opens (loading the flow and binding a just-completed model), recipes, templates, the saved-version select and the hand-off wait, and the binding never replaces a model chosen meanwhile (an app-flow QA run had a recipe refused at adoption in that window, 3 of 3 runs); class choices and checks stop at the nearest model node; a blank source label is named by its id. Independent review: s205f2b ACCEPT WITH FIXES (P2 version select and hand-off in the window), s205f2c ACCEPT",
      "scope": "frozen tree (0715df1 + 5 files): flow tests 45, renderer 418, typecheck, browser e2e 18 (S2-05, S2-04, S0-05, S0-08), Linux CI list 595 passed 2 skipped, Windows list 372 passed 2 skipped (run on this Mac); the whole browser suite on the working tree passed 51 (1 gated skip)",
      "platform": "macOS development; renderer only"
+    },
+    {
+     "kind": "parallel-slice-local-verified",
+     "result": "afddfcf: the save API refuses predicate class names and segmentation/Blob class IDs or channel orders not recorded by a completed, source-matched connected model, before any recipe/version/active file write; unknown legacy vocabulary and unbound drafts remain supported. Independent review reproduced and closed inconsistent empty aliases and non-contiguous segmentation channel IDs.",
+     "scope": "46 new save-refusal cases; 408 affected backend cases. Standard checkpoint bytes are not loaded for class metadata validation.",
+     "platform": "macOS CPU; Windows native and GPU acceptance pending"
     }
    ],
    "file_actions": {
@@ -1522,7 +1528,6 @@
     "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
     "older behaviour from the follow-up review: an id-less connection cannot be deleted or edited from its wire; two connections with one id are both marked and the banner jumps to the first; a node with no label still reads 'undefined' in three screen-reader labels",
     "class check and opening-window review P3s: the binding guard, the held version select and hand-off are not covered by a test; a threshold set on a still-unbound node during the opening window is reset by the binding; an empty requested segmentation class list being judged; the studio catalog wiring and the datalist are covered only by the gated app-flow QA",
-    "a backend refusal of unknown predicate classes at save time (defence in depth)",
     "Windows native and hosted evidence"
    ]
   },
@@ -1615,6 +1620,12 @@
      "result": "c481021: a fixed flow comparison refuses a damaged image (the image library marks it invalid) and filters to valid images by default, keeping an existing valid selection; clearing the package comparison selection also clears the earlier refusal notice; browser scenarios: a damaged image refused with a valid one chosen and restored after restart, a moved image checked again, a deleted saved image kept and explained",
      "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
      "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
+    },
+    {
+     "kind": "parallel-slice-local-verified",
+     "result": "afddfcf plus its loading follow-up: package comparison choices persist in a backend/workspace/actor/project/source/task/label-set namespace as UUID and SHA-256; changed/missing/moved/unreadable choices remain unresolved until explicit removal or reselection. Invalid storage remains recoverable without automatic overwrite. Legacy paths have a separate key. Late first-32 listings do not reset identity picks; explicit saved refresh rechecks identities and independent modes remain available during restore.",
+     "scope": "Actual renderer with an isolated backend and synthetic images: delayed initial restore, mode changes, selection/reload, changed source revision and explicit refresh, warning/reload, reselection, clear/reload and project separation. No export or GPU run is claimed by this scenario.",
+     "platform": "macOS browser with desktop host shim; cross-browser synchronization and native Windows pending"
     }
    ],
    "file_actions": {
@@ -1639,7 +1650,7 @@
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
     "a failed legacy listing has no retry within the same context; the panel tests' React stub runs no effect cleanup, so the late-answer guard and the loading resets are verified by the reviewer's cleanup-aware probe only",
-    "operator and package cohort selections stay in memory; since c481021 a damaged image cannot be chosen for a fixed comparison (the picker defaults to valid images) and clearing the package cohort clears its earlier refusal notice",
+    "operator inspection image selections stay in memory; package comparison choices now persist locally, with unresolved identities retained and comparison blocked until explicit reselection or removal",
     "the flowchart header keeps the previous path until the picker is confirmed",
     "Windows native and hosted evidence for these commits pending"
    ]
@@ -1862,6 +1873,12 @@
      "result": "c481021: a COCO document in a sub-folder binds its relative image paths from its own folder, the same way in the importer and the dataset index; a path that would resolve to different real images is refused as ambiguous; an internal link to the same file is kept; an annotation document read from outside the source is refused",
      "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
      "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
+    },
+    {
+     "kind": "parallel-slice-local-verified",
+     "result": "afddfcf: segmentation index revisions bind trainer-selected grayscale PNG masks and optional class maps by source-relative path and SHA-256; native dimensions/channels, naming and containment are checked using the reject/exclude policy. LabelMe/COCO/YOLO retain precedence, flat/split layouts use trainer pairing including masks/train fallback. Background-only masks add no foreground labels or OK verdict. Classification/detection do not acquire raster mask bindings.",
+     "scope": "33 new mask cases and affected index/annotation suites; source files unchanged. Palette/color masks remain in the explicit mask exchange path. Independent review reproduced and closed the flat-image trainer fallback gap.",
+     "platform": "macOS CPU; Windows native and GPU acceptance pending"
     }
    ],
    "file_actions": {
@@ -1887,7 +1904,7 @@
    ],
    "remaining": [
     "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
-    "mask binding as source annotations; stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021)",
+    "stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021); palette/color source masks require the existing explicit mask exchange path",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
     "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
     "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"

@@ -35,3 +35,15 @@ test('damaged saved selections remain recoverable and cannot be silently overwri
  const f=fixture(async()=>{throw Object.assign(new Error('no revision'),{status:409});});
  try{const raw=JSON.stringify(['/s/a.png',3]);f.data.set(f.key+':paths',raw);f.render();await settle();assert.equal(f.render().ready,false);assert.equal(f.data.get(f.key+':paths'),raw);assert.equal(f.writes.length,0);}finally{f.close();}
 });
+test('a late legacy listing cannot restart an available identity restore or discard a new choice',async()=>{
+ let calls=0;const f=fixture(async saved=>{calls++;return {results:saved.map(row=>({...row,status:'found',current:{...row,valid:1},candidates:[]}))};});
+ try{f.args.legacyReady=false;f.render();await settle();let state=f.render();assert.equal(state.ready,true);state.pick(image('a'));f.render();f.args.legacyReady=true;f.args.legacyImages=[{file_path:'/s/a.png'}];f.render();await settle();state=f.render();assert.equal(calls,1);assert.equal(state.picks.length,1);}finally{f.close();}
+});
+test('an unavailable revision waits for legacy images without resetting the identity restore',async()=>{
+ let calls=0;const f=fixture(async()=>{calls++;throw Object.assign(new Error('no revision'),{status:409});});
+ try{f.args.legacyReady=false;f.render();await settle();assert.equal(f.render().ready,false);f.args.legacyReady=true;f.args.legacyImages=[{file_path:'/s/a.png'},{file_path:'/s/b.png'}];f.render();await settle();const state=f.render();assert.equal(state.ready,true);assert.equal(state.paths.length,2);assert.equal(calls,1);}finally{f.close();}
+});
+test('an explicit refresh rechecks saved identities and refuses callbacks from the earlier request',async()=>{
+ const pending=[];const f=fixture(saved=>new Promise(resolve=>pending.push({saved,resolve})));
+ try{f.data.set(f.key,JSON.stringify([image('a')]));f.render();pending[0].resolve({results:[{...image('a'),status:'found',current:image('a'),candidates:[]}]});await settle();const old=f.render();assert.equal(old.picks.length,1);f.args.refreshKey=1;assert.equal(f.render().ready,false);assert.equal(pending.length,2);old.pick(image('old'));assert.equal(f.render().picks.length,0);assert.equal(JSON.parse(f.data.get(f.key)).length,1);pending[1].resolve({results:[{...image('a'),status:'changed',current:image('a','b'.repeat(64)),candidates:[]}]});await settle();const next=f.render();assert.equal(next.picks.length,0);assert.equal(next.unresolved.length,1);}finally{f.close();}
+});

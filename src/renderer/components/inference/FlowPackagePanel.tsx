@@ -48,7 +48,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [failedExport, setFailedExport] = useState<{ packagePath?: string; mismatchedFields: string[]; status?: string } | null>(null);
   const [result, setResult] = useState<FlowExportResult | null>(null);
   useEffect(()=>{if(result?.package_path)setLibraryRefresh(value=>value+1);},[result?.package_path]);
-  const cohort=useParityCohort({projectId:project?.id,projectDir,source:sourceFolder,task,labelset:project?.active_labelset_id,deliveryKey,legacyImages:images,legacyReady:!isLoading});
+  const cohort=useParityCohort({projectId:project?.id,projectDir,source:sourceFolder,task,labelset:project?.active_labelset_id,deliveryKey,legacyImages:images,legacyReady:!isLoading,refreshKey});
   const cohortPicks=cohort.picks,cohortPaths=cohort.paths,cohortLibrary=cohort.mode;
   const unresolvedPaths=cohortPaths.filter(path=>!images.some(image=>image.file_path===path));
   const cohortBlocker=!cohort.ready?'저장된 검증 이미지 선택을 확인하고 있습니다.':cohort.unresolved.length||unresolvedPaths.length?'확인이 필요한 검증 이미지를 다시 선택하거나 목록에서 빼세요.':null;
@@ -311,34 +311,34 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       {effectiveParityMode === 'cohort' && cohortLibrary === 'available' && <div className="mt-2 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증된 데이터 버전 전체에서 선택</span>
-          <button type="button" onClick={() => { cohort.clear(); setCohortRefusal(''); }} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+          <button type="button" disabled={cohort.phase==='loading'} onClick={() => { cohort.clear(); setCohortRefusal(''); }} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348] disabled:opacity-50">선택 해제</button>
         </div>
         {cohortPicks.length>0&&<ul aria-label="선택한 패키지 검증 이미지" className="flex flex-wrap gap-1">{cohortPicks.map(item=><li key={item.image_uuid}><button type="button" onClick={()=>cohort.remove(item.image_uuid)} className="rounded border border-sky-800 px-2 py-1 text-sky-200" title="선택 해제">{item.relative_path} ✕</button></li>)}</ul>}
         {cohort.unresolved.length>0&&<div className="rounded border border-amber-800 bg-amber-950/20 p-2"><p className="text-amber-200">저장된 이미지 {cohort.unresolved.length}장의 확인이 필요합니다. 재선택하거나 빼기 전에는 비교 패키지를 만들 수 없습니다.</p><ul aria-label="확인이 필요한 패키지 검증 이미지" className="mt-2 flex flex-wrap gap-1">{cohort.unresolved.map(item=><li key={item.image_uuid}><button type="button" onClick={()=>cohort.remove(item.image_uuid)} className="rounded border border-amber-700 px-2 py-1 text-amber-200" title="저장 목록에서 빼기">{item.relative_path} · {parityUnresolvedReason(item.status)} ✕</button></li>)}</ul></div>}
         {cohortPicks.length + cohort.unresolved.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
         {cohortRefusal && <p role="status" className="text-amber-300">{cohortRefusal}</p>}
         <div className="flex h-[320px] flex-col">
-          <ImageLibraryBrowser key={cohort.token} selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
+          {cohort.ready&&<ImageLibraryBrowser key={cohort.token} selectedIds={new Set(cohortPicks.map((item) => item.image_uuid))} initialFilters={{ state: 'valid' }}
             onPick={(item) => {
               const picked = cohortPicks.some((pick) => pick.image_uuid === item.image_uuid);
               // a corrupt image cannot be compared; the click is answered instead of ignored
               setCohortRefusal(!picked && !item.valid ? `잘못된 이미지는 동일성 비교에 쓸 수 없습니다: ${item.relative_path}` : '');
               if(cohort.ready)cohort.pick(item);
             }}
-            onUnavailable={cohort.unavailable} />
+            onUnavailable={cohort.unavailable} />}
         </div>
       </div>}
       {effectiveParityMode === 'cohort' && cohortLibrary === 'unavailable' && <div className="mt-2">
         <div className="flex flex-wrap items-center gap-2">
           <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증 버전 없음: 처음 32장 목록을 경로로 기억</span>
-          <button type="button" onClick={() => cohort.pathsChange(() => images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}
+          <button type="button" disabled={!cohort.ready} onClick={() => cohort.pathsChange(() => images.slice(0, MAX_PARITY_IMAGES).map((item) => item.file_path))}
             className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">목록 전체</button>
-          <button type="button" onClick={() => cohort.clear()} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+          <button type="button" disabled={cohort.phase==='loading'} onClick={() => cohort.clear()} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348] disabled:opacity-50">선택 해제</button>
         </div>
         {unresolvedPaths.length>0&&<div className="mt-2 text-amber-200"><p>목록 밖 저장 경로는 확인 후 빼거나 데이터 버전을 검증해 다시 선택하세요.</p><ul aria-label="목록 밖 패키지 검증 경로">{unresolvedPaths.map(path=><li key={path}><button type="button" className="underline" onClick={()=>cohort.pathsChange(rows=>rows.filter(row=>row!==path))}>{path} ✕</button></li>)}</ul></div>}
         <ul className="mt-2 grid max-h-40 gap-1 overflow-y-auto sm:grid-cols-2">
           {images.map((item) => <li key={item.file_path}><label className="flex min-w-0 items-center gap-1.5">
-            <input type="checkbox" checked={cohortPaths.includes(item.file_path)} onChange={() => cohort.pathsChange((current) => toggleCohort(current, item.file_path))}
+            <input type="checkbox" disabled={!cohort.ready} checked={cohortPaths.includes(item.file_path)} onChange={() => cohort.pathsChange((current) => toggleCohort(current, item.file_path))}
               className="rounded border-[#455670] bg-[#0F1723] text-sky-500" />
             <span className="truncate">{item.file_name}</span></label></li>)}
         </ul>
