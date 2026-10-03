@@ -856,6 +856,12 @@
      "result": "79ffa03: this computer as a worker. GET /api/workers shows every family's train, evaluate, infer, export and search stage per device as verified, unverified, not installed or unsupported from the support decision; POST /api/workers/local/preflight runs a real preflight in an owned child process (tiny synthetic data, the production trainer, evaluator, inference and an exported flow package, nothing downloaded) and records each stage per runtime digest (Python, OS release, packages, CUDA build, cuDNN, Linux NVIDIA driver, app version, every backend source). A stage passes only on the requested device kind (strict device check; a trainer or inference fallback fails the stage) and export only when the package inspected the image with its trained model; evidence names the architecture checked (resnet18, padim, unet, yolo26n), and the model hub panel says the family default model and other export formats are not part of it. The child runs in its own run folder, holds the app-wide local compute reservation, exits when the app goes away or at its deadline, is stopped at shutdown, and its folders are swept. Independent review freeze 1 ACCEPT WITH FIXES (2 P1: child cwd in the installed app, device fallback; 6 P2), freeze 2 ACCEPT (8 P3)",
      "scope": "frozen tree (e7fce1c + 13 files): green 62 (S1-05, S0-06, S1-09), renderer 397, typecheck, browser e2e on the actual backend (CPU preflight from the hub moves classification to verified), Linux CI list 534 passed 2 skipped, Windows list 311 passed 2 skipped (run on this Mac); red: 13 of 26 backend and 1 of 3 renderer tests fail on freeze 1; test_service_s1_05.py and test_sqlite_schema.py join both CI lists. The author receipt's fallback test fell back to this Mac's MPS GPU (review N5; fixed in the follow-up)",
      "platform": "macOS CPU preflights only; no CUDA preflight, GPU server or native Windows run (the GPU server QA is on hold by the user)"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "4c838cc: a preflight refuses while a training of this app waits for the device; the reservation heartbeat survives a busy table; shutdown stops the preflight child within 3 s and releases its reservation; a preflight stopped by the quit records nothing, so earlier passes of the runtime stay verified; a run folder removed mid-run is a recorded failure; the busy state answers what acquire would (an expired reservation of a crashed app is not busy) and the panel refreshes while busy and after a refused start; the training refusal names a worker preflight; the fallback test trains on the CPU only. Independent review: s105f1 ACCEPT WITH FIXES (P2 expired reservation read as busy), s105f2 ACCEPT",
+     "scope": "frozen tree (3c1322d + 7 files): green 150 (S1-05, S0-06, S1-09, S1-04, S1-03), renderer 411, typecheck, browser e2e on the actual backend, Linux CI list 552 passed 2 skipped, Windows list 329 passed 2 skipped (run on this Mac); red: 4 of 35 fail on the s105f1 code",
+     "platform": "macOS CPU; no CUDA preflight or native Windows run (GPU work on hold by the user)"
     }
    ],
    "file_actions": {
@@ -880,7 +886,7 @@
    "proposed_test_file": "backend/tests/test_service_s1_05.py",
    "remaining": [
     "the verified state for a family's default architecture (DINOv3 and others) and for remote SSH/Docker workers; a real CUDA preflight on a GPU worker (on hold)",
-    "review P3s (freeze 2): a preflight could overtake a queued training (N1), the lease refusal message (N2), the reservation held up to 30 s after a quit (N3), a heartbeat that stops on a database error (N4), the fallback test used MPS (N5), the panel busy state read only on open (N6), a removed run folder ending as a recording error (N7), test gaps such as --exit-with-parent and --device reaching the child (N8) - fixed in the working tree, not yet reviewed",
+    "review P3s (follow-up freezes): a NULL remote/uncertain/expires lease row is read differently from acquire (no writer writes NULLs); a run that finished just before a quit is discarded as interrupted; the fence/uncertain/remote parts of the busy rule, the 3 s join bound and the panel reload after a refused click are untested; the lifespan test leaves the shutdown flag set; a lost reservation is only logged; the waiting-training state is not in the API; N1 across app processes",
     "older review P3s: verification per device kind, not per GPU; ONNX/onnxruntime/native exports are not preflighted; a preflight lost to a restart leaves no record; shared accounts: an owner (not an administrator) runs it, failure reasons can contain paths, the store lock is per process; run folders under Roaming on Windows",
     "HTTPS pull-worker transport, per-worker ACL, credential rotation, TLS/auth/trust gate",
     "the catalog device list is cached per process (the start check probes live)",
@@ -1165,6 +1171,12 @@
      "result": "6309f79: the freeze-2 review P3s fixed: a pull while a follow-up is queued joins it (reads never overlap); the app's catch-up (createCatchUp) retries a failed catch-up once after 5 s and then waits for the next connection; the catch-up re-reads the current job when it stops at its 10-round limit with more unread; a cursor-aware A-B-A server shows the discarded read loses nothing; a retired telemetry socket that opens late announces nothing; independent review ACCEPT (mutants: no follow-up join, cursor commit on a discarded pull, endless or missing retry, 0 ms delay, ignored reconnection, no-op refresh, missing round-limit re-read, missing onopen guard - each caught)",
      "scope": "frozen tree (7d788dc + 6 files): unit, renderer 394, typecheck, e2e service-s1-10, both CI pytest lists (Linux 361, Windows list 175 run on this Mac)",
      "platform": "hosted Windows run of 7d788dc passed every step (first full pass after the S1-01 fix); hosted Linux of 7d788dc failed only in the e2e step at service-s2-04.spec.ts:75 (a standing Linux-only failure since 2bc8fdc, tracked under S2-04)"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "670a789: each reconnection catch-up page announces its changed jobs (or a reset) to the panels; stale or empty pages announce nothing and a failing panel never stops the catch-up; an open Task Center reads its list at once on a change (the 2.5 s poll stays as the fallback). Independent review ACCEPT (P3s)",
+     "scope": "frozen tree (0715df1 + 5 files): unit 21, renderer 415, typecheck, e2e service-s1-10 (3), Linux CI list 595 passed 2 skipped, Windows list 372 passed 2 skipped (run on this Mac); red: the two slice-4 tests fail on main",
+     "platform": "macOS development; renderer only; no end-to-end reconnection into an open Task Center"
     }
    ],
    "file_actions": {
@@ -1190,7 +1202,7 @@
     "slice 3: OpenAPI-generated TypeScript client types and a schema drift check",
     "review P3s (follow-up): the retry test does not show a later failure in the same session is retried again after a failed retry; App's catch-up wiring is checked by source text, not by rendering App",
     "review P3s (recorded): global cursor positions reveal other projects' event counts and timing; reads take the ledger write lock through ledger_id(); the anchor covers (job, seq) only; raw payloads reach every project member; openLink returns false in a real browser; browser pickers explain themselves only in a tooltip",
-    "TaskCenter and other panels still poll; only the training store catches up on reconnection",
+    "since 670a789 an open Task Center reads its list at once when a reconnection catch-up reports changed jobs; other panels (inspection history, dataset imports, specialized workbenches) still only poll; review P3s: the unsubscribe on close or scope change is not tested, a throwing listener is tested only last, no coalescing of N pulls, async listeners must not reject",
     "Windows native evidence"
    ]
   },
@@ -1471,6 +1483,12 @@
      "result": "2115263: the flow editor flags, on the connection or node where it can be fixed, a branch condition on a class the source model does not record (it would never or always hold at run time), a Blob or segmentation class ID outside the connected model's classes, and a segmentation class order that differs from the checkpoint. Names are compared exactly as the engine compares them, with a hint when only surrounding spaces differ; the class input offers the source model's recorded names; a model node is judged only against its own model and a model without a recorded vocabulary is never judged. Independent review freeze 1 ACCEPT WITH FIXES (P2: trimmed comparison), freeze 2 ACCEPT; 22 of 28 reviewer mutants and all 5 author mutants caught",
      "scope": "frozen tree (be1f2a8 + 7 files): flow unit tests 40, renderer 396, typecheck, browser e2e 12 (S2-05 and S0-05 specs), Linux CI list 491 passed 2 skipped, Windows list 268 passed 2 skipped (run on this Mac)",
      "platform": "macOS development; renderer only; the studio's use of a real trained model's classes is not yet driven by an e2e (planned in the app-flow QA)"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "28145c7: while step 05 opens (loading the flow and binding a just-completed model), recipes, templates, the saved-version select and the hand-off wait, and the binding never replaces a model chosen meanwhile (an app-flow QA run had a recipe refused at adoption in that window, 3 of 3 runs); class choices and checks stop at the nearest model node; a blank source label is named by its id. Independent review: s205f2b ACCEPT WITH FIXES (P2 version select and hand-off in the window), s205f2c ACCEPT",
+     "scope": "frozen tree (0715df1 + 5 files): flow tests 45, renderer 418, typecheck, browser e2e 18 (S2-05, S2-04, S0-05, S0-08), Linux CI list 595 passed 2 skipped, Windows list 372 passed 2 skipped (run on this Mac); the whole browser suite on the working tree passed 51 (1 gated skip)",
+     "platform": "macOS development; renderer only"
     }
    ],
    "file_actions": {
@@ -1503,7 +1521,7 @@
     "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
     "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
     "older behaviour from the follow-up review: an id-less connection cannot be deleted or edited from its wire; two connections with one id are both marked and the banner jumps to the first; a node with no label still reads 'undefined' in three screen-reader labels",
-    "class check review P3s: a Blob behind an unbound segmentation node is judged against an upstream detector's classes and a label of only spaces is not replaced by the id (both fixed in the working tree, not yet reviewed); an empty requested segmentation class list being judged, the studio catalog wiring and the datalist are not covered by a test (e2e with a real trained model planned)",
+    "class check and opening-window review P3s: the binding guard, the held version select and hand-off are not covered by a test; a threshold set on a still-unbound node during the opening window is reset by the binding; an empty requested segmentation class list being judged; the studio catalog wiring and the datalist are covered only by the gated app-flow QA",
     "a backend refusal of unknown predicate classes at save time (defence in depth)",
     "Windows native and hosted evidence"
    ]
