@@ -39,4 +39,18 @@ test('S1-10 review: the app catch-up pulls until caught up, re-reads its job whe
  let calls=0;await catchUpJobEvents({pull:async()=>{calls+=1;return {events:[],reset:false,stale:true,more:true};}},()=>'mine',async()=>assert.fail('stale is never applied'));
  assert.equal(calls,1,'a stale stream stops the catch-up');
  calls=0;await catchUpJobEvents({pull:async()=>{calls+=1;return {events:[],reset:false,stale:false,more:true};}},()=>null,async()=>{},3);
- assert.equal(calls,3,'bounded');});
+ assert.equal(calls,3,'bounded');
+ let reread=0;await catchUpJobEvents({pull:async()=>({events:[{job_id:'other'}],reset:false,stale:false,more:true})},()=>'mine',async()=>{reread+=1;},3);
+ assert.equal(reread,1,'stopping with more unread re-reads the current job');});
+test('S1-10 follow-up: a failed catch-up is retried once, and a failed retry waits for the next connection',async()=>{
+ const {createCatchUp}=load('jobEventFeed.ts',{'./api':{getApiPersistenceIdentity:()=>'local',getProjectContext:()=>null,request:async()=>({})},'./jobEvents':load('jobEvents.ts',{})});
+ const scheduled=[];let fail=true,pulls=0;const stream={pull:async()=>{pulls+=1;if(fail)throw new Error('503');return {events:[],reset:false,stale:false,more:false};}};
+ const catchUp=createCatchUp(stream,()=>null,async()=>{},(run,ms)=>{scheduled.push({run,ms});});
+ await catchUp();assert.equal(scheduled.length,1);assert.equal(scheduled[0].ms,5000);
+ await catchUp();assert.equal(scheduled.length,1,'a pending retry is not scheduled twice');
+ scheduled[0].run();await tick();await tick();assert.equal(scheduled.length,1,'the failed retry schedules nothing more');
+ fail=false;await catchUp();assert.equal(pulls,4,'the next connection catches up again');});
+test('S1-10 follow-up: the app catches up on every reconnection and re-reads its real training job',()=>{
+ const app=fs.readFileSync(path.join(__dirname,'..','App.tsx'),'utf8');
+ assert.match(app,/if \(event === 'telemetry_connected'\) \{ void catchUpJobEvents\(\); return; \}/);
+ assert.match(app,/createCatchUp\(jobEventStream, \(\) => useTrainingStore\.getState\(\)\.jobId,\s*\(\) => useTrainingStore\.getState\(\)\.refreshCurrentJob\(\)\)/);});

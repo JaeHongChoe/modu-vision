@@ -62,6 +62,8 @@ export class JobEventStream {
   /** Read everything recorded after the cursor. A call during a pull gets one more read after it, shared by every call
    *  that arrives meanwhile, so an answer computed before its trigger is never its only answer. */
   pull(): Promise<JobEventPull> {
+    // A queued follow-up is joined, so two reads never run at once (a read settling just before this call included).
+    if (this.followUp) return this.followUp;
     if (!this.pulling) return this.start();
     this.followUp ??= this.pulling.catch(() => undefined).then(() => { this.followUp = null; return this.start(); });
     return this.followUp;

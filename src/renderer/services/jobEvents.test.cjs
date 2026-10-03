@@ -45,3 +45,21 @@ test('S1-10 review: a failed page or a discarded pull moves nothing, so the next
 test('S1-10 review: a pull that stops at the page limit says more remain',async()=>{
  let n=0;const stream=new JobEventStream(async()=>{n+=1;return page(`c${n}`,[event('a',n)],{more:true});},()=>'p');
  const pulled=await stream.pull();assert.equal(pulled.more,true);assert.equal(pulled.events.length,20);});
+test('S1-10 follow-up: reads never overlap, even for a pull that arrives as a read settles with a follow-up queued',async()=>{
+ let active=0,most=0,calls=0;const gates=[];
+ const stream=new JobEventStream(async()=>{calls+=1;active+=1;most=Math.max(most,active);await new Promise(resolve=>gates.push(resolve));active-=1;return page(`c${calls}`,[event('a',calls)]);},()=>'p');
+ const first=stream.pull();const second=stream.pull();
+ await new Promise(setImmediate);gates.shift()();await first;
+ const third=stream.pull();  // the first read settled; the follow-up is queued but may not have started
+ await new Promise(setImmediate);while(gates.length)gates.shift()();
+ const [b,c]=await Promise.all([second,third]);
+ assert.equal(b,c,'the late pull joined the queued follow-up');assert.equal(most,1,'never two reads at once');assert.equal(calls,2);});
+test('S1-10 follow-up: a pull discarded by a project switch commits nothing, against a server that honours the cursor',async()=>{
+ const log=[{id:'x:1'},{id:'x:2'}].map((e,i)=>({...event('x',i+1)}));const asked=[];let key='A',switchOnce=true;
+ const stream=new JobEventStream(async after=>{asked.push(after);
+   if(after===null)return page('p0',[],{reset:true});
+   const position=Number(after.slice(1));if(switchOnce&&position===0){switchOnce=false;key='B';}
+   const events=log.slice(position);return page(`p${log.length}`,events);},()=>key);
+ await stream.pull();const stale=await stream.pull();assert.equal(stale.stale,true);
+ key='A';const back=await stream.pull();
+ assert.deepEqual(back.events.map(e=>e.id),['x:1','x:2'],'nothing was lost');assert.deepEqual(asked,[null,'p0','p0'],'the discarded read did not move the cursor');});
