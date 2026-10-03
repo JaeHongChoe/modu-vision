@@ -1029,8 +1029,16 @@
     "S1-02",
     "S1-04"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in 949f96b: a local training worker starts in its own process group with no console on Windows (CREATE_NEW_PROCESS_GROUP|CREATE_NO_WINDOW) and its own session on POSIX; the desktop supervisor stops the backend gracefully by closing its stdin (opt-in VISION_AI_STUDIO_STOP_ON_STDIN_EOF; the backend reads fd 0 and runs the shutdown sequence, which a Windows stop signal from Electron would skip), sends SIGTERM only on POSIX, and force-stops only through the process handle (no taskkill /T, no raw process number); a failed detach never loses the stop; an exit from an untracked earlier backend is not a crash of its successor; on Windows the ownership scan sets aside processes it cannot open and counts one as the run's only when it is the proven leader or started after its recorded parent (the worker or a marked member) and before any other process took the recorded number, never for a worker from before this boot, so an elevated worker stays unknown with its reservation kept while unrelated processes are not the worker's; independent review freezes 1-4 (freeze 1 P1+P2, freeze 2 P2, freeze 3 test-safety P2, freeze 4 ACCEPT); 28 of 33 mutants killed, the 5 survivors listed as limits",
+     "scope": "frozen tree (8a23fc6 + 9 files): S1-09/S1-04/S1-05 suites 62 passed, regression 194 passed 4 skipped (freeze 3; production unchanged since), supervisor tests 5/5 with a process-wide kill recorder, renderer, typecheck; a real worker in a spaced Korean path stopped with only its own processes; a process at a reused number never signalled",
+     "platform": "macOS development; the Windows hosted run of 949f96b is pending; native Windows 11 x64 not run",
+     "incident": "during the freeze-2 review a reviewer's raw-PID mutant of the supervisor test sent two SIGKILLs to the made-up PID 4321 at process exit (no process held 4321 then, as far as can be checked); the test now gives fakes a pid Node rejects before any system call, records process.kill for the whole file and fails if it was ever called"
+    }
+   ],
    "file_actions": {
     "src/main/supervisor.ts": "Modify",
     "backend/engine/local_training_worker.py": "Modify",
@@ -1049,7 +1057,16 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s1_09.py"
+   "proposed_test_file": "backend/tests/test_service_s1_09.py",
+   "remaining": [
+    "frozen (PyInstaller) worker entrypoint on native Windows (backend/frozen_entry.py, scripts/build_backend_binary.py), a standard-user install with restricted permissions, Windows 11 x64 hardware",
+    "DataLoader child processes of a worker are not exercised by a test (the basic trainer starts none)",
+    "managed services, fleet agent and distributed launcher still use start_new_session directly",
+    "a stdin close during startup detaches before recovery runs and skips the shutdown sequence",
+    "fails safe (unknown, reservation kept): a worker started less than 300 s before a reboot; a reused number whose short-lived holder already exited; a briefly unopenable child fails a cancel at once instead of retrying",
+    "untested: the Electron exit hook, the EPIPE handler, startBackend using backendSpawnOptions()",
+    "Windows evidence counts only after a passing hosted run of 949f96b"
+   ]
   },
   {
    "id": "S1-10",
