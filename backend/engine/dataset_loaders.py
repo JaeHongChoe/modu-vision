@@ -38,7 +38,8 @@ import torchvision.transforms.functional as TF
 logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"} | DICOM_EXTENSIONS
-SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+# MODU_SPLIT_MANIFEST_DIR relocates the saved splits (the tests point it at their own folder).
+SPLIT_MANIFEST_DIR = Path(os.environ.get("MODU_SPLIT_MANIFEST_DIR") or Path.home() / ".modu_vision" / "splits")
 _REQUEST_SPLIT_ROOT: ContextVar[Optional[Path]] = ContextVar("project_split_root", default=None)
 
 

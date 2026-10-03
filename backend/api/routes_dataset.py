@@ -46,9 +46,10 @@ logger = logging.getLogger("vision_ai_studio.routes_dataset")
 
 router = APIRouter(prefix="/api/dataset", tags=["dataset"])
 
-THUMBNAIL_CACHE_DIR = Path.home() / ".vision_ai_studio_thumbnails"
+# MODU_THUMBNAIL_CACHE_DIR and MODU_SPLIT_MANIFEST_DIR relocate these stores (the tests point them at their own folder).
+THUMBNAIL_CACHE_DIR = Path(os.environ.get("MODU_THUMBNAIL_CACHE_DIR") or Path.home() / ".vision_ai_studio_thumbnails")
 THUMBNAIL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-SPLIT_MANIFEST_DIR = Path.home() / ".modu_vision" / "splits"
+SPLIT_MANIFEST_DIR = Path(os.environ.get("MODU_SPLIT_MANIFEST_DIR") or Path.home() / ".modu_vision" / "splits")
 STUDIO_ANNOTATIONS_DIR = Path("./annotations")
 
 
