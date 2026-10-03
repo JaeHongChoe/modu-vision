@@ -57,6 +57,14 @@ def _annotations(source,image):
                 # A transient failure (a file locked by an indexer, a share that dropped) is raised, never turned into
                 # an unlabeled image: training reads these labels too.
                 return [],None
+            except OSError as exc:
+                # Pillow's short header read uses a plain, errno-less OSError.
+                # Only this known decoder failure is permanent content damage;
+                # permission, missing file, OS I/O and unknown share errors stay visible.
+                if (type(exc) is OSError and exc.errno is None and getattr(exc,'winerror',None) is None
+                        and str(exc)=='Truncated File Read'):
+                    return [],None
+                raise
             document.setdefault('imageWidth',width);document.setdefault('imageHeight',height)
         return import_annotations(document,'labelme')[0]['annotations'],None
     annotations=source_annotations_for_image(source,image)

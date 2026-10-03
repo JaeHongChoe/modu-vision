@@ -4,6 +4,7 @@ import { api, type DatasetDuplicateGroup, type DatasetImportView, type DatasetRe
 import type { VisionTask } from '../../types';
 import { uploadArchive, type ArchiveProgress } from '../../services/archiveUpload';
 import { acceptBlocker, annotationSummary, archiveProgressText, clearImportKey, importSourceText, duplicateSummary, importEnded, importHeadline, importKeyFor, importProgress, revisionJobLabel, sourceMismatchNotice } from './datasetImportView';
+import { datasetImportError as message } from './datasetImportError';
 
 interface Props {
   projectId: string;
@@ -18,16 +19,6 @@ interface Props {
 const storageKey = (projectId: string) => `modu.datasetImport.lastJob.${projectId}`;
 const readLastJob = (projectId: string) => { try { return window.localStorage.getItem(storageKey(projectId)); } catch { return null; } };
 const writeLastJob = (projectId: string, jobId: string) => { try { window.localStorage.setItem(storageKey(projectId), jobId); } catch { /* per-viewer convenience only */ } };
-const message = (caught: unknown): string => {
-  if (caught instanceof Error) return caught.message;
-  // structured server details: a validation list ({msg} entries) or a catalog error (Korean message first)
-  if (Array.isArray(caught)) return caught.map((entry) => message(entry)).join(' · ');
-  if (caught && typeof caught === 'object') {
-    const detail = caught as { message_ko?: unknown; message?: unknown; msg?: unknown };
-    return String(detail.message_ko ?? detail.message ?? detail.msg ?? JSON.stringify(caught));
-  }
-  return String(caught);
-};
 const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `import-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 /** Validated dataset revisions: a durable import reads every image; nothing becomes active until it is accepted. */
