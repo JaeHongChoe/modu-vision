@@ -1037,6 +1037,12 @@
      "scope": "frozen tree (8a23fc6 + 9 files): S1-09/S1-04/S1-05 suites 62 passed, regression 194 passed 4 skipped (freeze 3; production unchanged since), supervisor tests 5/5 with a process-wide kill recorder, renderer, typecheck; a real worker in a spaced Korean path stopped with only its own processes; a process at a reused number never signalled",
      "platform": "macOS development; the Windows hosted run of 949f96b is pending; native Windows 11 x64 not run",
      "incident": "during the freeze-2 review a reviewer's raw-PID mutant of the supervisor test sent two SIGKILLs to the made-up PID 4321 at process exit (no process held 4321 then, as far as can be checked); the test now gives fakes a pid Node rejects before any system call, records process.kill for the whole file and fails if it was ever called"
+    },
+    {
+     "kind": "windows-fix-reviewed-published",
+     "result": "published in 2b857b4 after the first hosted Windows run of the backend suites (run 37085323445 of e096adb: 5 failed, 2 errors): a real local training worker ended with 'PermissionError: Access is denied'; the probable cause is Windows refusing to replace a file another process has open (the worker's status file read by the app many times a second, the app's cancel file read by the worker); backend/remote/file_replace.py (standard library only) retries replace and read on Windows only (60 attempts, about two seconds), both atomic writers and both hot readers use it, the cancel watch keeps watching through a read error and always stops the trainer; test fixes: S1-04 waits joined the job thread instead of a 4 s loop, server profiles use a POSIX server root, os.getsid patched with raising=False, a failed worker's private traceback is shown by the S0-06 test; two Windows-only tests check the real file-sharing behaviour; independent review freezes 1-3 (freeze 1: 1 P2, freeze 2: 3 P2 fixed and ACCEPT, freeze 3 ACCEPT)",
+     "scope": "frozen tree (5af5bc2 + 8 files): the Windows workflow's backend list 149 passed 2 skipped (Windows-only), regression 198; mutants for the retry and its wiring killed",
+     "platform": "the cause is inferred from the redacted error and the code path; the hosted Windows run of 2b857b4 (Windows-only tests included) confirms or refutes it"
     }
    ],
    "file_actions": {
@@ -1065,7 +1071,11 @@
     "a stdin close during startup detaches before recovery runs and skips the shutdown sequence",
     "fails safe (unknown, reservation kept): a worker started less than 300 s before a reboot; a reused number whose short-lived holder already exited; a briefly unopenable child fails a cancel at once instead of retrying",
     "untested: the Electron exit hook, the EPIPE handler, startBackend using backendSpawnOptions()",
-    "Windows evidence counts only after a passing hosted run of 949f96b"
+    "Windows evidence counts only after a passing hosted run of 949f96b",
+    "the hosted Windows result of 2b857b4: the S0-06 worker completing, the Windows-only file-sharing tests",
+    "the other os.replace sites (project files, receipts, best_model.pt) are not covered by the retry; they are not read concurrently many times a second",
+    "test_service_s1_02's concurrent ledger upgrade test is intermittent (about 3 in 150, base too)",
+    "frozen (PyInstaller) worker entrypoint on native Windows, a restricted-permission install, Windows 11 x64 hardware"
    ]
   },
   {
@@ -1089,8 +1099,15 @@
     "S1-06",
     "S1-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slices 1+2 published in 6370134: GET /api/job-events reads one project's job ledger events after a cursor (v1.<stream>.<position>.<anchor>; a cursor of another project or ledger, a malformed or huge one, or one whose anchored event the ledger no longer holds is answered with a reset and a fresh cursor); the app pulls after every telemetry (re)connection, commits its cursor and seen ids only when a pull completes (a failed page or a stale pull loses nothing), gives a trigger during a pull one follow-up read, continues past the page cap, and re-reads the current training job when the events concern it; one host adapter separates desktop and browser features (pickers, open path/link, updates, shared project sign-in), every method fails asynchronously with a reason in a browser, and no component calls the desktop bridge directly; independent review freeze 1 ACCEPT WITH FIXES (3 P2: a timing-dependent test, project isolation untested, events used up before delivery), freeze 2 ACCEPT; the test's 4-in-48 loaded failure rate went to 48 of 48 passes",
+     "scope": "frozen tree (5af5bc2 + 33 files): backend 112, unit, renderer suite, typecheck, e2e 22 (freeze 1: the whole browser project, 42); test_service_s1_10.py joins both CI workflows",
+     "platform": "macOS development; the hosted Windows run of 6370134/2b857b4 runs test_service_s1_10.py for the first time"
+    }
+   ],
    "file_actions": {
     "src/renderer/services/api.ts": "Modify",
     "src/renderer/services/websocket.ts": "Modify",
@@ -1109,7 +1126,14 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s1_10.py"
+   "proposed_test_file": "backend/tests/test_service_s1_10.py",
+   "remaining": [
+    "slice 3: OpenAPI-generated TypeScript client types and a schema drift check",
+    "review P3s (follow-up): two reads can overlap when pull() is called as a read settles with a follow-up queued; the failed catch-up retry repeats every 5 s without end; the A-B-A test's fake server ignores the cursor; App's catch-up wiring is untested; the loop gives up after 10 rounds without re-reading the job",
+    "review P3s (recorded): global cursor positions reveal other projects' event counts and timing; reads take the ledger write lock through ledger_id(); the anchor covers (job, seq) only; raw payloads reach every project member; openLink returns false in a real browser; browser pickers explain themselves only in a tooltip",
+    "TaskCenter and other panels still poll; only the training store catches up on reconnection",
+    "Windows native and hosted evidence"
+   ]
   },
   {
    "id": "S2-01",
@@ -3430,6 +3454,12 @@
      "result": "Windows unpackaged CPU run 37021912594 on 08a9d48 passed every step for the first time since the storage step started failing: type/build/renderer checks (renderer 304, harness 14), Windows context/storage/recovery suite including the text-encoding guard, the Korean non-UTF-8 scenario and the file-identity tests (85 passed / 9 skipped), and the real Electron main/preload smoke (2 passed); Linux run on the same commit still running at the time of recording",
      "scope": "GitHub-hosted Windows Server 2025 runner (windows-2025-vs2026), unpackaged, CPU",
      "platform": "Windows hosted (unpackaged); signed installer and Windows 11 x64 device runs pending"
+    },
+    {
+     "kind": "windows-fix-reviewed-published",
+     "result": "published in e096adb: the hosted Windows renderer step of 949f96b and e153de0 failed because S1-09 made the renderer runner also run the Electron main tests, and DistributionManager.configure reopened a temporary file read-only and fsynced it, which Windows refuses (EPERM; saving the update channel failed on real Windows installs too); one writeDurably helper now writes and flushes through the handle that created the file, used by both the update configuration and the delivery recovery record; a test applies the Windows rule (no flush through a read-only handle) on every platform and wraps both saves; independent review freeze 1 ACCEPT WITH FIXES (P2: the delivery save untested), freeze 2 ACCEPT",
+     "scope": "frozen tree (e153de0 + 2 files): main-process tests 8, renderer suite, typecheck; mutants for both saves killed",
+     "platform": "the hosted Windows run of e096adb passed the renderer step and reached the backend suites for the first time"
     }
    ],
    "file_actions": {
@@ -3468,7 +3498,8 @@
     "user label reads in routes_annotation, routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (unchanged from before; cp949 files work in some paths only)",
     "Pillow reports some truncated headers as errno-less OSError, outside the undecodable set (size-less LabelMe case can still 500)",
     "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
-    "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design"
+    "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design",
+    "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test"
    ]
   },
   {
