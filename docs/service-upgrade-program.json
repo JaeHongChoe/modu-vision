@@ -1601,8 +1601,15 @@
     "S1-05",
     "S2-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "slice 1 published in b4c5bf3 (JobProgressView): one reading of a training job for every model family (state names shared with the task center, the four record shapes, server phases, tone, watch and cancel rules, failure with its recorded cause, the backend next action or a default) and one view rendered by the six family workbenches (patch classification, rotation, OCR, defect generation, rotated detection, image enhancement); each workbench reopens a job whose state may still change before an older finished one, keeps reading it while its connection is down (3 s), reconnects a server job through the server job API with its execution id, and no longer starts a second job while a server job transfers or syncs; a server job cancelled while disconnected gets its stop delivered by observing the server again and a stopping job can be reconnected (a refused reconnect answers 409); a rotated job left running by an app restart reads interrupted like every family; the task center uses the same names, cancel rule, label, epochs and family names, and gives a family's next action only to a model family's job; independent review freezes 1-3 (freeze 1: 3 P2, freeze 2: 1 P2, freeze 3 ACCEPT); mutants M1-M15 and the review's later mutants killed except M16 and M17 (listed)",
+     "scope": "frozen tree (e096adb + 24 files): unit 34, renderer suite, typecheck, backend 106 (audit hook and home_guard: no home-store event), e2e 13 (S2-09: the interrupted job in the task center and its workbench on the actual backend; rotated detection and enhancement reconnect-first and cancel-while-disconnected against a stubbed server job API; S2-03)",
+     "platform": "macOS development; Windows hosted run pending for this commit (test_service_s2_09.py is not in the Windows workflow list yet)"
+    }
+   ],
    "file_actions": {
     "src/renderer/components/training/TrainingController.tsx": "Modify",
     "src/renderer/components/training/TaskCenter.tsx": "Modify",
@@ -1623,6 +1630,14 @@
    "proposed_test_file": "scripts/e2e/service-s2-09.spec.ts",
    "scope_refinement_ids": [
     "E08"
+   ],
+   "remaining": [
+    "slice 2: the four core families' TrainingController on the shared view (uncertain states, failure cause and next action, reservations)",
+    "ModelRecipeEditor: budget across families (the core screen sends no max_runtime_s/queue/priority), parent pickers with metrics and dates, typed IDs (the specialized approval's incumbent evaluation, the flow node's manual job ID, pretrained weight paths), dataset_version_id",
+    "TaskHandoff: opening results the same way for every family; queue position and wait reason; failure classification for family jobs (job_observation)",
+    "review P3: a cancel whose reconnect the manager refuses (runner gone) dead-ends at a pending stop without saying the stop was not delivered; the view offers cancel again with no sign a stop is pending; patch classification does not reconnect a local disconnected job from its workbench; M16/M17 untested; the task-center family alias, shared label and rotated epochs are covered only by the e2e",
+    "test_service_s2_09.py's server fixture uses a local-path server root (fails on Windows; fixed in the follow-up)",
+    "Windows native and hosted evidence"
    ]
   },
   {
