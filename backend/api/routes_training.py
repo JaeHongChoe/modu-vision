@@ -575,7 +575,7 @@ class TrainingJobManager:
                 if ledger is None or not queue_when_busy:  # no ledger record, or the client asked not to wait
                     if active_record is not None:
                         raise HTTPException(409, f"Another training job ({active_record.job_id}) is currently in progress.")
-                    raise HTTPException(409, "Another application process holds the local compute lease")
+                    raise HTTPException(409, "Local compute is reserved by another training or a worker preflight")
                 return self._wait_for_local_device_locked(job_id, ledger, priority, budget, dict(
                     task=task, dataset_path=dataset_path, output_dir=output_dir, preset=preset, device=device,
                     config_overrides=config_overrides, prepare_dataset=prepare_dataset, source_dataset_path=source_dataset_path,
@@ -755,6 +755,11 @@ class TrainingJobManager:
             self._local_watcher = threading.Thread(target=watch, daemon=True, name="LocalComputeQueue")
             self._local_watcher.start()
         return record
+
+    def local_queue_waiting(self) -> bool:
+        """Whether a local training of this process is queued for the local device (a preflight must not overtake it)."""
+        with self._lock:
+            return bool(self._local_waiting)
 
     def _dispatch_local_queue(self) -> None:
         """When the local device is free, the scheduler claims the next waiting local job (attempt + fenced

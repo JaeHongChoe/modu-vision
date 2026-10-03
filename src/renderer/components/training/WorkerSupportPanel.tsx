@@ -14,18 +14,21 @@ export function WorkerSupportPanel({ task }: { task: string }) {
     .catch(cause => setError(String(cause?.message || cause))), []);
   useEffect(() => { void load(); }, [load]);
   const running = state?.running_preflight ?? null;
-  useEffect(() => {
-    if (!running) return undefined;
-    const timer = setInterval(() => { void load(); }, 1000);
-    return () => clearInterval(timer);
-  }, [running, load]);
   const worker = state?.workers[0];
+  // Every second during a preflight; every 5 s while a training or another app's preflight reserves this computer, so
+  // the buttons free up when it ends.
+  const busy = Boolean(worker?.local_compute_busy);
+  useEffect(() => {
+    if (!running && !busy) return undefined;
+    const timer = setInterval(() => { void load(); }, running ? 1000 : 5000);
+    return () => clearInterval(timer);
+  }, [running, busy, load]);
   const start = async (device: string) => {
     setStarting(true); setError('');
     try {
       await request('/api/workers/local/preflight', { method: 'POST', body: JSON.stringify({ task, device }) });
       await load();
-    } catch (cause) { setError(String((cause as Error)?.message || cause)); }
+    } catch (cause) { setError(String((cause as Error)?.message || cause)); void load(); }  // a refusal also re-reads why
     finally { setStarting(false); }
   };
   const last = state?.last_preflight && state.last_preflight.task === task ? state.last_preflight : null;

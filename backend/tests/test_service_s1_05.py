@@ -310,6 +310,8 @@ def test_a_device_the_preflight_process_cannot_use_fails_every_stage_and_a_fallb
     import torch
     from backend.engine import runtime_device, worker_preflight
     monkeypatch.setattr(torch.cuda, 'is_available', lambda: False)
+    # The trainer's fallback lands on the CPU, never on this machine's MPS GPU (tests train on the CPU only).
+    monkeypatch.setattr(torch.backends.mps, 'is_available', lambda: False)
     refused = worker_preflight.run_stages('classification', 'cuda', tmp_path / 'strict')
     assert set(refused) == {'train', 'evaluate', 'infer', 'export'}
     assert all(not row['passed'] and 'cuda is not usable in the preflight process' in row['reason'] for row in refused.values())
@@ -317,7 +319,7 @@ def test_a_device_the_preflight_process_cannot_use_fails_every_stage_and_a_fallb
     # Past the strict check (a device lost between the check and the stage), the trainer's own fallback still fails train.
     monkeypatch.setattr(runtime_device, 'resolve_runtime_device', lambda device: None)
     fallback = worker_preflight.run_stages('classification', 'cuda', tmp_path / 'fallback', ('train', 'infer'))
-    assert not fallback['train']['passed'] and 'not on cuda' in fallback['train']['reason'], fallback['train']
+    assert not fallback['train']['passed'] and 'training ran on cpu, not on cuda' in fallback['train']['reason'], fallback['train']
     assert fallback['infer'] == {'passed': False, 'reason': 'not run: training did not produce a model', 'seconds': 0.0}
 
 
@@ -395,6 +397,9 @@ def test_a_timed_out_child_is_killed_through_its_handle(tmp_path, monkeypatch):
     worker_preflight.run_preflight('classification', 'cpu', ('train',), store=worker_preflight.PreflightStore(tmp_path / 'p.json'),
                                    timeout=0.5, workdir_root=tmp_path / 'runs')
     assert len(started) == 1 and started[0].returncode not in (None, 0), 'the child was stopped, it did not finish'
+    command = started[0].args
+    assert '--exit-with-parent' in command and '--deadline' in command, 'the child exits with its app and at its deadline'
+    assert command[command.index('--device') + 1] == 'cpu' and command[command.index('--task') + 1] == 'classification'
 
 
 def test_the_child_exits_when_the_app_side_of_its_stdin_closes(tmp_path):
@@ -434,8 +439,10 @@ def test_shutdown_stops_a_running_preflight_child(tmp_path):
     assert worker_preflight.stop_running_preflights() == 1
     worker.join(30)
     assert not worker.is_alive()
-    assert all(not row['passed'] and 'without a result' in row['reason'] for row in outcome['results'].values()), outcome
-    assert not worker_preflight._CHILDREN
+    # A quit interrupts the run; it records nothing, so it never marks this runtime's stages failed.
+    assert outcome['results'] == {} and '중단' in outcome['interrupted'], outcome
+    assert worker_preflight.PreflightStore(tmp_path / 'p.json').results('local', outcome['runtime_digest']) == {}
+    assert not worker_preflight._CHILDREN and not worker_preflight._STOPPED_BY_APP
 
 
 def test_stale_run_folders_are_swept_and_a_live_one_is_kept(tmp_path):
@@ -516,3 +523,156 @@ def test_a_running_preflight_holds_the_local_compute_reservation(tmp_path, monke
     leases = shared_leases()
     assert leases.acquire('job_after', 'local-compute', 'all'), 'the reservation is released with the preflight'
     assert leases.release('job_after')
+
+
+def test_a_queued_training_is_not_overtaken_by_a_preflight(tmp_path, monkeypatch):
+    api, manager = _app(tmp_path, monkeypatch)
+    manager._local_waiting['job_waiting'] = {}
+    refused = api.post('/api/workers/local/preflight', json={'task': 'classification'})
+    assert refused.status_code == 409 and '기다리는 학습' in refused.json()['detail']
+    manager._local_waiting.clear()
+    assert api.get('/api/workers').json()['running_preflight'] is None
+
+
+def test_shutdown_releases_the_reservation_of_a_running_preflight(tmp_path, monkeypatch):
+    import time
+    from backend.api import routes_workers
+    from backend.engine import worker_preflight
+    from backend.engine.shared_scheduler import shared_leases
+    api, _ = _app(tmp_path, monkeypatch)
+    assert api.post('/api/workers/local/preflight', json={'task': 'classification'}).status_code == 202
+    deadline = time.monotonic() + 30
+    while not worker_preflight._CHILDREN and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert worker_preflight._CHILDREN, 'the preflight child started'
+    routes_workers.stop_for_shutdown()
+    state = api.get('/api/workers').json()
+    assert state['running_preflight'] is None and state['workers'][0]['local_compute_busy'] is None
+    assert state['last_preflight']['results'] == {} and state['last_preflight']['interrupted']
+    assert shared_leases().acquire('job_after_quit', 'local-compute', 'all'), 'nothing holds the computer after the quit'
+
+
+def test_the_reservation_heartbeat_survives_a_busy_table(tmp_path, monkeypatch):
+    import threading
+    import time
+    from backend.engine import shared_scheduler, worker_preflight
+    api, _ = _app(tmp_path, monkeypatch)
+    path = shared_scheduler.shared_leases().path
+    beats = []
+
+    class Flaky(shared_scheduler.ResourceLeases):
+        def heartbeat(self, job_id):
+            beats.append(job_id)
+            if len(beats) == 1:
+                raise shared_scheduler.sqlite3.OperationalError('database is locked')
+            return super().heartbeat(job_id)
+    monkeypatch.setattr(shared_scheduler, 'shared_leases', lambda: Flaky(path, lease_seconds=1.5))
+    release = threading.Event()
+    monkeypatch.setattr(worker_preflight, 'run_preflight', lambda *args, **kwargs: (release.wait(30), {'runtime_digest': 'r', 'results': {}})[1])
+    assert api.post('/api/workers/local/preflight', json={'task': 'classification'}).status_code == 202
+    deadline = time.monotonic() + 10
+    while len(beats) < 3 and time.monotonic() < deadline:
+        time.sleep(0.05)
+    release.set()
+    _wait_preflight(api, 30)
+    assert len(beats) >= 3, 'the heartbeat went on after a refused beat'
+
+
+@pytest.mark.skipif(__import__('os').name == 'nt', reason='Windows keeps a folder with open files')
+def test_a_run_folder_removed_mid_run_is_a_recorded_failure(tmp_path):
+    import shutil
+    import threading
+    import time
+    from backend.engine import worker_preflight
+    store = worker_preflight.PreflightStore(tmp_path / 'p.json')
+    outcome, errors = {}, []
+
+    def run():
+        try:
+            outcome.update(worker_preflight.run_preflight('classification', 'cpu', ('train', 'export'), store=store,
+                                                          workdir_root=tmp_path / 'runs'))
+        except Exception as exc:  # the defect: an exception instead of a recorded failure
+            errors.append(exc)
+    worker = threading.Thread(target=run)
+    worker.start()
+    deadline = time.monotonic() + 30
+    while not worker_preflight._CHILDREN and time.monotonic() < deadline:
+        time.sleep(0.02)
+    for folder in (tmp_path / 'runs').iterdir():
+        shutil.rmtree(folder)  # this test's own run folder under tmp_path
+    worker.join(120)
+    assert not errors, errors
+    assert outcome['results'] and all(not row['passed'] for row in outcome['results'].values()), outcome
+
+
+def test_an_expired_reservation_of_a_crashed_app_does_not_read_as_busy(tmp_path, monkeypatch):
+    import time
+    from backend.engine.shared_scheduler import ResourceLeases, shared_leases
+    api, _ = _app(tmp_path, monkeypatch)
+    crashed = ResourceLeases(shared_leases().path, owner='pid:crashed-app', lease_seconds=0.05)
+    assert crashed.acquire('worker-preflight-crashed', 'local-compute', 'all')
+    time.sleep(0.2)
+    assert api.get('/api/workers').json()['workers'][0]['local_compute_busy'] is None, 'acquire would delete this row'
+    live = ResourceLeases(shared_leases().path, owner='pid:live-app')
+    assert live.acquire('job_live', 'local-compute', 'all')
+    assert api.get('/api/workers').json()['workers'][0]['local_compute_busy'], 'a live reservation is busy'
+    assert live.release('job_live')
+
+
+def test_an_earlier_pass_survives_a_quit_during_the_next_preflight(tmp_path):
+    import threading
+    import time
+    from backend.engine import worker_preflight
+    store = worker_preflight.PreflightStore(tmp_path / 'p.json')
+    digest = worker_preflight.runtime_digest()
+    store.record('local', digest, 'classification', 'train', 'cpu', passed=True, reason='passed', seconds=1)
+    worker = threading.Thread(target=lambda: worker_preflight.run_preflight('classification', 'cpu', ('train',), store=store,
+                                                                            workdir_root=tmp_path / 'runs'))
+    worker.start()
+    deadline = time.monotonic() + 30
+    while not worker_preflight._CHILDREN and time.monotonic() < deadline:
+        time.sleep(0.02)
+    worker_preflight.stop_running_preflights()
+    worker.join(30)
+    assert store.verified('local', digest) == {'classification:train:cpu': store.results('local', digest)['classification:train:cpu']['at']}
+
+
+def test_the_child_runs_the_device_it_is_given(tmp_path, monkeypatch):
+    import json
+    import torch
+    from backend.engine import worker_preflight
+    monkeypatch.setattr(torch.cuda, 'is_available', lambda: False)
+    assert worker_preflight.main(['--task', 'classification', '--device', 'cuda', '--stages', 'train', '--workdir', str(tmp_path)]) == 0
+    result = json.loads((tmp_path / worker_preflight.RESULT_FILE).read_text(encoding='utf-8'))
+    assert 'cuda is not usable' in result['results']['train']['reason'], 'the child checks the requested device, not the CPU'
+
+
+def test_the_app_lifespan_sweeps_at_start_and_stops_a_preflight_at_shutdown(tmp_path, monkeypatch):
+    import threading
+    from fastapi.testclient import TestClient
+    import backend.main as main
+    from backend.api import routes_workers
+    from backend.engine import worker_preflight
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
+    calls, swept = [], threading.Event()
+    monkeypatch.setattr(routes_workers, 'stop_for_shutdown', lambda: calls.append('stop'))
+    monkeypatch.setattr(worker_preflight, 'sweep_stale_runs', lambda: swept.set())
+    app = main.create_app(project_dir=str(tmp_path / 'projects'))
+    with TestClient(app):
+        assert swept.wait(10), 'run folders of an earlier app are swept at start'
+        assert calls == []
+    assert calls == ['stop'], 'the shutdown stops a running preflight'
+
+
+def test_a_refused_training_start_names_the_preflight_as_a_possible_holder(tmp_path, monkeypatch):
+    from fastapi import HTTPException
+    from backend.api import routes_training
+    from backend.engine.shared_scheduler import ResourceLeases, shared_leases
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
+    manager = routes_training.TrainingJobManager()
+    holder = ResourceLeases(shared_leases().path, owner='pid:preflight')
+    assert holder.acquire('worker-preflight-x', 'local-compute', 'all')
+    with pytest.raises(HTTPException) as refused:
+        manager.start_job('job_refused', 'classification', str(tmp_path / 'data'), str(tmp_path / 'out'))
+    assert refused.value.status_code == 409 and 'worker preflight' in refused.value.detail
+    assert holder.release('worker-preflight-x')

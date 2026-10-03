@@ -366,6 +366,7 @@ PREFLIGHT_TIMEOUT_SECONDS = 900.0
 # exits at its own deadline), so a start may sweep it.
 STALE_RUN_SECONDS = PREFLIGHT_TIMEOUT_SECONDS + 300.0
 _CHILDREN: set = set()  # this app's running preflight children, stopped through their handles at shutdown
+_STOPPED_BY_APP: set = set()  # children stopped because the app quit: their run is interrupted, not a failed runtime
 _CHILDREN_LOCK = threading.Lock()
 
 
@@ -418,6 +419,7 @@ def stop_running_preflights(wait: float = 5.0) -> int:
     """Kill this app's running preflight children through their own handles (app shutdown); the number stopped."""
     with _CHILDREN_LOCK:
         children = list(_CHILDREN)
+        _STOPPED_BY_APP.update(children)
     for child in children:
         if child.poll() is None:
             child.kill()
@@ -471,13 +473,22 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
             finally:
                 with _CHILDREN_LOCK:
                     _CHILDREN.discard(child)
+                    stopped_by_app = child in _STOPPED_BY_APP
+                    _STOPPED_BY_APP.discard(child)
                 child.stdin.close()
+        if stopped_by_app:
+            # The app quit mid-run: nothing is recorded, so earlier results of this runtime keep their state.
+            return {'task': task, 'device': device, 'runtime_digest': runtime_digest(), 'architecture': preflight_architecture(task),
+                    'results': {}, 'interrupted': '앱이 종료되어 사전 점검이 중단되었습니다. 결과는 기록하지 않았습니다.'}
         try:
             answer = json.loads((run / RESULT_FILE).read_text(encoding='utf-8'))
         except (OSError, ValueError):
             answer = None
         if answer is None or timed_out:
-            tail = (run / 'preflight.log').read_text(encoding='utf-8', errors='replace')[-400:].strip()
+            try:
+                tail = (run / 'preflight.log').read_text(encoding='utf-8', errors='replace')[-400:].strip()
+            except OSError as exc:  # the run folder itself was removed meanwhile: still a recorded failure
+                tail = f'the run log is gone ({type(exc).__name__})'
             why = (f'timed out after {limit:.0f} s' if timed_out
                    else f'the preflight process ended (exit {child.returncode}) without a result: {tail}')
             answer = {'runtime_digest': runtime_digest(),

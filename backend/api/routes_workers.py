@@ -16,6 +16,7 @@ router = APIRouter(prefix='/api/workers', tags=['workers'])
 logger = logging.getLogger(__name__)
 _LOCK = threading.Lock()
 _STATE: dict[str, Any] = {'running': None, 'last': None}
+_WORKER: dict[str, Any] = {'thread': None}  # the running preflight's work thread, joined at shutdown
 LOCAL_COMPUTE = 'local-compute'
 
 
@@ -55,7 +56,8 @@ def _local_compute_busy() -> Optional[str]:
     """Why this computer's compute is reserved now (training or another preflight, in any app process), or None."""
     from backend.engine.shared_scheduler import shared_leases
     try:
-        return None if shared_leases().available(LOCAL_COMPUTE, 'all') else '학습 또는 다른 사전 점검이 이 컴퓨터의 계산 자원을 사용 중입니다.'
+        # The same rule as acquire: an expired reservation of a crashed app is not busy.
+        return None if shared_leases().available_to_acquire(LOCAL_COMPUTE, 'all') else '학습 또는 다른 사전 점검이 이 컴퓨터의 계산 자원을 사용 중입니다.'
     except Exception as exc:  # an unreadable reservation table is a reason not to start, and it is shown
         return f'계산 자원 예약 상태를 확인하지 못했습니다: {type(exc).__name__}'
 
@@ -80,6 +82,7 @@ def _require_owner(request: Request) -> None:
 
 @router.post('/local/preflight', status_code=202)
 def start_preflight(req: PreflightRequest, request: Request):
+    from backend.api.routes_training import training_job_manager
     from backend.engine.shared_scheduler import shared_leases
     from backend.engine.worker_preflight import PreflightRefused, plan, preflight_architecture, run_preflight
     _require_owner(request)
@@ -87,6 +90,9 @@ def start_preflight(req: PreflightRequest, request: Request):
         stages = plan(req.task, req.device, req.stages)
     except PreflightRefused as exc:
         raise HTTPException(409, str(exc)) from exc
+    if training_job_manager.local_queue_waiting():
+        # A training already waiting for this computer goes first; a preflight never overtakes it.
+        raise HTTPException(409, '이 컴퓨터를 기다리는 학습이 있습니다. 학습이 시작·종료된 뒤 사전 점검을 실행하세요.')
     run = {'task': req.task, 'device': req.device, 'stages': list(stages), 'started_at': time.time(),
            'architecture': preflight_architecture(req.task)}
     with _LOCK:
@@ -102,8 +108,13 @@ def start_preflight(req: PreflightRequest, request: Request):
 
     def keep_reserved():
         while not stop.wait(max(0.5, leases.lease_seconds / 3)):
-            if not leases.heartbeat(lease_id):
-                logger.warning('The local compute reservation of preflight %s could not be renewed', lease_id)
+            try:
+                renewed = leases.heartbeat(lease_id)
+            except Exception:  # a busy or unreadable reservation table: try again at the next beat
+                logger.warning('The local compute reservation of preflight %s could not be renewed now', lease_id, exc_info=True)
+                continue
+            if not renewed:
+                logger.warning('The local compute reservation of preflight %s is no longer held', lease_id)
                 return
 
     def work():
@@ -121,5 +132,18 @@ def start_preflight(req: PreflightRequest, request: Request):
                 logger.exception('The local compute reservation of preflight %s could not be released', lease_id)
         with _LOCK:
             _STATE['running'], _STATE['last'] = None, {**outcome, 'finished_at': time.time()}
-    threading.Thread(target=work, name=f'worker-preflight-{req.task}', daemon=True).start()
+    thread = threading.Thread(target=work, name=f'worker-preflight-{req.task}', daemon=True)
+    _WORKER['thread'] = thread
+    thread.start()
     return {'status': 'started', **run}
+
+
+def stop_for_shutdown(wait: float = 3.0) -> None:
+    """App shutdown: stop the running preflight child through its handle and let its work thread record the outcome
+    and release the local compute reservation (a quit never leaves the reservation held until it expires). The wait
+    stays under the desktop supervisor's stop window, so a locked reservation table cannot turn a quit into a kill."""
+    from backend.engine.worker_preflight import stop_running_preflights
+    stop_running_preflights()
+    thread = _WORKER.get('thread')
+    if thread is not None and thread.is_alive():
+        thread.join(wait)

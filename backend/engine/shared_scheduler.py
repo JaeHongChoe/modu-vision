@@ -81,10 +81,10 @@ class ResourceLeases:
         if any(row['uuid'].startswith('MIG-') and not row['memory_mb'] for row in first+second):return True
         return self.conflict(a,b)
 
-    def _available(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None):
-        return self._assess(conn,host,selector,memory_budget_mb,allow_sharing,job_id)[0]
+    def _available(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None,skip_expired=False):
+        return self._assess(conn,host,selector,memory_budget_mb,allow_sharing,job_id,skip_expired)[0]
 
-    def _assess(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None):
+    def _assess(self,conn,host,selector,memory_budget_mb,allow_sharing,job_id=None,skip_expired=False):
         """(available, overlapping rows): the rows decide why a claim waits."""
         identities=self._identities(conn,host,selector)
         if allow_sharing:
@@ -93,8 +93,11 @@ class ResourceLeases:
             capacity=min(row[0] for row in conn.execute('SELECT memory_mb FROM devices WHERE uuid=?',(identities[0]['uuid'],)))
             if memory_budget_mb>capacity:raise ValueError('Requested memory exceeds observed capacity')
         overlapping=[]
+        now=time.time()
         for row in conn.execute('SELECT * FROM leases'):
             if row['job_id']==job_id:continue
+            # The rows acquire deletes first (expired local, unfenced, not uncertain) hold nothing.
+            if skip_expired and not row['remote'] and not row['uncertain'] and row['fence'] is None and row['expires']<now:continue
             if row['host']==host:
                 overlap=self._overlap(conn,host,row['selector'],selector)
             else:
@@ -111,6 +114,12 @@ class ResourceLeases:
     def available(self,host,selector='all',*,memory_budget_mb=0,allow_sharing=False):
         with self.connect() as conn:
             return self._available(conn,host,selector,memory_budget_mb,allow_sharing)
+
+    def available_to_acquire(self,host,selector='all'):
+        """What acquire would answer now: rows acquire would delete (expired local, unfenced, not uncertain) do not
+        count, so a reservation left by a crashed app does not read as busy. Nothing is deleted here."""
+        with self.connect() as conn:
+            return self._available(conn,host,selector,0,False,skip_expired=True)
 
     def acquire(self, job_id, host, selector='all', *, remote=False,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None):
         with self.connect() as conn:
