@@ -41,6 +41,14 @@ function unlinked(target:string):void {
   }
 }
 
+/** Replaces a small settings file atomically and durably: the text is written and flushed through the handle that created
+ *  the temporary file (Windows flushes only through a handle opened for writing), which is then renamed over the file. */
+function writeDurably(file:string,text:string):void {
+  const temporary=file+'.'+crypto.randomUUID()+'.tmp';
+  try{const fd=fs.openSync(temporary,'wx',0o600);try{fs.writeFileSync(fd,text);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temporary,file);}
+  finally{fs.rmSync(temporary,{force:true});}
+}
+
 export class DistributionManager {
   readonly options:DistributionOptions;
   private release:UpdateRelease|null=null;
@@ -72,9 +80,7 @@ export class DistributionManager {
   }
   private saveDelivery(value:DeliveryRecovery&{partial_path?:string}):void {
     const file=this.deliveryPath();unlinked(file);fs.mkdirSync(this.options.userDataPath,{recursive:true});
-    const temporary=file+'.'+crypto.randomUUID()+'.tmp';
-    try {fs.writeFileSync(temporary,JSON.stringify(value),{flag:'wx',mode:0o600});const fd=fs.openSync(temporary,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temporary,file);}
-    finally{fs.rmSync(temporary,{force:true});}
+    writeDurably(file,JSON.stringify(value));
   }
   private installedSHA():string|null {
     return fs.existsSync(this.options.executablePath)&&fs.statSync(this.options.executablePath).isFile()?crypto.createHash('sha256').update(fs.readFileSync(this.options.executablePath)).digest('hex'):null;
@@ -105,7 +111,7 @@ export class DistributionManager {
   async configure(value:UpdateChannel|null):Promise<DistributionState> {
     if(value)this.validateChannel(value);
     const file=this.configPath();unlinked(file);fs.mkdirSync(this.options.userDataPath,{recursive:true});
-    if(value){const temporary=file+'.'+crypto.randomUUID()+'.tmp';try{fs.writeFileSync(temporary,JSON.stringify({channel:value.channel,manifest_url:value.manifest_url}),{mode:0o600,flag:'wx'});const fd=fs.openSync(temporary,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temporary,file);}finally{fs.rmSync(temporary,{force:true});}}
+    if(value)writeDurably(file,JSON.stringify({channel:value.channel,manifest_url:value.manifest_url}));
     else fs.rmSync(file,{force:true});
     this.revision++;this.release=null;this.manifestSHA=null;return this.status();
   }
