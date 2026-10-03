@@ -8,11 +8,7 @@ from backend.tests.test_rotation import rotation_data
 
 def client(tmp_path):
     from backend.main import create_app
-    from backend.api.routes_rotation import router as rotation_router
-    from backend.api.routes_automated_training import router as search_router
     app = create_app(project_dir=str(tmp_path / 'projects'))
-    if not any(r.path == '/api/rotation/train' for r in app.routes): app.include_router(rotation_router)
-    if not any(r.path == '/api/automated-training/start' for r in app.routes): app.include_router(search_router)
     return TestClient(app, headers={'X-Vision-Token': app.state.api_token})
 
 

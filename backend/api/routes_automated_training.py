@@ -35,6 +35,9 @@ class StartRequest(BaseModel):
     family_dataset_path:str|None=None
     preset:Literal['fast','precision']='fast'
     device:str='cpu'
+    compute_profile_id:str|None=None
+    seed:int=Field(default=0,strict=True,ge=0,le=2147483647)
+    reuse_search_id:str|None=None
     mode:Literal['quick','search','fast_retrain']='search'
     budget:Budget=Field(default_factory=Budget)
     search_space:dict=Field(default_factory=dict)
@@ -66,6 +69,9 @@ def capabilities():
 @router.post('/start')
 def start(req:StartRequest,request:Request):
     project=get_current_project(request);source=Path(req.dataset_path).expanduser().resolve()
+    account=getattr(request.state,'account_user',None)
+    if account and request.app.state.accounts.project_role(account['id'],project['id']) not in {'owner','reviewer','trainer'}:
+        raise HTTPException(403,'This project role cannot submit automated training')
     if req.task not in _RUNNERS:raise HTTPException(422,'No measured trial runner registered for this task')
     if not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():raise HTTPException(409,'Automated training source must match the active project')
     from backend.engine.training_provenance import bind_training_version,bind_family_training
@@ -80,16 +86,32 @@ def start(req:StartRequest,request:Request):
             raise ValueError('This task trains directly from the registered project source')
         else:binding=bind_training_version(project,source,req.dataset_version_id)
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+    try:
+        from backend.engine.automated_trials import validate_trial_controls
+        validate_trial_controls(req.task,req.preset,req.base_config)
+        if req.base_config.get('resume_checkpoint'):
+            raise ValueError('Use direct training exact resume; AutoDL candidates require separate new model outputs')
+        from backend.engine.automated_trials import _space
+        next(_space(req.task,req.search_space,req.base_config,req.mode))
+        if req.compute_profile_id:
+            from backend.remote.profiles import get_profile_store
+            profile=get_profile_store().get(req.compute_profile_id)
+            if profile is None:raise ValueError('Selected compute profile is unavailable')
+            from backend.engine.remote_automated_trials import validate_remote_search
+            validate_remote_search(profile,req.task,req.preset,req.device,req.base_config,req.search_space,req.budget.model_dump(),warm_start=bool(req.parent_job_id))
+    except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
+    owner={'project_id':project['id'],'account_id':account['id'] if account else None}
     identifier=uuid.uuid4().hex;models=Path(project['models_dir']);event=threading.Event();key=(str(models.resolve()),identifier)
     submission={'search_id':identifier,'status':'queued','task':req.task,'mode':req.mode,'created_at':time.time(),'owner_pid':os.getpid(),'owner_instance':_PROCESS_INSTANCE,'owner_kind':'api',
-                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None,'budget':req.budget.model_dump(),'device':req.device}
+                'dataset_path':str(dataset),'source_dataset_path':str(source),'training_provenance':binding,'trials':[],'winner':None,'budget':req.budget.model_dump(),'device':req.device,'compute_profile_id':req.compute_profile_id}
     _write(models/'automated_training'/identifier/'submission.json',submission)
     with _LOCK:_EVENTS[key]=event
     def execute():
         try:
             return run_automated_training(task=req.task,dataset_path=dataset,source_dataset_path=source,models_dir=models,preset=req.preset,device=req.device,mode=req.mode,
                 budget=req.budget.model_dump(),search_space=req.search_space,base_config={**req.base_config,'objective':req.objective,'latency_weight':req.latency_weight},
-                epochs_per_trial=req.epochs_per_trial,parent_job_id=req.parent_job_id,cancel_event=event,search_id=identifier,training_binding=binding,owner_instance=_PROCESS_INSTANCE)
+                epochs_per_trial=req.epochs_per_trial,parent_job_id=req.parent_job_id,cancel_event=event,search_id=identifier,training_binding=binding,owner_instance=_PROCESS_INSTANCE,
+                compute_profile_id=req.compute_profile_id,remote_owner=owner,seed=req.seed,reuse_search_id=req.reuse_search_id)
         except (ValueError,OSError,RuntimeError,KeyError,TypeError) as exc:
             failed={**submission,'status':'failed','error':str(exc)};_write(models/'automated_training'/identifier/'search.json',failed)
             if not req.background:raise HTTPException(422,str(exc)) from exc

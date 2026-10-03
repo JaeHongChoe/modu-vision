@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import closing
+from contextlib import closing, ExitStack
 import hashlib
 import json
 import os
@@ -125,6 +125,29 @@ def _sqlite_snapshot(path: Path, directory: Path) -> Path:
 
 
 def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, Any]:
+    from backend.engine.artifact_retention import ArtifactRetention
+    from backend.engine.runtime_process_control import runtime_state_lock
+    retention=ArtifactRetention(project['project_dir'])
+    try:
+        with retention.lock(),ExitStack() as scope:
+            runtime=Path(project['project_dir'])/'runtime_service'
+            if runtime.is_dir():scope.enter_context(runtime_state_lock(runtime))
+            retention.refresh_references(project)
+            identifier=retention.begin_backup()
+            try:
+                result=_create_archive(project,destination_dir,retention_manifest={'backup_id':identifier,'audit_cursor':retention.audit_cursor()})
+                result.update(backup_id=identifier,backup_status='archive_verified',restore_status='unverified',archive_sha256=_digest_file(Path(result['archive_path'])))
+                retention.finish_backup(identifier,result)
+                return result
+            except Exception:
+                retention.fail_backup(identifier)
+                raise
+    except ValueError as exc:
+        if isinstance(exc,ArchiveError):raise
+        raise ArchiveError(str(exc),409) from exc
+
+
+def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention_manifest=None) -> dict[str, Any]:
     project_dir = Path(project["project_dir"]).resolve()
     source_text = project.get("source_dataset_dir")
     source_dir = Path(source_text).resolve() if source_text else None
@@ -196,6 +219,8 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
                 "source_dataset_fingerprints_by_labelset": source_fingerprints,
                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "files": rows,
+                "retention":retention_manifest,
+                "db_revision":{row['member']:row['sha256'] for row in rows if row['member'].endswith(('.sqlite3','.sqlite','.db'))},
             }
             if (source_dir is not None and _labelset_dataset_fingerprints(project_dir, source_dir)
                     != (source_active_set, source_fingerprints)):
@@ -278,7 +303,7 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
     for path in staging.rglob("*.json"):
         # Source files are customer data. Keep their verified bytes intact.
         # Version snapshots need their own hashes, paths and immutable source bytes.
-        if (path.is_relative_to(staging / "versions") or path.is_relative_to(staging/'.migrations') or path.name == "release_policy.json"
+        if (path.is_relative_to(staging / "versions") or path.is_relative_to(staging/'.migrations') or path.is_relative_to(staging/'.retention'/'trash') or path.name == "release_policy.json"
                 or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))):
             continue
         try:
@@ -624,13 +649,31 @@ def _rebind_execution_state(staging: Path, old_project: Path, target: Path,
                     fields["owner_pid"] = None
                 assignments = ", ".join(f"{name} = ?" for name in fields)
                 conn.execute(f"UPDATE jobs SET {assignments} WHERE job_id = ?", (*fields.values(), identifier))
-    database = staging / "runtime_service" / "runtime_deployments.sqlite3"
-    if database.is_file():
+    databases=[staging/'runtime_service'/'runtime_deployments.sqlite3',*sorted((staging/'fleet').glob('*/runtime_deployments.sqlite3'))]
+    for database in databases:
+        if not database.is_file():continue
         with closing(sqlite3.connect(database)) as conn, conn:
             for identifier, release, ack in conn.execute("SELECT deployment_id, release, ack FROM deployments").fetchall():
                 conn.execute("UPDATE deployments SET release = ?, ack = ? WHERE deployment_id = ?", (
                     _rebind_json_blob(release, old_project, target, old_source, new_source),
                     _rebind_json_blob(ack, old_project, target, old_source, new_source), identifier))
+            tables={row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if 'update_operations' in tables:
+                for identifier,release,previous,ack,status in conn.execute('SELECT operation_id,release,previous,ack,status FROM update_operations').fetchall():
+                    pending=status in ('applying','rolling_back','needs_review','interrupted_without_previous')
+                    conn.execute('UPDATE update_operations SET release=?,previous=?,ack=?,status=?,error=CASE WHEN ? THEN ? ELSE error END WHERE operation_id=?',(
+                        _rebind_json_blob(release,old_project,target,old_source,new_source),
+                        _rebind_json_blob(previous,old_project,target,old_source,new_source) if previous else None,
+                        _rebind_json_blob(ack,old_project,target,old_source,new_source) if ack else None,
+                        'needs_review' if pending else status,pending,
+                        'Restored pending deployment has no worker acknowledgment; review before recovery',identifier))
+    database=staging/'fleet'/'agents.sqlite3'
+    if database.is_file():
+        with closing(sqlite3.connect(database)) as conn,conn:
+            tables={row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if 'rollouts' in tables:
+                for identifier,payload in conn.execute('SELECT plan_id,payload FROM rollouts').fetchall():
+                    conn.execute('UPDATE rollouts SET payload=? WHERE plan_id=?',(_rebind_json_blob(payload,old_project,target,old_source,new_source),identifier))
     service_config = staging / "runtime_service" / "service.json"
     if service_config.is_file():
         value = json.loads(service_config.read_text(encoding="utf-8"))
@@ -692,7 +735,7 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
     source_roots = _restored_source_roots(target)
     immutable_roots = _immutable_package_roots(target)
     for path in target.rglob("*.json"):
-        if (path.is_relative_to(target/'.migrations') or path.name == "release_policy.json" or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))
+        if (path.is_relative_to(target/'.migrations') or path.is_relative_to(target/'.retention'/'trash') or path.name == "release_policy.json" or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))
                 or path.is_relative_to(target / "versions") and path.name != "manifest.json"):
             continue
         try:
@@ -733,6 +776,18 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
 
 
 def restore_archive(archive_path: Path, target_dir: Path) -> Path:
+    from backend.engine.artifact_retention import ArtifactRetention
+    archive_path=Path(archive_path).expanduser().resolve()
+    if not archive_path.is_file():raise ArchiveError('Backup archive not found',404)
+    digest=_digest_file(archive_path)
+    target=_restore_archive(archive_path,target_dir)
+    if _digest_file(archive_path)!=digest:raise ArchiveError('Backup archive changed during restore; installed copy requires review',409)
+    retention=ArtifactRetention(target)
+    retention.verified_restore(digest,{'target_dir':str(target),'fresh_path':True,'inventory_verified':True})
+    return target
+
+
+def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
     archive_path = Path(archive_path).expanduser().resolve()
     target_dir = Path(target_dir).expanduser().resolve()
     if not archive_path.is_file():
@@ -833,6 +888,13 @@ def restore_archive(archive_path: Path, target_dir: Path) -> Path:
                                     if isinstance(old_fingerprint, str) and old_fingerprint.startswith("v1:") else {})
             _rebind_fingerprint_records(target_dir, new_source, old_fingerprints)
         _rebind_training_version_aliases(target_dir, version_digests)
+        from backend.engine.image_truth import digest
+        for path in (target_dir/'dataset'/'capture_intake'/'drift').glob('driftref_*.json'):
+            record=json.loads(path.read_text(encoding='utf-8'))
+            previous=record.pop('record_sha256')
+            record.setdefault('archive_restored_from_sha256',previous)
+            record['record_sha256']=digest(record)
+            path.write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
         completed = True
         return target_dir
     except (OSError, KeyError, TypeError, ValueError, sqlite3.Error,BadZipFile,LargeZipFile,RuntimeError,NotImplementedError) as exc:

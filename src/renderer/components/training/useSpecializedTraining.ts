@@ -1,7 +1,7 @@
 import {controlModelTraining,reconnectModelTraining,submitModelTraining} from '../../services/modelExecution';
 import {activeJob,watchJob} from './jobProgress';
 import {useComputeStore} from '../../stores/useComputeStore';
-import {getApiPersistenceIdentity} from '../../services/api';
+import {getApiPersistenceIdentity,request} from '../../services/api';
 import {useEffect,useRef,useState} from 'react';
 import {specializedApi,type SpecializedTrainingFamily,type SpecializedTrainingJob} from '../../services/specializedApi';
 import {useProjectStore} from '../../stores/useProjectStore';
@@ -50,8 +50,9 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     }).catch(cause=>{if(active&&current()){setError(String(cause.message ?? cause));setReadFailures(count=>count+1);}});},isActiveSpecializedJob(job)&&!readFailures?600:3000);  // after a failed read, retry slowly
     return()=>{active=false;clearTimeout(timer);};
   },[family,job,projectDir,source,labelset,readFailures]);
-  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu')=>{
-    setError('');const record=await submitModelTraining<SpecializedTrainingJob>(family==='defect-gan'?'defect_gan':family,{dataset_path:path,epochs,device,...(warmStartJobId?{warm_start_job_id:warmStartJobId}:{})},()=>specializedApi.startTraining(family,path,epochs,warmStartJobId,device));
+  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu',options?:{recipe?:Record<string,unknown>})=>{
+    const config={dataset_path:path,epochs,device,...(warmStartJobId?{warm_start_job_id:warmStartJobId}:{}),...(options?.recipe?{recipe:options.recipe}:{})};
+    setError('');const record=await submitModelTraining<SpecializedTrainingJob>(family==='defect-gan'?'defect_gan':family,config,()=>options?.recipe?request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({...config,background:true})}):specializedApi.startTraining(family,path,epochs,warmStartJobId,device));
     if(current()){setJob(record);setJobs(rows=>[record,...rows.filter(item=>item.job_id!==record.job_id)]);}
   };
   const cancel=async()=>{

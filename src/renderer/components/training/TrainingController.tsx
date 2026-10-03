@@ -30,7 +30,7 @@ import { RotatedDetectionPanel } from './RotatedDetectionPanel';
 import { DefectGANWorkbench } from './DefectGANWorkbench';
 import { EnhancementWorkbench } from './EnhancementWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
-import { api,getApiPersistenceIdentity } from '../../services/api';
+import { api,request,getApiPersistenceIdentity } from '../../services/api';
 import { ModelFamilyCatalog } from './ModelFamilyCatalog';
 import { dinoSyntheticDefaults, modelChoices, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
 import { DinoSyntheticOptions } from './DinoSyntheticOptions';
@@ -57,6 +57,11 @@ export const TrainingController: React.FC = () => {
   const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
   const [trainingBackbone, setTrainingBackbone] = useState(modelChoices[task][0].value);
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
+  const [trainMode,setTrainMode]=useState<'head_only'|'partial'|'full'>('head_only');
+  const [partialBlocks,setPartialBlocks]=useState(2);
+  const [resumeState,setResumeState]=useState<{checkpoint_path:string;recipe:Record<string,unknown>;device:string;next_epoch:number;global_step:number}|null>(null);
+  const [resumeStates,setResumeStates]=useState<Array<NonNullable<typeof resumeState>>>([]);
+  const [resumeError,setResumeError]=useState('');
   const [anomalyPurpose,setAnomalyPurpose] = useState<'image'|'region'>('image');
   const [syntheticOptions, setSyntheticOptions] = useState<DinoSyntheticTrainingOptions>({...dinoSyntheticDefaults});
   const selectedBackbone = modelChoices[task].some(choice => choice.value === trainingBackbone) ? trainingBackbone : modelChoices[task][0].value;
@@ -64,7 +69,8 @@ export const TrainingController: React.FC = () => {
   const statisticalRefit = task === 'anomaly' && !syntheticAnomaly;
   let modelOptions: Record<string, unknown> = {};
   let modelOptionsError: string | null = null;
-  try { modelOptions = trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose); }
+  try { modelOptions = resumeState ? {...resumeState.recipe,resume_checkpoint:resumeState.checkpoint_path} : trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose,
+    selectedBackbone.startsWith('dinov3')?{train_mode:trainMode,partial_blocks:partialBlocks}:undefined); }
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
@@ -123,6 +129,12 @@ export const TrainingController: React.FC = () => {
     (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
   const warmStartSupported = true;
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
+  useEffect(()=>{
+    let current=true;setResumeStates([]);setResumeState(null);setResumeError('');
+    if(sourceReady&&!selectedProfileId&&task!=='anomaly')void request<{states:Array<NonNullable<typeof resumeState>>}>(`/api/training/resume-states?${new URLSearchParams({dataset_path:folderPath,task,preset})}`)
+      .then(result=>{if(current)setResumeStates(result.states);}).catch(cause=>{if(current)setResumeError(String(cause));});
+    return()=>{current=false;};
+  },[sourceReady,folderPath,task,preset,projectDir,selectedProfileId,completedJobId,transportRevision]);
 
   useEffect(() => {
     setTrainingBackbone(modelChoices[task][0].value);
@@ -180,7 +192,10 @@ export const TrainingController: React.FC = () => {
   const handleStart = async () => {
     if (!canStart || useProjectStore.getState().isProjectBusy) return;
     setActionError(null);
-    try { await startTraining(folderPath, task, warmParentId || undefined, modelOptions); }
+    try {
+      if(resumeState)setNextSettings({batchSize:Number(resumeState.recipe.batch_size)||undefined,device:resumeState.device});
+      await startTraining(folderPath, task, resumeState?undefined:warmParentId || undefined, modelOptions);
+    }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
 
@@ -338,12 +353,12 @@ export const TrainingController: React.FC = () => {
 
         <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <label className="font-semibold text-white">다음 학습 모델
-            <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
+            <select aria-label="학습 모델 구조" value={selectedBackbone} disabled={isTraining||!!resumeState} onChange={event => { setTrainingBackbone(event.target.value); setWarmParentId(''); }}
               className="mt-2 block w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 font-normal">
               {modelChoices[task].map(choice => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
             </select>
           </label>
-          {selectedBackbone.startsWith('dinov3') && <p className="mt-2 text-slate-300">DINOv3 사전학습 특징을 사용하고 현재 라벨에 맞는 분류·분할 헤드를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p>}
+          {selectedBackbone.startsWith('dinov3') && <><p className="mt-2 text-slate-300">DINOv3 사전학습 가중치에서 선택한 범위를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p><label className="mt-2 block">DINO 학습 범위<select aria-label="DINO 학습 범위" value={trainMode} disabled={isTraining||!!resumeState} onChange={event=>setTrainMode(event.target.value as typeof trainMode)} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="head_only">헤드만 · 기본</option><option value="partial">헤드와 마지막 인코더 블록</option><option value="full">전체 인코더와 헤드</option></select></label>{trainMode==='partial'&&<label className="mt-2 block">마지막 학습 블록 수<input aria-label="마지막 학습 블록 수" type="number" min={1} max={12} value={partialBlocks} disabled={isTraining||!!resumeState} onChange={event=>setPartialBlocks(Number(event.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}</>}
           {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
           {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region">이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 출력은 패치 점수 맵이며 픽셀 정답 마스크와 구분합니다.'}</p></div>}
           {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
@@ -357,12 +372,14 @@ export const TrainingController: React.FC = () => {
           {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
         </div>
 
+        {!selectedProfileId&&task!=='anomaly'&&<div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200"><label>중단된 학습 이어가기 · Epoch 경계<select aria-label="정확한 학습 이어가기" value={resumeState?.checkpoint_path||''} disabled={isTraining} onChange={event=>{const row=resumeStates.find(state=>state.checkpoint_path===event.target.value)||null;setResumeState(row);setWarmParentId('');if(row){setTrainingBackbone(String(row.recipe.model_name||row.recipe.backbone||selectedBackbone));setTrainMode((row.recipe.train_mode||'head_only') as typeof trainMode);setPartialBlocks(Number(row.recipe.partial_blocks)||2);}}} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="">새 학습 또는 완료 모델의 초기 가중치 사용</option>{resumeStates.map(row=><option key={row.checkpoint_path} value={row.checkpoint_path}>Epoch {row.next_epoch}/{String(row.recipe.epochs)} 완료 · Step {row.global_step} · {row.device}</option>)}</select></label><p className="mt-2 text-slate-400">동일 데이터·구조·설정·장치에서 마지막으로 완료한 Epoch부터 optimizer·RNG·AMP·scheduler 상태를 복원합니다. 진행 중이던 Epoch는 다시 시작합니다. 서버와 DDP 이어가기는 지원하지 않습니다.</p>{resumeState&&<p className="mt-2 text-cyan-200">저장된 학습 설정 사용 · 전체 {String(resumeState.recipe.epochs)} Epoch · 마지막 완료 Step {resumeState.global_step}</p>}{resumeError&&<p role="alert" className="mt-2 text-amber-300">{resumeError}</p>}</div>}
+
         {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <div className="font-semibold text-white">이전 모델에서 재학습</div>
           <p className="mt-1 text-slate-400">{statisticalRefit ? '완료된 같은 출처의 특징 추출기를 검증하고, 현재 정상 데이터로 통계를 다시 구성합니다.' : syntheticAnomaly ? '같은 백본·원본 패치 크기·패치 간격·헤드 구조의 완료 모델 전체 가중치에서 다시 학습합니다.' : '완료된 같은 프로젝트·데이터 출처·구조의 체크포인트를 초기 가중치로 사용합니다.'} 새 결과는 후보 모델로 저장됩니다.</p>
           <label className="mt-2 block text-slate-300">시작 모델
               <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
-                disabled={!sourceReady || isTraining || !!modelOptionsError} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
+                disabled={!sourceReady || isTraining || !!modelOptionsError||!!resumeState} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
                 <option value="">새 모델로 학습</option>
                 {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parent.job_id} · SHA {parent.checkpoint_sha256.slice(0, 12)}</option>)}
               </select>

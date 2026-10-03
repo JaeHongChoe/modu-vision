@@ -166,6 +166,9 @@ class CropInspectionResult(BaseModel):
     largest_blob_area_px: Optional[int] = None
     tiles_processed: Optional[int] = None
     recognized_text: Optional[str] = None
+    ocr_regions: List[Dict[str, Any]] = Field(default_factory=list)
+    ocr_recipe: Optional[Dict[str, Any]] = None
+    ocr_rule_result: Optional[Dict[str, Any]] = None
     predicted_class: Optional[str] = None
     polygon: Optional[List[List[float]]] = None
     anomaly_map: Optional[str] = None
@@ -1343,6 +1346,12 @@ class FlowchartEngine:
                     if crop.polygon:
                         points=np.asarray(crop.polygon)
                         crop.polygon=(transform@np.vstack([points.T,np.ones(len(points))]))[:2].T.tolist()
+                    for region in crop.ocr_regions:
+                        points=np.asarray(region['polygon'],dtype=float)
+                        mapped_points=(transform@np.vstack([points.T,np.ones(len(points))]))
+                        points=(mapped_points[:2]/mapped_points[2]).T
+                        region['polygon']=points.tolist()
+                        region['box']=[max(0,int(np.floor(points[:,0].min()))),max(0,int(np.floor(points[:,1].min()))),min(img_rgb.shape[1],int(np.ceil(points[:,0].max()))),min(img_rgb.shape[0],int(np.ceil(points[:,1].max())))]
                     crop.source_transform = transform.tolist()
                     crop._region = {**roi,'id':crop.roi_id,'image':local[max(0,y1):min(h,y2),max(0,x1):min(w,x2)].copy(),'bbox':crop.bbox,'source_transform':mapped.tolist(),'crop_padding':0}
                     if crop.polygon and task.lower().strip() == 'rotated_detection':
@@ -1433,9 +1442,18 @@ class FlowchartEngine:
                 params = inspect_node.data.params
                 evaluated=evaluate_ocr_rules(prediction['text'],params)
                 matched=evaluated.pop('matched')
+                recipe_rules=prediction.get('text_rule_result')
+                if recipe_rules and recipe_rules.get('passed') is False:
+                    matched=False
+                    evaluated['rule_violations'].extend({'rule':rule,'origin':'model_recipe'} for rule in recipe_rules.get('failed_rules',[]))
+                regions=deepcopy(prediction.get('regions',[]))
+                for region in regions:
+                    region['box']=[region['box'][0]+bbox[0],region['box'][1]+bbox[1],region['box'][2]+bbox[0],region['box'][3]+bbox[1]]
+                    region['polygon']=[[x+bbox[0],y+bbox[1]] for x,y in region['polygon']]
                 result.append(CropInspectionResult(roi_id=roi['id'],label=roi['label'],bbox=bbox,
                     defect_score=0 if matched else 1,verdict="OK" if matched else "NG",crop_thumbnail=image_uri(pixels),
-                    flaw_type="문자 일치" if matched else "문자 불일치",recognized_text=prediction['text'],confidence=prediction['confidence'],**evaluated))
+                    flaw_type="문자 일치" if matched else "문자 불일치",recognized_text=prediction['text'],confidence=prediction['confidence'],
+                    ocr_regions=regions,ocr_recipe=prediction.get('recipe'),ocr_rule_result=recipe_rules,**evaluated))
             return result,(time.time()-t0)*1000,"passed"
         if task.lower().strip() == "rotated_detection":
             from backend.engine.rotated_detection import predict_rotated_array

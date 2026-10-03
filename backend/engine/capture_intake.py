@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -165,6 +166,11 @@ def register_service_jobs(project, *, job_ids=None, limit=100):
                            'service_state':receipt['state'],'created_at':receipt['created_at'],'updated_at':receipt['updated_at'],
                            'runtime_identity':result.get('runtime_identity'), 'graph_sha256':result.get('graph_sha256'),
                            'node_evidence':result.get('execution_steps',[]),'roi_evidence':result.get('crops',[]),
+                           'review_evidence':{'models_disagree':result.get('models_disagree') is True,
+                             'review_required':result.get('review_required') is True or result.get('final_verdict')=='REVIEW',
+                             'score':result.get('max_defect_score'), 'score_unit':result.get('score_unit')},
+                           'runtime_binding':json.loads(receipt.get('runtime_binding_json') or 'null'),
+                           'binding_provenance':receipt.get('binding_provenance','legacy_unknown'),
                            'error':receipt.get('error'),'job_receipt_sha256':receipt_sha}}
             index['candidates'][identifier]=row;registered.append(copy.deepcopy(row))
         atomic_json(root/'index.json',index)
@@ -179,6 +185,27 @@ def list_candidates(project):
         except (ValueError,OSError) as exc:row=copy.deepcopy(value);row['stale']=True;row['stale_reason']=str(exc)
         rows.append(row)
     return {'candidates':sorted(rows,key=lambda row:row['created_at'],reverse=True),'total':len(rows),'scope':scope}
+
+
+def review_queue(project, *, threshold=.5, margin=.05):
+    """Rank persisted evidence without converting a prediction into truth."""
+    if any(isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not 0<=value<=1 for value in (threshold,margin)):
+        raise ValueError('Review threshold and margin must be finite fractions from 0 to 1')
+    result=list_candidates(project)
+    for row in result['candidates']:
+        evidence=row['origin'].get('review_evidence') or {};reasons=[];rank=0
+        if row.get('stale') or row['routing']=='failed':reasons.append('error');rank=max(rank,400)
+        if evidence.get('models_disagree') is True:reasons.append('disagreement');rank=max(rank,300)
+        if evidence.get('review_required') is True:reasons.append('review');rank=max(rank,200)
+        score=evidence.get('score')
+        if evidence.get('score_unit')=='fraction' and not isinstance(score,bool) and isinstance(score,(int,float)) and math.isfinite(score) and 0<=score<=1 and abs(score-threshold)<=margin:
+            reasons.append('threshold');rank=max(rank,100)
+        if row['routing']=='duplicate':reasons.append('duplicate')
+        if row['truth_verdict']=='UNKNOWN':reasons.append('unknown_truth');rank+=10
+        row.update(review_reasons=reasons,review_priority=rank)
+    result['candidates'].sort(key=lambda row:(row['review_state']=='reviewed',-row['review_priority'],row['created_at'],row['candidate_id']))
+    result.update(pending=sum(row['review_state']=='pending' for row in result['candidates']),threshold=threshold,margin=margin)
+    return result
 
 
 def candidate_image(project,identifier):

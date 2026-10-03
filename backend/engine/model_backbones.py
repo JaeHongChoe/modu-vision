@@ -7,6 +7,7 @@ labels at the Studio boundary, converting only at the Ultralytics boundary.
 from __future__ import annotations
 
 import hashlib
+from contextlib import nullcontext
 import math
 from pathlib import Path
 from types import SimpleNamespace
@@ -99,12 +100,40 @@ def model_metadata(model: nn.Module) -> dict[str, Any]:
     return dict(getattr(model, 'model_metadata', {}))
 
 
+def validate_training_controls(task: str, preset: str, options: dict) -> None:
+    """Reject unsupported fine-tune/resume combinations before allocating work."""
+    mode = options.get('train_mode', 'head_only')
+    if mode not in ('head_only', 'partial', 'full'):
+        raise ValueError('train_mode must be head_only, partial, or full')
+    blocks = options.get('partial_blocks', 2)
+    if type(blocks) is not int or not 1 <= blocks <= 24:
+        raise ValueError('partial_blocks must be an integer between 1 and 24')
+    if mode != 'head_only':
+        name = options.get('model_name' if task == 'segmentation' else 'backbone',
+                           'dinov3_vitb16' if preset == 'precision' else 'dinov3_vits16')
+        if task not in ('classification', 'patch_classification', 'segmentation') or not is_dino_backbone(str(name)):
+            raise ValueError('train_mode partial/full requires a DINOv3 classification or segmentation recipe')
+        if mode == 'partial' and blocks > (24 if canonical_dino_name(str(name)) == 'dinov3_vitl16' else 12):
+            raise ValueError('partial_blocks exceeds this DINOv3 encoder block count')
+    if options.get('resume_checkpoint') and task in ('anomaly', 'anomaly_detection'):
+        raise ValueError('Exact resume is unsupported for anomaly fitting; use its documented warm-start/refit mode')
+    if options.get('resume_checkpoint') and task == 'detection' and str(options.get('backbone','yolo26n')).startswith('yolo'):
+        raise ValueError('Exact resume is unsupported for the YOLO native training adapter')
+    if type(options.get('use_amp', False)) is not bool:
+        raise ValueError('use_amp must be a boolean')
+
+
 class DinoTaskModel(nn.Module):
     """A real timm DINOv3 encoder with a trainable linear or dense head."""
 
     def __init__(self, task: str, backbone: str, num_classes: int, pretrained: bool = True,
-                 pretrained_checkpoint: str | None = None, pretrained_sha256: str | None = None):
+                 pretrained_checkpoint: str | None = None, pretrained_sha256: str | None = None,
+                 train_mode: str = 'head_only', partial_blocks: int = 2):
         super().__init__()
+        if train_mode not in ('head_only', 'partial', 'full'):
+            raise ValueError('DINOv3 train_mode must be head_only, partial, or full')
+        if type(partial_blocks) is not int or partial_blocks < 1:
+            raise ValueError('DINOv3 partial_blocks must be a positive integer')
         if task not in ('classification', 'segmentation'):
             raise ValueError(f'Unsupported DINOv3 task: {task}')
         name = canonical_dino_name(backbone)
@@ -126,6 +155,16 @@ class DinoTaskModel(nn.Module):
             load_checkpoint(self.encoder, str(receipt[0]), strict=True)
         self.encoder.requires_grad_(False)
         self.encoder.eval()
+        self.train_mode = train_mode
+        self.partial_blocks = partial_blocks
+        if train_mode == 'full':
+            self.encoder.requires_grad_(True)
+        elif train_mode == 'partial':
+            if partial_blocks > len(self.encoder.blocks):
+                raise ValueError('DINOv3 partial_blocks exceeds the encoder block count')
+            for block in self.encoder.blocks[-partial_blocks:]:
+                block.requires_grad_(True)
+            self.encoder.norm.requires_grad_(True)
         self.task = task
         self.backbone = name
         self.num_classes = num_classes
@@ -143,7 +182,9 @@ class DinoTaskModel(nn.Module):
         self.target_gradcam_layer = None
         self.model_metadata = {
             'backbone': name, 'model_name': name, 'architecture': f'{task}:{name}',
-            'encoder_architecture': DINO_MODELS[name], 'encoder_frozen': True,
+            'encoder_architecture': DINO_MODELS[name], 'encoder_frozen': train_mode == 'head_only',
+            'train_mode': train_mode, 'partial_blocks': partial_blocks,
+            'trainable_encoder_parameters': sum(p.numel() for p in self.encoder.parameters() if p.requires_grad),
             'adapter_version': ADAPTER_VERSION, 'num_classes': num_classes,
             'pretrained': bool(pretrained), 'pretrained_source': receipt[2] if receipt else None,
             'pretrained_sha256': receipt[1] if receipt else None,
@@ -152,7 +193,13 @@ class DinoTaskModel(nn.Module):
 
     def train(self, mode: bool = True):
         super().train(mode)
-        self.encoder.eval()
+        if self.train_mode == 'head_only':
+            self.encoder.eval()
+        elif self.train_mode == 'partial':
+            self.encoder.eval()
+            for block in self.encoder.blocks[-self.partial_blocks:]:
+                block.train(mode)
+            self.encoder.norm.train(mode)
         return self
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -163,7 +210,7 @@ class DinoTaskModel(nn.Module):
         pad_h = (self.patch_size - height % self.patch_size) % self.patch_size
         pad_w = (self.patch_size - width % self.patch_size) % self.patch_size
         x = F.pad(x, (0, pad_w, 0, pad_h))
-        with torch.no_grad():
+        with torch.no_grad() if self.train_mode == 'head_only' else nullcontext():
             tokens = self.encoder.forward_features(x)
         if self.task == 'classification':
             return self.head(tokens[:, 0])

@@ -119,12 +119,22 @@ class RotatedBoxRecord:
 
 
 @dataclass(frozen=True)
+class RotatedImageRecord:
+    image: str
+    path: Path
+    source_sha256: str
+    split: str
+    size: tuple[int, int]
+
+
+@dataclass(frozen=True)
 class RotatedBoxManifest:
     root: Path
     class_name: str
     records: tuple[RotatedBoxRecord, ...]
     provenance: dict[str, Any]
     version: int = 1
+    images: tuple[RotatedImageRecord, ...] = ()
 
     @property
     def direction_enabled(self):
@@ -150,6 +160,7 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
     if not isinstance(rows, list) or not rows:
         raise ValueError("rotated_boxes.json needs one-object image samples")
     records: list[RotatedBoxRecord] = []
+    images: list[RotatedImageRecord] = []
     hashes_by_split: dict[str, str] = {}
     seen_images: set[str] = set()
     counts = dict.fromkeys(_SPLITS, 0)
@@ -184,15 +195,17 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         except (OSError, ValueError) as exc:
             raise ValueError(f"Rotated source image is unreadable: {image}") from exc
         split = row.get("split")
-        if split not in _SPLITS:
+        if not isinstance(split,str) or split not in _SPLITS:
             raise ValueError(f"Rotated sample {index} split must be train, val or test")
         existing_split = hashes_by_split.setdefault(actual, split)
         if existing_split != split:
             raise ValueError("Byte-identical rotated source images occur in different split partitions")
         objects = row.get("objects") if raw["version"] == 2 else [row]
-        if not isinstance(objects,list) or not 1 <= len(objects) <= 32:
-            raise ValueError("Rotated objects must contain 1-32 explicit boxes")
+        if not isinstance(objects,list):
+            raise ValueError('Rotated objects must be an explicit list; empty lists represent verified background')
+        images.append(RotatedImageRecord(image,path,actual,split,size))
         for obj in objects:
+            if not isinstance(obj,dict): raise ValueError('Rotated object must be an object')
             label = obj.get("label")
             if not isinstance(label, str) or not label.strip() or label != label.strip():
                 raise ValueError(f"Rotated sample {index} needs a nonempty label")
@@ -209,11 +222,16 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
         raise ValueError("Single-object rotated model supports exactly one label class")
     if not counts["train"] or not counts["val"]:
         raise ValueError("Rotated training requires separate nonempty train and val splits")
+    if not labels or not any(record.split=='train' for record in records):
+        raise ValueError('Rotated training requires at least one explicit train object class')
     manifest_sha = _sha256(manifest_path)
     digest = hashlib.sha256()
     digest.update(b"rotated-detection-single-object-v1\0")
     digest.update(manifest_sha.encode("ascii"))
-    for record in sorted(records, key=lambda item: item.image):
+    # Preserve v1/v2 dataset digests for existing nonempty fixed-slot models.
+    object_images={record.image for record in records}
+    digest_records=list(records)+[image for image in images if image.image not in object_images]
+    for record in sorted(digest_records, key=lambda item: item.image):
         digest.update(b"\0")
         digest.update(record.image.encode("utf-8"))
         digest.update(b"\0")
@@ -221,14 +239,14 @@ def _load_rotated_manifest_path(root: str | Path, manifest_path: Path) -> Rotate
     provenance = {
         "dataset_sha256": f"sha256:{digest.hexdigest()}",
         "manifest_sha256": manifest_sha,
-        "source_sha256": {row.image: row.source_sha256 for row in records},
+        "source_sha256": {row.image: row.source_sha256 for row in images},
         "split_counts": counts,
         "source_image_count": len(seen_images), "object_count": len(records),
         "direction_enabled": any(r.direction_deg is not None for r in records),
     }
     from backend.engine.prepared_family_datasets import prepared_source_provenance
     provenance.update(prepared_source_provenance(root, raw, provenance['source_sha256']))
-    return RotatedBoxManifest(root, sorted(labels)[0], tuple(records), provenance, raw["version"])
+    return RotatedBoxManifest(root, sorted(labels)[0], tuple(records), provenance, raw["version"],tuple(images))
 
 
 def load_rotated_manifest(root: str | Path) -> RotatedBoxManifest:
@@ -415,6 +433,15 @@ def predict_rotated_box(
     checkpoint: str | Path, image: str | Path, *, device: str | torch.device = "cpu", threshold: float = 0.5,
 ) -> dict[str, Any]:
     """Predict one rotated box in the supplied image's original pixel space."""
+    from backend.engine.yolo_obb_adapter import adapter_metadata, predict_yolo_array
+    yolo_meta=adapter_metadata(checkpoint)
+    if yolo_meta is not None:
+        source=Path(image).expanduser()
+        if source.is_symlink() or not source.is_file(): raise ValueError('Rotated inference needs a regular source image')
+        data=source.read_bytes()
+        with Image.open(io.BytesIO(data)) as opened: result=predict_yolo_array(checkpoint,np.asarray(opened.convert('RGB')),device=device,threshold=threshold,meta=yolo_meta)
+        result.update(source_image=str(source.resolve()),source_sha256=hashlib.sha256(data).hexdigest())
+        return result
     model, meta, checksum = _load_checkpoint(checkpoint, device)
     source = Path(image).expanduser()
     if source.is_symlink() or not source.is_file():
@@ -494,6 +521,9 @@ def evaluate_rotated_detector(
     """Measure oriented IoU and modulo-180 angle error on a held-out split."""
     if split not in ("val", "test"):
         raise ValueError("Rotated evaluation requires a held-out val or test split")
+    from backend.engine.yolo_obb_adapter import adapter_metadata, evaluate_yolo
+    if adapter_metadata(checkpoint) is not None:
+        return evaluate_yolo(checkpoint,load_rotated_manifest(root),split=split,device=device,allow_dataset_revision=allow_dataset_revision)
     model, meta, checksum = _load_checkpoint(checkpoint, device)
     manifest = load_rotated_manifest(root)
     revised = meta.get("dataset_sha256") != manifest.provenance["dataset_sha256"]
@@ -517,6 +547,7 @@ def train_rotated_detector(
     device: str | torch.device = "cpu",
     cancel_event: threading.Event | None = None,
     warm_start=None,
+    recipe=None,
 ) -> dict[str, Any]:
     """Train a small single-object regressor; select the best validation IoU."""
     if type(epochs) is not int or epochs < 1 or type(batch_size) is not int or batch_size < 1:
@@ -528,6 +559,11 @@ def train_rotated_detector(
     if cancel_event is not None and cancel_event.is_set():
         raise RotatedTrainingCancelled()
     manifest = load_rotated_manifest(root)
+    from backend.engine.yolo_obb_adapter import OBBRecipe, train_yolo, validate_training_recipe
+    recipe=OBBRecipe.from_value(recipe)
+    validate_training_recipe(manifest,recipe,warm_start=warm_start)
+    if recipe.adapter=='ultralytics_yolo_obb':
+        return train_yolo(manifest,output_dir,recipe,epochs=epochs,batch_size=batch_size,image_size=image_size,learning_rate=learning_rate,device=device,cancel_event=cancel_event)
     if manifest.version == 2:
         return _train_multi(manifest,output_dir,epochs,batch_size,image_size,learning_rate,device,cancel_event,warm_start)
     train = RotatedBoxDataset(manifest, split="train", image_size=image_size)
@@ -657,6 +693,9 @@ def _multi_predictions(raw,size,meta,threshold):
 
 def predict_rotated_array(checkpoint,image_rgb,*,device='cpu',threshold=0.5):
     if not 0<=threshold<=1: raise ValueError('Rotated threshold must be [0,1]')
+    from backend.engine.yolo_obb_adapter import adapter_metadata, predict_yolo_array
+    meta=adapter_metadata(checkpoint)
+    if meta is not None: return predict_yolo_array(checkpoint,image_rgb,device=device,threshold=threshold,meta=meta)
     model,meta,checksum=_load_checkpoint(checkpoint,device)
     height,width=image_rgb.shape[:2]
     pixels=cv2.resize(image_rgb,(meta['image_size'],meta['image_size']))

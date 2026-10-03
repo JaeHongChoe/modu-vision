@@ -20,8 +20,10 @@ export const dinoSyntheticDefaults: DinoSyntheticTrainingOptions = {
   patches_per_image: 8, inference_batch_size: 32,
 };
 
+export type DinoFineTuneOptions = {train_mode: 'head_only' | 'partial' | 'full'; partial_blocks?: number};
+
 export function trainingModelOverrides(task: VisionTask, model: string, checkpoint = '',
-  syntheticOptions: Partial<DinoSyntheticTrainingOptions> = {}, purpose: 'image' | 'region' = 'image'): Record<string, unknown> {
+  syntheticOptions: Partial<DinoSyntheticTrainingOptions> = {}, purpose: 'image' | 'region' = 'image', fineTune?: DinoFineTuneOptions): Record<string, unknown> {
   if (!modelChoices[task].some(choice => choice.value === model)) throw new Error('현재 검사 종류와 맞는 모델을 선택하세요.');
   const options: Record<string, unknown> = task === 'segmentation' ? {model_name: model} : task === 'anomaly' ? {anomaly_method: model} : {backbone: model};
   if (task === 'anomaly') options.anomaly_mode = purpose === 'region' ? 'segmentation' : 'classification';
@@ -35,5 +37,15 @@ export function trainingModelOverrides(task: VisionTask, model: string, checkpoi
     Object.assign(options, selected);
   }
   if (checkpoint.trim()) options.pretrained_checkpoint = checkpoint.trim();
+  if (fineTune) {
+    if (!model.startsWith('dinov3') || !['classification','segmentation'].includes(task)) throw new Error('DINO 분류·분할 모델에서 학습 범위를 선택하세요.');
+    if (!['head_only','partial','full'].includes(fineTune.train_mode)) throw new Error('DINO 학습 범위를 확인하세요.');
+    options.train_mode = fineTune.train_mode;
+    if (fineTune.train_mode === 'partial') {
+      const blocks = fineTune.partial_blocks ?? 2;
+      if (!Number.isInteger(blocks) || blocks < 1 || blocks > 12) throw new Error('마지막 학습 블록 수는 1~12 범위여야 합니다.');
+      options.partial_blocks = blocks;
+    }
+  }
   return options;
 }

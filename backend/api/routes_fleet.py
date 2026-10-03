@@ -23,6 +23,23 @@ class EmergencyRollbackRequest(BaseModel):
     deployment_id:str=Field(min_length=1,max_length=100)
     reason:str=Field(max_length=2000)
 
+class RolloutRequest(DeployRequest):
+    model_config=ConfigDict(extra='forbid')
+    target_ids:list[str]=Field(min_length=1,max_length=1000)
+    canary_target_ids:list[str]|None=None
+    batch_size:int=Field(default=5,ge=1,le=100)
+
+class RolloutActionRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    expected_revision:int=Field(ge=1)
+    reviewer:str=Field(min_length=1,max_length=100)
+
+class RolloutAdvanceRequest(RolloutActionRequest):
+    confirm_canary:bool=False
+
+class RolloutPauseRequest(RolloutActionRequest):
+    reason:str=Field(min_length=1,max_length=2000)
+
 
 # The desktop process token is an explicit local-owner capability, not a
 # human account identity. Shared servers always require the account session.
@@ -105,3 +122,45 @@ def emergency_rollback(target_id:str,payload:EmergencyRollbackRequest,request:Re
         except EmergencyReasonRequired as exc:
             raise HTTPException(422,str(exc)) from exc
     return execute(action)
+
+
+@router.get('/rollouts')
+def rollouts(request:Request):
+    store,project=scope(request)
+    return execute(lambda:{'rollouts':store.rollouts()})
+
+@router.post('/rollouts')
+def create_rollout(payload:RolloutRequest,request:Request):
+    store,project=scope(request)
+    def action():
+        import re
+        if not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?|openvino:(CPU|GPU|NPU)',payload.device):raise ValueError('Unsupported field execution device')
+        release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device)
+        return store.create_rollout(release,target_ids=payload.target_ids,canary_target_ids=payload.canary_target_ids,batch_size=payload.batch_size,reviewer=payload.reviewer,project=project)
+    return execute(action)
+
+@router.get('/rollouts/{plan_id}')
+def rollout(plan_id:str,request:Request):
+    store,project=scope(request)
+    return execute(lambda:{**store.rollout(plan_id),'events':store.rollout_events(plan_id)})
+
+@router.post('/rollouts/{plan_id}/advance')
+def advance_rollout(plan_id:str,payload:RolloutAdvanceRequest,request:Request):
+    store,project=scope(request)
+    return execute(lambda:store.advance_rollout(plan_id,**payload.model_dump(),project=project))
+
+@router.post('/rollouts/{plan_id}/pause')
+def pause_rollout(plan_id:str,payload:RolloutPauseRequest,request:Request):
+    store,project=scope(request)
+    return execute(lambda:store.pause_rollout(plan_id,**payload.model_dump()))
+
+@router.post('/rollouts/{plan_id}/resume')
+def resume_rollout(plan_id:str,payload:RolloutActionRequest,request:Request):
+    store,project=scope(request)
+    return execute(lambda:store.resume_rollout(plan_id,**payload.model_dump(),project=project))
+
+@router.post('/rollouts/{plan_id}/rollback')
+def rollback_rollout(plan_id:str,payload:RolloutActionRequest,request:Request):
+    store,project=scope(request)
+    if not rollback_capabilities(request,project)['can_rollback']:raise HTTPException(403,'Rollout rollback requires project owner or reviewer permission')
+    return execute(lambda:store.rollback_rollout(plan_id,**payload.model_dump(),project=project))

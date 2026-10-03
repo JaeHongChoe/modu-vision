@@ -14,6 +14,11 @@ import {TrainingDeviceSelector,programButton} from './ProgramWorkbenchControls';
 import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
 import {ProjectImagePicker} from './ProjectImagePicker';
 import {projectSampleRow,replaceSampleRow} from './preparedSampleRows';
+import {ocrRecipePayload,type OCRMode,type OCRNormalizer} from './modelAdapterRecipes';
+
+type OCRPrediction={text:string;confidence:number;model_sha256:string;mode:OCRMode;image_size:[number,number];
+  regions:Array<{box:[number,number,number,number];text:string;confidence:number;line_index:number}>;
+  text_rule_result:{passed:boolean;failed_rules:string[]};preview_data_url?:string};
 
 function parseRows(value: string): OCRLabelRow[] {
   const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -52,7 +57,11 @@ export const OCRWorkbench: React.FC = () => {
   const [imagePath, setImagePath] = useState('');
   const [manifestCount, setManifestCount] = useState<number | null>(null);
   const [evaluation, setEvaluation] = useState<OCREvaluation | null>(null);
-  const [prediction, setPrediction] = useState<{ text: string; confidence: number; model_sha256: string } | null>(null);
+  const [prediction, setPrediction] = useState<OCRPrediction | null>(null);
+  const [ocrMode,setOCRMode]=useState<OCRMode>('crop');
+  const [charset,setCharset]=useState('');
+  const [normalizer,setNormalizer]=useState<OCRNormalizer>('none');
+  const [textRegex,setTextRegex]=useState('');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<'manifest' | 'train' | 'evaluate' | 'predict' | null>(null);
@@ -70,6 +79,7 @@ export const OCRWorkbench: React.FC = () => {
     setJobId('');
     setEvaluation(null);
     setPrediction(null);
+    setOCRMode('crop');setCharset('');setNormalizer('none');setTextRegex('');
     if (!projectDir) return;
     let active = true;
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/ocr/datasets'),api.ocr.models()]).then(([prepared,result])=>{
@@ -118,7 +128,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !projectDir || busy || !manifestCount) return;
     setBusy('train'); setError(''); setNotice('');
     try {
-      await training.start(datasetPath.trim(),epochs,warmParentId || undefined,device);
+      await training.start(datasetPath.trim(),epochs,warmParentId || undefined,device,{recipe:ocrRecipePayload(ocrMode,charset,normalizer,textRegex)});
       if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -138,7 +148,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!imagePath.trim() || !jobId || busy) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await request<{text:string;confidence:number;model_sha256:string}>('/api/ocr/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:imagePath.trim(),device})});
+      const result = await request<OCRPrediction>('/api/ocr/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:imagePath.trim(),device,include_preview:true,recipe:ocrRecipePayload(ocrMode,charset,normalizer,textRegex)})});
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -146,11 +156,18 @@ export const OCRWorkbench: React.FC = () => {
 
   return <details open className="rounded-xl border border-[#344255] bg-[#141D2B] text-xs text-slate-200">
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold text-slate-100">
-      <FileText className="h-4 w-4 text-cyan-400" /> 문자 인식 모델 실험 <span className="font-normal text-slate-400">단일 행 텍스트 이미지</span>
+      <FileText className="h-4 w-4 text-cyan-400" /> 문자 인식 모델 실험 <span className="font-normal text-slate-400">단일 행 인식 · 수평 다중 행 영역 제안</span>
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
-      <TrainingPreparationPanel family="ocr" model="ctc" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
+      <TrainingPreparationPanel family="ocr" model="ctc" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs,recipe:{mode:ocrMode,charset:charset||null,normalizer,orientation:'horizontal',text_rules:textRegex?{regex:textRegex}:{}}}} />
       <p className="leading-5 text-slate-400">문자가 한 줄로 잘린 이미지와 실제 정답 문자열이 필요합니다. 후보 모델은 자동으로 검사 플로우에 적용되지 않습니다.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label>인식 방식<select aria-label="OCR 인식 방식" value={ocrMode} onChange={event=>setOCRMode(event.target.value as OCRMode)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="crop">잘린 단일 행 인식 (기존)</option><option value="detect_recognize">수평 문자 영역 제안 후 다중 행 인식</option></select></label>
+        <label>허용 문자 집합 (비우면 학습 문자)<input value={charset} onChange={event=>setCharset(event.target.value)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] p-2" /></label>
+        <label>문자 정규화<select value={normalizer} onChange={event=>setNormalizer(event.target.value as OCRNormalizer)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="none">원문 유지</option><option value="strip">앞뒤 공백 제거</option><option value="nfkc">Unicode NFKC</option><option value="nfkc_strip">NFKC · 앞뒤 공백 제거</option></select></label>
+        <label>전체 문자열 정규식 규칙 (선택)<input value={textRegex} onChange={event=>setTextRegex(event.target.value)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] p-2" /></label>
+      </div>
+      <p className="text-slate-500">영역 제안은 고전 영상 처리이며 단순 배경의 수평 문자에 한정됩니다. 세로 문자·복잡한 장면 검출 품질은 검증되지 않았습니다. 학습 정답은 단일 행 crop이며, 한글·숫자는 학습 문자 집합에 있어야 합니다. 빈 영상은 영역 제안 모드에서 빈 결과를 반환합니다.</p>
       {datasets.length>0&&<label className="block text-slate-300">프로젝트에 저장된 문자 정답<select value={datasetPath} onChange={event=>{const row=datasets.find(item=>item.dataset_path===event.target.value);setDatasetPath(event.target.value);setManifestCount(row?.sample_count||null);}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2">{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <ProjectImagePicker value={selectedImage} disabled={!!busy||training.active} onSelect={image=>{setSelectedImage(image.file_path);setImagePath(image.file_path);if(['train','val','test'].includes(image.split))setTruthSplit(image.split as 'train'|'val'|'test');}} label="문자 원본 이미지 선택" />
       <div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm text-slate-200">사람이 확인한 정답 문자열<input aria-label="OCR 실제 정답 문자열" value={textTruth} onChange={event=>setTextTruth(event.target.value)} disabled={!!busy||training.active} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2" /></label><label className="block text-sm text-slate-200">독립 이미지 분할<select value={truthSplit} onChange={event=>setTruthSplit(event.target.value as 'train'|'val'|'test')} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="train">학습</option><option value="val">검증</option><option value="test">시험</option></select></label></div>
@@ -199,10 +216,14 @@ export const OCRWorkbench: React.FC = () => {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {evaluation && <div className="rounded border border-[#344255] bg-[#0E1722] p-3">
-        시험 {evaluation.sample_count}장 · 정확히 일치 {(evaluation.exact_match_accuracy * 100).toFixed(1)}% · 문자 오류율 {(evaluation.character_error_rate * 100).toFixed(1)}%
+        시험 {evaluation.sample_count}장 · 정확히 일치 {(evaluation.exact_match_accuracy * 100).toFixed(1)}% · 문자 오류율 {(evaluation.character_error_rate * 100).toFixed(1)}% · 단어 오류율 {(((evaluation as OCREvaluation & {word_error_rate?:number}).word_error_rate ?? 0)*100).toFixed(1)}%
         <div className="mt-2 max-h-32 overflow-y-auto font-mono text-slate-400">{evaluation.samples.map((item) => <div key={item.image} className="truncate">{item.image}: {item.reference_text} → {item.predicted_text}</div>)}</div>
       </div>}
-      {prediction && <p className="rounded border border-cyan-700 bg-cyan-950/30 p-3">인식 후보: <strong className="text-cyan-200">{prediction.text || '(빈 문자열)'}</strong> · 후보 점수 {(prediction.confidence * 100).toFixed(1)}%</p>}
+      {prediction && <div className="rounded border border-cyan-700 bg-cyan-950/30 p-3"><p>인식 후보: <strong className="whitespace-pre-wrap text-cyan-200">{prediction.text || '(빈 문자열)'}</strong> · 후보 점수 {(prediction.confidence * 100).toFixed(1)}%</p>
+        {prediction.text_rule_result&&<p className="mt-2">문자 규칙: {prediction.text_rule_result.passed?'통과':prediction.text_rule_result.failed_rules.join(', ')}</p>}
+        {prediction.image_size&&<svg aria-label="OCR 원본 좌표 영역" viewBox={`0 0 ${prediction.image_size[0]} ${prediction.image_size[1]}`} className="mt-2 max-h-64 w-full bg-slate-900">{prediction.preview_data_url&&<image href={prediction.preview_data_url} width={prediction.image_size[0]} height={prediction.image_size[1]}/>}{prediction.regions?.map((region,index)=><rect key={index} x={region.box[0]} y={region.box[1]} width={region.box[2]-region.box[0]} height={region.box[3]-region.box[1]} fill="none" stroke="#22d3ee" strokeWidth={Math.max(1,prediction.image_size[0]/500)}/>)}</svg>}
+        {prediction.regions?.map((region,index)=><p key={index} className="mt-1 font-mono">행 {region.line_index+1} · [{region.box.join(', ')}] · {region.text||'(빈 문자열)'}</p>)}
+      </div>}
       <AutoDLWorkbench task="ocr" familyDatasetPath={datasets.some(row=>row.dataset_path===datasetPath)?datasetPath:undefined} onComplete={()=>void api.ocr.models().then(result=>{if(sameProject()){setModels(result.models);setJobId((handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff)?.job_id)||'');}}).catch(cause=>{if(sameProject())setError(describeError(cause));})}/>
     </div>
   </details>;

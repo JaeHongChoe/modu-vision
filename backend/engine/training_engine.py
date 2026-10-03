@@ -36,6 +36,9 @@ CONFIG_FIELDS={
     'defect_gan':{'architecture','batch_size','base_channels','seed'},
 }
 ACTIVE={'queued','running','stopping'}
+for _task in ('classification','patch_classification','segmentation'):
+    CONFIG_FIELDS[_task].update({'train_mode','partial_blocks','use_amp','seed'})
+CONFIG_FIELDS['ocr'].add('recipe')
 _EVENTS={}
 _LOCK=threading.RLock()
 logger=logging.getLogger(__name__)
@@ -328,6 +331,8 @@ def create_run(*,output_dir,prepared_id=None,mode='quick',preset='fast',device='
     controls=dict(config or {})
     if prepared['task']=='ocr' and 'image_height' in controls:controls['image_size']=controls.pop('image_height')
     if set(controls)-(CONFIG_FIELDS[prepared['task']]|{'objective','latency_weight'}):raise ValueError('Unsupported model/training configuration field for this family')
+    from backend.engine.automated_trials import validate_trial_controls
+    validate_trial_controls(prepared['task'],preset,controls)
     if prepared['task']=='anomaly' and controls.get('anomaly_method','dino_synthetic')!='dino_synthetic':raise ValueError('Measured anomaly training uses the genuine pretrained DINO synthetic detector')
     next(_space(prepared['task'],search_space,controls,mode))
     budget=validated_budget(budget or {'max_trials':4 if mode=='search' else 1,'max_total_epochs':epochs_per_trial*(4 if mode=='search' else 1),'max_seconds':600},epochs_per_trial)
@@ -414,7 +419,7 @@ def execute_run(output,identifier,on_progress=None):
             search=run_automated_training(task=record['task'],dataset_path=prepared['dataset_path'],source_dataset_path=prepared['source_dataset_path'],
                 models_dir=output/'models',mode=record['mode'],preset=record['preset'],device=record['device'],base_config=record['config'],
                 search_space=record['search_space'],budget=record['budget'],epochs_per_trial=record['epochs_per_trial'],parent_job_id=record['parent_job_id'],
-                training_binding=prepared['training_binding'],search_id=identifier,cancel_event=event,on_progress=progress)
+                training_binding=prepared['training_binding'],search_id=identifier,cancel_event=event,on_progress=progress,seed=record['config'].get('seed',0))
         record.update(search=search,status=search['status'],winner=search['winner'],finished_at=time.time())
         with _LOCK,_file_lock(path.parent/'.journal.lock'):
             if event.is_set() or (path.parent/'cancel_requested.json').is_file():record.update(status='cancelled',winner=None)

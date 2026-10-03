@@ -5,6 +5,7 @@ import {request} from '../../services/api';
 import {useDeliveryScope} from './useDeliveryScope';
 import {SavedPackagePicker} from './SavedPackagePicker';
 import {emergencyAcknowledged,type RollbackCapabilities,type EmergencyRollbackEvent,type EmergencyRollbackReceipt} from './emergencyRollbackPolicy';
+import {fleetRollouts,rolloutControls,type FleetRollout} from '../../services/fleetRollouts';
 type Target={target_id:string;name:string;url:string;token_set:boolean};
 type Deployment={deployment_id:string;created_at:number;reviewer:string;restored_from?:string;release:{manifest_sha256:string;device:string}};
 type AgentState={target:Target;runtime:{status:string;device?:string;manifest_sha256?:string;model_sha256?:Record<string,string>};active:Deployment|null;history:Deployment[];matches_active:boolean;error?:string;emergency_rollback_events?:EmergencyRollbackEvent[]};
@@ -18,6 +19,9 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
   const selectedRef=useRef(selected);selectedRef.current=selected;
   const capabilities=capabilityRecord?.key===key?capabilityRecord.value:null;
   const [capabilityError,setCapabilityError]=useState('');
+  const [rollouts,setRollouts]=useState<FleetRollout[]>([]),[rolloutId,setRolloutId]=useState(''),[rollout,setRollout]=useState<FleetRollout|null>(null);
+  const [rolloutTargets,setRolloutTargets]=useState<string[]>([]),[canary,setCanary]=useState(''),[batchSize,setBatchSize]=useState(5),[pauseReason,setPauseReason]=useState('');
+  const rolloutRef=useRef(rolloutId);rolloutRef.current=rolloutId;
   const capabilityRequest=useRef(0);
   const refreshCapabilities=async()=>{
     const started=scope.current,generation=++capabilityRequest.current;
@@ -29,9 +33,11 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
   useEffect(()=>{
     let current=true;const started=scope.current;
     setTargets([]);setSelected('');selectedRef.current='';setState(null);setName('');setUrl('');setToken('');setPackagePath('');setReviewer('');setRollback('');setBusy(false);setError('');setCapabilities(null);setCapabilityError('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');
+    setRollouts([]);setRolloutId('');rolloutRef.current='';setRollout(null);setRolloutTargets([]);setCanary('');setBatchSize(5);setPauseReason('');
     if(projectDir){
       request<{targets:Target[]}>('/api/fleet/targets').then(r=>{if(current&&scope.current===started)setTargets(r.targets);}).catch(e=>{if(current&&scope.current===started)setError(String(e.message||e));});
       void refreshCapabilities();
+      fleetRollouts.list().then(result=>{if(current&&scope.current===started)setRollouts(result.rollouts);}).catch(cause=>{if(current&&scope.current===started)setError(String(cause.message||cause));});
     }
     return()=>{current=false;};
   },[key]);
@@ -64,6 +70,34 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
       throw cause;
     }
   };
+  const readRollout=async(identifier:string)=>{
+    const started=scope.current;
+    const result=await fleetRollouts.read(identifier);
+    if(scope.current===started&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
+    return result;
+  };
+  const createRollout=async()=>{
+    const started=scope.current;
+    const result=await fleetRollouts.create({package_path:packagePath,device,reviewer,target_ids:rolloutTargets,canary_target_ids:[canary],batch_size:batchSize});
+    if(scope.current!==started)return;
+    rolloutRef.current=result.plan_id;setRolloutId(result.plan_id);setRollout(result);setRollouts(previous=>[result,...previous]);
+  };
+  const operateRollout=async(operation:'advance'|'confirm'|'pause'|'resume'|'rollback')=>{
+    if(!rollout)return;
+    const started=scope.current,identifier=rollout.plan_id,revision=rollout.revision;
+    try{
+      const result=operation==='advance'||operation==='confirm'?await fleetRollouts.advance(identifier,revision,reviewer,operation==='confirm'):
+        operation==='pause'?await fleetRollouts.pause(identifier,revision,reviewer,pauseReason):
+        operation==='resume'?await fleetRollouts.resume(identifier,revision,reviewer):await fleetRollouts.rollback(identifier,revision,reviewer);
+      if(scope.current===started&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
+    }catch(cause){
+      // A transport interruption can follow a committed target action; reload its
+      // durable plan before offering another revision-bound command.
+      if(scope.current===started&&rolloutRef.current===identifier){try{await readRollout(identifier);}catch{/* Original command error remains visible. */}}
+      throw cause;
+    }
+  };
+  const rolloutButtons=rollout?rolloutControls(rollout):null;
   const refreshActualState=async()=>{
     // Capability failure disables actions independently of target evidence.
     const [targetResult]=await Promise.allSettled([read(selected),refreshCapabilities()]);
@@ -107,6 +141,23 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
     <div className="grid gap-2 sm:grid-cols-2"><SavedPackagePicker value={packagePath} onChange={setPackagePath} disabled={busy}/><details className="sm:col-span-2"><summary className="text-slate-400">고급 · 패키지 폴더 직접 입력</summary><input aria-label="현장 배포 승인 패키지" className={`${control} w-full`} value={packagePath} onChange={e=>setPackagePath(e.target.value)}/></details><label>적용 검토자<input aria-label="현장 배포 검토자" className={`${control} w-full`} value={reviewer} onChange={e=>setReviewer(e.target.value)}/></label><label>장비 실행 자원<input aria-label="현장 실행 자원" className={`${control} w-full`} value={device} onChange={e=>setDevice(e.target.value)} placeholder="cpu / cuda:0 / openvino:CPU"/></label></div>
     {deployBlocker&&<div className="mt-2 text-xs text-amber-200"><p id="fleet-deploy-reason">적용 보류: {deployBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(selected&&!packagePath.trim())void (onNavigate||useProjectStore.getState().setStep)(6);else document.querySelector<HTMLElement>(!selected?'[aria-label="현장 장비 선택"]':'[aria-label="현장 배포 검토자"]')?.focus();}}>{!selected?'현장 장비 선택':!packagePath.trim()?'승인·패키지 확인 (6단계)':'적용 입력 확인'}</button></div>}
     <button aria-describedby={deployBlocker?'fleet-deploy-reason':undefined} disabled={busy||!selected||!packagePath.trim()||!reviewer.trim()} onClick={()=>void action(deploy)} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">패키지 전송·적용 응답 확인</button>
+    <section aria-label="단계적 현장 배포" className="space-y-3 rounded border border-cyan-800 p-3">
+      <h3 className="font-semibold text-cyan-200">카나리 · 배치 순차 배포</h3>
+      <p className="leading-5 text-slate-400">위의 승인 패키지·장치·검토자를 사용해 계획을 저장합니다. 카나리 장비의 적용 응답을 확인한 후 다음 배치를 명시적으로 승인하세요. 실패·오프라인 시 중단되며, 재개는 기존 적용 장비의 실제 응답을 다시 확인합니다.</p>
+      <div className="flex flex-wrap gap-3">{targets.map(target=><label key={target.target_id}><input type="checkbox" disabled={busy} checked={rolloutTargets.includes(target.target_id)} onChange={event=>{setRolloutTargets(previous=>event.target.checked?[...previous,target.target_id]:previous.filter(id=>id!==target.target_id));if(!event.target.checked&&canary===target.target_id)setCanary('');}}/> {target.name}</label>)}{!targets.length&&<span className="text-slate-400">등록한 장비가 없습니다.</span>}</div>
+      <div className="flex flex-wrap items-end gap-2"><label>카나리 장비<select aria-label="카나리 장비" className={`${control} block`} disabled={busy} value={canary} onChange={event=>setCanary(event.target.value)}><option value="">선택한 장비 중 지정</option>{targets.filter(target=>rolloutTargets.includes(target.target_id)).map(target=><option key={target.target_id} value={target.target_id}>{target.name}</option>)}</select></label><label>배치 장비 수<input aria-label="배치 장비 수" type="number" min="1" max="100" disabled={busy} value={batchSize} onChange={event=>setBatchSize(Math.max(1,Math.min(100,Number(event.target.value)||1)))} className={`${control} block w-20`}/></label><button disabled={busy||!packagePath.trim()||!reviewer.trim()||!rolloutTargets.length||!rolloutTargets.includes(canary)} onClick={()=>void action(createRollout)} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">배포 계획 저장</button></div>
+      <div className="flex gap-2"><select aria-label="순차 배포 계획" className={`${control} flex-1`} disabled={busy} value={rolloutId} onChange={event=>{const identifier=event.target.value;rolloutRef.current=identifier;setRolloutId(identifier);setRollout(null);if(identifier)void action(()=>readRollout(identifier));}}><option value="">저장된 계획 선택</option>{rollouts.map(plan=><option key={plan.plan_id} value={plan.plan_id}>{new Date(plan.updated_at*1000).toLocaleString()} · {plan.status} · {plan.targets.length}장비 · {plan.release.manifest_sha256.slice(0,12)}</option>)}</select><button disabled={busy||!rolloutId} onClick={()=>void action(()=>readRollout(rolloutId))} className="text-cyan-200 disabled:opacity-40">계획 기록 다시 읽기</button></div>
+      {rollout&&rolloutButtons&&<>
+        <p role="status">계획 상태: {rollout.status} · 개정 {rollout.revision} · 카나리 {rollout.canary_confirmed?'승인됨':'추가 배치 승인 전'} · 배치 {rollout.batch_size}장비</p>
+        <p className="break-all font-mono text-[10px]">계획 manifest: {rollout.release.manifest_sha256} · {rollout.release.device}</p>
+        {rollout.pause_reason&&<p role="alert" className="text-amber-200">중단 사유: {rollout.pause_reason}</p>}
+        <p className="text-slate-400">계획 기록은 마지막 응답을 보존합니다. 오프라인 장비는 기존 확인된 검사 실행을 유지하고 새 명령은 실제 응답 확인까지 보류합니다.</p>
+        <ul className="space-y-2">{rollout.targets.map(target=><li key={target.target_id} className="rounded border border-slate-700 p-2"><p>{targets.find(row=>row.target_id===target.target_id)?.name||target.target_id} · {rollout.canary_target_ids.includes(target.target_id)?'카나리 · ':''}{target.status}</p>{target.error&&<p className="text-amber-200">{target.error}</p>}{target.readback&&<p className="break-all text-slate-400">마지막 응답 {new Date(target.readback.observed_at*1000).toLocaleString()} · {target.readback.runtime?.status||'응답 없음'} · {target.readback.matches_active?'적용 기록과 일치':'일치 확인 필요'} · {target.readback.runtime?.manifest_sha256||'—'}</p>}</li>)}</ul>
+        <div className="flex flex-wrap gap-2"><button disabled={busy||!reviewer.trim()||!rolloutButtons.advance} onClick={()=>void action(()=>operateRollout('advance'))} className="rounded bg-cyan-800 px-3 py-2 disabled:opacity-40">{rollout.status==='planned'?'카나리 적용·응답 확인':'다음 배치 적용·응답 확인'}</button><button disabled={busy||!reviewer.trim()||!rolloutButtons.confirmCanary} onClick={()=>void action(()=>operateRollout('confirm'))} className="rounded bg-emerald-800 px-3 py-2 disabled:opacity-40">카나리 응답 확인 · 다음 배치 승인</button><button disabled={busy||!reviewer.trim()||!rolloutButtons.resume} onClick={()=>void action(()=>operateRollout('resume'))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">실제 응답 재확인·재개 준비</button><button disabled={busy||!reviewer.trim()||!capabilities?.can_rollback||!rolloutButtons.rollback} onClick={()=>void action(()=>operateRollout('rollback'))} className="rounded border border-amber-700 px-3 py-2 disabled:opacity-40">{rollout.operation==='rollback'?'다음 롤백 배치·응답 확인':'적용 장비의 이전 이력으로 롤백'}</button></div>
+        <div className="flex gap-2"><input aria-label="순차 배포 중단 사유" disabled={busy} value={pauseReason} onChange={event=>setPauseReason(event.target.value)} placeholder="다음 배치 전 중단 사유" className={`${control} flex-1`}/><button disabled={busy||!reviewer.trim()||!pauseReason.trim()||!rolloutButtons.pause} onClick={()=>void action(()=>operateRollout('pause'))} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">계획 중단</button></div>
+        <details><summary className="cursor-pointer text-slate-400">계획 감사 기록</summary><ul>{rollout.events?.map(event=><li key={event.event_id}>개정 {event.revision} · {event.event} · {event.reviewer} · {new Date(event.created_at*1000).toLocaleString()}</li>)}</ul><p className="text-slate-500">감사 기록은 계획 기록 다시 읽기로 갱신합니다.</p></details>
+      </>}
+    </section>
     <div className="flex gap-2"><select aria-label="현장 배포 복원 이력" className={`${control} flex-1`} disabled={busy} value={rollback} onChange={e=>{setRollback(e.target.value);setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');}}><option value="">복원할 적용 기록</option>{state?.history.map(h=><option key={h.deployment_id} value={h.deployment_id}>{new Date(h.created_at*1000).toLocaleString()} · {h.release.manifest_sha256.slice(0,12)} · {h.release.device}</option>)}</select><button disabled={busy||!selected||!rollback||!reviewer.trim()||!capabilities?.can_rollback} onClick={()=>void action(restore)} className="rounded border border-amber-700 px-3 disabled:opacity-40">장비 롤백</button></div>
     <section aria-label="긴급 롤백" className="space-y-2 rounded-lg border border-amber-700/60 bg-amber-950/20 p-3">
       <h3 className="font-semibold text-amber-200">긴급 롤백</h3>

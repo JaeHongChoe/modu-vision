@@ -25,6 +25,8 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
   const [capability, setCapability] = useState<TrialCapability | null>(null);
   const [values, setValues] = useState<Record<string, string>>({}); const [mode, setMode] = useState<'quick' | 'search' | 'fast_retrain'>('search');
   const [device, setDevice] = useState<LocalTrainingDevice>('cpu'); const [epochs, setEpochs] = useState(2);
+  const [seed,setSeed]=useState(0);const [reuseSearch,setReuseSearch]=useState('');
+  const [trainMode,setTrainMode]=useState<'head_only'|'partial'|'full'>('head_only');const [partialBlocks,setPartialBlocks]=useState(2);
   const [trials, setTrials] = useState(4); const [epochBudget, setEpochBudget] = useState(8); const [seconds, setSeconds] = useState(600); const [memory,setMemory] = useState(4096);
   const [latencyObjective, setLatencyObjective] = useState(false); const [latencyWeight, setLatencyWeight] = useState(.001);
   const [parents, setParents] = useState<Array<{job_id: string; checkpoint_sha256: string}>>([]); const [parent, setParent] = useState('');
@@ -42,6 +44,7 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
   const same = () => currentScope.current === scope;
   useEffect(() => {
     let current = true; setCapability(null); setValues({}); setJobs([]); setJob(null); setParents([]); setParent(''); setError(''); setBusy(false);
+    setReuseSearch('');if(compute.selectedProfileId&&device==='mps')setDevice('cpu');
     if (!projectDir || !source) return;
     void modelTrainingProgram.automated.capabilities().then(result => {
       if (!current || !same()) return;
@@ -111,10 +114,13 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
         search[key] = mode === 'search' ? parsed : parsed.slice(0, 1);
       }
       const result = await modelTrainingProgram.automated.start({task, dataset_path: source, ...(familyDatasetPath ? {family_dataset_path: familyDatasetPath} : {}),
-        mode, device, epochs_per_trial: epochs, ...(parent ? {parent_job_id: parent} : {}),
+        mode, device, seed, epochs_per_trial: epochs, ...(parent ? {parent_job_id: parent} : {}),
+        ...(compute.selectedProfileId?{compute_profile_id:compute.selectedProfileId}:{}),...(reuseSearch?{reuse_search_id:reuseSearch}:{}),
         objective: latencyObjective ? 'loss_latency' : 'val_loss', latency_weight: latencyObjective ? latencyWeight : 0,
         budget: {max_trials: mode === 'search' ? trials : 1, max_total_epochs: epochBudget, max_seconds: seconds,max_memory_mb:memory},
-        search_space: mode === 'fast_retrain' ? {} : search, base_config: {...(mode === 'fast_retrain' ? {} : baseConfig()), ...(task==='anomaly'?{anomaly_mode:anomalyPurpose==='region'?'segmentation':'classification'}:{})}});
+        search_space: mode === 'fast_retrain' ? {} : search, base_config: {...(mode === 'fast_retrain' ? {} : baseConfig()),
+          ...(['classification','segmentation','patch_classification'].includes(task)&&mode!=='fast_retrain'?{train_mode:trainMode,partial_blocks:partialBlocks}:{}),
+          ...(task==='anomaly'?{anomaly_mode:anomalyPurpose==='region'?'segmentation':'classification'}:{})}});
       if (same()) {setJob(result); setJobs(old => [...old, result]);}
     } catch (cause) {if (same()) setError(programError(cause));} finally {if (same()) setBusy(false);}
   };
@@ -136,12 +142,14 @@ export function AutoDLWorkbench({task, familyDatasetPath, onComplete, anomalyPur
           <ProgramField label="전체 Epoch 예산"><input type="number" min={epochs} max={512} value={epochBudget} onChange={e => setEpochBudget(Number(e.target.value))} className={programInput} /></ProgramField>
           <ProgramField label="전체 시간 예산 · 초"><input type="number" min={1} max={86400} value={seconds} onChange={e => setSeconds(Number(e.target.value))} className={programInput} /></ProgramField></div>
         <p className="text-slate-400">메모리 예산은 CPU에서 백엔드 프로세스 전체 RSS, CUDA/MPS에서 이 프로세스의 장치 할당 메모리를 확인합니다. 학습 경계에서 협조적으로 중지하며 하드웨어 메모리를 강제로 제한하지 않습니다. GPU 예약에도 요청 예산을 기록합니다.</p>
-        <div className="grid gap-3 md:grid-cols-4"><ProgramField label="프로세스 메모리 예산 · MB"><input type="number" min={1} max={1048576} value={memory} onChange={event=>setMemory(Number(event.target.value))} className={programInput} /></ProgramField><TrainingDeviceSelector localOnly value={device} onChange={setDevice} disabled={busy || active} />
+        <div className="grid gap-3 md:grid-cols-4"><ProgramField label="프로세스 메모리 예산 · MB"><input type="number" min={1} max={1048576} value={memory} onChange={event=>setMemory(Number(event.target.value))} className={programInput} /></ProgramField>{compute.selectedProfileId?<ProgramField label="선택 서버의 학습 장치"><select value={device} disabled={busy||active} onChange={event=>setDevice(event.target.value as LocalTrainingDevice)} className={programInput}><option value="cpu">서버 CPU</option><option value="cuda">서버 CUDA GPU</option></select></ProgramField>:<TrainingDeviceSelector value={device} onChange={setDevice} disabled={busy || active} />}
           <ProgramField label="호환 완료 부모 모델"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={busy || active}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>부모 {index + 1} · SHA {row.checkpoint_sha256.slice(0, 12)}</option>)}</select></ProgramField>
           <ProgramField label="추론 시간 가중치"><input type="number" min={0} step={.001} value={latencyWeight} disabled={!latencyObjective} onChange={e => setLatencyWeight(Number(e.target.value))} className={programInput} /></ProgramField></div>
         <label className="flex items-center gap-2 text-slate-300"><input type="checkbox" checked={latencyObjective} onChange={e => setLatencyObjective(e.target.checked)} />검증 {capability.metric_key}와 모델 추론 시간(ms)을 함께 비교</label>
+        <div className="grid gap-3 md:grid-cols-3"><ProgramField label="탐색 Seed"><input type="number" min={0} max={2147483647} value={seed} disabled={busy||active} onChange={event=>setSeed(Number(event.target.value))} className={programInput}/></ProgramField><ProgramField label="완료 후보 재사용"><select value={reuseSearch} disabled={busy||active} onChange={event=>setReuseSearch(event.target.value)} className={programInput}><option value="">모든 후보 새로 측정</option>{jobs.filter(row=>row.trials.some(trial=>trial.status==='completed')).map((row,index)=><option value={row.search_id} key={row.search_id}>저장 작업 {index+1} · {statusLabels[row.status]||row.status}</option>)}</select></ProgramField>{['classification','segmentation','patch_classification'].includes(task)&&mode!=='fast_retrain'&&<ProgramField label="DINO 학습 범위"><select value={trainMode} disabled={busy||active} onChange={event=>setTrainMode(event.target.value as typeof trainMode)} className={programInput}><option value="head_only">헤드만 · 기본</option><option value="partial">마지막 블록과 헤드</option><option value="full">전체 인코더와 헤드</option></select>{trainMode==='partial'&&<input aria-label="AutoDL 마지막 학습 블록 수" type="number" min={1} max={12} value={partialBlocks} onChange={event=>setPartialBlocks(Number(event.target.value))} className={programInput}/>}</ProgramField>}</div>
+        <p className="text-slate-400">{compute.selectedProfileId?'선택한 서버 프로필로 각 후보를 제출합니다. 서버 연결 실패 시 실행이 중단되며 소유한 작업의 상태 확인이 필요합니다. 원격 메모리는 프로필 할당 한도를 적용하며 실측값이 없으면 표시하지 않습니다.':'이 컴퓨터에서 후보를 실행합니다.'} 완료 후보는 데이터 스냅샷·Seed·목표·설정·실행 위치와 체크포인트 해시가 같은 경우 재사용합니다. 재사용한 후보는 새 Epoch 예산을 소모하지 않습니다.</p>
         {budgetError&&<p role="alert" className="text-amber-200">{budgetError}</p>}
-        <button type="button" className={programPrimary} disabled={!!compute.selectedProfileId || busy || active || !preparedReady || !!budgetError || (mode === 'fast_retrain' && !parent)} onClick={() => void start()}>측정 학습 시작</button>
+        <button type="button" className={programPrimary} disabled={busy || active || !preparedReady || !!budgetError || (mode === 'fast_retrain' && !parent)} onClick={() => void start()}>측정 학습 시작</button>
       </>}
       {jobs.length > 0 && <ProgramField label="저장된 자동 학습 작업"><select value={job?.search_id || ''} disabled={active} className={programInput} onChange={e => setJob(jobs.find(row => row.search_id === e.target.value) || null)}>{jobs.map((row, index) => <option key={row.search_id} value={row.search_id}>작업 {index + 1} · {statusLabels[row.status] || row.status} · {new Date(row.created_at * 1000).toLocaleString()}</option>)}</select></ProgramField>}
       {job && <div className="rounded border border-[#344255] bg-[#0B1520] p-3"><div className="flex items-center justify-between"><span className="font-semibold text-violet-200">{statusLabels[job.status] || job.status} · 후보 {job.trials.length}개 · {job.epochs_consumed || 0} epoch</span>{active && <button type="button" disabled={busy || job.status==='stopping'} onClick={() => void cancel()} className={programButton}><Square className="mr-1 inline h-3 w-3" />탐색 중지</button>}</div>

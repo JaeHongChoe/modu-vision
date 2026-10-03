@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import logging
 import os
 import re
@@ -185,6 +186,27 @@ class ProjectBackupRequest(BaseModel):
 class ProjectRestoreRequest(BaseModel):
     archive_path: str = Field(..., min_length=1)
     target_dir: str = Field(..., min_length=1)
+
+
+class RetentionPolicyRequest(BaseModel):
+    retention_days: int = Field(default=30, strict=True, ge=0, le=3650)
+    trash_days: int = Field(default=30, strict=True, ge=0, le=3650)
+    quota_bytes: int | None = Field(default=None, strict=True, ge=1)
+
+
+class RetentionPinRequest(BaseModel):
+    owner: str = Field(min_length=1, max_length=128)
+    paths: list[str] = Field(min_length=1, max_length=1000)
+    reason: str = Field(min_length=1, max_length=200)
+
+
+class RetentionTrashRequest(BaseModel):
+    paths: list[str] = Field(min_length=1, max_length=1000)
+    dry_run: bool = True
+
+
+class RetentionRestoreRequest(BaseModel):
+    trash_id: str = Field(pattern='^[0-9a-f]{32}$')
 
 
 class ProjectUpdateRequest(BaseModel):
@@ -385,6 +407,39 @@ def backup_project(req: ProjectBackupRequest, request: Request):
         return create_archive(project, Path(req.destination_dir))
     except ArchiveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+def _retention_action(request, action):
+    from backend.engine.artifact_retention import ArtifactRetention
+    project=get_current_project(request)
+    try:return action(ArtifactRetention(project['project_dir']),project)
+    except (ValueError,OSError,KeyError,sqlite3.Error) as exc:raise HTTPException(409,str(exc)) from exc
+
+
+@router.get('/retention')
+def retention_status(request: Request):
+    return _retention_action(request,lambda store,project:store.status(project))
+
+
+@router.put('/retention/policy')
+def retention_policy(req: RetentionPolicyRequest,request: Request):
+    return _retention_action(request,lambda store,project:store.configure(**req.model_dump()))
+
+
+@router.post('/retention/pins')
+def retention_pin(req: RetentionPinRequest,request: Request):
+    if req.owner.startswith(('derived:','backup:','deployment:')):raise HTTPException(422,'System retention pin owners are reserved')
+    return _retention_action(request,lambda store,project:{'pinned':store.pin('manual:'+req.owner,req.paths,reason=req.reason)})
+
+
+@router.post('/retention/trash')
+def retention_trash(req: RetentionTrashRequest,request: Request):
+    return _retention_action(request,lambda store,project:store.move_to_trash(req.paths,project=project,dry_run=req.dry_run))
+
+
+@router.post('/retention/restore-trash')
+def retention_restore(req: RetentionRestoreRequest,request: Request):
+    return _retention_action(request,lambda store,project:store.restore_trash(req.trash_id))
 
 
 @router.post("/restore", response_model=ProjectConfigResponse)

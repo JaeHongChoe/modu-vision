@@ -66,6 +66,8 @@ def bootstrap_command(project_dir):
     if release.get('input_root'):args+=['--input-root',release['input_root']]
     args+=service.input_arguments(release)
     if (service.root/'adapters.json').is_file():args+=['--adapter-config',str(service.root/'adapters.json')]
+    if service.config.get('native_kind')=='windows_scm' and service.config.get('scm_configuration',{}).get('warmup_image'):
+        args+=['--warmup-image',service.config['scm_configuration']['warmup_image']]
     env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=service.config['token']
     env['PYTHONDONTWRITEBYTECODE']='1'
     return runtime_command(args),env

@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 from backend.engine.dicom_input import open_source_image
 from backend.engine.dataset_metadata import _file_lock
 
@@ -141,7 +141,13 @@ def edit_image_and_annotations(image,annotations,operation):
         elif axis=='vertical':transform=lambda p:[p[0],height-p[1]];transpose=Image.Transpose.FLIP_TOP_BOTTOM;angle=lambda v:(-v)%360
         else:raise ValueError('Flip axis must be horizontal or vertical')
         result=image.transpose(transpose);mask_edit=lambda im:im.transpose(transpose)
-    else:raise ValueError('Choose crop, rotate or flip')
+    elif kind=='brightness':
+        factor=operation.get('factor')
+        if isinstance(factor,bool) or not isinstance(factor,(int,float)) or not math.isfinite(factor) or not 0<=factor<=4:
+            raise ValueError('Brightness factor must be a finite number from 0 to 4')
+        result=ImageEnhance.Brightness(image).enhance(factor)
+        transform=lambda p:list(p);angle=lambda v:v;mask_edit=lambda im:im.copy()
+    else:raise ValueError('Choose crop, rotate, flip or brightness')
     transformed=[];omitted=[]
     for annotation in annotations:
         row=copy.deepcopy(annotation);shape=row.get('type')

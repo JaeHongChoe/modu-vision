@@ -30,6 +30,7 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
+from backend.engine.ocr_recipe import OCRRecipe, detect_horizontal_regions, validate_rgb
 
 
 @dataclass(frozen=True)
@@ -365,9 +366,12 @@ def train_ocr(
     cancel_event=None,
     on_progress=None,
     warm_start=None,
+    recipe=None,
 ) -> dict[str, Any]:
     """Fit a scratch OCR model on train only, selecting by validation CTC loss."""
     manifest = load_ocr_manifest(dataset_root)
+    recipe = OCRRecipe.from_value(recipe)
+    recipe.validate_alphabet(manifest.alphabet)
     if epochs < 1 or batch_size < 1 or not math.isfinite(learning_rate) or learning_rate <= 0:
         raise ValueError("OCR epochs, batch_size and learning_rate must be positive")
     if len(image_size) != 2 or image_size[0] < 8 or image_size[1] < 8:
@@ -423,6 +427,7 @@ def train_ocr(
                 "model_state_dict": model.state_dict(),
                 "dataset_provenance": manifest.provenance,
                 "best_epoch": epoch, "validation": validation,
+                "recipe": recipe.to_dict(),
                 **lineage,
             })
     metadata = {
@@ -432,6 +437,7 @@ def train_ocr(
         "best_epoch": best_epoch, "best_validation_loss": best_loss,
         "training_samples": len(train), "validation_samples": len(val),
         "epochs_completed": epochs, "training_loss_history": history,
+        "recipe": recipe.to_dict(),
         **lineage,
     }
     _atomic_write(output_dir / "model_meta.json", (json.dumps(metadata, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
@@ -448,6 +454,7 @@ def _load_model(checkpoint: str | Path, device: str) -> tuple[SmallCTCOCR, dict[
     if not isinstance(alphabet, str) or not alphabet or not isinstance(image_size, list) or len(image_size) != 2:
         raise ValueError("OCR checkpoint has invalid model metadata")
     model = SmallCTCOCR(len(alphabet))
+    OCRRecipe.from_value(payload.get('recipe')).validate_alphabet(alphabet)
     model.load_state_dict(payload["model_state_dict"])
     model = model.to(torch.device(device)).eval()
     return model, payload, _sha256(path.read_bytes())
@@ -472,7 +479,26 @@ def evaluate_ocr_checkpoint(
     dataset = OCRDataset(manifest, split=split, image_size=tuple(payload["image_size"]))
     dataset.alphabet = payload["alphabet"]
     dataset.index = {character: i + 1 for i, character in enumerate(dataset.alphabet)}
-    result = _evaluate(model, dataset, device=torch.device(device), batch_size=batch_size)
+    recipe=OCRRecipe.from_value(payload.get('recipe'))
+    if recipe.mode == 'crop' and recipe.normalizer == 'none' and not recipe.text_rules:
+        result = _evaluate(model, dataset, device=torch.device(device), batch_size=batch_size)
+    else:
+        predictions=[]
+        for record in dataset.samples:
+            data=record.image_path.read_bytes()
+            if _sha256(data)!=record.source_sha256: raise ValueError('OCR source changed after manifest validation')
+            with Image.open(io.BytesIO(data)) as opened: image=np.asarray(opened.convert('RGB'))
+            prediction=_predict_array(model,payload,model_sha,image,device,recipe)
+            predictions.append({'image':record.image,'source_sha256':record.source_sha256,
+                'reference_text':recipe.normalize(record.text),'predicted_text':prediction['text'],
+                'confidence':prediction['confidence'],'regions':prediction['regions'],'text_rule_result':prediction['text_rule_result']})
+        if not predictions: raise ValueError('OCR evaluation split is empty')
+        denominator=sum(len(item['reference_text']) for item in predictions)
+        result={'sample_count':len(predictions),'samples':predictions,
+            'exact_match_accuracy':sum(item['reference_text']==item['predicted_text'] for item in predictions)/len(predictions),
+            'character_error_rate':sum(_distance(item['predicted_text'],item['reference_text']) for item in predictions)/denominator}
+    result['word_error_rate']=sum(_distance(item['predicted_text'].split(),item['reference_text'].split()) for item in result['samples'])/sum(len(item['reference_text'].split()) for item in result['samples'])
+    result['mode']=recipe.mode
     return {
         "task": "ocr", "split": split, "dataset_sha256": manifest.provenance["dataset_sha256"],
         "training_dataset_sha256": training_sha, "dataset_revision_changed": revised,
@@ -480,18 +506,15 @@ def evaluate_ocr_checkpoint(
     }
 
 
-def predict_ocr(checkpoint: str | Path, image: str | Path, *, device: str = "cpu") -> dict[str, Any]:
+def predict_ocr(checkpoint: str | Path, image: str | Path, *, device: str = "cpu", recipe=None) -> dict[str, Any]:
     """Recognize one image with a saved candidate, reporting model and source hashes."""
     model, payload, model_sha = _load_model(checkpoint, device)
     path = Path(image).expanduser().resolve()
     source_bytes = path.read_bytes()
-    with Image.open(io.BytesIO(source_bytes)) as source:
-        tensor = _prepare_image(source, tuple(payload["image_size"]))
-    with torch.inference_mode():
-        logits = model(tensor.unsqueeze(0).to(torch.device(device)))[0]
-        recognized, confidence = _decode(logits, payload["alphabet"])
+    with Image.open(io.BytesIO(source_bytes)) as source: image_rgb=np.asarray(source.convert('RGB'))
+    result=_predict_array(model,payload,model_sha,image_rgb,device,OCRRecipe.from_value(recipe if recipe is not None else payload.get('recipe')))
     return {
-        "task": "ocr", "text": recognized, "confidence": confidence,
+        **result,
         "source_image": str(path), "source_sha256": _sha256(source_bytes),
         "model_sha256": model_sha,
         "dataset_sha256": payload["dataset_provenance"]["dataset_sha256"],
@@ -499,10 +522,26 @@ def predict_ocr(checkpoint: str | Path, image: str | Path, *, device: str = "cpu
     }
 
 
-def predict_ocr_array(checkpoint: str | Path, image_rgb: np.ndarray, *, device: str = "cpu") -> dict[str, Any]:
+def predict_ocr_array(checkpoint: str | Path, image_rgb: np.ndarray, *, device: str = "cpu", recipe=None) -> dict[str, Any]:
     """Array adapter used by app and exported flow; preserves the same CTC decoder."""
     model,payload,model_sha = _load_model(checkpoint,device)
-    tensor = _prepare_image(Image.fromarray(image_rgb),tuple(payload['image_size']))
+    return _predict_array(model,payload,model_sha,image_rgb,device,OCRRecipe.from_value(recipe if recipe is not None else payload.get('recipe')))
+
+
+def _predict_array(model,payload,model_sha,image_rgb,device,recipe):
+    validate_rgb(image_rgb);recipe.validate_alphabet(payload['alphabet'])
+    height,width=image_rgb.shape[:2]
+    regions=detect_horizontal_regions(image_rgb) if recipe.mode=='detect_recognize' else [{'box':[0,0,width,height],'polygon':[[0,0],[width,0],[width,height],[0,height]],'line_index':0}]
     with torch.inference_mode():
-        text,confidence = _decode(model(tensor.unsqueeze(0).to(torch.device(device)))[0],payload['alphabet'])
-    return {'task':'ocr','text':text,'confidence':confidence,'model_sha256':model_sha}
+        for index,region in enumerate(regions):
+            left,top,right,bottom=region['box']
+            tensor=_prepare_image(Image.fromarray(image_rgb[top:bottom,left:right]),tuple(payload['image_size']))
+            raw,confidence=_decode(model(tensor.unsqueeze(0).to(torch.device(device)))[0],payload['alphabet'])
+            region.update(region_index=index,raw_text=raw,text=recipe.normalize(raw),confidence=confidence)
+    lines={}
+    for region in regions: lines.setdefault(region['line_index'],[]).append(region['text'])
+    text=recipe.normalize('\n'.join(' '.join(parts) for parts in lines.values()))
+    return {'task':'ocr','version':2,'mode':recipe.mode,'text':text,'confidence':sum(r['confidence'] for r in regions)/len(regions) if regions else 0.,
+        'model_sha256':model_sha,'regions':regions,'image_size':[width,height],'coordinate_space':'original_image_pixels',
+        'recipe':recipe.to_dict(),'text_rule_result':recipe.check_text(text),
+        'detector':{'kind':'classical_horizontal_projection' if recipe.mode=='detect_recognize' else 'full_image_crop','learned':False,'vertical_text_supported':False}}

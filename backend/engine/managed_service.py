@@ -28,7 +28,7 @@ class ManagedService:
         self.root=project_dir/'runtime_service'
         if self.root.is_symlink():raise ValueError('Managed service storage is linked')
         self.root.mkdir(parents=True,exist_ok=True)
-        for name in ('service.json','state','adapters.json','install','service.log','native-install.json','runtime_deployments.sqlite3','runtime_deployments.sqlite3-wal','runtime_deployments.sqlite3-shm'):
+        for name in ('service.json','state','adapters.json','install','service.log','native-install.json','scm-install.json','runtime_deployments.sqlite3','runtime_deployments.sqlite3-wal','runtime_deployments.sqlite3-shm'):
             if (self.root/name).is_symlink():raise ValueError('Managed service project state is linked')
         for name in ('runtime.json','inspection_service.sqlite3','uploads'):
             if (self.root/'state'/name).is_symlink():raise ValueError('Managed service execution state is linked')
@@ -59,6 +59,17 @@ class ManagedService:
             from backend.engine.native_autostart import NativeAutostart
             native=NativeAutostart(self);state=native.query();pid=state.get('pid')
             try:
+                if pid and self.config.get('native_kind')=='windows_scm':
+                    # SCM PID is the supervisor; observe only its direct owned
+                    # inspection child. Never treat the wrapper as the worker.
+                    parent=psutil.Process(pid)
+                    for process in parent.children():
+                        try:
+                            identity=process_identity(process,self.root/'state')
+                            owned=owned_inspection_process(identity,self.root/'state')
+                            if owned:return owned
+                        except (psutil.Error,ValueError):continue
+                    return None
                 if pid:
                     process=psutil.Process(pid);identity=process_identity(process,self.root/'state')
                     return owned_inspection_process(identity,self.root/'state')
@@ -303,3 +314,29 @@ class ManagedService:
     def uninstall_native(self):
         from backend.engine.native_autostart import NativeAutostart
         return NativeAutostart(self).remove()
+
+    def scm_preflight(self,configuration=None):
+        from backend.engine.windows_scm_registration import WindowsScmRegistration
+        return WindowsScmRegistration(self).preflight(configuration)
+
+    @serialized_lifecycle
+    def prepare_scm(self,configuration):
+        if self.ledger.active() is None:raise ValueError('An approved applied release is required')
+        from backend.engine.windows_scm_registration import WindowsScmRegistration
+        return WindowsScmRegistration(self).prepare(configuration)
+
+    @serialized_lifecycle
+    def activate_scm(self):
+        from backend.engine.windows_scm_registration import WindowsScmRegistration
+        native=WindowsScmRegistration(self)
+        if not native.preflight()['registration_prerequisites_passed']:
+            raise ValueError('SCM prerequisites are pending; personal Studio remains available')
+        if self.ledger.active() is None:raise ValueError('An approved applied release is required')
+        if self.config.get('native_kind') not in (None,'windows_scm'):
+            raise ValueError('Remove the existing user startup registration before SCM activation')
+        running=self.owned_process() is not None
+        if not self.config.get('native_label'):self.stop()
+        try:return native.install()
+        except Exception:
+            if running and not self.config.get('native_label'):self.start()
+            raise

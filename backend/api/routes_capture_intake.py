@@ -1,5 +1,5 @@
 """Explicit service-capture intake; adoption returns a new source for user selection."""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Query
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 import base64
@@ -9,7 +9,7 @@ from PIL import Image
 from backend.api.routes_project import get_current_project
 from backend.api.routes_image_truth import execute, require_role
 from backend.api.shared_authorization import request_actor
-from backend.engine import capture_intake
+from backend.engine import capture_intake, capture_drift
 
 router=APIRouter(prefix='/api/capture-intake',tags=['capture-intake'])
 
@@ -35,9 +35,37 @@ class AdoptRequest(BaseModel):
     name:str=Field(min_length=1,max_length=200)
 
 
+class DriftReferenceRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    candidate_ids:list[str]=Field(min_length=1,max_length=2000)
+    actor:str=Field(min_length=1,max_length=100)
+    name:str=Field(min_length=1,max_length=200)
+
+
 @router.get('')
 def candidates(request:Request):
     return execute(lambda:capture_intake.list_candidates(get_current_project(request)))
+
+
+@router.get('/review-queue')
+def review_queue(request:Request, threshold:float=Query(.5,ge=0,le=1), margin:float=Query(.05,ge=0,le=1)):
+    return execute(lambda:capture_intake.review_queue(get_current_project(request),threshold=threshold,margin=margin))
+
+
+@router.get('/drift/references')
+def drift_references(request:Request):
+    return execute(lambda:capture_drift.references(get_current_project(request)))
+
+
+@router.post('/drift/references')
+def drift_reference(body:DriftReferenceRequest,request:Request):
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    return execute(lambda:capture_drift.create_reference(project,body.candidate_ids,actor=request_actor(request,body.actor),name=body.name))
+
+
+@router.get('/drift/references/{identifier}/report')
+def drift_report(identifier:str,request:Request):
+    return execute(lambda:capture_drift.report(get_current_project(request),identifier))
 
 
 @router.post('/register')

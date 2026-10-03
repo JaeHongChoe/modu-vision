@@ -14,6 +14,10 @@ class ApplyRequest(BaseModel):
 class RollbackRequest(BaseModel):
     deployment_id:str
     reviewer:str=Field(min_length=1,max_length=100)
+class ScmConfiguration(BaseModel):
+    service_account:str=Field(min_length=1,max_length=160)
+    network_required:bool=False
+    warmup_image:str|None=None
 
 def manager(request):
     project=get_current_project(request)
@@ -52,3 +56,13 @@ def activate_install(request:Request):
 @router.post('/install/remove')
 def remove_install(request:Request):
     service,_=manager(request);return execute(service.uninstall_native)
+
+@router.post('/scm/preflight')
+def scm_preflight(payload:ScmConfiguration,request:Request):
+    service,_=manager(request);return execute(lambda:service.scm_preflight(payload.model_dump()))
+@router.post('/scm/prepare')
+def prepare_scm(payload:ScmConfiguration,request:Request):
+    service,_=manager(request);return execute(lambda:service.prepare_scm(payload.model_dump()))
+@router.post('/scm/activate')
+def activate_scm(request:Request):
+    service,_=manager(request);return execute(service.activate_scm)

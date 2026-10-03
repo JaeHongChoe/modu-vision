@@ -1267,6 +1267,11 @@ class TrainingConfigOverrides(BaseModel):
     pretrained: Optional[bool] = None
     pretrained_checkpoint: Optional[str] = None
     pretrained_sha256: Optional[str] = None
+    train_mode: Optional[Literal['head_only', 'partial', 'full']] = None
+    partial_blocks: Optional[int] = Field(None, strict=True, ge=1, le=24)
+    resume_checkpoint: Optional[str] = None
+    use_amp: Optional[bool] = None
+    seed: Optional[int] = Field(None, strict=True, ge=0, le=2147483647)
 
     @model_validator(mode='after')
     def validate_synthetic_geometry(self):
@@ -1325,6 +1330,35 @@ def _warm_start_scope(request: Request, dataset_path: Path) -> Path:
     if models.is_symlink() or not models.is_dir() or models.resolve() != (Path(project["project_dir"]) / "models").resolve():
         raise HTTPException(status_code=422, detail="Current project models directory is invalid")
     return models
+
+
+@router.get('/resume-states')
+def list_resume_states(dataset_path: str, task: str, request: Request, preset: str = 'fast'):
+    """List owned epoch states; selecting one still undergoes strict restore validation."""
+    source = Path(dataset_path).expanduser().resolve()
+    models = _warm_start_scope(request, source)
+    from backend.engine.training_resume import read_training_state
+    from backend.engine.training_resume import backend_numeric_flags
+    from backend.engine.dataset_fingerprint import fingerprint_dataset
+    import torch
+    fingerprint = fingerprint_dataset(source)
+    rows = []
+    for path in models.glob('*/latest_training_state.pt'):
+        if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(models)): continue
+        try:
+            state = read_training_state(path); identity = state['identity']
+            if (identity['task'] != task or identity['preset'] != preset
+                    or identity['dataset_fingerprint'] != fingerprint
+                    or identity['torch_version'] != str(torch.__version__)
+                    or identity.get('backend_flags') != backend_numeric_flags()
+                    or identity['device']=='mps'
+                    or state['next_epoch'] >= identity['recipe']['epochs']
+                    or state['early_stopping'].get('early_stop')): continue
+            rows.append({'checkpoint_path': str(path), 'job_id': path.parent.name,
+                'semantics': 'exact_resume', 'boundary': state['boundary'], 'next_epoch': state['next_epoch'],
+                'global_step': state['global_step'], 'device': identity['device'], 'recipe': identity['recipe']})
+        except (OSError, ValueError, KeyError, RuntimeError): continue
+    return {'states': rows}
 
 
 @router.get("/warm-start-parents")
@@ -1424,6 +1458,45 @@ def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: P
 
 def _start_training(req: TrainingStartRequest, request: Optional[Request], reserved: List[TrainingLedgerLink]):
     requested = req.model_copy(deep=True)  # the client request, before server defaults are filled in
+    options = req.config_overrides or {}
+    if options.get('resume_checkpoint'):
+        if req.compute_profile_id or req.warm_start_job_id:
+            raise HTTPException(422, 'Exact resume currently uses local single-process epoch boundaries; choose it separately from remote/warm-start')
+        if request is None: raise HTTPException(409, 'Open the checkpoint project before exact resume')
+        from backend.api.routes_project import get_current_project
+        models = Path(get_current_project(request)['models_dir']).resolve()
+        checkpoint = Path(options['resume_checkpoint']).expanduser()
+        if (checkpoint.name != 'latest_training_state.pt' or checkpoint.is_symlink()
+                or not checkpoint.resolve().is_relative_to(models)
+                or any(parent.is_symlink() for parent in checkpoint.parents if parent.is_relative_to(models))):
+            raise HTTPException(422, 'Exact resume checkpoint must be an owned training state in the current project models folder')
+        from backend.engine.training_resume import read_training_state
+        try:
+            state = read_training_state(checkpoint)
+            if state['identity']['task'] != req.task or state['identity']['preset'] != req.preset:
+                raise ValueError('Exact resume task/preset differs from the original recipe')
+            if state['identity']['device']=='mps':
+                raise ValueError('MPS exact resume is unsupported because its full device RNG state is not restored')
+            if fingerprint_dataset(Path(req.dataset_path).expanduser().resolve()) != state['identity']['dataset_fingerprint']:
+                raise ValueError('Exact resume dataset snapshot changed')
+            if any(key != 'resume_checkpoint' and value != state['identity']['recipe'].get(key) for key, value in options.items()):
+                raise ValueError('Exact resume recipe changed; use warm-start to change training conditions')
+            if req.device is not None and req.device != state['identity']['device']:
+                raise ValueError('Exact resume device changed')
+            if state['identity'].get('torch_version') != str(__import__('torch').__version__):
+                raise ValueError('Exact resume PyTorch runtime changed')
+            from backend.engine.training_resume import backend_numeric_flags
+            if state['identity'].get('backend_flags')!=backend_numeric_flags():
+                raise ValueError('Exact resume numeric backend flags changed')
+            if state['next_epoch'] >= state['identity']['recipe']['epochs'] or state['early_stopping'].get('early_stop'):
+                raise ValueError('Exact resume has no remaining epochs')
+            req.config_overrides = {**state['identity']['recipe'], **options}
+            if req.device is None: req.device = state['identity']['device']
+        except (ValueError, OSError, KeyError) as exc: raise HTTPException(422, str(exc)) from exc
+    try:
+        from backend.engine.model_backbones import validate_training_controls
+        validate_training_controls(req.task, req.preset, req.config_overrides or {})
+    except ValueError as exc: raise HTTPException(422, str(exc)) from exc
     if req.config_overrides:
         # Origin aliases are populated only by the worker after verifying its transferred input.
         req.config_overrides = {key: value for key, value in req.config_overrides.items() if key != 'pretrained_origin'}

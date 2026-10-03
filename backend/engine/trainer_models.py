@@ -15,9 +15,11 @@ from backend.engine.anomaly import PaDiMDetector, PatchCoreDetector
 
 def build_classification_model(num_classes: int = 2, backbone: str = "resnet18", pretrained: bool = True,
                                pretrained_checkpoint: str | None = None,
-                               pretrained_sha256: str | None = None) -> nn.Module:
+                               pretrained_sha256: str | None = None, train_mode: str = 'head_only',
+                               partial_blocks: int = 2) -> nn.Module:
     return create_classification_model(backbone=backbone, num_classes=num_classes, pretrained=pretrained,
-                                       pretrained_checkpoint=pretrained_checkpoint, pretrained_sha256=pretrained_sha256)
+                                       pretrained_checkpoint=pretrained_checkpoint, pretrained_sha256=pretrained_sha256,
+                                       train_mode=train_mode, partial_blocks=partial_blocks)
 
 
 def build_detection_model(num_classes: int = 4, preset: str = "fast", pretrained: bool = True,

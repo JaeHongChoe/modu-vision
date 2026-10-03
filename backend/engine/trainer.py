@@ -328,6 +328,14 @@ class UnifiedAutoMLTrainer:
         self.config = PRESET_CONFIGS.get(preset_key, PRESET_CONFIGS["fast"])
         self.overrides = config_overrides or {}
         self.warm_start = warm_start
+        from backend.engine.model_backbones import validate_training_controls
+        validate_training_controls(self.task, self.preset_key, self.overrides)
+        if self.overrides.get('resume_checkpoint'):
+            if str(self.device)=='mps':raise ValueError('MPS exact resume is unsupported; use a model-only warm-start')
+            if warm_start is not None:
+                raise ValueError('Exact resume and warm-start cannot be selected together')
+            if self.task in ('anomaly', 'anomaly_detection') or context.world_size > 1:
+                raise ValueError('Exact resume currently supports supervised single-process epoch boundaries')
 
     def abort(self) -> None:
         """Signal trainer to immediately halt execution."""
@@ -341,6 +349,11 @@ class UnifiedAutoMLTrainer:
     def train(self, job_id: str = "job_default") -> Dict[str, Any]:
         """Executes full AutoML training workflow with telemetry streaming."""
         start_time = time.time()
+        if 'seed' in self.overrides:
+            import random
+            seed=self.overrides['seed']
+            if type(seed)is not int or not 0<=seed<=2147483647:raise ValueError('Training seed must be a bounded nonnegative integer')
+            random.seed(seed);np.random.seed(seed);torch.manual_seed(seed)
         epochs = self.overrides.get("epochs", self.config.target_epochs)
         target_size = self.overrides.get("image_size", self.config.image_size)
         batch_size = int(self.overrides.get("batch_size", self.config.batch_size))
@@ -384,9 +397,11 @@ class UnifiedAutoMLTrainer:
                 backbone = str(self.overrides.get('backbone', self.config.backbone_classification))
                 model = create_classification_model(
                     backbone=backbone, num_classes=num_classes,
-                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained=self.warm_start is None and not self.overrides.get('resume_checkpoint') and bool(self.overrides.get('pretrained', True)),
                     pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
                     pretrained_sha256=self.overrides.get('pretrained_sha256'),
+                    train_mode=self.overrides.get('train_mode', 'head_only'),
+                    partial_blocks=self.overrides.get('partial_blocks', 2),
                 ).to(self.device)
                 if not hasattr(train_ds, "class_counts"):
                     counts = [0] * num_classes
@@ -413,9 +428,11 @@ class UnifiedAutoMLTrainer:
                 self._patch_backbone = backbone
                 model = create_classification_model(
                     backbone=backbone, num_classes=len(classes),
-                    pretrained=self.warm_start is None and bool(self.overrides.get("pretrained", True)),
+                    pretrained=self.warm_start is None and not self.overrides.get('resume_checkpoint') and bool(self.overrides.get("pretrained", True)),
                     pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
                     pretrained_sha256=self.overrides.get('pretrained_sha256'),
+                    train_mode=self.overrides.get('train_mode', 'head_only'),
+                    partial_blocks=self.overrides.get('partial_blocks', 2),
                 ).to(self.device)
                 class_weights = compute_class_weights(train_ds.class_counts, num_classes=len(classes)).to(self.device)
                 criterion = create_classification_loss(weights=class_weights, label_smoothing=0.1)
@@ -426,7 +443,7 @@ class UnifiedAutoMLTrainer:
                 num_classes = max(2, len(classes) + 1)
                 model = create_detection_model(preset=self.preset_key, num_classes=num_classes,
                     backbone=str(self.overrides.get('backbone', self.config.backbone_detection)),
-                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained=self.warm_start is None and not self.overrides.get('resume_checkpoint') and bool(self.overrides.get('pretrained', True)),
                     pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
                     pretrained_sha256=self.overrides.get('pretrained_sha256')).to(self.device)
                 criterion = None
@@ -449,9 +466,11 @@ class UnifiedAutoMLTrainer:
                     classes = mask_folder_classes(self.dataset_path, [mask for _, mask in train_ds.samples + val_ds.samples])
                 model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key,
                     model_name=str(self.overrides.get('model_name', self.config.backbone_segmentation)),
-                    pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                    pretrained=self.warm_start is None and not self.overrides.get('resume_checkpoint') and bool(self.overrides.get('pretrained', True)),
                     pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
-                    pretrained_sha256=self.overrides.get('pretrained_sha256')).to(self.device)
+                    pretrained_sha256=self.overrides.get('pretrained_sha256'),
+                    train_mode=self.overrides.get('train_mode', 'head_only'),
+                    partial_blocks=self.overrides.get('partial_blocks', 2)).to(self.device)
                 criterion = ComboLoss(num_classes=len(classes), dice_weight=1.0)
 
             elif self.task in ("anomaly", "anomaly_detection"):
@@ -595,10 +614,30 @@ class UnifiedAutoMLTrainer:
                 warmup_epochs=min(3, max(1, epochs // 4)),
             )
             early_stopping = EarlyStopping(patience=patience, mode="min")
+            amp_enabled = bool(self.overrides.get('use_amp', False))
+            if amp_enabled and self.device.type != 'cuda':
+                raise ValueError('AMP training requires a CUDA device')
+            scaler = torch.amp.GradScaler('cuda', enabled=amp_enabled)
+            from backend.engine.training_resume import build_identity, restore_training_state, save_training_state, resume_lineage
+            resume_identity = build_identity(task=self.task, preset=self.preset_key,
+                recipe=self._training_config(), dataset_path=self.dataset_path, classes=classes,
+                model=model, device=self.device)
             total_steps = epochs * len(train_loader)
-            global_step = 0
+            global_step = 0; first_epoch = 0
+            if self.overrides.get('resume_checkpoint'):
+                state = restore_training_state(self.overrides['resume_checkpoint'], model, optimizer, scheduler, scaler,
+                    identity=resume_identity, early_stopping=early_stopping)
+                first_epoch, global_step = state['next_epoch'], state['global_step']
+                if first_epoch >= epochs or early_stopping.early_stop:
+                    raise ValueError('Exact resume has no remaining epochs in the original recipe')
+                self._resume_lineage = resume_lineage(self.overrides['resume_checkpoint'], state)
+                if state['best_model_payload'] is not None:
+                    best = state['best_model_payload']; best['resume'] = self._resume_lineage
+                    torch.save(best, self.output_dir / 'best_model.pt')
+                    metadata = {key: value for key, value in best.items() if key != 'model_state_dict'}
+                    (self.output_dir / 'model_meta.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
 
-            for epoch in range(epochs):
+            for epoch in range(first_epoch, epochs):
                 set_sampler_epoch(train_loader,epoch)
                 if self._cancel_requested():
                     clear_device_cache(self.device)
@@ -615,28 +654,30 @@ class UnifiedAutoMLTrainer:
                         return {"status": "aborted", "epoch": epoch}
 
                     optimizer.zero_grad()
-                    if self.task in ("classification", "patch_classification"):
-                        imgs, targets = batch
-                        imgs, targets = imgs.to(self.device), targets.to(self.device)
-                        outputs = model(imgs)
-                        loss = criterion(outputs, targets)
-                    elif self.task == "detection":
-                        imgs, targets = batch
-                        imgs = [img.to(self.device) for img in imgs]
-                        targets_dev = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
-                        loss_dict = model(imgs, targets_dev)
-                        loss = sum(v for v in loss_dict.values())
-                    elif self.task == "segmentation":
-                        imgs, masks = batch
-                        imgs, masks = imgs.to(self.device), masks.to(self.device)
-                        outputs = model(imgs)
-                        if isinstance(criterion, ComboLoss):
-                            loss, _ = criterion(outputs, masks)
-                        else:
-                            loss = criterion(outputs, masks)
+                    with torch.autocast(device_type=self.device.type, enabled=amp_enabled):
+                        if self.task in ("classification", "patch_classification"):
+                            imgs, targets = batch
+                            imgs, targets = imgs.to(self.device), targets.to(self.device)
+                            outputs = model(imgs)
+                            loss = criterion(outputs, targets)
+                        elif self.task == "detection":
+                            imgs, targets = batch
+                            imgs = [img.to(self.device) for img in imgs]
+                            targets_dev = [{k: v.to(self.device) for k, v in t.items()} for t in targets]
+                            loss_dict = model(imgs, targets_dev)
+                            loss = sum(v for v in loss_dict.values())
+                        elif self.task == "segmentation":
+                            imgs, masks = batch
+                            imgs, masks = imgs.to(self.device), masks.to(self.device)
+                            outputs = model(imgs)
+                            if isinstance(criterion, ComboLoss):
+                                loss, _ = criterion(outputs, masks)
+                            else:
+                                loss = criterion(outputs, masks)
 
-                    loss.backward()
-                    optimizer.step()
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
 
                     loss_val = float(loss.item())
                     train_losses.append(loss_val)
@@ -710,6 +751,10 @@ class UnifiedAutoMLTrainer:
                 )
 
                 scheduler.step()
+                if not distributed:
+                    save_training_state(self.output_dir / 'latest_training_state.pt', model, optimizer, scheduler, scaler,
+                        identity=resume_identity, next_epoch=epoch + 1, global_step=global_step,
+                        early_stopping=early_stopping, best_model_path=self.output_dir / 'best_model.pt')
                 if early_stopping.early_stop:
                     logger.info("Early stopping triggered at epoch %d", epoch)
                     break
@@ -735,6 +780,19 @@ class UnifiedAutoMLTrainer:
             self.callback.on_error(e, "training_loop")
             raise
 
+    def _training_config(self):
+        return {'epochs': self.overrides.get('epochs', self.config.target_epochs),
+                'batch_size': self.overrides.get('batch_size', self.config.batch_size),
+                'learning_rate': self.overrides.get('learning_rate', self.config.learning_rate),
+                'weight_decay': self.overrides.get('weight_decay', 1e-4),
+                'image_size': self.overrides.get('image_size', self.config.image_size),
+                'patience': self.overrides.get('patience', self.config.patience),
+                'augmentation_profile': self.overrides.get('augmentation_profile', 'industrial'),
+                'train_mode': self.overrides.get('train_mode', 'head_only'),
+                'partial_blocks': self.overrides.get('partial_blocks', 2),
+                'use_amp': self.overrides.get('use_amp', False),
+                **{key:value for key,value in self.overrides.items() if key!='resume_checkpoint'}}
+
     def _save_checkpoint(
         self, epoch: int, model: Any, metric: float, classes: List[str], img_size: Tuple[int, int], elapsed: float
     ) -> None:
@@ -757,14 +815,7 @@ class UnifiedAutoMLTrainer:
             "training_duration_seconds": round(elapsed, 2),
             "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "distributed_world_size":current_distributed_context().world_size,
-            "training_config": {"epochs": self.overrides.get('epochs', self.config.target_epochs),
-                "batch_size": self.overrides.get('batch_size', self.config.batch_size),
-                "learning_rate": self.overrides.get('learning_rate', self.config.learning_rate),
-                "weight_decay": self.overrides.get('weight_decay', 1e-4),
-                "image_size": self.overrides.get('image_size', self.config.image_size),
-                "patience": self.overrides.get('patience', self.config.patience),
-                "augmentation_profile": self.overrides.get('augmentation_profile', 'industrial'),
-                **self.overrides},
+            "training_config": self._training_config(),
         }
         if self.task in {"detection", "segmentation"}:
             # New candidates identify the loader contract, allowing historical
@@ -817,6 +868,8 @@ class UnifiedAutoMLTrainer:
 
         if self.warm_start is not None:
             meta["warm_start"] = self.warm_start.lineage()
+        if hasattr(self, '_resume_lineage'):
+            meta['resume'] = self._resume_lineage
 
         from backend.engine.model_backbones import model_metadata
         meta.update(model_metadata(model))

@@ -17,6 +17,8 @@ def create_classification_model(
     pretrained: bool = True,
     pretrained_checkpoint: str | None = None,
     pretrained_sha256: str | None = None,
+    train_mode: str = 'head_only',
+    partial_blocks: int = 2,
 ) -> nn.Module:
     """
     Constructs transfer learning classification model with custom classification head.
@@ -32,7 +34,10 @@ def create_classification_model(
     from backend.engine.model_backbones import DinoTaskModel, is_dino_backbone
     if is_dino_backbone(backbone_clean):
         return DinoTaskModel("classification", backbone_clean, num_classes, pretrained,
-                             pretrained_checkpoint, pretrained_sha256)
+                             pretrained_checkpoint, pretrained_sha256, train_mode, partial_blocks)
+
+    if train_mode != 'head_only':
+        raise ValueError('Explicit train_mode is supported by DINOv3 backbones')
 
     if backbone_clean in ("resnet18", "resnet"):
         weights = models.ResNet18_Weights.DEFAULT if pretrained else None

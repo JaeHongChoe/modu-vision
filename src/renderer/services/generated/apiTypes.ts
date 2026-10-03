@@ -354,6 +354,12 @@ export type DiagnosticsOptions = {
   sections?: Array<"installation" | "packages" | "hardware" | "operator_errors">;
 };
 
+export type DriftReferenceRequest = {
+  candidate_ids: Array<string>;
+  actor: string;
+  name: string;
+};
+
 export type EditRequest = {
   expected_revision: number;
   actor: string;
@@ -779,6 +785,15 @@ export type NewUser = {
   administrator?: boolean;
 };
 
+export type OBBRecipe = {
+  adapter?: string;
+  angle_convention?: string;
+  direction_schema?: string;
+  empty_background_policy?: string;
+  model_path?: string | null;
+  trust_native_weights?: boolean;
+};
+
 export type OCREvaluateRequest = {
   job_id: string;
   dataset_path: string;
@@ -801,11 +816,21 @@ export type OCRPredictRequest = {
   job_id: string;
   image_path: string;
   device?: "cpu" | "cuda" | "mps";
+  recipe?: OCRRecipe | null;
+  include_preview?: boolean;
 };
 
 export type OCRPrepareRequest = {
   source_dataset_path: string;
   samples: Array<OCRLabelRow>;
+};
+
+export type OCRRecipe = {
+  mode?: string;
+  charset?: string | null;
+  normalizer?: string;
+  text_rules?: { [key: string]: unknown };
+  orientation?: string;
 };
 
 export type OCRTrainRequest = {
@@ -819,6 +844,7 @@ export type OCRTrainRequest = {
   background?: boolean;
   seed?: number;
   warm_start_job_id?: string | null;
+  recipe?: OCRRecipe;
 };
 
 export type OidcCallback = {
@@ -1065,11 +1091,58 @@ export type ResolveRequest = {
   selections: Array<Selection>;
 };
 
+export type RetentionPinRequest = {
+  owner: string;
+  paths: Array<string>;
+  reason: string;
+};
+
+export type RetentionPolicyRequest = {
+  retention_days?: number;
+  trash_days?: number;
+  quota_bytes?: number | null;
+};
+
+export type RetentionRestoreRequest = {
+  trash_id: string;
+};
+
+export type RetentionTrashRequest = {
+  paths: Array<string>;
+  dry_run?: boolean;
+};
+
 export type ReviewRow = {
   image_path: string;
   final_verdict: "OK" | "NG" | "REVIEW";
   reason: string;
   reviewer: string;
+};
+
+export type RolloutActionRequest = {
+  expected_revision: number;
+  reviewer: string;
+};
+
+export type RolloutAdvanceRequest = {
+  expected_revision: number;
+  reviewer: string;
+  confirm_canary?: boolean;
+};
+
+export type RolloutPauseRequest = {
+  expected_revision: number;
+  reviewer: string;
+  reason: string;
+};
+
+export type RolloutRequest = {
+  package_path: string;
+  device?: string;
+  reviewer: string;
+  target_ids: Array<string>;
+  canary_target_ids?: Array<string> | null;
+  batch_size?: number;
 };
 
 export type RotatedBoxInput = {
@@ -1095,6 +1168,12 @@ export type Row = {
   correction_deg: number;
   split: "train" | "val" | "test";
   source_sha256?: string | null;
+};
+
+export type ScmConfiguration = {
+  service_account: string;
+  network_required?: boolean;
+  warmup_image?: string | null;
 };
 
 export type Selection = {
@@ -1170,6 +1249,9 @@ export type StartRequest = {
   family_dataset_path?: string | null;
   preset?: "fast" | "precision";
   device?: string;
+  compute_profile_id?: string | null;
+  seed?: number;
+  reuse_search_id?: string | null;
   mode?: "quick" | "search" | "fast_retrain";
   budget?: Budget;
   search_space?: { [key: string]: unknown };
@@ -1393,6 +1475,7 @@ export type backend__api__routes_rotated_detection__TrainRequest = {
   learning_rate?: number;
   device?: "cpu" | "mps" | "cuda";
   warm_start_job_id?: string | null;
+  recipe?: OBBRecipe;
 };
 
 export type backend__api__routes_rotation__EvaluateRequest = {
@@ -1505,6 +1588,7 @@ export interface ApiRequestBody {
   "POST /api/automated-training/start": StartRequest;
   "POST /api/capture-intake/adopt": backend__api__routes_capture_intake__AdoptRequest;
   "POST /api/capture-intake/candidates/{identifier}/review": backend__api__routes_capture_intake__ReviewRequest;
+  "POST /api/capture-intake/drift/references": DriftReferenceRequest;
   "POST /api/capture-intake/register": RegisterRequest;
   "POST /api/compute/jobs": ComputeJobInput;
   "POST /api/compute/jobs/{job_id}/predict": ComputePredictionInput;
@@ -1558,6 +1642,11 @@ export interface ApiRequestBody {
   "POST /api/export/flow/optimization-jobs/{job_id}/approve": PrecisionApprovalRequest;
   "POST /api/export/flow/optimize": OptimizeFlowRequest;
   "POST /api/export/runtime": ExportRuntimeRequest;
+  "POST /api/fleet/rollouts": RolloutRequest;
+  "POST /api/fleet/rollouts/{plan_id}/advance": RolloutAdvanceRequest;
+  "POST /api/fleet/rollouts/{plan_id}/pause": RolloutPauseRequest;
+  "POST /api/fleet/rollouts/{plan_id}/resume": RolloutActionRequest;
+  "POST /api/fleet/rollouts/{plan_id}/rollback": RolloutActionRequest;
   "POST /api/fleet/targets": TargetRequest;
   "POST /api/fleet/targets/{target_id}/deploy": DeployRequest;
   "POST /api/fleet/targets/{target_id}/emergency-rollback": EmergencyRollbackRequest;
@@ -1614,6 +1703,10 @@ export interface ApiRequestBody {
   "POST /api/project/open": ProjectOpenRequest;
   "PATCH /api/project/preferences": PreferenceUpdate;
   "POST /api/project/restore": ProjectRestoreRequest;
+  "POST /api/project/retention/pins": RetentionPinRequest;
+  "PUT /api/project/retention/policy": RetentionPolicyRequest;
+  "POST /api/project/retention/restore-trash": RetentionRestoreRequest;
+  "POST /api/project/retention/trash": RetentionTrashRequest;
   "PUT /api/project/update": ProjectUpdateRequest;
   "POST /api/report/export": ReportExportRequest;
   "POST /api/rotated-detection/evaluate": backend__api__routes_rotated_detection__EvaluateRequest;
@@ -1630,6 +1723,8 @@ export interface ApiRequestBody {
   "PUT /api/runtime-services/adapters": FieldAdapterConfig;
   "POST /api/runtime-services/apply": ApplyRequest;
   "POST /api/runtime-services/rollback": backend__api__routes_runtime_services__RollbackRequest;
+  "POST /api/runtime-services/scm/preflight": ScmConfiguration;
+  "POST /api/runtime-services/scm/prepare": ScmConfiguration;
   "POST /api/team-data/books": BookRequest;
   "POST /api/team-data/images/{image_uuid}/adjudicate": backend__api__routes_team_data__ReviewRequest;
   "POST /api/team-data/images/{image_uuid}/assign": AssignmentRequest;

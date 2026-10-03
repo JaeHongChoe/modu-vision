@@ -19,6 +19,11 @@ from backend.engine.runtime_process_control import atomic_private_json
 
 
 class NativeAutostart:
+    def __new__(cls,service,*,system=None,home=None):
+        if service.config.get('native_kind')=='windows_scm':
+            from backend.engine.windows_scm_registration import WindowsScmRegistration
+            return WindowsScmRegistration(service,system=system)
+        return super().__new__(cls)
     def __init__(self,service,*,system=None,home=None):
         self.service=service;self.system=system or platform.system();self.home=Path(home or Path.home())
         self.label=service.native_identity()

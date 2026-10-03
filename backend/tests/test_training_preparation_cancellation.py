@@ -54,6 +54,8 @@ def test_start_returns_job_id_while_labelme_preparation_is_blocked(monkeypatch, 
 
     monkeypatch.setattr(routes_training, "prepare_labelme_segmentation", slow_preparation)
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
+    # This test isolates preparation cancellation from process-wide GC/cache cleanup.
+    monkeypatch.setattr(routes_training, "clear_device_cache", lambda: None)
     manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
 
@@ -80,9 +82,11 @@ def test_start_returns_job_id_while_labelme_preparation_is_blocked(monkeypatch, 
     finally:
         release.set()
         caller.join(timeout=2)
+        assert not caller.is_alive(), "Training start did not return"
         for record in list(manager._jobs.values()):
             if record.thread:
                 record.thread.join(timeout=2)
+                assert not record.thread.is_alive(), "Cancelled worker did not finish"
 
     record = manager.get_job(job_id)
     assert record.status == "aborted"
@@ -201,12 +205,15 @@ def test_terminal_training_job_writes_recoverable_receipt(monkeypatch, tmp_path,
             return {"status": terminal}
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
+    # Terminal receipt persistence is independent of global GC/accelerator cleanup latency.
+    monkeypatch.setattr(routes_training, "clear_device_cache", lambda: None)
     manager = routes_training.TrainingJobManager(local_execution='embedded')
     output = tmp_path / terminal
     record = manager.start_job(
         f"job_{terminal}", "segmentation", str(tmp_path), str(output),
     )
     record.thread.join(timeout=2)
+    assert not record.thread.is_alive(), "Terminal worker did not finish"
 
     assert record.status == terminal
     assert json.loads((output / "job_receipt.json").read_text()) == {
@@ -221,3 +228,46 @@ def test_terminal_training_job_writes_recoverable_receipt(monkeypatch, tmp_path,
         "best_metric": None, "metrics": {}, "loss_history": [],
         "error": record.error,
     }
+
+
+@pytest.mark.parametrize("terminal", ["completed", "aborted", "failed"])
+def test_embedded_job_retains_reservation_until_cache_cleanup_finishes(monkeypatch, tmp_path, terminal):
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+
+    class Trainer:
+        def __init__(self, **kwargs):
+            pass
+
+        def train(self, job_id):
+            if terminal == "failed":
+                raise RuntimeError("training failed")
+            return {"status": terminal}
+
+    def blocked_cleanup():
+        cleanup_entered.set()
+        assert release_cleanup.wait(timeout=5), "Test did not release cache cleanup"
+
+    monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", Trainer)
+    monkeypatch.setattr(routes_training, "clear_device_cache", blocked_cleanup)
+    manager = routes_training.TrainingJobManager(local_execution='embedded')
+    output = tmp_path / terminal
+    record = manager.start_job(f"job_cleanup_{terminal}", "segmentation", str(tmp_path), str(output))
+    try:
+        assert cleanup_entered.wait(timeout=2), "Worker did not reach cache cleanup"
+        assert record.status == "running"
+        assert manager.is_training
+        assert not (output / "job_receipt.json").exists()
+        assert any(row['job_id'] == record.job_id for row in manager._leases.list())
+        with pytest.raises(HTTPException) as overlap:
+            manager.start_job("overlap_cleanup", "segmentation", str(tmp_path), str(tmp_path / "overlap"))
+        assert overlap.value.status_code == 409
+    finally:
+        release_cleanup.set()
+        record.thread.join(timeout=2)
+        assert not record.thread.is_alive(), "Worker did not finish after cache cleanup"
+
+    assert record.status == terminal
+    assert json.loads((output / "job_receipt.json").read_text(encoding='utf-8'))['status'] == terminal
+    assert not manager.is_training
+    assert all(row['job_id'] != record.job_id for row in manager._leases.list())

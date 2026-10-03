@@ -1,5 +1,5 @@
 import { request } from './api';
-import {submitModelTraining,requireLocalSearch} from './modelExecution';
+import {submitModelTraining} from './modelExecution';
 
 export type ModelFamily = 'classification' | 'segmentation' | 'detection' | 'anomaly' |
   'patch_classification' | 'ocr' | 'rotated_detection' | 'rotation' | 'defect_gan' | 'enhancement';
@@ -20,7 +20,7 @@ export type TrialCapability = {architectures: string[]; metric_key: string; dire
 export type MeasuredTrial = {trial_id: string; config: Record<string, unknown>; status: string; metrics: Record<string, number>;
   latency_ms?: number; latency_scope?: string; objective?: number; checkpoint_path?: string; checkpoint_sha256?: string; error?: string;
   progress?:{epoch?:number;epochs?:number;batch?:number;batches?:number;loss?:number}};
-export type AutomatedTrainingJob = {search_id: string; task: ModelFamily; status: string; mode: string;
+export type AutomatedTrainingJob = {search_id: string; task: ModelFamily; status: string; mode: string;compute_profile_id?:string;
   dataset_path: string; source_dataset_path?: string; created_at: number; trials: MeasuredTrial[]; winner?: MeasuredTrial;
   training_provenance?: {labelset_id?: string}; stop_reason?: string; error?: string; epochs_consumed?: number; duration_seconds?: number; device?: string; memory_scope?:string; memory_used_mb?:number; budget?: {max_trials:number;max_total_epochs:number;max_seconds:number;max_memory_mb?:number}};
 
@@ -66,9 +66,9 @@ export const modelTrainingProgram = {
     status: (search_id: string) => request<AutomatedTrainingJob>(`/api/automated-training/jobs/${encodeURIComponent(search_id)}`),
     cancel: (search_id: string) => post<AutomatedTrainingJob>(`/api/automated-training/jobs/${encodeURIComponent(search_id)}/cancel`, {}),
     start: (options: {task: ModelFamily; dataset_path: string; family_dataset_path?: string; device: LocalTrainingDevice;
-      mode: 'quick' | 'search' | 'fast_retrain'; epochs_per_trial: number; parent_job_id?: string;
+      mode: 'quick' | 'search' | 'fast_retrain'; epochs_per_trial: number; parent_job_id?: string;compute_profile_id?:string;seed?:number;reuse_search_id?:string;
       objective: 'val_loss' | 'loss_latency'; latency_weight: number;
       budget: {max_trials: number; max_total_epochs: number; max_seconds: number;max_memory_mb?:number};
-      search_space: Record<string, Array<string | number>>; base_config: Record<string, unknown>}) => requireLocalSearch(()=>post<AutomatedTrainingJob>('/api/automated-training/start', {...options, background: true})),
+      search_space: Record<string, Array<string | number>>; base_config: Record<string, unknown>}) => post<AutomatedTrainingJob>('/api/automated-training/start', {...options, background: true}),
   },
 };

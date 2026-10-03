@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { request } from '../../services/api';
 import { runtimeDeploymentApi } from '../../services/runtimeDeploymentApi';
 import {SavedPackagePicker} from './SavedPackagePicker';
+import {WindowsServiceSetupPanel} from './WindowsServiceSetupPanel';
 import {ProtocolSettingsPanel} from './ProtocolSettingsPanel';
 import {useDeliveryScope} from './useDeliveryScope';
 
@@ -76,7 +77,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
   return <section className="mt-4 rounded border border-slate-600 bg-slate-950/40 p-3 text-xs" aria-label="검사 서비스 배포">
     <div className="flex items-center justify-between"><h3 className="font-bold">독립 검사 서비스</h3><button type="button" disabled={busy} onClick={() => void refresh()}>상태 새로고침</button></div>
     <p className="mt-2 text-slate-300">현재 응답: {state?.runtime.status || '확인 중'} · 장치 {state?.runtime.device || '—'} · 포트 {state?.port || '—'}</p>
-    {state?.native_install&&<div className="mt-2 text-slate-400"><p>자동 시작 {state.native_install.platform} · {state.native_install.kind} · {state.native_install.registered?'OS 등록 확인':'OS 미등록'} · {state.native_install.enabled?'시작 설정 켜짐':'시작 설정 꺼짐'} · {state.native_install.verified?'대상 OS 실행 검증됨':'로그인·재시작 실행 검증 필요'}</p><p>실제 검사 준비는 위의 서비스 응답에서 확인하세요. {state.native_install.kind==='scheduled_task'?'Windows 로그인 작업입니다. 시스템 서비스는 별도 실행 파일이 필요합니다.':state.native_install.kind==='systemd_user'?'Linux 사용자 세션 서비스입니다. 로그인 전 부팅 시작은 사용자 lingering 설정이 필요합니다.':'macOS 사용자 로그인 서비스입니다.'}</p>{!state.native_install.command_available&&<p>이 OS의 서비스 등록 명령이 필요합니다.</p>}{state.native_install.error&&<p role="alert">{state.native_install.error}</p>}</div>}
+    {state?.native_install&&<div className="mt-2 text-slate-400"><p>자동 시작 {state.native_install.platform} · {state.native_install.kind} · {state.native_install.registered?'OS 등록 확인':'OS 미등록'} · {state.native_install.enabled?'시작 설정 켜짐':'시작 설정 꺼짐'} · {state.native_install.verified?'대상 OS 실행 검증됨':'로그인·재시작 실행 검증 필요'}</p><p>실제 검사 준비는 위의 서비스 응답에서 확인하세요. {state.native_install.kind==='windows_scm'?'Windows 시스템 부팅 서비스입니다. Session0와 실제 장비 실행 검증이 필요합니다.':state.native_install.kind==='scheduled_task'?'Windows 로그인 작업입니다. 시스템 서비스는 별도 실행 파일이 필요합니다.':state.native_install.kind==='systemd_user'?'Linux 사용자 세션 서비스입니다. 로그인 전 부팅 시작은 사용자 lingering 설정이 필요합니다.':'macOS 사용자 로그인 서비스입니다.'}</p>{!state.native_install.command_available&&<p>이 OS의 서비스 등록 명령이 필요합니다.</p>}{state.native_install.error&&<p role="alert">{state.native_install.error}</p>}</div>}
     <p className="mt-1 break-all font-mono text-[10px]">실행 manifest SHA-256: {state?.runtime.manifest_sha256 || '서비스 응답 없음'}</p>
     {state?.active&&state.runtime.status==='ready'&&state.runtime.manifest_sha256!==state.active.release.manifest_sha256&&<p role="alert" className="mt-2 text-amber-300">현재 서비스와 승인된 적용 기록의 패키지가 다릅니다. 서비스를 시작해 복구 응답을 확인하세요.</p>}
     {state?.recovery?.pending&&<div role="alert" className="mt-2 rounded border border-amber-700 p-2 text-amber-200"><p>{state.recovery.pending.status==='needs_review'?'이전 패키지 복원 응답을 확인하지 못했습니다.':'패키지 전환이 중단돼 이전 적용 상태 복구가 필요합니다.'}</p><p>서비스 시작 시 마지막으로 확인된 패키지를 복원하고 실행 응답을 검증합니다. 실패하면 적용 기록을 유지하며 검토가 필요합니다.</p></div>}
@@ -99,6 +100,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
       <button type="button" disabled={busy} onClick={() => void action('/install/remove')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">자동 시작 해제</button>
     </div>
     <div className="mt-3 flex gap-2"><select aria-label="서비스 복원 이력" className="min-w-0 flex-1 rounded bg-slate-800 p-2" value={target} onChange={event => setTarget(event.target.value)}><option value="">보존된 적용 이력 선택</option>{state?.history.map(item => <option value={item.deployment_id} key={item.deployment_id}>{new Date(item.created_at * 1000).toLocaleString()} · {item.release.manifest_sha256.slice(0, 12)} · {item.reviewer}</option>)}</select><button type="button" disabled={busy || !target || !reviewer.trim()} className="rounded border border-amber-600 px-3 disabled:opacity-40" onClick={() => void action('/rollback', { deployment_id: target, reviewer })}>서비스 롤백</button></div>
+    {state?.native_install?.platform==='Windows'&&<WindowsServiceSetupPanel scopeKey={key} approved={!!state.active}/>}
     <SpecializedApprovalPanel />
     <ModelOperationsPanel />
     <FleetPanel onNavigate={onNavigate} />

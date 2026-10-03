@@ -3,8 +3,9 @@ import { Archive, ArchiveRestore, ArrowRight, Clock3, FolderOpen, FolderPlus, Ha
 import type { VisionTask } from '../../types';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { host } from '../../services/hostAdapter';
+import { ArtifactRetentionPanel } from './ArtifactRetentionPanel';
 
-type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore';
+type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore' | 'retention';
 
 const taskLabels: Record<VisionTask, string> = {
   classification: '분류',
@@ -126,6 +127,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
               ['open', FolderOpen, '폴더에서 열기'],
               ['backup', Archive, '프로젝트 백업'],
               ['restore', ArchiveRestore, '백업에서 복원'],
+              ['retention', HardDrive, '보존기한·복구 보관함'],
             ] as const).map(([id, Icon, label]) => (
               <button key={id} type="button" onClick={() => switchTab(id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs font-medium transition-colors ${tab === id ? 'bg-[#263D58] text-cyan-200' : 'text-slate-400 hover:bg-[#1C293A] hover:text-slate-200'}`}>
                 <Icon className="h-4 w-4" />{label}
@@ -183,6 +185,8 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
                 {backupMessage && <p role="status" className="break-all rounded-md border border-emerald-700/50 bg-emerald-950/20 p-3 text-xs leading-5 text-emerald-200">{backupMessage}</p>}
               </form>
             )}
+
+            {tab === 'retention' && project && <ArtifactRetentionPanel projectId={project.id} />}
 
             {tab === 'restore' && (
               <form onSubmit={submitRestore} className="space-y-4">

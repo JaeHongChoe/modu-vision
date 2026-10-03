@@ -468,7 +468,8 @@ def test_restore_closes_sqlite_handles_before_publication_and_return(tmp_path: P
         assert publications == [4]
         restored_handles = [connection for path, connection in connections
                             if path.is_relative_to(target) or any('.restore-' in parent.name for parent in path.parents)]
-        assert len(restored_handles) == 5
+        # Five archive rebind handles plus the restored retention schema/receipt.
+        assert len(restored_handles) == 7
         assert all(_connection_closed(connection) for connection in restored_handles)
         assert restored.json()['id'] == project['id']
         assert (target / 'models' / job_id / 'best_model.pt').read_bytes() == model_bytes

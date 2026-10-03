@@ -10,8 +10,11 @@ from backend.engine.runtime_process_control import runtime_state_lock
 
 
 class DeploymentLedger:
-    def __init__(self, directory):
+    def __init__(self, directory, *, project_dir=None):
         self.directory = Path(directory); self.directory.mkdir(parents=True,exist_ok=True)
+        from backend.engine.artifact_retention import retention_project_root
+        self.project_dir=Path(project_dir) if project_dir is not None else retention_project_root(self.directory)
+        self.pin_owner='derived:active-release:'+self.directory.resolve().relative_to(self.project_dir.resolve()).as_posix()
         self.path = self.directory/'runtime_deployments.sqlite3'
         if self.path.is_symlink(): raise ValueError('Deployment database cannot be linked')
         with self.connect() as conn:
@@ -50,7 +53,9 @@ class DeploymentLedger:
             raise ValueError('Runtime acknowledgment identity mismatch')
     def recover(self, apply_runtime):
         """Restore only the last committed release after an interrupted switch."""
-        with runtime_state_lock(self.directory):
+        from backend.engine.artifact_retention import ArtifactRetention,retention_project_root
+        retention=ArtifactRetention(self.project_dir)
+        with runtime_state_lock(self.directory),retention.lock():
             pending=self.diagnostics()['pending']
             if pending is None: return None
             identifier=pending['operation_id'];previous=pending['previous']
@@ -68,13 +73,19 @@ class DeploymentLedger:
                 self._record(identifier,'needs_review',error=type(exc).__name__)
                 raise ValueError('Runtime rollback acknowledgment failed; runtime requires review') from exc
             self._record(identifier,'rolled_back',ack=ack)
+            retention.unpin('deployment:'+identifier)
+            retention.unpin('derived:pending-release:'+identifier)
             return self.diagnostics()['last_operation']
     def apply(self, release, apply_runtime, *, reviewer, restored_from=None):
         if not reviewer.strip(): raise ValueError('A reviewer is required')
-        with runtime_state_lock(self.directory):
+        from backend.engine.artifact_retention import ArtifactRetention,retention_project_root
+        retention=ArtifactRetention(self.project_dir)
+        with runtime_state_lock(self.directory),retention.lock():
             self.recover(apply_runtime)
             previous=self.active()
             identifier=uuid.uuid4().hex;now=time.time()
+            paths=retention.release_paths(release)+retention.release_paths((previous or {}).get('release'))
+            if paths:retention.pin('deployment:'+identifier,paths,reason='pending_release')
             # Commit recovery intent BEFORE the external runtime mutates. SQLite
             # transaction rollback cannot undo a service process after power loss.
             with self.connect() as conn:
@@ -88,6 +99,10 @@ class DeploymentLedger:
                     conn.execute('INSERT INTO deployments VALUES(?,?,?,?,?,?)',(identifier,json.dumps(release),json.dumps(ack),reviewer,restored_from,time.time()))
                     conn.execute('INSERT INTO active VALUES(1,?) ON CONFLICT(id) DO UPDATE SET deployment_id=excluded.deployment_id',(identifier,))
                     conn.execute("UPDATE update_operations SET status='committed',ack=?,updated_at=? WHERE operation_id=?",(json.dumps(ack),time.time(),identifier))
+                paths=retention.release_paths(release)
+                if paths:retention.pin(self.pin_owner,paths,reason='active_release',replace=True)
+                retention.unpin('deployment:'+identifier)
+                retention.unpin('derived:pending-release:'+identifier)
             except Exception as exc:
                 if previous:
                     self.recover(apply_runtime)

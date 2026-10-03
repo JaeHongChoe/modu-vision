@@ -230,6 +230,10 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         raise ValueError("Invalid expected_artifacts for train")
     data["expected_artifacts"] = expected
     data["config_overrides"] = overrides
+    if 'measured_candidate' in data and type(data['measured_candidate']) is not bool:
+        raise ValueError('Invalid measured candidate selection')
+    if data.get('measured_candidate') and data.get('distributed'):
+        raise ValueError('Measured candidate DDP is unsupported')
     distributed=data.get('distributed')
     if distributed is not None:
         if not isinstance(distributed,dict) or set(distributed)-{'processes'}:raise ValueError('Invalid distributed training configuration')
@@ -452,7 +456,7 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
             persist_model_binding(output_dir,spec.get('dataset_binding'))
             _atomic_json(run_dir/'artifacts.json',_artifact_manifest(run_dir,spec))
             return status.update(status='completed',best_metric=result.get('best_metric'),distributed=result.get('distributed'))
-        if trainer_factory is None and spec['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}:
+        if trainer_factory is None and (spec.get('measured_candidate') or spec['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}):
             trainer_factory=_FamilyTrainer
         if trainer_factory is None:
             from backend.engine.trainer import UnifiedAutoMLTrainer
@@ -493,6 +497,16 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
             raise RuntimeError(f"Trainer returned non-completed status: {result.get('status')}")
         from backend.engine.training_provenance import persist_model_binding
         persist_model_binding(output_dir, spec.get("dataset_binding"))
+        if spec.get('measured_candidate'):
+            import torch
+            checkpoint=output_dir/'best_model.pt';payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
+            measurement=payload.get('measured_candidate')
+            if not isinstance(measurement,dict):raise ValueError('Measured candidate receipt is unavailable')
+            lineage={**(spec.get('automated_training') or {}),'metrics':measurement['metrics'],'latency_ms':measurement['latency_ms']}
+            payload['automated_training']=lineage
+            temporary=checkpoint.with_suffix('.tmp');torch.save(payload,temporary);temporary.replace(checkpoint)
+            metadata_path=output_dir/'model_meta.json';metadata=json.loads(metadata_path.read_text(encoding='utf-8'))
+            metadata.update(automated_training=lineage,checkpoint_sha256=_sha256_file(checkpoint)[1]);_atomic_json(metadata_path,metadata)
         manifest = _artifact_manifest(run_dir, spec)
         if cancel_path.exists():
             return status.update(status="aborted")

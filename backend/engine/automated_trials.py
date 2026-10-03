@@ -7,6 +7,7 @@ budgets; they are not hard inference deadlines.
 from __future__ import annotations
 
 from contextvars import copy_context
+from contextlib import nullcontext
 from dataclasses import dataclass
 from hashlib import sha256
 import itertools
@@ -46,6 +47,17 @@ class TaskRunner:
 
 
 _RUNNERS = {}
+
+
+def validate_trial_controls(task,preset,options):
+    from backend.engine.model_backbones import validate_training_controls
+    validate_training_controls(task,preset,options)
+    if options.get('resume_checkpoint'):raise ValueError('Use direct training exact resume; measured candidates need new outputs')
+    recipe=options.get('recipe') or {}
+    if task=='ocr' and recipe.get('mode','crop')!='crop':
+        raise ValueError('AutoDL multiline OCR latency measurement is unsupported; use its direct workbench')
+    if task=='rotated_detection' and recipe.get('adapter','fixed_slot_cnn')!='fixed_slot_cnn':
+        raise ValueError('AutoDL native YOLO OBB measurement is unsupported; use its direct workbench')
 
 
 def register_task_runner(task, runner, architectures, *, metric_key='val_loss', direction='min',
@@ -241,9 +253,11 @@ def run_measured_candidate(*, task, dataset_path, output_dir, job_id, config_ove
     if not isinstance(objective,(int,float)) or not math.isfinite(objective) or not isinstance(latency,(int,float)) or not math.isfinite(latency) or latency<=0:
         raise ValueError('Candidate needs finite measured validation and latency')
     payload=torch.load(checkpoint,map_location='cpu',weights_only=True);payload['training_config']=config
+    measurement={key:result.get(key) for key in ('metrics','latency_ms','epochs_completed','latency_scope')}
+    payload['measured_candidate']=measurement
     temporary=checkpoint.with_suffix('.tmp');torch.save(payload,temporary);temporary.replace(checkpoint)
     metadata_path=checkpoint.with_name('model_meta.json');metadata=json.loads(metadata_path.read_text(encoding='utf-8'))
-    digest=sha256(checkpoint.read_bytes()).hexdigest();metadata.update(training_config=config,checkpoint_sha256=digest,dataset_path=str(dataset));_write(metadata_path,metadata)
+    digest=sha256(checkpoint.read_bytes()).hexdigest();metadata.update(training_config=config,checkpoint_sha256=digest,dataset_path=str(dataset),measured_candidate=measurement);_write(metadata_path,metadata)
     return {**result,'status':'completed','job_id':job_id,'task':task,'model_path':str(checkpoint),
             'checkpoint_sha256':digest,'best_metric':float(objective),'metric_key':spec.metric_key,
             'training_config':config,'metadata':metadata}
@@ -263,17 +277,28 @@ def validated_budget(budget,epochs_per_trial):
 
 def run_automated_training(*, task, dataset_path, models_dir, preset='fast', device='cpu', mode='search',
         budget=None, search_space=None, base_config=None, epochs_per_trial=2, parent_job_id=None,
-        cancel_event=None, on_progress=None, search_id=None, training_binding=None, source_dataset_path=None,owner_instance=None):
+        cancel_event=None, on_progress=None, search_id=None, training_binding=None, source_dataset_path=None,owner_instance=None,
+        compute_profile_id=None,remote_owner=None,seed=0,reuse_search_id=None):
     if task not in _RUNNERS: raise ValueError('No automated training runner registered for this task')
     if mode not in ('quick', 'search', 'fast_retrain'): raise ValueError('Unknown automated training mode')
     limits=validated_budget(budget,epochs_per_trial)
     if preset not in ('fast', 'precision'): raise ValueError('Invalid automated training preset')
+    if type(seed)is not int or not 0<=seed<=2147483647:raise ValueError('Search seed must be a bounded nonnegative integer')
+    validate_trial_controls(task,preset,base_config or {})
     source = Path(dataset_path).expanduser().resolve(); models = Path(models_dir).expanduser().resolve()
     canonical = Path(source_dataset_path).expanduser().resolve() if source_dataset_path else source
     spec = _RUNNERS[task]; architecture_key = spec.architecture_key or ('model_name' if task == 'segmentation' else 'backbone')
     if not source.is_dir() or models == source or models.is_relative_to(source): raise ValueError('Trial model output must be outside source data')
     from backend.engine.runtime_device import resolve_runtime_device
-    device = str(resolve_runtime_device(device)); event = cancel_event or threading.Event()
+    remote_profile = None
+    if compute_profile_id:
+        from backend.remote.profiles import get_profile_store
+        remote_profile = get_profile_store().get(compute_profile_id)
+        if remote_profile is None: raise ValueError('Selected remote compute profile is unavailable')
+        from backend.engine.remote_automated_trials import validate_remote_search
+        remote_profile = validate_remote_search(remote_profile,task,preset,device,base_config or {},search_space or {},limits,warm_start=bool(parent_job_id))
+    else: device = str(resolve_runtime_device(device))
+    event = cancel_event or threading.Event()
     base = dict(base_config or {}); parent = None; configuration_parent = None
     if task=='anomaly':base.setdefault('anomaly_method','dino_synthetic')
     if mode == 'fast_retrain' and not parent_job_id: raise ValueError('Fast retraining requires a compatible completed parent')
@@ -319,31 +344,55 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
     record = {'search_id': search_id, 'task': task, 'status': 'running', 'mode': mode, 'preset': preset,
         'owner_pid':os.getpid(),'owner_kind':'api' if owner_instance else 'engine','owner_instance':owner_instance or uuid.uuid4().hex,
         'device': device, 'budget': limits, 'memory_scope': 'cuda_process_allocated' if str(device).startswith('cuda') else 'mps_process_allocated' if str(device)=='mps' else 'backend_process_rss', 'epochs_per_trial': epochs_per_trial, 'trials': [], 'winner': None,
+        'compute_profile_id':compute_profile_id,'remote_owner':remote_owner,
+        'seed':seed,'reuse_search_id':reuse_search_id,
         'dataset_path': str(source), 'source_dataset_path': str(canonical),
         'dataset_fingerprint': _fingerprint(source), 'source_dataset_fingerprint': _fingerprint(canonical), 'training_provenance': training_binding,
         'configuration_parent': configuration_parent, 'created_at': time.time(), 'stop_reason': None,
         'objective': base.pop('objective', 'val_loss'), 'latency_weight': base.pop('latency_weight', 0.)}
+    if remote_profile:record['memory_scope']='remote_worker_allocation_limit'
     if record['objective'] not in ('val_loss', 'loss_latency') or not isinstance(record['latency_weight'], (int, float)) or not math.isfinite(record['latency_weight']) or record['latency_weight'] < 0:
         raise ValueError('Invalid measured training objective or latency weight')
+    reusable={}
+    def config_key(config):return json.dumps(config,sort_keys=True,separators=(',',':'))
+    if reuse_search_id:
+        previous=read_search(models,reuse_search_id)
+        keys=('task','preset','device','compute_profile_id','remote_owner','seed','dataset_fingerprint','source_dataset_fingerprint',
+              'training_provenance','configuration_parent','epochs_per_trial','objective','latency_weight')
+        if any(previous.get(key)!=record.get(key) for key in keys):
+            raise ValueError('Completed trial reuse identity differs: snapshot, seed, objective, recipe, or compute target changed')
+        for trial in previous.get('trials',[]):
+            if trial.get('status')!='completed':continue
+            checkpoint=Path(trial['checkpoint_path'])
+            if (checkpoint.is_symlink() or not checkpoint.resolve().is_relative_to(models) or not checkpoint.is_file()
+                    or sha256(checkpoint.read_bytes()).hexdigest()!=trial['checkpoint_sha256']):
+                raise ValueError('Reusable measured checkpoint hash changed')
+            reusable[config_key(trial['config'])]=trial
     _write(output / 'search.json', record); start = time.monotonic(); consumed = 0
     def persist():
         record.update(epochs_consumed=consumed, duration_seconds=time.monotonic()-start, memory_used_mb=memory_used_mb())
         _write(output / 'search.json', record)
         if on_progress: on_progress(json.loads(json.dumps(record)))
     def memory_used_mb():
+        if remote_profile:return None # No local-coordinator RSS is presented as worker memory.
         if str(device).startswith('cuda'):return torch.cuda.memory_allocated(device)/1048576
         if str(device)=='mps':return torch.mps.current_allocated_memory()/1048576
         import psutil
         return psutil.Process().memory_info().rss/1048576
     def memory_exceeded():
-        return limits.get('max_memory_mb') is not None and memory_used_mb()>limits['max_memory_mb']
+        used=memory_used_mb()
+        return used is not None and limits.get('max_memory_mb') is not None and used>limits['max_memory_mb']
     try:
         from backend.engine.shared_scheduler import compute_lease_scope
-        with compute_lease_scope(search_id, device,memory_budget_mb=limits.get('max_memory_mb') or 0,task=task):
-            for config in itertools.chain([first], candidates):
+        with nullcontext() if remote_profile else compute_lease_scope(search_id, device,memory_budget_mb=limits.get('max_memory_mb') or 0,task=task):
+            for candidate_index,config in enumerate(itertools.chain([first], candidates)):
                 if (output/'cancel_requested.json').is_file():event.set()
                 if event.is_set(): record.update(status='cancelled', winner=None, stop_reason='cancelled'); break
                 if len(record['trials']) >= (1 if mode != 'search' else limits['max_trials']): record['stop_reason'] = 'trial_budget'; break
+                config = {**config, 'epochs': epochs_per_trial, 'seed': (seed + candidate_index) % 2147483648}
+                config.pop('objective', None); config.pop('latency_weight', None)
+                if old:=reusable.get(config_key(config)):
+                    record['trials'].append({**old,'reused_from_search_id':reuse_search_id});persist();continue
                 if consumed + epochs_per_trial > limits['max_total_epochs']: record['stop_reason'] = 'epoch_budget'; break
                 remaining = limits['max_seconds'] - (time.monotonic() - start)
                 if remaining <= 0: record['stop_reason'] = 'time_budget'; break
@@ -352,8 +401,6 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                 if training_binding:
                     from backend.engine.training_provenance import validate_training_binding
                     validate_training_binding(training_binding)
-                config = {**config, 'epochs': epochs_per_trial}
-                config.pop('objective', None); config.pop('latency_weight', None)
                 trial_id = uuid.uuid4().hex if spec.family else f'job_{int(time.time())}_{uuid.uuid4().hex[:6]}'
                 trial_dir = models / spec.family / trial_id if spec.family else models / trial_id
                 trial = {'trial_id': trial_id, 'config': config, 'status': 'running', 'metrics': {}, 'latency_ms': None}
@@ -371,7 +418,12 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                     trial['progress'] = values; persist()
                 context = TrialContext(task, source, trial_dir, config, preset, device, parent, child_event, progress)
                 try:
-                    measured = _RUNNERS[task].run(context)
+                    if remote_profile:
+                        from backend.engine.remote_automated_trials import run_remote_candidate
+                        measured = run_remote_candidate(context, profile=remote_profile, search_id=search_id,
+                            source_dataset_path=canonical, training_binding=training_binding, owner=remote_owner,
+                            remaining_seconds=remaining, configuration_parent=configuration_parent)
+                    else: measured = _RUNNERS[task].run(context)
                     if event.is_set() or child_event.is_set(): raise InterruptedError('Automated training cancelled or budget elapsed')
                     if _fingerprint(source) != record['dataset_fingerprint'] or _fingerprint(canonical) != record['source_dataset_fingerprint']: raise ValueError('Automated training source or labels changed')
                     checkpoint = Path(measured['checkpoint_path'])
@@ -381,25 +433,34 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                         raise ValueError('Winner requires finite measured validation objective and latency')
                     objective = float(value) * (1 if _RUNNERS[task].direction == 'min' else -1)
                     if record['objective'] == 'loss_latency': objective += record['latency_weight'] * latency
-                    payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
-                    payload['training_config'] = config
-                    payload['automated_training'] = {'search_id': search_id, 'trial_id': trial_id, 'configuration_parent': configuration_parent, 'metrics': measured['metrics'], 'latency_ms': latency}
-                    temporary = checkpoint.with_suffix('.tmp'); torch.save(payload, temporary); temporary.replace(checkpoint)
+                    if not remote_profile:
+                        payload = torch.load(checkpoint, map_location='cpu', weights_only=True)
+                        payload['training_config'] = config
+                        payload['automated_training'] = {'search_id': search_id, 'trial_id': trial_id, 'configuration_parent': configuration_parent, 'metrics': measured['metrics'], 'latency_ms': latency}
+                        temporary = checkpoint.with_suffix('.tmp'); torch.save(payload, temporary); temporary.replace(checkpoint)
                     metadata_path = checkpoint.with_name('model_meta.json'); metadata = json.loads(metadata_path.read_text(encoding='utf-8'))
-                    metadata.update(automated_training=payload['automated_training'], training_config=config,
-                                    source_dataset_path=str(canonical), dataset_path=str(source)); _write(metadata_path, metadata)
-                    if training_binding:
+                    if not remote_profile:
+                        metadata.update(automated_training={'search_id':search_id,'trial_id':trial_id,'configuration_parent':configuration_parent,'metrics':measured['metrics'],'latency_ms':latency}, training_config=config,
+                                        source_dataset_path=str(canonical), dataset_path=str(source)); _write(metadata_path, metadata)
+                    if training_binding and not remote_profile:
                         from backend.engine.training_provenance import persist_model_binding
                         persist_model_binding(trial_dir, training_binding)
                     digest = sha256(checkpoint.read_bytes()).hexdigest()
-                    metadata = json.loads(metadata_path.read_text(encoding='utf-8')); metadata['checkpoint_sha256'] = digest; _write(metadata_path, metadata)
-                    _write(trial_dir / 'job_receipt.json', {'job_id': trial_id, 'task': task, 'status': 'completed',
+                    if not remote_profile:
+                        metadata = json.loads(metadata_path.read_text(encoding='utf-8')); metadata['checkpoint_sha256'] = digest; _write(metadata_path, metadata)
+                    receipt = {'job_id': trial_id, 'task': task, 'status': 'completed',
                         'source_dataset_path': str(canonical), 'dataset_path': str(source),
                         'output_dir':str(trial_dir),'current_epoch':measured.get('epochs_completed',epochs_per_trial),'total_epochs':epochs_per_trial,
                         'dataset_fingerprint': training_binding['dataset_fingerprint'] if training_binding else record['source_dataset_fingerprint'],
-                        'checkpoint_sha256': digest, 'training_provenance': training_binding, 'search_id': search_id,'device':device})
+                        'checkpoint_sha256': digest, 'training_provenance': training_binding, 'search_id': search_id,'device':device,
+                        **({'compute_profile_id':compute_profile_id,'remote_job_id':measured.get('remote_job_id')} if remote_profile else {})}
+                    if remote_profile:
+                        receipt = {**json.loads((trial_dir/'job_receipt.json').read_text(encoding='utf-8')),'search_id':search_id,
+                                   'checkpoint_sha256':digest,'current_epoch':measured.get('epochs_completed',epochs_per_trial)}
+                    _write(trial_dir/'job_receipt.json',receipt)
                     trial.update(status='completed', metrics=measured['metrics'], latency_ms=latency, latency_scope=measured.get('latency_scope'),
-                                 objective=objective, checkpoint_path=str(checkpoint), checkpoint_sha256=digest)
+                                 objective=objective, checkpoint_path=str(checkpoint), checkpoint_sha256=digest,
+                                 **({'compute_profile_id':compute_profile_id,'remote_job_id':measured.get('remote_job_id')} if remote_profile else {}))
                     consumed += measured.get('epochs_completed', epochs_per_trial)
                 except InterruptedError:
                     trial['status'] = 'cancelled'; consumed += epochs_per_trial
@@ -408,13 +469,17 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                     if event.is_set(): record['status'] = 'cancelled'
                     break
                 except (ValueError, OSError, RuntimeError, KeyError, TypeError, ImportError) as exc:
+                    from backend.engine.remote_automated_trials import RemoteTrialUncertain
+                    if isinstance(exc, RemoteTrialUncertain):
+                        trial.update(status='disconnected',error=str(exc),compute_profile_id=compute_profile_id)
+                        record.update(status='interrupted',stop_reason='remote_reconciliation_required',error=str(exc));break
                     trial.update(status='failed', error=str(exc)); consumed += epochs_per_trial
                     for name in ('best_model.pt', 'model_meta.json', 'job_receipt.json'): (trial_dir / name).unlink(missing_ok=True)
                 finally:
                     stop_monitor.set(); monitor_thread.join(timeout=1); persist()
             completed = [t for t in record['trials'] if t['status'] == 'completed']
             if event.is_set(): record.update(status='cancelled',winner=None,stop_reason='cancelled')
-            if record['status'] != 'cancelled':
+            if record['status'] not in ('cancelled','interrupted'):
                 if _fingerprint(source) != record['dataset_fingerprint'] or _fingerprint(canonical) != record['source_dataset_fingerprint']: raise ValueError('Automated training source or labels changed')
                 record['winner'] = min(completed, key=lambda t: (t['objective'], t['trial_id'])) if completed else None
                 record['status'] = 'completed' if completed else 'failed'

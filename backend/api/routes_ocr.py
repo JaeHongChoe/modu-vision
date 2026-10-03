@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import base64
+import io
 import json
 import re
 import uuid
@@ -10,8 +12,10 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from backend.engine.ocr_recipe import OCRRecipe
 from fastapi.responses import JSONResponse
+from PIL import Image
 from backend.engine.specialized_training_jobs import start_job,require_training_source,read_job,list_jobs,cancel_job
 
 from backend.api.routes_project import get_current_project
@@ -59,6 +63,11 @@ class OCRTrainRequest(BaseModel):
     background: bool = False
     seed: int = 0
     warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
+    recipe: OCRRecipe = Field(default_factory=OCRRecipe)
+
+    @field_validator('recipe',mode='before')
+    @classmethod
+    def validate_recipe(cls,value): return OCRRecipe.from_value(value)
 
 
 class OCREvaluateRequest(BaseModel):
@@ -74,6 +83,12 @@ class OCRPredictRequest(BaseModel):
     job_id: str = Field(pattern=r"^[0-9a-f]{32}$")
     image_path: str = Field(min_length=1)
     device: Literal["cpu", "cuda", "mps"] = "cpu"
+    recipe: OCRRecipe | None = None
+    include_preview: bool = False
+
+    @field_validator('recipe',mode='before')
+    @classmethod
+    def validate_recipe(cls,value): return OCRRecipe.from_value(value) if value is not None else None
 
 
 def _models_root(request: Request) -> Path:
@@ -162,13 +177,14 @@ def train(req: OCRTrainRequest, request: Request):
         source=require_training_source(project,project.get('source_dataset_dir',''))
         from backend.engine.prepared_family_datasets import resolve_family_dataset
         dataset=resolve_family_dataset(project,'ocr',req.dataset_path).root
+        req.recipe.validate_alphabet(load_ocr_manifest(dataset).alphabet)
     except ValueError as exc:raise HTTPException(422,str(exc)) from exc
     try:
         from backend.engine.specialized_warm_start import resolve_family_parent
         parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'ocr', source, dataset, req.model_dump()) if req.warm_start_job_id else None
         output=_models_root(request)/uuid.uuid4().hex
         result=start_job(project=project,task='ocr',source=source,family_dataset=dataset,output=output,options=req,
-            runner=lambda event,progress,device:train_ocr(dataset,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress,warm_start=parent),family_digest=lambda:load_ocr_manifest(dataset).provenance['dataset_sha256'],warm_start=parent)
+            runner=lambda event,progress,device:train_ocr(dataset,output,epochs=req.epochs,batch_size=req.batch_size,image_size=(req.image_height,req.image_width),learning_rate=req.learning_rate,device=device,seed=req.seed,cancel_event=event,on_progress=progress,warm_start=parent,recipe=req.recipe),family_digest=lambda:load_ocr_manifest(dataset).provenance['dataset_sha256'],warm_start=parent)
         return JSONResponse(result,status_code=202) if req.background else result
     except InterruptedError as exc:raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
@@ -255,6 +271,14 @@ def predict(req: OCRPredictRequest, request: Request):
     source=get_current_project(request).get('source_dataset_dir'); image=Path(req.image_path)
     if not source or image.is_symlink() or not image.resolve().is_relative_to(Path(source).resolve()):raise HTTPException(422,'OCR image must belong to active original source')
     try:
-        return predict_ocr(checkpoint, req.image_path, device=req.device)
+        result=predict_ocr(checkpoint, req.image_path, device=req.device, recipe=req.recipe)
+        if req.include_preview:
+            data=image.read_bytes()
+            if hashlib.sha256(data).hexdigest()!=result['source_sha256']: raise ValueError('OCR original image changed before preview')
+            with Image.open(io.BytesIO(data)) as opened:
+                preview=opened.convert('RGB');preview.thumbnail((800,600),Image.Resampling.BILINEAR)
+                stream=io.BytesIO();preview.save(stream,format='PNG')
+            result['preview_data_url']='data:image/png;base64,'+base64.b64encode(stream.getvalue()).decode('ascii')
+        return result
     except (ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

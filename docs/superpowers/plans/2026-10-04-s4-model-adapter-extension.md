@@ -1,0 +1,37 @@
+# S4-06 / S4-07 adapter extension slice
+
+This slice preserves OCR crop and the fixed-slot CNN as defaults. It implements the approved phase 4 contracts in an isolated checkout, with CPU-only regression receipts saved in the external extension-batch evidence directory's `model-adapters` subdirectory.
+
+## OCR contract
+
+`OCRRecipe` selects `crop` or `detect_recognize`, a printable Unicode charset, `none`/`strip`/`nfkc`/`nfkc_strip` normalization and full-string regex, minimum/maximum length or explicit allowed values. Charset constrains the recognizer training alphabet; a val/test character absent from train remains a preflight error. Empty training labels remain unsupported; an empty detected image returns no regions, empty text and zero confidence.
+
+The detector is **classical horizontal foreground projection**, not a learned text detector. It thresholds a plain-background image, removes tiny connected components, proposes row bands and splits large horizontal gaps. Each original-coordinate crop actually calls the existing CTC recognizer. Output orders rows top-to-bottom and regions left-to-right, joining regions with spaces and rows with newlines. `box` uses exclusive right/bottom pixel bounds and `polygon` uses the corresponding original image corners. Recipe versioned metadata is saved with the existing safe CTC checkpoint. Public file and array prediction share the same implementation; existing flow array callers inherit the saved recipe. HTTP preview bytes are checked against the inference source hash. Evaluation reports CER and whitespace-token WER using recipe normalization.
+
+The recognizer still trains from single-line crop labels. Vertical text and complex scenes are unsupported/unqualified; multiline scene quality, detector recall and Korean recognition quality require representative held-out scene annotations. The small deterministic recognition fixture proves crop dispatch and coordinates, not model quality.
+
+## OBB contract and compatibility
+
+`OBBRecipe` defaults to `fixed_slot_cnn`. The optional `ultralytics_yolo_obb` selection requires an absolute regular local `.pt` file; no default model name or weight download is selected. Initial model bytes, source image bytes, class mapping, dataset recipe, optional runtime version and native trained weights are pinned by hashes. A changed initial model fails the run. Empty images have explicit `objects: []`; every image retains source hash and split membership even when it has no objects. The manifest can carry more than 32 objects, while legacy fixed-slot training rejects empty or oversized images with a concrete adapter selection error. Existing nonempty v1/v2 dataset digest construction and saved checkpoint loading stay compatible.
+
+The adapter creates a derived normalized four-corner YOLO dataset, calls real optional-runtime `train`, `val`, and `predict` entry points, and maps radians into clockwise axial angles in `[-90,90)`. RGB app arrays are converted to the BGR ndarray contract expected by Ultralytics. Native polygon outputs stay in original input pixels. Native weights are embedded as bytes in the existing `weights_only=True` safe checkpoint envelope and unpacked into a temporary local file only at the explicit runtime boundary. The completed job, provenance binder, specialized checkpoint resolver and package checkpoint format therefore remain connected without adding a second untracked weights file.
+
+Training requires a separate `trust_native_weights: true` request acknowledgement, exposed as an unchecked UI checkbox. For a selected native `.pt`, the exact acknowledged bytes are copied to a temporary file before deserialization; completed native outputs are registered by SHA256 in the same process. Every native load requires process-local trust for that digest or an exact digest listed in `MODU_VISION_TRUSTED_YOLO_OBB_SHA256` (comma-separated 64-character SHA256 values). Wildcards and global bypasses are rejected. Saved recipe flags are provenance only and do not grant authorization after restart or on another host. A field host owner must review and explicitly allow the package's `native_model_sha256`; this slice does not enable that setting on any actual machine. Arbitrary model YAML is rejected before runtime construction: module definitions such as TorchVision can select pretrained downloads during construction even when trainer `pretrained=False`.
+
+Envelope verification reads checkpoint bytes once, verifies that snapshot's envelope/native hashes and safe signature, and materializes only the native bytes from that checked payload. A source mutation after safe loading cannot switch the runtime input to unverified bytes. This trust mechanism authorizes native deserialization separately from runtime/weight license and operational qualification.
+
+An axial OBB has no independent 360-degree direction. Direction-labeled training and fixed-slot warm-parent migration are rejected for YOLO OBB. Independent direction remains available on the existing CNN. Remote local-file transfer for the optional adapter is pending and must fail preflight rather than reinterpret the local path as a worker path. Runtime detections use a 10,000 maximum output limit; this is separate from the removed 32-slot training limit.
+
+Official source references, checked 2026-10-04:
+
+- [Ultralytics OBB task](https://docs.ultralytics.com/tasks/obb): train/val/predict APIs, four-corner output and axial geometry.
+- [Ultralytics OBB dataset format](https://docs.ultralytics.com/datasets/obb): normalized four-corner annotation format.
+- [Ultralytics prediction](https://docs.ultralytics.com/modes/predict): results and ndarray input contract.
+- [Ultralytics model YAML](https://docs.ultralytics.com/guides/model-yaml-config) and [TorchVision module](https://docs.ultralytics.com/reference/nn/modules/block/#ultralytics.nn.modules.block.TorchVision): arbitrary YAML can reference pretrained weights and is excluded from this slice.
+- [Ultralytics license](https://www.ultralytics.com/license): runtime and distribution options. This slice records `distribution_status: pending_review`; it does not accept terms, select legal conditions, or approve distribution. Caller-supplied weight terms require separate review.
+
+## Evidence and remaining qualification
+
+The red receipts cover ignored OCR recipes, missing blank detection, missing recipe validation, the old 1-32 object limit, renderer payload helpers, safe checkpoint job binding, and initial-model mutation. Green receipts cover CPU CTC training, real manifest conversion, normalization/rules, original geometry, empty/33-object input and public project route readback. The optional Ultralytics boundary is replaced in dispatch tests; its fabricated metrics prove mapping and invocation only. No real learned detector training, real Ultralytics model quality, Windows/GPU runtime, native app visual QA, target deployment, license acceptance or model-distribution approval is claimed. Root owns the combined broad test run and OCR flow region/rule integration.
+
+Independent review should check legacy checkpoint/dataset compatibility, explicit adapter selection, safe-envelope/native checksum verification, cancellation cleanup, unchanged original bytes, empty-image preservation, Unicode class/charset handling, label/polygon coordinates, direction refusal, project source scope, request recipe persistence and honest quality/license status.

@@ -21,10 +21,11 @@ class ServiceRuntime:
         if self.state_file.exists():
             prior=json.loads(self.state_file.read_text(encoding='utf-8'))
             if self.runtime_root is None: raise ValueError('Recovered runtime requires a managed release root')
-            self.apply(prior['package_path'],prior.get('release_policy'),prior['device'],prior['manifest_sha256'],persist=False)
+            self.apply(prior['package_path'],prior.get('release_policy'),prior['device'],prior['manifest_sha256'],persist=False,
+                       recipe={key:prior[key] for key in ('recipe_id','recipe_revision','product_id','lot_id') if key in prior})
         else:
             self.apply(package,policy,device,None,persist=False,initial=True)
-    def apply(self,package,policy,device,expected_manifest,persist=True,initial=False):
+    def apply(self,package,policy,device,expected_manifest,persist=True,initial=False,recipe=None):
         package=Path(package)
         if package.is_symlink():raise ValueError('Runtime package cannot be a symbolic link')
         package=package.resolve(strict=True)
@@ -48,6 +49,14 @@ class ServiceRuntime:
         selected=str(resolve_runtime_device(device))
         identity={'status':'ready','package_path':str(package),'release_policy':str(policy) if policy else None,'device':selected,'manifest_sha256':digest,'pipeline_id':pipeline.id,
                   'runtime_build':self.runtime_build,'model_sha256':{job:hashlib.sha256(path.read_bytes()).hexdigest() for job,path in checkpoints.items()}}
+        if recipe is not None:
+            if not isinstance(recipe,dict) or set(recipe)-{'recipe_id','recipe_revision','product_id','lot_id'}:
+                raise ValueError('Recipe identity has unsupported fields')
+            if any(not isinstance(value,str) or not 1<=len(value)<=160 for value in recipe.values()):
+                raise ValueError('Recipe identity values must contain 1 to 160 characters')
+            if ('recipe_id' in recipe) != ('recipe_revision' in recipe):
+                raise ValueError('Recipe id and revision must be supplied together')
+            identity.update(recipe)
         with self.lock:
             if persist:
                 temporary=self.state_file.with_suffix('.tmp')
@@ -55,6 +64,6 @@ class ServiceRuntime:
                     json.dump(identity,writer);writer.flush();os.fsync(writer.fileno())
                 os.replace(temporary,self.state_file)
             self.identity=identity
-        return dict(identity)
+        return json.loads(json.dumps(identity))
     def read(self):
-        with self.lock:return dict(self.identity)
+        with self.lock:return json.loads(json.dumps(self.identity))

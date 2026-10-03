@@ -101,7 +101,7 @@ class SharedAuthorizationMiddleware:
             delivery_allowed=False
             team_allowed=False
             if path.startswith('/api/capture-intake/'):
-                delivery_allowed=(path.endswith('/register') and role in {'labeler','trainer','reviewer'}) or (path.endswith(('/review','/adopt')) and role=='reviewer')
+                delivery_allowed=(path.endswith('/register') and role in {'labeler','trainer','reviewer'}) or ((path.endswith(('/review','/adopt')) or path=='/api/capture-intake/drift/references') and role=='reviewer')
             if path.startswith('/api/team-data/'):
                 management=path in {'/api/team-data/books','/api/team-data/settings'} or path.endswith('/assign')
                 voting=path.endswith(('/review','/adjudicate'))

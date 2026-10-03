@@ -21,7 +21,7 @@ import {RotatedBoxFitting} from './RotatedBoxFitting';
 
 import {useTaskHandoff} from './useTaskHandoff';
 import {selectHandoffRecord} from './taskHandoff';
-import {parseRotatedRows as parseRows,formatRotatedRows as formatRows} from './rotatedDirectionRows';
+import {parseOBBRows as parseRows,formatOBBRows as formatRows,obbRecipePayload,type OBBAdapter} from './modelAdapterRecipes';
 
 function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
@@ -39,6 +39,9 @@ export const RotatedDetectionPanel: React.FC = () => {
   const [sampleCount, setSampleCount] = useState<number | null>(null);
   const [splitCounts, setSplitCounts] = useState<Record<string, number> | null>(null);
   const [epochs, setEpochs] = useState(10);
+  const [adapter,setAdapter]=useState<OBBAdapter>('fixed_slot_cnn');
+  const [localModelPath,setLocalModelPath]=useState('');
+  const [trustNativeWeights,setTrustNativeWeights]=useState(false);
   const [device,setDevice] = useState<LocalTrainingDevice>('cpu');
   const [models, setModels] = useState<Array<RotatedModelSummary & {dataset_path?:string}>>([]);
   const [modelId, setModelId] = useState('');
@@ -61,6 +64,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     setDatasetPath(projectSource);setDatasets([]);
     setModels([]); setModelId(''); setJob(null); setImagePath('');
     setEvaluation(null); setPrediction(null); setNotice(''); setError(''); setBusy(null); setWarmParentId('');
+    setAdapter('fixed_slot_cnn');setLocalModelPath('');setTrustNativeWeights(false);
     if (!projectDir) return;
     let active = true;
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets'),request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs'),specializedApi.rotated.models()]).then(([prepared,journal,result])=>{
@@ -145,7 +149,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const options={dataset_path:datasetPath,epochs,device,...(warmParentId?{warm_start_job_id:warmParentId}:{})};
+      const options={dataset_path:datasetPath,epochs,device,recipe:obbRecipePayload(adapter,localModelPath,trustNativeWeights),...(warmParentId?{warm_start_job_id:warmParentId}:{})};
       const started=await submitModelTraining<RotatedJob>('rotated_detection',options,()=>request<RotatedJob>('/api/rotated-detection/train',{method:'POST',body:JSON.stringify(options)}));
       if (!sameProject()) return;
       setJob(started);
@@ -212,6 +216,8 @@ export const RotatedDetectionPanel: React.FC = () => {
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <p className="leading-5 text-slate-400">원본 이미지의 회전 박스 정답을 지정해 후보 모델을 학습합니다. 같은 이미지의 객체는 여러 행으로 입력하세요. 완료 후보는 5단계 검사 노드에서 회전 객체 검출 모델로 선택하고 저장할 수 있습니다.</p>
+      <label>검출 구현<select aria-label="회전 검출 구현" value={adapter} onChange={event=>{setAdapter(event.target.value as OBBAdapter);setWarmParentId('');}} className={programInput}><option value="fixed_slot_cnn">기존 CNN · 이미지당 1~32 객체 · 별도 방향 학습</option><option value="ultralytics_yolo_obb">YOLO OBB 명시적 선택 · 빈 정상·32 초과 객체 · 축 각도</option></select></label>
+      {adapter==='ultralytics_yolo_obb'&&<div className="rounded border border-amber-700 p-3"><label>로컬 OBB 모델 .pt 절대 경로<input value={localModelPath} onChange={event=>{setLocalModelPath(event.target.value);setTrustNativeWeights(false);}} className={programInput}/></label><label className="mt-2 block"><input type="checkbox" checked={trustNativeWeights} onChange={event=>setTrustNativeWeights(event.target.checked)}/> 선택한 로컬 모델의 출처와 네이티브 로딩을 신뢰합니다.</label><p className="mt-2 text-amber-200">YOLO OBB는 별도 방향을 예측하지 않습니다. 로컬 모델과 선택 runtime이 필요하며 가중치를 자동 선택·다운로드하지 않습니다. 이 확인은 현재 프로세스의 정확한 모델 SHA에만 적용됩니다. 서버 재시작·다른 호스트에서는 해당 SHA의 호스트 신뢰 설정이 필요합니다. runtime·가중치 배포 라이선스는 검토 대기 상태입니다. GPU·Windows·모델 품질과 원격 worker 모델 전달은 별도 검증이 필요합니다.</p></div>}
       <TrainingPreparationPanel family="rotated_detection" model="rotated_detector" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
       <div className="rounded border border-[#344255] bg-[#0E1722] px-3 py-2">
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
@@ -225,6 +231,7 @@ export const RotatedDetectionPanel: React.FC = () => {
           className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] px-3 py-2 font-mono text-slate-100" />
       </label>
       <p className="text-slate-500">좌표는 이미지 원본 픽셀입니다. 박스 축 각도는 화면에서 시계 방향이며 -90° 이상 90° 미만입니다. 선택한 다섯 번째 열은 별도의 객체 방향 0° 이상 360° 미만입니다. 방향 학습에는 모든 객체의 방향 정답이 필요합니다. 동일 이미지 또는 동일 바이트의 복사본은 서로 다른 분할에 둘 수 없습니다.</p>
+      <p className="text-slate-500">빈 정상은 이미지 경로 ↹ 빈 라벨 ↹ 빈 박스 ↹ 분할로 입력합니다. 빈 정상과 32개 초과 객체는 YOLO OBB 선택이 필요합니다.</p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => void loadManifest()} disabled={!datasetPath || !!busy}
           className="rounded border border-slate-600 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-40"><RefreshCw className="mr-1 inline h-3 w-3" />저장된 정답 읽기</button>
@@ -234,17 +241,17 @@ export const RotatedDetectionPanel: React.FC = () => {
       </div>
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||isActive}/>
-        <WarmStartSelector family="rotated-detection" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || isActive} refreshKey={job?.status === 'completed' ? job.job_id : null} />
+        <WarmStartSelector family="rotated-detection" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || isActive||adapter==='ultralytics_yolo_obb'} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input type="number" min="1" max="200" value={epochs}
           onChange={(event) => setEpochs(Math.max(1, Math.min(200, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!busy || isActive}
+        <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!busy || isActive || (adapter==='ultralytics_yolo_obb'&&!trustNativeWeights)}
           className="rounded bg-amber-700 px-3 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-40">후보 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
-            {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id.slice(0, 12)} · 검증 IoU {(model.validation.mean_oriented_iou * 100).toFixed(1)}%</option>)}
+            {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id.slice(0, 12)} · {(model as RotatedModelSummary & {adapter?:string}).adapter==='ultralytics_yolo_obb'?'YOLO OBB · 라이선스 검토 대기':`검증 IoU ${((model.validation?.mean_oriented_iou||0)*100).toFixed(1)}%`}</option>)}
           </select>
         </label>
         <button type="button" onClick={() => void evaluate()} disabled={!modelId || !datasetPath || !!busy || !splitCounts?.test}

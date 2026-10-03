@@ -327,6 +327,9 @@ export interface FlowchartCrop {
   flaw_type: string;
   confidence?: number;
   recognized_text?: string;
+  ocr_regions?: Array<{box:number[];polygon:number[][];line_index:number;region_index:number;text:string;confidence:number}>;
+  ocr_recipe?: Record<string,unknown> | null;
+  ocr_rule_result?: {passed:boolean;failed_rules:string[]} | null;
   original_text?: string;
   corrected_text?: string;
   correction_applied?: boolean;

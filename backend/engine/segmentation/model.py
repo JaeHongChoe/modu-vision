@@ -164,6 +164,8 @@ def build_segmentation_model(
     pretrained: bool = True,
     pretrained_checkpoint: str | None = None,
     pretrained_sha256: str | None = None,
+    train_mode: str = 'head_only',
+    partial_blocks: int = 2,
 ) -> nn.Module:
     """
     Factory constructing segmentation models based on model_name and preset.
@@ -176,7 +178,10 @@ def build_segmentation_model(
         if in_channels != 3:
             raise ValueError("DINOv3 segmentation requires RGB input channels")
         return DinoTaskModel("segmentation", name, num_classes, pretrained,
-                             pretrained_checkpoint, pretrained_sha256)
+                             pretrained_checkpoint, pretrained_sha256, train_mode, partial_blocks)
+
+    if train_mode != 'head_only':
+        raise ValueError('Explicit train_mode is supported by DINOv3 backbones')
 
     if "deeplab" in name:
         bb = "resnet50" if ("resnet" in name or p == "precision") else "mobilenet_v3"

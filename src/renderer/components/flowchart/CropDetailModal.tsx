@@ -276,6 +276,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 <div className="flex justify-between"><span className="text-slate-400">교정 후 문자</span><strong>{crop.corrected_text ?? crop.recognized_text}</strong></div>
                 <p className="text-[10px] text-slate-400">{crop.correction_applied ? '문자 교정 규칙 적용' : '교정 없음'}</p>
                 {!!crop.rule_violations?.length && <p className="text-rose-300">문자 규칙 위반: {crop.rule_violations.map(row => String(row.rule ?? row.kind ?? row.index ?? JSON.stringify(row))).join(', ')}</p>}
+                {!!crop.ocr_regions?.length && <div aria-label="OCR 줄별 원본 영역">{crop.ocr_regions.map((region,index)=><p key={index} className="text-[10px] text-slate-300">{region.line_index+1}줄 · {region.text} · 원본 좌표 {region.box.join(', ')} · 신뢰도 {region.confidence.toFixed(3)}</p>)}</div>}
               </div>}
               {!!crop.blob_measurements?.length && <div className="mt-3 space-y-2 rounded border border-teal-800 bg-[#0B0E14] p-3">
                 <h4 className="font-semibold text-teal-200">원본 클래스별 구조 측정</h4>

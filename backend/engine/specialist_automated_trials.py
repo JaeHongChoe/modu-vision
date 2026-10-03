@@ -38,7 +38,7 @@ def ocr_trial(context):
     config=context.config;size=(config['image_size'],config['image_width'])
     train_ocr(context.dataset_path,context.output_dir,epochs=config['epochs'],batch_size=config['batch_size'],image_size=size,
         learning_rate=config['learning_rate'],device=context.device,seed=config.get('seed',0),cancel_event=context.cancel_event,
-        on_progress=context.on_progress,warm_start=context.warm_start)
+        on_progress=context.on_progress,warm_start=context.warm_start,recipe=config.get('recipe'))
     model,payload,_=_load_model(context.output_dir/'best_model.pt',context.device)
     heldout=OCRDataset(load_ocr_manifest(context.dataset_path),split='val',image_size=size)
     image=heldout[0][0].unsqueeze(0).to(context.device)

@@ -31,6 +31,11 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+# SCM must connect its dispatcher before importing Studio/GPU application code.
+if __name__ == '__main__' and sys.argv[1:2] == ['--windows-inspection-service']:
+    from backend.engine.windows_inspection_service import main as service_main
+    raise SystemExit(service_main(sys.argv[2:]))
+
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Query, Path as ApiPath
 from fastapi.middleware.cors import CORSMiddleware

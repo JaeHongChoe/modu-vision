@@ -50,6 +50,12 @@ class FleetRegistry:
                 CREATE TRIGGER IF NOT EXISTS emergency_rollback_no_delete
                     BEFORE DELETE ON emergency_rollback_events BEGIN SELECT RAISE(ABORT,'Emergency rollback audit is immutable'); END;
             """)
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS rollouts(plan_id TEXT PRIMARY KEY,revision INTEGER NOT NULL,payload TEXT NOT NULL,updated_at REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS rollout_events(event_id TEXT PRIMARY KEY,plan_id TEXT NOT NULL,revision INTEGER NOT NULL,event TEXT NOT NULL,reviewer TEXT NOT NULL,created_at REAL NOT NULL);
+                CREATE TRIGGER IF NOT EXISTS rollout_events_no_update BEFORE UPDATE ON rollout_events BEGIN SELECT RAISE(ABORT,'Rollout audit is immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS rollout_events_no_delete BEFORE DELETE ON rollout_events BEGIN SELECT RAISE(ABORT,'Rollout audit is immutable'); END;
+            """)
         self.path.chmod(0o600)
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30);conn.row_factory=sqlite3.Row;return conn
@@ -71,7 +77,7 @@ class FleetRegistry:
         with self.connect() as conn:conn.execute('INSERT INTO targets VALUES(?,?,?,?) ON CONFLICT(target_id) DO UPDATE SET name=excluded.name,url=excluded.url,token=excluded.token',(identifier,name.strip(),url,token))
         return self.target(identifier)
     def ledger(self,identifier):
-        self.target(identifier);return DeploymentLedger(self.root/identifier)
+        self.target(identifier);return DeploymentLedger(self.root/identifier,project_dir=self.root.parent)
     def client(self,identifier):
         return httpx.Client(base_url=self.target(identifier)['url'],headers={'Authorization':'Bearer '+self.secret(identifier)},timeout=30,follow_redirects=False)
     def readback(self,identifier):
@@ -167,6 +173,206 @@ class FleetRegistry:
         if not target:raise KeyError(deployment_id)
         selected=self.apply(identifier,target['release'],reviewer=reviewer,restored_from=deployment_id,project=project)
         return selected
+
+    def _rollout_lock(self,identifier):
+        from backend.engine.runtime_process_control import runtime_state_lock
+        if not isinstance(identifier,str) or len(identifier)!=32 or any(c not in '0123456789abcdef' for c in identifier):raise ValueError('Invalid rollout plan ID')
+        directory=self.root/'rollout_operations'/identifier
+        if directory.is_symlink() or directory.parent.is_symlink():raise ValueError('Rollout operation storage is linked')
+        directory.mkdir(parents=True,exist_ok=True)
+        return runtime_state_lock(directory)
+
+    def rollout(self,identifier):
+        with self.connect() as conn:
+            row=conn.execute('SELECT payload FROM rollouts WHERE plan_id=?',(identifier,)).fetchone()
+        if row is None:raise KeyError(identifier)
+        return json.loads(row['payload'])
+
+    def rollouts(self):
+        with self.connect() as conn:rows=conn.execute('SELECT payload FROM rollouts ORDER BY updated_at DESC').fetchall()
+        return [json.loads(row['payload']) for row in rows]
+
+    def rollout_events(self,identifier):
+        self.rollout(identifier)
+        with self.connect() as conn:rows=conn.execute('SELECT * FROM rollout_events WHERE plan_id=? ORDER BY revision',(identifier,)).fetchall()
+        return [dict(row) for row in rows]
+
+    def _save_rollout(self,plan,event,reviewer):
+        previous=plan['revision'];updated={**plan,'revision':previous+1,'updated_at':time.time()}
+        encoded=json.dumps(updated,ensure_ascii=False,allow_nan=False)
+        with self.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            result=conn.execute('UPDATE rollouts SET revision=?,payload=?,updated_at=? WHERE plan_id=? AND revision=?',
+                (updated['revision'],encoded,updated['updated_at'],plan['plan_id'],previous))
+            if result.rowcount!=1:raise ValueError('Rollout revision changed; reload the plan before retrying')
+            conn.execute('INSERT INTO rollout_events VALUES(?,?,?,?,?,?)',(uuid.uuid4().hex,plan['plan_id'],updated['revision'],event,reviewer,time.time()))
+        plan.update(updated)
+        return plan
+
+    def _checked_rollout(self,identifier,expected_revision,reviewer,project=None):
+        if not isinstance(reviewer,str) or not reviewer.strip():raise ValueError('Rollout reviewer is required')
+        plan=self.rollout(identifier)
+        if type(expected_revision) is not int or expected_revision!=plan['revision']:raise ValueError('Rollout revision changed; reload the plan before retrying')
+        if project is not None and Path(project['project_dir']).resolve()!=self.root.parent.resolve():raise ValueError('Rollout project identity differs')
+        return plan
+
+    def create_rollout(self,release,*,target_ids,canary_target_ids=None,batch_size=5,reviewer,project):
+        if Path(project['project_dir']).resolve()!=self.root.parent.resolve():raise ValueError('Rollout project identity differs')
+        if not isinstance(reviewer,str) or not reviewer.strip():raise ValueError('Rollout reviewer is required')
+        if not isinstance(target_ids,list) or not target_ids or len(target_ids)>1000 or len(set(target_ids))!=len(target_ids):raise ValueError('Rollout requires 1-1000 unique registered targets')
+        canaries=canary_target_ids if canary_target_ids is not None else target_ids[:1]
+        if not isinstance(canaries,list) or not canaries or len(set(canaries))!=len(canaries) or not set(canaries).issubset(target_ids):raise ValueError('Rollout canaries must be unique selected targets')
+        if type(batch_size) is not int or not 1<=batch_size<=100:raise ValueError('Rollout batch size must be 1-100')
+        if len(canaries)>batch_size:raise ValueError('Rollout canary cohort cannot exceed the reviewed batch size')
+        if not isinstance(release,dict) or not isinstance(release.get('manifest_sha256'),str) or len(release['manifest_sha256'])!=64 or any(c not in '0123456789abcdef' for c in release['manifest_sha256']) or not release.get('package_path') or not release.get('device'):raise ValueError('Rollout requires a staged package hash and execution device')
+        identifier=uuid.uuid4().hex;now=time.time()
+        targets=[{'target_id':target_id,'target_url':self.target(target_id)['url'],'status':'pending','deployment_id':None,'previous_deployment_id':None,'error':None,'readback':None} for target_id in target_ids]
+        plan={'schema_version':1,'plan_id':identifier,'revision':1,'status':'planned','operation':'deploy','release':{**release,'rollout_id':identifier},
+            'targets':targets,'canary_target_ids':list(canaries),'batch_size':batch_size,'canary_confirmed':False,
+            'reviewer':reviewer,'created_at':now,'updated_at':now,'pause_reason':None,
+            'offline_policy':'existing acknowledged field runtime continues; new commands pause until live readback'}
+        with self.connect() as conn:
+            conn.execute('INSERT INTO rollouts VALUES(?,?,?,?)',(identifier,1,json.dumps(plan,ensure_ascii=False,allow_nan=False),now))
+            conn.execute('INSERT INTO rollout_events VALUES(?,?,?,?,?,?)',(uuid.uuid4().hex,identifier,1,'created',reviewer,now))
+        return plan
+
+    def _rollout_probe(self,plan,target,*,require_desired=False):
+        if self.target(target['target_id'])['url']!=target['target_url']:raise ValueError('Rollout target endpoint changed; create a new reviewed plan')
+        result=self.readback(target['target_id']);runtime=result.get('runtime')
+        target['readback']={'observed_at':time.time(),'runtime':runtime,'matches_active':result.get('matches_active',False)}
+        if not isinstance(runtime,dict) or runtime.get('status')=='disconnected':raise ConnectionError('Target is offline; fresh runtime readback is required')
+        if runtime.get('status') in ('failed','error','stopping'):raise ValueError('Target health blocks rollout')
+        if require_desired:
+            active=result.get('active') or {}
+            if (not result.get('matches_active') or runtime.get('manifest_sha256')!=plan['release']['manifest_sha256'] or runtime.get('device')!=plan['release']['device'] or (target.get('deployment_id') and active.get('deployment_id')!=target['deployment_id'])):
+                raise ValueError('Target desired release/device readback differs from the committed rollout receipt')
+        return result
+
+    def _pause_rollout_failure(self,plan,target,error,reviewer):
+        target.update(status='offline' if isinstance(error,ConnectionError) else 'failed',error=str(error) if isinstance(error,(ValueError,ConnectionError)) else type(error).__name__)
+        plan.update(status='paused',pause_reason=target['error'])
+        return self._save_rollout(plan,'target_paused',reviewer)
+
+    def _rollout_restored(self,plan,target,observed):
+        """Adopt a committed restoration only when its exact receipt is live."""
+        active=observed.get('active') or {}
+        previous=target.get('previous_deployment_id')
+        if not previous or active.get('restored_from')!=previous:return False
+        if target.get('rollback_deployment_id') and active.get('deployment_id')!=target['rollback_deployment_id']:
+            raise ValueError('Target active rollback receipt changed; review separately')
+        requested=target.get('rollback_requested_at')
+        if not requested or active.get('created_at',0)<requested:return False
+        original=next((row for row in self.ledger(target['target_id']).history() if row['deployment_id']==previous),None)
+        runtime=observed.get('runtime') or {}
+        if (not original or not observed.get('matches_active') or runtime.get('status')!='ready'
+            or runtime.get('manifest_sha256')!=original['release']['manifest_sha256']
+            or runtime.get('device')!=original['release']['device']):
+            raise ValueError('Rollback target readback differs from the previous committed release')
+        target.update(status='rolled_back',rollback_deployment_id=active['deployment_id'],error=None)
+        return True
+
+    def advance_rollout(self,identifier,*,expected_revision,reviewer,project,confirm_canary=False):
+        with self._rollout_lock(identifier):
+            plan=self._checked_rollout(identifier,expected_revision,reviewer,project)
+            if plan.get('operation')=='rollback':raise ValueError('Rollout rollback has started; continue rollback instead of deployment')
+            if plan['status']=='paused':raise ValueError('Explicitly resume the paused rollout after checking target readback')
+            if plan['status'] in ('completed','rolled_back'):return plan
+            if plan['status']=='rolling_back' or any(row['status']=='applying' for row in plan['targets']):raise ValueError('Interrupted rollout requires explicit resume and live readback')
+            if plan['status']=='waiting_canary_confirmation' and not confirm_canary:return plan
+            if plan['status']=='planned' and confirm_canary:raise ValueError('Canary must deploy and produce readback before explicit confirmation')
+            # Recheck every previously applied target before advancing a new batch.
+            for target in plan['targets']:
+                if target['status']=='applied':
+                    try:self._rollout_probe(plan,target,require_desired=True)
+                    except (ValueError,ConnectionError,OSError,KeyError,httpx.HTTPError,TypeError,AttributeError) as exc:return self._pause_rollout_failure(plan,target,exc,reviewer)
+            canary_stage=plan['status']=='planned'
+            if plan['status']=='waiting_canary_confirmation':
+                plan.update(canary_confirmed=True,status='running')
+                self._save_rollout(plan,'canary_confirmed',reviewer)
+            selected=[row for row in plan['targets'] if row['status']=='pending' and (row['target_id'] in plan['canary_target_ids'] if canary_stage else row['target_id'] not in plan['canary_target_ids'])]
+            if not canary_stage:selected=selected[:plan['batch_size']]
+            for target in selected:
+                try:
+                    self._rollout_probe(plan,target)
+                    previous=self.ledger(target['target_id']).active()
+                    target.update(status='applying',previous_deployment_id=previous['deployment_id'] if previous else None,error=None)
+                    plan['status']='running';self._save_rollout(plan,'target_apply_started',reviewer)
+                    receipt=self.apply(target['target_id'],plan['release'],reviewer=reviewer,project=project)
+                    target.update(deployment_id=receipt['deployment_id'],status='applied')
+                    self._rollout_probe(plan,target,require_desired=True)
+                    self._save_rollout(plan,'target_readback_verified',reviewer)
+                except (ValueError,ConnectionError,OSError,KeyError,RuntimeError,httpx.HTTPError,TypeError,AttributeError) as exc:return self._pause_rollout_failure(plan,target,exc,reviewer)
+            plan.update(status='waiting_canary_confirmation' if canary_stage else 'completed' if all(row['status']=='applied' for row in plan['targets']) else 'running',pause_reason=None)
+            return self._save_rollout(plan,'canary_ready' if canary_stage else 'batch_finished',reviewer)
+
+    def pause_rollout(self,identifier,*,expected_revision,reviewer,reason):
+        with self._rollout_lock(identifier):
+            plan=self._checked_rollout(identifier,expected_revision,reviewer)
+            if not isinstance(reason,str) or not reason.strip():raise ValueError('A rollout pause reason is required')
+            if plan['status'] in ('completed','rolled_back'):raise ValueError('A terminal rollout cannot be paused')
+            plan.update(status='paused',pause_reason=reason.strip())
+            return self._save_rollout(plan,'paused_by_reviewer',reviewer)
+
+    def resume_rollout(self,identifier,*,expected_revision,reviewer,project):
+        with self._rollout_lock(identifier):
+            plan=self._checked_rollout(identifier,expected_revision,reviewer,project)
+            if plan['status'] not in ('paused','running','rolling_back'):raise ValueError('This rollout is not paused or interrupted')
+            for target in plan['targets']:
+                if target['status']=='pending':continue
+                try:
+                    if plan.get('operation')=='rollback':
+                        observed=self._rollout_probe(plan,target)
+                        if target.get('deployment_id') and self._rollout_restored(plan,target,observed):continue
+                        if target.get('rollback_deployment_id'):raise ValueError('Rollback receipt is no longer active; review separately')
+                        self._rollout_probe(plan,target,require_desired=bool(target.get('deployment_id')))
+                        target.update(status='applied' if target.get('deployment_id') else 'pending',error=None)
+                        continue
+                    observed=self._rollout_probe(plan,target,require_desired=bool(target.get('deployment_id')))
+                    if not target.get('deployment_id'):
+                        active=observed.get('active') or {}
+                        if active.get('release',{}).get('rollout_id')==identifier:
+                            target.update(deployment_id=active['deployment_id'])
+                            self._rollout_probe(plan,target,require_desired=True)
+                    target.update(status='applied' if target.get('deployment_id') else 'pending',error=None)
+                except (ValueError,ConnectionError,OSError,KeyError,RuntimeError,httpx.HTTPError,TypeError,AttributeError) as exc:return self._pause_rollout_failure(plan,target,exc,reviewer)
+            canaries=[row for row in plan['targets'] if row['target_id'] in plan['canary_target_ids']]
+            if plan.get('operation')=='rollback':
+                remaining=any(row.get('deployment_id') and row['status']!='rolled_back' for row in plan['targets'])
+                plan.update(status='rolling_back' if remaining else 'rolled_back',pause_reason=None)
+            else:plan.update(status='running' if plan['canary_confirmed'] else 'waiting_canary_confirmation' if all(row['status']=='applied' for row in canaries) else 'planned',pause_reason=None)
+            return self._save_rollout(plan,'resumed_after_live_readback',reviewer)
+
+    def rollback_rollout(self,identifier,*,expected_revision,reviewer,project):
+        with self._rollout_lock(identifier):
+            plan=self._checked_rollout(identifier,expected_revision,reviewer,project)
+            # The ledger may commit before the plan publishes a target receipt.
+            # Resolve that interrupted intent with fresh readback through resume
+            # before choosing rollback targets or claiming a terminal result.
+            if any(row['status']=='applying' or (not row.get('deployment_id') and row['status'] in ('failed','offline')) for row in plan['targets']):
+                raise ValueError('Interrupted target apply requires explicit resume and live receipt adoption before rollout rollback')
+            if plan['status']=='rolled_back':return plan
+            if plan['status']=='paused' and plan.get('operation')=='rollback':raise ValueError('Explicitly resume paused rollback after live target readback')
+            targets=[row for row in reversed(plan['targets']) if row.get('deployment_id') and row['status']!='rolled_back']
+            if not targets:raise ValueError('Rollout has no acknowledged targets to rollback')
+            plan.update(status='rolling_back',operation='rollback');self._save_rollout(plan,'rollback_started',reviewer)
+            for target in targets[:plan['batch_size']]:
+                try:
+                    if not target.get('previous_deployment_id'):raise ValueError('Target has no previously acknowledged release for rollback')
+                    active=self.ledger(target['target_id']).active()
+                    if not active or active['deployment_id']!=target['deployment_id']:raise ValueError('Target active release changed after rollout; review separately before rollback')
+                    self._rollout_probe(plan,target,require_desired=True)
+                    target.update(status='rolling_back',rollback_requested_at=time.time())
+                    self._save_rollout(plan,'target_rollback_started',reviewer)
+                    receipt=self.rollback(target['target_id'],target['previous_deployment_id'],reviewer=reviewer,project=project)
+                    target['rollback_deployment_id']=receipt['deployment_id']
+                    observed=self.readback(target['target_id'])
+                    target['readback']={'observed_at':time.time(),'runtime':observed.get('runtime'),'matches_active':observed.get('matches_active',False)}
+                    if not self._rollout_restored(plan,target,observed):raise ValueError('Rollback target readback differs from committed receipt')
+                    self._save_rollout(plan,'target_rollback_verified',reviewer)
+                except (ValueError,ConnectionError,OSError,KeyError,RuntimeError,httpx.HTTPError,TypeError,AttributeError) as exc:return self._pause_rollout_failure(plan,target,exc,reviewer)
+            remaining=any(row.get('deployment_id') and row['status']!='rolled_back' for row in plan['targets'])
+            plan.update(status='rolling_back' if remaining else 'rolled_back',pause_reason=None)
+            return self._save_rollout(plan,'rollback_finished',reviewer)
 
 
 def package_archive(package):

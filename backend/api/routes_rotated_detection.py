@@ -20,7 +20,8 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from PIL import Image, ImageDraw
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from backend.engine.yolo_obb_adapter import OBBRecipe, validate_training_recipe
 
 from backend.api.routes_project import get_current_project
 from backend.engine.specialized_models import require_completed_checkpoint
@@ -82,7 +83,7 @@ class RotatedSampleInput(BaseModel):
     split: Literal["train", "val", "test"]
     label: str | None = None
     box: RotatedBoxInput | None = None
-    objects: list[dict[str, Any]] | None = Field(default=None, min_length=1, max_length=32)
+    objects: list[dict[str, Any]] | None = None
     source_sha256: str | None = None
     direction_deg: float | None = Field(None,ge=0,lt=360,allow_inf_nan=False)
 
@@ -162,6 +163,11 @@ class TrainRequest(BaseModel):
     learning_rate: float = Field(default=1e-3, gt=0, le=1)
     device:Literal['cpu','mps','cuda']='cpu'
     warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
+    recipe: OBBRecipe = Field(default_factory=OBBRecipe)
+
+    @field_validator('recipe',mode='before')
+    @classmethod
+    def validate_recipe(cls,value): return OBBRecipe.from_value(value)
 
 
 class EvaluateRequest(BaseModel):
@@ -268,6 +274,7 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                 job.dataset_path, job.output_dir, epochs=options.epochs,
                 batch_size=options.batch_size, image_size=options.image_size,
                 learning_rate=options.learning_rate, device=options.device, cancel_event=job.cancel, warm_start=job.warm_start,
+                recipe=options.recipe,
             )
         validate_training_binding(job.training_provenance)
         if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
@@ -310,6 +317,16 @@ def _manifest_groups(manifest):
 
 
 def _manifest_result(manifest) -> dict[str, Any]:
+    groups=_manifest_groups(manifest)
+    samples=[]
+    for image in manifest.images:
+        rows=groups.get(image.image,[])
+        sample={'image':image.image,'source_sha256':image.source_sha256,'split':image.split}
+        if manifest.version==2:
+            sample['objects']=[{'label':row.label,'box':row.box,**({'direction_deg':row.direction_deg} if row.direction_deg is not None else {})} for row in rows]
+        else:
+            row=rows[0];sample.update(label=row.label,box=row.box,**({'direction_deg':row.direction_deg} if row.direction_deg is not None else {}))
+        samples.append(sample)
     return {
         "dataset_path": str(manifest.root),
         "sample_count": len(manifest.records),
@@ -318,10 +335,7 @@ def _manifest_result(manifest) -> dict[str, Any]:
         "split_counts": manifest.provenance["split_counts"],
         "dataset_sha256": manifest.provenance["dataset_sha256"],
         "provenance":manifest.provenance,
-        "samples": [
-            {"image": image, "source_sha256": rows[0].source_sha256, "split": rows[0].split, **({"objects": [{"label": row.label,"box": row.box,**({"direction_deg":row.direction_deg} if row.direction_deg is not None else {})} for row in rows]} if manifest.version==2 else {"label": rows[0].label,"box": rows[0].box,**({"direction_deg":rows[0].direction_deg} if rows[0].direction_deg is not None else {})})}
-            for image, rows in _manifest_groups(manifest).items()
-        ],
+        "samples": samples,
     }
 
 
@@ -367,7 +381,8 @@ def read_manifest(dataset_path: str, request: Request):
 def start_training(req: TrainRequest, request: Request):
     source = _project_source(request, req.dataset_path)
     try:
-        load_rotated_manifest(source)
+        manifest=load_rotated_manifest(source)
+        validate_training_recipe(manifest,req.recipe,warm_start=req.warm_start_job_id)
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     project = get_current_project(request)
@@ -483,6 +498,7 @@ def list_models(request: Request):
                        "dataset_path":meta.get('dataset_path'),"source_dataset_path":meta.get('source_dataset_path'),
                        "dataset_sha256": meta.get("dataset_sha256"),
                        "validation": meta.get("validation"),
+                       "adapter":meta.get('adapter','fixed_slot_cnn'),"recipe":meta.get('recipe'),"license":meta.get('license'),
                        "class_name": meta.get("class_name")})
     return {"models": models}
 

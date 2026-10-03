@@ -644,6 +644,10 @@ def run_remote_training(
                 "input_manifest_sha256": snapshot.manifest_sha256,
             }
             if getattr(record, "dataset_binding", None): spec["dataset_binding"] = record.dataset_binding
+            launch = getattr(record, 'launch_spec', None) or {}
+            if launch.get('measured_candidate'):
+                spec['measured_candidate'] = True
+                spec['automated_training'] = launch.get('automated_training')
             local_model_id=(getattr(record,'launch_spec',None) or {}).get('local_model_id')
             if local_model_id:spec['local_model_id']=local_model_id
             if source_snapshot:

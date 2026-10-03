@@ -154,11 +154,9 @@ def test_engine_rejects_escaped_labels_and_source_edits_and_marks_orphan(tmp_pat
 def test_all_specialist_rest_real_fit_evaluation_prediction_and_gui_isolation(tmp_path,task,config):
     import torch
     from backend.main import create_app
-    from backend.api.routes_training_engine import router
     from fastapi.testclient import TestClient
     torch.set_num_threads(1)
     app=create_app(project_dir=str(tmp_path/'projects'))
-    if not any(route.path=='/api/engine/train' for route in app.routes):app.include_router(router)
     api=TestClient(app,headers={'X-Vision-Token':app.state.api_token})
     project=api.post('/api/project/create',json={'name':'GUI stays selected'}).json()
     source,labels,rows=fixture(tmp_path);output=str(tmp_path/'headless')
