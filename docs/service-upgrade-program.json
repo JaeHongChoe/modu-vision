@@ -630,7 +630,7 @@
    "depends_on": [
     "S1-01"
    ],
-   "status": "verification_pending",
+   "status": "in_progress",
    "evidence": [
     {
      "kind": "preparation-only",
@@ -648,6 +648,12 @@
      "result": "persistent job ledger (jobs/attempts/events/cancel intents, idempotent submit, fenced finish and receipt link) wired into the real training start/stop/restart routes; restart readback for ended jobs in their own project; published in 91033b23d83efe5ba9a3dfb731edf81e83251516",
      "scope": "clean main + 24 bundle files: 2621 passed, 29 skipped, 1 failure pre-existing on main; S1-02 37 tests incl. real tiny worker restarts; older tests adapted for the required project context",
      "platform": "macOS development; Windows native and target hardware pending"
+    },
+    {
+     "kind": "fix-reviewed-published",
+     "result": "f1a1c6a: two processes switching a SQLite store to WAL at once no longer fail ('database is locked' answered at once, so the connect timeout never helped); all ten stores switch through backend/engine/sqlite_wal.use_wal, which retries SQLITE_BUSY by result code until the store's timeout and raises anything else (SQLITE_LOCKED included) at once; found as an intermittent test_service_s1_02 failure (a 300-run reproduction: 5 failing openers before, 0 after); independent review freeze 1 ACCEPT WITH FIXES (CI lists, older races recorded, reviewed bytes), freeze 2 ACCEPT (real SQLite on Python 3.9/3.13 with SQLite 3.45-3.54: the race refusal carries code 5; six-way races on every store: 0 failures)",
+     "scope": "frozen tree (6309f79 + 14 files): green 249, race 0/300, Linux CI list 405, Windows list 182 run on this Mac; test_sqlite_wal.py joins both CI lists, test_service_s1_02.py the Linux list and its WAL proxy test the Windows list",
+     "platform": "macOS development; the hosted Windows job runs the helper tests from f1a1c6a"
     }
    ],
    "file_actions": {
@@ -671,6 +677,11 @@
    "proposed_test_file": "backend/tests/test_service_s1_02.py",
    "scope_refinement_ids": [
     "E08"
+   ],
+   "remaining": [
+    "older first-open races measured by the review (six concurrent openers per run): ComparisonJobs and InspectionStore fail with 'duplicate column name' on new files (two requests on a fresh project can answer HTTP 500 for comparison jobs); DatasetIndex fails with 'uses index schema 0' on older files",
+    "review P3s: the helper tests patch the global time.sleep (patch the helper module's own time instead); only the job ledger's retry is exercised (inject one refused switch into every store); three stores' timeouts are not checked",
+    "Windows native evidence"
    ]
   },
   {
@@ -1112,6 +1123,12 @@
      "result": "ce6f002: the S1-01 telemetry test counted S1-10's new 'telemetry_connected' announcements as data frames and failed on hosted Linux and Windows (runs of 6370134 and 2b857b4); it now counts announcements apart (2, one per opened socket) and still requires that no retired-socket frame is delivered; independent review ACCEPT; both CI pytest lists passed on the frozen tree (Linux 342, Windows 156)",
      "scope": "frozen tree (a4c713c + 1 file); CI lists via verification/tools/ci_pytest_lists.py",
      "platform": "the same hosted Windows run showed the rest of the Windows backend list passing, including S0-06's real worker, S1-04, S1-09 with the Windows-only file-sharing tests, and S1-10"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "6309f79: the freeze-2 review P3s fixed: a pull while a follow-up is queued joins it (reads never overlap); the app's catch-up (createCatchUp) retries a failed catch-up once after 5 s and then waits for the next connection; the catch-up re-reads the current job when it stops at its 10-round limit with more unread; a cursor-aware A-B-A server shows the discarded read loses nothing; a retired telemetry socket that opens late announces nothing; independent review ACCEPT (mutants: no follow-up join, cursor commit on a discarded pull, endless or missing retry, 0 ms delay, ignored reconnection, no-op refresh, missing round-limit re-read, missing onopen guard - each caught)",
+     "scope": "frozen tree (7d788dc + 6 files): unit, renderer 394, typecheck, e2e service-s1-10, both CI pytest lists (Linux 361, Windows list 175 run on this Mac)",
+     "platform": "hosted Windows run of 7d788dc passed every step (first full pass after the S1-01 fix); hosted Linux of 7d788dc failed only in the e2e step at service-s2-04.spec.ts:75 (a standing Linux-only failure since 2bc8fdc, tracked under S2-04)"
     }
    ],
    "file_actions": {
@@ -1135,10 +1152,10 @@
    "proposed_test_file": "backend/tests/test_service_s1_10.py",
    "remaining": [
     "slice 3: OpenAPI-generated TypeScript client types and a schema drift check",
-    "review P3s (follow-up): two reads can overlap when pull() is called as a read settles with a follow-up queued; the failed catch-up retry repeats every 5 s without end; the A-B-A test's fake server ignores the cursor; App's catch-up wiring is untested; the loop gives up after 10 rounds without re-reading the job",
+    "review P3s (follow-up): the retry test does not show a later failure in the same session is retried again after a failed retry; App's catch-up wiring is checked by source text, not by rendering App",
     "review P3s (recorded): global cursor positions reveal other projects' event counts and timing; reads take the ledger write lock through ledger_id(); the anchor covers (job, seq) only; raw payloads reach every project member; openLink returns false in a real browser; browser pickers explain themselves only in a tooltip",
     "TaskCenter and other panels still poll; only the training store catches up on reconnection",
-    "Windows native and hosted evidence"
+    "Windows native evidence"
    ]
   },
   {
