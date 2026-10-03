@@ -54,3 +54,15 @@ test('S1-10 follow-up: the app catches up on every reconnection and re-reads its
  const app=fs.readFileSync(path.join(__dirname,'..','App.tsx'),'utf8');
  assert.match(app,/if \(event === 'telemetry_connected'\) \{ void catchUpJobEvents\(\); return; \}/);
  assert.match(app,/createCatchUp\(jobEventStream, \(\) => useTrainingStore\.getState\(\)\.jobId,\s*\(\) => useTrainingStore\.getState\(\)\.refreshCurrentJob\(\)\)/);});
+test('S1-10 slice 4: each catch-up pull announces its changed jobs or a reset to the panels; a stale or empty pull announces nothing',async()=>{
+ const {catchUpJobEvents,onJobEventChanges}=load('jobEventFeed.ts',{'./api':{getApiPersistenceIdentity:()=>'local',getProjectContext:()=>null,request:async()=>({})},'./jobEvents':load('jobEvents.ts',{})});
+ const heard=[];const stop=onJobEventChanges(change=>heard.push(change));
+ const broken=onJobEventChanges(()=>{throw new Error('a panel failed');});
+ const pulls=[{events:[{job_id:'a'},{job_id:'b'},{job_id:'a'}],reset:false,stale:false,more:true},{events:[],reset:false,stale:false,more:true},{events:[],reset:true,stale:false,more:false}];
+ await catchUpJobEvents({pull:async()=>pulls.shift()},()=>null,async()=>{});
+ assert.deepEqual(heard,[{jobIds:['a','b'],reset:false},{jobIds:[],reset:true}],'one announcement per pull that changed something; a failing listener stops nothing');
+ await catchUpJobEvents({pull:async()=>({events:[{job_id:'x'}],reset:false,stale:true,more:false})},()=>null,async()=>{});
+ assert.equal(heard.length,2,'a stale page (another project or server) is not announced');
+ stop();broken();
+ await catchUpJobEvents({pull:async()=>({events:[{job_id:'y'}],reset:false,stale:false,more:false})},()=>null,async()=>{});
+ assert.equal(heard.length,2,'an unsubscribed panel hears nothing');});

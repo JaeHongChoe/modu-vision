@@ -38,12 +38,34 @@ export function createCatchUp(stream: Pick<JobEventStream, 'pull'>, currentJobId
   return () => run(false);
 }
 
+/** What a catch-up pull told: the jobs whose events arrived, or that the stream was reset (every job may have changed). */
+export type JobEventChange = { jobIds: string[]; reset: boolean };
+const changeListeners = new Set<(change: JobEventChange) => void>();
+
+/** Panels that show jobs (the Task Center and others) listen here, so a reconnection refreshes them at once instead of at
+ *  their next poll. Returns the unsubscribe. */
+export function onJobEventChanges(listener: (change: JobEventChange) => void): () => void {
+  changeListeners.add(listener);
+  return () => { changeListeners.delete(listener); };
+}
+
+function announce(pulled: { events: Array<{ job_id: string }>; reset: boolean; stale: boolean }): void {
+  if (pulled.stale) return;  // a stale page belongs to another project or server: nothing of the current one changed
+  const jobIds = [...new Set(pulled.events.map((event) => event.job_id))];
+  if (!pulled.reset && !jobIds.length) return;
+  for (const listener of [...changeListeners]) {
+    try { listener({ jobIds, reset: pulled.reset }); } catch { /* one panel's failure never stops the catch-up */ }
+  }
+}
+
 /** Pull until the stream has caught up (bounded), re-reading the current job when the events concern it or the stream
- *  was reset. A failed pull leaves the stream where it was; the caller decides when to try again. */
+ *  was reset, and announcing each pull's changed jobs to the panels. A failed pull leaves the stream where it was; the
+ *  caller decides when to try again. */
 export async function catchUpJobEvents(stream: Pick<JobEventStream, 'pull'>, currentJobId: () => string | null,
   refreshJob: () => Promise<void>, rounds = 10): Promise<void> {
   for (let round = 0; round < rounds; round += 1) {
     const pulled = await stream.pull();
+    announce(pulled);
     if (jobNeedsRefresh(currentJobId(), pulled)) await refreshJob();
     if (pulled.stale || !pulled.more) return;
   }

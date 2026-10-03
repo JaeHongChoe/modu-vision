@@ -10,6 +10,7 @@ const rows=[
   {kind:'ocr',job_id:'ocr-lost',task:'ocr',status:'interrupted',epoch:1,epochs:4,error:'Application stopped before training completed',source_dataset_path:'/source',training_provenance:{labelset_id:'default'}},
   {kind:'ocr',job_id:'ocr-stuck',task:'ocr',status:'stopping',cancel_supported:false,source_dataset_path:'/source',training_provenance:{labelset_id:'default'}},
 ];
+const jobEventListeners=[];let taskReads=0;
 async function renderCenter(){
   let cursor=0;const slots=[],effects=[];const state={projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'},task:'detection',isProjectBusy:false,setStep:async()=>{},setTask:async()=>({ok:true})};
   const useProjectStore=Object.assign(sel=>sel?sel(state):state,{getState:()=>state});
@@ -18,7 +19,8 @@ async function renderCenter(){
     useEffect:(fn,deps)=>{const i=cursor++;if(!slots[i]||deps.some((v,j)=>v!==slots[i][j])){slots[i]=deps;effects.push(fn);}}};
   const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(child=>child!==undefined&&child!==null&&child!==false)});
   const m=load('TaskCenter.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},
-    '../../services/api':{getApiPersistenceIdentity:()=>'local',request:async()=>({tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'})},
+    '../../services/jobEventFeed':{onJobEventChanges:listener=>{jobEventListeners.push(listener);return()=>{jobEventListeners.splice(jobEventListeners.indexOf(listener),1);};}},
+    '../../services/api':{getApiPersistenceIdentity:()=>'local',request:async()=>{taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
     '../../stores/useProjectStore':{useProjectStore},'../../stores/useComputeStore':{useComputeStore:Object.assign(sel=>sel({transportRevision:0,profiles:[],selectedProfileId:null}),{getState:()=>({transportRevision:0,selectedProfileId:null})})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''}});
   const render=()=>{cursor=0;const tree=m.TaskCenter({initialOpen:true});effects.splice(0).forEach(fn=>fn());return tree;};
@@ -51,5 +53,14 @@ test('S2-09: a stopping job that says it cannot be cancelled shows no pending-st
     const stuck=open('ocr:local:ocr-stuck');
     assert.match(stuck.text,/취소 요청 · 종료 확인 중/);
     assert.equal(stuck.nodes.filter(n=>n.type==='button'&&n.children.flat().some(c=>typeof c==='string'&&c.includes('취소 요청'))).length,0);
+  }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+test('S1-10 slice 4: an open task center reads its list again as soon as a reconnection catch-up reports changed jobs',async()=>{
+  const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+  try{
+    jobEventListeners.length=0;await renderCenter();
+    assert.equal(jobEventListeners.length,1,'the open center listens for catch-ups');
+    const before=taskReads;jobEventListeners[0]({jobIds:['job_1'],reset:false});await new Promise(setImmediate);
+    assert.equal(taskReads,before+1,'a reported change reads the list at once, not at the next poll');
   }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });

@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {onJobEventChanges} from '../../services/jobEventFeed';
 import {RefreshCw,Square,ListChecks} from 'lucide-react';
 import {request,getApiPersistenceIdentity} from '../../services/api';
 import {useProjectStore} from '../../stores/useProjectStore';
@@ -37,7 +38,10 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   };
   useEffect(()=>{
     setRows([]);setLeases(null);setError('');setChecked(null);setBusy(false);setSelected(taskSelection(localStorage,stableScope)||'');
-    if(!opened)return;void refresh();const timer=setInterval(()=>void refresh(),2500);return()=>clearInterval(timer);
+    if(!opened)return;void refresh();const timer=setInterval(()=>void refresh(),2500);
+    // S1-10: a reconnection's catch-up reads the job events missed meanwhile; the open list is read again at once.
+    const unsubscribe=onJobEventChanges(()=>void refresh());
+    return()=>{clearInterval(timer);unsubscribe();};
   },[scope,opened]);
   useEffect(()=>{if(selected&&visibleRows.some(row=>row.key===selected))taskSelection(localStorage,stableScope,selected);},[selected,scope,visibleRows]);
   const filteredRows=familyFilter==='all'?visibleRows:visibleRows.filter(row=>taskDestination(row).family===familyFilter);
