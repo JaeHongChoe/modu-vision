@@ -10,6 +10,8 @@ import tempfile
 import threading
 import psutil
 
+from backend.remote.file_replace import replace_file  # Windows: waits out a reader of the file
+
 _REGISTRY_LOCK=threading.Lock()
 _THREAD_LOCKS={}
 _LOCAL=threading.local()
@@ -64,7 +66,7 @@ def atomic_private_json(path,value):
     try:
         with os.fdopen(descriptor,'w',encoding='utf-8') as writer:
             json.dump(value,writer,allow_nan=False);writer.flush();os.fsync(writer.fileno())
-        temporary.chmod(0o600);os.replace(temporary,path)
+        temporary.chmod(0o600);replace_file(temporary,path)
     finally:temporary.unlink(missing_ok=True)
 
 

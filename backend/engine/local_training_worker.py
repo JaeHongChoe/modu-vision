@@ -24,6 +24,7 @@ import uuid
 import psutil
 
 from backend.engine.runtime_process_control import atomic_private_json, command_sha256, session_isolation
+from backend.remote.file_replace import read_text
 
 POLL_SECONDS = .05
 _WINDOWS = os.name == 'nt'
@@ -86,7 +87,7 @@ def _cancelled(root, job_id):
     path = root / 'local_cancel.json'
     if not path.exists():
         return False
-    return json.loads(path.read_text(encoding='utf-8')).get('job_id') == job_id
+    return json.loads(read_text(path)).get('job_id') == job_id  # waits out the app's replacement of the file on Windows
 
 
 def _owned(journal):
@@ -540,7 +541,7 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
             cancellation_started = time.monotonic()
         status_path = root / 'status.json'
         if status_path.is_file():
-            status = json.loads(status_path.read_text(encoding='utf-8'))
+            status = json.loads(read_text(status_path))  # waits out the worker's replacement of the file on Windows
             if status.get('job_id') != record.job_id or status.get('spec_sha256') != digest:
                 raise ValueError('Local worker status differs from its immutable launch')
             _observe(record, status, callback, seen)
@@ -633,13 +634,20 @@ def execute_basic(spec_path):
     leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'])
     def watch():
         while not stop.wait(.05):
-            if _cancelled(root, spec['job_id']):
+            try:
+                cancelled = _cancelled(root, spec['job_id'])
+            except (OSError, ValueError):
+                continue  # a cancel file being replaced is read again on the next tick
+            if cancelled:
                 # The worker's acknowledgement, recorded apart from the signals sent and from the confirmed exit (S1-04);
-                # a status that is already terminal is kept (checked and written under the writer's lock).
-                writer.acknowledge_cancel()
-                event.set()
-                if trainer is not None:
-                    trainer.abort()
+                # a status that is already terminal is kept (checked and written under the writer's lock). The trainer
+                # stops even if recording the acknowledgement fails.
+                try:
+                    writer.acknowledge_cancel()
+                finally:
+                    event.set()
+                    if trainer is not None:
+                        trainer.abort()
                 return
     def heartbeat():
         while not stop.wait(5):

@@ -54,7 +54,9 @@ def _completed_job(source, root, job_id):
     record = manager.start_job(job_id, 'classification', str(source), str(root / job_id), device='cpu',
                                config_overrides=TINY_TRAINING)
     record.thread.join(90)
-    assert record.status == 'completed', record.error
+    # a failed worker keeps its private traceback beside its output; show it, so a CI failure names its cause
+    trace = root / job_id / 'worker_error.log'
+    assert record.status == 'completed', (record.error, trace.read_text(encoding='utf-8')[-3000:] if trace.is_file() else 'no worker_error.log')
     assert not manager._leases.list()
     index = Path(os.environ['VISION_AI_STUDIO_USER_DATA_DIR']) / 'local_jobs' / f'{job_id}.json'
     journal = json.loads(index.read_text())
@@ -74,7 +76,8 @@ def _restart_and_assert_available(source, root, restored_id):
     follow_up = restarted.start_job(f'{restored_id}_next', 'classification', str(source), str(root / f'{restored_id}_next'),
                                     device='cpu', config_overrides=TINY_TRAINING)
     follow_up.thread.join(90)
-    assert follow_up.status == 'completed', follow_up.error
+    trace = Path(follow_up.output_dir) / 'worker_error.log'  # the follow-up's private traceback, if its worker failed
+    assert follow_up.status == 'completed', (follow_up.error, trace.read_text(encoding='utf-8')[-3000:] if trace.is_file() else 'no worker_error.log')
     return restored
 
 

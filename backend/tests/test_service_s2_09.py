@@ -49,7 +49,7 @@ def _server_job(tmp_path, monkeypatch, outcomes):
         runs.append(record.status)
         return {'status': outcomes[min(len(runs), len(outcomes)) - 1]}
 
-    profile = ComputeProfile(id='server', name='server', ssh_target='operator@gpu-host', ssh_port=22, remote_root=str(tmp_path / 'server'),
+    profile = ComputeProfile(id='server', name='server', ssh_target='operator@gpu-host', ssh_port=22, remote_root='/srv/modu-vision-test/server',
                              runtime_kind='python', runtime_value='python3', gpu_selector='0')
     record = manager.start_remote_job(job_id='job_server', task='segmentation', dataset_path=str(tmp_path / 'data'),
                                       output_dir=str(tmp_path / 'job_server'), remote_profile_id=profile.id, profile=profile,

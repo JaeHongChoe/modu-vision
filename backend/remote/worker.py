@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
+from backend.remote.file_replace import replace_file
 from backend.remote.snapshot import (
     PROTOCOL_VERSION,
     SnapshotCancelled,
@@ -58,7 +59,8 @@ def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
             writer.write("\n")
             writer.flush()
             os.fsync(writer.fileno())
-        os.replace(temporary, path)
+        # the app reads this status many times a second; on Windows a file it holds open cannot be replaced at once
+        replace_file(temporary, path)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)

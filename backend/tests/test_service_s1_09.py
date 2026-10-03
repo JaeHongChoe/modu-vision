@@ -200,7 +200,7 @@ def test_on_posix_a_denied_process_in_the_workers_own_session_stays_unknown(monk
     from backend.engine import local_training_worker
     token, now = uuid.uuid4().hex, time.time()
     monkeypatch.setattr(local_training_worker, '_WINDOWS', False)
-    monkeypatch.setattr(local_training_worker.os, 'getsid', lambda pid: 999_999)
+    monkeypatch.setattr(local_training_worker.os, 'getsid', lambda pid: 999_999, raising=False)  # Windows has no getsid
     _listing(monkeypatch, [_Listed(21, 'me', token, created=now + 1), _Listed(22, 'me', denied={'environ'})])
     assert local_training_worker._owned_members(_journal(token, now)) is None
 
@@ -333,3 +333,117 @@ def test_the_backend_stops_gracefully_when_its_supervisor_closes_stdin(tmp_path,
         if backend.poll() is None:
             backend.kill()
         backend.wait(30)
+
+
+def test_a_job_file_held_open_by_a_reader_on_windows_is_replaced_once_the_reader_lets_go(tmp_path, monkeypatch):
+    """Windows refuses to replace a file another process has open ('Access is denied'). A running job's status and cancel
+    files are read many times a second by the other process, so a replacement waits briefly for the reader instead of
+    failing the job; both the app's and the worker's atomic writers do this (simulated here; the real Windows behaviour
+    is the Windows-only test below)."""
+    from backend.engine import runtime_process_control
+    from backend.remote import file_replace, worker
+    real_replace, sleeps, attempts = os.replace, [], []
+
+    def held_by_a_reader(times):
+        def replace(source, destination):
+            attempts.append(destination)
+            if len(attempts) <= times:
+                raise PermissionError(13, 'Access is denied')
+            return real_replace(source, destination)
+        return replace
+
+    monkeypatch.setattr(file_replace, '_WINDOWS', True)
+    monkeypatch.setattr(file_replace.time, 'sleep', sleeps.append)
+    monkeypatch.setattr(file_replace.os, 'replace', held_by_a_reader(3))
+    runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': True})
+    assert json.loads((tmp_path / 'local_cancel.json').read_text()) == {'cancel': True} and len(attempts) == 4
+    attempts.clear()
+    worker._atomic_json(tmp_path / 'status.json', {'status': 'running'})
+    assert json.loads((tmp_path / 'status.json').read_text()) == {'status': 'running'} and len(attempts) == 4
+    # a reader that never lets go still fails the write, after about two seconds, instead of hanging
+    attempts.clear(); sleeps.clear()
+    monkeypatch.setattr(file_replace.os, 'replace', held_by_a_reader(10_000))
+    with pytest.raises(PermissionError):
+        runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': False})
+    assert len(attempts) == file_replace.ATTEMPTS and 1.0 < sum(sleeps) < 4.0
+    # elsewhere a refused replacement is a real error at once
+    attempts.clear()
+    monkeypatch.setattr(file_replace, '_WINDOWS', False)
+    with pytest.raises(PermissionError):
+        runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': False})
+    assert len(attempts) == 1
+
+
+def test_a_job_file_read_during_a_replacement_on_windows_is_read_again(tmp_path, monkeypatch):
+    """The app reads the worker's status file and the worker reads the app's cancel file; on Windows a read can meet a
+    replacement in progress, which is read again instead of ending the job or the cancel watch."""
+    from backend.remote import file_replace
+    target = tmp_path / 'status.json'
+    target.write_text('{"status": "running"}', encoding='utf-8')
+    real_read, reads = Path.read_text, []
+
+    def busy_twice(self, *args, **kwargs):
+        reads.append(self)
+        if len(reads) <= 2:
+            raise PermissionError(13, 'Access is denied')
+        return real_read(self, *args, **kwargs)
+
+    monkeypatch.setattr(file_replace, '_WINDOWS', True)
+    monkeypatch.setattr(file_replace.time, 'sleep', lambda seconds: None)
+    monkeypatch.setattr(Path, 'read_text', busy_twice)
+    assert json.loads(file_replace.read_text(target)) == {'status': 'running'} and len(reads) == 3
+    # the worker's cancel watch reads its cancel file through the same retry
+    from backend.engine import local_training_worker
+    (tmp_path / 'local_cancel.json').write_text(json.dumps({'job_id': 'job_watch'}), encoding='utf-8')
+    reads.clear()
+    assert local_training_worker._cancelled(tmp_path, 'job_watch') is True and len(reads) == 3
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows file sharing semantics')
+def test_windows_refuses_to_replace_a_file_a_reader_holds_and_the_retry_waits_it_out(tmp_path):
+    """The real cause of the S0-06 failure: a file this process holds open through Python's open() (no delete sharing)
+    cannot be replaced (WinError 5, 'Access is denied'); the retry replaces it once the reader lets go."""
+    from backend.engine.runtime_process_control import atomic_private_json
+    target, source = tmp_path / 'status.json', tmp_path / 'next.json'
+    target.write_text('{"status": "running"}', encoding='utf-8')
+    source.write_text('{"status": "completed"}', encoding='utf-8')
+    reader = open(target, encoding='utf-8')  # what a status read does, for a moment
+    try:
+        with pytest.raises(PermissionError) as refused:
+            os.replace(source, target)
+        assert refused.value.winerror == 5, refused.value
+        threading.Timer(0.2, reader.close).start()
+        atomic_private_json(target, {'status': 'completed'})
+    finally:
+        reader.close()
+    assert json.loads(target.read_text(encoding='utf-8')) == {'status': 'completed'}
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows file sharing semantics')
+def test_a_status_file_read_while_it_is_replaced_never_fails_either_side_on_windows(tmp_path):
+    """A real reader (the app's read helper) races a real writer (the worker's atomic writer) 2000 times."""
+    from backend.remote.file_replace import read_text
+    from backend.remote.worker import _atomic_json
+    target = tmp_path / 'status.json'
+    _atomic_json(target, {'n': 0})
+    errors, done = [], threading.Event()
+
+    def read():
+        while not done.is_set():
+            try:
+                json.loads(read_text(target))
+            except Exception as exc:
+                errors.append(f'reader: {exc!r}')
+            time.sleep(0.001)  # the app polls; a reader that never lets go would make the writer's retries fail instead
+
+    thread = threading.Thread(target=read)
+    thread.start()
+    try:
+        for n in range(1, 2001):
+            _atomic_json(target, {'n': n})
+    except Exception as exc:
+        errors.append(f'writer: {exc!r}')
+    finally:
+        done.set()
+        thread.join(10)
+    assert not errors, errors[:5]

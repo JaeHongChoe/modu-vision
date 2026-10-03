@@ -105,7 +105,7 @@ def remote_run(tmp_path, monkeypatch):
     monkeypatch.setattr(coordinator, 'POLL_INTERVAL_SECONDS', 0)
     monkeypatch.setattr(coordinator, 'CANCEL_GRACE_SECONDS', 3600)  # no escalation inside this test
     profile = ComputeProfile(id='test', name='Test', ssh_target='host', ssh_port=22,
-                             remote_root=str(tmp_path / 'server'), runtime_kind='python', runtime_value='python3')
+                             remote_root='/srv/modu-vision-test/server', runtime_kind='python', runtime_value='python3')  # a server path, POSIX on every OS
     output = tmp_path / 'output'
     output.mkdir()
     record = SimpleNamespace(job_id='job_owned', output_dir=str(output), preparation_cancel=threading.Event(),
@@ -246,10 +246,7 @@ def test_an_uncertain_reservation_is_released_only_on_an_operators_recorded_conf
     api, body = _devices_app(tmp_path, monkeypatch, lambda *args, **kwargs: {'status': 'aborted', 'worker_exit_confirmed': True})
     job_id = api.post('/api/training/start', json=body).json()['job_id']
     manager = routes_training.training_job_manager
-    for _ in range(200):
-        if manager.get_job(job_id).status not in ('queued', 'preparing', 'running'):
-            break
-        time.sleep(0.02)
+    _wait_ended(manager, job_id)
     release = lambda **extra: api.post('/api/training/reservations/confirm-release',
                                       json={'job_id': job_id, 'confirm': True, 'reason': 'the PC was rebooted', **extra})
     assert api.post('/api/training/reservations/confirm-release', json={'job_id': job_id, 'reason': 'rebooted'}).status_code == 422
@@ -291,6 +288,20 @@ def _expire(manager, job_id):
         conn.execute('UPDATE leases SET expires=? WHERE job_id=?', (time.time() - 1, job_id))
 
 
+def _wait_ended(manager, job_id):
+    """Wait for a launched job to end, then for its thread, which records the end in the job ledger after the in-memory
+    status changes; a slow runner (hosted Windows) can take seconds to prepare even a stub launch."""
+    import time
+    deadline = time.monotonic() + 60
+    while manager.get_job(job_id).status in ('queued', 'preparing', 'running') and time.monotonic() < deadline:
+        time.sleep(0.02)
+    job = manager.get_job(job_id)
+    assert job.status not in ('queued', 'preparing', 'running'), (job.status, job.phase, job.error)
+    if getattr(job, 'thread', None) is not None:
+        job.thread.join(30)
+        assert not job.thread.is_alive(), 'the job thread did not finish recording its end'
+
+
 def _ended_job(tmp_path, monkeypatch, *, remote=False):
     """A finished local job (the launcher is a stub) holding an uncertain reservation no worker refreshes."""
     import time
@@ -299,10 +310,7 @@ def _ended_job(tmp_path, monkeypatch, *, remote=False):
     api, body = _devices_app(tmp_path, monkeypatch, lambda *args, **kwargs: {'status': 'aborted', 'worker_exit_confirmed': True})
     job_id = api.post('/api/training/start', json=body).json()['job_id']
     manager = routes_training.training_job_manager
-    for _ in range(200):
-        if manager.get_job(job_id).status not in ('queued', 'preparing', 'running'):
-            break
-        time.sleep(0.02)
+    _wait_ended(manager, job_id)
     manager._leases.acquire(job_id, 'server-host' if remote else 'local-compute', 'all', remote=remote)
     manager._leases.mark_uncertain(job_id) if remote else manager._leases.mark_uncertain_local(job_id)
     _expire(manager, job_id)
@@ -464,10 +472,7 @@ def test_releasing_a_reservation_needs_training_rights_in_the_jobs_own_team_proj
     started = owner.post('/api/training/start', json={'task': 'classification', 'dataset_path': str(source), 'preset': 'fast'})
     assert started.status_code == 200, started.text
     job_id = started.json()['job_id']
-    for _ in range(200):
-        if manager.get_job(job_id).status not in ('queued', 'preparing', 'running'):
-            break
-        time.sleep(0.02)
+    _wait_ended(manager, job_id)
     manager._leases.acquire(job_id, 'local-compute', 'all')
     manager._leases.mark_uncertain_local(job_id)
     _expire(manager, job_id)
