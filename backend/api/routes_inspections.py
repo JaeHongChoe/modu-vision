@@ -12,6 +12,7 @@ import io
 import json
 import sqlite3
 from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
+from backend.engine.sqlite_schema import add_missing_columns  # two openers never add a column twice
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -426,21 +427,11 @@ def _store(request: Request, run_id: Optional[str] = None):
         CREATE INDEX IF NOT EXISTS runs_source_idx ON runs(source_folder, task, created_at);
         CREATE INDEX IF NOT EXISTS reviews_row_idx ON reviews(run_id, image_path, created_at);
     """)
-    columns = {row["name"] for row in conn.execute("PRAGMA table_info(runs)")}
-    if "owner_instance" not in columns:
-        conn.execute("ALTER TABLE runs ADD COLUMN owner_instance TEXT")
-    if "saved_version_id" not in columns:
-        conn.execute("ALTER TABLE runs ADD COLUMN saved_version_id TEXT")
-    if "model_sha256_json" not in columns:
-        conn.execute("ALTER TABLE runs ADD COLUMN model_sha256_json TEXT")
-    if "model_paths_json" not in columns:
-        conn.execute("ALTER TABLE runs ADD COLUMN model_paths_json TEXT")
-    for column in ("execution_config_json", "execution_config_sha256"):
-        if column not in columns:
-            conn.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
-    row_columns = {row["name"] for row in conn.execute("PRAGMA table_info(rows)")}
-    if "image_sha256" not in row_columns:
-        conn.execute("ALTER TABLE rows ADD COLUMN image_sha256 TEXT")
+    # A history file written by an older build gains its columns once, even when two requests open it together.
+    add_missing_columns(conn, "runs", {"owner_instance": "TEXT", "saved_version_id": "TEXT", "model_sha256_json": "TEXT",
+                                       "model_paths_json": "TEXT", "execution_config_json": "TEXT",
+                                       "execution_config_sha256": "TEXT"})
+    add_missing_columns(conn, "rows", {"image_sha256": "TEXT"})
     stale_ids = [row["run_id"] for row in conn.execute(
         "SELECT run_id FROM runs WHERE status = 'running' AND (owner_instance IS NULL OR owner_instance != ?)",
         (PROCESS_INSTANCE,),

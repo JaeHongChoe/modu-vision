@@ -355,13 +355,15 @@ class DatasetIndex:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
-            version = db.execute('PRAGMA user_version').fetchone()[0]
-            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dataset_revisions'").fetchone()
-            if exists and version != SCHEMA_VERSION and version not in _UPGRADABLE:
-                raise RuntimeError(f'{self.path} uses index schema {version}; this build reads schema {SCHEMA_VERSION}')
-            # Additive upgrade (new tables and an index only): existing revisions and rows are not rewritten.
+            # Additive upgrade (new tables and an index only): existing revisions and rows are not rewritten. The version
+            # is read under the same write lock: read before it, another opener's upgrade could commit between the two
+            # reads and an index it just created would look like an unknown schema 0.
             db.execute('BEGIN IMMEDIATE')
             try:
+                version = db.execute('PRAGMA user_version').fetchone()[0]
+                exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='dataset_revisions'").fetchone()
+                if exists and version != SCHEMA_VERSION and version not in _UPGRADABLE:
+                    raise RuntimeError(f'{self.path} uses index schema {version}; this build reads schema {SCHEMA_VERSION}')
                 for statement in SCHEMA.split(';'):
                     if statement.strip():
                         db.execute(statement)

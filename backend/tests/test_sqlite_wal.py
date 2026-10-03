@@ -15,6 +15,13 @@ from backend.engine import sqlite_wal
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _clock(monkeypatch, sleep=lambda seconds: None, monotonic=None):
+    """Give the helper a clock of its own; the global time module stays untouched for every other thread."""
+    import time as real_time
+    from types import SimpleNamespace
+    monkeypatch.setattr(sqlite_wal, 'time', SimpleNamespace(sleep=sleep, monotonic=monotonic or real_time.monotonic))
+
+
 class _Refusing:
     """A connection whose WAL switch is refused ``times`` times with ``message`` (and SQLite result ``code``, if any)."""
     def __init__(self, connection, times, message='database is locked', code=None):
@@ -32,7 +39,7 @@ class _Refusing:
 
 
 def test_a_refused_concurrent_switch_is_tried_again_and_the_store_ends_in_wal(tmp_path, monkeypatch):
-    monkeypatch.setattr(sqlite_wal.time, 'sleep', lambda seconds: None)
+    _clock(monkeypatch)
     real = sqlite3.connect(tmp_path / 'store.sqlite3')
     connection = _Refusing(real, 2)
     sqlite_wal.use_wal(connection)
@@ -41,13 +48,13 @@ def test_a_refused_concurrent_switch_is_tried_again_and_the_store_ends_in_wal(tm
 
 
 def test_another_error_is_raised_at_once_and_a_lasting_lock_after_the_timeout(tmp_path, monkeypatch):
-    monkeypatch.setattr(sqlite_wal.time, 'sleep', lambda seconds: None)
+    _clock(monkeypatch)
     broken = _Refusing(sqlite3.connect(tmp_path / 'a.sqlite3'), 1, 'disk I/O error')
     with pytest.raises(sqlite3.OperationalError, match='disk I/O'):
         sqlite_wal.use_wal(broken)
     assert broken.switches == 1
     clock = iter(range(0, 1000, 5))
-    monkeypatch.setattr(sqlite_wal.time, 'monotonic', lambda: next(clock))
+    _clock(monkeypatch, monotonic=lambda: next(clock))
     held = _Refusing(sqlite3.connect(tmp_path / 'b.sqlite3'), 10_000)
     with pytest.raises(sqlite3.OperationalError, match='locked'):
         sqlite_wal.use_wal(held, timeout=10)
@@ -55,7 +62,7 @@ def test_another_error_is_raised_at_once_and_a_lasting_lock_after_the_timeout(tm
 
 
 def test_only_a_busy_answer_is_retried(tmp_path, monkeypatch):
-    monkeypatch.setattr(sqlite_wal.time, 'sleep', lambda seconds: None)
+    _clock(monkeypatch)
     table = _Refusing(sqlite3.connect(tmp_path / 'a.sqlite3'), 1, 'database table is locked', code=6)  # SQLITE_LOCKED
     with pytest.raises(sqlite3.OperationalError, match='table is locked'):
         sqlite_wal.use_wal(table)
@@ -77,10 +84,25 @@ def test_a_real_busy_database_is_waited_out_and_ends_in_wal(tmp_path, monkeypatc
         waits.append(seconds)
         if len(waits) == 2:
             holder.execute('COMMIT')
-    monkeypatch.setattr(sqlite_wal.time, 'sleep', wait)
+    _clock(monkeypatch, sleep=wait)
     sqlite_wal.use_wal(opener)
     assert len(waits) == 2, 'SQLite answered busy until the holder let go'
     assert opener.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
+
+
+class _RefuseFirstSwitch(sqlite3.Connection):
+    """A real connection whose first WAL switch per file is refused as a concurrent switch would be (SQLITE_BUSY)."""
+    refused: dict = {}
+
+    def execute(self, sql, *args):
+        if sql == 'PRAGMA journal_mode=WAL':
+            path = self.execute('PRAGMA database_list').fetchone()[2]
+            if not _RefuseFirstSwitch.refused.get(path):
+                _RefuseFirstSwitch.refused[path] = True
+                error = sqlite3.OperationalError('database is locked')
+                error.sqlite_errorcode = 5
+                raise error
+        return super().execute(sql, *args)
 
 
 def test_every_store_ends_in_wal(tmp_path, monkeypatch):
@@ -103,6 +125,10 @@ def test_every_store_ends_in_wal(tmp_path, monkeypatch):
         'inspection_run_index': ('inspection_run_index.sqlite3', lambda d: entered(routes_inspections._run_index(object()))),
         'model_deployments': ('model_deployments.sqlite3', lambda d: entered(routes_model_deployments._store({'project_dir': str(d)}))),
     }
+    _clock(monkeypatch)
+    real_connect = sqlite3.connect
+    _RefuseFirstSwitch.refused = {}
+    monkeypatch.setattr(sqlite3, 'connect', lambda *args, **kwargs: real_connect(*args, **{**kwargs, 'factory': _RefuseFirstSwitch}))
     modes = {}
     for name, (filename, opener) in stores.items():
         folder = tmp_path / name
@@ -114,6 +140,8 @@ def test_every_store_ends_in_wal(tmp_path, monkeypatch):
         modes[name] = check.execute('PRAGMA journal_mode').fetchone()[0]
         check.close()
     assert modes == {name: 'wal' for name in stores}
+    refused = {Path(path).name for path in _RefuseFirstSwitch.refused}
+    assert {filename for filename, _ in stores.values()} <= refused, 'every store met one refused switch and retried it'
 
 
 def test_no_store_sets_a_journal_mode_except_through_the_helper():

@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
+from backend.engine.sqlite_schema import add_missing_columns  # two openers never add a column twice
 import time
 import uuid
 from pathlib import Path
@@ -126,10 +127,7 @@ class ComparisonJobs:
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as conn:
             conn.execute('CREATE TABLE IF NOT EXISTS jobs(job_id TEXT PRIMARY KEY, payload TEXT NOT NULL, status TEXT NOT NULL, total_images INTEGER DEFAULT 0, completed_images INTEGER DEFAULT 0, cancel_requested INTEGER DEFAULT 0, report_id TEXT, error TEXT, created_at REAL, updated_at REAL)')
-            columns = {row[1] for row in conn.execute('PRAGMA table_info(jobs)')}
-            if 'owner_pid' not in columns: conn.execute('ALTER TABLE jobs ADD COLUMN owner_pid INTEGER')
-            if 'owner_created_at' not in columns: conn.execute('ALTER TABLE jobs ADD COLUMN owner_created_at REAL')
-            if 'owner_command_sha256' not in columns: conn.execute('ALTER TABLE jobs ADD COLUMN owner_command_sha256 TEXT')
+            add_missing_columns(conn, 'jobs', {'owner_pid': 'INTEGER', 'owner_created_at': 'REAL', 'owner_command_sha256': 'TEXT'})
         self.recover()
     def connect(self):
         conn = sqlite3.connect(self.path, timeout=10); conn.row_factory = sqlite3.Row

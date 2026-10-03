@@ -15,6 +15,7 @@ import re
 import secrets
 import sqlite3
 from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
+from backend.engine.sqlite_schema import add_missing_columns  # two openers never add a column twice
 import tempfile
 import threading
 import time
@@ -161,13 +162,9 @@ class InspectionStore:
                     PRIMARY KEY(device_id, event_id)
                 );
             """)
-            # Databases created before result delivery was added remain readable.
-            columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)")}
-            if "model_verdict" not in columns:
-                conn.execute("ALTER TABLE jobs ADD COLUMN model_verdict TEXT")
-            # Counts only attempts interrupted by a worker stop, not operator retries.
-            if "interrupted" not in columns:
-                conn.execute("ALTER TABLE jobs ADD COLUMN interrupted INTEGER NOT NULL DEFAULT 0")
+            # Databases created before result delivery was added remain readable; "interrupted" counts only attempts
+            # interrupted by a worker stop, not operator retries.
+            add_missing_columns(conn, "jobs", {"model_verdict": "TEXT", "interrupted": "INTEGER NOT NULL DEFAULT 0"})
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
