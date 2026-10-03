@@ -6,6 +6,8 @@ The gate is scripts/check_service_plan.py, which CI runs on Linux and Windows.
 import copy
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -227,3 +229,131 @@ def test_the_gate_prints_ascii_even_when_an_error_names_a_korean_title(monkeypat
     assert gate.main() == 1
     printed = capsys.readouterr().out
     assert printed.isascii() and '\\uc790' in printed, 'escaped, so a cp1252 console can print it'
+
+
+@pytest.fixture
+def gate_root(tmp_path):
+    """Only public gate inputs and phase plans; the real CLI uses this root without app imports."""
+    shutil.copytree(ROOT / 'docs', tmp_path / 'docs')
+    return tmp_path
+
+
+def _run_gate(root):
+    # Keep pytest's isolated store variables, interpreter paths and the caller's environment.
+    return subprocess.run([sys.executable, str(ROOT / 'scripts/check_service_plan.py'), '--root', str(root)],
+                          capture_output=True, cwd=ROOT, env={**os.environ, 'PYTHONIOENCODING': 'cp1252'}, timeout=120)
+
+
+def _assert_cli_input_error(done, message):
+    assert done.returncode == 1, done.stdout.decode('ascii', 'replace') + done.stderr.decode('ascii', 'replace')
+    assert done.stdout.isascii() and done.stderr.isascii()
+    assert b'Traceback' not in done.stderr
+    receipt = json.loads(done.stdout)
+    assert receipt['ok'] is False and any(message in error for error in receipt['errors']), receipt
+
+
+@pytest.mark.parametrize('filename, duplicate', [
+    ('service-upgrade-program.json', '"coverage_summary": {"mapped_ids": 0},'),
+    ('service-upgrade-evidence.json', '"schema_version": 0,'),
+    ('feature-program.json', '"features": [],'),
+    ('product-upgrade-program.json', '"requirements": [],'),
+])
+def test_the_cli_refuses_duplicate_json_keys_in_every_gate_input(gate_root, filename, duplicate):
+    path = gate_root / 'docs' / filename
+    source = path.read_text(encoding='utf-8')
+    path.write_text(source.replace('{', '{' + duplicate, 1), encoding='utf-8')
+    # json.loads would keep the later, valid value and let the overwritten bad claim disappear.
+    _assert_cli_input_error(_run_gate(gate_root), 'duplicate JSON key')
+
+
+@pytest.mark.parametrize('filename, original, duplicate', [
+    ('service-upgrade-program.json', '"status": "planned"', '"status": "accepted", "status": "planned"'),
+    ('service-upgrade-evidence.json', '"state": "pending"', '"state": "verified", "state": "pending"'),
+])
+def test_the_cli_refuses_nested_duplicate_claims(gate_root, filename, original, duplicate):
+    path = gate_root / 'docs' / filename
+    source = path.read_text(encoding='utf-8')
+    assert original in source
+    path.write_text(source.replace(original, duplicate, 1), encoding='utf-8')
+    _assert_cli_input_error(_run_gate(gate_root), 'duplicate JSON key')
+
+
+def test_a_duplicate_korean_key_is_an_ascii_cli_error(gate_root):
+    path = gate_root / 'docs/service-upgrade-program.json'
+    source = path.read_text(encoding='utf-8')
+    path.write_text(source.replace('{', '{"중복": 0, "\\uC911\\uBCF5": 1,', 1), encoding='utf-8')
+    _assert_cli_input_error(_run_gate(gate_root), 'duplicate JSON key')
+
+
+@pytest.mark.parametrize('filename', [
+    'service-upgrade-program.json', 'service-upgrade-evidence.json',
+    'feature-program.json', 'product-upgrade-program.json',
+])
+@pytest.mark.parametrize('invalid', ['{"broken":', '[]'])
+def test_malformed_json_inputs_are_failed_cli_receipts_without_tracebacks(gate_root, filename, invalid):
+    (gate_root / 'docs' / filename).write_text(invalid, encoding='utf-8')
+    _assert_cli_input_error(_run_gate(gate_root), 'could not be read')
+
+
+@pytest.mark.parametrize('field, invalid', [('requirements', None), ('requirements', [None]), ('coverage_summary', [])])
+def test_malformed_program_structure_is_a_failed_cli_receipt(gate_root, field, invalid):
+    path = gate_root / 'docs/service-upgrade-program.json'
+    program = json.loads(path.read_text(encoding='utf-8'))
+    program[field] = invalid
+    path.write_text(json.dumps(program), encoding='utf-8')
+    _assert_cli_input_error(_run_gate(gate_root), 'could not be read')
+
+
+@pytest.mark.parametrize('filename, key', [('feature-program.json', 'features'), ('product-upgrade-program.json', 'requirements')])
+def test_check_program_refuses_duplicate_baseline_keys(gate_root, filename, key):
+    path = gate_root / 'docs' / filename
+    path.write_text(path.read_text(encoding='utf-8').replace('{', '{"' + key + '": [],', 1), encoding='utf-8')
+    receipt = gate.check_program(_program(), gate_root)
+    assert not receipt['ok'] and any('duplicate JSON key' in error for error in receipt['errors']), receipt
+
+
+def test_check_program_refuses_a_nested_duplicate_evidence_state(gate_root):
+    path = gate_root / 'docs/service-upgrade-evidence.json'
+    path.write_text(path.read_text(encoding='utf-8').replace('"state": "pending"', '"state": "verified", "state": "pending"', 1),
+                    encoding='utf-8')
+    receipt = gate.check_program(_program(), gate_root)
+    assert not receipt['ok'] and any('duplicate JSON key' in error for error in receipt['errors']), receipt
+
+
+@pytest.mark.parametrize('row', [
+    '|F001|natural language|S3-06, S3-05, S7-01|pending|',
+    '  |\tF001\t| natural language | S3-06, S3-05, S7-01 | pending |  ',
+    '| `F001` | natural language | S3-06, S3-05, S7-01 | pending |',
+    'F001 | natural language | S3-06, S3-05, S7-01 | pending',
+])
+def test_markdown_spacing_and_backtick_ids_do_not_lose_a_main_table_row(row):
+    assert _errors(coverage=_coverage().replace(ROW_F001, row)) == []
+
+
+@pytest.mark.parametrize('row', [
+    '|F001|duplicate|S3-06, S3-05, S7-01|pending|',
+    ' | `F001` | duplicate | S3-06, S3-05, S7-01 | pending | ',
+    '|U001|duplicate|S7-01|pending|',
+    '| `F999` | unknown | S7-01 | pending |',
+])
+def test_variant_duplicate_or_extra_main_table_rows_are_refused(row):
+    coverage = _coverage().replace(ROW_F001, ROW_F001 + '\n' + row)
+    assert any('every legacy ID once' in error for error in _errors(coverage=coverage))
+
+
+@pytest.mark.parametrize('row', [
+    '| F001 | missing state | S7-01 |',
+    '| F001 | too many | S7-01 | pending | extra |',
+    '| `F001 | broken code span | S7-01 | pending |',
+    '| X001 | not a legacy ID | S7-01 | pending |',
+])
+def test_malformed_extra_main_table_rows_cannot_be_silently_skipped(row):
+    coverage = _coverage().replace(ROW_F001, ROW_F001 + '\n' + row)
+    assert any('malformed main table row' in error for error in _errors(coverage=coverage))
+
+
+def test_a_malformed_main_table_row_fails_the_actual_cli(gate_root):
+    path = gate_root / 'docs/service-upgrade-coverage.md'
+    path.write_text(path.read_text(encoding='utf-8').replace(ROW_F001, ROW_F001 + '\n| `F001 | bad | S7-01 | pending |'),
+                    encoding='utf-8')
+    _assert_cli_input_error(_run_gate(gate_root), 'malformed main table row')

@@ -310,7 +310,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       {effectiveParityMode === 'cohort' && cohortLibrary === 'available' && <div className="mt-2 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span>{cohortImages.length}장 선택 (2–{MAX_PARITY_IMAGES}장) · 검증된 데이터 버전 전체에서 선택</span>
-          <button type="button" onClick={() => setCohortPicks([])} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
+          <button type="button" onClick={() => { setCohortPicks([]); setCohortRefusal(''); }} className="rounded border border-[#455670] px-2 py-0.5 hover:bg-[#243348]">선택 해제</button>
         </div>
         {cohortPicks.length >= MAX_PARITY_IMAGES && <p className="text-amber-300">최대 {MAX_PARITY_IMAGES}장까지 고를 수 있습니다.</p>}
         {cohortRefusal && <p role="status" className="text-amber-300">{cohortRefusal}</p>}

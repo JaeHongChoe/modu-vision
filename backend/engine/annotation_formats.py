@@ -186,11 +186,15 @@ def source_annotation_files(source,image):
         if parent==source: break
         if parent.is_relative_to(source) and parent.name not in {'train','val','test','images'}: folders.append(parent)
     candidates=[]
-    for folder in dict.fromkeys(folders):
+    # COCO paths can be relative to their document, including a split/images folder.
+    # Keep the existing YOLO class-list precedence in ``folders`` below.
+    coco_folders=[source, *(parent for parent in image.parents if parent != source and parent.is_relative_to(source))]
+    for folder in dict.fromkeys(coco_folders):
         names=['annotations.json',f'annotations_{split}.json' if split else 'annotations.json']
         for name in names:
             path=folder/name
             if path.is_file() and path not in candidates: candidates.append(path)
+    for folder in dict.fromkeys(folders):
         local = image.relative_to(folder) if image.is_relative_to(folder) else relative
         label_parts = list(local.parts)
         if 'images' in label_parts:
@@ -205,14 +209,47 @@ def source_annotation_files(source,image):
     return list(dict.fromkeys(candidates))
 
 
+def source_coco_image_names(source, image, document):
+    """Supported names for this image in one COCO document, without basename guessing.
+
+    Keep source-relative names for existing datasets and add document-relative names.
+    Multiple matching rows/documents remain an explicit ambiguity at the caller.
+    """
+    from pathlib import Path
+    source=Path(source).resolve(); image=Path(image); document=Path(document)
+    relative=image.relative_to(source).as_posix()
+    names={relative, relative.removeprefix('images/')}
+    if image.is_relative_to(document.parent):
+        local=image.relative_to(document.parent).as_posix()
+        names.update((local, local.removeprefix('images/')))
+    split=next((part for part in Path(relative).parts[:-1] if part in {'train','val','test'}),None)
+    if split and document.stem==f'annotations_{split}': names.add(image.name)
+    return names
+
+
+def validate_source_coco_binding(source, document, name):
+    """A COCO row must not name two existing files through supported relative aliases."""
+    from pathlib import Path
+    name=safe_name(name).removeprefix('./')
+    bases={Path(source).resolve(), Path(document).parent}
+    candidates={base/prefix/name for base in bases for prefix in ('', 'images')}
+    existing=[]
+    for path in candidates:
+        if path.is_file() and not any(path.samefile(other) for other in existing):
+            existing.append(path)
+    if len(existing)>1:
+        raise ValueError(f'COCO image mapping is ambiguous: {name} names more than one source image')
+
+
 def source_annotations_for_image(source,image):
     """Read standard COCO/YOLO source labels without altering them."""
     from pathlib import Path
     from PIL import Image
     source=Path(source).resolve();image=Path(image);relative=image.relative_to(source).as_posix()
-    split=next((part for part in Path(relative).parts[:-1] if part in {'train','val','test'}),None)
     files=source_annotation_files(source,image)
     if not any(path.suffix in {'.json','.txt'} for path in files):return None
+    if any(not path.resolve().is_relative_to(source) for path in files):
+        raise ValueError('Source annotation links outside the source')
     from backend.engine.dicom_input import IMAGE_OPEN_ERRORS,open_source_image
     try:
         with open_source_image(image) as pil: width,height=pil.size
@@ -222,11 +259,12 @@ def source_annotations_for_image(source,image):
         if path.suffix!='.json':continue
         data=json.loads(read_source_text(path))
         if not isinstance(data,dict) or not {'images','categories','annotations'}<=set(data):continue
-        split_bound=bool(split and path.stem==f'annotations_{split}')
-        images=[row for row in data['images'] if safe_name(row['file_name']) in {relative,relative.removeprefix('images/')} or (split_bound and row['file_name']==image.name)]
+        names=source_coco_image_names(source,image,path)
+        images=[row for row in data['images'] if safe_name(row['file_name']).removeprefix('./') in names]
         if len(images)>1:raise ValueError('COCO image mapping is ambiguous')
         if not images:continue
         row=images[0]
+        validate_source_coco_binding(source,path,row['file_name'])
         if (row['width'],row['height'])!=(width,height):raise ValueError('COCO dimensions differ from source image')
         sub={'images':[{**row,'file_name':relative}],'categories':data['categories'],'annotations':[a for a in data['annotations'] if a['image_id']==row['id']]}
         matched.append(import_annotations(sub,'coco')[0]['annotations'])

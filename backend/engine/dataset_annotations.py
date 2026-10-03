@@ -10,8 +10,8 @@ Discovery and binding follow ``annotation_formats.source_annotations_for_image``
 - an adjacent LabelMe JSON binds the image named by its ``imagePath``; without one it binds the image with its stem,
   and two images sharing that stem make the binding ambiguous;
 - ``annotations.json`` or ``annotations_<split>.json`` (COCO) in the source or the image's folders binds by
-  source-relative ``file_name`` (or by bare name inside its own split). A document in a subfolder naming files relative
-  to itself is not bound, as in the importer. Unsafe names, an unknown category, or a size that differs from the image
+  source-relative or document-relative ``file_name`` (or by bare name inside its own split).
+  Unsafe names, an unknown category, or a size that differs from the image
   make the document invalid for that image;
 - YOLO ``.txt`` labels take their names from the first ``classes.txt``, else the first ``data.yaml``/``dataset.yaml``
   (the importer's precedence); class lists that disagree, blank or missing names and ids outside the list are errors.
@@ -30,7 +30,7 @@ import os
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
-from backend.engine.annotation_formats import safe_name, source_annotation_files
+from backend.engine.annotation_formats import safe_name, source_annotation_files, source_coco_image_names, validate_source_coco_binding
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine.source_text import read_source_text
 
@@ -188,8 +188,6 @@ class SourceAnnotationScanner:
         if found is not None:
             return found
         files = source_annotation_files(self.source, image)
-        split = next((part for part in PurePosixPath(relative).parts[:-1] if part in SPLITS), None)
-        keys = {relative, relative.removeprefix('images/')}
         hits = []
         for path in files:
             if path.suffix != '.json':
@@ -199,7 +197,7 @@ class SourceAnnotationScanner:
                 continue
             if isinstance(index, tuple):  # a document that cannot be read may bind this image: say so
                 return SourceAnnotation('coco', (), (self._record(path),), index[1])
-            candidates = set(keys) | ({image.name} if split and path.stem == f'annotations_{split}' else set())
+            candidates = source_coco_image_names(self.source, image, path)
             matched = [name for name in candidates if name in index]
             if matched:
                 hits.append((path, matched))
@@ -211,6 +209,10 @@ class SourceAnnotationScanner:
             recorded = (self._record(path),)
             if len(matched) > 1:
                 return SourceAnnotation('coco', (), recorded, 'AMBIGUOUS_ANNOTATION: the COCO document maps this image more than once')
+            try:
+                validate_source_coco_binding(self.source, path, matched[0])
+            except ValueError as exc:
+                return SourceAnnotation('coco', (), recorded, f'AMBIGUOUS_ANNOTATION: {exc}')
             entry = self._coco_index(path)[matched[0]]
             if entry[0] == 'error':
                 return SourceAnnotation('coco', (), recorded, entry[1])

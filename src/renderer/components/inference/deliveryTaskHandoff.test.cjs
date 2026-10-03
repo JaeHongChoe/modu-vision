@@ -53,6 +53,10 @@ test('the package cohort answers a click on an invalid image instead of ignoring
  assert.ok(said('잘못된 이미지는 동일성 비교에 쓸 수 없습니다: ok/broken.png'));assert.equal(browser().props.selectedIds.size,0);
  browser().props.onPick(image('good',1));
  assert.ok(!said('잘못된 이미지는'),'the next valid pick clears the notice');assert.deepEqual([...browser().props.selectedIds],['u-good']);
+ browser().props.onPick(image('broken',0));assert.ok(said('잘못된 이미지는'));
+ nodes(render()).find(row=>row.type==='button'&&row.props.children==='선택 해제').props.onClick();
+ assert.equal(browser().props.selectedIds.size,0,'clear removes all cohort picks');
+ assert.ok(!said('잘못된 이미지는'),'clear selection clears the refusal notice');
 });
 test('batch history workspace shows selected run B rather than newest run A',async()=>{
  const h=harness(),store=value=>{const fn=selector=>selector?selector(value):value;fn.getState=()=>value;return fn;};

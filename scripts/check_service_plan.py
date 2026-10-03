@@ -23,7 +23,24 @@ WINDOWS_WORKFLOW = ".github/workflows/windows-native.yml"
 _RECEIPT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 _SHA40 = re.compile(r"[0-9a-f]{40}")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
-_ROW = re.compile(r"^\| ([FU]\d{3}) \| ([^|]*?) \| ([^|]*?) \| ([^|]*?) \|\s*$")
+_ROW_ID = re.compile(r"(?:[FU][0-9]{3}|`[FU][0-9]{3}`)")
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        result[key] = value
+    return result
+
+
+def _read_json(path):
+    """Reject overwritten claims at every object depth before any schema or scope checks."""
+    value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_json_object)
+    if not isinstance(value, dict):
+        raise ValueError("expected a JSON object")
+    return value
 
 
 def _text(value):
@@ -134,16 +151,28 @@ def _coverage_rows(coverage_text):
     """The rows of the main coverage table only (another table or a copy elsewhere is not read)."""
     lines = coverage_text.splitlines()
     try:
-        start = lines.index(COVERAGE_TABLE)
-    except ValueError:
+        start = next(index for index, line in enumerate(lines) if line.strip() == COVERAGE_TABLE)
+    except StopIteration:
         return None
     rows = []
-    for line in lines[start + 1:]:
+    for line_number, line in enumerate(lines[start + 1:], start + 2):
+        line = line.strip()
         if line.startswith("## "):
             break
-        match = _ROW.match(line)
-        if match:
-            rows.append(match.groups())
+        if not line:
+            continue
+        cells = [cell.strip() for cell in line.split("|")]
+        if cells[0] == "":
+            cells.pop(0)
+        if cells and cells[-1] == "":
+            cells.pop()
+        if cells == ["기존 ID", "기능", "담당 task", "새 검증"]:
+            continue
+        if len(cells) == 4 and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
+            continue
+        if len(cells) != 4 or not _ROW_ID.fullmatch(cells[0]) or not all(cells):
+            raise ValueError(f"malformed main table row at line {line_number}")
+        rows.append((cells[0].strip("`"), *cells[1:]))
     return rows
 
 
@@ -162,7 +191,10 @@ def check_requirement_evidence(program, evidence, root, coverage_text):
     ids = [record["id"] for record in records if isinstance(record, dict) and isinstance(record.get("id"), str)]
     if bad or len(ids) != len(set(ids)) or set(ids) != set(legacy):
         errors.append(f"{EVIDENCE_FILE}: one record per legacy ID is required (missing, extra or duplicated IDs)")
-    rows = _coverage_rows(coverage_text)
+    try:
+        rows = _coverage_rows(coverage_text)
+    except ValueError as exc:
+        return errors + [f"{COVERAGE_FILE}: {exc}"]
     if rows is None:
         return errors + [f"{COVERAGE_FILE}: the table '{COVERAGE_TABLE}' is missing"]
     table_ids = [row[0] for row in rows]
@@ -259,8 +291,11 @@ def check_program(program, root, evidence=None):
         errors.append("accepted count differs from actual acceptance states")
     expected_legacy = set()
     for filename, key in [("docs/feature-program.json", "features"), ("docs/product-upgrade-program.json", "requirements")]:
-        baseline = json.loads((root / filename).read_text(encoding="utf-8"))
-        expected_legacy.update(row["id"] for row in baseline[key])
+        try:
+            baseline = _read_json(root / filename)
+            expected_legacy.update(row["id"] for row in baseline[key])
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"legacy baseline {filename} could not be read: {exc}")
     legacy = program.get("legacy_coverage", [])
     legacy_ids = [row.get("legacy_id") for row in legacy]
     if len(legacy_ids) != len(set(legacy_ids)) or set(legacy_ids) != expected_legacy:
@@ -278,7 +313,7 @@ def check_program(program, root, evidence=None):
             errors.append(f"{refinement.get('id')}: missing refinement acceptance")
     try:
         if evidence is None:
-            evidence = json.loads((root / EVIDENCE_FILE).read_text(encoding="utf-8"))
+            evidence = _read_json(root / EVIDENCE_FILE)
         coverage_text = (root / COVERAGE_FILE).read_text(encoding="utf-8")
     except (OSError, ValueError) as exc:
         errors.append(f"requirement evidence could not be read: {exc}")
@@ -295,8 +330,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
-    program = json.loads((args.root / "docs/service-upgrade-program.json").read_text(encoding="utf-8"))
-    receipt = check_program(program, args.root)
+    try:
+        program = _read_json(args.root / "docs/service-upgrade-program.json")
+        receipt = check_program(program, args.root)
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        receipt = {"receipt": "ServicePlanSourceGate", "ok": False,
+                   "errors": [f"service plan input could not be read or checked: {exc}"]}
     print(json.dumps(receipt, ensure_ascii=True, indent=2))  # a Windows console code page cannot fail the gate
     return 0 if receipt["ok"] else 1
 
