@@ -512,6 +512,12 @@
      "result": "03be617: the interface half on the actual backend with no fixture answer - a PaDiM model trained through the training API on the CPU; its calibrated threshold carried into the flow; threshold 8 saved (stored pipeline and score_spec 8), reopened after a reload and used by actual runs whose verdicts are checked against 8; a second saved version holds 9 while the reopened first version keeps 8; an unsaved flow refuses a model family (task) change and the project keeps its task. scripts/service_baseline_evidence.py writes one BaselineEvidence record per defect (commit and changed backend files, hash of the regression and fixture modules, production path, command, per-test outcome with failure messages, scope) without importing the app. Found and fixed on the way: training an anomaly model through the app failed after its first epoch (the live progress message rounded a confusion matrix). Independent review: freeze 1 ACCEPT WITH FIXES (P1: the script imported the test modules and opened the app store), freeze 2 ACCEPT WITH FIXES (UTF-8 mode would hide default-code-page bugs), freeze 3 ACCEPT",
      "scope": "browser renderer with the test-only desktop host shim on this Mac and on hosted Linux (the e2e spec passed in run 37105713725); BaselineEvidence: all five records passed on hosted Linux (Ubuntu 24.04) and hosted Windows Server 2025 (run 37105713719, the first native Windows run of the four defects' regressions); the S0-05 spec keeps the fixture-held cases (late evaluation, server-refused task change)",
      "platform": "macOS, hosted Linux, hosted Windows (backend regressions and baseline records only; the browser spec does not run on Windows)"
+    },
+    {
+     "kind": "app-flow-e2e-reviewed-published",
+     "result": "f16d9a5: scripts/e2e/qa-app-flow.spec.ts (run with MV_E2E_APP_FLOW=1) drives the user's whole flow through the screens on the actual backend: register data, a CPU segmentation training that is aborted, released and restarted, evaluation, a flow with a fixed ROI and a class branch (node evidence: the ROI input 1 -> output 1 region [8, 8, 56, 56]), a val batch with clean and defect images whose verdicts must differ (6 NG, 2 REVIEW in the receipt run), a reload that reopens the saved flow and the same inspection run from the stored history, the CSV, and a flow package checked against the app on one CPU image. Findings it recorded: mask-folder labels not shown in step 02 (S3-01 mask binding), clean images ending REVIEW behind a class-present-only branch (S2-05 no-branch rule, freeze s205u3h). Independent review: freezes 1-3 changed per review (P2s), freeze 4 ACCEPT WITH FIXES (P3 record-keeping only, done: the freeze-4 typecheck receipt, the reload note, the app-qa record and red reason outside $TMPDIR)",
+     "scope": "frozen tree (422a2d2 + 10 files), published unchanged on 64b8181 (the move touches none of them): renderer unit tests 14 (datasetSourcePath 5, flowSaveAdoption 3, trainingLog 1 and the existing store tests) green, red 10 of 14 on freeze 1 code; renderer suite 475 passed; typecheck and the e2e typecheck ok on the freeze-4 tree; Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac); the app-flow e2e passed once run alone (9.7 min), skipped by default without MV_E2E_APP_FLOW=1, red on freeze 1 code (stops at the disabled training start button)",
+     "platform": "macOS development; browser (Chrome) with the actual backend, the repo .venv and the test-only desktop host shim, CPU; not the Electron app, not GPU, not native Windows"
     }
    ],
    "file_actions": {
@@ -535,7 +541,10 @@
    "remaining": [
     "native Windows: the interface half in the desktop app on Windows (the hosted Windows job runs the backend regressions, the baseline records and the Electron smoke, not this browser spec)",
     "review P3s: the record's tests fake git, so a narrowed status path or a non-transitive fixture list would pass; Decimal or lists of numpy scalars in metrics and NaN tokens; the e2e checks the crop verdict, not final_verdict; failure messages can contain local paths",
-    "handoff and target execution gates"
+    "handoff and target execution gates",
+    "the same flow in the Electron app, on native Windows and on a GPU server (native QA, Codex; GPU on hold)",
+    "other model families through this flow (classification, detection, DINOv3, YOLO and the rest)",
+    "review qaf4 P3: the click on the already pressed history row after the reload proves nothing more (drop it or assert its request); the console errors 409/404/ERR_EMPTY_RESPONSE in the run are not explained yet"
    ]
   },
   {
@@ -1420,6 +1429,12 @@
      "result": "four work areas with one primary action each, two-line identity strip from receipts only, five task-aware purpose recipes (validator-checked, explicit model/class mapping, OCR expectation, adoption re-verifies models and scope, one undoable replacement, no save/activation), guarded release action; three independent review rounds, final spec/quality pass; published in 00d7f1a",
      "scope": "clean main + 13 files: renderer 288/288, typecheck clean, full browser e2e 32/32, Electron 2/2 (macOS arm64, Chrome channel, real backend); S0-05 threshold-8 now imports a valid anomaly tree",
      "platform": "macOS development; Windows native and target-hardware DPI pending"
+    },
+    {
+     "kind": "app-qa-fix-reviewed-published",
+     "result": "f16d9a5: after a flow save the editor reads the stored version back (the server fills defaults when it stores a flow) and adopts it when nothing changed meanwhile, so the editor and the active version no longer differ right after saving (the readiness footer said 'rules differ' right after a save in the app-flow QA); the run stays current. Independent review: freezes 1-3 changed per review (P2s), freeze 4 ACCEPT WITH FIXES (P3 record-keeping only, done: the freeze-4 typecheck receipt, the reload note, the app-qa record and red reason outside $TMPDIR)",
+     "scope": "frozen tree (422a2d2 + 10 files), published unchanged on 64b8181 (the move touches none of them): renderer unit tests 14 (datasetSourcePath 5, flowSaveAdoption 3, trainingLog 1 and the existing store tests) green, red 10 of 14 on freeze 1 code; renderer suite 475 passed; typecheck and the e2e typecheck ok on the freeze-4 tree; Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac); the app-flow e2e passed once run alone (9.7 min), skipped by default without MV_E2E_APP_FLOW=1, red on freeze 1 code (stops at the disabled training start button)",
+     "platform": "macOS development; browser (Chrome) with the actual backend, the repo .venv and the test-only desktop host shim, CPU; not the Electron app, not GPU, not native Windows"
     }
    ],
    "file_actions": {
@@ -1734,6 +1749,12 @@
      "result": "slice 1 published in b4c5bf3 (JobProgressView): one reading of a training job for every model family (state names shared with the task center, the four record shapes, server phases, tone, watch and cancel rules, failure with its recorded cause, the backend next action or a default) and one view rendered by the six family workbenches (patch classification, rotation, OCR, defect generation, rotated detection, image enhancement); each workbench reopens a job whose state may still change before an older finished one, keeps reading it while its connection is down (3 s), reconnects a server job through the server job API with its execution id, and no longer starts a second job while a server job transfers or syncs; a server job cancelled while disconnected gets its stop delivered by observing the server again and a stopping job can be reconnected (a refused reconnect answers 409); a rotated job left running by an app restart reads interrupted like every family; the task center uses the same names, cancel rule, label, epochs and family names, and gives a family's next action only to a model family's job; independent review freezes 1-3 (freeze 1: 3 P2, freeze 2: 1 P2, freeze 3 ACCEPT); mutants M1-M15 and the review's later mutants killed except M16 and M17 (listed)",
      "scope": "frozen tree (e096adb + 24 files): unit 34, renderer suite, typecheck, backend 106 (audit hook and home_guard: no home-store event), e2e 13 (S2-09: the interrupted job in the task center and its workbench on the actual backend; rotated detection and enhancement reconnect-first and cancel-while-disconnected against a stubbed server job API; S2-03)",
      "platform": "macOS development; Windows hosted run pending for this commit (test_service_s2_09.py is not in the Windows workflow list yet)"
+    },
+    {
+     "kind": "app-qa-fix-reviewed-published",
+     "result": "f16d9a5: step 3 shows a training log (role=log, '학습 로그'): the job, each finished epoch with its losses, and how the job ended (completed, stopped, failed); the app-flow e2e reads it for an aborted and a completed job. Independent review: freezes 1-3 changed per review (P2s), freeze 4 ACCEPT WITH FIXES (P3 record-keeping only, done: the freeze-4 typecheck receipt, the reload note, the app-qa record and red reason outside $TMPDIR)",
+     "scope": "frozen tree (422a2d2 + 10 files), published unchanged on 64b8181 (the move touches none of them): renderer unit tests 14 (datasetSourcePath 5, flowSaveAdoption 3, trainingLog 1 and the existing store tests) green, red 10 of 14 on freeze 1 code; renderer suite 475 passed; typecheck and the e2e typecheck ok on the freeze-4 tree; Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac); the app-flow e2e passed once run alone (9.7 min), skipped by default without MV_E2E_APP_FLOW=1, red on freeze 1 code (stops at the disabled training start button)",
+     "platform": "macOS development; browser (Chrome) with the actual backend, the repo .venv and the test-only desktop host shim, CPU; not the Electron app, not GPU, not native Windows"
     }
    ],
    "file_actions": {
@@ -1891,6 +1912,12 @@
      "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
      "result": "Failed LabelMe/COCO/YOLO parsing, decoding and class validation retain source-relative bindings and SHA-256 of bytes actually read. Cached documents retain the digest of parsed bytes across replacement; incomplete reads fabricate no digest. Default external-link refusal and explicitly opted-in link policy remain. UTF-8-only decoding errors no longer duplicate the UTF-8 fallback wording.",
      "scope": "Synthetic scanner/index and affected CPU regressions; source files unchanged except intentional replacement fixtures. Successful YOLO binding scope/order and raster-mask callback preserved. Existing containment-check/open race unchanged."
+    },
+    {
+     "kind": "app-qa-fix-reviewed-published",
+     "result": "f16d9a5: the project API saves a dataset source resolved (a symlinked folder, or a mapped network drive on Windows, gets another spelling); the dataset store now imports under that saved spelling and decides 'the same folder again', another task in the same folder and latest-model recovery with it, and a source save retried before a project action follows it too, so step 3 no longer waits for 'the current source' forever (found by the app-flow QA on macOS /var vs /private/var). Independent review: freezes 1-3 changed per review (P2s), freeze 4 ACCEPT WITH FIXES (P3 record-keeping only, done: the freeze-4 typecheck receipt, the reload note, the app-qa record and red reason outside $TMPDIR)",
+     "scope": "frozen tree (422a2d2 + 10 files), published unchanged on 64b8181 (the move touches none of them): renderer unit tests 14 (datasetSourcePath 5, flowSaveAdoption 3, trainingLog 1 and the existing store tests) green, red 10 of 14 on freeze 1 code; renderer suite 475 passed; typecheck and the e2e typecheck ok on the freeze-4 tree; Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac); the app-flow e2e passed once run alone (9.7 min), skipped by default without MV_E2E_APP_FLOW=1, red on freeze 1 code (stops at the disabled training start button)",
+     "platform": "macOS development; browser (Chrome) with the actual backend, the repo .venv and the test-only desktop host shim, CPU; not the Electron app, not GPU, not native Windows"
     }
    ],
    "file_actions": {
@@ -1918,7 +1945,8 @@
     "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
     "stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021); palette/color source masks require the existing explicit mask exchange path",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
-    "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel"
+    "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
+    "the same spelling on native Windows with a mapped drive and its UNC path (native QA)"
    ]
   },
   {
