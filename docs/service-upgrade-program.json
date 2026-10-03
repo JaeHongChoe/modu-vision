@@ -660,6 +660,12 @@
      "result": "f1a1c6a: two processes switching a SQLite store to WAL at once no longer fail ('database is locked' answered at once, so the connect timeout never helped); all ten stores switch through backend/engine/sqlite_wal.use_wal, which retries SQLITE_BUSY by result code until the store's timeout and raises anything else (SQLITE_LOCKED included) at once; found as an intermittent test_service_s1_02 failure (a 300-run reproduction: 5 failing openers before, 0 after); independent review freeze 1 ACCEPT WITH FIXES (CI lists, older races recorded, reviewed bytes), freeze 2 ACCEPT (real SQLite on Python 3.9/3.13 with SQLite 3.45-3.54: the race refusal carries code 5; six-way races on every store: 0 failures)",
      "scope": "frozen tree (6309f79 + 14 files): green 249, race 0/300, Linux CI list 405, Windows list 182 run on this Mac; test_sqlite_wal.py joins both CI lists, test_service_s1_02.py the Linux list and its WAL proxy test the Windows list",
      "platform": "macOS development; the hosted Windows job runs the helper tests from f1a1c6a"
+    },
+    {
+     "kind": "fix-reviewed-published",
+     "result": "f822656: two processes opening an older store together no longer fail. ComparisonJobs, InspectionStore and the inspection history store add missing columns through backend/engine/sqlite_schema.add_missing_columns (an up-to-date file is only read; a missing column is re-checked and added under BEGIN IMMEDIATE), and DatasetIndex reads its schema version and tables inside its upgrade lock (an unknown schema is still refused). The WAL tests keep their clock to sqlite_wal and give every store one injected SQLITE_BUSY to retry. Deterministic interleave tests (another opener upgrades right after the first unlocked read) fail on the old code in 15 of 15 sessions per store and pass on the fix; independent review freeze 5 ACCEPT",
+     "scope": "frozen tree (63d6b0b + 7 files): green 317, Linux CI list 425 passed 2 skipped, Windows list 202 passed 2 skipped (run on this Mac); the lease store, job store, account store and the other column upgrades were checked and already tolerate or serialize a concurrent add",
+     "platform": "macOS development; the hosted runs of f822656 were cancelled by later pushes, and e7fce1c, which contains it, was running when this was recorded"
     }
    ],
    "file_actions": {
@@ -685,8 +691,8 @@
     "E08"
    ],
    "remaining": [
-    "older first-open races measured by the review (six concurrent openers per run): ComparisonJobs and InspectionStore fail with 'duplicate column name' on new files (two requests on a fresh project can answer HTTP 500 for comparison jobs); DatasetIndex fails with 'uses index schema 0' on older files",
-    "review P3s: the helper tests patch the global time.sleep (patch the helper module's own time instead); only the job ledger's retry is exercised (inject one refused switch into every store); three stores' timeouts are not checked",
+    "review P3: nothing deterministic checks that add_missing_columns holds the write lock (a plain BEGIN mutant is caught only by the thread races)",
+    "test_sqlite_schema.py joins both CI pytest lists with the S1-05 follow-up (not yet published)",
     "Windows native evidence"
    ]
   },
@@ -1834,12 +1840,11 @@
     "E08"
    ],
    "remaining": [
-    "archive extraction runs inside the HTTP request (job-thread extraction pending); a transient completeUpload failure cancels the staged upload (re-upload needed); closing the panel during server verification still starts the import; an unreachable cancel or quitting mid-upload leaves the reservation until it expires",
+    "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
     "mask binding as source annotations; nested COCO documents relative to themselves; stale .partial staging sweep",
-    "dataset_annotations reads source JSON as utf-8-sig without the locale fallback of read_source_text",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
     "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
-    "error display edge cases: a catalog dict without message_ko, an empty list, null",
+    "error display edge cases: an empty validation list shows an empty message and null shows 'null' (a catalog dict without message_ko falls back to message/msg since 1e23881)",
     "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"
    ]
   },
@@ -3505,6 +3510,12 @@
      "result": "published in e096adb: the hosted Windows renderer step of 949f96b and e153de0 failed because S1-09 made the renderer runner also run the Electron main tests, and DistributionManager.configure reopened a temporary file read-only and fsynced it, which Windows refuses (EPERM; saving the update channel failed on real Windows installs too); one writeDurably helper now writes and flushes through the handle that created the file, used by both the update configuration and the delivery recovery record; a test applies the Windows rule (no flush through a read-only handle) on every platform and wraps both saves; independent review freeze 1 ACCEPT WITH FIXES (P2: the delivery save untested), freeze 2 ACCEPT",
      "scope": "frozen tree (e153de0 + 2 files): main-process tests 8, renderer suite, typecheck; mutants for both saves killed",
      "platform": "the hosted Windows run of e096adb passed the renderer step and reached the backend suites for the first time"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "e7fce1c: external LabelMe files read next to an image in backend/api/routes_annotation.py use read_source_text (UTF-8 with or without a BOM, else this machine's code page such as cp949 where it is not UTF-8); input a UTF-8 machine cannot decode still answers 422 with a conversion hint; saved Studio JSON and the permission policy are unchanged. backend/tests/test_annotation_source_encoding.py adds four API regressions and joins both CI pytest lists",
+     "scope": "Codex freeze on be1f2a8 + the 4 files: red 3 failed 1 passed (BOM and cp949 labels, the conversion hint); green 35 passed across 7 annotation and source-encoding modules; independent review approved",
+     "platform": "macOS API checks only; native Windows and the desktop UI are not verified by this change; no GPU used"
     }
    ],
    "file_actions": {
@@ -3540,11 +3551,12 @@
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
     "test code still has about 810 default-encoding reads outside the Windows job list",
-    "user label reads in routes_annotation, routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (unchanged from before; cp949 files work in some paths only)",
+    "user label reads in routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (routes_annotation's adjacent LabelMe read uses read_source_text since e7fce1c)",
     "Pillow reports some truncated headers as errno-less OSError, outside the undecodable set (size-less LabelMe case can still 500)",
     "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
     "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design",
-    "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test"
+    "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test",
+    "native Windows run of the LabelMe encoding regressions (cp949 on a Korean-locale Windows)"
    ]
   },
   {
@@ -3787,8 +3799,15 @@
     "S6-05",
     "S0-08"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "be1f2a8: docs/service-upgrade-evidence.json records every one of the 156 existing features with seven dimensions (implementation, gui, persist, reopen, failure, handoff, target) and platform.windows_native, all pending. scripts/check_service_plan.py derives a feature's acceptance from it: accepted only when every dimension is verified or waived with a reviewed reason (never implementation or native Windows) and native Windows is verified; the program row and the coverage table must agree. A verified entry needs a task owning the feature, a full commit hash, a kind tied to its dimension, and what that kind must cite (an end-to-end spec or hashed receipt for a click, a hashed receipt and artifacts for a target run, a hashed receipt or a test the Windows workflow runs for native Windows). Independent review freeze 3 ACCEPT; 65 of 72 rule mutants caught",
+     "scope": "frozen tree (63d6b0b + 6 files): S7-01 tests 54 passed, the gate exits 0 with 0 accepted features; both CI pytest lists run the gate tests",
+     "platform": "macOS development; the hosted runs of be1f2a8 were cancelled by e7fce1c's push, and e7fce1c was running when this was recorded"
+    }
+   ],
    "file_actions": {
     "docs/service-upgrade-program.json": "Modify",
     "docs/service-upgrade-coverage.md": "Modify",
@@ -3797,8 +3816,8 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-7-acceptance.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
+    "implementation": "verified",
+    "contract": "verified",
     "gui": "pending",
     "persist": "pending",
     "reopen": "pending",
@@ -3807,7 +3826,12 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
+   "remaining": [
+    "fill the registry: per-feature evidence as each task verifies a dimension (all 156 records are pending)",
+    "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; variant rows of the main table are skipped; duplicate JSON keys; commit existence and ::name are not checked; the older ASCII test strips the environment",
+    "Windows native evidence"
+   ]
   },
   {
    "id": "S7-02",
