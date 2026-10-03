@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -83,7 +84,7 @@ def _deployment_db(project: dict[str, Any]) -> Path:
 def _store(project: dict[str, Any]):
     conn = sqlite3.connect(_deployment_db(project), timeout=10)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    use_wal(conn)
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS revisions (
             revision_id TEXT PRIMARY KEY,

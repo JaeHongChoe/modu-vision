@@ -24,6 +24,7 @@ from typing import Any, Iterable, Optional
 import uuid
 
 from backend.engine.job_state import ACTIVE, TERMINAL, IllegalTransition, from_legacy, transition as next_state
+from backend.engine.sqlite_wal import use_wal
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS jobs(
@@ -157,7 +158,7 @@ class JobStore:
         db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         db.row_factory = sqlite3.Row
         try:
-            db.execute('PRAGMA journal_mode=WAL')
+            use_wal(db, 30)  # a concurrent switch of an older ledger is retried, not failed
             db.execute('PRAGMA synchronous=FULL')
             db.execute('PRAGMA foreign_keys=ON')
             yield db

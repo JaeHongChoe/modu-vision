@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import time
 import uuid
 from pathlib import Path
@@ -132,7 +133,7 @@ class ComparisonJobs:
         self.recover()
     def connect(self):
         conn = sqlite3.connect(self.path, timeout=10); conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL'); return conn
+        use_wal(conn); return conn
     def create(self, payload):
         identifier = 'comparejob_' + uuid.uuid4().hex
         import psutil

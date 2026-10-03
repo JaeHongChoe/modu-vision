@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import tempfile
 import threading
 import time
@@ -172,7 +173,7 @@ class InspectionStore:
     def _connection(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self.database, timeout=10)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        use_wal(conn)
         conn.execute("PRAGMA foreign_keys=ON")
         try:
             with conn:

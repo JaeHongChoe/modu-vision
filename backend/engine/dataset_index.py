@@ -44,6 +44,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import tempfile
 import time
 from typing import Callable, Optional
@@ -378,7 +379,7 @@ class DatasetIndex:
         db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
         db.row_factory = sqlite3.Row
         try:
-            db.execute('PRAGMA journal_mode=WAL')
+            use_wal(db, 30)
             db.execute('PRAGMA foreign_keys=ON')
             yield db
         finally:

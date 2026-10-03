@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -317,7 +318,7 @@ def _run_index(request: Request):
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path, timeout=10)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    use_wal(conn)
     conn.execute("""CREATE TABLE IF NOT EXISTS run_projects (
         run_id TEXT PRIMARY KEY, project_dir TEXT NOT NULL, project_id TEXT NOT NULL
     )""")
@@ -380,7 +381,7 @@ def _store(request: Request, run_id: Optional[str] = None):
     # saved with a trailing slash, parent segment, or symlink source spelling.
     conn.create_function("source_identity", 1, _source_identity)
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
+    use_wal(conn)
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS runs (
             run_id TEXT PRIMARY KEY,

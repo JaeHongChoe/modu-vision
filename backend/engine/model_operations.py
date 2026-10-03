@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import threading
 import time
 from types import SimpleNamespace
@@ -23,7 +24,7 @@ class OperationsStore:
         with self.connect() as conn:
             conn.executescript('CREATE TABLE IF NOT EXISTS policy(id INTEGER PRIMARY KEY CHECK(id=1),payload TEXT NOT NULL);CREATE TABLE IF NOT EXISTS cycles(cycle_id TEXT PRIMARY KEY,payload TEXT NOT NULL);')
     def connect(self):
-        conn=sqlite3.connect(self.path,timeout=30);conn.execute('PRAGMA journal_mode=WAL');return conn
+        conn=sqlite3.connect(self.path,timeout=30);use_wal(conn,30);return conn
     def policy(self):
         with self.connect() as conn:row=conn.execute('SELECT payload FROM policy WHERE id=1').fetchone()
         return json.loads(row[0]) if row else None

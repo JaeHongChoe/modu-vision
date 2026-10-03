@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import time
 import uuid
 from pathlib import Path
@@ -17,7 +18,7 @@ class DeploymentLedger:
             conn.executescript('CREATE TABLE IF NOT EXISTS deployments(deployment_id TEXT PRIMARY KEY,release TEXT,ack TEXT,reviewer TEXT,restored_from TEXT,created_at REAL);CREATE TABLE IF NOT EXISTS active(id INTEGER PRIMARY KEY CHECK(id=1),deployment_id TEXT);CREATE TABLE IF NOT EXISTS update_operations(operation_id TEXT PRIMARY KEY,release TEXT,previous TEXT,status TEXT,ack TEXT,error TEXT,reviewer TEXT,created_at REAL,updated_at REAL);')
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30); conn.row_factory=sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL'); conn.execute('PRAGMA synchronous=FULL'); return conn
+        use_wal(conn, 30); conn.execute('PRAGMA synchronous=FULL'); return conn
     def history(self):
         with self.connect() as conn: rows=conn.execute('SELECT * FROM deployments ORDER BY created_at DESC').fetchall()
         return [{**dict(row),'release':json.loads(row['release']),'ack':json.loads(row['ack'])} for row in rows]

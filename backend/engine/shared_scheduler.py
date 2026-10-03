@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 import sqlite3
+from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
 import time
 import uuid
 import threading
@@ -30,7 +31,7 @@ class ResourceLeases:
             conn.execute('CREATE TABLE IF NOT EXISTS devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))')
     def connect(self, timeout=10):
         conn = sqlite3.connect(self.path, timeout=timeout); conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL'); return conn
+        use_wal(conn, timeout); return conn
     @staticmethod
     def conflict(a, b):
         if a in (None, '', 'all') or b in (None, '', 'all'): return True

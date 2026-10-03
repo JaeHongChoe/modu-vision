@@ -839,3 +839,32 @@ def test_a_child_records_only_a_verified_completed_parent_in_its_own_scope(store
         assert store.record(child.id)['parent_id'] == expected, claimed
         submit_event = store.events(child.id)[0]['payload']
         assert submit_event['claimed_parent'] == claimed and submit_event['parent_verified'] is (expected is not None)
+
+
+def test_an_opener_whose_wal_switch_is_refused_by_a_concurrent_switch_tries_again(tmp_path, monkeypatch):
+    """SQLite answers a second opener switching an older ledger to WAL at the same moment with 'database is locked' at
+    once (waiting would deadlock); the opener tries again instead of failing, as two processes opening it together do."""
+    import sqlite3
+    from backend.engine import job_store
+    real_connect, refused = sqlite3.connect, []
+
+    class FirstSwitchRefused:
+        def __init__(self, connection):
+            object.__setattr__(self, '_connection', connection)
+
+        def __getattr__(self, name):
+            return getattr(self._connection, name)
+
+        def __setattr__(self, name, value):
+            setattr(self._connection, name, value)
+
+        def execute(self, sql, *args):
+            if sql == 'PRAGMA journal_mode=WAL' and not refused:
+                refused.append(sql)
+                raise sqlite3.OperationalError('database is locked')
+            return self._connection.execute(sql, *args)
+
+    monkeypatch.setattr(job_store.sqlite3, 'connect', lambda *args, **kwargs: FirstSwitchRefused(real_connect(*args, **kwargs)))
+    store = job_store.JobStore(tmp_path / 'ledger.sqlite3')
+    assert refused == ['PRAGMA journal_mode=WAL'] and store.path.is_file()
+    assert real_connect(tmp_path / 'ledger.sqlite3').execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
