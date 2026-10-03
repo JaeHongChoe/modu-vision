@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from backend.engine.dataset_loaders import BoundingBox, SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root, request_project_root
 from backend.engine.annotation_transactions import AnnotationFileTransaction
+from backend.engine.source_text import read_source_text
 from backend.engine import dataset_metadata as metadata_engine
 from backend.engine.labeling_ai import (
     auto_select_contour,
@@ -441,8 +442,7 @@ def _get_annotations_impl(
 
     if candidate_json and candidate_json.exists():
         try:
-            with open(candidate_json, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            data = json.loads(read_source_text(candidate_json))
             if not isinstance(data, dict) or not isinstance(data.get("shapes"), list):
                 raise ValueError("LabelMe JSON must contain a shapes list")
             # If standard LabelMe schema with "shapes"

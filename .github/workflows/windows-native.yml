@@ -65,6 +65,7 @@ jobs:
           backend/tests/test_service_s1_02.py::test_an_opener_whose_wal_switch_is_refused_by_a_concurrent_switch_tries_again
           backend/tests/test_service_s7_01.py
           backend/tests/test_segmentation_mask_folder_classes.py
+          backend/tests/test_annotation_source_encoding.py
       - name: Actual Electron main and preload smoke
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
