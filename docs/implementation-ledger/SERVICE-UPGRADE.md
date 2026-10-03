@@ -486,5 +486,5 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 - S3-01: 하위 폴더의 COCO 문서가 자기 폴더 기준 상대 이미지 경로로 연결된다(가져오기와 데이터 인덱스가 같게). 서로 다른 실제 이미지로 해석되는 경로는 모호함으로 거절하고, 같은 파일을 가리키는 내부 링크는 유지하며, 원본 밖의 주석 문서는 읽지 않는다.
 - S2-07: 고정 플로우 비교에서 손상 이미지 선택을 거절하고 정상 이미지를 기본으로 보여 준다. 기존 정상 선택은 유지한다. 패키지 비교 선택을 해제하면 이전 거절 안내도 지운다.
 - S7-01: 계획 검사기가 program, 근거 기록, 기존 기준 JSON 두 파일의 모든 깊이에서 중복 키를 거절한다. coverage 표의 공백·backtick ID를 읽고 중복·추가·깨진 행을 조용히 빠뜨리지 않는다. 명령줄 오류는 ASCII JSON receipt로 돌려준다.
-- Codex 최종 freeze-4(3c1322d + 소유 13개 파일): backend 147, renderer 413, e2e harness 14, 타입 검사·빌드는 freeze-3 receipt를 재사용했다(앱·backend·단위 시험 소스, 설정, 의존성 lock 해시가 같아서). freeze-4는 e2e 선택자 하나(service-s2-07-invalid-images.spec.ts)만 좁힌 뒤 e2e 타입 검사와 Chrome 브라우저 시나리오 3개(실제 격리 백엔드, 시험용 desktop host shim)를 다시 통과했다. 독립 리뷰 승인.
+- Codex 최종 freeze-4(3c1322d + 소유 13개 파일): backend 147, renderer 413, 타입 검사·빌드는 freeze-3 receipt를 재사용했다(앱·backend·단위 시험 소스, 설정, 의존성 lock 해시가 같아서). freeze-4는 e2e 선택자 하나(service-s2-07-invalid-images.spec.ts)만 좁힌 뒤 e2e harness(14/14), e2e 타입 검사, Chrome 브라우저 시나리오 3개(실제 격리 백엔드, 시험용 desktop host shim)를 다시 실행해 통과했다. 독립 리뷰 승인. (2b6657e에서 harness 14를 freeze-3 재사용으로 적었던 것을 freeze-4 재실행으로 정정)
 - macOS CPU 계약 시험과 Chrome 브라우저 검증이다. native Electron, Windows 설치, GPU 실행은 확인하지 않았다.
