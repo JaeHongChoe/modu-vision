@@ -1457,6 +1457,12 @@
      "result": "follow-up 1 published in fe4fe94 (the slice-1 review P3s): a connection saved without an id files its problem under its position (flowEdgeKey) and shows it on its own wire, the banner offers no jump to a connection that cannot be selected, a node saved without a name or with an emptied name renders its problems with the validator prefix stripped as written, and the unsupported-pair refusal uses the object particle of what the target accepts (이미지·ROI를, 결과를, 판정을); independent review freeze 1 ACCEPT (P3s), freeze 2 ACCEPT; 1.2M-graph comparison with the base: same validator answers, problem lists and jump targets, and the 12,781 id-less connection problems the base left off the canvas are now shown; 21 of 23 mutants killed (the 2 survivors are not observable)",
      "scope": "frozen tree (8a23fc6 + 4 renderer files): flow tests 15/15, renderer suite, typecheck, S2-05 browser e2e 2/2; reviewer re-ran renderer 345/345 and the e2e",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "2115263: the flow editor flags, on the connection or node where it can be fixed, a branch condition on a class the source model does not record (it would never or always hold at run time), a Blob or segmentation class ID outside the connected model's classes, and a segmentation class order that differs from the checkpoint. Names are compared exactly as the engine compares them, with a hint when only surrounding spaces differ; the class input offers the source model's recorded names; a model node is judged only against its own model and a model without a recorded vocabulary is never judged. Independent review freeze 1 ACCEPT WITH FIXES (P2: trimmed comparison), freeze 2 ACCEPT; 22 of 28 reviewer mutants and all 5 author mutants caught",
+     "scope": "frozen tree (be1f2a8 + 7 files): flow unit tests 40, renderer 396, typecheck, browser e2e 12 (S2-05 and S0-05 specs), Linux CI list 491 passed 2 skipped, Windows list 268 passed 2 skipped (run on this Mac)",
+     "platform": "macOS development; renderer only; the studio's use of a real trained model's classes is not yet driven by an e2e (planned in the app-flow QA)"
     }
    ],
    "file_actions": {
@@ -1484,17 +1490,13 @@
     "E03"
    ],
    "remaining": [
-    "class errors (predicate class not in the source model's classes), coordinate errors (fixed ROI beyond the source image) and range errors against model metadata at connection time",
-    "task compatibility beyond the Blob rule (measurement accepts any model)",
-    "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
-    "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
-    "review P3s: a label-less node with a problem breaks CustomNode; the refusal particle '결과을(를)'; an edge with an empty id keeps its problem off the canvas; the connection problem marks, locateFlowIssue targeting and the detector's other port label are not covered by a test",
-    "Windows native and hosted evidence",
-    "class errors (predicate class not in the source model's classes), coordinate errors (fixed ROI beyond the source image) and range errors against model metadata at connection time",
+    "coordinate errors (a fixed ROI beyond the source image) and range errors against model metadata at connection time",
     "task compatibility beyond the Blob rule (measurement accepts any model)",
     "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
     "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
     "older behaviour from the follow-up review: an id-less connection cannot be deleted or edited from its wire; two connections with one id are both marked and the banner jumps to the first; a node with no label still reads 'undefined' in three screen-reader labels",
+    "class check review P3s: a Blob behind an unbound segmentation node is judged against an upstream detector's classes and a label of only spaces is not replaced by the id (both fixed in the working tree, not yet reviewed); an empty requested segmentation class list being judged, the studio catalog wiring and the datalist are not covered by a test (e2e with a real trained model planned)",
+    "a backend refusal of unknown predicate classes at save time (defence in depth)",
     "Windows native and hosted evidence"
    ]
   },
@@ -1816,6 +1818,12 @@
      "result": "published in 1e23881: a transient completion failure of an archive upload is retried before the reservation is cancelled; an upload stopped during server verification starts no import; structured server errors show message_ko or validation messages; the source annotation scanner reads label files with the training decoder (UTF-8/BOM, else the non-UTF-8 platform code page); independent review ACCEPT",
      "scope": "frozen tree (08a9d48 + 5 files): green 82 incl. the encoding guard, renderer, typecheck, e2e 2 passed",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "955e302: an API rejection in the dataset import panel always shows a visible alert. A pure formatter (datasetImportError.ts) reads Korean catalog messages first, then message, FastAPI validation msg and detail, joins validation lists, skips blank fields, and answers a fixed Korean fallback for an empty list, null or a detail with no readable text",
+     "scope": "Codex freeze on 2115263 + 7 files: red renderer 3 failed; green renderer 408, typecheck and build exit 0; independent review ACCEPT",
+     "platform": "macOS renderer checks; the panel test uses the real panel with a mocked API; a real browser failure-injection path, native Windows and GPU were not run"
     }
    ],
    "file_actions": {
@@ -1844,7 +1852,6 @@
     "mask binding as source annotations; nested COCO documents relative to themselves; stale .partial staging sweep",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
     "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
-    "error display edge cases: an empty validation list shows an empty message and null shows 'null' (a catalog dict without message_ko falls back to message/msg since 1e23881)",
     "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"
    ]
   },
@@ -3516,6 +3523,12 @@
      "result": "e7fce1c: external LabelMe files read next to an image in backend/api/routes_annotation.py use read_source_text (UTF-8 with or without a BOM, else this machine's code page such as cp949 where it is not UTF-8); input a UTF-8 machine cannot decode still answers 422 with a conversion hint; saved Studio JSON and the permission policy are unchanged. backend/tests/test_annotation_source_encoding.py adds four API regressions and joins both CI pytest lists",
      "scope": "Codex freeze on be1f2a8 + the 4 files: red 3 failed 1 passed (BOM and cp949 labels, the conversion hint); green 35 passed across 7 annotation and source-encoding modules; independent review approved",
      "platform": "macOS API checks only; native Windows and the desktop UI are not verified by this change; no GPU used"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "955e302: grouped dataset views treat Pillow's errno-less OSError 'Truncated File Read' (a short image header) for a LabelMe file without image size as damaged content and list it without geometry instead of failing; permission, missing-file, OS I/O and other share errors still raise. backend/tests/test_annotation_truncated_source.py joins both CI pytest lists",
+     "scope": "Codex freeze on 2115263 + 7 files: red backend 1 failed; green backend 51 across 10 annotation, gallery and text-encoding modules; independent review ACCEPT",
+     "platform": "macOS backend checks; native Windows and GPU not run"
     }
    ],
    "file_actions": {
@@ -3552,7 +3565,7 @@
    "remaining": [
     "test code still has about 810 default-encoding reads outside the Windows job list",
     "user label reads in routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (routes_annotation's adjacent LabelMe read uses read_source_text since e7fce1c)",
-    "Pillow reports some truncated headers as errno-less OSError, outside the undecodable set (size-less LabelMe case can still 500)",
+    "Pillow reports other truncated headers as errno-less OSError outside the undecodable set: since 955e302 only the exact 'Truncated File Read' case of a size-less LabelMe image is treated as damaged content (listed without geometry); other errno-less decoder errors still raise",
     "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
     "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design",
     "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test",
