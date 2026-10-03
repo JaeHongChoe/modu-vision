@@ -1359,6 +1359,12 @@
      "result": "slice 1 published in 875c78b: flowGraphIssues collects every node's and connection's own problem with the validator's checks, messages and order (its first issue is validateFlowchartGraph's answer), attaches each to its target, and reports malformed saved data per target instead of throwing; nodes with problems get an amber frame and a badge, connections an amber dotted wire with the problems in their aria-label, and the inspector lists the selected item's problems; typed ports (IMAGE / ROI / RESULT / VERDICT) come from the payload rules, a connection started from the wrong port is refused at once naming what the target accepts, edges without a stored payload resolve it as the backend does, and wires are drawn from the measured pin positions; independent review freeze 1 ACCEPT WITH FIXES (2 P2: untyped edges from the wrong port, wires off their ports), freeze 2 ACCEPT; 600k-graph differential fuzzer equal to the old validator except format messages where it threw; wires within 0.05 px of their pins at 7 zoom levels in headless Chromium",
      "scope": "frozen tree (0e09c6c + 9 files): renderer suite, typecheck, backend flow suites 119, e2e 17 (S2-05 incl. wires-at-ports, S2-04, S0-05); reviewer re-ran 120 flowchart renderer tests",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "follow-up-reviewed-published",
+     "result": "follow-up 1 published in fe4fe94 (the slice-1 review P3s): a connection saved without an id files its problem under its position (flowEdgeKey) and shows it on its own wire, the banner offers no jump to a connection that cannot be selected, a node saved without a name or with an emptied name renders its problems with the validator prefix stripped as written, and the unsupported-pair refusal uses the object particle of what the target accepts (이미지·ROI를, 결과를, 판정을); independent review freeze 1 ACCEPT (P3s), freeze 2 ACCEPT; 1.2M-graph comparison with the base: same validator answers, problem lists and jump targets, and the 12,781 id-less connection problems the base left off the canvas are now shown; 21 of 23 mutants killed (the 2 survivors are not observable)",
+     "scope": "frozen tree (8a23fc6 + 4 renderer files): flow tests 15/15, renderer suite, typecheck, S2-05 browser e2e 2/2; reviewer re-ran renderer 345/345 and the e2e",
+     "platform": "macOS development; Windows hosted run pending for this commit"
     }
    ],
    "file_actions": {
@@ -1391,6 +1397,12 @@
     "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
     "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
     "review P3s: a label-less node with a problem breaks CustomNode; the refusal particle '결과을(를)'; an edge with an empty id keeps its problem off the canvas; the connection problem marks, locateFlowIssue targeting and the detector's other port label are not covered by a test",
+    "Windows native and hosted evidence",
+    "class errors (predicate class not in the source model's classes), coordinate errors (fixed ROI beyond the source image) and range errors against model metadata at connection time",
+    "task compatibility beyond the Blob rule (measurement accepts any model)",
+    "an explicit UNKNOWN verdict rule in the editor (today REVIEW through incomplete_policy)",
+    "geometry rules (region mean brightness, missing-object without mask evidence) and mm display only with verified calibration need their own review",
+    "older behaviour from the follow-up review: an id-less connection cannot be deleted or edited from its wire; two connections with one id are both marked and the banner jumps to the first; a node with no label still reads 'undefined' in three screen-reader labels",
     "Windows native and hosted evidence"
    ]
   },
