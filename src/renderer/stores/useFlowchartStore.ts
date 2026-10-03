@@ -374,11 +374,23 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const saveGeneration = ++flowchartSaveGeneration;
     set({ isSaving: true, errorMessage: null, saveMessage: null });
     try {
-      await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath);
+      const saved = await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath);
       if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+      // The server stores the flow with its defaults filled in (null branch and predicate fields, node type, threshold,
+      // padding, execution limits). A graph built here (a recipe, a palette node) then never equals its saved version,
+      // so the editor adopts the stored version when nothing was edited since: the same rules, now equal to what was saved.
+      let stored: FlowchartPipeline | null = null;
+      if (get().pipeline === target && saved?.version_id) {
+        try { stored = await api.flowchart.getPipelineVersion(saved.version_id); } catch { stored = null; }
+        if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+      }
       const currentVersionSaved = get().pipeline === target;
+      const adopted = currentVersionSaved && stored ? stored : null;
+      // A run made with the saved rules stays current: only the server's defaults were added.
+      const keepRun = adopted && isExecutionResultCurrent(get()) ? get().executionIdentity : null;
       set({
-        cleanPipeline: currentVersionSaved ? target : get().cleanPipeline,
+        ...(adopted ? { pipeline: adopted, executionIdentity: keepRun ? { ...keepRun, semantic_key: flowSemanticKey(adopted) } : get().executionIdentity } : {}),
+        cleanPipeline: currentVersionSaved ? adopted || target : get().cleanPipeline,
         pipelineDirty: currentVersionSaved ? false : get().pipelineDirty,
         pipelineIsDraft: currentVersionSaved ? false : get().pipelineIsDraft,
         persistedDraftHash: currentVersionSaved ? null : get().persistedDraftHash,

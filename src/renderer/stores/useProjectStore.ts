@@ -171,6 +171,20 @@ export async function saveOpenEdits(): Promise<void> {
     useProjectStore.setState({ project: refreshed, projectName: refreshed.name, projectDir: refreshed.project_dir });
     useDatasetStore.setState({ sourceSaveError: null });
     verifiedSource = refreshed.source_dataset_dir;
+    // The saved source is resolved (a symlink, or a mapped drive's network path on Windows): the loaded dataset is the
+    // same folder, so follow the saved spelling, as an import does, or training would keep waiting for the source.
+    const canonical = refreshed.source_dataset_dir;
+    const picked = dataset.datasetKey;
+    if (canonical && canonical !== dataset.folderPath) {
+      const adopted = `${canonical}\0${currentProject.task}`;
+      // Only while the same pick is loaded and settled (a re-import of it in progress keeps its own state).
+      useDatasetStore.setState((state) => state.datasetKey !== picked || state.isLoading ? {} : {
+        folderPath: canonical,
+        datasetKey: adopted,
+        lastImportedKey: state.lastImportedKey === picked ? adopted : state.lastImportedKey,
+        staleDatasetKeys: state.staleDatasetKeys.includes(picked) ? [...new Set([...state.staleDatasetKeys, adopted])] : state.staleDatasetKeys,
+      });
+    }
   }
   const flow = useFlowchartStore.getState();
   if (flow.isRunning) {
