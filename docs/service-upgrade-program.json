@@ -506,6 +506,12 @@
      "result": "published in aff4313: backend/tests/test_service_integrity.py runs the production-path regressions of S0-01 (real Dataset.__getitem__ flips/rotation), S0-02 (saved distance threshold through catalog, package, direct inference and heatmap API; incompatible calibration refused), S0-03 (changed reviewed truth blocks approval, release and export during CPU parity) and S0-04 (central rollback rechecks revocation; emergency path keeps live gates) in one command, and checks each regression still comes from its own module with a fixed per-defect count; two independent review rounds, final ACCEPT",
      "scope": "18 tests; the interface half is the S0-05 browser spec (real renderer clicks, model list and run answered by fixtures), a recorded deviation from the planned service-integrity.spec.ts; a full backend run executes these tests twice",
      "platform": "macOS development; Windows hosted run pending"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "03be617: the interface half on the actual backend with no fixture answer - a PaDiM model trained through the training API on the CPU; its calibrated threshold carried into the flow; threshold 8 saved (stored pipeline and score_spec 8), reopened after a reload and used by actual runs whose verdicts are checked against 8; a second saved version holds 9 while the reopened first version keeps 8; an unsaved flow refuses a model family (task) change and the project keeps its task. scripts/service_baseline_evidence.py writes one BaselineEvidence record per defect (commit and changed backend files, hash of the regression and fixture modules, production path, command, per-test outcome with failure messages, scope) without importing the app. Found and fixed on the way: training an anomaly model through the app failed after its first epoch (the live progress message rounded a confusion matrix). Independent review: freeze 1 ACCEPT WITH FIXES (P1: the script imported the test modules and opened the app store), freeze 2 ACCEPT WITH FIXES (UTF-8 mode would hide default-code-page bugs), freeze 3 ACCEPT",
+     "scope": "browser renderer with the test-only desktop host shim on this Mac and on hosted Linux (the e2e spec passed in run 37105713725); BaselineEvidence: all five records passed on hosted Linux (Ubuntu 24.04) and hosted Windows Server 2025 (run 37105713719, the first native Windows run of the four defects' regressions); the S0-05 spec keeps the fixture-held cases (late evaluation, server-refused task change)",
+     "platform": "macOS, hosted Linux, hosted Windows (backend regressions and baseline records only; the browser spec does not run on Windows)"
     }
    ],
    "file_actions": {
@@ -516,20 +522,20 @@
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-0-correctness.md",
    "acceptance_state": {
     "implementation": "verified",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "backend/tests/test_service_s0_08.py",
    "remaining": [
-    "interface half on the real backend (service-integrity.spec.ts without fixture answers for the model list and the run)",
-    "baseline evidence record per defect",
-    "Windows native"
+    "native Windows: the interface half in the desktop app on Windows (the hosted Windows job runs the backend regressions, the baseline records and the Electron smoke, not this browser spec)",
+    "review P3s: the record's tests fake git, so a narrowed status path or a non-transitive fixture list would pass; Decimal or lists of numpy scalars in metrics and NaN tokens; the e2e checks the crop verdict, not final_verdict; failure messages can contain local paths",
+    "handoff and target execution gates"
    ]
   },
   {
@@ -768,6 +774,12 @@
      "result": "published in 423aee4: the operator release reads the run journal first (proof of exit releases even with an expiry ahead of the clock; proof of life refuses), the refresh refusal applies only to an unknown state and names its age in seconds, and the per-job confirmation locks are reference-counted and removed when unused; independent review ACCEPT (future-expiry and 300-request lock probes, all mutants caught)",
      "scope": "frozen tree (c1b46b3 + 2 files): S1-04/S1-05 49 passed, regression 192 passed; reviewer re-ran both",
      "platform": "macOS development; Windows hosted run pending"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "fca3267: each local cancel step is a job ledger event of its own - cancel_signalled {cooperative} when the cancel file is written, {terminate}/{kill} for each signal actually sent (also recorded in the run journal, so local cancel evidence now reaches the signalled stage), cancel_acknowledged, worker_exit_confirmed {exit_code, state} - and a job-end release that removed a reservation is reservation_released {by: job_end, status}, apart from an operator release {by: operator, ...}; a transition retries on StaleRevision when such an event moved the revision; a failed journal save after the cancel file is written no longer stops the cancel. A real API cancel records: cancel_requested, cancel_signalled, cancel_acknowledged, worker_exit_confirmed, reservation_released, abort. Independent review: freeze 1 ACCEPT WITH FIXES (P2: the terminate test would fail on Windows, where terminate is a hard kill), freeze 2 ACCEPT",
+     "scope": "author receipts on the frozen tree (03be617 + 5 files): s104s5-green 213 passed, 2 skipped (S1-04, S1-02, S1-10 and worker suites); CI pytest lists Linux 421 passed, Windows list 198 passed (run on macOS)",
+     "platform": "hosted Windows run 37107498021 of fca3267 passed every step (incl. test_service_s1_04); hosted Linux run 37107498010 failed only the existing service-s2-04 browser test"
     }
    ],
    "file_actions": {
@@ -790,11 +802,12 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_04.py",
    "remaining": [
-    "ledger events for every evidence step (acknowledged, signalled, exit confirmed) are still recorded in the run journals; only the cancel intent and the operator release confirmation/outcome are ledger events",
     "explicit process-identity (PID reuse) evidence: process_identity_changed is unreachable until a journal records it",
     "observation for restart-interrupted ledger rows in TaskCenter; reopen/handoff gates",
-    "review P3s: facts gaps for remote jobs (user-data journal copy, queued-failed rows) and interrupted rows; with no journal an expiry ahead of the clock still refuses ('0 s ago'); the late-arrival refcount case and a TrainingStartRequest-built spec in the profile test are untested",
-    "Windows native and hosted evidence"
+    "review P3s (slice 2): facts gaps for remote jobs (user-data journal copy, queued-failed rows) and interrupted rows; with no journal an expiry ahead of the clock still refuses ('0 s ago'); the late-arrival refcount case and a TrainingStartRequest-built spec in the profile test are untested",
+    "review P3s (slice 3): a stop during dataset preparation records a cooperative signal with no worker; _stop_owned returns True for an already empty process group; some releases record no event (restored confirmed terminal, fenced scheduler releases, one start-up failure); the abort step writes SQLite under the manager lock and the signal event has no timestamp; the worker's own SIGTERM handler can set cancel_signal_sent_at; the cleanup path releases without worker_exit_confirmed or a recorded cancel request; a reattached observer reports exit code -1; the job-end release has no fence; launched() and the device-wait enqueue are not retried on StaleRevision; a ValueError from the signal-time save still escapes",
+    "remote jobs: the coordinator's acknowledgement, signals and exit stay in the remote run journal",
+    "Windows native evidence"
    ]
   },
   {
@@ -825,6 +838,12 @@
      "result": "slice 1 published in c0a7088: one capability record per worker (devices, model families, operations, support state); this computer's devices are probed (no MPS off macOS, no CUDA without a visible device); a training start that names an accelerator this computer does not have is refused (409) instead of silently falling back; the model catalog shows \"this computer\" devices",
      "scope": "clean main + 16 files (shared with S1-04): backend 430 passed / 4 skipped, renderer 295, typecheck clean",
      "platform": "macOS development (CPU/MPS probe); Windows native and CUDA hosts pending; SSH/Docker workers not reachable in this environment"
+    },
+    {
+     "kind": "legacy-defect-found-and-fixed",
+     "result": "e82b915: the in-progress worker preflight trained the app's own synthetic segmentation dataset (image/mask folders with class_map.json) and the trainer failed ('index 3 is out of bounds'): without a saved split it always trained background/defect. Classes now come from class_map.json (both layouts, BOM and system code page) and the values of the masks paired with images; value 0 is always background; binary masks stay background/defect; warm start checks parents against the same list. Independent review: freeze 1 ACCEPT WITH FIXES (warm start disagreed), freeze 2 ACCEPT WITH FIXES (5 P2), freeze 3 ACCEPT WITH FIXES (one older gap recorded)",
+     "scope": "frozen tree (f1a1c6a + 4 files): 12 new tests incl. a real one-epoch CPU training and warm start agreement; 412 training/loader/inference tests; both CI lists; the reviewer checked evaluation, inference, ONNX and flow packages and 10 warm-start layouts",
+     "platform": "macOS development; hosted Linux and Windows CI of e82b915 passed the backend lists"
     }
    ],
    "file_actions": {
@@ -851,7 +870,8 @@
     "local and SSH/Docker worker registration with a real preflight (the verified support state is unreachable in production until then)",
     "support states exposed to clients; remote device decisions on remote start",
     "HTTPS pull-worker transport, per-worker ACL, credential rotation, TLS/auth/trust gate",
-    "the catalog device list is cached per process (the start check probes live)"
+    "the catalog device list is cached per process (the start check probes live)",
+    "segmentation follow-up (older gap): an image marked not used is skipped by the API class check but trained on by the worker (no project scope in the training job)"
    ]
   },
   {
@@ -1054,6 +1074,12 @@
      "result": "published in 2b857b4 after the first hosted Windows run of the backend suites (run 37085323445 of e096adb: 5 failed, 2 errors): a real local training worker ended with 'PermissionError: Access is denied'; the probable cause is Windows refusing to replace a file another process has open (the worker's status file read by the app many times a second, the app's cancel file read by the worker); backend/remote/file_replace.py (standard library only) retries replace and read on Windows only (60 attempts, about two seconds), both atomic writers and both hot readers use it, the cancel watch keeps watching through a read error and always stops the trainer; test fixes: S1-04 waits joined the job thread instead of a 4 s loop, server profiles use a POSIX server root, os.getsid patched with raising=False, a failed worker's private traceback is shown by the S0-06 test; two Windows-only tests check the real file-sharing behaviour; independent review freezes 1-3 (freeze 1: 1 P2, freeze 2: 3 P2 fixed and ACCEPT, freeze 3 ACCEPT)",
      "scope": "frozen tree (5af5bc2 + 8 files): the Windows workflow's backend list 149 passed 2 skipped (Windows-only), regression 198; mutants for the retry and its wiring killed",
      "platform": "the cause is inferred from the redacted error and the code path; the hosted Windows run of 2b857b4 (Windows-only tests included) confirms or refutes it"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "1791338: the eight Popen launch sites of the published code use one session_isolation() from the standard-library-only backend/engine/process_isolation.py - seven launchers changed by this commit (fleet agent, managed service, operations watcher, deadline runs, distributed training, SSH transfers, background training CLI) and the local training worker, which already used it: start_new_session on POSIX as before (identical arguments at all 8 sites), its own process group and a hidden console on Windows; GAN generation packages carry the module; an AST check fails CI when a Popen skips the helper or sets its own isolation flags (the S1-05 worker preflight child, not yet published, is outside this evidence). Independent review: freeze 1 ACCEPT WITH FIXES (P1: GAN packages lacked the module; P2: the scan missed a site dropping isolation), freeze 2 ACCEPT (20 of 21 mutants killed, the survivor a shadowed local helper)",
+     "scope": "author receipt s109iso3-green on the frozen tree (e82b915 + 11 files): 23 test modules incl. the native and GAN package suites, 279 passed, 9 skipped; both CI pytest lists (Linux 409 passed, Windows list 186 passed, run on macOS); the reviewer's own run of 27 modules on the same tree: 307 passed, 9 skipped",
+     "platform": "hosted Windows passed every step on 7d788dc, 6309f79, f1a1c6a, e82b915 and 03be617 (code before this change, incl. test_service_s0_06's real local worker and test_service_s1_09) and on fca3267 (run 37107498021, the first hosted run containing 1791338); the hosted runs of 1791338 itself (37107320222 Windows, 37107320252 Linux) were cancelled when fca3267 was pushed; hosted Linux still fails only the existing service-s2-04 browser test"
     }
    ],
    "file_actions": {
@@ -1078,15 +1104,11 @@
    "remaining": [
     "frozen (PyInstaller) worker entrypoint on native Windows (backend/frozen_entry.py, scripts/build_backend_binary.py), a standard-user install with restricted permissions, Windows 11 x64 hardware",
     "DataLoader child processes of a worker are not exercised by a test (the basic trainer starts none)",
-    "managed services, fleet agent and distributed launcher still use start_new_session directly",
     "a stdin close during startup detaches before recovery runs and skips the shutdown sequence",
     "fails safe (unknown, reservation kept): a worker started less than 300 s before a reboot; a reused number whose short-lived holder already exited; a briefly unopenable child fails a cancel at once instead of retrying",
     "untested: the Electron exit hook, the EPIPE handler, startBackend using backendSpawnOptions()",
-    "Windows evidence counts only after a passing hosted run of 949f96b",
-    "the hosted Windows result of 2b857b4: the S0-06 worker completing, the Windows-only file-sharing tests",
     "the other os.replace sites (project files, receipts, best_model.pt) are not covered by the retry; they are not read concurrently many times a second",
-    "test_service_s1_02's concurrent ledger upgrade test is intermittent (about 3 in 150, base too)",
-    "frozen (PyInstaller) worker entrypoint on native Windows, a restricted-permission install, Windows 11 x64 hardware"
+    "isolation review P3s: a Popen behind an alias or a shadowed local helper passes the AST check; synchronous subprocess.run children (ssh exec, scp/rsync download, flow-package smoke run) are not isolated; torch elastic stops workers with Ctrl+C, which a new process group disables on Windows (unreachable today); the desktop app likely hides the backend console already (Electron windowsHide), unverified on Windows"
    ]
   },
   {
