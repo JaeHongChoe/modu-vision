@@ -850,6 +850,12 @@
      "result": "e82b915: the in-progress worker preflight trained the app's own synthetic segmentation dataset (image/mask folders with class_map.json) and the trainer failed ('index 3 is out of bounds'): without a saved split it always trained background/defect. Classes now come from class_map.json (both layouts, BOM and system code page) and the values of the masks paired with images; value 0 is always background; binary masks stay background/defect; warm start checks parents against the same list. Independent review: freeze 1 ACCEPT WITH FIXES (warm start disagreed), freeze 2 ACCEPT WITH FIXES (5 P2), freeze 3 ACCEPT WITH FIXES (one older gap recorded)",
      "scope": "frozen tree (f1a1c6a + 4 files): 12 new tests incl. a real one-epoch CPU training and warm start agreement; 412 training/loader/inference tests; both CI lists; the reviewer checked evaluation, inference, ONNX and flow packages and 10 warm-start layouts",
      "platform": "macOS development; hosted Linux and Windows CI of e82b915 passed the backend lists"
+    },
+    {
+     "kind": "slice-reviewed-published",
+     "result": "79ffa03: this computer as a worker. GET /api/workers shows every family's train, evaluate, infer, export and search stage per device as verified, unverified, not installed or unsupported from the support decision; POST /api/workers/local/preflight runs a real preflight in an owned child process (tiny synthetic data, the production trainer, evaluator, inference and an exported flow package, nothing downloaded) and records each stage per runtime digest (Python, OS release, packages, CUDA build, cuDNN, Linux NVIDIA driver, app version, every backend source). A stage passes only on the requested device kind (strict device check; a trainer or inference fallback fails the stage) and export only when the package inspected the image with its trained model; evidence names the architecture checked (resnet18, padim, unet, yolo26n), and the model hub panel says the family default model and other export formats are not part of it. The child runs in its own run folder, holds the app-wide local compute reservation, exits when the app goes away or at its deadline, is stopped at shutdown, and its folders are swept. Independent review freeze 1 ACCEPT WITH FIXES (2 P1: child cwd in the installed app, device fallback; 6 P2), freeze 2 ACCEPT (8 P3)",
+     "scope": "frozen tree (e7fce1c + 13 files): green 62 (S1-05, S0-06, S1-09), renderer 397, typecheck, browser e2e on the actual backend (CPU preflight from the hub moves classification to verified), Linux CI list 534 passed 2 skipped, Windows list 311 passed 2 skipped (run on this Mac); red: 13 of 26 backend and 1 of 3 renderer tests fail on freeze 1; test_service_s1_05.py and test_sqlite_schema.py join both CI lists. The author receipt's fallback test fell back to this Mac's MPS GPU (review N5; fixed in the follow-up)",
+     "platform": "macOS CPU preflights only; no CUDA preflight, GPU server or native Windows run (the GPU server QA is on hold by the user)"
     }
    ],
    "file_actions": {
@@ -873,11 +879,13 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_05.py",
    "remaining": [
-    "local and SSH/Docker worker registration with a real preflight (the verified support state is unreachable in production until then)",
-    "support states exposed to clients; remote device decisions on remote start",
+    "the verified state for a family's default architecture (DINOv3 and others) and for remote SSH/Docker workers; a real CUDA preflight on a GPU worker (on hold)",
+    "review P3s (freeze 2): a preflight could overtake a queued training (N1), the lease refusal message (N2), the reservation held up to 30 s after a quit (N3), a heartbeat that stops on a database error (N4), the fallback test used MPS (N5), the panel busy state read only on open (N6), a removed run folder ending as a recording error (N7), test gaps such as --exit-with-parent and --device reaching the child (N8) - fixed in the working tree, not yet reviewed",
+    "older review P3s: verification per device kind, not per GPU; ONNX/onnxruntime/native exports are not preflighted; a preflight lost to a restart leaves no record; shared accounts: an owner (not an administrator) runs it, failure reasons can contain paths, the store lock is per process; run folders under Roaming on Windows",
     "HTTPS pull-worker transport, per-worker ACL, credential rotation, TLS/auth/trust gate",
     "the catalog device list is cached per process (the start check probes live)",
-    "segmentation follow-up (older gap): an image marked not used is skipped by the API class check but trained on by the worker (no project scope in the training job)"
+    "segmentation follow-up (older gap): an image marked not used is skipped by the API class check but trained on by the worker (no project scope in the training job)",
+    "Windows native evidence"
    ]
   },
   {
@@ -3829,7 +3837,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-7-acceptance.md",
    "acceptance_state": {
-    "implementation": "verified",
+    "implementation": "pending",
     "contract": "verified",
     "gui": "pending",
     "persist": "pending",
@@ -3843,7 +3851,8 @@
    "remaining": [
     "fill the registry: per-feature evidence as each task verifies a dimension (all 156 records are pending)",
     "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; variant rows of the main table are skipped; duplicate JSON keys; commit existence and ::name are not checked; the older ASCII test strips the environment",
-    "Windows native evidence"
+    "Windows native evidence",
+    "acceptance 2: the button/menu/shortcut/action list with success, empty, invalid, error, cancel, reopen and handoff evidence is not recorded yet (the implementation state was recorded as verified too early in a19a8a4; corrected to pending; the contract and its gate are verified)"
    ]
   },
   {
