@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {api} from '../../services/api';
+import {host} from '../../services/hostAdapter';
 import {workflowError} from '../../services/datasetWorkflow';
 import {foundationLabelingApi as provider,labelingJobActive,type FoundationSetup,type FoundationOptions,type FoundationProposal,type FoundationBatch,type FeatureModel,type FeatureJob,type RegionExample,type SizeControls} from '../../services/foundationLabelingApi';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
@@ -52,7 +53,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
     positive_examples:positive,negative_examples:negative,points,boxes,...sizes,class_ids:Object.fromEntries(categories.filter(c=>c.id>0&&c.id<=255).map(c=>[c.name,c.id])),...(modelId?{suggestion_model_id:modelId}:{})});
   const generate=()=>run(async()=>{if(!currentImage||!setup)return;const imagePath=currentImage.file_path;
     useModelAssistRunStore.getState().begin();try{const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.generate(buildFoundationRequest(imagePath,options(),current));if(sameProject()&&useAnnotationStore.getState().currentImage?.file_path===imagePath)onCreated(next);}finally{useModelAssistRunStore.getState().end();}});
-  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await window.api?.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())setSetup(next);}});
+  const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())setSetup(next);}});
   const addExample=(kind:'positive'|'negative',selected=false)=>{
     try{let example:RegionExample|null;
       if(selected)example=currentImage?regionExample(currentImage.file_path,annotations.find(a=>a.id===selectedAnnotationId)):null;

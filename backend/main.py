@@ -51,6 +51,7 @@ from backend.api.routes_compute import router as compute_router
 from backend.api.routes_dataset import router as dataset_router
 from backend.api.routes_dataset_imports import router as dataset_imports_router
 from backend.api.routes_image_library import router as image_library_router
+from backend.api.routes_job_events import router as job_events_router
 from backend.api.routes_dataset_versions import router as dataset_versions_router
 from backend.api.routes_dataset_metadata import router as dataset_metadata_router, format_router as dataset_format_router
 from backend.api.routes_evaluation import router as evaluation_router
@@ -405,6 +406,7 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.include_router(dataset_router)
     app.include_router(dataset_imports_router)
     app.include_router(image_library_router)
+    app.include_router(job_events_router)
     app.include_router(dataset_versions_router)
     app.include_router(dataset_metadata_router)
     app.include_router(dataset_format_router)

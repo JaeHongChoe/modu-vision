@@ -31,6 +31,7 @@ import {
   isNormalLabel,
 } from '../../stores/useEvaluationStore';
 import { resolveApiUrl } from '../../services/api';
+import { host } from '../../services/hostAdapter';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
@@ -146,9 +147,9 @@ export const EvaluationStudio: React.FC = () => {
     setReportError(null);
     try {
       const filePath = await exportReport('html');
-      if (typeof window !== 'undefined' && window.api?.openExternal) {
-        await window.api.openExternal(filePath);
-      }
+      // The desktop app opens the saved report; a browser cannot open a file on the backend's computer, so it says where it is.
+      if (host.can('openPaths')) await host.openPath(filePath);
+      else setReportError(`HTML 보고서를 저장했습니다: ${filePath}. 브라우저에서는 이 파일을 열 수 없습니다.`);
     } catch (error) {
       setReportError(error instanceof Error ? error.message : 'HTML 보고서 내보내기 실패');
     }

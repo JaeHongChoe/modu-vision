@@ -24,6 +24,20 @@ import { useComputeStore } from './stores/useComputeStore';
 import { telemetryService } from './services/websocket';
 import { getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
+import { catchUpJobEvents as catchUpStream, createJobEventStream } from './services/jobEventFeed';
+
+// S1-10: after every (re)connection the app reads the job events it may have missed and re-reads its job if needed.
+const jobEventStream = createJobEventStream();
+let catchUpRetry: ReturnType<typeof setTimeout> | null = null;
+async function catchUpJobEvents(): Promise<void> {
+  try {
+    await catchUpStream(jobEventStream, () => useTrainingStore.getState().jobId, () => useTrainingStore.getState().refreshCurrentJob());
+  } catch {
+    // A failed pull moved nothing; one retry is scheduled (the next connection also catches up), and live telemetry
+    // and polling continue meanwhile.
+    catchUpRetry ??= setTimeout(() => { catchUpRetry = null; void catchUpJobEvents(); }, 5000);
+  }
+}
 
 export default function App() {
   const { activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
@@ -74,6 +88,7 @@ export default function App() {
     // 2. Initialize WebSocket telemetry streaming
     telemetryService.connect();
     const unsubTelemetry = telemetryService.subscribe((event, data) => {
+      if (event === 'telemetry_connected') { void catchUpJobEvents(); return; }
       updateFromTelemetry(event, data);
       if (event === 'training_error') {
         showError(data);

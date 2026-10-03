@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {datasetWorkflow,workflowError,type ImageReviewMetadata,type GroupSplit,type ImportPreview,type DuplicateGroup} from '../../services/datasetWorkflow';
 import {resolveApiUrl} from '../../services/api';
+import {host} from '../../services/hostAdapter';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
@@ -61,7 +62,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
       <p className="mt-2 text-slate-400">선택한 그룹과 동일 내용의 이미지는 같은 분할에 유지됩니다. 모든 이미지에 그룹 정보가 필요합니다.</p>
       {duplicates.length>0&&<ul className="mt-2 max-h-24 overflow-auto">{duplicates.map(d=><li key={d.content_hash} className={d.cross_split?'text-red-300':'text-amber-200'}>{d.cross_split?'분할 간 동일 이미지: ':'동일 내용: '}{d.images.join(', ')} · {d.splits.join(', ')}</li>)}</ul>}{!duplicates.length&&<p className="mt-2 text-emerald-300">현재 동일 내용 중복 없음</p>}</details>
       <details><summary className="cursor-pointer font-semibold">LabelMe · COCO · YOLO 라벨 가져오기/내보내기</summary><div className="mt-2 flex flex-wrap items-center gap-2"><select aria-label="라벨 교환 형식" value={format} onChange={e=>{setFormat(e.target.value);setPreview([]);}} className="rounded border border-slate-600 bg-slate-900 p-2">{['labelme','coco','yolo'].map(f=><option key={f} value={f}>{f.toUpperCase()}</option>)}</select>
-        <button disabled={busy} onClick={()=>void run(async()=>{const dir=await window.api?.selectFolder({title:'가져올 라벨 폴더 선택'});if(dir){setImportDir(dir);setPreview([]);}})} className="rounded border border-slate-600 px-3 py-2">라벨 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={importDir}>{importDir||'폴더를 선택하세요'}</span>
+        <button disabled={busy} onClick={()=>void run(async()=>{const dir=await host.selectFolder({title:'가져올 라벨 폴더 선택'});if(dir){setImportDir(dir);setPreview([]);}})} className="rounded border border-slate-600 px-3 py-2">라벨 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={importDir}>{importDir||'폴더를 선택하세요'}</span>
         <select aria-label="기존 라벨 충돌 처리" value={policy} onChange={e=>setPolicy(e.target.value)} className="rounded border border-slate-600 bg-slate-900 p-2"><option value="reject">기존 라벨 충돌 시 중지</option><option value="merge">기존 라벨에 추가</option><option value="replace">기존 라벨 교체</option></select>
         <button disabled={busy||!importDir} onClick={()=>void run(()=>importLabels(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">가져오기 미리보기</button><button disabled={busy||!preview.length} onClick={()=>void run(()=>importLabels(true))} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">검토한 라벨 적용</button>
         <button disabled={busy} onClick={()=>void run(async()=>{const result=await datasetWorkflow.export(format);const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);})} className="rounded border border-cyan-700 px-3 py-2">라벨 내보내기</button></div>

@@ -19,6 +19,7 @@ import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { resolveApiUrl } from '../../services/api';
+import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetImportPanel } from './DatasetImportPanel';
@@ -125,11 +126,17 @@ export const DatasetStudio: React.FC = () => {
   }, [folderPath, task, ensureImported]);
 
   const handleSelectFolder = async () => {
-    if (typeof window !== 'undefined' && window.api?.selectFolder) {
-      const folder = await window.api.selectFolder({ title: 'Select Industrial Dataset' });
-      if (folder) {
-        await importFolder(folder, task).catch(() => {});
-      }
+    setImageOpenError(null);
+    let folder: string | null;
+    try {
+      folder = await host.selectFolder({ title: 'Select Industrial Dataset' });
+    } catch (error) {
+      // A browser has no folder dialog: say so instead of doing nothing.
+      setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.'));
+      return;
+    }
+    if (folder) {
+      await importFolder(folder, task).catch(() => {});
     }
   };
 

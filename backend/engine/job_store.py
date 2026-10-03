@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS quotas(
     project_key TEXT PRIMARY KEY, max_running INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS migrations(
     source_path TEXT PRIMARY KEY, sha256 TEXT NOT NULL, job_id TEXT, outcome TEXT NOT NULL, migrated_ns INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 '''
 
 
@@ -323,6 +324,52 @@ class JobStore:
             self._job(db, job_id)
             rows = db.execute('SELECT * FROM events WHERE job_id=? ORDER BY seq', (job_id,))
             return [{**dict(row), 'payload': json.loads(row['payload_json']) if row['payload_json'] else None} for row in rows]
+
+    # Event stream (S1-10). An event's position is its row number, assigned in commit order (SQLite has one writer at a
+    # time) and never reused while the newest row is kept; events are never deleted today. A future retention must keep
+    # the newest row, and a cursor whose event is gone is answered as expired by its reader.
+
+    def ledger_id(self) -> str:
+        """A random identity of this ledger file, made once: cursors of another ledger are never continued here."""
+        with self._tx() as db:
+            row = db.execute("SELECT value FROM meta WHERE key='ledger_id'").fetchone()
+            if row is not None:
+                return row['value']
+            value = uuid.uuid4().hex
+            db.execute("INSERT INTO meta(key, value) VALUES('ledger_id', ?)", (value,))
+            return value
+
+    def events_after(self, workspace_id: str, project_key: str, position: int, limit: int) -> tuple[list[dict], int, bool]:
+        """One project's events recorded after a position, read from one snapshot of the ledger.
+
+        Returns (rows, head, more). `head` is where the next read continues: the last row returned when more remain,
+        else the ledger's newest position, so other projects' events are not scanned again.
+        """
+        with self._connect() as db:
+            db.execute('BEGIN')  # the newest position and the rows come from the same snapshot
+            try:
+                newest = db.execute('SELECT COALESCE(MAX(rowid), 0) FROM events').fetchone()[0]
+                rows = db.execute('SELECT e.rowid AS position, e.job_id, e.seq, e.event, e.from_state, e.to_state, '
+                                  'e.payload_json, e.at_ns, j.kind FROM events e JOIN jobs j ON j.id = e.job_id '
+                                  'WHERE e.rowid > ? AND e.rowid <= ? AND j.workspace_id = ? AND j.project_key = ? '
+                                  'ORDER BY e.rowid LIMIT ?', (position, newest, workspace_id, project_key, limit + 1)).fetchall()
+            finally:
+                db.execute('COMMIT')
+        more = len(rows) > limit
+        rows = [dict(row) for row in rows[:limit]]
+        return rows, (rows[-1]['position'] if more else newest), more
+
+    def event_at(self, position: int) -> Optional[tuple[str, int]]:
+        """The (job, sequence) of the event at a position, or None when no event is held there."""
+        with self._connect() as db:
+            row = db.execute('SELECT job_id, seq FROM events WHERE rowid = ?', (position,)).fetchone()
+        return (row['job_id'], row['seq']) if row is not None else None
+
+    def newest_event(self) -> Optional[tuple[int, str, int]]:
+        """(position, job, sequence) of the newest event, or None for an empty ledger."""
+        with self._connect() as db:
+            row = db.execute('SELECT rowid AS position, job_id, seq FROM events ORDER BY rowid DESC LIMIT 1').fetchone()
+        return (row['position'], row['job_id'], row['seq']) if row is not None else None
 
     def record_event(self, job_id: str, event: str, payload: Any = None) -> None:
         """An event that does not change the job's state, e.g. a retained failure to link an artifact."""

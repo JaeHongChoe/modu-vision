@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {resolveApiUrl,getApiPersistenceIdentity} from '../../services/api';
+import {host,hostErrorMessage} from '../../services/hostAdapter';
 import {dataWorkbench,dataWorkbenchScope,type DerivedVersion} from '../../services/dataWorkbench';
 import {workflowError} from '../../services/datasetWorkflow';
 import {useComputeStore} from '../../stores/useComputeStore';
@@ -45,6 +46,6 @@ export const DerivedImagePanel:React.FC=()=>{
   </svg>
   {cropMode&&<div className="flex flex-wrap items-center gap-2">{(['왼쪽','위','오른쪽','아래'] as const).map((name,index)=><label key={name}>{name}<input aria-label={`자르기 ${name} 좌표`} type="number" step="1" value={crop?.[index]??(index<2?0:size[index%2])} onChange={e=>setCrop(old=>{const next:[number,number,number,number]=old?[...old]:[0,0,size[0],size[1]];next[index]=Number(e.target.value);return next;})} className="ml-1 w-20 rounded border border-slate-600 bg-slate-900 p-2"/></label>)}<button type="button" disabled={disabled||!crop||crop[0]>=crop[2]||crop[1]>=crop[3]} className={`${button} border-cyan-600`} onClick={()=>crop&&void edit({kind:'crop',rect:crop})}>자르기 새 버전 저장</button></div>}
   {isDirty&&<p className="text-amber-200">라벨을 저장한 뒤 이미지 편집을 실행하세요.</p>}{busy&&<p role="status">이미지와 라벨을 새 버전으로 저장하는 중…</p>}{error&&<p role="alert" className="text-rose-200">{error}</p>}{notice&&<p role="status" className="text-emerald-200">{notice}</p>}
-  {version&&<><button type="button" className={button} onClick={()=>void window.api?.openExternal(version.dataset_path)}>파생 이미지·라벨 저장 폴더 열기</button><details><summary className="cursor-pointer text-slate-400">버전 출처와 보존 해시</summary><pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify({version:version.id,parent:version.parent_id,actor:version.actor,operation:version.operation,original_sha256:version.source_sha256,derived_sha256:version.derived_sha256,dataset_path:version.dataset_path},null,2)}</pre></details></>}
+  {version&&<><button type="button" className={button} onClick={()=>void host.openPath(version.dataset_path).catch(cause=>setError(hostErrorMessage(cause,'저장 폴더를 열 수 없습니다.')))}>파생 이미지·라벨 저장 폴더 열기</button><details><summary className="cursor-pointer text-slate-400">버전 출처와 보존 해시</summary><pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify({version:version.id,parent:version.parent_id,actor:version.actor,operation:version.operation,original_sha256:version.source_sha256,derived_sha256:version.derived_sha256,dataset_path:version.dataset_path},null,2)}</pre></details></>}
  </section></details>;
 }

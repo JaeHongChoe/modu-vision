@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {CheckCircle,RefreshCw} from 'lucide-react';
 import {request,getApiPersistenceIdentity} from '../../services/api';
+import {host} from '../../services/hostAdapter';
 import type {ModelFamily} from '../../services/modelTrainingProgram';
 import type {TrainingPreset} from '../../types';
 import {useProjectStore} from '../../stores/useProjectStore';
@@ -31,10 +32,10 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
   const importFile=async()=>{
     setBusy(true);setError('');
     try {
-      if(!window.api?.selectFile)throw new Error('데스크톱 앱의 파일 선택 기능을 사용하거나 아래 상세 경로 설정을 사용하세요.');
-      const shared=await window.api.getSharedConnection();
+      if(!host.can('pickPaths'))throw new Error('데스크톱 앱의 파일 선택 기능을 사용하거나 아래 상세 경로 설정을 사용하세요.');
+      const shared=await host.shared.connection();
       if(shared)throw new Error('공유 서버에서는 서버 저장소의 가중치 경로를 상세 설정에 지정하세요. 로컬 파일을 서버 경로로 사용하지 않습니다.');
-      const path=await window.api.selectFile({title:'공식 사전학습 가중치 가져오기',filters:[{name:'사전학습 파일',extensions:['pt','pth','safetensors']}]});
+      const path=await host.selectFile({title:'공식 사전학습 가중치 가져오기',filters:[{name:'사전학습 파일',extensions:['pt','pth','safetensors']}]});
       if(!path||current.current!==scope)return;
       const result=await request<{pretrained_checkpoint:string;sha256:string;content_verified:boolean}>('/api/training-workspace/import-weights',{method:'POST',body:JSON.stringify({task:family,model:check?.model||model,preset,device,pretrained_checkpoint:path})});
       if(current.current===scope){onCheckpointChange?.(result.pretrained_checkpoint);setCheck(null);}
@@ -54,7 +55,7 @@ export function TrainingPreparationPanel({family,model,preset='fast',checkpoint=
     {compute.selectedProfileId&&<p className="mt-2 text-slate-400">선택 서버의 모델별 준비 상태를 확인합니다. 학습 작업을 등록하거나 모델을 다운로드하지 않습니다.</p>}
     {check&&<div role="status" className="mt-3 rounded border border-slate-600 p-3"><strong className={check.ready?'text-emerald-300':'text-amber-200'}>{check.ready?'준비 항목 확인됨':'준비 필요'}</strong><p className="mt-1">장치: {check.runtime.available?check.runtime.device:check.runtime.reason} · 가중치: {({file_available:'파일 있음 · 학습 시 구조 검증',not_required:'별도 사전학습 파일 불필요',transfer_ready:'프로젝트 파일 해시 확인 · 학습 시 서버로 전송',server_file_available:'서버 캐시 파일 있음 · 학습 시 구조 검증',parent_verified:'부모 모델 해시·호환 구조 확인'} as Record<string,string>)[check.weights.state]||'준비 필요'}</p>{check.dependencies.missing.length>0&&<p className="mt-1 text-amber-200">설치 필요: {check.dependencies.missing.join(', ')}</p>}{check.weights.state==='missing'&&<p className="mt-1">공식 사전학습 파일을 준비하고 아래 상세 설정에서 가져오세요. 접근 승인이 필요한 모델은 제공처 승인 절차를 완료하세요.</p>}{check.next_actions.length>0&&<ul className="mt-2 list-disc pl-5 text-amber-200">{check.next_actions.map(action=><li key={action}>{action}</li>)}</ul>}<p className="mt-1 text-slate-400">실제 학습·추론 실행과 모델 품질 승인은 아직 확인하지 않았습니다.</p></div>}
     {onCheckpointChange&&<button type="button" disabled={busy||!(check?.model||model)} onClick={()=>void importFile()} className={`${programButton} mt-3`}>사전학습 파일 선택·프로젝트에 가져오기</button>}
-    {check?.dependencies.missing.length ? <details className="mt-3 rounded border border-slate-600 p-3"><summary className="cursor-pointer text-slate-300">실행 환경 준비 방법</summary><p className="mt-2">패키지된 앱은 필요한 의존성을 포함한 앱 버전을 설치하세요. 개발·서버 실행은 앱에 설정된 Python 환경에 아래 패키지를 설치한 뒤 준비 검사를 다시 실행하세요. 공유·원격 환경은 서버 관리 화면의 연결 검사에서 해당 Python/Docker 환경을 확인하세요.</p><code className="mt-2 block break-all text-slate-200">python -m pip install {check.dependencies.missing.map(name=>name==='PIL'?'Pillow':name).join(' ')}</code><button type="button" onClick={()=>void window.api?.openExternal('https://pytorch.org/get-started/locally/')} className={`${programButton} mt-2`}>PyTorch 공식 설치 안내</button></details>:null}
+    {check?.dependencies.missing.length ? <details className="mt-3 rounded border border-slate-600 p-3"><summary className="cursor-pointer text-slate-300">실행 환경 준비 방법</summary><p className="mt-2">패키지된 앱은 필요한 의존성을 포함한 앱 버전을 설치하세요. 개발·서버 실행은 앱에 설정된 Python 환경에 아래 패키지를 설치한 뒤 준비 검사를 다시 실행하세요. 공유·원격 환경은 서버 관리 화면의 연결 검사에서 해당 Python/Docker 환경을 확인하세요.</p><code className="mt-2 block break-all text-slate-200">python -m pip install {check.dependencies.missing.map(name=>name==='PIL'?'Pillow':name).join(' ')}</code><button type="button" onClick={()=>void host.openLink('https://pytorch.org/get-started/locally/')} className={`${programButton} mt-2`}>PyTorch 공식 설치 안내</button></details>:null}
     {error&&<p role="alert" className="mt-3 text-rose-200">{error}</p>}
   </section>;
 }

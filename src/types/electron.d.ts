@@ -50,6 +50,7 @@ export interface SharedConnection {server_url:string;expires_at:number;user:{id:
 
 declare global {
   interface Window {
-    api: ElectronAPI;
+    /** The desktop preload bridge; absent in a plain browser. Components use services/hostAdapter.ts instead. */
+    api?: ElectronAPI;
   }
 }

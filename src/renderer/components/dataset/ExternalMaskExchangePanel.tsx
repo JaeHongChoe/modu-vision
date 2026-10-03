@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {datasetWorkflow,workflowError,type MaskImportPreview} from '../../services/datasetWorkflow';
 import {resolveApiUrl} from '../../services/api';
+import {host} from '../../services/hostAdapter';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
@@ -17,7 +18,7 @@ export const ExternalMaskExchangePanel:React.FC=()=>{
     if(next.applied){setNotice(`mask 라벨 ${next.preview.length}개 이미지 적용 · 이전 버전 ${next.backup_version_id} · 이미지별 검토가 필요합니다.`);setRows([]);await useDatasetStore.getState().annotationsChanged();await useAnnotationStore.getState().loadAnnotationsForCurrent();}
   };
   return <details aria-label="외부 multiclass mask 교환"><summary className="cursor-pointer font-semibold">외부 pixel mask 가져오기·내보내기 (클래스·구멍 유지)</summary><div className="mt-2 flex flex-wrap items-center gap-2">
-    <button disabled={busy} onClick={()=>void run(async()=>{const path=await window.api?.selectFolder({title:'mask_manifest.json와 PNG mask가 있는 폴더'});if(path){setDirectory(path);setRows([]);setSignature('');}})} className="rounded border border-slate-600 px-3 py-2">mask 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={directory}>{directory||'mask_manifest.json 필요'}</span>
+    <button disabled={busy} onClick={()=>void run(async()=>{const path=await host.selectFolder({title:'mask_manifest.json와 PNG mask가 있는 폴더'});if(path){setDirectory(path);setRows([]);setSignature('');}})} className="rounded border border-slate-600 px-3 py-2">mask 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={directory}>{directory||'mask_manifest.json 필요'}</span>
     <select aria-label="외부 mask 충돌 처리" value={policy} onChange={e=>setPolicy(e.target.value)} className="rounded border border-slate-600 bg-slate-900 p-2"><option value="reject">기존 라벨 충돌 시 중지</option><option value="replace">검토 후 기존 라벨 교체</option><option value="merge">기존 라벨에 추가</option></select>
     <button disabled={busy||!directory} onClick={()=>void run(()=>load(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">mask 미리보기</button><button disabled={busy||!rows.length} onClick={()=>void run(()=>load(true))} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">검토한 mask 라벨 적용</button>
     <label><input type="checkbox" checked={originals} onChange={e=>setOriginals(e.target.checked)} className="mr-1"/>원본 이미지 함께 내보내기</label><button disabled={busy} onClick={()=>void run(async()=>{const next=await datasetWorkflow.exportMasks(originals);const a=document.createElement('a');a.href=resolveApiUrl(next.download_url);a.download='pixel_masks_with_source_mapping.zip';a.click();setNotice(`${next.image_count}개 이미지 · ${next.annotation_count}개 라벨 PNG·palette·원본 mapping 내보내기`);})} className="rounded border border-cyan-700 px-3 py-2">pixel mask 내보내기</button>

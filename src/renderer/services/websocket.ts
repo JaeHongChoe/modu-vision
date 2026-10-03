@@ -51,6 +51,9 @@ class WebSocketTelemetryService {
           this.reconnectTimer = null;
         }
 
+        // Messages sent while the socket was down are lost; listeners catch up from the job event cursor (S1-10).
+        for (const listener of this.listeners) listener('telemetry_connected', {});
+
         // Start keepalive ping every 10s
         if (this.pingInterval) clearInterval(this.pingInterval);
         this.pingInterval = setInterval(() => {

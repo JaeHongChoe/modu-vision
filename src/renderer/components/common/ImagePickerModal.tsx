@@ -16,6 +16,7 @@ import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { api, resolveApiUrl, type LibraryResolution } from '../../services/api';
+import { host } from '../../services/hostAdapter';
 import type { ImageMeta, SelectedInspectionImage } from '../../types';
 import { ImageLibraryBrowser } from './ImageLibraryBrowser';
 import { identityOf, recallSelection, rememberSelection, resolutionNotice, selectionFromImage } from './librarySelection';
@@ -126,8 +127,8 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   };
 
   const handleBrowseLocalFile = async () => {
-    if (typeof window !== 'undefined' && (window as any).api?.selectFile) {
-      const file = await (window as any).api.selectFile({
+    if (host.can('pickPaths')) {
+      const file = await host.selectFile({
         title: '검사 대상 이미지 파일 선택',
         filters: [{ name: '이미지 파일', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'tif', 'tiff'] }],
       });
@@ -364,6 +365,8 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                   />
                   <button
                     onClick={handleBrowseLocalFile}
+                    disabled={!host.can('pickPaths')}
+                    title={host.can('pickPaths') ? undefined : '브라우저에서는 파일 선택 창을 열 수 없습니다. 경로를 직접 입력하세요.'}
                     className="px-3.5 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] border border-[#2B3547] rounded text-xs font-medium text-slate-200 flex items-center space-x-1.5 cursor-pointer transition-colors"
                   >
                     <FolderOpen className="w-3.5 h-3.5 text-slate-300" />
