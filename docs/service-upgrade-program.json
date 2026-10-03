@@ -1106,6 +1106,12 @@
      "result": "slices 1+2 published in 6370134: GET /api/job-events reads one project's job ledger events after a cursor (v1.<stream>.<position>.<anchor>; a cursor of another project or ledger, a malformed or huge one, or one whose anchored event the ledger no longer holds is answered with a reset and a fresh cursor); the app pulls after every telemetry (re)connection, commits its cursor and seen ids only when a pull completes (a failed page or a stale pull loses nothing), gives a trigger during a pull one follow-up read, continues past the page cap, and re-reads the current training job when the events concern it; one host adapter separates desktop and browser features (pickers, open path/link, updates, shared project sign-in), every method fails asynchronously with a reason in a browser, and no component calls the desktop bridge directly; independent review freeze 1 ACCEPT WITH FIXES (3 P2: a timing-dependent test, project isolation untested, events used up before delivery), freeze 2 ACCEPT; the test's 4-in-48 loaded failure rate went to 48 of 48 passes",
      "scope": "frozen tree (5af5bc2 + 33 files): backend 112, unit, renderer suite, typecheck, e2e 22 (freeze 1: the whole browser project, 42); test_service_s1_10.py joins both CI workflows",
      "platform": "macOS development; the hosted Windows run of 6370134/2b857b4 runs test_service_s1_10.py for the first time"
+    },
+    {
+     "kind": "ci-regression-fixed",
+     "result": "ce6f002: the S1-01 telemetry test counted S1-10's new 'telemetry_connected' announcements as data frames and failed on hosted Linux and Windows (runs of 6370134 and 2b857b4); it now counts announcements apart (2, one per opened socket) and still requires that no retired-socket frame is delivered; independent review ACCEPT; both CI pytest lists passed on the frozen tree (Linux 342, Windows 156)",
+     "scope": "frozen tree (a4c713c + 1 file); CI lists via verification/tools/ci_pytest_lists.py",
+     "platform": "the same hosted Windows run showed the rest of the Windows backend list passing, including S0-06's real worker, S1-04, S1-09 with the Windows-only file-sharing tests, and S1-10"
     }
    ],
    "file_actions": {
@@ -3562,8 +3568,15 @@
    "depends_on": [
     "S6-05"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "reviewed-published",
+     "result": "published in e18f4c6: CONTRIBUTING.md (per-OS fresh checkout with the locked installs CI uses: Windows PowerShell without changing the execution policy, Linux, macOS; the CPU demo; focused tests and the CI lists; test data isolation; fork/branch/push/PR; evidence kinds; module map; coding rules; ownership; support matrix; change, deprecation and release policy), SECURITY.md, CODE_OF_CONDUCT.md, a neutral private contact request form with no free-text field, bug and feature forms with a required hygiene confirmation, a PR template with the evidence kinds, README aligned with the guide and the pinned versions; scripts/cpu_demo.py trains and evaluates small_cnn_angle_v1 on synthetic images with the app's training CLI on the CPU (no GPU, network or downloaded weights) and keeps its records in its own folder; backend/tests/test_service_s6_07.py (19) keeps the documents true to the repository and runs in both CI workflows; independent review freezes 1-3 (freeze 1: 1 P1, 5 P2; freeze 2: 2 P2; freeze 3 ACCEPT)",
+     "scope": "frozen tree (a4c713c + 13 files): test 19 passed, demo 13.8 s on this Mac (angular MAE 1.85 degrees on 16 test images, environment data folders untouched); reviewer walk-through of the macOS steps without network installs",
+     "platform": "macOS development; the Windows steps were checked by reading; the hosted Windows job runs the test and the demo after publish"
+    }
+   ],
    "file_actions": {
     "CONTRIBUTING.md": "Create",
     "SECURITY.md": "Create",
@@ -3583,7 +3596,12 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s6_07.py"
+   "proposed_test_file": "backend/tests/test_service_s6_07.py",
+   "remaining": [
+    "the maintainer's repository setting: GitHub private vulnerability reporting is off (the private contact form works either way); turning it on is the maintainer's decision",
+    "a fresh-PC walk-through on Windows 11 x64 and Linux (the steps were checked by reading and by CI)",
+    "review P3: neither lock installs PyInstaller for the README packaging steps; 21 text-level mutants survive; a missing run ID ends the demo in a bare traceback; tests match exact Korean phrases"
+   ]
   },
   {
    "id": "S6-08",
