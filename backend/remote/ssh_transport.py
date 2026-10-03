@@ -535,10 +535,10 @@ class SSHTransport:
             raise SSHTransferCancelled("upload cancelled")
         argv = self._rsync_argv(profile, str(source), f'{profile.ssh_target}:{remote}') if resumable else [
             *self._scp_base(profile), str(source), f"{profile.ssh_target}:{remote}"]
+        from backend.engine.process_isolation import session_isolation
         process = subprocess.Popen(
             argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, encoding="utf-8", errors="replace", shell=False, start_new_session=os.name == "posix",
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+            text=True, encoding="utf-8", errors="replace", shell=False, **session_isolation(),
         )
         deadline = time.monotonic() + 3600
         while True:

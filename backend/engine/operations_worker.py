@@ -11,6 +11,7 @@ import threading
 import time
 import psutil
 from backend.engine.model_operations import OperationsStore,run_cycle
+from backend.engine.process_isolation import session_isolation
 
 
 def _paths(project):
@@ -40,7 +41,7 @@ def _start_watcher_locked(project):
     root=_paths(project);(root/'stop').unlink(missing_ok=True)
     with (root/'worker.log').open('ab') as log:
         process=subprocess.Popen([sys.executable,'-m','backend.engine.operations_worker','--project-dir',str(Path(project['project_dir']).resolve())],
-            cwd=Path(__file__).resolve().parents[2],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+            cwd=Path(__file__).resolve().parents[2],stdout=log,stderr=subprocess.STDOUT,**session_isolation())
     owner={'pid':process.pid,'created_at':psutil.Process(process.pid).create_time()}
     temporary=root/'owner.tmp';temporary.write_text(json.dumps(owner),encoding='utf-8');temporary.chmod(0o600);temporary.replace(root/'owner.json')
     return watcher_state(project)

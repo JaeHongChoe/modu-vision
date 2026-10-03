@@ -447,3 +447,76 @@ def test_a_status_file_read_while_it_is_replaced_never_fails_either_side_on_wind
         done.set()
         thread.join(10)
     assert not errors, errors[:5]
+
+
+def test_every_owned_child_is_launched_through_session_isolation():
+    """Every Popen in the backend passes **session_isolation() and no isolation flag of its own (watchers, managed
+    services, the fleet agent, deadline runs, distributed and background training, SSH transfers, local workers)."""
+    import ast
+    root = Path(__file__).resolve().parents[2]
+    own_flags = {'start_new_session', 'creationflags', 'preexec_fn', 'process_group'}
+    problems, launches = [], 0
+    for path in sorted((root / 'backend').rglob('*.py')):
+        if 'tests' in path.parts:
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+            if not (isinstance(node, ast.Call) and (getattr(node.func, 'attr', None) == 'Popen' or getattr(node.func, 'id', None) == 'Popen')):
+                continue
+            launches += 1
+            where = f'{path.relative_to(root).as_posix()}:{node.lineno}'
+            spread = [keyword.value for keyword in node.keywords if keyword.arg is None]
+            if not any(isinstance(value, ast.Call) and getattr(value.func, 'id', None) == 'session_isolation' and not value.args
+                       for value in spread):
+                problems.append(f'{where}: no **session_isolation()')
+            problems += [f'{where}: own {keyword.arg}' for keyword in node.keywords if keyword.arg in own_flags]
+    assert launches >= 8 and problems == [], problems
+    text = '\n'.join(path.read_text(encoding='utf-8') for path in (root / 'backend').rglob('*.py')
+                     if 'tests' not in path.parts and path.name != 'process_isolation.py')
+    assert 'CREATE_NEW_PROCESS_GROUP' not in text  # (a remote command may still run setsid on the remote host)
+
+
+def test_a_deadline_run_uses_session_isolation(monkeypatch):
+    from backend.engine import process_isolation, runtime_deadline
+    calls = []
+    real = process_isolation.session_isolation
+
+    def recorded():
+        calls.append(real())
+        return calls[-1]
+    monkeypatch.setattr(process_isolation, 'session_isolation', recorded)
+    launched = []
+    real_popen = subprocess.Popen
+
+    def popen(*args, **kwargs):
+        launched.append(kwargs)
+        return real_popen(*args, **kwargs)
+    monkeypatch.setattr(runtime_deadline.subprocess, 'Popen', popen)
+    result = runtime_deadline.execute_owned_process([sys.executable, '-c', 'print(1)'], deadline_ms=60_000)
+    assert calls == [real()], 'the child was launched with the shared isolation options'
+    assert len(launched) == 1 and all(launched[0].get(key) == value for key, value in real().items()), 'Popen received them'
+    assert result.get('status') != 'timeout', result
+
+
+def test_the_isolation_helper_imports_nothing_from_the_app():
+    """Packaged runtimes copy backend/engine without backend/remote; a deadline run there must still start its child."""
+    import ast
+    root = Path(__file__).resolve().parents[2]
+    for name in ('process_isolation.py', 'runtime_deadline.py'):
+        tree = ast.parse((root / 'backend' / 'engine' / name).read_text(encoding='utf-8'))
+        imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
+        imported |= {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+        assert not {module for module in imported if module.startswith('backend.remote')}, name
+    from backend.engine import process_isolation, runtime_process_control
+    assert runtime_process_control.session_isolation is process_isolation.session_isolation
+
+
+def test_a_generation_package_carries_what_its_owned_run_imports():
+    """A GAN generation package copies a fixed list of engine files; its deadline run imports process_isolation."""
+    import ast
+    from backend.engine.gan_package_runtime import GENERATOR_PACKAGE_ENGINE_FILES
+    engine = Path(__file__).resolve().parents[2] / 'backend' / 'engine'
+    for name in ('runtime_deadline.py', 'process_isolation.py'):
+        tree = ast.parse((engine / name).read_text(encoding='utf-8'))
+        needed = {node.module.rsplit('.', 1)[1] + '.py' for node in ast.walk(tree)
+                  if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith('backend.engine.')}
+        assert needed <= set(GENERATOR_PACKAGE_ENGINE_FILES), (name, needed - set(GENERATOR_PACKAGE_ENGINE_FILES))

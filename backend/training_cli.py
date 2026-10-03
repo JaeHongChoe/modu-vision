@@ -74,8 +74,9 @@ def main(argv=None):
             if options.background:
                 logfile=Path(recipe['output_dir'])/'runs'/record['run_id']/'progress.jsonl'
                 with logfile.open('ab') as log:
+                    from backend.engine.process_isolation import session_isolation
                     child=subprocess.Popen([sys.executable,'-m','backend.training_cli','execute','--output',recipe['output_dir'],'--run-id',record['run_id'],'--launch-handshake'],
-                        cwd=Path(__file__).resolve().parent.parent,stdin=subprocess.PIPE,stdout=log,stderr=log,start_new_session=True)
+                        cwd=Path(__file__).resolve().parent.parent,stdin=subprocess.PIPE,stdout=log,stderr=log,**session_isolation())
                 # Publish the execution owner before releasing the child. A fast
                 # child can never have its running/completed journal overwritten
                 # by a stale queued record from this launcher.

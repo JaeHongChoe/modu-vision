@@ -18,12 +18,13 @@ def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_eve
     """The budget includes initialization; termination also targets descendant work."""
     validate_deadline(deadline_ms)
     started=time.monotonic()
-    kwargs={'start_new_session':True} if os.name!='nt' else {'creationflags':subprocess.CREATE_NEW_PROCESS_GROUP}
+    from backend.engine.process_isolation import session_isolation  # packaged runtimes have no backend.remote
     # Files avoid a child blocking on a filled output pipe. Inference results use
     # a separate bounded JSON file, not arbitrary model logging on stdout.
     import tempfile
     with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
-        process=subprocess.Popen(command,stdout=stdout,stderr=stderr,env=env,cwd=cwd,**kwargs)
+        # Own session on POSIX; own process group and no console window on Windows.
+        process=subprocess.Popen(command,stdout=stdout,stderr=stderr,env=env,cwd=cwd,**session_isolation())
         cancelled=False
         try:
             if cancel_event is None:process.wait(timeout=None if deadline_ms is None else max(.0001,deadline_ms/1000-(time.monotonic()-started)))

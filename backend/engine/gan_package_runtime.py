@@ -12,6 +12,11 @@ from backend.engine.defect_gan import generate_defect_candidates, generate_compo
 def _sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+# The engine files a generation package carries; runtime_deadline (the owned generation run) needs process_isolation.
+GENERATOR_PACKAGE_ENGINE_FILES = ('defect_gan.py', 'gan_package_runtime.py', 'runtime_device.py', 'geometry_measurement.py',
+                                  'runtime_deadline.py', 'process_isolation.py', 'runtime_configuration.py', 'native_runtime_bridge.py')
+
+
 def build_generator_package(checkpoint: Path, output_dir: Path) -> Path:
     from backend.engine.specialized_models import require_completed_checkpoint
     require_completed_checkpoint(checkpoint)
@@ -29,7 +34,7 @@ def build_generator_package(checkpoint: Path, output_dir: Path) -> Path:
         copy_native_sdk(Path(__file__).parent.parents[1]/'native_runtime', staging/'native_runtime')
         shutil.copyfile(checkpoint,staging/'best_model.pt');shutil.copyfile(metadata,staging/'model_meta.json')
         engine=Path(__file__).parent
-        for name in ('defect_gan.py','gan_package_runtime.py','runtime_device.py','geometry_measurement.py','runtime_deadline.py','runtime_configuration.py','native_runtime_bridge.py'):
+        for name in GENERATOR_PACKAGE_ENGINE_FILES:
             target=staging/'backend'/'engine'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(engine/name,target)
         (staging/'backend'/'__init__.py').write_text('',encoding='utf-8')
         (staging/'backend'/'engine'/'__init__.py').write_text('',encoding='utf-8')

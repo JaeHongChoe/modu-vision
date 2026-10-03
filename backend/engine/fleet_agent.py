@@ -18,7 +18,7 @@ import httpx
 import psutil
 from fastapi import Depends,FastAPI,HTTPException,Request
 from backend.engine.runtime_process_control import (atomic_private_json,owned_inspection_process,
-    process_identity,runtime_state_lock,serialized_lifecycle)
+    process_identity,runtime_state_lock,serialized_lifecycle,session_isolation)
 
 
 MAX_ARCHIVE_BYTES=1024*1024*1024
@@ -122,7 +122,7 @@ class FieldAgent:
             arguments=runtime_command(['--package',str(package),'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),
                 '--release-policy',str(policy),'--require-approved-release','--device',selected,'--port',str(self.config['port'])])
             env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=self.config['token']
-            with (self.root/'service.log').open('ab') as log:process=subprocess.Popen(arguments,cwd=runtime_cwd(),env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+            with (self.root/'service.log').open('ab') as log:process=subprocess.Popen(arguments,cwd=runtime_cwd(),env=env,stdout=log,stderr=subprocess.STDOUT,**session_isolation())
             try:self.config.update(process_identity(process,self.root/'state'));self.save(self.config)
             except Exception:
                 process.terminate();process.wait(timeout=10);raise

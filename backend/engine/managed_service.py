@@ -18,7 +18,7 @@ from backend.engine.inspection_service import _verify_release_policy
 from backend.engine.runtime_deployment import DeploymentLedger
 from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
 from backend.engine.runtime_process_control import (atomic_private_json,
-    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle)
+    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle,session_isolation)
 
 
 class ManagedService:
@@ -208,7 +208,7 @@ class ManagedService:
         # Runtime modules are loaded from this checkout, never from untrusted release code.
         checkout=runtime_cwd()
         log=(self.root/'service.log').open('ab')
-        try:process=subprocess.Popen(arguments,cwd=checkout,env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        try:process=subprocess.Popen(arguments,cwd=checkout,env=env,stdout=log,stderr=subprocess.STDOUT,**session_isolation())
         finally:log.close()
         try:self.config.update(process_identity(process,self.root/'state'));self.save(self.config)
         except Exception:

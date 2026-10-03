@@ -47,7 +47,8 @@ def launch_distributed(spec_path,*,cancel_event=None,status_writer=None):
     command=[sys.executable,'-m','torch.distributed.run','--rdzv_backend=static','--master_addr=127.0.0.1',f'--master_port={port}',f'--nproc_per_node={processes}',
              '-m','backend.remote.distributed_worker','--spec',str(spec_path)]
     with log_path.open('wb') as log:
-        process=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,start_new_session=os.name=='posix',
+        from backend.engine.process_isolation import session_isolation
+        process=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,**session_isolation(),
                                  env={**os.environ,'OMP_NUM_THREADS':os.environ.get('OMP_NUM_THREADS','1')})
         try:
             while process.poll() is None:
