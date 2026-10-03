@@ -11,10 +11,13 @@ Each test below is the existing production-path regression, imported so that one
 - S0-04, central release actions: rollback rechecks revocation (no remote command for a revoked release) and the
   emergency path keeps every live gate.
 
-The interface half of S0-08 (real clicks: threshold 8 saved, reopened and run; another version's evaluation never
-shown as current; a refused task change) is ``scripts/e2e/service-s0-05.spec.ts`` on the S0-09 harness. That spec
-clicks the real renderer but answers the model list and the run from fixtures; it stands in for the planned
-``service-integrity.spec.ts`` (a recorded deviation). A full backend run executes these tests twice (here and in their
+The interface half of S0-08 runs on the S0-09 harness in two specs (they stand in for the planned
+``service-integrity.spec.ts``, a recorded deviation): ``scripts/e2e/service-s0-08.spec.ts`` on the actual backend with
+no fixture answer (a model trained on the CPU, its calibrated threshold carried into the flow, threshold 8 saved,
+reopened, kept by an earlier version and used by actual runs, a task change refused while the flow is unsaved), and
+``scripts/e2e/service-s0-05.spec.ts`` for the paths an actual backend cannot be held in (another version's evaluation
+finishing late, a task change refused by the server). ``scripts/service_baseline_evidence.py`` writes one
+BaselineEvidence record per defect from ``PINNED``. A full backend run executes these tests twice (here and in their
 own modules, about a minute); this module is the one-command baseline, not extra coverage.
 """
 from backend.tests.test_fleet_emergency_rollback import (  # noqa: F401  (imported tests run here)

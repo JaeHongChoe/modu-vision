@@ -53,6 +53,7 @@ jobs:
           backend/tests/test_service_release_eligibility.py
           backend/tests/test_fleet_emergency_rollback.py
           backend/tests/test_service_s0_06.py
+          backend/tests/test_service_s0_08.py
           backend/tests/test_service_s1_01.py
           backend/tests/test_service_s1_06.py
           backend/tests/test_service_image_path_alias.py
@@ -65,6 +66,8 @@ jobs:
           backend/tests/test_service_s6_07.py
           backend/tests/test_sqlite_wal.py
           backend/tests/test_service_s1_02.py
+      - name: Core defect baseline evidence
+        run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Browser transport and flow checks
@@ -83,6 +86,7 @@ jobs:
           name: linux-cpu-${{ github.sha }}
           path: |
             ci-receipt.json
+            ci-baseline-evidence.json
             ci-license-inventory.json
             ci-pytest.xml
             ${{ runner.temp }}/modu-e2e

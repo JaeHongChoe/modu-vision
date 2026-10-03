@@ -910,7 +910,7 @@ export const FlowchartStudio: React.FC = () => {
           </span>}
           {savedVersions.length > 0 && <label className="ml-2 flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
             저장 버전
-            <select value={selectedVersionId} onChange={(event) => openSavedVersion(event.target.value)}
+            <select aria-label="저장 버전" value={selectedVersionId} onChange={(event) => openSavedVersion(event.target.value)}
               disabled={isLoading || isSaving || isRunning || isVerifyingAction}
               className="max-w-[220px] rounded border border-[#364357] bg-[#1A212E] px-2 py-1 text-xs text-slate-100 disabled:opacity-50">
               <option value="">버전 선택</option>

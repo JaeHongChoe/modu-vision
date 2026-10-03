@@ -49,6 +49,7 @@ jobs:
         run: >-
           python -m pytest -q --junitxml=ci-pytest.xml
           backend/tests/test_service_s0_06.py
+          backend/tests/test_service_s0_08.py
           backend/tests/test_service_s1_01.py
           backend/tests/test_service_s1_06.py
           backend/tests/test_service_image_path_alias.py
@@ -70,6 +71,8 @@ jobs:
           $env:MV_E2E_PYTHON = (Get-Command python).Source
           npm run test:e2e:electron
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Core defect baseline evidence
+        run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Record native evidence and inventory
         if: always()
         run: |
@@ -83,6 +86,7 @@ jobs:
           name: windows-unpackaged-${{ github.sha }}
           path: |
             ci-receipt.json
+            ci-baseline-evidence.json
             ci-license-inventory.json
             ci-pytest.xml
             ${{ runner.temp }}/modu-e2e

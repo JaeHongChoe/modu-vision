@@ -28,6 +28,17 @@ logger = logging.getLogger("vision_ai_studio.telemetry")
 router = APIRouter(tags=["telemetry"])
 
 
+
+def _metric_value(value: Any) -> Any:
+    """A number rounded for the live progress message; other recorded values (an anomaly model's confusion matrix,
+    its threshold basis label, a flag) are sent as recorded, as the status endpoint returns them. A numpy or torch
+    value is sent as the plain value it holds (a scalar, or a list for an array), so the message always serialises."""
+    if hasattr(value, 'tolist') and not isinstance(value, (list, tuple, str, bytes)):
+        value = value.tolist()  # numpy scalars and 0-d tensors give a Python scalar; arrays give (nested) lists
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    return round(float(value), 5)
+
 class RateLimiter:
     """Controls event emission frequency to stay within 10-50Hz."""
 
@@ -380,7 +391,7 @@ class WebSocketTelemetryCallback(TrainingCallback):
             "train_loss": round(float(train_loss), 5),
             "val_loss": None if val_loss is None else round(float(val_loss), 5),
             "lr": float(lr),
-            "metrics": {k: None if v is None else round(float(v), 5) for k, v in metrics.items()},
+            "metrics": {k: _metric_value(v) for k, v in metrics.items()},
             "eta_seconds": round(total_eta, 1),
         })
 
