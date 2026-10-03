@@ -217,6 +217,56 @@ function firstUnvisitedNode(
 
 /** A problem of an editable graph, attached to the node or connection where the user can fix it. */
 export interface FlowIssue { kind: 'node' | 'edge' | 'graph'; id: string | null; message: string }
+/** The class vocabulary of the completed models (the flow model catalog); without it the class checks are skipped. */
+export type FlowModelVocabulary = { job_id: string; class_names?: string[]; class_ids?: number[] };
+
+/** The classes a class rule of `nodeId` may name: the vocabulary of its own model or of the nearest upstream models,
+ *  without background 0; empty when unknown or when two upstream models disagree. */
+export function nodeClassChoices(pipeline:FlowchartPipeline,nodeId:string,models:FlowModelVocabulary[]):{id:number;name:string}[]{
+  const own=pipeline.nodes.find(node=>node.id===nodeId)?.data.model_job_id;
+  const jobs=new Set<string>();const visited=new Set<string>();
+  const visit=(id:string)=>{
+    if(visited.has(id))return;visited.add(id);
+    const node=pipeline.nodes.find(row=>row.id===id);
+    if(node?.data.model_job_id){jobs.add(node.data.model_job_id);return;}
+    pipeline.edges.filter(edge=>edge.target===id).forEach(edge=>visit(edge.source));
+  };
+  if(own)jobs.add(own);else visit(nodeId);
+  const vocabulary=new Map<number,string>();
+  for(const job of jobs){
+    const model=models.find(row=>row.job_id===job);
+    if(!model?.class_names?.length||model.class_ids?.length!==model.class_names.length)return [];
+    for(let index=0;index<model.class_names.length;index++){
+      const id=model.class_ids[index],name=model.class_names[index];
+      if(id===0)continue;
+      if(vocabulary.has(id)&&vocabulary.get(id)!==name)return [];
+      vocabulary.set(id,name);
+    }
+  }
+  return [...vocabulary].sort(([a],[b])=>a-b).map(([id,name])=>({id,name}));
+}
+
+function modelClassNames(models: FlowModelVocabulary[] | undefined, jobId: string | undefined): string[] | null {
+  const model = jobId ? models?.find((row) => row.job_id === jobId) : undefined;
+  return model?.class_names?.length ? model.class_names : null;
+}
+
+/** Class IDs a rule names that the connected model does not record (S2-05); an unknown or conflicting vocabulary is
+ *  not judged here (nodeClassChoices answers nothing), so a missing catalog never blocks the editor. */
+function classIdIssue(pipeline: FlowchartPipeline, node: FlowNode, models: FlowModelVocabulary[] | undefined): string | null {
+  // A model node is judged only against its own model: an unbound one is already refused for its missing model, and an
+  // upstream model's classes would suggest the wrong choices.
+  if (!models || (node.data.node_type === 'inspection' && !node.data.model_job_id)) return null;
+  const choices = nodeClassChoices(pipeline, node.id, models);
+  if (!choices.length) return null;
+  const params = node.data.params || {};
+  const named = [...(Array.isArray(params.class_ids) ? params.class_ids : []),
+    ...(Array.isArray(params.class_rules) ? params.class_rules.map((row: { class_id?: unknown }) => row?.class_id) : [])];
+  const missing = [...new Set(named.filter((id) => !choices.some((choice) => choice.id === id)))];
+  return missing.length
+    ? `연결된 모델에 없는 클래스 ID: ${missing.join(', ')}. 선택 가능한 클래스: ${choices.map((choice) => `${choice.id} ${choice.name}`).join(', ')}`
+    : null;
+}
 
 /** The key a connection's problems are filed under: its id, or its position for saved data without one. */
 export const flowEdgeKey = (edge: FlowEdge, index: number): string => edge.id || `\u0000${index}`;
@@ -240,7 +290,7 @@ function guarded(message: string, check: () => string | null): string | null {
 /** Every problem of the graph in the order the backend reports them (S2-05). With `first`, stops at the first one,
  *  which is the validator's answer; otherwise each node and connection reports its own first problem, so the editor can
  *  mark all of them at once. */
-export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: { first?: boolean } = {}): FlowIssue[] {
+export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, models: catalog }: { first?: boolean; models?: FlowModelVocabulary[] } = {}): FlowIssue[] {
   const issues: FlowIssue[] = [];
   const report = (message: string, kind: FlowIssue['kind'] = 'graph', id: string | null = null) => {
     issues.push({ kind, id, message });
@@ -279,6 +329,18 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
       if (edge.predicate && (!modelTypes.includes(nodes.get(edge.source)?.data.node_type as FlowNodeType) || !edge.predicate.class_name.trim() || !['present', 'absent'].includes(edge.predicate.operator) ||
         !Number.isFinite(edge.predicate.min_confidence ?? 0) || (edge.predicate.min_confidence ?? 0) < 0 || (edge.predicate.min_confidence ?? 0) > 1 ||
         (edge.isBranch && edge.isBranch !== 'default'))) return '클래스 조건과 신뢰도 범위를 확인하세요.';
+      if (edge.predicate) {
+        // A class the source model never predicts would make the condition silently never (present) or always (absent) hold.
+        // The engine compares the name exactly (no trimming, case kept), so the editor does too.
+        const source = nodes.get(edge.source);
+        const names = modelClassNames(catalog, source?.data.model_job_id);
+        const wanted = edge.predicate.class_name;
+        if (names && !names.includes(wanted)) {
+          return names.includes(wanted.trim())
+            ? `연결 조건 클래스 '${wanted}'의 앞뒤 공백을 지우세요. 실행 시 클래스 이름은 공백까지 그대로 비교됩니다.`
+            : `연결 조건 클래스 '${wanted}': ${source?.data.label || edge.source} 모델에 없는 이름입니다. 모델 클래스: ${names.join(', ')}`;
+        }
+      }
       const from = nodes.get(edge.source)?.data.node_type;
       const to = nodes.get(edge.target)?.data.node_type;
       const payloads = allowedPayloads(from as FlowNodeType, to as FlowNodeType);
@@ -339,7 +401,12 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
       if (node.data.task === 'ocr') {
         const issue=ocrRuleIssue(node.data.params || {});if(issue)return `${node.data.label}: ${issue}`;
       }
-      if(node.data.task==='segmentation'){const issue=classRuleIssue(node.data.params || {},false);if(issue)return `${node.data.label}: ${issue}`;}
+      if(node.data.task==='segmentation'){
+        const issue=classRuleIssue(node.data.params || {},false)??classIdIssue(pipeline,node,catalog);if(issue)return `${node.data.label}: ${issue}`;
+        const requested=node.data.params?.class_names,recorded=modelClassNames(catalog,node.data.model_job_id);
+        // The engine refuses a channel order that differs from the checkpoint; say so before a run does.
+        if(Array.isArray(requested)&&requested.length&&recorded&&JSON.stringify(requested)!==JSON.stringify(recorded))return `${node.data.label}: 분할 클래스 순서(${requested.join(', ')})가 모델(${recorded.join(', ')})과 다릅니다.`;
+      }
       const targets = outgoing.get(node.id) || [];
       if (!targets.length || targets.some((edge) => ![...operatorTypes, ...modelTypes, 'blob_measure', 'measurement', 'aggregate', 'decision'].includes(nodes.get(edge.target)?.data.node_type as FlowNodeType))) {
         return `${node.data.label}: 다음 모델, Blob, 집계 또는 판정 노드로 연결하세요.`;
@@ -347,7 +414,7 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
       return null;
     }],
     [blobs, (node) => {
-      const issue=classRuleIssue(node.data.params || {},true);if(issue)return `${node.data.label}: ${issue}`;
+      const issue=classRuleIssue(node.data.params || {},true)??classIdIssue(pipeline,node,catalog);if(issue)return `${node.data.label}: ${issue}`;
       const parents = incoming.get(node.id) || [];
       const source = nodes.get(parents[0]?.source);
       if (parents.length !== 1 || source?.data.node_type !== 'inspection' || !['segmentation','anomaly'].includes(source.data.task || '')) {
@@ -447,15 +514,15 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false }: 
 }
 
 /** Mirrors the backend's supported executable graph, including saved linear flows. */
-export function validateFlowchartGraph(pipeline: FlowchartPipeline): string | null {
-  return flowGraphIssues(pipeline, { first: true })[0]?.message ?? null;
+export function validateFlowchartGraph(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[]): string | null {
+  return flowGraphIssues(pipeline, { first: true, models })[0]?.message ?? null;
 }
 
 /** The issues of each node and connection, for marking them on the canvas. */
-export function flowIssuesByTarget(pipeline: FlowchartPipeline): { nodes: Map<string, string[]>; edges: Map<string, string[]> } {
+export function flowIssuesByTarget(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[]): { nodes: Map<string, string[]>; edges: Map<string, string[]> } {
   const nodes = new Map<string, string[]>();
   const edges = new Map<string, string[]>();
-  for (const issue of flowGraphIssues(pipeline)) {
+  for (const issue of flowGraphIssues(pipeline, { models })) {
     if (!issue.id || issue.kind === 'graph') continue;
     const target = issue.kind === 'node' ? nodes : edges;
     target.set(issue.id, [...(target.get(issue.id) || []), issue.message]);
@@ -467,9 +534,10 @@ export function flowIssuesByTarget(pipeline: FlowchartPipeline): { nodes: Map<st
 export function locateFlowIssue(
   pipeline: FlowchartPipeline,
   message: string | null,
+  models?: FlowModelVocabulary[],
 ): { kind: 'node' | 'edge'; id: string } | null {
   if (!message) return null;
-  const first = flowGraphIssues(pipeline, { first: true })[0];
+  const first = flowGraphIssues(pipeline, { first: true, models })[0];
   // A connection saved without an id has only a positional key on the canvas; there is nothing to select.
   const selectable = first?.kind === 'node' || pipeline.edges.some((edge) => edge.id && edge.id === first?.id);
   if (first && first.message === message && first.id && first.kind !== 'graph' && selectable) return { kind: first.kind, id: first.id };

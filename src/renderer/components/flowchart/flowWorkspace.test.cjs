@@ -18,11 +18,3 @@ test('ROI trace follows selected branches and excludes an unselected sibling',()
   const result={execution_steps:[{node_id:'roi',status:'passed',selected_edge_ids:['a'],artifacts:[{roi_id:'r1'}]},{node_id:'no',status:'skipped',artifacts:[]},{node_id:'yes',status:'flagged_ng',selected_edge_ids:['c'],artifacts:[{roi_id:'r1:patch_2'}]},{node_id:'next',status:'passed',artifacts:[{roi_id:'r1:patch_2'}]}]};
   assert.deepEqual(m.exports.roiTrace('r1:patch_2',graph,result).map(r=>r.node_id),['roi','yes','next']);
 });
-test('class rule choices use model IDs and refuse conflicting upstream vocabularies',()=>{
-  const graph={nodes:[{id:'seg',data:{model_job_id:'model'}},{id:'blob',data:{node_type:'blob_measure'}}],edges:[{source:'seg',target:'blob'}]};
-  const models=[{job_id:'model',class_names:['background','Bow'],class_ids:[0,1]}];
-  assert.deepEqual(m.exports.nodeClassChoices(graph,'blob',models),[{id:1,name:'Bow'}]);
-  graph.nodes.push({id:'other',data:{model_job_id:'second'}});graph.edges.push({source:'other',target:'blob'});
-  models.push({job_id:'second',class_names:['background','Crack'],class_ids:[0,1]});
-  assert.deepEqual(m.exports.nodeClassChoices(graph,'blob',models),[]);
-});

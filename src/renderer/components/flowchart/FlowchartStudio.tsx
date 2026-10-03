@@ -40,7 +40,6 @@ import { ImageRoiEditor } from './ImageRoiEditor';
 import { FlowNodeDebugger } from './FlowNodeDebugger';
 import { FlowWorkspacePanel } from './FlowWorkspacePanel';
 import { FlowEvaluationPanel } from './FlowEvaluationPanel';
-import {nodeClassChoices} from './flowWorkspace';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
@@ -54,7 +53,7 @@ import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
-import { connectFlowNodes, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
+import { connectFlowNodes, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -347,10 +346,10 @@ export const FlowchartStudio: React.FC = () => {
     node.data.node_type === 'inspection' && !node.data.model_job_id
   ) ?? false;
   const needsModel = !pipeline || missingDetectionModel || missingInspectionModel || pipeline.nodes.some(node=>getFlowchartModelTask(node)!==null&&!node.data.model_job_id);
-  const graphError = pipeline ? validateFlowchartGraph(pipeline) : null;
-  const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError) : null;
+  const graphError = pipeline ? validateFlowchartGraph(pipeline, modelCatalog) : null;
+  const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError, modelCatalog) : null;
   // Every node's and connection's own problem, marked where it is (the banner keeps the first one).
-  const flowIssues = pipeline ? flowIssuesByTarget(pipeline) : null;
+  const flowIssues = pipeline ? flowIssuesByTarget(pipeline, modelCatalog) : null;
   const canVerifyGraph = modelCheck.status !== 'checking' && hasSelectedFolder && !datasetIsLoading
     && !importError && datasetKey === `${folderPath}\0${task}`;
 
@@ -1277,7 +1276,7 @@ export const FlowchartStudio: React.FC = () => {
                       edge.id === selectedEdge.id ? { ...edge, label: event.target.value } : edge) })}
                     className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
                 </div>
-                {['detection_crop','inspection'].includes(pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.node_type || '') && <div className="space-y-2"><label className="block">클래스 조건<select value={selectedEdge.predicate?.operator || ''} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,isBranch:undefined,predicate:e.target.value?{kind:'class',operator:e.target.value as 'present'|'absent',class_name:edge.predicate?.class_name || '',min_confidence:edge.predicate?.min_confidence || 0}:undefined}:edge)})} className="ml-2 rounded bg-slate-800 p-1"><option value="">사용 안 함</option><option value="present">클래스 있음</option><option value="absent">클래스 없음</option></select></label>{selectedEdge.predicate && <><input aria-label="분기 클래스 이름" placeholder="클래스 이름" value={selectedEdge.predicate.class_name} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,class_name:e.target.value}}:edge)})} className="w-full rounded bg-slate-800 p-1" /><label>최소 신뢰도<input type="number" min="0" max="1" step="0.05" value={selectedEdge.predicate.min_confidence || 0} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,min_confidence:Number(e.target.value)}}:edge)})} className="ml-2 w-20 rounded bg-slate-800 p-1" /></label></>}</div>}
+                {['detection_crop','inspection'].includes(pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.node_type || '') && <div className="space-y-2"><label className="block">클래스 조건<select value={selectedEdge.predicate?.operator || ''} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,isBranch:undefined,predicate:e.target.value?{kind:'class',operator:e.target.value as 'present'|'absent',class_name:edge.predicate?.class_name || '',min_confidence:edge.predicate?.min_confidence || 0}:undefined}:edge)})} className="ml-2 rounded bg-slate-800 p-1"><option value="">사용 안 함</option><option value="present">클래스 있음</option><option value="absent">클래스 없음</option></select></label>{selectedEdge.predicate && <><input aria-label="분기 클래스 이름" placeholder="클래스 이름" list="flow-predicate-classes" value={selectedEdge.predicate.class_name} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,class_name:e.target.value}}:edge)})} className="w-full rounded bg-slate-800 p-1" /><datalist id="flow-predicate-classes">{(modelCatalog.find((row) => row.job_id===pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.model_job_id)?.class_names || []).map((name) => <option key={name} value={name} />)}</datalist><label>최소 신뢰도<input type="number" min="0" max="1" step="0.05" value={selectedEdge.predicate.min_confidence || 0} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,min_confidence:Number(e.target.value)}}:edge)})} className="ml-2 w-20 rounded bg-slate-800 p-1" /></label></>}</div>}
                 {(['detection_crop', 'inspection', 'blob_measure', 'measurement', 'aggregate'].includes(pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type || '')) && (
                   <div>
                     <label className="text-[#94A3B8] block mb-1">다음 노드 실행 조건</label>

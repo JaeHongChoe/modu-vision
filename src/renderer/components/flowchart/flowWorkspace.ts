@@ -1,29 +1,5 @@
 import type { FlowchartPipeline, FlowchartExecutionStep, FlowchartExecutionResult, FlowNode } from '../../types';
 
-export function nodeClassChoices(pipeline:FlowchartPipeline,nodeId:string,models:{job_id:string;class_names?:string[];class_ids?:number[]}[]):{id:number;name:string}[]{
-  const own=pipeline.nodes.find(node=>node.id===nodeId)?.data.model_job_id;
-  const jobs=new Set<string>();const visited=new Set<string>();
-  const visit=(id:string)=>{
-    if(visited.has(id))return;visited.add(id);
-    const node=pipeline.nodes.find(row=>row.id===id);
-    if(node?.data.model_job_id){jobs.add(node.data.model_job_id);return;}
-    pipeline.edges.filter(edge=>edge.target===id).forEach(edge=>visit(edge.source));
-  };
-  if(own)jobs.add(own);else visit(nodeId);
-  const vocabulary=new Map<number,string>();
-  for(const job of jobs){
-    const model=models.find(row=>row.job_id===job);
-    if(!model?.class_names?.length||model.class_ids?.length!==model.class_names.length)return [];
-    for(let index=0;index<model.class_names.length;index++){
-      const id=model.class_ids[index],name=model.class_names[index];
-      if(id===0)continue;
-      if(vocabulary.has(id)&&vocabulary.get(id)!==name)return [];
-      vocabulary.set(id,name);
-    }
-  }
-  return [...vocabulary].sort(([a],[b])=>a-b).map(([id,name])=>({id,name}));
-}
-
 export function flowTestSetStorageKey(scope:{projectId:string;projectDir:string;source:string;task:string;labelset?:string;computeProfileId:string|null;apiIdentity:string}):string {
   return `flow-test-set:v2:${JSON.stringify([scope.apiIdentity,scope.computeProfileId,scope.projectId,scope.projectDir,scope.source,scope.task,scope.labelset||'default'])}`;
 }

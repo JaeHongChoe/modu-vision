@@ -130,3 +130,66 @@ test('S2-05 review: DEFECT BOXES only for a detection model feeding the decision
  assert.match(render({node:node('seg','inspection',{task:'segmentation'}),issues:['seg: x']}),/border-amber-500 hover:border-amber-400/,'the frame itself is amber');
  assert.doesNotMatch(render({node:node('seg','inspection',{task:'segmentation'})}),/hover:border-amber-400/);
  assert.match(render({node:node('seg','inspection',{task:'segmentation'})}),/data-flow-port="seg:out:1"/,'each port carries its key for the wire layer');});
+test('class rule choices use model IDs and refuse conflicting upstream vocabularies',()=>{
+  const pipeline={nodes:[{id:'seg',data:{model_job_id:'model'}},{id:'blob',data:{node_type:'blob_measure'}}],edges:[{source:'seg',target:'blob'}]};
+  const models=[{job_id:'model',class_names:['background','Bow'],class_ids:[0,1]}];
+  assert.deepEqual(graph.nodeClassChoices(pipeline,'blob',models),[{id:1,name:'Bow'}]);
+  pipeline.nodes.push({id:'other',data:{model_job_id:'second'}});pipeline.edges.push({source:'other',target:'blob'});
+  models.push({job_id:'second',class_names:['background','Crack'],class_ids:[0,1]});
+  assert.deepEqual(graph.nodeClassChoices(pipeline,'blob',models),[]);
+});
+test('S2-05: a class a rule names must exist in the connected model, and an unknown vocabulary is never judged',()=>{
+ const catalog=[{job_id:'job_seg',class_names:['background','scratch'],class_ids:[0,1]},{job_id:'job_cls',class_names:['OK','NG'],class_ids:[0,1]}];
+ const flow=()=>{const p=valid();p.nodes[1].data.model_job_id='job_seg';p.nodes[2].data.model_job_id='job_cls';return p;};
+ // A branch condition on a class the classifier never predicts.
+ const predicate=flow();predicate.edges[3]={...predicate.edges[3],predicate:{kind:'class',operator:'present',class_name:'Crack'}};
+ assert.deepEqual(graph.flowIssuesByTarget(predicate).edges.get('e4')||[],[],'without the catalog nothing is judged');
+ const named=graph.flowIssuesByTarget(predicate,catalog).edges.get('e4')||[];
+ assert.ok(named.some(message=>/'Crack': cls 모델에 없는 이름입니다\. 모델 클래스: OK, NG/.test(message)),named);
+ predicate.edges[3].predicate.class_name='NG';assert.deepEqual(graph.flowIssuesByTarget(predicate,catalog).edges.get('e4')||[],[]);
+ // A Blob rule and a segmentation rule on class IDs the segmentation model does not record.
+ const blob=flow();blob.nodes.push(node('blob','blob_measure',{params:{class_ids:[2],class_rules:[{class_id:3}]}}));
+ blob.edges[2]={id:'e3',source:'seg',target:'blob',payload_type:'result'};blob.edges.push({id:'e6',source:'blob',target:'judge',payload_type:'result'});
+ const blobIssues=graph.flowIssuesByTarget(blob,catalog).nodes.get('blob')||[];
+ assert.ok(blobIssues.some(message=>/연결된 모델에 없는 클래스 ID: 2, 3\. 선택 가능한 클래스: 1 scratch/.test(message)),blobIssues);
+ assert.deepEqual(graph.flowIssuesByTarget(blob).nodes.get('blob')||[],[],'without the catalog the Blob is not judged');
+ const segRules=flow();segRules.nodes[1].data.params={class_ids:[4]};
+ assert.ok((graph.flowIssuesByTarget(segRules,catalog).nodes.get('seg')||[]).some(message=>/없는 클래스 ID: 4\./.test(message)));
+ // The segmentation channel order must equal the model's, as the engine refuses a different one.
+ const order=flow();order.nodes[1].data.params={class_names:['background','dent']};
+ assert.ok((graph.flowIssuesByTarget(order,catalog).nodes.get('seg')||[]).some(message=>/분할 클래스 순서\(background, dent\)가 모델\(background, scratch\)과 다릅니다/.test(message)));
+ order.nodes[1].data.params={class_names:['background','scratch']};assert.deepEqual(graph.flowIssuesByTarget(order,catalog).nodes.get('seg')||[],[]);
+ // A model recorded without class IDs has an unknown vocabulary: nothing is judged (conflicts: the test above).
+ assert.deepEqual(graph.flowIssuesByTarget(blob,[{job_id:'job_seg',class_names:['background','scratch']}]).nodes.get('blob')||[],[]);
+ assert.equal(graph.validateFlowchartGraph(predicate,catalog),null,'a known class passes the validator');
+ predicate.edges[3].predicate.class_name='Crack';assert.match(graph.validateFlowchartGraph(predicate,catalog),/Crack/);
+ assert.equal(graph.locateFlowIssue(predicate,graph.validateFlowchartGraph(predicate,catalog),catalog)?.id,'e4');
+});
+test('S2-05 review: class names are compared exactly as the engine does, and a model node is judged by its own model only',()=>{
+ const catalog=[{job_id:'job_seg',class_names:['background','scratch'],class_ids:[0,1]},{job_id:'job_cls',class_names:['OK','NG'],class_ids:[0,1]}];
+ const flow=()=>{const p=valid();p.nodes[1].data.model_job_id='job_seg';p.nodes[2].data.model_job_id='job_cls';return p;};
+ const edgeIssues=(pipeline,models=catalog)=>graph.flowIssuesByTarget(pipeline,models).edges.get('e4')||[];
+ const predicate=flow();predicate.edges[3]={...predicate.edges[3],predicate:{kind:'class',operator:'present',class_name:'NG '}};
+ // The engine never matches 'NG ' to NG, so the condition would silently never hold: say to remove the spaces.
+ assert.ok(edgeIssues(predicate).some(message=>/'NG '의 앞뒤 공백을 지우세요/.test(message)),edgeIssues(predicate));
+ predicate.edges[3].predicate.class_name=' NG';assert.ok(edgeIssues(predicate).some(message=>/공백을 지우세요/.test(message)),'a non-breaking space too');
+ predicate.edges[3].predicate.class_name='ng';assert.ok(edgeIssues(predicate).some(message=>/'ng': cls 모델에 없는 이름입니다/.test(message)),'case is kept, as at run time');
+ predicate.edges[3].predicate.class_name='NG';assert.deepEqual(edgeIssues(predicate),[]);
+ // A source node without a label is named by its id.
+ const unlabeled=flow();unlabeled.nodes[2].data.label='';unlabeled.edges[3]={...unlabeled.edges[3],predicate:{kind:'class',operator:'absent',class_name:'Crack'}};
+ assert.ok(edgeIssues(unlabeled).some(message=>/'Crack': cls 모델에 없는 이름입니다/.test(message)),edgeIssues(unlabeled));
+ // A model recorded with an empty class list has an unknown vocabulary: nothing is judged.
+ assert.deepEqual(edgeIssues(predicate,[{job_id:'job_cls',class_names:[],class_ids:[]}]),[]);
+ predicate.edges[3].predicate.class_name='Crack';assert.deepEqual(edgeIssues(predicate,[{job_id:'job_cls',class_names:[],class_ids:[]}]),[]);
+ // The segmentation channel order is compared in order, not as a set, and with its case.
+ const order=flow();const seg=()=>graph.flowIssuesByTarget(order,catalog).nodes.get('seg')||[];
+ order.nodes[1].data.params={class_names:['scratch','background']};assert.ok(seg().some(message=>/분할 클래스 순서\(scratch, background\)/.test(message)),'a reordering is refused');
+ order.nodes[1].data.params={class_names:['background','Scratch']};assert.ok(seg().some(message=>/분할 클래스 순서/.test(message)),'case is kept');
+ // An unbound segmentation node is not judged against an upstream detector's classes (its missing model is the problem).
+ const unbound={id:'p',name:'p',nodes:[node('in','input'),node('det','detection_crop',{model_job_id:'job_det',threshold:0.5}),node('seg','inspection',{task:'segmentation',threshold:0.5,params:{class_ids:[3]}}),node('judge','decision',{rule:'any_defect_is_ng'}),node('out','output')],
+  edges:[{id:'e1',source:'in',target:'det',payload_type:'image'},{id:'e2',source:'det',target:'seg',payload_type:'roi'},{id:'e3',source:'seg',target:'judge',payload_type:'result'},{id:'e4',source:'judge',target:'out',payload_type:'result'}]};
+ const detector=[{job_id:'job_det',class_names:['chip','pad'],class_ids:[1,2]}];
+ assert.deepEqual((graph.flowIssuesByTarget(unbound,detector).nodes.get('seg')||[]).filter(message=>/클래스 ID/.test(message)),[]);
+ unbound.nodes[2].data.model_job_id='job_seg';
+ assert.ok((graph.flowIssuesByTarget(unbound,[...detector,...catalog]).nodes.get('seg')||[]).some(message=>/없는 클래스 ID: 3\. 선택 가능한 클래스: 1 scratch$/.test(message)),'a bound node is judged by its own model');
+});
