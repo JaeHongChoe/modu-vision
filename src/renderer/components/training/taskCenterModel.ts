@@ -13,7 +13,7 @@ export function normalizeTask(kind:string, raw:Record<string,any>):TaskRow {
   const id=String(raw.search_id || raw.job_id);const transport=String(raw.compute_profile_id || 'local');
   return {key:`${kind}:${transport}:${id}`,id,kind,task:raw.task || kind,status:raw.status,phase:raw.phase || raw.status,
     source:raw.source_dataset_path || raw.dataset_path || '',labelset:raw.scope_kind==='project'?'':raw.training_provenance?.labelset_id || 'default',transport,
-    epoch:raw.current_epoch ?? raw.epoch ?? raw.epochs_consumed ?? 0,totalEpochs:raw.total_epochs ?? raw.epochs ?? raw.budget?.max_total_epochs ?? 0,raw};
+    epoch:raw.current_epoch ?? raw.epoch ?? raw.epochs_completed ?? raw.epochs_consumed ?? 0,totalEpochs:raw.total_epochs ?? raw.epochs ?? raw.budget?.max_total_epochs ?? 0,raw};
 }
 export function tasksForScope(rows:TaskRow[],source:string,labelset:string):TaskRow[] {return rows.filter(row=>row.source===source && (row.labelset===labelset || row.raw?.scope_kind==='project'));}
 export function taskSnapshotForScope<T>(snapshotScope:string,currentScope:string,rows:T[]):T[] {return snapshotScope===currentScope?rows:[];}

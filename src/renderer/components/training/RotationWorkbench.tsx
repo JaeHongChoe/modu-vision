@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { modelTrainingProgram, type LocalTrainingDevice, type RotationEvaluation, type RotationPrediction, type RotationRow } from '../../services/modelTrainingProgram';
 import { useProgramWorkbench } from './useProgramWorkbench';
-import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
+import { ProgramField, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
+import { JobProgressView } from './JobProgressView';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
 import {ProjectImagePicker} from './ProjectImagePicker';
 import {projectSampleRow,replaceSampleRow} from './preparedSampleRows';
@@ -71,7 +72,7 @@ export function RotationWorkbench() {
       if (!state.dataset) return; const row = await modelTrainingProgram.rotation.train({dataset_path: state.dataset.dataset_path, epochs, batch_size: batch, image_size: size, width, learning_rate: rate, device, ...(parent ? {warm_start_job_id: parent} : {})});
       if (state.isCurrent()) {state.setJob(row); setEvaluation(null); setPrediction(null);}
     })}>정방향 모델 후보 학습</button>
-    <ProgramJobStatus job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} />
+    <JobProgressView job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} onReconnect={() => void state.reconnect()} />
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 정방향 후보 모델"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null); setPrediction(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · epoch {String(row.metadata.best_epoch || '?')}</option>)}</select></ProgramField></div>
       <button type="button" className={programButton} disabled={!state.modelId || !selectedData || disabled} onClick={() => void state.action('시험 각도 평가', async () => {const result = await modelTrainingProgram.rotation.evaluate(state.modelId, selectedData!, device); if (state.isCurrent()) setEvaluation(result);})}>시험 분할 평가</button>
       <button type="button" className={programButton} disabled={!state.modelId || !sampleImage || disabled} onClick={() => void state.action('정방향 예측', async () => {const result = await modelTrainingProgram.rotation.predict(state.modelId, sampleImage, device); if (state.isCurrent()) setPrediction(result);})}>선택 이미지 정렬</button>

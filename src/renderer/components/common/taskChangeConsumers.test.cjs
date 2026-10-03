@@ -45,6 +45,8 @@ function harness(kind, outcome) {
       saveTaskHandoff:()=>writes.push(job)},
     './TaskChangeImpactDialog':{TaskChangeImpactDialog:ImpactDialog,taskPreviewScope:()=>scopeFor({...project,...compute,apiTransportIdentity:transport})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''},
+    './jobProgress':(()=>{const file=path.resolve(__dirname,'../training/jobProgress.ts'),shared=new Module(file,module);shared.filename=file;
+      shared._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,file);return shared.exports;})(),
   };
   const relative=kind==='center'?'../training/TaskCenter.tsx':'../wizard/WizardHeader.tsx';
   const filename=path.resolve(__dirname,relative),loaded=new Module(filename,module);

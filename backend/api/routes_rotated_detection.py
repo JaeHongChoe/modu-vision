@@ -436,7 +436,9 @@ def get_job(job_id: str, request: Request):
     if not isinstance(state, dict) or state.get("job_id") != job_id:
         raise HTTPException(status_code=422, detail="Rotated job state identity is invalid")
     if state.get("status") in ("running", "stopping"):
-        state = {**state, "status": "failed", "error": "Training process ended before completion"}
+        # No process of this app owns the job any more (the app restarted). As for every other family it is interrupted,
+        # not failed: no candidate was registered and the same settings can run again.
+        state = {**state, "status": "interrupted", "error": "Application stopped before training completed"}
     return state
 
 

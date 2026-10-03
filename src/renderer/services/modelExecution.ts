@@ -24,6 +24,12 @@ export async function controlModelTraining<T>(row:ExecutionIdentity,action:'stat
  const id=encodeURIComponent(row.execution_job_id||row.job_id);
  return normalizeExecution(await request<ExecutionIdentity>(`/api/compute/jobs/${id}${action==='cancel'?'/cancel':''}`,action==='cancel'?{method:'POST'}:undefined)) as T;
 }
+/** S2-09: asks the server's job manager to observe a disconnected server job again; a local job has nothing to reconnect. */
+export async function reconnectModelTraining<T>(row:ExecutionIdentity):Promise<T>{
+ if(!row.compute_profile_id)throw new Error('이 컴퓨터의 작업은 다시 연결하지 않습니다. 저장된 상태를 다시 확인하세요.');
+ const id=encodeURIComponent(row.execution_job_id||row.job_id);
+ return normalizeExecution(await request<ExecutionIdentity>(`/api/compute/jobs/${id}/reconnect`,{method:'POST'})) as T;
+}
 export async function requireLocalSearch<T>(local:()=>T|Promise<T>):Promise<T>{
  if(useComputeStore.getState().selectedProfileId)throw new Error('자동 후보 탐색은 로컬에서 실행합니다. 실행 위치를 이 컴퓨터로 선택하거나 위 작업대의 서버 학습을 사용하세요.');
  return local();

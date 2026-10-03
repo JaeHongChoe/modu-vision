@@ -1,4 +1,5 @@
-import {controlModelTraining} from '../../services/modelExecution';
+import {controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
+import {watchJob} from './jobProgress';
 import {getApiPersistenceIdentity} from '../../services/api';
 import {useComputeStore} from '../../stores/useComputeStore';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -46,7 +47,7 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
         const own = jobs.jobs.filter(row => family === 'patch'
           ? row.task === 'patch_classification' && !!row.output_dir && row.output_dir.startsWith(`${project?.models_dir}/`)
           : row.source_dataset_path === source && row.training_provenance?.labelset_id === (project?.active_labelset_id || 'default'));
-        const restored = handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row => activeProgramJob(row.status)) || own.at(-1);
+        const restored = handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row => watchJob(row.status)) || own.at(-1);
         if (restored) setJob(restored);
         if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<ProgramJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&isCurrent())setJob(row);}).catch(cause=>{if(active&&isCurrent())setError(programError(cause));});}
       }).catch(cause => {if (active && isCurrent()) setError(programError(cause));});
@@ -54,7 +55,7 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
     return () => {active = false;};
   }, [family, scope, projectDir, source, isCurrent, refreshModels,handoff?.jobId,handoff?.selectionId]);
   useEffect(() => {
-    if (!job || !activeProgramJob(job.status)) return;
+    if (!job || !watchJob(job.status)) return;
     let active = true; let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
@@ -62,8 +63,8 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
         if (!active || !isCurrent()) return;
         setJob(row);
         if (row.status === 'completed') {setModelId(row.job_id); setNotice('완료 후보를 저장했습니다. 평가한 뒤 검사 플로우에 연결하세요.'); await refreshModels();}
-        if (row.error) setError(typeof row.error === 'string' ? row.error : row.error.message || JSON.stringify(row.error));
-        if (activeProgramJob(row.status)) timer = setTimeout(() => void poll(), 1200);
+        // The job's own error and next action are shown by its progress view; a dropped connection is read more slowly.
+        if (watchJob(row.status)) timer = setTimeout(() => void poll(), activeProgramJob(row.status) ? 1200 : 3000);
       } catch (cause) {if (active && isCurrent()) {setError(programError(cause)); timer = setTimeout(() => void poll(), 3000);}}
     };
     void poll(); return () => {active = false; clearTimeout(timer);};
@@ -75,7 +76,12 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
     const result = await controlModelTraining<ProgramJob>(job,'cancel',()=>modelTrainingProgram[family].cancel(job.job_id));
     if (isCurrent()) setJob({...job, ...result, status: result.status === 'stopping' ? 'stopping' : result.status});
   });
+  const reconnect = () => action('재연결 요청', async () => {
+    if (!job) return;
+    const result = await reconnectModelTraining<ProgramJob>(job);
+    if (isCurrent()) setJob({...job, ...result});
+  });
   return {family, source, scope, projectDir, datasets, dataset, selectDataset, addDataset, models, modelId, setModelId,
-    job, setJob, error, setError, notice, setNotice, busy, action, isCurrent, cancel,
+    job, setJob, error, setError, notice, setNotice, busy, action, isCurrent, cancel, reconnect,
     active: !!job && activeProgramJob(job.status), refreshModels};
 }

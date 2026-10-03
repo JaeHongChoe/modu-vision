@@ -1,10 +1,12 @@
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
-import {submitModelTraining,controlModelTraining} from '../../services/modelExecution';
+import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
+import {JobProgressView} from './JobProgressView';
+import {cancellable,watchJob} from './jobProgress';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {getApiPersistenceIdentity} from '../../services/api';
 import {openModelFlow} from './ProgramWorkbenchControls';
 import React, { useEffect, useState } from 'react';
-import { Crosshair, Loader2, RefreshCw, Square } from 'lucide-react';
+import { Crosshair, Loader2, RefreshCw } from 'lucide-react';
 import {
   type RotatedEvaluation, type RotatedJob, type RotatedModelSummary,
   request,
@@ -44,7 +46,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   const [imagePath, setImagePath] = useState('');
   const [evaluation, setEvaluation] = useState<RotatedEvaluation | null>(null);
   const [prediction, setPrediction] = useState<MultiRotatedPrediction | null>(null);
-  const [busy, setBusy] = useState<'manifest' | 'train' | 'cancel' | 'evaluate' | 'predict' | null>(null);
+  const [busy, setBusy] = useState<'manifest' | 'train' | 'cancel' | 'reconnect' | 'evaluate' | 'predict' | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const isActive = !!job&&['queued','preparing','running','stopping','transferring','syncing'].includes(job.status);
@@ -64,7 +66,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets'),request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs'),specializedApi.rotated.models()]).then(([prepared,journal,result])=>{
       if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
       const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff);setModelId(selected?.job_id||'');
-      const restored=handoff?(handoff.transport&&handoff.transport!=='local'?journal.jobs.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>row.status==='running'||row.status==='stopping');setJob(restored||null);
+      const restored=handoff?(handoff.transport&&handoff.transport!=='local'?journal.jobs.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>watchJob(row.status));setJob(restored||null);
       if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<RotatedJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&sameProject())setJob(row);}).catch(cause=>{if(active&&sameProject())setError(String(cause));});}
       const path=handoff?.datasetPath||(selected as {dataset_path?:string}|undefined)?.dataset_path;
       const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
@@ -75,7 +77,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   }, [projectDir,projectSource,labelsetId,compute.selectedProfileId,compute.transportRevision,apiIdentity,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
-    if (!job || !isActive || !projectDir) return;
+    if (!job || !watchJob(job.status) || !projectDir) return;
     let active = true;
     const check = async () => {
       try {
@@ -89,14 +91,12 @@ export const RotatedDetectionPanel: React.FC = () => {
           setNotice(`회전 박스 후보 학습 완료 · ${status.job_id.slice(0, 8)}. 시험 분할 평가와 이미지 확인이 필요합니다.`);
         } else if (status.status === 'aborted') {
           setNotice('회전 박스 학습을 취소했습니다. 후보 모델은 등록되지 않았습니다.');
-        } else if (status.status === 'failed') {
-          setError(status.error || '회전 박스 학습이 실패했습니다.');
-        }
+        }  // a failure and its next action are shown by the job's progress view
       } catch (cause) {
         if (active && sameProject()) setError(errorText(cause));
       }
     };
-    const timer = window.setInterval(() => void check(), 700);
+    const timer = window.setInterval(() => void check(), isActive ? 700 : 3000);
     void check();
     return () => { active = false; window.clearInterval(timer); };
   }, [job?.job_id, job?.status, projectDir, datasetPath, labelsetId]);
@@ -166,11 +166,21 @@ export const RotatedDetectionPanel: React.FC = () => {
   };
 
   const cancelTraining = async () => {
-    if (!job || !isActive || busy) return;
+    if (!job || !cancellable(job) || busy) return;
     setBusy('cancel'); setError('');
     try {
       const stopped = await controlModelTraining<RotatedJob>(job,'cancel',()=>specializedApi.rotated.cancel(job.job_id));
       if (sameProject()) setJob(stopped);
+    } catch (cause) { if (sameProject()) setError(errorText(cause)); }
+    finally { if (sameProject()) setBusy(null); }
+  };
+
+  const reconnectTraining = async () => {
+    if (!job || busy) return;
+    setBusy('reconnect'); setError('');
+    try {
+      const row = await reconnectModelTraining<RotatedJob>(job);
+      if (sameProject()) setJob({...job, ...row});
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
   };
@@ -230,8 +240,6 @@ export const RotatedDetectionPanel: React.FC = () => {
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
         <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!busy || isActive}
           className="rounded bg-amber-700 px-3 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-40">후보 학습</button>
-        {isActive && <button type="button" onClick={() => void cancelTraining()} disabled={job?.status !== 'running' || !!busy}
-          className="rounded border border-rose-700 px-3 py-2 text-rose-200 hover:bg-rose-950 disabled:opacity-40"><Square className="mr-1 inline h-3 w-3" />취소</button>}
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
@@ -242,7 +250,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         <button type="button" onClick={() => void evaluate()} disabled={!modelId || !datasetPath || !!busy || !splitCounts?.test}
           className="rounded border border-slate-600 px-3 py-2 hover:bg-slate-700 disabled:opacity-40">시험 분할 평가</button>
       </div>
-      {job && isActive && <p role="status" className="text-amber-200"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" />{job.status === 'stopping' ? '학습을 멈추는 중' : '선택한 장치에서 학습 중'} · 작업 {job.job_id.slice(0, 8)}</p>}
+      <JobProgressView job={job} busy={!!busy} onCancel={() => void cancelTraining()} onReconnect={() => void reconnectTraining()} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="min-w-[260px] flex-1">한 장 시험 이미지 경로
           <input value={imagePath} onChange={(event) => setImagePath(event.target.value)} placeholder="원본 폴더 안의 시험 이미지 절대 경로"

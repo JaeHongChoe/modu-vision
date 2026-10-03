@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { Grid2X2 } from 'lucide-react';
 import { modelTrainingProgram, type LocalTrainingDevice } from '../../services/modelTrainingProgram';
 import { useProgramWorkbench } from './useProgramWorkbench';
-import { ProgramField, ProgramJobStatus, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
+import { ProgramField, TrainingDeviceSelector, programButton, programInput, programPrimary } from './ProgramWorkbenchControls';
+import { JobProgressView } from './JobProgressView';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 
@@ -63,7 +64,7 @@ export function PatchClassificationWorkbench() {
     <details className="mt-3 text-slate-400"><summary className="cursor-pointer">사전학습 파일 지정</summary><input aria-label="패치 DINOv3 사전학습 파일" placeholder="비워 두면 검증된 기본 pretrained 사용" value={checkpoint} onChange={e => setCheckpoint(e.target.value)} className={programInput} /></details>
     <div className="mt-3"><ProgramField label="호환 완료 모델에서 재학습"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={disabled}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>부모 {index + 1} · SHA {row.checkpoint_sha256.slice(0, 12)}</option>)}</select></ProgramField></div>
     <div className="my-4"><button type="button" onClick={() => void train()} disabled={!state.dataset || disabled || epochs < 1 || batch < 1 || learningRate <= 0} className={programPrimary}>패치 분류 후보 학습</button></div>
-    <ProgramJobStatus job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} />
+    <JobProgressView job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} onReconnect={() => void state.reconnect()} />
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 패치 분류 후보"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · {row.job_id.slice(-6)}</option>)}</select></ProgramField></div>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('시험 평가', async () => {const result = await modelTrainingProgram.patch.evaluate(state.modelId); if (state.isCurrent()) setEvaluation(result);})}>시험 평가</button>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void openModelFlow('patch_classification',state.modelId,state.dataset?.dataset_path)}>플로우에 연결</button>

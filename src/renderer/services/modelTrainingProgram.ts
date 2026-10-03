@@ -26,7 +26,8 @@ export type AutomatedTrainingJob = {search_id: string; task: ModelFamily; status
 
 const post = <T>(path: string, body: unknown) => request<T>(path, {method: 'POST', body: JSON.stringify(body)});
 const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([key, value]) => [key, String(value)])).toString();
-export const activeProgramJob = (status: string) => ['queued', 'preparing', 'running', 'stopping'].includes(status);
+// A job in any of these states is still working (a server job also transfers and syncs); a new start waits for it.
+export const activeProgramJob = (status: string) => ['queued', 'preparing', 'transferring', 'running', 'stopping', 'cancelling', 'syncing'].includes(status);
 export const programError = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
 
 export const modelTrainingProgram = {

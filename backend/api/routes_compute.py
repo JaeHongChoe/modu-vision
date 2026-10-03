@@ -253,7 +253,11 @@ def job_status(job_id:str,request:Request):return _row(_job(job_id,request)[0])
 def cancel_job(job_id:str,request:Request):
     record,manager=_job(job_id,request)
     _control_role(record,request)
+    disconnected=record.status=='disconnected'
     if not manager.abort_job(job_id):raise HTTPException(409,'Compute job is already terminal')
+    # As /api/training/stop does: a stop for a server job whose connection dropped is delivered by observing it again;
+    # otherwise nothing watches the server and the job stays stopping.
+    if disconnected:manager.reconnect_remote_job(job_id)
     return _row(record)
 
 
@@ -261,8 +265,9 @@ def cancel_job(job_id:str,request:Request):
 def reconnect_job(job_id:str,request:Request):
     record,manager=_job(job_id,request)
     _control_role(record,request)
-    if record.status!='disconnected':raise HTTPException(409,'Only a disconnected remote job can reconnect')
-    manager.reconnect_remote_job(job_id)
+    # A stop requested while the connection was down leaves the job stopping until the server is observed again.
+    if record.status not in ('disconnected','stopping'):raise HTTPException(409,'Only a disconnected or stopping remote job can reconnect')
+    if manager.reconnect_remote_job(job_id) is None:raise HTTPException(409,'The job manager could not reconnect this job')
     return _row(record)
 
 

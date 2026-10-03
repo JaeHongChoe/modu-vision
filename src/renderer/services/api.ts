@@ -271,7 +271,7 @@ export interface RotatedModelSummary {
 export interface RotatedJob {
   execution_job_id?:string;compute_profile_id?:string;
   job_id: string;
-  status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed';
+  status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed' | 'interrupted';
   epochs_completed: number;
   total_epochs: number;
   result: { checkpoint_sha256: string; dataset_sha256: string } | null;

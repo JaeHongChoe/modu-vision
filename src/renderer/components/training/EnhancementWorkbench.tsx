@@ -1,5 +1,7 @@
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
-import {submitModelTraining,controlModelTraining} from '../../services/modelExecution';
+import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
+import {JobProgressView} from './JobProgressView';
+import {activeJob,watchJob,JOB_STATUS_LABELS} from './jobProgress';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {getApiPersistenceIdentity} from '../../services/api';
 import {openModelFlow} from './ProgramWorkbenchControls';
@@ -17,7 +19,7 @@ import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrai
 interface EnhancementModel { job_id: string; metadata: { best_epoch: number; dataset_path: string; source_dataset_path: string } }
 interface EnhancementMetrics { sample_count: number; input_psnr: number; output_psnr: number; improved: boolean }
 interface EnhancementJob { execution_job_id?:string;compute_profile_id?:string; job_id: string; status: string; epoch: number; epochs: number; dataset_path: string; source_dataset_path: string; error: string | null }
-const activeStatus = (status: string) => ['queued','preparing','running','stopping','transferring','syncing'].includes(status);
+const activeStatus = activeJob;
 
 export function EnhancementWorkbench() {
   const handoff=useTaskHandoff('enhancement');
@@ -58,7 +60,7 @@ export function EnhancementWorkbench() {
       if(!current||currentScope.current!==scope)return;setDatasets(prepared.datasets);
       const items=result.models.filter(model=>model.metadata.source_dataset_path===source);setModels(items);
       const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(items,handoff);setJobId(selected?.job_id||'');
-      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>activeStatus(row.status));setJob(restored||null);
+      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>watchJob(row.status));setJob(restored||null);
       if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<EnhancementJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(current&&currentScope.current===scope)setJob(row);}).catch(cause=>{if(current&&currentScope.current===scope)setError(String(cause));});}
       const path=handoff?.datasetPath||selected?.metadata.dataset_path||restored?.dataset_path;const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 이미지 개선 정답 쌍을 찾지 못했습니다.');
@@ -68,7 +70,7 @@ export function EnhancementWorkbench() {
   }, [scope,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
-    if (!job || !activeStatus(job.status)) return;
+    if (!job || !watchJob(job.status)) return;
     let current = true;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -79,8 +81,8 @@ export function EnhancementWorkbench() {
         if (row.status === 'completed') {
           setJobId(row.job_id); setNotice('후보 모델을 저장했습니다. 시험 평가 후 5단계에서 연결할 수 있습니다.');
           void refresh();
-        } else if (row.error) setError(row.error);
-        if (activeStatus(row.status)) timer = setTimeout(() => void poll(), 800);
+        }  // a failure and its next action are shown by the job's progress view
+        if (watchJob(row.status)) timer = setTimeout(() => void poll(), activeStatus(row.status) ? 800 : 3000);
       } catch (e) {
         if (current) { setError(e instanceof Error ? e.message : '진행 상황을 읽지 못했습니다.'); timer = setTimeout(() => void poll(), 2000); }
       }
@@ -127,6 +129,11 @@ export function EnhancementWorkbench() {
     const row = await controlModelTraining<EnhancementJob>(job,'cancel',()=>request<EnhancementJob>(`/api/enhancement/jobs/${job.job_id}/cancel`,{method:'POST'}));
     if (currentScope.current === scope) setJob(row);
   });
+  const reconnect = () => action('재연결 요청', async () => {
+    if (!job) return;
+    const row = await reconnectModelTraining<EnhancementJob>(job);
+    if (currentScope.current === scope) setJob({...job, ...row});
+  });
   const reopen = (id: string) => action('학습 작업 확인', async () => {
     const row = await request<EnhancementJob>(`/api/enhancement/jobs/${id}`);
     if (currentScope.current !== scope) return;
@@ -167,14 +174,9 @@ export function EnhancementWorkbench() {
         <button type="button" onClick={() => void evaluate()} disabled={!jobId || !datasetPath || !!busy} className={button}>시험 분할 평가</button>
       </div>
       {jobs.length > 0 && <label className="block">학습 작업 다시 열기<select aria-label="이미지 개선 학습 작업" value={job?.job_id || ''} onChange={(e) => { if (e.target.value) void reopen(e.target.value); }} className={input} disabled={!!busy}>
-        <option value="">작업 선택</option>{jobs.map((row) => <option key={row.job_id} value={row.job_id}>{row.job_id.slice(0, 12)} · {row.status} · {row.epoch}/{row.epochs}</option>)}
+        <option value="">작업 선택</option>{jobs.map((row) => <option key={row.job_id} value={row.job_id}>{row.job_id.slice(0, 12)} · {JOB_STATUS_LABELS[row.status] || row.status} · {row.epoch}/{row.epochs}</option>)}
       </select></label>}
-      {job && <div role="status" className="space-y-2 rounded border border-[#344255] p-3">
-        <p>학습 상태: {job.status} · epoch {job.epoch}/{job.epochs}</p>
-        <progress aria-label="이미지 개선 학습 진행률" value={job.epoch} max={job.epochs} className="w-full accent-cyan-500" />
-        {training && <button type="button" onClick={() => void cancel()} disabled={!!busy || job.status === 'stopping'} className={button}>{job.status === 'stopping' ? '중단 처리 중…' : '학습 중단'}</button>}
-        {job.status === 'interrupted' && <p className="text-amber-300">앱 종료로 중단된 작업입니다. 정답 쌍을 확인한 뒤 새 후보로 다시 학습할 수 있습니다.</p>}
-      </div>}
+      <JobProgressView job={job} busy={!!busy} onCancel={() => void cancel()} onReconnect={() => void reconnect()} />
       {busy && <p role="status" className="text-cyan-300"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{busy} 중…</p>}
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-3 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
