@@ -354,6 +354,10 @@ export type DiagnosticsOptions = {
   sections?: Array<"installation" | "packages" | "hardware" | "operator_errors">;
 };
 
+export type DismissRequest = {
+  dismissed?: boolean;
+};
+
 export type EditRequest = {
   expected_revision: number;
   actor: string;
@@ -1596,6 +1600,7 @@ export interface ApiRequestBody {
   "POST /api/ocr/predict": OCRPredictRequest;
   "POST /api/ocr/prepare": OCRPrepareRequest;
   "POST /api/ocr/train": OCRTrainRequest;
+  "POST /api/onboarding/dismiss": DismissRequest;
   "POST /api/patch-classification/evaluate": backend__api__routes_patch_classification__EvaluateRequest;
   "POST /api/patch-classification/prepare": backend__api__routes_patch_classification__PrepareRequest;
   "POST /api/patch-classification/train": backend__api__routes_patch_classification__TrainRequest;

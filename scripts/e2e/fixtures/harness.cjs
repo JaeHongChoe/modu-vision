@@ -155,6 +155,9 @@ function createWorkspace(root) {
     logs: path.join(root, 'logs'),
   };
   for (const dir of Object.values(workspace)) fs.mkdirSync(dir, { recursive: true });
+  // Specs start past the first-run guide (S2-01), which would otherwise open over an empty project; the first-start
+  // spec writes dismissed:false before it loads the app.
+  fs.writeFileSync(path.join(workspace.userData, 'onboarding.json'), JSON.stringify({ version: 1, dismissed: true }));
   workspace.images = [['ok', false], ['ng', true]].map(([label, defect]) => {
     const dir = path.join(workspace.dataset, label);
     fs.mkdirSync(dir, { recursive: true });

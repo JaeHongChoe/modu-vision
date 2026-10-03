@@ -72,10 +72,21 @@ def release_authority(project, *, source=None):
                 yield
 
 
+class ExampleProjectRefused(ValueError):
+    """An example project (synthetic data, S2-01) never authorizes an approval or a release."""
+
+
 def verify_project_context(project):
-    """A caller's cached project cannot authorize a newly selected source/scope."""
+    """A caller's cached project cannot authorize a newly selected source/scope, and an example project authorizes
+    nothing: its results come from synthetic data and say nothing about a real process."""
     from backend.api.routes_project import _load_project
+    from backend.engine.onboarding import is_example_source
     current = _load_project(Path(project['project_dir']))
+    # The marker or the data itself: a project whose source is an example folder is refused even when the marker was
+    # never written (an import that stopped, a closed app, a hand-edited project file).
+    if (current.get('example') or project.get('example') or is_example_source(current.get('source_dataset_dir'))
+            or is_example_source(project.get('source_dataset_dir'))):
+        raise ExampleProjectRefused('예제 프로젝트(합성 데이터)는 품질 승인·배포 대상이 아닙니다. 실제 공정 데이터로 만든 프로젝트에서 승인하세요.')
     for key in ('id', 'source_dataset_dir', 'active_labelset_id', 'annotations_dir'):
         if current.get(key) != project.get(key):
             raise ValueError('Current project source or labelset changed; reload and re-evaluate')

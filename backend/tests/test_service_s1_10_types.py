@@ -101,13 +101,17 @@ def test_the_generator_leaves_the_working_folder_and_environment_as_they_were(tm
 
 def test_the_generator_restores_the_working_folder_and_store_variables_in_process(tmp_path, monkeypatch):
     import os
+    # The backend is imported under the session's store folders first: imported inside the generator, its module-level
+    # folders would point at the generator's temporary folder after it is removed.
+    import backend.main  # noqa: F401
     folder = tmp_path / 'cwd'
     folder.mkdir()
     monkeypatch.chdir(folder)
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'mine'))
     monkeypatch.delenv('MODU_FLOW_TEMPLATE_DIR', raising=False)
     before = {name: os.environ.get(name) for name in generator._STORES}
+    before_cwd = os.getcwd()
     assert generator.main(['--check']) == 0
-    assert os.getcwd() == str(folder), 'the working folder is the caller\'s again (the temporary one can be removed on Windows)'
+    assert os.getcwd() == before_cwd, 'the working folder is the caller\'s again (the temporary one can be removed on Windows)'
     assert {name: os.environ.get(name) for name in generator._STORES} == before, 'set variables keep their value; unset ones stay unset'
     assert list(folder.iterdir()) == []

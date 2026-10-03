@@ -23,6 +23,8 @@ export type TaskChangeOutcome =
 let taskChangeInFlight = false;
 let syncAfterTaskChange = false;
 let deferredSync = false;
+/** Stage choices made by the user (setStep), counted so a sync can tell a choice made while it was in flight. */
+let stepChoices = 0;
 
 // A failed task change stays reported only in its own project and server scope: a refusal
 // through the sync deferred behind it, a change already applied on the server until the
@@ -267,6 +269,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
     if (projectViewScope(get().project, getApiPersistenceIdentity()) !== startedScope) return;
     set({ activeStep: step });
+    stepChoices += 1;
     rememberProjectStep(viewStorage(), get().project, apiIdentity, step);
   },
 
@@ -392,6 +395,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const failure = currentTaskFailure(get());
     const kept = failure && (failure.applied || deferred) ? failure.message : null;
     set({ isProjectBusy: true, projectError: kept });
+    const choicesAtStart = stepChoices;
     try {
       const project = await api.project.getCurrent();
       const previous = get().project;
@@ -408,8 +412,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         throw new Error('프로젝트 동기화 중 새 편집이 생겼습니다. 이전 프로젝트의 편집 내용을 먼저 저장하세요.');
       }
       const identity = getApiPersistenceIdentity();
-      acceptSelectedProject(project, { activeStep: previous && projectViewScope(previous, identity) === projectViewScope(project, identity)
+      // A stage the user chose while the app's first sync was in flight is kept (and remembered for this project)
+      // instead of the stage remembered from an earlier session.
+      const chosenMeanwhile = !previous && stepChoices !== choicesAtStart;
+      acceptSelectedProject(project, { activeStep: chosenMeanwhile || (previous && projectViewScope(previous, identity) === projectViewScope(project, identity))
         ? get().activeStep : readProjectStep(viewStorage(), project, identity) });
+      if (chosenMeanwhile) rememberProjectStep(viewStorage(), project, identity, get().activeStep);
       await applyProject(project, previous, true);
       if (project.source_dataset_dir && get().activeStep !== 1) {
         // Later stages also need the daemon's restored source and effective split;

@@ -4,7 +4,7 @@
  * Dark Steel Chassis & 1px Precision Hairline Grid Architecture.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { WorkspaceDialog } from './components/common/WorkspaceDialog';
 import { TaskCenter } from './components/training/TaskCenter';
 import { ProductDeliveryWorkspace } from './components/runtime/ProductDeliveryWorkspace';
@@ -18,6 +18,9 @@ import { EvaluationStudio } from './components/evaluation/EvaluationStudio';
 import { FlowchartStudio } from './components/flowchart/FlowchartStudio';
 import { InferenceCenterStudio } from './components/inference/InferenceCenterStudio';
 import { ErrorDiagnosticsModal } from './components/common/ErrorDiagnosticsModal';
+import { FirstRunStudio } from './components/onboarding/FirstRunStudio';
+import { useFirstRunStore } from './components/onboarding/firstRunStore';
+import { EXAMPLE_NOTICE, shouldOpenFirstRun } from './components/onboarding/firstRun';
 import { useProjectStore } from './stores/useProjectStore';
 import { useTrainingStore } from './stores/useTrainingStore';
 import { useComputeStore } from './stores/useComputeStore';
@@ -39,6 +42,11 @@ export default function App() {
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
   const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
   const transportRevision=useComputeStore(s=>s.transportRevision);
+  const project=useProjectStore(s=>s.project);
+  const {onboarding,open:firstRunOpen,demo,setOpen:setFirstRunOpen,dismiss:dismissFirstRun}=useFirstRunStore();
+  const firstRunOffered=useRef(false);
+  // S2-01: the example marker is written by the backend into project.json and comes back with the project.
+  const exampleProject=Boolean((project as {example?:unknown}|null)?.example);
 
   useEffect(() => {
     let unsubStatus: (() => void) | undefined;
@@ -100,8 +108,17 @@ export default function App() {
 
   useEffect(() => {
     if (!backendStatus.healthy) return;
-    void syncCurrentProject();
+    // The guide's state is read after the first project sync: read together, the sync's step restore could land after a
+    // stage the user already chose and take the app back to step 1.
+    void syncCurrentProject().finally(() => { void useFirstRunStore.getState().load(); });
   }, [backendStatus.healthy, backendStatus.port, syncCurrentProject]);
+
+  // The first-run guide opens by itself once per start, only before any project has data and until dismissed.
+  useEffect(() => {
+    if (firstRunOffered.current || !onboarding || !project) return;
+    firstRunOffered.current = true;
+    if (shouldOpenFirstRun(onboarding, Boolean(project.source_dataset_dir))) setFirstRunOpen(true);
+  }, [onboarding, project, setFirstRunOpen]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans">
@@ -112,9 +129,11 @@ export default function App() {
         <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>모델·플로우 작업</button>
         <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>운영자 검사</button>
         <span className="flex-1"/>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'}</button>
         <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>작업 센터</button>
         <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>패키지·장치·진단</button>
       </nav>
+      {exampleProject&&<p role="note" aria-label="예제 프로젝트" className="shrink-0 border-b border-amber-700/60 bg-amber-950/30 px-4 py-1.5 text-xs text-amber-200">예제 프로젝트 · {EXAMPLE_NOTICE}</p>}
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
       <main key={transportRevision} className="flex-1 min-h-0 flex overflow-hidden bg-[#0B0E14]">
         {workspace==='studio' && activeStep === 1 && <DatasetStudio />}
@@ -131,6 +150,9 @@ export default function App() {
 
       {/* Global Industrial Fault Diagnostic Dialog */}
       <ErrorDiagnosticsModal />
+      {firstRunOpen&&<WorkspaceDialog title="처음 시작하기" onClose={()=>setFirstRunOpen(false)}>
+        <FirstRunStudio onClose={()=>setFirstRunOpen(false)} onDismiss={()=>void dismissFirstRun()}/>
+      </WorkspaceDialog>}
       {utility&&<WorkspaceDialog key={`${utility}:${transportRevision}`} title={utility==='tasks'?'작업 센터':'패키지·장치·설치·진단'} onClose={()=>setUtility(null)}>
         {utility==='tasks'?<TaskCenter initialOpen onNavigate={()=>{setUtility(null);setWorkspace('studio');}}/>:<ProductDeliveryWorkspace onNavigate={step=>{setUtility(null);setWorkspace('studio');void useProjectStore.getState().setStep(step);}}/>}
       </WorkspaceDialog>}
