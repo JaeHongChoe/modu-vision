@@ -433,7 +433,8 @@ const sockets=[];
 global.WebSocket=class {static OPEN=1;static CONNECTING=0;readyState=0;constructor(url){this.url=url;sockets.push(this);}send(){}close(){this.readyState=3;this.onclose?.();}};
 global.window={api:{getBackendPort:async()=>8123}};
 const telemetry=load('src/renderer/services/websocket.ts',{'./api':api}).telemetryService;
-const received=[];telemetry.subscribe((event,data)=>received.push({event,data}));
+// S1-10 announces every (re)connection so the app catches up from the job event cursor; data frames are counted apart.
+const received=[],announced=[];telemetry.subscribe((event,data)=>event==='telemetry_connected'?announced.push(data):received.push({event,data}));
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
  api.setProjectContext(context('first'));await telemetry.connect();
@@ -444,7 +445,7 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
  assert.deepEqual(JSON.parse(new URL(current.url).searchParams.get('project_context')),context('second'));
  current.readyState=1;current.onopen();
  lateMessage({data:JSON.stringify({event:'step_progress',data:{job_id:'old'},project_context:context('first')})});lateClose();
- assert.equal(telemetry.getStatus(),true);assert.equal(received.length,0);
+ assert.equal(telemetry.getStatus(),true);assert.equal(received.length,0);assert.equal(announced.length,2,'each opened socket announced its connection');
  current.onmessage({data:JSON.stringify({event:'step_progress',data:{job_id:'new'},project_context:context('second')})});assert.equal(received[0].data.job_id,'new');
  api.setProjectContext(context('second'));await settle();assert.equal(sockets.length,2);
  api.setProjectContext(context('second','restored-copy'));await settle();assert.equal(sockets.length,3);
