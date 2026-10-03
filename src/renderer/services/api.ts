@@ -3,6 +3,7 @@
  * Type-safe HTTP REST client for Python FastAPI backend with dynamic port resolution.
  */
 
+import type { ApiRequestBody } from './generated/apiTypes';
 import type {
   AnnotationItem,
   ClassSplitCounts,
@@ -1014,15 +1015,24 @@ export const api = {
       compute_profile_id?: string;
       device?: string;
       warm_start_job_id?: string;
-    }) => request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    }) => {
+      // An explicit literal of the generated request type: a field the backend renames or removes fails typecheck here
+      // (a variable or a spread would not be checked for extra fields). Undefined fields are left out as before.
+      const body: ApiRequestBody['POST /api/training/start'] = {
+        task: data.task, preset: data.preset, dataset_path: data.dataset_path,
+        output_dir: data.output_dir, config_overrides: data.config_overrides, compute_profile_id: data.compute_profile_id,
+        device: data.device, warm_start_job_id: data.warm_start_job_id,
+      };
+      return request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    },
 
     stop: (jobId?: string) =>
       request<{ status: string; job_id: string | null }>('/api/training/stop', {
         method: 'POST',
-        body: JSON.stringify({ job_id: jobId }),
+        body: JSON.stringify({ job_id: jobId } satisfies ApiRequestBody['POST /api/training/stop']),
         signal: AbortSignal.timeout(10000),
       }),
 
