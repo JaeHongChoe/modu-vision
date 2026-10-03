@@ -66,6 +66,8 @@ jobs:
           backend/tests/test_service_s6_07.py
           backend/tests/test_sqlite_wal.py
           backend/tests/test_service_s1_02.py
+          backend/tests/test_service_s7_01.py
+          backend/tests/test_segmentation_mask_folder_classes.py
       - name: Core defect baseline evidence
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Install test browser

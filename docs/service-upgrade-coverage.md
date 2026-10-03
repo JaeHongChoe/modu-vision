@@ -316,4 +316,6 @@
 
 `legacy_id, task_id, source_sha, artifact/run/target IDs, input/label/truth/graph/model/package hashes, action, expected, observed, screenshot/log/receipt, acceptance_state, prerequisites, reviewer`를 기록한다. 버튼을 클릭했다는 증거와 모델/작업 완료·품질/운영 승인은 각각 별도 근거다.
 
+기존 항목별 근거는 `docs/service-upgrade-evidence.json`의 RequirementEvidence 기록(구현·GUI·저장·다시 열기·실패·인계·대상 실행, native Windows, 선행 조건)에 남긴다. 각 항목은 pending, verified(근거 포함) 또는 not_required(사유 포함)이며, 기존 registry의 주장은 근거가 아니다. 근거 하나에는 담당 task, 40자 커밋, 종류(click·api·unit·real_input·native_windows·target), action·expected·observed·reviewer와 저장소 시험 경로 또는 해시가 붙은 receipt를 적는다. GUI는 실제 클릭(scripts/e2e 시험 또는 해시가 붙은 receipt), native Windows는 Windows 실행(receipt 또는 Windows workflow가 실행하는 시험), 대상 실행은 실제 장비 실행 receipt와 산출물 해시만 인정한다. not_required에는 사유와 검토자를 적는다. `scripts/check_service_plan.py`가 이 표의 새 검증 칸을 기록에서 다시 계산하고, 모든 항목이 근거를 갖추고 native Windows가 verified일 때만 accepted를 허용한다.
+
 원본 데이터나 credentials를 공개 evidence에 넣지 않는다. private 원본 mapping은 보존하고 공개 fixtures 또는 redacted summary와 source hash로 연결한다.
