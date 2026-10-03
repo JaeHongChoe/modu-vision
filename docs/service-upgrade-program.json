@@ -1591,6 +1591,12 @@
      "result": "published in f00464e (freezes 5-7): saved legacy paths outside the first 200 listed images stay saved, are left out of comparisons and are listed with a remove button each and '모두 빼기', with an honest summary (saved / compared / unlisted); until the listing answers (loading or failed) nothing is called unlisted, offered for removal or compared; independent review: freeze 5 ACCEPT WITH FIXES (P2 lock-out), freeze 6 ACCEPT (P3 wipe while loading), freeze 7 ACCEPT; the unlisted path is lost in 0 of 340 load orders (freeze 4: 310)",
      "scope": "frozen trees (6fae111 / c1b46b3 + 3 renderer files): renderer suite, typecheck, e2e 2 passed (freeze 5/6); reviewer re-ran 330 renderer tests and the typecheck on freeze 7",
      "platform": "macOS development; Windows hosted run pending for this commit"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "c481021: a fixed flow comparison refuses a damaged image (the image library marks it invalid) and filters to valid images by default, keeping an existing valid selection; clearing the package comparison selection also clears the earlier refusal notice; browser scenarios: a damaged image refused with a valid one chosen and restored after restart, a moved image checked again, a deleted saved image kept and explained",
+     "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, e2e harness 14, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and passed the e2e typecheck and the 3 Chrome browser scenarios again (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+     "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
     }
    ],
    "file_actions": {
@@ -1615,7 +1621,7 @@
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
     "a failed legacy listing has no retry within the same context; the panel tests' React stub runs no effect cleanup, so the late-answer guard and the loading resets are verified by the reviewer's cleanup-aware probe only",
-    "operator and package cohort selections stay in memory; the test-set browser still offers invalid images; the cohort notice stays after clearing the selection",
+    "operator and package cohort selections stay in memory; since c481021 a damaged image cannot be chosen for a fixed comparison (the picker defaults to valid images) and clearing the package cohort clears its earlier refusal notice",
     "the flowchart header keeps the previous path until the picker is confirmed",
     "Windows native and hosted evidence for these commits pending"
    ]
@@ -1832,6 +1838,12 @@
      "result": "955e302: an API rejection in the dataset import panel always shows a visible alert. A pure formatter (datasetImportError.ts) reads Korean catalog messages first, then message, FastAPI validation msg and detail, joins validation lists, skips blank fields, and answers a fixed Korean fallback for an empty list, null or a detail with no readable text",
      "scope": "Codex freeze on 2115263 + 7 files: red renderer 3 failed; green renderer 408, typecheck and build exit 0; independent review ACCEPT",
      "platform": "macOS renderer checks; the panel test uses the real panel with a mocked API; a real browser failure-injection path, native Windows and GPU were not run"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "c481021: a COCO document in a sub-folder binds its relative image paths from its own folder, the same way in the importer and the dataset index; a path that would resolve to different real images is refused as ambiguous; an internal link to the same file is kept; an annotation document read from outside the source is refused",
+     "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, e2e harness 14, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and passed the e2e typecheck and the 3 Chrome browser scenarios again (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+     "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
     }
    ],
    "file_actions": {
@@ -1857,7 +1869,7 @@
    ],
    "remaining": [
     "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
-    "mask binding as source annotations; nested COCO documents relative to themselves; stale .partial staging sweep",
+    "mask binding as source annotations; stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021)",
     "the index excludes hidden image files while the classification loader globs them (pre-existing inventory/loader difference)",
     "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",
     "SourceTextError reads 'not UTF-8 text (nor UTF-8)' on a UTF-8 machine (wording in source_text.py); a label file failing mid-scan lists no binding files on the row"
@@ -3827,6 +3839,12 @@
      "result": "be1f2a8: docs/service-upgrade-evidence.json records every one of the 156 existing features with seven dimensions (implementation, gui, persist, reopen, failure, handoff, target) and platform.windows_native, all pending. scripts/check_service_plan.py derives a feature's acceptance from it: accepted only when every dimension is verified or waived with a reviewed reason (never implementation or native Windows) and native Windows is verified; the program row and the coverage table must agree. A verified entry needs a task owning the feature, a full commit hash, a kind tied to its dimension, and what that kind must cite (an end-to-end spec or hashed receipt for a click, a hashed receipt and artifacts for a target run, a hashed receipt or a test the Windows workflow runs for native Windows). Independent review freeze 3 ACCEPT; 65 of 72 rule mutants caught",
      "scope": "frozen tree (63d6b0b + 6 files): S7-01 tests 54 passed, the gate exits 0 with 0 accepted features; both CI pytest lists run the gate tests",
      "platform": "macOS development; the hosted runs of be1f2a8 were cancelled by e7fce1c's push, and e7fce1c was running when this was recorded"
+    },
+    {
+     "kind": "fix-reviewed-published (Codex, parallel slice)",
+     "result": "c481021: the plan gate refuses duplicate JSON keys at any depth in the program, the evidence registry and the two existing baseline files; the coverage table reads IDs with spaces or backticks and no longer drops duplicated, added or broken rows silently; command-line errors return an ASCII JSON receipt",
+     "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, e2e harness 14, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and passed the e2e typecheck and the 3 Chrome browser scenarios again (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+     "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
     }
    ],
    "file_actions": {
@@ -3850,7 +3868,7 @@
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
     "fill the registry: per-feature evidence as each task verifies a dimension (all 156 records are pending)",
-    "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; variant rows of the main table are skipped; duplicate JSON keys; commit existence and ::name are not checked; the older ASCII test strips the environment",
+    "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; commit existence and ::name are not checked; the older ASCII test strips the environment",
     "Windows native evidence",
     "acceptance 2: the button/menu/shortcut/action list with success, empty, invalid, error, cancel, reopen and handoff evidence is not recorded yet (the implementation state was recorded as verified too early in a19a8a4; corrected to pending; the contract and its gate are verified)"
    ]
