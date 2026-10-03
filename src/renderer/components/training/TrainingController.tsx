@@ -45,6 +45,7 @@ import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
+import { trainingLogLines } from './trainingLog';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -467,6 +468,8 @@ export const TrainingController: React.FC = () => {
           </div>
         )}
 
+        <TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} />
+
         {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Hardware Telemetry (34%) */}
         <div className="grid grid-cols-12 gap-5">
           {/* Left Column: CRT Phosphor Oscilloscope Loss Curve */}
@@ -533,3 +536,14 @@ export const TrainingController: React.FC = () => {
 };
 
 export default TrainingController;
+
+/** The current job's log: its start, each finished epoch with its losses and how it ended (newest at the bottom). */
+function TrainingLogPanel({ lines }: { lines: string[] }) {
+  if (!lines.length) return null;
+  return <section aria-label="학습 로그" className="rounded border border-[#2B3547] bg-[#0B0E14] p-3 text-xs">
+    <h3 className="mb-2 font-semibold text-slate-200">학습 로그</h3>
+    <ol role="log" aria-live="polite" className="max-h-40 space-y-0.5 overflow-y-auto font-mono text-slate-300">
+      {lines.map((line, index) => <li key={`${index}:${line}`}>{line}</li>)}
+    </ol>
+  </section>;
+}

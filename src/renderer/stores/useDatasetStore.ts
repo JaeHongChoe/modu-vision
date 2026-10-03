@@ -155,7 +155,8 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
   importFolder: async (folder, task, allowRecoveryOverride) => {
-    const key = importKey(folder, task);
+    const pickedFolder = folder;
+    let key = importKey(folder, task);
     const previous = get().lastImportedKey;
     const previousFolder = previous?.slice(0, previous.lastIndexOf('\0'));
     const changedTaskInSameFolder = previousFolder === folder && previous !== key;
@@ -186,9 +187,32 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         // The project API is the authority for the canonical source path. Keep
         // the renderer's project state aligned before allowing a switch.
         const { useProjectStore } = await import('./useProjectStore');
+        if (requestId !== latestImportRequest || get().datasetKey !== key) return;
         useProjectStore.setState((state) => state.project?.id === project.id
           ? { project, projectName: project.name, projectDir: project.project_dir }
           : {});
+        // The backend saves the source resolved (a symlinked folder, or a mapped network drive on Windows, gets another
+        // spelling). Follow its spelling, or training would wait for "the current source" forever.
+        const canonical = project.source_dataset_dir;
+        if (canonical && canonical !== folder) {
+          folder = canonical;
+          key = importKey(folder, task);
+          // The previous import was recorded with the saved spelling (or, after a failed save, the picked one): decide
+          // "the same folder again" and "another task in the same folder" with both, so a re-pick through another
+          // spelling is the same folder.
+          const sameFolder = previousFolder === folder || previousFolder === pickedFolder;
+          const sameFolderTaskChange = sameFolder && previous !== key && previous !== importKey(pickedFolder, task);
+          if (sameFolderTaskChange && previous) {
+            set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, previous, key])] }));
+          }
+          if (allowRecoveryOverride === undefined) {
+            // A stale mark under either spelling counts (labels changed while a save had failed are still changed).
+            const stale = get().staleDatasetKeys.includes(key) || get().staleDatasetKeys.includes(importKey(pickedFolder, task));
+            const allow = !stale && !sameFolderTaskChange && (!previous || !sameFolder);
+            if (allow !== allowSourceRecovery) useEvaluationStore.setState({ allowLatestRecovery: allow });
+          }
+          set({ folderPath: folder, datasetKey: key });
+        }
       } catch (error) {
         // The in-memory dataset remains usable, but a restart cannot restore its source.
         if (requestId === latestImportRequest && get().datasetKey === key) {
