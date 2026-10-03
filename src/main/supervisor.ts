@@ -7,7 +7,8 @@
  *   - Spawns backend/main.py with ephemeral port 0 and unbuffered I/O
  *   - Chunk-split-proof line buffering regex discovery for VISION_AI_STUDIO_PORT=<port>
  *   - Exponential backoff HTTP health check polling against GET /health (15s timeout)
- *   - Graceful SIGTERM shutdown with 4.0s timeout and automatic SIGKILL fallback (0 orphaned processes)
+ *   - Graceful shutdown (stdin closed on every platform, SIGTERM on POSIX) with a 4.0s timeout, then a force stop of the
+ *     backend process only (owned training workers live in their own session and are reattached on restart)
  *   - Crash detection, circular log buffer, and auto-restart resilience (max 3 retries / 60s)
  *   - IPC port and status provider conforming to PROJECT.md contracts
  */
@@ -81,6 +82,30 @@ export interface SupervisorConfig {
 }
 
 const MAX_LOG_BUFFER_LINES = 100;
+
+/** Spawn options for the backend. Its stdin stays open as the graceful stop channel, closed by stopBackend (when the
+ *  app itself exits, the exit hook force-stops the backend instead), and no console window opens for it on Windows. */
+export function backendSpawnOptions(cwd: string, env: NodeJS.ProcessEnv) {
+  return {
+    cwd,
+    env: { ...env, VISION_AI_STUDIO_STOP_ON_STDIN_EOF: '1' },
+    stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
+    windowsHide: true,
+  };
+}
+
+/** Force-stop the backend process itself through the handle Node holds for it, never by process number: once Node has
+ *  seen the backend exit the handle is gone and this does nothing, and Windows does not reuse a process number while the
+ *  handle is open (there it terminates that one process). Only the backend is stopped, never its process tree: owned
+ *  training workers run in their own session (POSIX) or process group (Windows), and they, managed services and the
+ *  operations watcher are reattached by identity by the next backend; other helpers end on their own deadlines. */
+export function forceStop(proc: ChildProcess): void {
+  try {
+    proc.kill('SIGKILL');
+  } catch {
+    // Process already dead
+  }
+}
 
 export class BackendSupervisor extends EventEmitter {
   private runtimeIdentity:BackendStatusInfo['runtimeIdentity']=null;
@@ -250,11 +275,7 @@ export class BackendSupervisor extends EventEmitter {
       };
 
       try {
-        this.childProcess = spawn(spawnBin, spawnArgs, {
-          cwd: backendCwd,
-          env,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
+        this.childProcess = spawn(spawnBin, spawnArgs, backendSpawnOptions(backendCwd, env));
       } catch (spawnError: any) {
         this.setState('CRASHED');
         throw new Error(`Failed to spawn backend process at '${spawnBin}': ${spawnError.message}`);
@@ -262,6 +283,8 @@ export class BackendSupervisor extends EventEmitter {
 
       const pid = this.childProcess.pid;
       console.log(`[Supervisor] Python daemon spawned with PID ${pid}`);
+      // Closing the stop channel of a backend that already exited reports EPIPE; it must not crash the main process.
+      this.childProcess.stdin?.on('error', () => {});
 
       // Attach stream listeners
       this.attachProcessListeners(this.childProcess);
@@ -330,30 +353,26 @@ export class BackendSupervisor extends EventEmitter {
 
       proc.once('exit', onExit);
 
-      // 1. Send SIGTERM for graceful FastAPI / Uvicorn shutdown
+      // 1. Graceful FastAPI / Uvicorn shutdown: closing stdin asks for it on every platform. POSIX also gets SIGTERM;
+      //    on Windows a signal from Node terminates the process outright, which would skip the shutdown sequence.
       try {
-        proc.kill('SIGTERM');
+        proc.stdin?.end();
       } catch (e) {
-        // Process might already be terminating
+        // The pipe may already be closed
+      }
+      if (process.platform !== 'win32') {
+        try {
+          proc.kill('SIGTERM');
+        } catch (e) {
+          // Process might already be terminating
+        }
       }
 
-      // 2. 4.0-second timeout fallback -> SIGKILL
+      // 2. 4.0-second timeout fallback -> force stop of the backend process only
       forceKillTimer = setTimeout(() => {
-        console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Issuing SIGKILL.`);
+        console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Forcing it to stop.`);
         proc.removeListener('exit', onExit);
-
-        try {
-          if (process.platform === 'win32' && pid) {
-            execSync(`taskkill /F /PID ${pid} /T`, { stdio: 'ignore' });
-          } else {
-            proc.kill('SIGKILL');
-            if (pid) {
-              try { process.kill(pid, 'SIGKILL'); } catch {}
-            }
-          }
-        } catch (err) {
-          // Process already dead
-        }
+        forceStop(proc);
         resolve();
       }, this.config.gracefulShutdownTimeoutMs);
     });
@@ -398,7 +417,9 @@ export class BackendSupervisor extends EventEmitter {
 
     proc.on('exit', (code, signal) => {
       console.log(`[Supervisor] Python process exited with code ${code}, signal ${signal}`);
-      if (this.isShuttingDown) {
+      // A backend force-stopped by an earlier stop may exit after a restart started its successor: its exit is not a
+      // crash of the backend now tracked.
+      if (this.isShuttingDown || this.childProcess !== proc) {
         return;
       }
 
@@ -777,15 +798,7 @@ export class BackendSupervisor extends EventEmitter {
 
   private registerProcessHooks(): void {
     const emergencyKill = () => {
-      if (this.childProcess && !this.childProcess.killed) {
-        try {
-          if (process.platform === 'win32' && this.childProcess.pid) {
-            execSync(`taskkill /F /PID ${this.childProcess.pid} /T`, { stdio: 'ignore' });
-          } else {
-            this.childProcess.kill('SIGKILL');
-          }
-        } catch {}
-      }
+      if (this.childProcess && !this.childProcess.killed) forceStop(this.childProcess);
     };
 
     process.on('exit', emergencyKill);

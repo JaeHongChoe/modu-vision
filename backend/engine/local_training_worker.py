@@ -23,9 +23,10 @@ import uuid
 
 import psutil
 
-from backend.engine.runtime_process_control import atomic_private_json, command_sha256
+from backend.engine.runtime_process_control import atomic_private_json, command_sha256, session_isolation
 
 POLL_SECONDS = .05
+_WINDOWS = os.name == 'nt'
 CANCEL_GRACE_SECONDS = 15.
 CANCEL_TERMINATE_SECONDS = 5.
 # A process created this long before the current boot cannot still be alive.
@@ -177,32 +178,43 @@ def _owned_members(journal):
         evidence = _boot_evidence(journal)
         if evidence == 'earlier':
             return []
+        leader_proven = False
+        reused_at = None  # start of another process now at the recorded number
         try:
             leader = psutil.Process(pid)
-            if abs(leader.create_time() - journal['owner_created_at']) >= .01:
+            leader_created = leader.create_time()
+            leader_proven = abs(leader_created - journal['owner_created_at']) < .01
+            if not leader_proven:
                 # A stepped wall clock can move a live leader's reported start
                 # time (Linux derives it from boot time), so its token decides.
                 try:
                     token = leader.environ().get('MODU_VISION_LOCAL_WORKER_TOKEN')
                 except psutil.AccessDenied:
-                    # Another user's process cannot be this user's worker.
-                    if os.name != 'nt' and leader.username() != journal['owner_username']:
+                    # Another user's process cannot be this user's worker. On
+                    # Windows a process with another start time at this number
+                    # that this backend cannot open is a different process
+                    # (Windows start times are absolute); the scan decides.
+                    if _WINDOWS:
+                        token = None
+                    elif leader.username() != journal['owner_username']:
                         return []
-                    return None
+                    else:
+                        return None
                 if token != journal['owner_token']:
                     # POSIX never reuses a PID while a process group or session
                     # with that ID exists, so another process at this PID proves
                     # the owned group ended. Windows keeps the token scan.
-                    if os.name != 'nt':
+                    if not _WINDOWS:
                         return []
-                    leader = None
+                    leader, reused_at = None, leader_created
         except psutil.NoSuchProcess:
             leader = None
         members = []
+        denied = []
         unmarked = False
         for process in psutil.process_iter(['pid']):
             try:
-                if os.name != 'nt':
+                if not _WINDOWS:
                     if os.getsid(process.pid) != journal['owner_session']:
                         continue
                 elif process.username() != journal['owner_username']:
@@ -211,7 +223,7 @@ def _owned_members(journal):
                     continue
                 token = process.environ().get('MODU_VISION_LOCAL_WORKER_TOKEN')
                 if token != journal['owner_token']:
-                    if os.name != 'nt':
+                    if not _WINDOWS:
                         unmarked = True  # never signalled; decides below
                     continue
                 if process.create_time() + .01 < journal['owner_created_at']:
@@ -219,8 +231,45 @@ def _owned_members(journal):
                 members.append(process)
             except (psutil.NoSuchProcess, ProcessLookupError):
                 continue
+            except psutil.AccessDenied:
+                # Windows lists every account's processes, and a standard user
+                # cannot open services or elevated ones: they are set aside and
+                # decided below. On POSIX a denied process in the worker's own
+                # session leaves its state unknown.
+                if _WINDOWS:
+                    denied.append(process)
+                    continue
+                return None
             except (psutil.Error, PermissionError):
                 return None
+        if denied:
+            # A worker this backend cannot open is still its worker when it is
+            # the proven leader (same number and start time), or was started by
+            # the leader or a marked worker: a worker started while the app ran
+            # elevated outlives a later, non-elevated backend. Its state is then
+            # unknown; it is never reported as exited.
+            # Windows keeps a parent's number after the parent exits and
+            # reuses numbers quickly, so a parent number alone proves nothing:
+            # as in psutil's children(), the child must have started after the
+            # parent, and before any other process took the recorded number.
+            # A worker from before this boot cannot be anyone's parent now.
+            starts = {process.pid: process.create_time() for process in members}
+            if evidence != 'estimated_earlier':
+                starts.setdefault(pid, journal['owner_created_at'])
+            for process in denied:
+                try:
+                    if process.pid == pid and leader_proven:
+                        return None
+                    parent = process.ppid()
+                    if parent not in starts:
+                        continue
+                    created = process.create_time()
+                except psutil.NoSuchProcess:
+                    continue  # exited during the scan
+                except psutil.Error:
+                    return None
+                if created + .01 >= starts[parent] and (parent != pid or reused_at is None or created < reused_at):
+                    return None
         if members:
             # Marked workers are alive; a session shared with unmarked processes
             # stays unknown so nothing unmarked is ever signalled.
@@ -436,7 +485,7 @@ def run_owned_training(record, callback, *, config_overrides, device, split_mani
     with (root / 'local_worker.log').open('ab') as log:
         os.chmod(root / 'local_worker.log', 0o600)
         child = subprocess.Popen(command, cwd=Path(__file__).resolve().parents[2], env=environment,
-                                 stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                                 stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, **session_isolation())
     record.process = child
     journal = {'protocol_version': 1, 'job_id': record.job_id, 'status': 'launching', 'task': record.task,
                'preset': record.preset, 'output_dir': str(root), 'spec_path': str(spec_path), 'spec_sha256': digest,

@@ -21,6 +21,7 @@ import secrets
 import signal
 import socket
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -491,8 +492,10 @@ def run_server():
     # Signal handlers for direct SIGINT/SIGTERM termination
     def _sig_handler(sig, frame):
         logger.info("Received signal %d, detaching owned training and triggering exit...", sig)
-        training_job_manager.detach_all_for_shutdown()
-        server.should_exit = True
+        try:
+            training_job_manager.detach_all_for_shutdown()
+        finally:
+            server.should_exit = True
 
     for s in (signal.SIGINT, signal.SIGTERM):
         try:
@@ -500,7 +503,32 @@ def run_server():
         except (ValueError, AttributeError):
             pass
 
+    if os.environ.get(STOP_ON_STDIN_EOF) == "1":
+        threading.Thread(target=_stop_when_stdin_closes, args=(server,), name="StopOnStdinEOF", daemon=True).start()
+
     server.run(sockets=[sock])
+
+
+# The desktop supervisor keeps this process's stdin open and closes it to ask for a graceful stop (when the app itself
+# exits, its exit hook stops this process outright instead). On Windows a stop signal from Electron terminates the
+# process outright, so this is the stop that runs the shutdown sequence there; it is opt-in because a server started
+# from a shell may have no stdin at all.
+STOP_ON_STDIN_EOF = "VISION_AI_STUDIO_STOP_ON_STDIN_EOF"
+
+
+def _stop_when_stdin_closes(server) -> None:
+    try:
+        # The raw descriptor, not sys.stdin: a daemon thread blocked in a buffered read holds a lock that interpreter
+        # shutdown would then wait for.
+        while os.read(0, 65536):
+            pass
+    except OSError:
+        pass  # a broken pipe also means the supervisor is gone
+    logger.info("The supervisor closed stdin; detaching owned training and triggering exit...")
+    try:
+        training_job_manager.detach_all_for_shutdown()
+    finally:  # a failed detach (a locked database) never loses the stop request
+        server.should_exit = True
 
 
 if __name__ == "__main__":

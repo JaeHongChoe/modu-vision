@@ -11,7 +11,8 @@ function discover(directory) {
       : entry.isFile() && entry.name.endsWith('.test.cjs') ? [path.relative(root, filename)] : [];
   });
 }
-const files = discover(path.join(root, 'src', 'renderer')).sort();
+// The Electron main process logic (supervisor, distribution) is tested the same way as the renderer.
+const files = [...discover(path.join(root, 'src', 'renderer')), ...discover(path.join(root, 'src', 'main'))].sort();
 if (!files.length) throw new Error('No renderer regression files discovered');
 if (process.argv.includes('--list')) console.log(JSON.stringify(files, null, 2));
 else {
