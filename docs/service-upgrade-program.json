@@ -8666,8 +8666,21 @@
     "Duplicate trigger/view is idempotent; missing view expires to REVIEW/INCOMPLETE; late frame cannot turn an expired group into OK.",
     "Restart preserves pending group/deadline and outputs; export/reopen retains join policy; Windows native simulator proof precedes camera claims."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "e3dedd2: backend/engine/capture_groups.py joins the frames of one part and trigger from several views into one whole-part verdict (SQLite WAL, every write under BEGIN IMMEDIATE): COMPLETE when every required view joined; at the deadline INCOMPLETE (a view arrived only outside the skew) or EXPIRED, both REVIEW; a verdict never changes; the same frame again is a duplicate; a frame past the late window, or for a part closed before a clock change, is refused every time; a conflicting frame of a joined view after the verdict is an alarm. Deadlines run on the monotonic clock read under the write lock; a monotonic time below the last write or a wall-clock move beyond 2 s plus 0.1% of the elapsed time marks pending parts due with that cause and the next sweep reports them. Independent review: freezes 1-3 changed per review (P1/P2s), freeze 4 ACCEPT (0 P1, 0 P2, P3s).",
+     "scope": "frozen tree (422a2d2 + 2 files) and the publish tree (+ the CI lines): backend/tests/test_service_e01.py 23 tests (29 with the suite's parametrisations) green with anaconda python and the repo .venv (CI lock), ten repeats, red on freeze 3 (8 failing); Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac). The reviewer reran red/green and a real-clock multi-process probe (two writers plus two openers for 10 s: 0 spurious clock-changed marks, 8,001 parts pending).",
+     "platform": "macOS development; engine only (nothing calls the store yet)"
+    }
+   ],
+   "remaining": [
+    "the camera runtime that owns the store, the trigger source and debouncing (S5-03); one-image flows as view subflows and the whole-part node (S2-05); export of the join policy with a package (S5-05)",
+    "review P3s: writers whose monotonic clocks start at different points see each other as clock changes (fail-safe REVIEW; no clock-source guard); the remaining detection windows stated in the module text; a late NG across a clock change raises without adding a group alarm; no test for a conflicting frame closing its own overdue group; add_frame ~1.9 ms and O(n) per frame for one flooded key",
+    "a check that capture times use the declared unit (only whole milliseconds are enforced)",
+    "Windows native simulator proof before any camera claim"
+   ]
   },
   {
    "id": "E02",
