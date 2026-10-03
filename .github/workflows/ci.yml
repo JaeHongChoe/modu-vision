@@ -62,6 +62,7 @@ jobs:
           backend/tests/test_service_s1_04.py
           backend/tests/test_service_s1_09.py
           backend/tests/test_service_s1_10.py
+          backend/tests/test_service_s6_07.py
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Browser transport and flow checks

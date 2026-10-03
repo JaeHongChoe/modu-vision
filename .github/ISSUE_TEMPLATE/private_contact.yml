@@ -1,0 +1,24 @@
+name: 비공개 연락 요청 (Private contact request)
+description: 비공개로 알릴 일이 있을 때 연락을 요청합니다. 이 양식은 공개되므로 내용과 종류를 쓰지 않습니다.
+title: "비공개 연락 요청"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        이 요청은 누구나 볼 수 있고, 요청한 계정도 보입니다. 문제의 내용이나 종류, 재현 방법, 이미지, 로그, 이름이나 연락처를 쓰지 마세요.
+        관리자가 비공개 채널(이 저장소의 비공개 보안 권고에 초대)을 열어 연락하고, 채널을 연 뒤 이 요청을 지웁니다. 내용은 그 비공개 채널에서만 나눕니다.
+  - type: dropdown
+    id: request
+    attributes:
+      label: 요청
+      options:
+        - 비공개 연락이 필요합니다
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: 확인
+      options:
+        - label: 문제의 내용이나 종류, 실제 검사 이미지, 로그, 개인정보, 비밀번호·토큰을 이 양식에 쓰지 않았습니다.
+          required: true

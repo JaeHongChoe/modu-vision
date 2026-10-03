@@ -9,10 +9,10 @@
 <br />
 
 [![macOS](https://img.shields.io/badge/macOS-arm64%20%7C%20MPS-000000?style=for-the-badge)](#-빠른-시작-quick-start)
-[![Windows](https://img.shields.io/badge/Windows-10%2F11%20%7C%20CUDA%20%7C%20CPU-0078D6?style=for-the-badge)](#-빠른-시작-quick-start)
-[![Electron](https://img.shields.io/badge/Electron-33.x-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.4+-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![Windows](https://img.shields.io/badge/Windows-11%20x64%20%7C%20CUDA%20%7C%20CPU-0078D6?style=for-the-badge)](#-빠른-시작-quick-start)
+[![Electron](https://img.shields.io/badge/Electron-44-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.142-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.9-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -95,7 +95,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                 Desktop Client Layer (Electron 33 + React 18)               │
+│                 Desktop Client Layer (Electron 44 + React 18)               │
 │   ┌───────────────────────┐ ┌────────────────────────┐ ┌────────────────┐  │
 │   │ 6-Stage Studio UI     │ │ Labeling Canvas        │ │ Zustand Stores │  │
 │   │ (Data → Inference)    │ │ (Base/Mask/Vector)     │ │ (Sync State)   │  │
@@ -132,23 +132,20 @@
 ## ⚡ 빠른 시작 (Quick Start)
 
 ### 필수 요구 조건
-* **Node.js**: v18.0.0 이상
-* **Python**: 3.10 이상. 설치할 PyTorch·torchvision 등 의존성이 해당 Python/OS 조합을 지원하는지 확인한다.
-* **OS**: macOS 12+ (arm64) 또는 Windows 10/11 (64-bit)
+* **Python**: 3.13 (고정 잠금 파일이 3.13용)
+* **Node.js**: 24
+* **OS**: Windows 11 x64(주 대상), macOS arm64(개발 환경). 지원 범위와 현재 근거는 [기여 안내](CONTRIBUTING.md#8-지원-범위-support-matrix)에 있다.
 
 ### 저장소 복제 및 설치
+운영체제별 명령(Windows PowerShell, Linux, macOS)은 [기여 안내의 1단계](CONTRIBUTING.md#1-새-pc에서-시작하기-fresh-checkout)에 있다. Linux x64 예:
+
 ```bash
-# 1. 저장소 복제
 git clone https://github.com/JaeHongChoe/modu-vision.git
 cd modu-vision
-
-# 2. 파이썬 가상환경 생성 및 의존성 설치
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# 3. 프론트엔드 모듈 설치
-npm install
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
+npm ci
 ```
 
 ### 개발 모드 실행
@@ -163,25 +160,25 @@ npm run dev
 
 ## 📦 데스크톱 패키징 (Desktop Packaging)
 
-`package:mac`과 `package:win`은 Electron 패키지를 만든다. 현재 패키징 설정은 백엔드 소스를 포함하고, 실행 시 별도 빌드한 백엔드 바이너리를 찾거나 Python 환경을 사용한다. Python이 없는 대상 PC에서의 완전 독립 실행과 모든 의존성 포함 여부는 각 플랫폼의 산출물 설치·첫 실행으로 검증해야 한다.
+`package:mac`과 `package:win`은 Electron 패키지를 만든다. 패키지는 같은 플랫폼에서 먼저 빌드한 frozen 백엔드(`backend_bin`)와 그 체크섬 목록을 담으며, 대상 PC에 Python 패키지를 설치하지 않는다(빌드·검증 절차는 [docs/release-platform-matrix.md](docs/release-platform-matrix.md)). 서명, 설치본 검증, 실제 장비 실행은 플랫폼별 근거가 따로 필요하다.
+
+먼저 같은 플랫폼에서 가상환경의 Python으로 frozen 백엔드를 빌드한 뒤 Electron 패키지를 만든다. 패키지 빌더는 같은 OS·아키텍처에서 실행 검증을 마친 백엔드 빌드가 없으면 멈춘다.
 
 ### 🍎 macOS 애플리케이션 번들 (.app)
 ```bash
+.venv/bin/python scripts/build_backend_binary.py
 npm run package:mac
 # 출력 위치: release/ 아래의 macOS 산출물
 ```
 
-### 🪟 Windows 설치 파일 (NSIS)
-```bash
-# 별도 백엔드 바이너리 빌드
-npm run build:backend
-
-# Electron 설치 파일 생성
-npm run package:win
+### 🪟 Windows 설치 파일 (NSIS, PowerShell)
+```powershell
+.venv\Scripts\python.exe scripts\build_backend_binary.py
+npm.cmd run package:win
 # 출력 위치: release/ 아래의 NSIS 산출물
 ```
 
-바이너리 빌드와 Electron 패키징은 별도 스크립트다. 현재 `electron-builder` 설정에서 빌드된 백엔드 바이너리를 설치 파일에 포함했는지 확인하고 대상 Windows PC에서 첫 실행을 시험해야 한다.
+서명, 설치본 설치·제거 검증, 대상 Windows PC에서의 첫 실행은 따로 확인해야 한다.
 
 프로젝트 열기 전에 스키마 호환성을 검사하며, 기존 스키마 정규화는 원본 바이트 백업과 해시 연결 기록을 남긴다. 배포 화면은 실제 데스크톱 버전·서명 상태와 사용자가 설정한 HTTPS 업데이트 채널을 표시한다. 검증된 파일의 수동 다운로드를 지원하며 자동 설치는 지원하지 않는다. 검사 서비스의 사용자 시작 등록은 macOS LaunchAgent, Linux systemd user, Windows logon task를 제공한다. 실제 서명·배포 채널과 OS별 재로그인·재부팅 검증은 별도로 필요하다. 상세 근거는 [배포·호환성 기록](docs/implementation-ledger/TEAM-DELIVERY.md)에 있다.
 
@@ -260,12 +257,11 @@ modu-vision/
 
 ## 🤝 기여하기 (Contributing)
 
-버그 제보, 기능 제안 및 풀 리퀘스트(PR)는 언제나 환영합니다!
-1. 이슈를 등록하여 구현 계획을 논의해 주세요.
-2. 피처 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`).
-3. 변경 사항을 커밋합니다 (`git commit -m 'feat: Add amazing feature'`).
-4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`).
-5. 풀 리퀘스트(PR)를 오픈합니다.
+버그 제보, 기능 제안 및 풀 리퀘스트(PR)는 언제나 환영합니다.
+
+- [기여 안내](CONTRIBUTING.md): 새 PC 설치(CI와 같은 잠금 파일), GPU 없는 CPU 데모(`python scripts/cpu_demo.py`), 집중 테스트, PR 절차, 모듈 지도, 코드 규칙, 지원 범위와 릴리스 정책
+- [보안 정책](SECURITY.md): 취약점은 공개 이슈가 아닌 비공개 신고로 알려 주세요. 실제 검사 이미지나 비밀정보는 첨부하지 않습니다.
+- [행동 강령](CODE_OF_CONDUCT.md)
 
 <br />
 

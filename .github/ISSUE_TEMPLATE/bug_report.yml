@@ -1,0 +1,84 @@
+name: 버그 신고 (Bug report)
+description: 재현할 수 있는 잘못된 동작을 알려 주세요. 보안 문제는 SECURITY.md의 비공개 신고를 사용하세요.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        실제 검사 이미지, 고객 데이터, 개인정보, 비밀번호·토큰·서버 주소는 첨부하지 마세요.
+        재현에는 합성 데이터(예: `python scripts/cpu_demo.py`)를 사용하고, 로그는 경로와 식별자를 가린 뒤 붙여 주세요.
+  - type: input
+    id: version
+    attributes:
+      label: 버전 또는 커밋
+      description: 앱의 버전 표시나 `git rev-parse --short HEAD` 결과
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: 실행 형태
+      options:
+        - 데스크톱 앱 (Windows)
+        - 데스크톱 앱 (macOS)
+        - 소스 실행 (Linux x64, 지원 범위 표의 CI 환경)
+        - 브라우저
+        - 공유 서버 모드
+        - 검사 서비스 / 내보낸 실행 패키지
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 운영체제와 장치
+      description: 예) Windows 11 x64, CPU / CUDA GPU 종류
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 영역
+      options:
+        - 데이터셋 가져오기·검증
+        - 라벨링
+        - 학습·작업 센터
+        - 평가
+        - 검사 플로우
+        - 검사 서비스·배포
+        - 설치·업데이트
+        - 기타
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 단계
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 동작
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작과 오류 문구
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그 (가린 뒤)
+      render: text
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: 확인
+      options:
+        - label: 실제 검사 이미지, 고객 데이터, 개인정보, 비밀번호·토큰·서버 접속 정보를 첨부하지 않았습니다.
+          required: true

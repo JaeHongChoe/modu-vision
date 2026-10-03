@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 보안 취약점 (Security vulnerability)
+    url: https://github.com/JaeHongChoe/modu-vision/security/policy
+    about: 취약점의 내용은 공개 이슈에 쓰지 마세요. 보안 정책의 비공개 신고나 '비공개 연락 요청' 양식을 쓰세요.
+  - name: 기여 안내 (Contributing guide)
+    url: https://github.com/JaeHongChoe/modu-vision/blob/main/CONTRIBUTING.md
+    about: 설치, CPU 데모, 테스트와 PR 절차
