@@ -1,9 +1,12 @@
 """S1-04: cancel and failure states from evidence only, each with one exact next action.
 
-Pure classification over recorded evidence (run journal fields, ledger cancel intent, reservation rows, exit codes,
-OS error numbers and error text). No process is started or signalled.
+Most tests classify recorded evidence (run journal fields, ledger cancel intent, reservation rows, exit codes, OS error
+numbers and error text). The local-worker tests start this app's own training worker and signal only that child,
+through the identity its run journal records; each cancel step it takes is a job ledger event of its own.
 """
 import errno
+import os
+from pathlib import Path
 
 import pytest
 
@@ -272,13 +275,19 @@ def test_an_uncertain_reservation_is_released_only_on_an_operators_recorded_conf
     assert all(row['job_id'] != job_id for row in manager._leases.list())
     confirmed = _release_events(ledger(), job_id, 'reservation_release_confirmed')
     assert len(confirmed) == 1 and confirmed[0]['reason'] == 'the PC was rebooted' and confirmed[0]['liveness'] == 'unknown'
-    assert len(_release_events(ledger(), job_id, 'reservation_released')) == 1
+    assert len(_operator_releases(ledger(), job_id)) == 1 and _operator_releases(ledger(), job_id)[0]['by'] == 'operator'
+    assert _release_events(ledger(), job_id, 'reservation_released')[0] == {'by': 'job_end', 'status': 'aborted'}, 'the job\'s own end released its first reservation'
     assert release().status_code == 409, 'a second confirmation finds nothing to release'
     assert len(_release_events(ledger(), job_id, 'reservation_release_confirmed')) == 1, 'a refused check records nothing'
 
 
 def _release_events(store, job_id, name):
     return [event['payload'] for event in store.events(job_id) if event['event'] == name]
+
+
+def _operator_releases(store, job_id):
+    """Releases an operator confirmed (they name the actor); a finished job's own release says by: job_end."""
+    return [payload for payload in _release_events(store, job_id, 'reservation_released') if payload.get('by') != 'job_end']
 
 
 def _expire(manager, job_id):
@@ -334,7 +343,7 @@ def test_the_ledger_never_records_a_release_that_did_not_happen(tmp_path, monkey
     assert len(_release_events(ledger(), job_id, 'reservation_release_confirmed')) == 1
     refused = _release_events(ledger(), job_id, 'reservation_release_refused')
     assert len(refused) == 1 and 'changed' in refused[0]['reason']
-    assert _release_events(ledger(), job_id, 'reservation_released') == []
+    assert _operator_releases(ledger(), job_id) == []
     # Two confirmations at once: one releases; the other is answered after it and records nothing.
     def slow_release(*args):
         time.sleep(0.2)
@@ -352,7 +361,7 @@ def test_the_ledger_never_records_a_release_that_did_not_happen(tmp_path, monkey
     for thread in threads:
         thread.join(10)
     assert sorted(type(outcome).__name__ for outcome in outcomes) == ['dict', 'int'] and 409 in outcomes, outcomes
-    assert len(_release_events(ledger(), job_id, 'reservation_released')) == 1
+    assert len(_operator_releases(ledger(), job_id)) == 1
     assert len(_release_events(ledger(), job_id, 'reservation_release_confirmed')) == 2, 'the refused change above and this release'
 
 
@@ -524,7 +533,7 @@ def test_a_release_outcome_or_reservation_store_failure_is_answered_truthfully(t
     released = api.post('/api/training/reservations/confirm-release', json=body)
     assert released.status_code == 200 and released.json()['outcome_recorded'] is False, released.text
     assert all(row['job_id'] != job_id for row in manager._leases.list())
-    assert _release_events(ledger(), job_id, 'reservation_released') == [], 'the confirmation alone never claims a release'
+    assert _operator_releases(ledger(), job_id) == [], 'the confirmation alone never claims a release'
 
 
 def test_a_ledger_only_server_job_is_released_without_a_local_process_check(tmp_path, monkeypatch):
@@ -617,3 +626,138 @@ def test_the_task_center_source_survives_an_unreadable_reservation_table(tmp_pat
         lease_db.chmod(0o644)
     assert response.status_code == 200, response.text
     assert response.json()['reservations'] is None and any(row['kind'] == 'reservations' for row in response.json()['errors'])
+
+
+_CHAIN = ('cancel_requested', 'cancel_signalled', 'cancel_acknowledged', 'worker_exit_confirmed', 'reservation_released', 'abort')
+
+
+@pytest.mark.parametrize('grace', ['cooperative', 'terminate'])
+def test_each_step_of_a_local_cancel_is_its_own_ledger_event(tmp_path, monkeypatch, grace):
+    import json
+    import time
+    from fastapi.testclient import TestClient
+    from PIL import Image
+    import backend.main as main
+    from backend.api import routes_training
+    from backend.engine import local_training_worker
+    from backend.engine.job_store import ledger
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
+    if grace == 'terminate':
+        monkeypatch.setattr(local_training_worker, 'CANCEL_GRACE_SECONDS', 0)  # this observer terminates its own worker at once
+    manager = routes_training.TrainingJobManager()
+    monkeypatch.setattr(routes_training, 'training_job_manager', manager)
+    monkeypatch.setattr(main, 'training_job_manager', manager)
+    source = tmp_path / 'source'
+    for split in ('train', 'val'):
+        for label in ('OK', 'NG'):
+            (source / split / label).mkdir(parents=True)
+            for index in range(4):
+                Image.new('RGB', (32, 32), (200, 20 * index, 0) if label == 'NG' else (0, 20 * index, 200)).save(source / split / label / f'{index}.png')
+    app = main.create_app(project_dir=str(tmp_path / 'projects'))
+    api = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
+    api.post('/api/project/create', json={'name': 'Cancel steps', 'task': 'classification'})
+    project = api.put('/api/project/update', json={'source_dataset_dir': str(source)}).json()
+    started = api.post('/api/training/start', json={
+        'task': 'classification', 'preset': 'fast', 'dataset_path': project['source_dataset_dir'], 'device': 'cpu',
+        'config_overrides': {'pretrained': False, 'backbone': 'resnet18', 'epochs': 1000, 'image_size': 32, 'batch_size': 2, 'num_workers': 0}})
+    assert started.status_code == 200, started.text
+    job_id, deadline = started.json()['job_id'], time.monotonic() + 120
+    while time.monotonic() < deadline and not api.get('/api/training/status', params={'job_id': job_id}).json().get('current_step'):
+        time.sleep(0.1)
+    assert api.post('/api/training/stop', json={'job_id': job_id}).json()['status'] == 'stopping'
+    record = manager.get_job(job_id)
+    record.thread.join(60)
+    assert record.status == 'aborted'
+    events = [(row['event'], row['payload']) for row in ledger().events(job_id) if row['event'] in _CHAIN]
+    names = [name for name, _ in events]
+    signals = [payload['signal'] for name, payload in events if name == 'cancel_signalled']
+    assert signals == (['cooperative'] if grace == 'cooperative' else ['cooperative', 'terminate'])
+    order = {name: names.index(name) for name in _CHAIN if name in names}
+    assert order['cancel_requested'] < order['cancel_signalled'] < order['worker_exit_confirmed'] < order['reservation_released'] < order['abort']
+    # On Windows a terminate is a hard kill (TerminateProcess): a worker killed before it saw the cancel file never
+    # acknowledges. Everywhere else, and for a cooperative stop, the acknowledgement comes before the confirmed exit.
+    if 'cancel_acknowledged' in order or not (os.name == 'nt' and grace == 'terminate'):
+        assert order['cancel_acknowledged'] < order['worker_exit_confirmed'], 'the worker saw the request before its exit was confirmed'
+    assert names.count('worker_exit_confirmed') == names.count('reservation_released') == 1
+    assert dict(events)['worker_exit_confirmed']['state'] == 'aborted'
+    assert dict(events)['reservation_released'] == {'by': 'job_end', 'status': 'aborted'}
+    journal = json.loads((record_output := Path(record.output_dir) / 'local_job.json').read_text())
+    assert journal['cancel_signal_sent_at'] >= journal['cancel_requested_at'], record_output
+    assert bool(journal.get('cancel_terminate_sent_at')) is (grace == 'terminate') and not journal.get('cancel_kill_sent_at')
+    evidence = cancellation_evidence(journal, reservation_present=bool(manager._leases.list()))
+    assert evidence.signals == (('cooperative',) if grace == 'cooperative' else ('cooperative', 'terminate'))
+    assert (evidence.stage, evidence.complete) == ('released', True)
+
+
+def test_a_transition_survives_an_evidence_event_recorded_between_its_read_and_its_write(tmp_path):
+    from backend.api.routes_training import TrainingLedgerLink
+    from backend.engine.job_store import JobStore
+    store = JobStore(tmp_path / 'jobs.sqlite3')
+    context = {'workspace_id': 'w', 'project_id': 'p', 'actor_id': 'a', 'mode': 'local'}
+    job_id = store.submit(context, 'project', 'training', {'task': 'classification'}).id
+    reads = []
+    real_get = store.get
+
+    def get_then_step(identifier):
+        ref = real_get(identifier)
+        if not reads:
+            store.record_event(identifier, 'cancel_signalled', {'signal': 'cooperative'})  # another thread, in between
+        reads.append(ref.revision)
+        return ref
+    store.get = get_then_step
+    TrainingLedgerLink(store, job_id)._record('queue')
+    assert real_get(job_id).state == 'queued', 'the transition was checked again and recorded'
+    assert len(reads) == 2
+    assert [row['event'] for row in store.events(job_id)][-2:] == ['cancel_signalled', 'queue']
+
+
+def test_a_ledger_failure_never_stops_a_cancel_step(tmp_path):
+    import sqlite3
+    from types import SimpleNamespace
+    from backend.api.routes_training import TrainingLedgerLink
+    from backend.engine import local_training_worker
+
+    class Unavailable:
+        def record_event(self, *args, **kwargs):
+            raise sqlite3.OperationalError('disk I/O error')
+    link = TrainingLedgerLink(Unavailable(), 'job')
+    link.step('cancel_acknowledged', {'acknowledged_at': 1.0})  # logged, not raised
+    output = tmp_path / 'run'
+    record = SimpleNamespace(job_id='job', output_dir=str(output), ledger=link)
+    local_training_worker.request_local_cancellation(record)
+    assert (output / 'local_cancel.json').is_file(), 'the cooperative signal was still sent'
+
+
+def test_a_release_is_recorded_only_when_a_reservation_was_removed():
+    from backend.api import routes_training
+    steps = []
+    link = type('Link', (), {'step': lambda self, event, payload: steps.append((event, payload))})()
+    for removed in (False, True):
+        leases = type('Leases', (), {'release': lambda self, job_id, terminal=False, removed=removed: removed})()
+        routes_training._release_reservation(leases, 'job', 'completed', link)
+    assert steps == [('reservation_released', {'by': 'job_end', 'status': 'completed'})]
+    routes_training._release_reservation(type('Leases', (), {'release': lambda self, job_id, terminal=False: True})(), 'job', 'failed', None)
+
+
+def test_a_failed_journal_save_after_the_cancel_file_still_records_the_signal_and_lets_the_stop_go_on(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from backend.engine import local_training_worker
+    output = tmp_path / 'run'
+    output.mkdir()
+    (output / 'local_job.json').write_text(json.dumps({'job_id': 'job', 'output_dir': str(output)}), encoding='utf-8')
+    steps = []
+    record = SimpleNamespace(job_id='job', output_dir=str(output),
+                             ledger=SimpleNamespace(step=lambda event, payload: steps.append((event, payload))))
+    real_save, saves = local_training_worker._save, []
+
+    def save(journal):
+        saves.append(dict(journal))
+        if len(saves) == 2:  # the save recording the signal time fails (e.g. the disk filled up)
+            raise OSError(28, 'No space left on device')
+        return real_save(journal)
+    monkeypatch.setattr(local_training_worker, '_save', save)
+    local_training_worker.request_local_cancellation(record)
+    assert (output / 'local_cancel.json').is_file(), 'the cooperative signal was sent'
+    assert steps == [('cancel_signalled', {'signal': 'cooperative'})], 'and recorded in the ledger'
+    assert json.loads((output / 'local_job.json').read_text())['cancel_requested_at'], 'the intent was saved first'

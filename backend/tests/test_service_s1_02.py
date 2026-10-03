@@ -437,7 +437,9 @@ def test_the_attempt_is_recorded_before_the_worker_starts_and_the_end_state_is_k
             break
         threading.Event().wait(0.05)
     assert ledger.get(job_id).state == 'completed'
-    assert [row['event'] for row in ledger.events(job_id)] == ['submit', 'attempt', 'start', 'complete']
+    # The released reservation is an evidence event of its own (S1-04); this harness's fake worker has no process exit
+    # to confirm (a real worker's is test_service_s1_04).
+    assert [row['event'] for row in ledger.events(job_id)] == ['submit', 'attempt', 'start', 'reservation_released', 'complete']
 
 
 def routes_training_context(value):

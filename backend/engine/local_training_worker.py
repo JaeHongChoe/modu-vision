@@ -69,18 +69,52 @@ def _save(journal):
 
 
 def request_local_cancellation(record):
-    """Acknowledge cancellation only after its run-local intent is saved."""
+    """Acknowledge cancellation only after its run-local intent is saved; then send the cooperative signal (the cancel
+    file the worker watches), recorded apart from the intent in the run journal and the job ledger (S1-04)."""
     with _LOCK:
         root = Path(record.output_dir)
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         path = root / 'local_job.json'
+        journal = None
         if path.is_file():
             journal = json.loads(path.read_text(encoding='utf-8'))
             if journal.get('job_id') != record.job_id:
                 raise ValueError('Local cancel intent belongs to another job')
             journal.setdefault('cancel_requested_at', time.time())
             _save(journal)
+        first_signal = not (root / 'local_cancel.json').exists()
         atomic_private_json(root / 'local_cancel.json', {'job_id': record.job_id, 'cancel_requested_at': time.time()})
+        if journal is not None and not journal.get('cancel_signal_sent_at'):
+            journal['cancel_signal_sent_at'] = time.time()
+            try:
+                _save(journal)
+            except OSError:  # the cancel file is written: the signal was sent, and the stop goes on
+                logger.exception('Could not record the cooperative signal sent to %s', record.job_id)
+    if first_signal:
+        _step(record, 'cancel_signalled', {'signal': 'cooperative'})
+
+
+_SIGNAL_KEYS = {'terminate': 'cancel_terminate_sent_at', 'kill': 'cancel_kill_sent_at'}
+
+
+def _step(record, event, payload):
+    """Record one cancel or exit step in the job ledger, when the job has one (the worker process itself has none)."""
+    step = getattr(getattr(record, 'ledger', None), 'step', None)
+    if step is not None:
+        step(event, payload)
+
+
+def _record_signal(record, journal, name):
+    """A terminate or kill this observer sent while cancelling, recorded once in the run journal and the ledger."""
+    key = _SIGNAL_KEYS[name]
+    if journal.get(key):
+        return
+    journal[key] = time.time()
+    try:
+        _save(journal)
+    except OSError:
+        logger.exception('Could not record the %s signal sent to %s', name, record.job_id)
+    _step(record, 'cancel_signalled', {'signal': name})
 
 
 def _cancelled(root, job_id):
@@ -516,13 +550,19 @@ def _monitor_with_cleanup(record, callback, journal, child, digest, root):
                 request_local_cancellation(record)
             except Exception:
                 logger.exception('Could not persist cancellation while reconciling failed local observer %s', record.job_id)
-            if not _stop_owned(journal) and _liveness(journal) is not False:
+            sent = _stop_owned(journal)
+            if not sent and _liveness(journal) is not False:
                 raise LocalWorkerUncertain('Local training worker ownership remains uncertain')
+            if sent:
+                _record_signal(record, journal, 'terminate')
             try:
                 _AttachedProcess(journal).wait(timeout=CANCEL_TERMINATE_SECONDS)
             except subprocess.TimeoutExpired:
-                if not _stop_owned(journal, force=True) and _liveness(journal) is not False:
+                sent = _stop_owned(journal, force=True)
+                if not sent and _liveness(journal) is not False:
                     raise LocalWorkerUncertain('Local training worker exit remains uncertain')
+                if sent:
+                    _record_signal(record, journal, 'kill')
                 try:
                     _AttachedProcess(journal).wait(timeout=5)
                 except subprocess.TimeoutExpired as exc:
@@ -552,6 +592,7 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
                     _save(journal)
                 except OSError:
                     logger.exception('Could not record the cancel acknowledgement of %s', record.job_id)
+                _step(record, 'cancel_acknowledged', {'acknowledged_at': acknowledged})
             if status['status'] in {'completed', 'failed', 'aborted'}:
                 terminal = status
         try:
@@ -589,6 +630,7 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
                 _save(journal)
             except OSError:
                 pass
+            _step(record, 'worker_exit_confirmed', {'exit_code': code, 'state': state})
             if state == 'failed':
                 raise RuntimeError((terminal or {}).get('error') or f'Owned training worker exited without a terminal receipt (exit {code})')
             return {**((terminal or {}).get('result') or {}), 'status': state,
@@ -598,12 +640,18 @@ def _monitor_owned_training(record, callback, journal, child, digest, root):
         if cancellation_started is not None:
             now = time.monotonic()
             if terminated_at is None and now - cancellation_started >= CANCEL_GRACE_SECONDS:
-                if not _stop_owned(journal) and _liveness(journal) is not False:
+                sent = _stop_owned(journal)
+                if not sent and _liveness(journal) is not False:
                     raise RuntimeError('Local worker ownership could not be confirmed for cancellation')
+                if sent:
+                    _record_signal(record, journal, 'terminate')
                 terminated_at = now
             elif terminated_at is not None and now - terminated_at >= CANCEL_TERMINATE_SECONDS:
-                if not _stop_owned(journal, force=True) and _liveness(journal) is not False:
+                sent = _stop_owned(journal, force=True)
+                if not sent and _liveness(journal) is not False:
                     raise RuntimeError('Local worker ownership could not be confirmed for final cancellation')
+                if sent:
+                    _record_signal(record, journal, 'kill')
                 _AttachedProcess(journal).wait(timeout=5)
         time.sleep(POLL_SECONDS)
 

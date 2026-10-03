@@ -203,8 +203,9 @@ class ResourceLeases:
         with self.connect() as conn:
             conn.execute('UPDATE leases SET uncertain=1 WHERE job_id=? AND owner=?', (job_id,self.owner))
     def release(self, job_id, *, terminal=False):
+        """Remove this owner's reservation of ``job_id``; True when one was removed (the release evidence, S1-04)."""
         with self.connect() as conn:
-            conn.execute('DELETE FROM leases WHERE job_id=? AND owner=? AND (remote=0 OR ?=1)', (job_id,self.owner,int(terminal)))
+            return conn.execute('DELETE FROM leases WHERE job_id=? AND owner=? AND (remote=0 OR ?=1)', (job_id,self.owner,int(terminal))).rowcount > 0
     def release_uncertain(self, job_id, fence=None):
         """An operator settles a reservation whose worker exit could not be proven (S1-04). Only a row that is still
         uncertain and still under the fence the operator saw is removed, so a reservation re-taken meanwhile stays."""

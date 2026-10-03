@@ -118,8 +118,24 @@ class TrainingLedgerLink:
 
     def _record(self, event: str, payload: Optional[Dict[str, Any]] = None) -> None:
         try:
-            ref = self.store.get(self.job_id)
-            self.store.transition(self.job_id, ref.revision, event, payload, fencing_token=self.fencing_token)
+            for attempt in range(3):
+                ref = self.store.get(self.job_id)
+                try:
+                    self.store.transition(self.job_id, ref.revision, event, payload, fencing_token=self.fencing_token)
+                    return
+                except StaleRevision:
+                    # An evidence event (step) recorded between the read and the transition moved the revision; the
+                    # transition is checked again against the job's current state.
+                    if attempt == 2:
+                        raise
+        except _LEDGER_ERRORS as exc:
+            logger.warning("Job ledger could not record %s for %s: %s", event, self.job_id, exc)
+
+    def step(self, event: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        """One piece of evidence that does not change the job's state (a cancel acknowledged, a signal sent, the
+        worker's exit confirmed, the reservation released; S1-04). A ledger failure never stops the step itself."""
+        try:
+            self.store.record_event(self.job_id, event, payload)
         except _LEDGER_ERRORS as exc:
             logger.warning("Job ledger could not record %s for %s: %s", event, self.job_id, exc)
 
@@ -341,6 +357,12 @@ def _write_job_receipt(record: JobRecord) -> None:
             temporary_path.unlink(missing_ok=True)
 
 
+def _release_reservation(leases: Any, job_id: str, status: str, link: Optional[TrainingLedgerLink]) -> None:
+    """Release an ended job's reservation; a reservation actually removed is recorded apart from the job's end (S1-04)."""
+    if leases.release(job_id, terminal=True) and link is not None:
+        link.step("reservation_released", {"by": "job_end", "status": status})  # an operator's release names its actor
+
+
 class TrainingJobManager:
     """Singleton coordinator for background PyTorch training jobs."""
 
@@ -490,7 +512,7 @@ class TrainingJobManager:
                         _write_job_receipt(record)
                     except OSError:
                         logger.exception('Could not persist recovered local receipt for %s', record.job_id)
-                    leases.release(record.job_id, terminal=True)
+                    _release_reservation(leases, record.job_id, record.status, record.ledger)
                 if record.ledger is not None:
                     record.ledger.finished(record.status, record.error)
                 with self._lock:
@@ -700,7 +722,7 @@ class TrainingJobManager:
                     if record.status == 'disconnected':
                         self._leases.mark_uncertain(job_id)
                     else:
-                        self._leases.release(job_id, terminal=True)
+                        _release_reservation(self._leases, job_id, record.status, record.ledger)
                     if record.ledger is not None:
                         record.ledger.finished(record.status, record.error)
                     logger.info("Background training thread finished for job %s", job_id)
@@ -769,7 +791,7 @@ class TrainingJobManager:
             waiting_record.error = {"message": f"Training could not start: {exc}"}
             with self._lock:
                 self._jobs[lease.job_id] = waiting_record
-            self._leases.release(lease.job_id, terminal=True)
+            _release_reservation(self._leases, lease.job_id, "failed", link)
             link.finished("failed", waiting_record.error)
 
     def start_remote_job(
@@ -873,7 +895,7 @@ class TrainingJobManager:
                     record.error = {"message": str(exc)}
             heartbeat.set()
             if record.status == "disconnected": self._leases.mark_uncertain(job_id)
-            else: self._leases.release(job_id, terminal=True)
+            else: _release_reservation(self._leases, job_id, record.status, record.ledger)
             if record.status != "disconnected":
                 try:
                     _write_job_receipt(record)
@@ -949,7 +971,7 @@ class TrainingJobManager:
                     record.error = {"message": str(exc)}
             heartbeat.set()
             if record.status == "disconnected": self._leases.mark_uncertain(job_id)
-            else: self._leases.release(job_id, terminal=True)
+            else: _release_reservation(self._leases, job_id, record.status, record.ledger)
             if record.status != "disconnected":
                 try:
                     _write_job_receipt(record)
@@ -1876,7 +1898,7 @@ def _confirm_reservation_release(req: ReservationReleaseRequest, request: Option
         released = training_job_manager._leases.release_uncertain(req.job_id, lease.get("fence"))
     except (OSError, sqlite3.Error) as exc:
         released, failure = False, exc
-    outcome = {"actor": actor, "fence": lease.get("fence"), "at": time.time()}
+    outcome = {"by": "operator", "actor": actor, "fence": lease.get("fence"), "at": time.time()}
     if not released:
         outcome["reason"] = (f"the reservation store could not be written: {failure}" if failure is not None
                              else "the reservation changed or was already returned before it was released")
