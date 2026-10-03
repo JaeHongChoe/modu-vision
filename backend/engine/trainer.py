@@ -432,10 +432,8 @@ class UnifiedAutoMLTrainer:
                 criterion = None
 
             elif self.task == "segmentation":
-                train_img = (self.dataset_path / "images" / "train") if (self.dataset_path / "images" / "train").exists() else (self.dataset_path / "images")
-                val_img = (self.dataset_path / "images" / "val") if (self.dataset_path / "images" / "val").exists() else train_img
-                train_mask = (self.dataset_path / "masks" / "train") if (self.dataset_path / "masks" / "train").exists() else (self.dataset_path / "masks")
-                val_mask = (self.dataset_path / "masks" / "val") if (self.dataset_path / "masks" / "val").exists() else train_mask
+                from backend.engine.dataset_loaders import mask_folder_classes, mask_folder_layout
+                train_img, train_mask, val_img, val_mask = mask_folder_layout(self.dataset_path)
 
                 from backend.engine.grouped_dataset_views import load_manifest_dataset
                 train_ds = load_manifest_dataset("segmentation", self.dataset_path, "train", aug, optimal_size)
@@ -445,7 +443,10 @@ class UnifiedAutoMLTrainer:
                 else:
                     train_ds = SegmentationDataset(images_dir=train_img, masks_dir=train_mask, transform=aug, image_size=optimal_size)
                     val_ds = SegmentationDataset(images_dir=val_img, masks_dir=val_mask, image_size=optimal_size)
-                    classes = ["background", "defect"]
+                    # The dataset's own class map or mask values, not a fixed binary pair: a multi-class mask folder
+                    # (e.g. the synthetic generator's) otherwise fails at its first class id above 1. Warm start
+                    # checks a parent against the same list (dataset_loaders.segmentation_folder_classes).
+                    classes = mask_folder_classes(self.dataset_path, [mask for _, mask in train_ds.samples + val_ds.samples])
                 model = build_segmentation_model(num_classes=len(classes), preset=self.preset_key,
                     model_name=str(self.overrides.get('model_name', self.config.backbone_segmentation)),
                     pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),

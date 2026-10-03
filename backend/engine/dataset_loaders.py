@@ -795,6 +795,76 @@ class DetectionDataset(Dataset):
 # Task 3: Semantic Segmentation Dataset
 # ============================================================================
 
+def mask_folder_layout(dataset_path: Union[str, Path]) -> Tuple[Path, Path, Path, Path]:
+    """(train images, train masks, val images, val masks) of a mask-folder segmentation dataset, as the trainer uses them."""
+    root = Path(dataset_path)
+    train_img = (root / "images" / "train") if (root / "images" / "train").exists() else (root / "images")
+    val_img = (root / "images" / "val") if (root / "images" / "val").exists() else train_img
+    train_mask = (root / "masks" / "train") if (root / "masks" / "train").exists() else (root / "masks")
+    val_mask = (root / "masks" / "val") if (root / "masks" / "val").exists() else train_mask
+    return train_img, train_mask, val_img, val_mask
+
+
+def _class_map_names(path: Path) -> Dict[int, str]:
+    """class_map.json as {mask value: name}: {"0": "background", "1": ...} or {"background": 0, ...}."""
+    from backend.engine.source_text import read_source_text
+    try:
+        raw = json.loads(read_source_text(path))
+    except (ValueError, UnicodeError, OSError) as exc:
+        raise ValueError(f"class_map.json could not be read: {exc}") from exc
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError("class_map.json must map mask values to class names")
+    if all(isinstance(value, int) and not isinstance(value, bool) for value in raw.values()):
+        pairs = [(value, key) for key, value in raw.items()]
+    else:
+        pairs = []
+        for key, value in raw.items():
+            try:
+                pairs.append((int(key), value))
+            except (TypeError, ValueError):
+                raise ValueError(f"class_map.json key {key!r} is not a mask value") from None
+    names: Dict[int, str] = {}
+    for value, name in pairs:
+        if not isinstance(name, str) or not name.strip() or not 0 <= value <= 254:
+            raise ValueError(f"class_map.json has an invalid entry: {value!r}: {name!r}")
+        names[value] = name.strip()
+    return names
+
+
+def mask_folder_classes(dataset_root: Union[str, Path], masks: Sequence[Union[str, Path]]) -> List[str]:
+    """Class names of a mask-folder segmentation dataset without a saved split, indexed by mask value.
+
+    Only the masks the dataset pairs with its images are read (an overlay or preview image in the folder is not a
+    class). Every value they use gets a class, so a mask value is never outside the model's outputs. ``class_map.json``
+    (written by the synthetic generator and other exporters) names the classes; value 0 is always "background", as
+    evaluation and the flow engine assume. Masks holding only 0 and 255 are background/defect, as SegmentationDataset
+    maps 255 to 1, and an unnamed single defect value stays "defect".
+    """
+    largest = 1
+    for mask in dict.fromkeys(Path(item) for item in masks):
+        with Image.open(mask) as image:
+            values = np.unique(np.asarray(image.convert("L")))
+        if not set(values.tolist()).issubset({0, 255}):
+            largest = max(largest, int(values.max(initial=0)))
+    class_map = Path(dataset_root) / "class_map.json"
+    names = _class_map_names(class_map) if class_map.is_file() else {}
+    largest = max(largest, max(names, default=0))
+    classes = ["background" if value == 0 else names.get(value) or ("defect" if largest == 1 else f"class_{value}")
+               for value in range(largest + 1)]
+    repeated = sorted({name for name in classes if classes.count(name) > 1})
+    if repeated:
+        raise ValueError(f"class_map.json names a class more than once (value 0 is always background): {', '.join(repeated)}")
+    return classes
+
+
+def segmentation_folder_classes(dataset_path: Union[str, Path]) -> List[str]:
+    """The classes the trainer gives a mask-folder dataset without a saved split (warm start checks the same list)."""
+    train_img, train_mask, val_img, val_mask = mask_folder_layout(dataset_path)
+    pairs = SegmentationDataset(images_dir=train_img, masks_dir=train_mask).samples
+    pairs = pairs + SegmentationDataset(images_dir=val_img, masks_dir=val_mask).samples
+    return mask_folder_classes(dataset_path, [mask for _, mask in pairs])
+
+
 class SegmentationDataset(Dataset):
     """
     Industrial semantic segmentation dataset loading RGB images and single-channel PNG masks.

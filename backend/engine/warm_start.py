@@ -150,7 +150,8 @@ def training_classes(task: str, source: str | Path) -> tuple[str, ...]:
         train, _ = _build_detection_datasets(effective, None, (64, 64))
         return tuple(train.categories.values())
     if task == 'segmentation':
-        return ('background', 'defect')
+        from backend.engine.dataset_loaders import segmentation_folder_classes
+        return tuple(segmentation_folder_classes(effective))  # the trainer's own classes for this layout
     raise ValueError('Unsupported parent task')
 
 
