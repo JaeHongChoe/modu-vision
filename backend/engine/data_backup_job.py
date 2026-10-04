@@ -1,7 +1,8 @@
 """Project backups in the common JobStore; ZIP publication stays owned until verified.
 
 Restart reruns archive staging from its immutable source snapshot, under the same
-job identity. Restore execution is intentionally not a capability of this adapter.
+job identity. Fresh-directory restore delegates to the separate project_restore
+kind in the same ledger.
 """
 from __future__ import annotations
 import hashlib
@@ -84,8 +85,8 @@ class DataBackupJobs:
         return {'job_id': job_id, 'state': record['state'], 'revision': record['revision'],
             **operation, 'attempt': len(self.store.attempts(job_id)), 'downloadable': available,
             'resumable': record['state'] == 'interrupted' and not self.store.cancel_intent(job_id),
-            'capabilities': {'resume': True, 'restore': False},
-            'restore_reason': 'Durable restore execution is unsupported; restore a verified archive to a new directory through the existing explicit restore action'}
+            'capabilities': {'resume': True, 'restore': available and record['mode']=='local'},
+            'restore_reason': 'Restore requires an explicit new owned local directory; the restored project is not activated automatically'}
 
     def resume(self, job_id, project_key, actor_id):
         view = self.view(job_id, project_key, actor_id)

@@ -130,7 +130,7 @@ interface FlowchartState {
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
   addNode: (node: FlowNode) => void;
-  replacePipeline: (pipeline: FlowchartPipeline) => void;
+  replacePipeline: (pipeline: FlowchartPipeline, newBasis?: { baseVersionId: string | null }) => void;
   moveNode: (id: string, position: { x: number; y: number }) => void;
   beginHistoryGroup: () => void;
   endHistoryGroup: () => void;
@@ -588,12 +588,17 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     });
   },
 
-  replacePipeline: (pipeline) => {
+  replacePipeline: (pipeline, newBasis) => {
     const state = get();
-    if (!state.pipeline || state.pipeline === pipeline) return;
+    if (!state.pipeline || (state.pipeline === pipeline && !newBasis)) return;
     const selectedNodeId = state.selectedNodeId;
     set({
-      ...editedHistory(state),
+      // An explicit recipe starts a new edit basis. Its previous stale graph must
+      // not be restored by undo while retaining the newly observed active base.
+      ...(newBasis ? {
+        baseVersionId: newBasis.baseVersionId,
+        historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
+      } : editedHistory(state)),
       flowIdentity: editedIdentity(state, pipeline),
       pipeline,
       pipelineDirty: true,

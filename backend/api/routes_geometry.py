@@ -144,3 +144,64 @@ def create_manual_calibration(req: ManualCalibrationRequest, request: Request):
         raise HTTPException(422, str(exc)) from exc
     _calibration_store(request).save(calibration)
     return calibration.to_json()
+
+
+class FixtureReferenceRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    image_path: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=200)
+    valid_region: list[int] = Field(min_length=4, max_length=4)
+    fixture_id: str | None = None
+    expected_ref: str | None = None
+
+
+def _fixture_store(request):
+    from backend.api.routes_project import get_current_project
+    from backend.engine.fixture_flow import project_fixtures
+    return project_fixtures(get_current_project(request))
+
+
+@router.get('/fixtures')
+def list_fixture_references(request: Request):
+    try:
+        return {'fixtures': _fixture_store(request).list()}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/fixtures')
+def create_fixture_reference(req: FixtureReferenceRequest, request: Request):
+    from backend.engine.fixture_pose import FixtureReference
+    try:
+        path = _native_source_path(req.image_path, request)
+        before = sha256(path.read_bytes()).hexdigest()
+        pixels = read_image_safely_rgb(path, max_dim=None)
+        if sha256(path.read_bytes()).hexdigest() != before:
+            raise ValueError('Fixture source changed while reading')
+        store = _fixture_store(request)
+        revision = 1
+        if req.fixture_id is not None:
+            old = store.load(req.expected_ref)
+            if old is None:
+                raise ValueError('Fixture reference changed; reopen before saving')
+            revision = old.reference.revision + 1
+        artifact = store.save(FixtureReference(pixels[:, :, ::-1], tuple(req.valid_region), revision=revision),
+            source_sha256=before, name=req.name, fixture_id=req.fixture_id, expected_ref=req.expected_ref)
+        return artifact.to_json()
+    except (ValueError, OSError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/fixtures/{ref}/preview')
+def fixture_reference_preview(ref: str, request: Request):
+    try:
+        artifact = _fixture_store(request).load(ref)
+        if artifact is None:
+            raise HTTPException(404, 'Fixture reference is missing, stale or changed')
+        preview = Image.fromarray(artifact.reference.grey)
+        preview.thumbnail((768, 768))
+        output = io.BytesIO(); preview.save(output, format='PNG')
+        return {'source_size': artifact.body['image_size'], 'reference_ref': artifact.ref,
+                'preview_data_url': 'data:image/png;base64,'+base64.b64encode(output.getvalue()).decode('ascii')}
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc

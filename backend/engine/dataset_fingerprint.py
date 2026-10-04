@@ -65,6 +65,7 @@ def fingerprint_dataset(
     studio_root: Path = Path("./annotations"),
     split_manifest: Optional[Path] = None,
     use_scope: bool = True,
+    _source_identity: Optional[Path] = None,
 ) -> str:
     """Return a deterministic version for source images, labels, and split.
 
@@ -76,7 +77,8 @@ def fingerprint_dataset(
         raise FileNotFoundError(f"Dataset directory is missing: {folder}")
     digest = hashlib.sha256()
     digest.update(b"modu-dataset-fingerprint-v1\0")
-    digest.update(str(folder).encode("utf-8", "surrogateescape"))
+    identity = Path(_source_identity).resolve() if _source_identity is not None else folder
+    digest.update(str(identity).encode("utf-8", "surrogateescape"))
     digest.update(b"\0")
 
     project_root = request_project_root()
@@ -85,8 +87,18 @@ def fingerprint_dataset(
     for path in _files_under(folder, project_root):
         _update_file(digest, path, f"source/{path.relative_to(folder).as_posix()}")
 
-    studio_dir = dataset_annotation_dir(folder, studio_root, use_scope=use_scope)
-    for scope in dataset_overlay_scopes(folder, studio_root, use_scope=use_scope):
+    studio_dir = dataset_annotation_dir(identity, studio_root, use_scope=use_scope)
+    scopes = dataset_overlay_scopes(folder, studio_root, use_scope=use_scope)
+    if _source_identity is not None:
+        # Read physical staged images but retain destination-derived overlay identities.
+        from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
+        scopes = {studio_dir}
+        for directory, names, files in os.walk(folder, followlinks=False):
+            names[:] = sorted(name for name in names if not name.startswith('.'))
+            if any(not name.startswith('.') and Path(name).suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS for name in files):
+                scopes.add(dataset_annotation_dir(identity / Path(directory).relative_to(folder), studio_root, use_scope=use_scope))
+        scopes = sorted(scopes)
+    for scope in scopes:
         for path in _files_under(scope):
             # Review identity/audit do not alter pixels/labels. Versions preserve them.
             if path.relative_to(scope).parts[0] == "metadata":

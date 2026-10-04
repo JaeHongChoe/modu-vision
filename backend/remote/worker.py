@@ -35,7 +35,7 @@ from backend.remote.snapshot import (
 )
 
 
-OPERATIONS = ("train", "evaluate", "infer", "flowchart_run", "benchmark", "export", "label")
+OPERATIONS = ("train", "evaluate", "infer", "flowchart_run", "benchmark", "export", "label", "package_parity")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 _TASKS = {"classification", "detection", "segmentation", "anomaly"}
@@ -1286,6 +1286,10 @@ def main(argv: list[str] | None = None, trainer_factory: Callable[..., Any] | No
     if args.operation == "flowchart_run":
         result = run_flowchart(args.spec)
         return 0 if result["status"] == "completed" else 3 if result["status"] == "aborted" else 1
+    if args.operation == 'package_parity':
+        from backend.remote.package_parity import run_package_parity
+        result = run_package_parity(args.spec)
+        return 0 if result['status'] == 'completed' else 3 if result['status'] == 'aborted' else 1
     if args.operation == "benchmark":
         result = run_benchmark(args.spec)
         return 0 if result["status"] == "completed" else 3 if result["status"] == "aborted" else 1

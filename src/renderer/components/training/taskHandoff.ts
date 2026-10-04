@@ -10,7 +10,7 @@ export const taskHandoffContextScope=(state:HandoffScope)=>JSON.stringify([taskH
 let selectionSequence=0;
 export function taskDestination(row:Pick<TaskRow,'task'|'kind'|'status'>):{step:TaskStep;family:ModelFamily|null}{
  const alias:Record<string,string>={'rotated-detection':'rotated_detection','defect-gan':'defect_gan',patch:'patch_classification'};const family=alias[row.task]||row.task;
- if(['dataset_import','project_backup'].includes(row.kind))return {step:2,family:null};
+ if(['dataset_import','project_backup','project_restore'].includes(row.kind))return {step:2,family:null};
  if(['inspection','optimization','export'].includes(row.kind))return {step:6,family:null};
  if(row.task==='labeling'||row.kind.startsWith('labeling-'))return {step:2,family:null};
  if(!modelFamilies.includes(family as ModelFamily))return {step:3,family:null};

@@ -1,0 +1,80 @@
+name: Windows unsigned packaged CPU qualification
+"on":
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-packaged-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  packaged:
+    # Server2025 hosted x64; neither clean Windows11 nor installation acceptance.
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/vision-builder-cache
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - name: Locked runtime and build-only tooling
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          New-Item -ItemType Directory -Force packaged-evidence | Out-Null
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-windows-py313-cpu.lock
+          python -m pip install --no-deps --require-hashes --only-binary=:all: -r build/ci/requirements-windows-packaging.lock
+          python -m pip check
+          npm ci
+      - name: Local harness gates and source build
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          node --test scripts/tests/windows-packaged.test.cjs
+          python -m unittest discover -s scripts/tests -p test_watch_windows_packaged.py -v
+          npm run typecheck
+          npm run build
+      - name: Frozen native backend and existing launch-restart acceptance
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python scripts/build_backend_binary.py 2>&1 | Tee-Object packaged-evidence/backend-build.log
+      - name: Build unsigned installer and portable (never install or publish)
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          npx --no-install electron-builder --win nsis portable --x64 --config build/electron-builder.yml --publish never 2>&1 | Tee-Object packaged-evidence/desktop-build.log
+      - name: Actual packaged renderer and frozen CPU child with restart
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $packagedPython = (Get-Command python).Source
+          node scripts/verify_windows_packaged.cjs --bundle release/win-unpacked --output packaged-evidence --temp "${{ runner.temp }}" --python "$packagedPython"
+      - name: Hash exact artifacts and qualification environment
+        if: always()
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python scripts/windows_package_inventory.py --output packaged-evidence/build-receipt.json --root . --builder-cache "${{ runner.temp }}/vision-builder-cache"
+      - name: Preserve failure diagnostics and unsigned test artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: windows-unsigned-packaged-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            packaged-evidence
+            release/*.exe
+            release/win-unpacked/release-package-diagnostics.json
+            dist-backend/vision_ai_backend/backend-release.json
+            dist-backend/vision_ai_backend/backend-acceptance.json

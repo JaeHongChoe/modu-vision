@@ -48,6 +48,11 @@ export interface FlowParityReport {
   scope?: 'cohort' | 'single_image';
   limitation?: string | null;
   device?: string;
+  execution_target?: 'local' | 'selected_compute';
+  compute_profile_id?: string | null;
+  compute_profile_name?: string;
+  compute_gpu_selector?: string | null;
+  reference_runtime?: { runtime_device_identity?: { gpu_uuid: string | null } };
   image_count?: number;
   completed_count?: number;
   cohort_sha256?: string;
@@ -72,6 +77,7 @@ export interface FlowExportBody {
   verification_image_id?: string;
   parity_images?: Array<{ path: string; image_id?: string }>;
   parity_device?: string;
+  compute_profile_id?: string;
   approval_revision_ids?: Record<string, string>;
   deployment_profile?: 'standard' | 'edge_cpu' | 'edge_cuda';
   target_os?: 'linux' | 'windows' | 'macos';

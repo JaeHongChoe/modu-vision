@@ -118,6 +118,7 @@ def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], poli
 class FileJob(BaseModel):
     image_path: str = Field(min_length=1)
     image_id: str | None = None
+    capture: dict | None = None
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=160)
     product_id: str | None = Field(default=None, max_length=160)
     lot_id: str | None = Field(default=None, max_length=160)
@@ -129,6 +130,7 @@ class ReplayJob(BaseModel):
 
 
 class DeviceEvent(BaseModel):
+    capture: dict | None = None
     device_id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_.-]+$")
     event_id: str = Field(min_length=1, max_length=100, pattern=r"^[A-Za-z0-9_.-]+$")
     image_path: str = Field(min_length=1)
@@ -190,6 +192,8 @@ class InspectionStore:
                     last_error TEXT,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS capture_bindings(part_id TEXT,trigger_id TEXT,policy_json TEXT,recipe_sha256 TEXT,
+                    PRIMARY KEY(part_id,trigger_id));
                 CREATE TABLE IF NOT EXISTS device_events (
                     device_id TEXT NOT NULL,
                     event_id TEXT NOT NULL,
@@ -201,7 +205,7 @@ class InspectionStore:
             # interrupted by a worker stop, not operator retries.
             add_missing_columns(conn, "jobs", {"model_verdict": "TEXT", "interrupted": "INTEGER NOT NULL DEFAULT 0"})
             add_missing_columns(conn, "jobs", {
-                "runtime_binding_json": "TEXT", "runtime_binding_sha256": "TEXT",
+                "capture_json": "TEXT", "runtime_binding_json": "TEXT", "runtime_binding_sha256": "TEXT",
                 "binding_provenance": "TEXT NOT NULL DEFAULT 'legacy_unknown'",
                 "idempotency_key": "TEXT", "payload_sha256": "TEXT", "deadline_at": "REAL",
                 "dead_letter_reason": "TEXT", "replay_of": "TEXT",
@@ -210,6 +214,21 @@ class InspectionStore:
                 "replay_operator": "TEXT", "retry_count": "INTEGER NOT NULL DEFAULT 0",
             })
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS jobs_input_key ON jobs(idempotency_key) WHERE idempotency_key IS NOT NULL")
+
+    def configure_capture_groups(self,policy,*,expected_revision):
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        return ServiceCaptureGroups(self).configure(policy,expected_revision)
+
+    def sweep_capture_deadlines(self,*,require_delivery=False):
+        """Persist provider deadline outcomes into the existing jobs/delivery transaction."""
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        with self._connection() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            return ServiceCaptureGroups(self).enqueue_deadlines(conn,require_delivery=require_delivery)
+
+    def capture_group_status(self,limit=100):
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        return ServiceCaptureGroups(self).status(limit)
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
@@ -283,7 +302,7 @@ class InspectionStore:
                 self._event(conn, row["job_id"], "delivery_pending", "Result delivery resumed after restart")
 
     def enqueue(self, image_path: Path, source: str, image_id: str | None = None, *,
-                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None) -> str:
+                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None, capture=None) -> str:
         if image_path.is_symlink() or not image_path.is_file():
             raise ValueError("Inspection image is missing or is a symbolic link")
         digest = _sha256(image_path)
@@ -296,6 +315,13 @@ class InspectionStore:
         if idempotency_key is not None and (not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 160):
             raise ValueError('Input idempotency key must contain 1 to 160 characters')
         encoded, binding_sha, provenance = self._binding(binding, product_id, lot_id)
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        groups=ServiceCaptureGroups(self)
+        if groups.current():
+            payload_sha=hashlib.sha256(_canonical({'image_sha256':digest,'image_id':image_id,'source':source,'product_id':product_id,'lot_id':lot_id,'capture':capture,
+                'recipe_sha256':(json.loads(encoded) if encoded else {}).get('manifest_sha256')}).encode()).hexdigest()
+            if capture and not idempotency_key:
+                idempotency_key='capture:'+payload_sha
         with self._connection() as conn:
             conn.execute('BEGIN IMMEDIATE')
             if idempotency_key:
@@ -312,6 +338,7 @@ class InspectionStore:
                 if existing:
                     return existing["job_id"]
             self._capacity(conn)
+            capture_metadata,capture_failure=groups.admit(conn,job_id,capture,json.loads(encoded) if encoded else None)
             conn.execute(
                 """INSERT INTO jobs(job_id,image_path,image_id,image_sha256,source,state,created_at,updated_at,
                    runtime_binding_json,runtime_binding_sha256,binding_provenance,idempotency_key,payload_sha256,deadline_at)
@@ -324,11 +351,19 @@ class InspectionStore:
                     "INSERT INTO inbox_items(image_path,image_sha256,job_id) VALUES(?,?,?)",
                     (str(image_path.resolve()), digest, job_id),
                 )
-            self._event(conn, job_id, "queued")
+            if capture_metadata:
+                conn.execute('UPDATE jobs SET capture_json=? WHERE job_id=?',(json.dumps(capture_metadata,sort_keys=True),job_id))
+            if capture_failure:
+                conn.execute("UPDATE jobs SET state='error',verdict='REVIEW',error=?,dead_letter_reason=? WHERE job_id=?",(capture_failure,capture_failure,job_id))
+            self._event(conn, job_id, 'error' if capture_failure else 'queued',capture_failure)
         return job_id
 
-    def enqueue_device_event(self, device_id: str, event_id: str, image_path: Path) -> str:
+    def enqueue_device_event(self, device_id: str, event_id: str, image_path: Path, *, capture=None) -> str:
         """Keep one durable row per device trigger, including a missing capture."""
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        if ServiceCaptureGroups(self).current() and image_path.is_file() and not image_path.is_symlink():
+            key='device:'+hashlib.sha256(f'{device_id}:{event_id}'.encode()).hexdigest()
+            return self.enqueue(image_path,'device:'+device_id,idempotency_key=key,capture=capture)
         resolved = image_path.expanduser().resolve()
         try:
             if image_path.is_symlink() or not resolved.is_file():
@@ -393,10 +428,20 @@ class InspectionStore:
         self, job_id: str, *, result: dict[str, Any] | None = None,
         error: str | None = None, require_delivery: bool = False, dead_letter_reason: str | None = None,
     ) -> None:
-        state = "error" if error else "delivery_pending" if require_delivery else "completed"
-        model_verdict = result["final_verdict"] if result else None
-        verdict = "REVIEW" if error or require_delivery else model_verdict
         with self._connection() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            current=conn.execute("SELECT capture_json FROM jobs WHERE job_id=? AND state='running'",(job_id,)).fetchone()
+            if current is None:return
+            if current['capture_json']:
+                from backend.engine.service_capture_groups import ServiceCaptureGroups
+                metadata=json.loads(current['capture_json']);frame_verdict='REVIEW' if error else (result or {}).get('final_verdict')
+                joined=ServiceCaptureGroups(self).finish(metadata,frame_verdict)
+                result={**(result or {}),'frame_verdict':frame_verdict,'capture_group':joined,
+                        'final_verdict':joined['verdict'] or 'REVIEW'}
+                require_delivery=require_delivery and joined['state']!='OPEN' and joined.get('disposition')=='accepted'
+            state = "error" if error else "delivery_pending" if require_delivery else "completed"
+            model_verdict = result["final_verdict"] if result else None
+            verdict = "REVIEW" if error or require_delivery else model_verdict
             changed = conn.execute(
                 """UPDATE jobs SET state=?,verdict=?,model_verdict=?,result_json=?,error=?,updated_at=?,dead_letter_reason=?
                    WHERE job_id=? AND state='running'""",
@@ -489,6 +534,7 @@ class InspectionStore:
         item["result"] = json.loads(result_json) if result_json else None
         binding_json = item.pop('runtime_binding_json', None)
         item['runtime_binding'] = json.loads(binding_json) if binding_json else None
+        capture_json=item.pop('capture_json',None);item['capture']=json.loads(capture_json) if capture_json else None
         return item
 
     def list(self, limit: int = 100) -> list[dict[str, Any]]:
@@ -509,6 +555,7 @@ class InspectionStore:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute('SELECT * FROM jobs WHERE job_id=?', (job_id,)).fetchone()
             if row is None or row['state'] != 'error': return False
+            if row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith('CAPTURE_'): return False
             at_limit = row['retry_count']>=self.max_attempts or (row['attempts']>=self.max_attempts and row['interrupted']==0)
             if row['dead_letter_reason'] in {'ADMISSION_DEADLINE_EXCEEDED', 'LEGACY_RECIPE_UNKNOWN'} or at_limit:
                 if at_limit:
@@ -529,6 +576,8 @@ class InspectionStore:
         with self._connection() as conn:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute('SELECT * FROM jobs WHERE job_id=?', (job_id,)).fetchone()
+            if row is not None and (row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith('CAPTURE_')):
+                raise ValueError('Capture replay requires a new explicit part and trigger identity')
             if row is None or row['state'] not in {'error', 'delivery_error'}:
                 raise ValueError('Only terminal failed inputs can be replayed')
             if not row['runtime_binding_json']:
@@ -611,6 +660,7 @@ def _deliver_job(store: InspectionStore, row: dict[str, Any], url: str, token: s
         "runtime_identity": json.loads(row['runtime_binding_json']) if row.get('runtime_binding_json') else None,
     }
     headers = {"Authorization": f"Bearer {token}"} if token else {}
+    if row["source"]=="capture-group-deadline":headers["Idempotency-Key"]=row["job_id"]
     try:
         response = httpx.post(url, json=payload, headers=headers, timeout=5)
         if response.status_code < 200 or response.status_code >= 300:
@@ -674,6 +724,11 @@ def create_service_app(
     from backend.engine.field_adapters import load_adapter_config, deliver_configured, ModbusTCPAdapter
     runtime = ServiceRuntime(package_dir, store.state_dir, device, release_policy, runtime_root, _verify_release_policy)
     store.runtime_provider = runtime.read
+    if pipeline.capture_group_policy:
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        current=ServiceCaptureGroups(store).current()
+        if current and current!=pipeline.capture_group_policy:raise ValueError('Saved capture group policy differs from package join policy')
+        if not current:ServiceCaptureGroups(store).configure(pipeline.capture_group_policy,expected_revision=0,package_import=True)
     field_config = load_adapter_config(adapter_config_path)
     require_delivery = bool(result_webhook_url) or bool(field_config.enabled and (field_config.modbus or field_config.mes))
     input_root = Path(allowed_input_root).expanduser().resolve() if allowed_input_root else None
@@ -697,6 +752,7 @@ def create_service_app(
     def worker() -> None:
         last_scan = 0.0
         while not stop.is_set():
+            store.sweep_capture_deadlines(require_delivery=require_delivery)
             if inbox is not None and time.monotonic() - last_scan >= 0.5:
                 adapter_state["file_inbox"] = _scan_inbox(store, inbox)
                 last_scan = time.monotonic()
@@ -773,6 +829,7 @@ def create_service_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         store.recover()
+        store.capture_group_status()
         if warmup_image is not None:
             warmup=Path(warmup_image)
             if warmup.is_symlink() or not warmup.is_file() or (input_root and not warmup.resolve().is_relative_to(input_root)):
@@ -832,6 +889,16 @@ def create_service_app(
         except (KeyError, ValueError, OSError) as exc:
             raise HTTPException(409, str(exc)) from exc
 
+    @app.get('/v1/capture-groups',dependencies=[Depends(authorized)])
+    def capture_groups(limit:int=100):
+        try:return store.capture_group_status(limit)
+        except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+
+    @app.put('/v1/capture-groups/policy',dependencies=[Depends(authorized)])
+    def capture_policy(payload:dict):
+        try:return store.configure_capture_groups(payload['policy'],expected_revision=payload['expected_revision'])
+        except (ValueError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
+
     @app.get("/v1/adapters", dependencies=[Depends(authorized)])
     def adapters():
         return dict(adapter_state)
@@ -843,15 +910,20 @@ def create_service_app(
             raise HTTPException(status_code=403, detail="Image is outside the allowed input root")
         try:
             key = payload.idempotency_key or request.headers.get('idempotency-key')
-            job_id = store.enqueue(path, "file", payload.image_id,idempotency_key=key,product_id=payload.product_id,lot_id=payload.lot_id)
+            job_id = store.enqueue(path, "file", payload.image_id,idempotency_key=key,product_id=payload.product_id,lot_id=payload.lot_id,capture=payload.capture)
         except InboxFull as exc: raise HTTPException(429,str(exc),headers={'Retry-After':'1'}) from exc
         except InputConflict as exc: raise HTTPException(409,str(exc)) from exc
         except (OSError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return {"job_id": job_id, "state": "queued"}
+        return {"job_id": job_id, "state":store.get(job_id)["state"]}
 
     @app.post("/v1/jobs/upload", status_code=202, dependencies=[Depends(authorized)])
     async def enqueue_upload(request: Request):
+        capture_header=request.headers.get("x-vision-capture")
+        try:
+            if capture_header and len(capture_header)>4096: raise ValueError("Capture header exceeds limit")
+            capture=json.loads(capture_header) if capture_header else None
+        except (ValueError,TypeError) as exc: raise HTTPException(422,"Invalid capture metadata header") from exc
         upload_dir = store.state_dir / "uploads"
         temp_path: Path | None = None
         final_path: Path | None = None
@@ -876,11 +948,11 @@ def create_service_app(
             os.replace(temp_path, final_path)
             temp_path = None
             try:
-                job_id = store.enqueue(final_path, "http",idempotency_key=request.headers.get('idempotency-key'))
+                job_id = store.enqueue(final_path, "http",idempotency_key=request.headers.get('idempotency-key'),capture=capture)
             except InboxFull as exc: raise HTTPException(429,str(exc),headers={'Retry-After':'1'}) from exc
             except InputConflict as exc: raise HTTPException(409,str(exc)) from exc
             admitted = store.get(job_id)['image_path'] == str(final_path.resolve())
-            return {"job_id": job_id, "state": "queued"}
+            return {"job_id": job_id, "state": store.get(job_id)["state"]}
         finally:
             if temp_path is not None:
                 temp_path.unlink(missing_ok=True)
@@ -892,7 +964,7 @@ def create_service_app(
         path = Path(payload.image_path).expanduser()
         if input_root and not path.resolve().is_relative_to(input_root):
             raise HTTPException(status_code=403, detail="Device capture is outside the allowed input root")
-        try: job_id = store.enqueue_device_event(payload.device_id, payload.event_id, path)
+        try: job_id = store.enqueue_device_event(payload.device_id, payload.event_id, path,capture=payload.capture)
         except InboxFull as exc: raise HTTPException(429,str(exc),headers={'Retry-After':'1'}) from exc
         except InputConflict as exc: raise HTTPException(409,str(exc)) from exc
         item = store.get(job_id)

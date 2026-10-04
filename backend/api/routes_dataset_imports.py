@@ -286,6 +286,7 @@ def recover_imports_at_startup(app) -> dict:
         app.state.dataset_imports = jobs
         result = jobs.recover_orphans()
         result['backups'] = _backup_jobs().recover_orphans()
+        result['restores'] = _restore_jobs().recover_orphans()
         return result
     except Exception:  # a recovery problem never blocks the backend from starting
         logging.getLogger(__name__).exception("Dataset import recovery failed at startup")
@@ -355,7 +356,61 @@ def download_backup(job_id: str, request: Request):
                         media_type='application/zip')
 
 
+class RestoreRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid',strict=True)
+    target_dir: str = Field(min_length=1,max_length=4096)
+    expected_archive_sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
+def _restore_jobs():
+    from backend.engine.data_restore_job import DataRestoreJobs
+    return DataRestoreJobs(ledger())
+
+
+def _local_restore_scope(request):
+    context,project_key,project=_scope(request)
+    if context.mode!='local' or getattr(request.app.state,'accounts',None) is not None:
+        raise HTTPException(403,'A shared server has no owned fresh-directory restore namespace; local desktop only')
+    return context,project_key,project
+
+
 @router.post('/operations/backups/{job_id}/restore')
-def durable_restore_unsupported(job_id: str, request: Request):
-    get_backup(job_id, request)
-    raise HTTPException(409, 'Durable restore is unsupported; use explicit restore to a new owned directory')
+def submit_restore(job_id: str,request: Request,payload: RestoreRequest | None = None):
+    context,project_key,_project=_local_restore_scope(request)
+    get_backup(job_id,request)
+    if payload is None:
+        raise HTTPException(409,'Choose a new owned directory and provide the verified backup hash')
+    key=request.headers.get('Idempotency-Key')
+    if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):raise HTTPException(422,'Invalid Idempotency-Key')
+    jobs=_restore_jobs()
+    try:
+        ref=jobs.submit(context,project_key,job_id,payload.target_dir,payload.expected_archive_sha256,key)
+    except KeyError:raise HTTPException(404,'Backup not found') from None
+    except (JobConflict,ImportNotAcceptable,OSError) as exc:raise HTTPException(409,str(exc)) from exc
+    if ref.created:jobs.start(ref.id)
+    return {**jobs.view(ref.id,project_key,context.actor_id),'idempotent_replay':not ref.created}
+
+
+@router.get('/operations/restores/{job_id}')
+def get_restore(job_id: str,request: Request):
+    context,project_key,_project=_local_restore_scope(request)
+    try:return _restore_jobs().view(job_id,project_key,context.actor_id)
+    except KeyError:raise HTTPException(404,'Restore not found') from None
+
+
+@router.post('/operations/restores/{job_id}/resume')
+def resume_restore(job_id: str,request: Request):
+    context,project_key,_project=_local_restore_scope(request);jobs=_restore_jobs()
+    try:ref=jobs.resume(job_id,project_key,context.actor_id)
+    except KeyError:raise HTTPException(404,'Restore not found') from None
+    except (ImportNotAcceptable,StaleRevision) as exc:raise HTTPException(409,str(exc)) from exc
+    if ref.state=='accepted':jobs.start(ref.id)
+    return jobs.view(job_id,project_key,context.actor_id)
+
+
+@router.post('/operations/restores/{job_id}/cancel')
+def cancel_restore(job_id: str,request: Request):
+    context,project_key,_project=_local_restore_scope(request)
+    get_restore(job_id,request)
+    _restore_jobs().store.request_cancel(job_id,context.actor_id,'cancelled by the user')
+    return get_restore(job_id,request)

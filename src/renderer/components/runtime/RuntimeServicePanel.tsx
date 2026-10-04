@@ -8,6 +8,7 @@ import { request } from '../../services/api';
 import { runtimeDeploymentApi } from '../../services/runtimeDeploymentApi';
 import {SavedPackagePicker} from './SavedPackagePicker';
 import {WindowsServiceSetupPanel} from './WindowsServiceSetupPanel';
+import {CaptureGroupsPanel} from './CaptureGroupsPanel';
 import {ProtocolSettingsPanel} from './ProtocolSettingsPanel';
 import {useDeliveryScope} from './useDeliveryScope';
 
@@ -104,6 +105,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     <SpecializedApprovalPanel />
     <ModelOperationsPanel />
     <FleetPanel onNavigate={onNavigate} />
+    <CaptureGroupsPanel scopeKey={key}/>
     <ProtocolSettingsPanel value={ready?config:EMPTY_CONFIG} onChange={setConfig} disabled={busy||!ready} onSave={()=>{try{void action('/adapters',JSON.parse(config),'PUT');}catch{setError('설정 JSON 형식을 확인하세요.');}}}/>
     {busy && <p role="status" className="mt-2 text-blue-300">서비스 응답 확인 중…</p>}
     {error && <p role="alert" className="mt-2 break-all text-red-300">{error}</p>}

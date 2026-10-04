@@ -86,7 +86,7 @@ def _content_digest(value: dict[str, Any]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _dataset_fingerprint(project_dir: Path, source_dir: Path, labelset_id: str | None = None) -> str:
+def _dataset_fingerprint(project_dir: Path, source_dir: Path, labelset_id: str | None = None, *, source_identity: Path | None = None) -> str:
     """Use the selected labels and split from project-scoped training verification."""
     from backend.engine.dataset_fingerprint import fingerprint_dataset
     from backend.engine.project_labelsets import labelset_root, load_labelsets
@@ -94,8 +94,8 @@ def _dataset_fingerprint(project_dir: Path, source_dir: Path, labelset_id: str |
     selected_id = labelset_id if labelset_id is not None else load_labelsets(project_dir)["active_id"]
     return fingerprint_dataset(
         source_dir, studio_root=labelset_root(project_dir, selected_id),
-        split_manifest=project_dir / "dataset" / "splits" / f"{_split_key(source_dir)}.json",
-        use_scope=False,
+        split_manifest=project_dir / "dataset" / "splits" / f"{_split_key(source_identity or source_dir)}.json",
+        use_scope=False, _source_identity=source_identity,
     )
 
 
@@ -471,7 +471,7 @@ def _rebind_versions(staging: Path, old_project: Path, target: Path,
     return digests
 
 
-def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, str]) -> None:
+def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, str], *, final_target: Path | None = None) -> None:
     """Metadata aliases use relocated verified versions; checkpoint bytes stay fixed."""
     immutable = _immutable_package_roots(target)
     for path in (target / "models").rglob("*.json"):
@@ -486,7 +486,7 @@ def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, s
             continue
         old_digest = binding["manifest_sha256"]
         directory = target / previous_digests[old_digest]
-        if Path(binding.get("version_dir", "")).resolve() != directory.resolve():
+        if Path(binding.get("version_dir", "")).resolve() != ((final_target or target) / previous_digests[old_digest]).resolve():
             raise ArchiveError("Training version alias does not match its bound manifest")
         manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
         split_rows = [row["sha256"] for row in manifest["files"] if row["origin"] == "split"]
@@ -507,6 +507,9 @@ def _rebind_training_version_aliases(target: Path, previous_digests: dict[str, s
                 if (binding.get('family_task')=='enhancement' and row.get('relative_path')=='pairs.json'
                         and row.get('snapshot_path')):
                     backup=Path(row['snapshot_path']);current=Path(row['source_path'])
+                    if final_target is not None:
+                        backup=target/backup.relative_to(final_target)
+                        current=target/current.relative_to(final_target)
                     if (not backup.resolve().is_relative_to(directory.resolve()) or _digest_file(backup)!=row['sha256']
                             or not current.resolve().is_relative_to(target/'dataset'/'enhancement')):
                         raise ArchiveError('Enhancement family relocation binding is invalid')
@@ -739,7 +742,7 @@ def _restore_source_location(members: Iterable[str]) -> Path:
     return candidate
 
 
-def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: dict[str, str]) -> None:
+def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: dict[str, str], *, source_identity: Path | None = None) -> None:
     from backend.engine.project_labelsets import load_labelsets
 
     registry = load_labelsets(target)
@@ -749,7 +752,7 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
         if (set_id not in registered_ids or not isinstance(old_fingerprint, str)
                 or not re.fullmatch(r"v1:[0-9a-f]{64}", old_fingerprint)):
             raise ArchiveError("Backup contains an invalid label set fingerprint")
-        new_fingerprint = _dataset_fingerprint(target, source, set_id)
+        new_fingerprint = _dataset_fingerprint(target, source, set_id, source_identity=source_identity)
         if old_fingerprint in replacements and replacements[old_fingerprint] != new_fingerprint:
             raise ArchiveError("Backup label set fingerprints are ambiguous")
         replacements[old_fingerprint] = new_fingerprint
@@ -796,19 +799,16 @@ def _rebind_fingerprint_records(target: Path, source: Path, old_fingerprints: di
                                  (_digest_file(report), comparison_id))
 
 
-def restore_archive(archive_path: Path, target_dir: Path) -> Path:
-    from backend.engine.artifact_retention import ArtifactRetention
+def restore_archive(archive_path: Path, target_dir: Path, *, staging_dir: Path | None = None, before_publish=None, publish=None, retain_staging: bool = False, stage_created=None, progress=None) -> Path:
     archive_path=Path(archive_path).expanduser().resolve()
     if not archive_path.is_file():raise ArchiveError('Backup archive not found',404)
     digest=_digest_file(archive_path)
-    target=_restore_archive(archive_path,target_dir)
+    target=_restore_archive(archive_path,target_dir,staging_dir=staging_dir,before_publish=before_publish,publish=publish,retain_staging=retain_staging,stage_created=stage_created,progress=progress)
     if _digest_file(archive_path)!=digest:raise ArchiveError('Backup archive changed during restore; installed copy requires review',409)
-    retention=ArtifactRetention(target)
-    retention.verified_restore(digest,{'target_dir':str(target),'fresh_path':True,'inventory_verified':True})
     return target
 
 
-def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
+def _restore_archive(archive_path: Path, target_dir: Path, *, staging_dir: Path | None = None, before_publish=None, publish=None, retain_staging: bool = False, stage_created=None, progress=None) -> Path:
     archive_path = Path(archive_path).expanduser().resolve()
     target_dir = Path(target_dir).expanduser().resolve()
     if not archive_path.is_file():
@@ -816,8 +816,11 @@ def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
     if target_dir.exists():
         raise ArchiveError("Restore folder already exists; choose an empty new location", 409)
     target_dir.parent.mkdir(parents=True, exist_ok=True)
-    staging = target_dir.parent / f".{target_dir.name}.restore-{uuid.uuid4().hex}"
+    staging = staging_dir or target_dir.parent / f".{target_dir.name}.restore-{uuid.uuid4().hex}"
+    if staging.parent != target_dir.parent or staging.exists() or staging.is_symlink():
+        raise ArchiveError("Restore staging must be a fresh owned sibling",409)
     installed = completed = False
+    archive_digest = _digest_file(archive_path)
     try:
         with ZipFile(archive_path) as source:
             infos = source.infolist()
@@ -850,8 +853,10 @@ def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
             source_relative = _restore_source_location(expected) if old_source else None
             new_source = target_dir / source_relative if source_relative is not None else None
             staging.mkdir()
+            if stage_created is not None:stage_created(staging)
             if source_relative is not None:
                 (staging / source_relative).mkdir(parents=True)
+            processed = 0
             for info in infos:
                 if info.filename == "backup-manifest.json":
                     continue
@@ -871,6 +876,8 @@ def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
                         output.write(chunk)
                 if digest.hexdigest() != row["sha256"]:
                     raise ArchiveError(f"Backup checksum mismatch: {info.filename}")
+                processed += 1
+                if progress is not None:progress(processed,len(rows))
             project_path = staging / "project.json"
             if not project_path.is_file():
                 raise ArchiveError("Backup project.json is missing")
@@ -891,10 +898,6 @@ def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
             _rebind_inspection_history(staging, old_project, target_dir, old_source, new_source)
             _rebind_deployments(staging, old_source, new_source)
             _rebind_execution_state(staging, old_project, target_dir, old_source, new_source)
-        if target_dir.exists():
-            raise ArchiveError("Restore folder was created by another process", 409)
-        os.replace(staging, target_dir)
-        installed = True
         if new_source is not None:
             old_fingerprints = manifest.get("source_dataset_fingerprints_by_labelset")
             if old_fingerprints is not None:
@@ -904,26 +907,60 @@ def _restore_archive(archive_path: Path, target_dir: Path) -> Path:
                 # Existing v1 backups recorded only the label set active at backup.
                 from backend.engine.project_labelsets import load_labelsets
                 old_fingerprint = manifest.get("source_dataset_fingerprint")
-                active_id = load_labelsets(target_dir)["active_id"]
+                active_id = load_labelsets(staging)["active_id"]
                 old_fingerprints = ({active_id: old_fingerprint}
                                     if isinstance(old_fingerprint, str) and old_fingerprint.startswith("v1:") else {})
-            _rebind_fingerprint_records(target_dir, new_source, old_fingerprints)
-        _rebind_training_version_aliases(target_dir, version_digests)
+            _rebind_fingerprint_records(staging, staging / new_source.relative_to(target_dir), old_fingerprints, source_identity=new_source)
+        _rebind_training_version_aliases(staging, version_digests, final_target=target_dir)
         from backend.engine.image_truth import digest
-        for path in (target_dir/'dataset'/'capture_intake'/'drift').glob('driftref_*.json'):
+        for path in (staging/'dataset'/'capture_intake'/'drift').glob('driftref_*.json'):
             record=json.loads(path.read_text(encoding='utf-8'))
             previous=record.pop('record_sha256')
             record.setdefault('archive_restored_from_sha256',previous)
             record['record_sha256']=digest(record)
             path.write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
+        if _digest_file(archive_path) != archive_digest:
+            raise ArchiveError('Backup archive changed during staging',409)
+        from backend.engine.artifact_retention import ArtifactRetention
+        ArtifactRetention(staging).verified_restore(archive_digest,{'target_dir':str(target_dir),'fresh_path':True,'inventory_verified':True})
+        if before_publish is not None:
+            before_publish(staging,target_dir)
+        if publish is not None:
+            publish(staging,target_dir)
+        else:
+            if target_dir.exists():
+                raise ArchiveError("Restore folder was created by another process",409)
+            os.replace(staging,target_dir)
+        installed = True
         completed = True
         return target_dir
+    except InterruptedError:
+        raise
     except (OSError, KeyError, TypeError, ValueError, sqlite3.Error,BadZipFile,LargeZipFile,RuntimeError,NotImplementedError) as exc:
         if isinstance(exc, ArchiveError):
             raise
         raise ArchiveError(f"Invalid backup: {exc}") from exc
     finally:
-        if staging.exists():
+        if staging.exists() and not retain_staging:
             shutil.rmtree(staging,ignore_errors=True)
-        if installed and not completed and target_dir.exists():
+        if installed and not completed and target_dir.exists() and publish is None:
             shutil.rmtree(target_dir,ignore_errors=True)
+
+
+def _publish_fresh_directory(staging: Path, target: Path) -> None:
+    """Atomic no-replace directory rename; an unrelated empty directory is protected too."""
+    import ctypes
+    import sys
+    if os.name == 'nt':
+        os.rename(staging,target)  # Windows rename refuses an existing destination.
+        return
+    library = ctypes.CDLL(None,use_errno=True)
+    if sys.platform == 'darwin':
+        result = library.renamex_np(os.fsencode(staging),os.fsencode(target),4)  # RENAME_EXCL
+    elif sys.platform.startswith('linux') and hasattr(library,'renameat2'):
+        result = library.renameat2(-100,os.fsencode(staging),-100,os.fsencode(target),1)  # RENAME_NOREPLACE
+    else:
+        raise ArchiveError('Atomic fresh-directory publication is unsupported on this platform',409)
+    if result:
+        error=ctypes.get_errno()
+        raise ArchiveError(f'Restore destination publication refused: {os.strerror(error)}',409)

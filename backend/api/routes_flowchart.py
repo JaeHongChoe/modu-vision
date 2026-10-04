@@ -1067,11 +1067,15 @@ def get_sample_images(request: Request = None):
 def _project_calibrations(project):
     """Measurement nodes find the project's spatial calibrations by reference (E03); the images' camera and setup are
     not known to this run, so results record that the unit claim was not checked against them."""
-    from contextlib import nullcontext
+    from contextlib import nullcontext, ExitStack
     from backend.engine.spatial_calibration import calibration_scope, project_calibration_store
     if not project:
         return nullcontext()
-    return calibration_scope(project_calibration_store(project).load)
+    from backend.engine.fixture_flow import fixture_scope, project_fixtures
+    stack = ExitStack()
+    stack.enter_context(calibration_scope(project_calibration_store(project).load))
+    stack.enter_context(fixture_scope(project_fixtures(project).load))
+    return stack
 
 
 @router.post("/run")

@@ -269,6 +269,7 @@ export interface FlowEdge {
 }
 
 export interface FlowchartPipeline {
+  capture_group_policy?: import('../services/captureGroups').CaptureJoinPolicy;
   id: string;
   name: string;
   description?: string;

@@ -2,12 +2,12 @@ import React,{useEffect,useRef,useState} from 'react';
 import {request,resolveApiUrl} from '../../services/api';
 import {roiFromDrag,moveRoi} from './flowWorkspace';
 
-export function ImageRoiEditor({imagePath,preview,roi,onChange,onEditingChange,disabled=false}:{imagePath?:string;preview?:string;roi:number[];onChange:(roi:number[])=>void;onEditingChange?:(editing:boolean)=>void;disabled?:boolean}) {
-  const [size,setSize]=useState<number[]|null>(null);const [error,setError]=useState('');const [draft,setDraft]=useState(roi);const start=useRef<number[]|null>(null);
+export function ImageRoiEditor({imagePath,preview,sourceSize,roi,onChange,onEditingChange,disabled=false}:{imagePath?:string;preview?:string;sourceSize?:number[];roi:number[];onChange:(roi:number[])=>void;onEditingChange?:(editing:boolean)=>void;disabled?:boolean}) {
+  const [size,setSize]=useState<number[]|null>(sourceSize||null);const [error,setError]=useState('');const [draft,setDraft]=useState(roi);const start=useRef<number[]|null>(null);
   useEffect(()=>setDraft(roi),[roi.join(',')]);
   useEffect(()=>()=>{start.current=null;onEditingChange?.(false);},[imagePath,onEditingChange]);
-  useEffect(()=>{let active=true;setSize(null);setError('');if(imagePath)request<{width:number;height:number}>(`/api/flow-workspace/image-info?image_path=${encodeURIComponent(imagePath)}`).then(v=>{if(active)setSize([v.width,v.height]);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[imagePath]);
-  if(!imagePath||!preview)return <p className="text-slate-400">상단에서 검사 이미지를 선택하면 원본 위에 ROI를 그릴 수 있습니다.</p>;
+  useEffect(()=>{let active=true;setSize(sourceSize||null);setError('');if(imagePath)request<{width:number;height:number}>(`/api/flow-workspace/image-info?image_path=${encodeURIComponent(imagePath)}`).then(v=>{if(active)setSize([v.width,v.height]);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[imagePath,sourceSize?.join(",")]);
+  if((!imagePath&&!sourceSize)||!preview)return <p className="text-slate-400">상단에서 검사 이미지를 선택하면 원본 위에 ROI를 그릴 수 있습니다.</p>;
   if(error)return <p role="alert" className="text-amber-300">{error}</p>;
   if(!size)return <p role="status">원본 이미지 크기 확인 중…</p>;
   const [w,h]=size;const [x1,y1,x2,y2]=draft;const src=resolveApiUrl(preview);

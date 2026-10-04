@@ -116,6 +116,15 @@ jobs:
           backend/tests/test_capture_intake.py
           backend/tests/test_e08_import_recovery.py
           backend/tests/test_e08_backup_recovery.py
+          backend/tests/test_e08_restore_recovery.py
+          backend/tests/test_e01_service_capture_groups.py
+          backend/tests/test_fixture_flow_integration.py
+          backend/tests/test_capture_group_deadline_delivery.py
+          backend/tests/test_remote_package_parity.py
+          backend/tests/test_portable_capture_policy_runtime.py
+          backend/tests/test_training_inventory_parity.py
+          backend/tests/test_fixture_pose_json_parity.py
+          backend/tests/test_service_s1_08.py
           backend/tests/test_anomaly_folder_case.py
       - name: Core defect baseline evidence
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json

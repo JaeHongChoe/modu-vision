@@ -194,7 +194,12 @@ class FixturePose:
     provider: dict = field(default_factory=lambda: dict(PROVIDER))
 
     def to_json(self) -> dict:
-        return asdict(self)
+        value = asdict(self)
+        # Coordinate tuples become arrays across the independent package's JSON
+        # transport. Emit that same representation in the app evidence too.
+        for name in ('reference_region', 'reference_shape', 'observed_shape'):
+            value[name] = list(value[name])
+        return value
 
 
 def _orb(features: int):

@@ -34,7 +34,7 @@ from typing import Any, Callable, Dict, Iterator, List, Literal, Mapping, Option
 
 import cv2
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_serializer
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -146,6 +146,20 @@ class FlowchartPipeline(BaseModel):
     nodes: List[FlowNode] = Field(default_factory=list)
     edges: List[FlowEdge] = Field(default_factory=list)
     execution_config: FlowExecutionConfig = Field(default_factory=FlowExecutionConfig)
+    capture_group_policy: Optional[Dict[str,Any]] = None
+
+    @field_validator('capture_group_policy')
+    @classmethod
+    def validate_capture_group_policy(cls,value):
+        if value is None:return None
+        from backend.engine.service_capture_groups import validate_join_policy
+        return validate_join_policy(value)
+
+    @model_serializer(mode='wrap')
+    def legacy_capture_serialization(self,handler):
+        result=handler(self)
+        if self.capture_group_policy is None:result.pop('capture_group_policy',None)
+        return result
 
 
 class CropInspectionResult(BaseModel):
@@ -176,6 +190,7 @@ class CropInspectionResult(BaseModel):
     map_semantics: Optional[str] = None
     mask: Optional[str] = None
     source_transform: Optional[List[List[float]]] = None
+    fixture_pose: Optional[Dict[str, Any]] = None
     segmentation_classes: List[Dict[str, Any]] = Field(default_factory=list)
     blob_measurements: List[Dict[str, Any]] = Field(default_factory=list)
     measurements: List[Dict[str, Any]] = Field(default_factory=list)
@@ -501,6 +516,9 @@ def _fixed_roi_rectangle(node: FlowNode) -> List[int]:
     x1, y1, x2, y2 = rectangle
     if x1 < 0 or y1 < 0 or x2 - x1 < 16 or y2 - y1 < 16:
         raise ValueError(f"Fixed ROI rectangle for {node.id} must start at nonnegative coordinates and be at least 16x16 pixels.")
+    if node.data.params.get('fixture') is not None:
+        from backend.engine.fixture_flow import validate_fixture_params
+        validate_fixture_params(node.data.params['fixture'])
     return rectangle
 
 
@@ -1355,6 +1373,7 @@ class FlowchartEngine:
                         region['polygon']=points.tolist()
                         region['box']=[max(0,int(np.floor(points[:,0].min()))),max(0,int(np.floor(points[:,1].min()))),min(img_rgb.shape[1],int(np.ceil(points[:,0].max()))),min(img_rgb.shape[0],int(np.ceil(points[:,1].max())))]
                     crop.source_transform = transform.tolist()
+                    crop.fixture_pose = roi.get("fixture_pose")
                     crop._region = {**roi,'id':crop.roi_id,'image':local[max(0,y1):min(h,y2),max(0,x1):min(w,x2)].copy(),'bbox':crop.bbox,'source_transform':mapped.tolist(),'crop_padding':0}
                     if crop.polygon and task.lower().strip() == 'rotated_detection':
                         from backend.engine.rotated_detection import box_from_polygon
@@ -2264,6 +2283,7 @@ class FlowchartEngine:
                     continue
 
                 step_reason = None
+                fixture_artifacts = []
                 if node.data.node_type in ("patch_split", "preprocess"):
                     started = time.time()
                     enhancement = None
@@ -2292,22 +2312,38 @@ class FlowchartEngine:
                 elif node.data.node_type == "fixed_roi":
                     started = time.time()
                     x1, y1, x2, y2 = _fixed_roi_rectangle(node)
-                    clipped = [max(0, min(w, x1)), max(0, min(h, y1)),
-                               max(0, min(w, x2)), max(0, min(h, y2))]
-                    if clipped[2] - clipped[0] >= 16 and clipped[3] - clipped[1] >= 16:
-                        selected_roi = [{
-                            "id": f"fixed_roi:{node.id}", "label": node.data.label,
-                            "bbox": clipped, "crop_padding": 0,
+                    if node.data.params.get('fixture') is not None:
+                        from backend.engine.fixture_flow import anchored_roi, FixtureReview
+                        try:
+                            anchored, pose = anchored_roi(img_rgb, [x1,y1,x2,y2], node.data.params['fixture'], node.id, node.data.label)
+                            selected_roi = [anchored]
+                            status, branch_verdict = 'passed', 'OK'
+                        except FixtureReview as exc:
+                            selected_roi = []
+                            status, branch_verdict = 'review_required', 'REVIEW'
+                            incomplete_reasons.append(str(exc)); step_reason = str(exc); pose = exc.pose
+                        fixture_artifacts = [{
+                            'roi_id': f'fixture:{node.id}', 'bbox': selected_roi[0]['bbox'] if selected_roi else [0,0,w,h],
+                            'image': image_uri(selected_roi[0]['image'] if selected_roi else img_rgb),
+                            'fixture_pose': pose, 'evidence': {'fixture_pose': pose},
                         }]
-                        status = "passed"
-                        branch_verdict = "OK"
                     else:
-                        selected_roi = []
-                        status = "review_required"
-                        branch_verdict = "REVIEW"
-                        incomplete_reasons.append(
-                            f"Fixed ROI {node.id} does not overlap this image by at least 16x16 pixels."
-                        )
+                        clipped = [max(0, min(w, x1)), max(0, min(h, y1)),
+                                   max(0, min(w, x2)), max(0, min(h, y2))]
+                        if clipped[2] - clipped[0] >= 16 and clipped[3] - clipped[1] >= 16:
+                            selected_roi = [{
+                                "id": f"fixed_roi:{node.id}", "label": node.data.label,
+                                "bbox": clipped, "crop_padding": 0,
+                            }]
+                            status = "passed"
+                            branch_verdict = "OK"
+                        else:
+                            selected_roi = []
+                            status = "review_required"
+                            branch_verdict = "REVIEW"
+                            incomplete_reasons.append(
+                                f"Fixed ROI {node.id} does not overlap this image by at least 16x16 pixels."
+                            )
                     node_rois[node.id] = selected_roi
                     node_evidence[node.id] = []
                     latency = (time.time() - started) * 1000.0
@@ -2368,7 +2404,7 @@ class FlowchartEngine:
                     branch_verdict=branch_verdict,
                     selected_edge_ids=[edge.id for edge in selected],
                     skip_reason=step_reason,
-                    artifacts=region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]),
+                    artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]),
                 ))
             return (node_rois[selected_node.id], node_evidence[selected_node.id],
                     node_branch_verdict[selected_node.id], execution_steps,

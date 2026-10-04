@@ -81,6 +81,56 @@ test('new graph edit after undo clears redo history', () => {
   assert.equal(store.getState().pipeline.nodes[0].data.threshold, 0.8);
 });
 
+test('ordinary graph replacement keeps its stale base and remains undoable', () => {
+  store.getState().setBaseVersionId(null);
+  const previous = store.getState().pipeline;
+  const next = { ...previous, name: 'Ordinary edit' };
+  store.getState().replacePipeline(next);
+  assert.equal(store.getState().baseVersionId, null);
+  store.getState().undo();
+  assert.equal(store.getState().pipeline, previous);
+  assert.equal(store.getState().baseVersionId, null);
+});
+
+test('explicit new basis atomically clears old undo, redo and open drag history', () => {
+  store.getState().setBaseVersionId(null);
+  store.getState().updateNodeData('inspect', { threshold: 0.7 });
+  store.getState().undo();
+  store.getState().beginHistoryGroup();
+  assert.equal(store.getState().historyFuture.length, 1);
+  assert.ok(store.getState().historyGroupStart);
+  const adopted = { ...store.getState().pipeline, name: 'Adopted recipe' };
+  const observations = [];
+  const unsubscribe = store.subscribe(state => observations.push({ pipeline: state.pipeline, base: state.baseVersionId,
+    past: state.historyPast.length, future: state.historyFuture.length, group: state.historyGroupStart }));
+  store.getState().replacePipeline(adopted, { baseVersionId: 'active-v1' });
+  unsubscribe();
+  assert.deepEqual(observations, [{ pipeline: adopted, base: 'active-v1', past: 0, future: 0, group: null }]);
+  assert.equal(store.getState().canUndo, false);
+  assert.equal(store.getState().canRedo, false);
+  store.getState().undo();
+  store.getState().redo();
+  store.getState().endHistoryGroup();
+  assert.equal(store.getState().pipeline, adopted);
+  assert.equal(store.getState().historyPast.length, 0);
+  assert.equal(store.getState().baseVersionId, 'active-v1');
+});
+
+test('edits after recipe adoption undo and redo within the observed basis', () => {
+  const adopted = { ...store.getState().pipeline, name: 'Recipe with no active version' };
+  store.getState().setBaseVersionId('old-version');
+  store.getState().replacePipeline(adopted, { baseVersionId: null });
+  store.getState().updateNodeData('inspect', { threshold: 0.8 });
+  const edited = store.getState().pipeline;
+  store.getState().undo();
+  assert.equal(store.getState().pipeline, adopted);
+  assert.equal(store.getState().baseVersionId, null);
+  assert.equal(store.getState().canUndo, false);
+  store.getState().redo();
+  assert.equal(store.getState().pipeline, edited);
+  assert.equal(store.getState().baseVersionId, null);
+});
+
 test('pointer drag records one undo step for many position updates', () => {
   store.getState().beginHistoryGroup();
   store.getState().moveNode('inspect', { x: 120, y: 100 });

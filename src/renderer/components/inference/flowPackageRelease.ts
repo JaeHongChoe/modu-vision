@@ -28,11 +28,12 @@ export function releaseApprovalIds(prerequisites: FlowApprovalPrerequisites | nu
   return chosen;
 }
 
-type ParityFields = Pick<FlowExportBody, 'parity_images' | 'parity_device' | 'verification_image_path' | 'verification_image_id'>;
+type ParityFields = Pick<FlowExportBody, 'parity_images' | 'parity_device' | 'verification_image_path' | 'verification_image_id' | 'compute_profile_id'>;
 
 export function parityFields(mode: ParityMode, cohort: readonly ParityImageChoice[], single: ParityImageChoice | undefined,
-  device: string): { fields: ParityFields } | { error: string } {
+  device: string, computeProfileId?: string | null): { fields: ParityFields } | { error: string } {
   if (mode === 'none') return { fields: {} };
+  if (computeProfileId && mode !== 'cohort') return { error: '원격 패키지 비교에는 고정 이미지 여러 장을 선택하세요.' };
   if (mode === 'single') {
     return single ? { fields: { verification_image_path: single.file_path, verification_image_id: single.image_id } }
       : { error: '한 장 확인에 사용할 이미지를 선택하세요.' };
@@ -41,7 +42,16 @@ export function parityFields(mode: ParityMode, cohort: readonly ParityImageChoic
     return { error: `동일성 검증 이미지는 2장 이상 ${MAX_PARITY_IMAGES}장 이하로 선택하세요.` };
   }
   return { fields: { parity_images: cohort.map((item) => ({ path: item.file_path, ...(item.image_id ? { image_id: item.image_id } : {}) })),
-    parity_device: device } };
+    parity_device: device, ...(computeProfileId ? { compute_profile_id: computeProfileId } : {}) } };
+}
+
+export function parityTargetLabel(report: FlowParityReport): string {
+  if (report.execution_target === 'selected_compute') {
+    const gpu = report.compute_gpu_selector ? ` · GPU 선택 ${report.compute_gpu_selector}` : '';
+    const uuid = report.reference_runtime?.runtime_device_identity?.gpu_uuid;
+    return `${report.compute_profile_name || report.compute_profile_id}${gpu} · ${report.device || '장치 확인 필요'}${uuid ? ` · ${uuid}` : ''}`;
+  }
+  return report.status === 'not_run' ? '검증 실행 전' : `이 컴퓨터 · ${report.device || '장치 확인 필요'}`;
 }
 
 export function parityHeadline(report: FlowParityReport): { tone: 'ok' | 'limited' | 'warn' | 'fail'; text: string } {

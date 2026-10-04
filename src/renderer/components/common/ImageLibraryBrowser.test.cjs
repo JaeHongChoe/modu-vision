@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+const nodes=tree=>Array.isArray(tree)?tree.flatMap(nodes):tree&&typeof tree==='object'?[tree,...nodes(tree.props?.children)]:[];
+const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>Object.is(v,b[i]));
+function browser(){
+ let cursor=0,dirty=false,tree,effects=[];const slots=[],calls=[],picked=[],selected=new Set(['image-0']);
+ const image=i=>({image_uuid:`image-${i}`,file_name:'part.png',file_path:`/images/${i}/part.png`,relative_path:`${i}/part.png`,valid:1,tags:['tag-A'],label:'OK',split:'test'});
+ const react={useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>{const next=typeof value==='function'?value(slots[i]):value;if(!Object.is(next,slots[i])){slots[i]=next;dirty=true;}}];},useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial});},useCallback(fn,deps){const i=cursor++;if(!same(slots[i]?.deps,deps))slots[i]={deps,fn};return slots[i].fn;},useEffect(fn,deps){const i=cursor++;if(!same(slots[i]?.deps,deps)){const previous=slots[i];slots[i]={deps,cleanup:previous?.cleanup};effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=fn();});}},useLayoutEffect(){cursor++;}};
+ const file=path.join(__dirname,'ImageLibraryBrowser.tsx'),loaded=new Module(file,module);loaded.filename=file;loaded.paths=Module._nodeModulePaths(__dirname);const original=loaded.require.bind(loaded);const utilityFile=path.join(__dirname,'../../utils/virtualWindow.ts'),utility=new Module(utilityFile,module);utility.filename=utilityFile;utility._compile(ts.transpileModule(fs.readFileSync(utilityFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,utilityFile);
+ loaded.require=name=>name==='../../utils/virtualWindow'?utility.exports:name==='react'?react:name==='../../services/api'?{resolveApiUrl:x=>x,api:{library:{images:async query=>{calls.push({...query});const start=query.cursor?120:0;return{items:Array.from({length:120},(_,i)=>image(i+start)),next_cursor:query.cursor?'page-3':'page-2',complete_page:true,scanned_to:null};}}}}:original(name);
+ loaded._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
+ const previousWindow=global.window;global.window={setTimeout:()=>1,clearTimeout(){}};
+ function render(){cursor=0;dirty=false;tree=loaded.exports.ImageLibraryBrowser({selectedIds:selected,onPick:item=>picked.push(item)});effects.splice(0).forEach(fn=>fn());return tree;}
+ async function settle(){for(let i=0;i<12;i++){if(dirty||!tree)render();await new Promise(setImmediate);if(!dirty)return tree;}throw Error('component did not settle');}
+ return{calls,picked,selected,settle,render,controls:()=>nodes(tree),change:async(label,value)=>{const input=nodes(tree).find(n=>n.props?.['aria-label']===label);assert(input,`production filter ${label} missing`);input.props.onChange({target:{value}});return settle();},scrollWithoutSettling:value=>nodes(tree).find(n=>n.props?.role==='list').props.onScroll({currentTarget:{scrollTop:value}}),scroll:async value=>{nodes(tree).find(n=>n.props?.role==='list').props.onScroll({currentTarget:{scrollTop:value}});return settle();},close(){global.window=previousWindow;}};
+}
+test('production metadata controls send tag/product/Lot together and clear empty filters',async()=>{
+ const b=browser();try{await b.settle();await b.change('태그','검사완료');await b.change('제품','PCB-A');await b.change('Lot','LOT-42');const query=b.calls.at(-1);assert.equal(query.tag,'검사완료');assert.equal(query.product,'PCB-A');assert.equal(query.lot,'LOT-42');assert.equal(query.cursor,null);assert.equal(query.limit,120);await b.change('Lot','');assert.equal(b.calls.at(-1).lot,undefined);assert.equal(b.calls.at(-1).tag,'검사완료');}finally{b.close();}
+});
+test('metadata change starts from first page after pagination and preserves UUID selection',async()=>{
+ const b=browser();try{await b.settle();await b.scroll(176*120);assert(b.calls.some(q=>q.cursor==='page-2'),'fixture must exercise actual pagination');for(const [label,value]of [['태그','tag-B'],['제품','PCB-B'],['Lot','LOT-B']]){const before=b.calls.length;await b.change(label,value);assert.equal(b.calls[before].cursor,null,'changed cohort must discard old cursor');}
+ const chosen=b.controls().find(n=>n.props?.role==='listitem'&&n.props['aria-pressed']);assert(chosen,'existing selected UUID remains selected after filter change');chosen.props.onClick();assert.equal(b.picked[0].image_uuid,'image-0');assert.equal(b.picked[0].file_path,'/images/0/part.png');assert.deepEqual([...b.selected],['image-0']);}finally{b.close();}
+});
+
+test('a cohort change at pagination boundary never sends the prior cursor with new filters',async()=>{
+ const b=browser();try{await b.settle();const before=b.calls.length;b.scrollWithoutSettling(176*120);await b.change('Lot','new-cohort');const changed=b.calls.slice(before).filter(query=>query.lot==='new-cohort');assert(changed.length);assert(changed.every(query=>query.cursor===null),'old cursor must not race first-page reset');}finally{b.close();}
+});

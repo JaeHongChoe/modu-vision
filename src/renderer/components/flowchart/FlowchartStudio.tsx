@@ -1,3 +1,4 @@
+import {FixtureReferencePanel} from './FixtureReferencePanel';
 /**
  * src/renderer/components/flowchart/FlowchartStudio.tsx
  * Stage 5: editable inspection graph with model fan-out and verdict branches.
@@ -465,9 +466,13 @@ export const FlowchartStudio: React.FC = () => {
     const idle=()=>{const live=useFlowchartStore.getState();return !live.isRunning&&!live.isSaving&&!live.isLoading&&!useProjectStore.getState().isProjectBusy;};
     if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
     if(!captured.graph)throw new Error('현재 플로우를 불러온 뒤 레시피를 적용하세요.');
+    // Explicit recipe replacement starts a new edit against the observed active version.
+    // Keep this snapshot through verification so concurrent activation still fails the save CAS.
+    const observedBase=(await api.flowchart.activeVersionId()).version_id??null;
+    if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
     await verifyModelReferences(folderPath,getFlowchartModelReferences(next));
     if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
-    replacePipeline(next);selectNode(next.nodes.find(node=>node.data.node_type==='fixed_roi')?.id||next.nodes.find(node=>node.data.model_job_id)?.id||null);
+    replacePipeline(next,{baseVersionId:observedBase});selectNode(next.nodes.find(node=>node.data.node_type==='fixed_roi')?.id||next.nodes.find(node=>node.data.model_job_id)?.id||null);
     setSelectedVersionId('');setSelectedEdgeId(null);setZoomScale(null);setActionValidationError(null);setActiveTab('edit');closeRecipe();
   };
   const handleSingleModel=()=>openRecipe('single');
@@ -1493,10 +1498,11 @@ export const FlowchartStudio: React.FC = () => {
                     { key: 'height' as const, label: '높이', value: y2 - y1, min: 16 },
                   ];
                   return <div className="rounded border border-sky-800/70 bg-sky-950/20 p-3 space-y-2">
-                    <div className="text-sky-200 font-bold">원본 이미지의 고정 ROI</div>
-                    <ImageRoiEditor imagePath={selectedImage?.imagePath} preview={selectedImage?.thumbnailUrl} roi={[x1,y1,x2,y2]} disabled={isRunning||isSaving}
+                    <div className="text-sky-200 font-bold">{selectedNode.data.params?.fixture ? "기준물 좌표의 ROI" : "원본 이미지의 고정 ROI"}</div>
+                    <FixtureReferencePanel params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})} imagePath={selectedImage?.imagePath}/>
+                    {!selectedNode.data.params?.fixture&&<ImageRoiEditor imagePath={selectedImage?.imagePath} preview={selectedImage?.thumbnailUrl} roi={[x1,y1,x2,y2]} disabled={isRunning||isSaving}
                       onEditingChange={setIsRoiEditing}
-                      onChange={roi=>updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,roi_bbox:roi}})}/>
+                      onChange={roi=>updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,roi_bbox:roi}})}/>}
                     <div className="grid grid-cols-2 gap-2">
                       {fields.map((field) => <FixedRoiCoordinateInput
                         key={`${selectedNode.id}:${field.key}`}

@@ -41,6 +41,7 @@ from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_no
 from backend.engine import flow_package as flow_package_engine
 from backend.engine.flow_package import build_flow_package
 from backend.engine.spatial_calibration import project_calibration_store
+from backend.engine.fixture_flow import project_fixtures
 from backend.engine.specialized_models import FLOW_TASKS, SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.edge_runtime import SUPPORTED_TARGETS, normalize_target
@@ -78,6 +79,7 @@ class ExportFlowRequest(BaseModel):
     verification_image_id: Optional[str] = None
     parity_images: Optional[List[ParityImageRequest]] = Field(default=None, min_length=2, max_length=64)
     parity_device: Optional[str] = None
+    compute_profile_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
     approval_revision_ids: Optional[Dict[str, str]] = None
     deployment_profile: Literal["standard", "edge_cpu",'edge_cuda'] = "standard"
     target_os: Optional[str] = None
@@ -88,6 +90,8 @@ class ExportFlowRequest(BaseModel):
     def validate_deployment(self):
         from backend.engine.runtime_configuration import runtime_options
         runtime = runtime_options(self.runtime_config)
+        if self.compute_profile_id is not None and self.parity_images is None:
+            raise ValueError('Selected remote package parity requires a frozen multi-image cohort')
         if self.deployment_profile in ('edge_cpu','edge_cuda'):
             target = normalize_target(self.target_os, self.target_arch)
             self.target_os, self.target_arch = target["os"], target["architecture"]
@@ -360,7 +364,8 @@ def read_flow_preflight(report_id: str, request: Request, source_dataset_path: s
 def _validated_cohort(req: ExportFlowRequest, source: Path) -> List[Dict[str, Optional[str]]]:
     from backend.engine.runtime_device import resolve_runtime_device
     try:
-        resolve_runtime_device(req.parity_device)
+        if req.compute_profile_id is None:
+            resolve_runtime_device(req.parity_device)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Parity target device is unavailable: {exc}") from exc
     images = []
@@ -388,6 +393,17 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     if req.recipe_task not in (*FLOW_TASKS, "mixed"):
         raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
     source = _canonical_source(req.source_dataset_path)
+    parity_profile = None
+    if req.compute_profile_id is not None:
+        from backend.remote.profiles import get_profile_store
+        from backend.remote.package_parity import validate_parity_target
+        parity_profile = get_profile_store().get(req.compute_profile_id)
+        if parity_profile is None:
+            raise HTTPException(status_code=404, detail='Selected package parity compute profile is unavailable')
+        try:
+            validate_parity_target(parity_profile, req.parity_device)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     if req.verification_image_path:
         image = Path(req.verification_image_path).expanduser().resolve()
         if not image.is_file():
@@ -424,6 +440,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             deployment_profile=req.deployment_profile, target_os=req.target_os, target_arch=req.target_arch,
             runtime_config=req.runtime_config,
             calibrations=project_calibration_store(project).load,
+            fixtures=project_fixtures(project).load,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -449,16 +466,26 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
     scope = "cohort" if cohort is not None else "single_image"
     device = req.parity_device if cohort is not None else "cpu"
     images = cohort if cohort is not None else [{"path": req.verification_image_path, "image_id": req.verification_image_id}]
+    target_identity = ({'execution_target': 'selected_compute', 'compute_profile_id': parity_profile.id,
+                        'compute_profile_name': parity_profile.name, 'compute_gpu_selector': parity_profile.gpu_selector}
+                       if parity_profile else {'execution_target': 'local', 'compute_profile_id': None})
     # Record a failure first: if the package changes or the process stops mid-check, the library keeps it.
     record_package(project, package, version_id=req.version_id, recipe_task=req.recipe_task,
-                   parity=_failed_parity(RuntimeError("Parity verification started but recorded no result"),
-                                         scope=scope, device=device, package=package))
+                   parity={**_failed_parity(RuntimeError("Parity verification started but recorded no result"),
+                                           scope=scope, device=device, package=package), **target_identity})
     try:
-        report = flow_package_engine.verify_flow_parity_cohort(
-            package_dir=package, pipeline=pipeline, checkpoints=checkpoints, images=images, device=device, scope=scope,
-        )
+        if parity_profile is not None:
+            from backend.remote.package_parity import verify_package_on_compute
+            report = verify_package_on_compute(parity_profile, project, package_dir=package, pipeline=pipeline,
+                                               checkpoints=checkpoints, images=images, device=device)
+            if get_profile_store().get(parity_profile.id) != parity_profile:
+                raise ArtifactValidationError('Selected package parity profile changed during execution')
+        else:
+            report = flow_package_engine.verify_flow_parity_cohort(
+                package_dir=package, pipeline=pipeline, checkpoints=checkpoints, images=images, device=device, scope=scope,
+            )
     except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
-        report = _failed_parity(exc, scope=scope, device=device, package=package)
+        report = {**_failed_parity(exc, scope=scope, device=device, package=package), **target_identity}
     # Every executed check leaves its receipt in the package and the library, including failures.
     flow_package_engine.write_parity_receipt(package, report)
     try:

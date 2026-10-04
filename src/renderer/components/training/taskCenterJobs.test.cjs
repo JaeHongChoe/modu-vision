@@ -5,9 +5,11 @@ function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(n
   m.require=ref=>ref in mocks?mocks[ref]:['./jobProgress','./taskCenterModel','./taskHandoff'].includes(ref)?load(ref+'.ts'):require(ref);
   m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const memory=()=>{const values=new Map();return{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};};
-const requests=[];
+const requests=[];const requestCalls=[];
 const rows=[
   {kind:'dataset_import',job_id:'import',task:'dataset_import',status:'interrupted',resumable:true,scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'image',attempt:1}},
+  {kind:'project_restore',job_id:'restored',task:'project_restore',status:'interrupted',resumable:true,target_dir:'/new-owned',autoactivated:false,scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'file',attempt:1,result_ref:{count:4,sha256:'def'}}},
+  {kind:'project_backup',job_id:'verified',task:'project_backup',status:'completed',downloadable:true,capabilities:{restore:true},scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'archive',result_ref:{count:4,sha256:'a'.repeat(64)}}},
   {kind:'project_backup',job_id:'backup',task:'project_backup',status:'completed',downloadable:false,scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'archive',attempt:1,expires_at:1,result_ref:{count:3,sha256:'abc'}}},
   {kind:'labeling-batch',job_id:'batch',task:'labeling',status:'interrupted',error:'proposals stopped; partial proposals remain reviewable',source_dataset_path:'/source',training_provenance:{labelset_id:'default'}},
   {kind:'ocr',job_id:'ocr-lost',task:'ocr',status:'interrupted',epoch:1,epochs:4,error:'Application stopped before training completed',source_dataset_path:'/source',training_provenance:{labelset_id:'default'}},
@@ -23,7 +25,7 @@ async function renderCenter(){
   const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(child=>child!==undefined&&child!==null&&child!==false)});
   const m=load('TaskCenter.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},
     '../../services/jobEventFeed':{onJobEventChanges:listener=>{jobEventListeners.push(listener);return()=>{jobEventListeners.splice(jobEventListeners.indexOf(listener),1);};}},
-    '../../services/api':{getApiPersistenceIdentity:()=>'local',request:async(path)=>{requests.push(path);taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
+    '../../services/api':{getApiPersistenceIdentity:()=>'local',request:async(path,options)=>{requests.push(path);requestCalls.push({path,options});taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
     '../../stores/useProjectStore':{useProjectStore},'../../stores/useComputeStore':{useComputeStore:Object.assign(sel=>sel({transportRevision:0,profiles:[],selectedProfileId:null}),{getState:()=>({transportRevision:0,selectedProfileId:null})})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''}});
   const render=()=>{cursor=0;const tree=m.TaskCenter({initialOpen:true});effects.splice(0).forEach(fn=>fn());return tree;};
@@ -80,5 +82,23 @@ test('S1-10 slice 4: an open task center reads its list again as soon as a recon
     assert.match(expired.text,/검증 3개/);assert.match(expired.text,/결과 만료/);
     const download=expired.nodes.find(n=>n.type==='button'&&n.children.includes('백업 결과 사용 불가'));
     assert.equal(download.props.disabled,true);
+  }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+
+ test('E08: explicit fresh restore binds verified archive and resumed restore keeps its identity',async()=>{
+  const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+  try{
+    const open=await renderCenter();let verified=open('project_backup:local:verified');
+    const input=verified.nodes.find(n=>n.type==='input'&&n.props['aria-label']==='새 복원 폴더');
+    assert.ok(input,'explicit destination required');input.props.onChange({target:{value:'/new-owned'}});
+    verified=open('project_backup:local:verified');
+    const restore=verified.nodes.find(n=>n.type==='button'&&n.children.includes('새 폴더에 복원'));
+    assert.ok(restore&&!restore.props.disabled);restore.props.onClick();await new Promise(setImmediate);
+    const call=requestCalls.find(c=>c.path==='/api/dataset/operations/backups/verified/restore');
+    assert.deepEqual(JSON.parse(call.options.body),{target_dir:'/new-owned',expected_archive_sha256:'a'.repeat(64)});
+    assert.ok(call.options.headers['Idempotency-Key']);
+    const restored=open('project_restore:local:restored');assert.match(restored.text,/\/new-owned/);assert.match(restored.text,/자동 활성화하지 않습니다/);
+    restored.nodes.find(n=>n.type==='button'&&n.children.includes('같은 작업 재개')).props.onClick();await new Promise(setImmediate);
+    assert.ok(requests.includes('/api/dataset/operations/restores/restored/resume'));
   }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });

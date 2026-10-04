@@ -241,6 +241,7 @@ class ProjectStorageScopeMiddleware:
         if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
             "/api/project/compatibility/preview", "/api/project/compatibility/apply",
+            "/api/project/compatibility/recover", "/api/project/compatibility/global-preview",
         }:
             await self.app(scope, receive, send)
             return
@@ -310,6 +311,8 @@ def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str]
     app.state.api_token = os.environ.get("VISION_AI_STUDIO_API_TOKEN") or secrets.token_urlsafe(32)
     from backend.engine.shared_accounts import AccountStore
     app.state.accounts=AccountStore(Path(shared_auth_dir)/'accounts.sqlite') if shared_auth_dir else None
+    from backend.engine.migration_guard import ProjectMaintenanceMiddleware
+    app.add_middleware(ProjectMaintenanceMiddleware, project_app=app)
     app.add_middleware(ProjectStorageScopeMiddleware, project_app=app)
     app.add_middleware(ProjectContextMiddleware, project_app=app)
     if app.state.accounts is not None:

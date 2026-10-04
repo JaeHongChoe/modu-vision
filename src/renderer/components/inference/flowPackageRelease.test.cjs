@@ -29,3 +29,12 @@ test('headlines never present a one-image or failed check as cohort acceptance',
  assert.equal(m.parityHeadline({status:'mismatch',scope:'cohort'}).tone,'fail');assert.equal(m.parityHeadline({status:'failed'}).tone,'fail');
  assert.equal(m.parityHeadline({status:'not_run'}).tone,'warn');
 });
+test('selected remote parity keeps the explicit profile and cannot degrade to a single local check',()=>{
+ const images=[{file_path:'/s/a.png'},{file_path:'/s/b.png'}];
+ assert.deepEqual(m.parityFields('cohort',images,undefined,'cuda:0','selected-server'),{fields:{parity_images:[{path:'/s/a.png'},{path:'/s/b.png'}],parity_device:'cuda:0',compute_profile_id:'selected-server'}});
+ assert.ok('error' in m.parityFields('single',images,images[0],'cpu','selected-server'));
+});
+test('target readback uses the retained receipt profile and observed UUID',()=>{
+ assert.equal(m.parityTargetLabel({status:'passed',execution_target:'selected_compute',compute_profile_id:'server-2',compute_profile_name:'GPU server',compute_gpu_selector:'2',device:'cuda:0',reference_runtime:{runtime_device_identity:{gpu_uuid:'GPU-actual-2'}}}),'GPU server · GPU 선택 2 · cuda:0 · GPU-actual-2');
+ assert.equal(m.parityTargetLabel({status:'failed',execution_target:'local',device:'cpu'}),'이 컴퓨터 · cpu');
+});

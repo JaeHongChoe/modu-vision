@@ -57,7 +57,16 @@ function harness(kind, outcome) {
   const render=()=>{cursor=0;return kind==='center'?loaded.exports.TaskCenter({initialOpen:true,onNavigate:step=>navigations.push(step)}):loaded.exports.WizardHeader();};
   global.window={api:{platform:'windows'}};global.localStorage={};
   render();
-  if(kind==='center'){states[2]=[job];states[4]=job.key;}
+  if(kind==='center'){
+    const rowCollections=states.filter(Array.isArray);
+    assert.equal(rowCollections.length,1,'Task Center initializes one task row collection');
+    rowCollections[0].push(job);
+    const jobSelector=()=>nodes(render()).find(node=>node.type==='select'&&nodes(node).some(
+      option=>option.type==='option'&&option.props.value===job.key));
+    const select=jobSelector();assert.ok(select,'controlled task is visible in the production job dropdown');
+    select.props.onChange({target:{value:job.key}});
+    assert.equal(jobSelector().props.value,job.key,'production selection handler selects the controlled task');
+  }
   const confirmHeader=async value=>{await headerAction({render,project}).props.onChange({target:{value}});const dialog=nodes(render()).find(n=>n.type===ImpactDialog);assert.ok(dialog,'task impact preview opens');const started=dialog.props.scope;const result=await project.setTask(value);if(started===scopeFor({...project,...compute,apiTransportIdentity:transport}))dialog.props.onResult(result);};
   return {confirmHeader,render,states,writes,steps,navigations,taskCalls,project,compute,
     changeTransport:value=>{transport=value;}};

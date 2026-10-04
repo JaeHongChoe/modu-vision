@@ -10,14 +10,15 @@ interface Props {
   /** Called with the reason when the project has no validated revision to browse. */
   onUnavailable?: (reason: string) => void;
   /** Filters the browser opens with (the user can change them). */
-  initialFilters?: Pick<LibraryQuery, 'split' | 'state' | 'workflow_state'>;
+  initialFilters?: Filters;
 }
 
 const ROW_HEIGHT = 176;
 const MIN_TILE = 150;
 const GAP = 10;
 const PAGE = 120;
-type Filters = Pick<LibraryQuery, 'split' | 'state' | 'workflow_state'>;
+type Filters = Pick<LibraryQuery, 'split' | 'state' | 'workflow_state' | 'tag' | 'product' | 'lot'>;
+const metadataLabels = { tag: '태그', product: '제품', lot: 'Lot' } as const;
 
 /**
  * The project's validated images, searched and filtered on the server and paged by cursor. Only the rows on screen are
@@ -27,6 +28,8 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(initialFilters ?? {});
+  const queryIdentity = JSON.stringify([query, filters]);
+  const cursorIdentity = useRef<string | null>(null);
   const [items, setItems] = useState<LibraryImage[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
@@ -64,6 +67,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
       const page = await api.library.images({ q: query || undefined, ...filters, cursor: from, limit: PAGE });
       if (sequence !== request.current) return;  // a newer search answered meanwhile
       setItems((current) => (from ? [...current, ...page.items] : page.items));
+      cursorIdentity.current = queryIdentity;
       setCursor(page.next_cursor);
       setFinished(page.next_cursor === null);
       setScannedTo(page.complete_page ? null : page.scanned_to);
@@ -77,7 +81,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
     } finally {
       if (sequence === request.current) setLoading(false);
     }
-  }, [query, filters]);
+  }, [query, filters, queryIdentity]);
 
   useEffect(() => {
     setItems([]);
@@ -93,8 +97,10 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
   const rowWindow = visibleRows({ scrollTop, viewportHeight: size.height, rowHeight: ROW_HEIGHT, rowCount, overscan: 2 });
 
   useEffect(() => {
-    if (!loading && !finished && cursor && nearEnd(rowWindow, rowCount)) void load(cursor);
-  }, [loading, finished, cursor, rowWindow.end, rowCount, load]);
+    // A filter reset and end-of-list effect can run in the same commit.
+    // Only advance a cursor returned for this exact query.
+    if (cursorIdentity.current === queryIdentity && !loading && !finished && cursor && nearEnd(rowWindow, rowCount)) void load(cursor);
+  }, [loading, finished, cursor, rowWindow.end, rowCount, load, queryIdentity]);
 
   const rows: LibraryImage[][] = [];
   for (let row = rowWindow.start; row < rowWindow.end; row += 1) rows.push(items.slice(row * columns, row * columns + columns));
@@ -108,6 +114,13 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
           <input value={text} onChange={(event) => setText(event.target.value)} aria-label="이미지 검색"
             placeholder="파일 이름이나 폴더로 검색" className="w-full bg-transparent text-xs text-slate-200 outline-none placeholder:text-slate-600" />
         </label>
+        {(['tag', 'product', 'lot'] as const).map((key) => (
+          <label key={key} className="flex items-center gap-2 rounded border border-[#2B3547] bg-[#0D1117] px-2 py-1.5 text-xs text-slate-300">
+            <span>{metadataLabels[key]}</span>
+            <input aria-label={metadataLabels[key]} value={filters[key] || ''} onChange={(event) => choose(key, event.target.value)}
+              placeholder={`모든 ${metadataLabels[key]}`} className="w-28 bg-transparent text-slate-200 outline-none placeholder:text-slate-600" />
+          </label>
+        ))}
         <select aria-label="분할" value={filters.split || ''} onChange={(event) => choose('split', event.target.value)}
           className="rounded border border-[#2B3547] bg-[#0D1117] px-2 py-1.5 text-xs text-slate-300">
           <option value="">모든 분할</option><option value="train">train</option><option value="val">val</option><option value="test">test</option>

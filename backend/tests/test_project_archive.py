@@ -465,7 +465,7 @@ def test_restore_closes_sqlite_handles_before_publication_and_return(tmp_path: P
     try:
         restored = client.post('/api/project/restore', json={'archive_path': str(archive), 'target_dir': str(target)})
         assert restored.status_code == 200, restored.text
-        assert publications == [4]
+        assert publications == [7]  # All rebind/fingerprint/retention connections now close before rename.
         restored_handles = [connection for path, connection in connections
                             if path.is_relative_to(target) or any('.restore-' in parent.name for parent in path.parents)]
         # Five archive rebind handles plus the restored retention schema/receipt.

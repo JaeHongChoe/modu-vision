@@ -204,6 +204,7 @@ def build_flow_package(
     target_arch: str | None = None,
     runtime_config: dict | None = None,
     calibrations=None,
+    fixtures=None,
 ) -> dict[str, Any]:
     """Create a new package, never overwriting an existing release. ``calibrations`` finds the spatial calibration
     artifacts the flow's measurement nodes name (E03); each is copied into the package, and a flow that names one it
@@ -231,6 +232,18 @@ def build_flow_package(
         if found is None:
             raise ValueError(f'The flow measures with calibration {ref}, which this project does not have')
         packaged_calibrations[ref] = found
+    from backend.engine.fixture_flow import fixture_refs, current_fixture_resolver
+    resolve_fixture = fixtures or current_fixture_resolver()
+    packaged_fixtures = {}
+    for ref in sorted(fixture_refs(pipeline)):
+        artifact = resolve_fixture(ref) if resolve_fixture else None
+        if artifact is None:
+            raise ValueError(f"Missing or stale fixture reference {ref}")
+        for node in pipeline.nodes:
+            fixture = node.data.params.get("fixture") if node.data.node_type == "fixed_roi" else None
+            if fixture and fixture["reference_ref"] == ref and fixture["reference_revision"] != artifact.reference.revision:
+                raise ValueError("Fixture reference revision differs from the saved graph")
+        packaged_fixtures[ref] = artifact
     jobs = _model_jobs(pipeline)
     if set(checkpoints) != set(jobs):
         raise ValueError("Checkpoint jobs do not match the saved flow")
@@ -283,6 +296,11 @@ def build_flow_package(
             store = package_calibrations(staging)
             for calibration in packaged_calibrations.values():
                 store.save(calibration)
+        if packaged_fixtures:
+            from backend.engine.fixture_flow import package_fixtures
+            fixture_store = package_fixtures(staging)
+            for artifact in packaged_fixtures.values():
+                fixture_store.copy_artifact(artifact)
         (staging / "run_flow.py").write_text(_RUNNER, encoding="utf-8")
         (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
         (staging / "requirements.txt").write_text(requirements, encoding="utf-8")
@@ -332,6 +350,22 @@ def build_flow_package(
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination, follow_symlinks=False)
 
+        # Runtime state publication uses this dependency-pure Windows file helper,
+        # including capture-policy validation and standalone service startup.
+        # Bundle its package marker and helper, without the remote worker/scheduler.
+        for name in ("__init__.py", "file_replace.py"):
+            source = source_root / "backend" / "remote" / name
+            linked = lambda: source.is_symlink() or any(
+                parent.is_symlink() for parent in source.parents if source_root in parent.parents)
+            if linked() or not source.is_file():
+                raise ValueError(f"Unsafe or missing portable runtime source: {name}")
+            digest = _sha256(source)
+            destination = staging / "backend" / "remote" / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination, follow_symlinks=False)
+            if linked() or destination.is_symlink() or _sha256(source) != digest or _sha256(destination) != digest:
+                raise ValueError(f"Portable runtime source changed during copy: {name}")
+
         files = []
         for path in sorted(staging.rglob("*")):
             if path.is_file():
@@ -350,6 +384,8 @@ def build_flow_package(
             ],
             "files": files,
         }
+        if packaged_fixtures:
+            manifest["fixtures"] = sorted(packaged_fixtures)
         if packaged_calibrations:
             manifest["calibrations"] = sorted(packaged_calibrations)
         if release_revisions is not None:
@@ -534,6 +570,7 @@ def _run_packaged_image(package: Path, item: Mapping[str, Any], device: str, tim
 def _flow_evidence(result: Mapping[str, Any]) -> dict[str, Any]:
     """Decision, route, ROI and raster digests that both executions must share."""
     return {
+        **({'runtime_device_identity': result['runtime_device_identity']} if 'runtime_device_identity' in result else {}),
         "final_verdict": result.get("final_verdict"),
         "routed_output_node_id": result.get("routed_output_node_id"),
         "roi_count": result.get("roi_count"),
@@ -594,8 +631,9 @@ def verify_flow_parity_cohort(
             continue
         try:
             engine = engine or FlowchartEngine(device=str(resolved), checkpoint_resolver=resolve)
+            from backend.engine.fixture_flow import fixture_scope, package_fixtures
             from backend.engine.spatial_calibration import calibration_scope, package_calibrations
-            with calibration_scope(package_calibrations(package).load):  # the same artifacts the package measures with
+            with calibration_scope(package_calibrations(package).load), fixture_scope(package_fixtures(package).load):  # the same artifacts the package measures with
                 reference = engine.execute(pipeline=pipeline, image_path=item["path"], image_id=item["image_id"])
             reference = reference.model_dump() if hasattr(reference, "model_dump") else reference
             packaged = _run_packaged_image(package, item, device, timeout_per_image)

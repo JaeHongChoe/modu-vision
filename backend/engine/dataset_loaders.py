@@ -443,7 +443,7 @@ class ClassificationDataset(Dataset):
         if split and (train_dir.is_dir() or val_dir.is_dir() or test_dir.is_dir()):
             self.split_basis = "folders"
             available = [directory for directory in (train_dir, val_dir, test_dir) if directory.is_dir()]
-            names = {name for directory in available for name in self._load_from_folder(directory)[1]}
+            names = {name for directory in available for name in self._load_from_folder(directory, inventory_eligible=True)[1]}
             self.classes = sorted(
                 names,
                 key=lambda name: (0 if name.lower() in ("ok", "good", "normal", "pass", "정상_ok", "정상") else 1,
@@ -452,13 +452,13 @@ class ClassificationDataset(Dataset):
             self.class_to_idx = {name: idx for idx, name in enumerate(self.classes)}
             target_dir = train_dir if split == "train" else (val_dir if split == "val" else test_dir)
             if target_dir.is_dir():
-                local_samples, local_classes, _ = self._load_from_folder(target_dir)
+                local_samples, local_classes, _ = self._load_from_folder(target_dir, inventory_eligible=True)
                 self.samples = [(path, self.class_to_idx[local_classes[label_idx]]) for path, label_idx in local_samples]
             else:
                 self.samples = []
         else:
             self.split_basis = "automatic"
-            self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir)
+            self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir, inventory_eligible=True)
             if split and split in ["train", "val"]:
                 self.samples = self._split_samples(self.samples, split, val_split, seed)
             elif split == "test":
@@ -466,10 +466,14 @@ class ClassificationDataset(Dataset):
                 self.samples = []
 
     @staticmethod
-    def _load_from_folder(folder: Path) -> Tuple[List[Tuple[Path, int]], List[str], Dict[str, int]]:
+    def _load_from_folder(folder: Path, *, inventory_eligible: bool = False) -> Tuple[List[Tuple[Path, int]], List[str], Dict[str, int]]:
         from backend.engine.dataset_usage import unused_image_paths
         unused=unused_image_paths(folder)
-        class_names = [d.name for d in folder.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        # Saved assignments retain their existing exact-set validation; unsaved
+        # discovery uses the same path eligibility as accepted source inventories.
+        from backend.engine.dataset_inventory import excluded_folder, is_inventory_path
+        class_names = [d.name for d in folder.iterdir() if d.is_dir() and not d.name.startswith(".")
+                       and (not inventory_eligible or not excluded_folder(d.name, "classification"))]
 
         # Deterministic sort: 'OK', 'good', 'normal', 'pass' sorted first (index 0)
         def sort_key(name: str) -> Tuple[int, str]:
@@ -486,7 +490,9 @@ class ClassificationDataset(Dataset):
             cidx = class_to_idx[cname]
             cdir = folder / cname
             for p in sorted(cdir.glob("*")):
-                if p.is_file() and str(p.resolve()) not in unused and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
+                if (p.is_file() and str(p.resolve()) not in unused
+                        and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                        and (not inventory_eligible or is_inventory_path(p.relative_to(folder).parts, "classification"))):
                     samples.append((p, cidx))
 
         return samples, class_names, class_to_idx
@@ -1057,10 +1063,12 @@ class AnomalyDataset(Dataset):
         def image_paths(directory: Path, recursive: bool = True) -> List[Path]:
             from backend.engine.dataset_usage import unused_image_paths
             unused=unused_image_paths(directory)
+            from backend.engine.dataset_inventory import is_inventory_path
             paths = directory.rglob("*") if recursive else directory.glob("*")
             return [
                 p for p in paths
                 if p.is_file() and str(p.resolve()) not in unused and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                and is_inventory_path(p.relative_to(directory).parts, "anomaly")
                 and not (directory.name.lower() == "test_crop_output" and p.name.startswith("mask_"))
             ]
 

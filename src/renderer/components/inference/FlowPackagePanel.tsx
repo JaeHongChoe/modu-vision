@@ -4,6 +4,7 @@ import { api, type SavedFlowVersion } from '../../services/api';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
+import { useComputeStore } from '../../stores/useComputeStore';
 import type { ImageMeta, VisionTask } from '../../types';
 import { savedFlowIdentity, type SavedFlowIdentity } from '../flowchart/flowHandoff';
 import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
@@ -17,12 +18,14 @@ import {useTaskHandoff} from '../training/useTaskHandoff';
 import {productDeliveryApi} from '../../services/productDeliveryApi';
 import {reopenOptimizationTask} from './deliveryTaskSelection';
 import { flowPackageExport, type FlowApprovalPrerequisites, type FlowExportResult } from '../../services/flowPackageExport';
-import { MAX_PARITY_IMAGES, parityFields, parityHeadline, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
+import { MAX_PARITY_IMAGES, parityFields, parityHeadline, parityTargetLabel, releaseApprovalIds, toggleCohort, type ParityMode } from './flowPackageRelease';
 import { ImageLibraryBrowser } from '../common/ImageLibraryBrowser';
 import {useParityCohort} from './useParityCohort';
 import {parityUnresolvedReason} from './parityCohort';
 
 export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask }> = ({ sourceFolder, task }) => {
+  const compute = useComputeStore();
+  const parityProfile = compute.profiles.find(profile => profile.id === compute.selectedProfileId);
   const {key:deliveryKey,scope:deliveryScope,project}=useDeliveryScope(sourceFolder+task);
   const handoff=useTaskHandoff();const requestedOptimization=handoff?.kind==='optimization'?handoff.jobId:undefined;
   const [libraryRefresh,setLibraryRefresh]=useState(0),[optimizationPath,setOptimizationPath]=useState(''),[deploymentPath,setDeploymentPath]=useState(''),[optimizationJobId,setOptimizationJobId]=useState<string|undefined>();
@@ -63,7 +66,13 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const [edgeTargetError, setEdgeTargetError] = useState<string | null>(null);
   const [deadlineMs,setDeadlineMs]=useState(30000),[cpuThreads,setCPUThreads]=useState(1),[runtimeDevice,setRuntimeDevice]=useState('cpu');
   const [runtimeDevices,setRuntimeDevices]=useState<string[]>(['cpu']);
-  const canVerify = canVerifyFlowOnHost(deploymentProfile, edgeTarget, hostTarget);
+  const canVerify = Boolean(compute.selectedProfileId) || canVerifyFlowOnHost(deploymentProfile, edgeTarget, hostTarget);
+  const deviceChoices = parityProfile ? ['cpu', ...(parityProfile.gpu_selector ? Array.from({length:parityProfile.gpu_selector==='all'?1:parityProfile.gpu_selector.split(',').length},(_,index)=>`cuda:${index}`) : [])] : runtimeDevices;
+  useEffect(() => { if (!compute.isLoaded) void compute.load().catch(() => {}); }, [compute.isLoaded]);
+  useEffect(() => {
+    setRuntimeDevice(parityProfile?.gpu_selector ? 'cuda:0' : 'cpu');
+    if (compute.selectedProfileId) setParityMode('cohort');
+  }, [compute.selectedProfileId]);
   useEffect(() => {
     let active = true;
     runtimeDeploymentApi.capabilities().then(value=>{if(active)setRuntimeDevices(value.torch_devices);}).catch(()=>{});
@@ -144,8 +153,9 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
   const approvalIds = includeApprovals ? releaseApprovalIds(release, releaseSelection) : null;
   const exportFlow = async () => {
     if (!sourceFolder || !selectedVersion || identity?.versionId !== selectedVersion.version_id || isExporting) return;
+    if (targetBlocker) { setError(targetBlocker); return; }
     if(effectiveParityMode==='cohort'&&cohortBlocker){setError(cohortBlocker);return;}
-    const parity = parityFields(effectiveParityMode, cohortImages, selectedImage, packageDevice);
+    const parity = parityFields(effectiveParityMode, cohortImages, selectedImage, packageDevice, compute.selectedProfileId);
     if ('error' in parity) {
       setError(parity.error);
       return;
@@ -189,7 +199,8 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
     }
   };
 
-  const exportBlocker = !sourceFolder?'현재 데이터 원본이 필요합니다.':!selectedVersion || identity?.versionId!==selectedVersion.version_id?'저장된 플로우 버전을 선택하세요.':includeApprovals&&!approvalIds?'모든 모델의 검증된 승인 revision을 선택하세요.':effectiveParityMode==='single'&&!selectedImage?'동일성 확인 이미지를 선택하세요.':effectiveParityMode==='cohort'&&cohortBlocker?cohortBlocker:effectiveParityMode==='cohort'&&cohortImages.length<2?'고정 검증 이미지를 2장 이상 선택하세요.':null;
+  const targetBlocker = !compute.isLoaded ? compute.loadError || '검증 실행 대상 설정을 확인하고 있습니다.' : compute.selectedProfileId && !parityProfile ? '선택한 검증 서버 설정을 찾을 수 없습니다.' : parityProfile && (parityProfile.allow_sharing || (parityProfile.distributed_processes || 1)>1) ? '패키지 비교에는 GPU 공유·분산 실행을 사용하지 않는 프로필을 선택하세요.' : parityProfile?.memory_budget_mb && packageDevice==='cpu' ? 'CPU 비교에는 CUDA 메모리 예약이 없는 프로필을 선택하세요.' : null;
+  const exportBlocker = targetBlocker || (!sourceFolder?'현재 데이터 원본이 필요합니다.':!selectedVersion || identity?.versionId!==selectedVersion.version_id?'저장된 플로우 버전을 선택하세요.':includeApprovals&&!approvalIds?'모든 모델의 검증된 승인 revision을 선택하세요.':effectiveParityMode==='single'&&!selectedImage?'동일성 확인 이미지를 선택하세요.':effectiveParityMode==='cohort'&&cohortBlocker?cohortBlocker:effectiveParityMode==='cohort'&&cohortImages.length<2?'고정 검증 이미지를 2장 이상 선택하세요.':null);
   return <section id="workflow-package" tabIndex={-1} className="rounded-lg border border-[#344255] bg-[#151E2B] p-5" aria-label="전체 검사 플로우 패키지">
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#344255] pb-4">
       <div className="flex items-start gap-3">
@@ -212,6 +223,14 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       <SavedFlowIdentityCard identity={identity} isActive={selectedVersion.is_active} />
     </div>}
     {identityError && <p role="alert" className="mt-3 text-xs text-rose-300">저장 버전 확인 실패: {identityError}</p>}
+    <label className="mt-3 grid gap-1.5 text-xs text-slate-300">동일성 검증 실행 대상
+      <select aria-label="패키지 검증 실행 대상" value={compute.selectedProfileId || ''} disabled={isExporting || !compute.isLoaded}
+        onChange={event => void compute.selectTarget(event.target.value || null).catch(cause => setError(cause instanceof Error ? cause.message : String(cause)))}
+        className="rounded border border-[#455670] bg-[#0F1723] px-3 py-2">
+        <option value="">이 컴퓨터</option>{compute.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}{profile.gpu_selector ? ` · GPU ${profile.gpu_selector}` : ' · CPU'}</option>)}
+      </select>
+      <span className="text-slate-400">{parityProfile ? `${parityProfile.name}에서 앱 참조와 독립 패키지를 함께 실행합니다. 실패하면 이 컴퓨터로 대체하지 않습니다.` : '이 컴퓨터에서 앱 참조와 독립 패키지를 함께 실행합니다.'}</span>
+    </label>
     <div className="mt-4 grid gap-3 sm:grid-cols-3">
       <label className="grid gap-1.5 text-xs font-medium text-slate-300">배포 프로필
         <select value={deploymentProfile} disabled={isExporting} onChange={(event) => {
@@ -243,7 +262,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         </label>
       </>}
     </div>
-    <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-300"><label>추론 최대 시간 (ms) <input type="number" min={1} max={86400000} value={deadlineMs} disabled={isExporting} onChange={e=>setDeadlineMs(Math.max(1,Math.min(86400000,Math.round(Number(e.target.value)))))} className="w-24 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label><label>CPU 스레드 <input type="number" min={1} max={64} value={cpuThreads} disabled={isExporting} onChange={e=>setCPUThreads(Math.max(1,Math.min(64,Math.round(Number(e.target.value)))))} className="w-16 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label>{deploymentProfile==='standard'&&<label>실행 장치 <select value={runtimeDevice} disabled={isExporting} onChange={e=>setRuntimeDevice(e.target.value)} className="bg-slate-900">{runtimeDevices.map(device=><option key={device}>{device}</option>)}</select></label>}<span className="text-slate-500">시간 초과 시 실행 프로세스를 종료하고 REVIEW로 기록합니다.</span></div>
+    <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-300"><label>추론 최대 시간 (ms) <input type="number" min={1} max={86400000} value={deadlineMs} disabled={isExporting} onChange={e=>setDeadlineMs(Math.max(1,Math.min(86400000,Math.round(Number(e.target.value)))))} className="w-24 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label><label>CPU 스레드 <input type="number" min={1} max={64} value={cpuThreads} disabled={isExporting} onChange={e=>setCPUThreads(Math.max(1,Math.min(64,Math.round(Number(e.target.value)))))} className="w-16 rounded border border-slate-700 bg-slate-900 px-2 py-1"/></label>{deploymentProfile==='standard'&&<label>실행 장치 <select value={runtimeDevice} disabled={isExporting} onChange={e=>setRuntimeDevice(e.target.value)} className="bg-slate-900">{deviceChoices.map(device=><option key={device}>{device}</option>)}</select></label>}<span className="text-slate-500">시간 초과 시 실행 프로세스를 종료하고 REVIEW로 기록합니다.</span></div>
     {deploymentProfile === 'edge_cpu' && <p className="mt-2 text-xs leading-5 text-slate-400">
       전체 플로우를 CPU로 실행합니다. 대상에 Python 3.10–3.13과 호환 패키지가 필요하며 설치·사전 점검 CLI를 포함합니다. 특정 보드·벤더 SDK·양자화·현장 성능은 검증하지 않았습니다.
     </p>}
@@ -270,7 +289,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
         </select>
       </label>
       {exportBlocker&&<div className="text-xs text-amber-200"><p id="flow-export-reason">내보내기 보류: {exportBlocker}</p><button className="workspace-button mt-2" onClick={()=>void setStep(!sourceFolder?1:!selectedVersion?5:includeApprovals&&!approvalIds?4:6)}>{!sourceFolder?'데이터 원본 확인 (1단계)':!selectedVersion?'플로우 저장·평가 (5단계)':includeApprovals&&!approvalIds?'평가·승인 확인 (4단계)':'검증 이미지 선택 (6단계)'}</button></div>}
-      <button type="button" aria-describedby={exportBlocker?'flow-export-reason':undefined} onClick={exportFlow} disabled={!selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
+      <button type="button" aria-describedby={exportBlocker?'flow-export-reason':undefined} onClick={exportFlow} disabled={Boolean(targetBlocker) || !selectedVersion || identity?.versionId !== selectedVersion.version_id || !sourceFolder || isExporting
           || (effectiveParityMode === 'single' && !selectedImage) || (effectiveParityMode === 'cohort' && (Boolean(cohortBlocker) || cohortImages.length < 2)) || (includeApprovals && !approvalIds)}
         className="rounded bg-sky-600 px-4 py-2 font-bold text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">
         {isExporting ? '패키지 생성·검증 중...' : '전체 플로우 내보내기'}
@@ -305,7 +324,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       <div className="flex flex-wrap gap-4">
         {([['cohort', '고정 이미지 여러 장'], ['single', '한 장 (제한된 확인)'], ['none', '검증 안 함']] as const).map(([mode, label]) =>
           <label key={mode} className="flex items-center gap-1.5"><input type="radio" name="flow-parity-mode" checked={effectiveParityMode === mode}
-            onChange={() => { setParityMode(mode); setResult(null); }} className="border-[#455670] bg-[#0F1723] text-sky-500" />{label}</label>)}
+            disabled={mode==='single'&&Boolean(compute.selectedProfileId)} onChange={() => { setParityMode(mode); setResult(null); }} className="border-[#455670] bg-[#0F1723] text-sky-500" />{label}</label>)}
       </div>
       <p className="mt-2 text-slate-400">대상 장치 <span className="font-mono text-slate-200">{packageDevice}</span> · 패키지 실행 장치와 같은 장치로만 비교합니다.</p>
       {effectiveParityMode === 'cohort' && cohortLibrary === 'available' && <div className="mt-2 space-y-2">
@@ -363,6 +382,7 @@ export const FlowPackagePanel: React.FC<{ sourceFolder: string; task: VisionTask
       </div>
       {result.parity.status === 'passed' && result.parity.scope === 'cohort' && <p className="mt-2 text-slate-300">판정 분포 {Object.entries(result.parity.verdict_counts || {}).map(([verdict, count]) => `${verdict} ${count}`).join(' · ')} · 입력 묶음 {result.parity.cohort_sha256?.slice(0, 12)}</p>}
       {result.parity.status === 'passed' && result.parity.scope === 'single_image' && <p className="mt-2 text-slate-300">최종 판정 {result.parity.final_verdict} · ROI {result.parity.roi_count}개</p>}
+      <p className="mt-2 text-slate-300">검증 실행 기록: {parityTargetLabel(result.parity)}</p>
       <p className="mt-2 break-all font-mono text-slate-400">{result.package_path}</p>
       {result.deployment && <div className="mt-3 rounded border border-sky-800 bg-sky-950/20 p-3">
         <p className="font-semibold text-sky-200">{result.deployment.profile} · {result.deployment.target.os} / {result.deployment.target.architecture} · {result.deployment.device}</p>

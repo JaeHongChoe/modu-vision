@@ -74,6 +74,12 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
     for ref in needed:
         if f"calibrations/{ref.rsplit(':', 1)[-1]}.json" not in seen or package_calibrations(root).load(ref) is None:
             raise ValueError(f'The flow package lacks calibration {ref}')
+    from backend.engine.fixture_flow import fixture_refs, package_fixtures
+    for ref in fixture_refs(pipeline):
+        digest = ref.split(":", 1)[1]
+        required = {f"fixture_references/{digest}.json", f"fixture_references/{digest}.png", "fixture_references/active.json"}
+        if ref not in (manifest.get("fixtures") or []) or not required <= seen or package_fixtures(root).load(ref) is None:
+            raise ValueError(f"Missing or stale packaged fixture {ref}")
     expected = {
         (node.data.model_job_id, flow_model_task(node))
         for node in pipeline.nodes if flow_model_task(node) is not None
@@ -141,6 +147,10 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     from backend.engine.runtime_device import resolve_runtime_device
     openvino_device=device.split(':',1)[1] if device.startswith('openvino:') else None
     if openvino_device is None:device = str(resolve_runtime_device(device))
+    parity_identity = None
+    if os.environ.get('VISION_PACKAGE_PARITY_IDENTITY') == '1':
+        from backend.engine.runtime_device_identity import runtime_device_identity
+        parity_identity = runtime_device_identity(device)
     image = Path(image_path).expanduser().resolve()
     if not image.is_file():
         raise FileNotFoundError(f"Inspection image not found: {image}")
@@ -156,14 +166,18 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
 
     engine = FlowchartEngine(device='cpu' if openvino_device else device, checkpoint_resolver=resolve)
     from backend.engine.spatial_calibration import calibration_scope, package_calibrations
-    with calibration_scope(package_calibrations(root).load):
+    from backend.engine.fixture_flow import fixture_scope, package_fixtures
+    with calibration_scope(package_calibrations(root).load), fixture_scope(package_fixtures(root).load):
         if openvino_device:
             from backend.engine.openvino_runtime import OpenVINOSession
             with OpenVINOSession(root,openvino_device,options['cpu_threads']) as session:
                 result=engine.execute(pipeline=pipeline,image_path=image,image_id=image_id)
                 result['model_runtime']=session.receipt()
         else:result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
-    return result.model_dump() if hasattr(result, "model_dump") else result
+    result = result.model_dump() if hasattr(result, "model_dump") else result
+    if parity_identity is not None:
+        result['runtime_device_identity'] = parity_identity
+    return result
 
 
 def _run_isolated(package_dir, image_path, image_id, options):

@@ -128,7 +128,7 @@ def _candidate(project,index,identifier,*,check_original=True):
 
 def _sampling_policy(project):
     path=_owned(project,_root(project)/'sampling-policy.json')
-    return json.loads(path.read_text()) if path.is_file() else None
+    return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else None
 
 
 def save_sampling_policy(project, policy, *, expected_revision):
@@ -145,7 +145,7 @@ def save_sampling_policy(project, policy, *, expected_revision):
         record={'schema_version':1,'policy':parsed.to_json(),'policy_ref':parsed.ref}
         history=_owned(project,root/'sampling-policies');history.mkdir(exist_ok=True)
         archived=_owned(project,history/f'r{parsed.revision:010d}.json')
-        if archived.exists() and json.loads(archived.read_text())!=record:
+        if archived.exists() and json.loads(archived.read_text(encoding='utf-8'))!=record:
             raise ValueError('Sampling policy revision already has different replay evidence')
         if not archived.exists():atomic_json(archived,record)
         atomic_json(root/'sampling-policy.json',record)
@@ -162,7 +162,7 @@ def sampling_status(project, *, limit=100):
             if path.is_file():held.append(path.stat().st_size)
     result={**(record or {'schema_version':1,'policy':None,'policy_ref':None}),
             'held_items':len(held),'held_bytes':sum(held),'receipts':[],'windows':[],
-            'policy_history':[json.loads(_owned(project,path).read_text()) for path in
+            'policy_history':[json.loads(_owned(project,path).read_text(encoding='utf-8')) for path in
                               sorted(_owned(project,root/'sampling-policies').glob('r*.json'))[-limit:]]}
     if record:
         policy=IntakeSamplingPolicy(**record['policy']);sampler=IntakeSampler(_owned(project,root/'sampling.sqlite3'),policy)

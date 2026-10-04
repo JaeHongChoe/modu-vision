@@ -300,6 +300,17 @@ class CaptureGroups:
             return 'conflict'
         return 'accepted' if self._in_skew(captured_at_ms, joined) else 'out_of_skew'
 
+    def reserve(self,part_id: str,trigger_id: str) -> GroupResult:
+        """Start the durable deadline at admission, before view inference returns."""
+        if not all(isinstance(value,str) and value.strip() for value in (part_id,trigger_id)):
+            raise ValueError('part_id and trigger_id are required')
+        with self._transaction() as db:
+            now,_,era=self._clock(db)
+            db.execute("INSERT OR IGNORE INTO groups(part_id,trigger_id,state,opened_at_ms,deadline_at_ms) VALUES(?,?,'OPEN',?,?)",
+                       (part_id,trigger_id,now,now+self.policy.deadline_ms))
+            self._close_if_due(db,part_id,trigger_id,now,era)
+            return self._result(db,part_id,trigger_id)
+
     def add_frame(self, part_id: str, trigger_id: str, view_id: str, frame_ref: str, captured_at_ms: int,
                   verdict: Optional[str]) -> GroupResult:
         """Record one view's frame and its own verdict; returns the group after it, with this frame's disposition.

@@ -233,6 +233,11 @@ export type CandidateReview = {
   reason: string;
 };
 
+export type CaptureGroupPolicyRequest = {
+  expected_revision: number;
+  policy: { [key: string]: unknown };
+};
+
 export type CohortRequest = {
   version_id: string;
   name?: string;
@@ -254,7 +259,14 @@ export type ComparisonRequest = {
 
 export type CompatibilityApplyRequest = {
   project_dir: string;
+  expected_source_sha256?: string | null;
   expected_manifest_sha256: string;
+};
+
+export type CompatibilityRecoveryRequest = {
+  project_dir: string;
+  migration_id: string;
+  action: "restore" | "finish";
 };
 
 export type ComputeJobInput = {
@@ -426,6 +438,7 @@ export type ExportFlowRequest = {
   verification_image_id?: string | null;
   parity_images?: Array<ParityImageRequest> | null;
   parity_device?: string | null;
+  compute_profile_id?: string | null;
   approval_revision_ids?: {
     [key: string]: string;
   } | null;
@@ -474,6 +487,14 @@ export type FitBoxRequest = {
   mode: "center" | "face" | "irregular";
   points: Array<[number, number]>;
   source_sha256?: string | null;
+};
+
+export type FixtureReferenceRequest = {
+  image_path: string;
+  name: string;
+  valid_region: Array<number>;
+  fixture_id?: string | null;
+  expected_ref?: string | null;
 };
 
 export type FlowCompare = {
@@ -558,6 +579,7 @@ export type FlowchartPipeline_Input = {
   nodes?: Array<FlowNode>;
   edges?: Array<FlowEdge>;
   execution_config?: FlowExecutionConfig;
+  capture_group_policy?: { [key: string]: unknown } | null;
 };
 
 export type FlowchartPipeline_Output = {
@@ -567,6 +589,7 @@ export type FlowchartPipeline_Output = {
   nodes?: Array<FlowNode>;
   edges?: Array<FlowEdge>;
   execution_config?: FlowExecutionConfig;
+  capture_group_policy?: { [key: string]: unknown } | null;
 };
 
 export type FlowchartRunRequest = {
@@ -1141,6 +1164,11 @@ export type ResolveRequest = {
   selections: Array<Selection>;
 };
 
+export type RestoreRequest = {
+  target_dir: string;
+  expected_archive_sha256: string;
+};
+
 export type RetentionPinRequest = {
   owner: string;
   paths: Array<string>;
@@ -1671,6 +1699,7 @@ export interface ApiRequestBody {
   "POST /api/dataset/metadata/bulk": BulkMetadataRequest;
   "POST /api/dataset/metadata/split": SplitRequest;
   "PATCH /api/dataset/metadata/{image_uuid}": EditRequest;
+  "POST /api/dataset/operations/backups/{job_id}/restore": RestoreRequest;
   "POST /api/dataset/split": DatasetSplitRequest;
   "POST /api/dataset/versions": VersionCreateRequest;
   "POST /api/defect-gan/adopt": backend__api__routes_defect_gan__AdoptRequest;
@@ -1721,6 +1750,7 @@ export interface ApiRequestBody {
   "POST /api/flowchart/run": FlowchartRunRequest;
   "POST /api/geometry/calibrations/known-lengths": KnownLengthCalibrationRequest;
   "POST /api/geometry/calibrations/manual": ManualCalibrationRequest;
+  "POST /api/geometry/fixtures": FixtureReferenceRequest;
   "POST /api/geometry/measure": GeometryMeasureRequest;
   "PUT /api/image-truth": TruthRequest;
   "POST /api/inspections/runs": CreateRun;
@@ -1759,6 +1789,7 @@ export interface ApiRequestBody {
   "POST /api/project/backup": ProjectBackupRequest;
   "POST /api/project/compatibility/apply": CompatibilityApplyRequest;
   "POST /api/project/compatibility/preview": ProjectOpenRequest;
+  "POST /api/project/compatibility/recover": CompatibilityRecoveryRequest;
   "POST /api/project/create": ProjectCreateRequest;
   "POST /api/project/labelsets": LabelSetCreateRequest;
   "POST /api/project/open": ProjectOpenRequest;
@@ -1783,6 +1814,7 @@ export interface ApiRequestBody {
   "POST /api/rotation/train": backend__api__routes_rotation__TrainRequest;
   "PUT /api/runtime-services/adapters": FieldAdapterConfig;
   "POST /api/runtime-services/apply": ApplyRequest;
+  "PUT /api/runtime-services/capture-groups/policy": CaptureGroupPolicyRequest;
   "POST /api/runtime-services/rollback": backend__api__routes_runtime_services__RollbackRequest;
   "POST /api/runtime-services/scm/preflight": ScmConfiguration;
   "POST /api/runtime-services/scm/prepare": ScmConfiguration;

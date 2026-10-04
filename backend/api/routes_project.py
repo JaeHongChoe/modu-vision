@@ -21,7 +21,7 @@ from backend.engine.checkpoint_paths import set_active_project_models_dir, activ
 from backend.engine.annotation_storage import migrate_legacy_dataset_overlay
 from backend.engine.project_labelsets import activate_labelset, create_labelset, labelset_root, load_labelsets
 from backend.engine.project_archive import ArchiveError, create_archive, restore_archive
-from backend.engine.project_migration import preview_migration, apply_migration, MigrationError
+from backend.engine.project_migration import preview_migration, legacy_preview_migration, apply_migration, normalize_legacy_manifest, restore_migration, finish_migration, MigrationError
 
 logger = logging.getLogger("vision_ai_studio.routes_project")
 router = APIRouter(prefix="/api/project", tags=["project"])
@@ -124,6 +124,21 @@ def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, An
 
 
 def _load_project(path: Path) -> Dict[str, Any]:
+    # Includes legacy normalization and lazy labelset initialization, even when
+    # called by authorization/context selection before the general API guard.
+    if not path.is_dir() or not (path/'project.json').is_file():
+        return _load_project_unfenced(path)
+    try:legacy_preview_migration(path)  # reject unsupported input before creating admission files
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(422,detail=str(exc)) from exc
+    from backend.engine.migration_guard import maintenance_guard
+    guard=maintenance_guard(path)
+    try:guard.__enter__()
+    except ValueError as exc:raise HTTPException(423,detail=str(exc)) from exc
+    try:return _load_project_unfenced(path)
+    finally:guard.__exit__(None,None,None)
+
+
+def _load_project_unfenced(path: Path) -> Dict[str, Any]:
     manifest = path / "project.json"
     if not path.is_dir():
         raise HTTPException(status_code=404, detail=f"Project directory not found: {path}")
@@ -138,7 +153,7 @@ def _load_project(path: Path) -> Dict[str, Any]:
         data = dict(saved)
         # Validate the project shape before the backed-up schema normalization.
         ProjectConfigResponse.model_validate(saved)
-        apply_migration(path)
+        normalize_legacy_manifest(path)
         saved = json.loads(manifest.read_text(encoding="utf-8"));data=dict(saved)
         active_set = load_labelsets(path)["active_id"]
         data.update({
@@ -238,6 +253,7 @@ class ProjectConfigResponse(BaseModel):
 
 
 class CompatibilityApplyRequest(ProjectOpenRequest):
+    expected_source_sha256: Optional[str] = Field(None,pattern=r"^[0-9a-f]{64}$")
     expected_manifest_sha256: str = Field(...,pattern=r'^[0-9a-f]{64}$')
 
 
@@ -251,8 +267,33 @@ def compatibility_preview(req:ProjectOpenRequest,request:Request):
 @router.post('/compatibility/apply')
 def compatibility_apply(req:CompatibilityApplyRequest,request:Request):
     _compatibility_scope(req.project_dir,request,write=True)
-    try:return apply_migration(Path(req.project_dir),req.expected_manifest_sha256)
+    try:return apply_migration(Path(req.project_dir),req.expected_manifest_sha256,expected_source_sha256=req.expected_source_sha256)
     except (MigrationError,OSError,ValueError) as exc:raise HTTPException(409,detail=str(exc)) from exc
+
+
+class CompatibilityRecoveryRequest(ProjectOpenRequest):
+    migration_id: str = Field(pattern=r'^[0-9a-f]{64}$')
+    action: Literal['restore','finish']
+
+
+@router.post('/compatibility/recover')
+def compatibility_recover(req:CompatibilityRecoveryRequest,request:Request):
+    _compatibility_scope(req.project_dir,request,write=True)
+    try:
+        return restore_migration(Path(req.project_dir),req.migration_id) if req.action=='restore' else finish_migration(Path(req.project_dir),req.migration_id)
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(409,detail=str(exc)) from exc
+
+
+@router.post('/compatibility/global-preview')
+def compatibility_global_preview(request:Request):
+    account=getattr(request.state,'account_user',None)
+    if account and not account.get('administrator'):
+        raise HTTPException(403,'Global migration inventory requires workspace administrator permission')
+    from backend.engine.project_migration import preview_global_migration
+    import os
+    root=Path(os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR') or Path.home()/'.modu_vision')
+    try:return preview_global_migration(root)
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(422,detail=str(exc)) from exc
 
 
 def _compatibility_scope(directory,request,write=False):
@@ -299,8 +340,19 @@ def create_project(req: ProjectCreateRequest, request: Request):
 @router.post("/open", response_model=ProjectConfigResponse)
 def open_project(req: ProjectOpenRequest, request: Request):
     """Open only a valid project workspace, keeping arbitrary image folders untouched."""
-    project = _load_project(Path(req.project_dir).expanduser().resolve())
-    return _activate_project(request, project)
+    target=Path(req.project_dir).expanduser().resolve()
+    if not target.is_dir() or not (target/'project.json').is_file():
+        return _activate_project(request,_load_project(target))  # retain existing404/422 validation
+    try:legacy_preview_migration(target)
+    except (MigrationError,OSError,ValueError) as exc:raise HTTPException(422,detail=str(exc)) from exc
+    from backend.engine.migration_guard import maintenance_guard
+    guard=maintenance_guard(target)
+    try:guard.__enter__()
+    except ValueError as exc:raise HTTPException(423,detail=str(exc)) from exc
+    try:
+        project=_load_project(target)
+        return _activate_project(request,project)
+    finally:guard.__exit__(None,None,None)
 
 
 @router.get("/current", response_model=ProjectConfigResponse)
