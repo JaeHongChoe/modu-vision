@@ -17,7 +17,6 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       HF_HUB_OFFLINE: '1'
       TRANSFORMERS_OFFLINE: '1'
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/vision-builder-cache
     defaults:
       run:
         shell: pwsh
@@ -52,6 +51,8 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           python scripts/build_backend_binary.py 2>&1 | Tee-Object packaged-evidence/backend-build.log
       - name: Build unsigned installer and portable (never install or publish)
+        env:
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/vision-builder-cache
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           npx --no-install electron-builder --win nsis portable --x64 --config build/electron-builder.yml --publish never 2>&1 | Tee-Object packaged-evidence/desktop-build.log
