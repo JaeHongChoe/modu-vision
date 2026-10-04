@@ -420,7 +420,7 @@ def test_a_flow_package_carries_its_calibration_and_measures_with_it(tmp_path):
         return done, output
     done, output = run(package)
     assert done.returncode == 0, done.stderr
-    rows = [row for crop in json.loads(output.read_text())['crops'] for row in crop.get('measurements') or [] if row['id'] == 'width']
+    rows = [row for crop in json.loads(output.read_text(encoding='utf-8'))['crops'] for row in crop.get('measurements') or [] if row['id'] == 'width']
     assert rows and rows[0]['unit'] == 'mm' and abs(rows[0]['length'] - 2.0) < 1e-6 and rows[0]['calibration']['ref'] == calibration.ref
     # A package whose calibration was changed after it was built is refused before anything runs.
     changed = tmp_path / 'changed'
@@ -489,7 +489,7 @@ def test_valid_plane_region_is_enforced_by_the_isolated_flow_package(tmp_path, f
                               output_base_dir=tmp_path / 'export', package_name='plane', calibrations=store.load)
     package = Path(built['package_path'])
     saved = SpatialCalibration.from_json(json.loads(
-        (package / 'calibrations' / f"{calibration.ref.split(':')[-1]}.json").read_text()))
+        (package / 'calibrations' / f"{calibration.ref.split(':')[-1]}.json").read_text(encoding='utf-8')))
     assert saved.to_json() == calibration.to_json()
     image = tmp_path / 'part.png'
     Image.new('RGB', (100, 100), 'gray').save(image)
@@ -497,7 +497,7 @@ def test_valid_plane_region_is_enforced_by_the_isolated_flow_package(tmp_path, f
     done = subprocess.run([sys.executable, str(package / 'run_flow.py'), '--image', str(image), '--output', str(output)],
                           cwd=tmp_path, env={**os.environ, 'PYTHONPATH': ''}, capture_output=True, text=True, timeout=90)
     assert done.returncode == 0, done.stderr
-    result = json.loads(output.read_text())
+    result = json.loads(output.read_text(encoding='utf-8'))
     rows = [row for crop in result['crops'] for row in crop.get('measurements') or []]
     if failure:
         assert result['final_verdict'] == 'REVIEW', result['rejection_reason']

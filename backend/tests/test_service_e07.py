@@ -139,7 +139,7 @@ def test_a_kept_report_reopens_and_goes_stale_with_the_target_the_environment_or
     with pytest.raises(ValueError):
         store.save(report)
     path = tmp_path / 'reports' / f"{report['report_id']}.json"
-    changed = json.loads(path.read_text())
+    changed = json.loads(path.read_text(encoding='utf-8'))
     changed['status'] = 'ready' if changed['status'] != 'ready' else 'blocked'
     path.write_text(json.dumps(changed))
     with pytest.raises(ValueError, match='changed after'):
@@ -208,7 +208,7 @@ def test_the_preflight_api_checks_a_saved_version_and_keeps_history_untouched(tm
                         json=get_single_detection_flowchart(job_id='job_saved_detector').model_dump())
     assert saved.status_code == 200, saved.text
     version = saved.json()['version_id']
-    before = sorted(str(path.relative_to(project['project_dir'])) for path in Path(project['project_dir']).rglob('*') if path.is_file())
+    before = sorted(path.relative_to(project['project_dir']).as_posix() for path in Path(project['project_dir']).rglob('*') if path.is_file())
     body = {'source_dataset_path': str(source), 'recipe_task': 'detection', 'version_id': version, 'target': {'kind': 'this_computer', 'device': 'cpu'}}
     made = client.post('/api/export/flow/preflight', json=body)
     assert made.status_code == 200, made.text
@@ -216,7 +216,7 @@ def test_the_preflight_api_checks_a_saved_version_and_keeps_history_untouched(tm
     model = next(r for r in report['requirements'] if r['kind'] == 'model')
     assert (model['node_id'], model['state']) == ('node_crop', 'ready') and model['evidence_ref'].startswith('sha256:')
     assert report['recipe_release']['version_id'] == version and report['environment_hash']
-    after = sorted(str(path.relative_to(project['project_dir'])) for path in Path(project['project_dir']).rglob('*') if path.is_file())
+    after = sorted(path.relative_to(project['project_dir']).as_posix() for path in Path(project['project_dir']).rglob('*') if path.is_file())
     assert [row for row in after if row not in before] == [f"deployment_preflight/{report['report_id']}.json"], 'nothing else is written or hidden'
     edge = client.post('/api/export/flow/preflight', json={**body, 'target': {'kind': 'edge', 'profile': 'edge_cpu', 'os': 'windows',
                                                                               'architecture': 'x86_64', 'device': 'cpu'}}).json()
