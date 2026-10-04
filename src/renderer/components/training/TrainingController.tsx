@@ -1,3 +1,4 @@
+import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from './parentCandidate';
 /**
  * src/renderer/components/training/TrainingController.tsx
  * Step 3: AutoML Training Controller.
@@ -53,7 +54,7 @@ export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState({...defaultTrainingScheduling});
   const [warmParentId, setWarmParentId] = useState('');
-  const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
+  const [warmParents, setWarmParents] = useState<ParentCandidate[]>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project, isProjectBusy } = useProjectStore();
   const handoff=useTaskHandoff();
@@ -395,8 +396,9 @@ export const TrainingController: React.FC = () => {
               <select aria-label="재학습 시작 모델" value={warmParentId} onChange={(event) => setWarmParentId(event.target.value)}
                 disabled={!sourceReady || isTraining || !!modelOptionsError||!!resumeState} className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2 text-white disabled:opacity-50">
                 <option value="">새 모델로 학습</option>
-                {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parent.job_id} · SHA {parent.checkpoint_sha256.slice(0, 12)}</option>)}
+                {warmParents.map((parent) => <option key={parent.job_id} value={parent.job_id}>{parentCandidateLabel(parent)}</option>)}
               </select>
+              <p className="mt-1 text-xs text-slate-400">{parentCandidateNotice}</p>
             </label>
           {selectedProfileId && warmParentId && <p className="mt-2 text-slate-400">부모 체크포인트의 해시와 구조를 검증한 뒤 선택 서버에 전송합니다.</p>}
           {warmParentsError && <p role="alert" className="mt-2 text-amber-300">재학습 모델 목록: {warmParentsError}</p>}

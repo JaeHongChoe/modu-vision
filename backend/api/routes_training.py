@@ -1382,6 +1382,7 @@ def list_warm_start_parents(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     parents = []
+    from backend.engine.parent_summary import parent_summary
     from backend.engine.warm_start import training_classes
     try:
         current_classes = training_classes(task, source)
@@ -1403,6 +1404,7 @@ def list_warm_start_parents(
             "checkpoint_sha256": parent.checkpoint_sha256,
             "dataset_fingerprint": parent.dataset_fingerprint,
             'semantics': parent.semantics,
+            'summary': parent_summary(parent.checkpoint_path.parent),
         })
     return {"parents": parents, "total": len(parents)}
 

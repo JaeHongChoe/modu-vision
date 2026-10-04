@@ -155,6 +155,12 @@ def test_specialist_parent_api_returns_only_verified_compatible_completed_candid
     response = client.get(f'/api/{prefix}/warm-start-parents', params=params)
     assert response.status_code == 200, response.text
     assert [p['job_id'] for p in response.json()['parents']] == ['a' * 32]
+    summary = response.json()['parents'][0]['summary']
+    assert summary['completed_at'] is None
+    if task == 'ocr': assert summary['training_metrics']['saved_val_loss'] == metadata['best_validation_loss']
+    if task == 'rotated_detection': assert summary['training_metrics']['saved_mean_oriented_iou'] == metadata['validation']['mean_oriented_iou']
+    if task == 'defect_gan': assert summary['training_metrics']['last_generator_loss'] == metadata['last_generator_loss']
+    if task == 'enhancement': assert summary['model_recorded_at'] is not None
     (directory / 'job_receipt.json').write_text(json.dumps({**receipt, 'status': 'stopped'}))
     assert client.get(f'/api/{prefix}/warm-start-parents', params=params).json()['parents'] == []
     rejected = client.post(f'/api/{prefix}/train', json={**params, 'epochs': 1, 'batch_size': 2, 'warm_start_job_id': 'a' * 32})

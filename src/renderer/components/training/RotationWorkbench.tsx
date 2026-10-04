@@ -1,3 +1,4 @@
+import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from './parentCandidate';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {openModelFlow} from './ProgramWorkbenchControls';
 import { useEffect, useState } from 'react';
@@ -28,7 +29,7 @@ export function RotationWorkbench() {
   const [angle, setAngle] = useState(0); const [split, setSplit] = useState<RotationRow['split']>('train');
   const [epochs, setEpochs] = useState(20); const [batch, setBatch] = useState(8); const [size, setSize] = useState(64); const [width, setWidth] = useState(16);
   const [rate, setRate] = useState(.001); const [device, setDevice] = useState<LocalTrainingDevice>('cpu');
-  const [parents, setParents] = useState<Array<{job_id: string; checkpoint_sha256: string}>>([]); const [parent, setParent] = useState('');
+  const [parents, setParents] = useState<ParentCandidate[]>([]); const [parent, setParent] = useState('');
   const [evaluation, setEvaluation] = useState<RotationEvaluation | null>(null); const [prediction, setPrediction] = useState<RotationPrediction | null>(null);
   const disabled = !!state.busy || state.active;
   useEffect(() => {setRowsText(''); setSampleImage(''); setEvaluation(null); setPrediction(null); setParents([]); setParent('');}, [state.scope]);
@@ -67,7 +68,8 @@ export function RotationWorkbench() {
       <ProgramField label="모델 입력 크기"><input type="number" min={16} max={512} value={size} onChange={e => setSize(Number(e.target.value))} className={programInput} /></ProgramField>
       <ProgramField label="CNN 채널 폭"><select value={width} onChange={e => setWidth(Number(e.target.value))} className={programInput}><option value={8}>8</option><option value={16}>16</option><option value={32}>32</option></select></ProgramField>
       <ProgramField label="학습률"><input type="number" min={.000001} max={1} step={.001} value={rate} onChange={e => setRate(Number(e.target.value))} className={programInput} /></ProgramField><TrainingDeviceSelector value={device} onChange={setDevice} disabled={disabled} /></div>
-    <div className="mt-3"><ProgramField label="동일 구조의 완료 부모 모델"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={disabled}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>부모 {index + 1} · SHA {row.checkpoint_sha256.slice(0, 12)}</option>)}</select></ProgramField></div>
+    <div className="mt-3"><ProgramField label="동일 구조의 완료 부모 모델"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={disabled}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>{parentCandidateLabel(row,index)}</option>)}</select></ProgramField></div>
+    <p className="mt-1 text-slate-400">{parentCandidateNotice}</p>
     <button type="button" className={`${programPrimary} my-4`} disabled={!state.dataset || disabled || epochs < 1 || batch < 1 || rate <= 0} onClick={() => void state.action('보정 모델 학습 등록', async () => {
       if (!state.dataset) return; const row = await modelTrainingProgram.rotation.train({dataset_path: state.dataset.dataset_path, epochs, batch_size: batch, image_size: size, width, learning_rate: rate, device, ...(parent ? {warm_start_job_id: parent} : {})});
       if (state.isCurrent()) {state.setJob(row); setEvaluation(null); setPrediction(null);}

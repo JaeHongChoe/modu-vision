@@ -1,3 +1,4 @@
+import type {ParentCandidate} from '../types/parentCandidate';
 import { request } from './api';
 import {submitModelTraining} from './modelExecution';
 
@@ -41,7 +42,7 @@ export const modelTrainingProgram = {
     jobs: () => request<{jobs: ProgramJob[]}>('/api/training/jobs'),
     cancel: (job_id: string) => post<ProgramJob>('/api/training/stop', {job_id}),
     reconnect: (job_id: string) => post<ProgramJob>('/api/training/reconnect', {job_id}),
-    parents: (dataset_path: string, backbone: string) => request<{parents: Array<{job_id: string; checkpoint_sha256: string}>}>(`/api/training/warm-start-parents?${query({dataset_path, task: 'patch_classification', preset: 'fast', backbone})}`),
+    parents: (dataset_path: string, backbone: string) => request<{parents: ParentCandidate[]}>(`/api/training/warm-start-parents?${query({dataset_path, task: 'patch_classification', preset: 'fast', backbone})}`),
     models: (source_dataset_path: string) => request<{models: FamilyModel[]}>(`/api/evaluation/model-comparisons/models?${query({source_dataset_path, task: 'patch_classification'})}`),
     evaluate: (job_id: string) => post<Record<string, unknown>>('/api/patch-classification/evaluate', {job_id, force_recompute: true}),
     export: (job_id: string) => post<{package_path?: string; package_dir?: string}>('/api/export/runtime', {job_id, export_format: 'torchscript', package_name: 'patch_classifier'}),
@@ -55,7 +56,7 @@ export const modelTrainingProgram = {
     jobs: () => request<{jobs: ProgramJob[]}>('/api/rotation/jobs'),
     status: (job_id: string) => request<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}`),
     cancel: (job_id: string) => post<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}/cancel`, {}),
-    parents: (dataset_path: string, image_size: number, width: number) => request<{parents: Array<{job_id: string; checkpoint_sha256: string}>}>(`/api/rotation/warm-start-parents?${query({dataset_path, image_size, width})}`),
+    parents: (dataset_path: string, image_size: number, width: number) => request<{parents: ParentCandidate[]}>(`/api/rotation/warm-start-parents?${query({dataset_path, image_size, width})}`),
     models: () => request<{models: FamilyModel[]}>('/api/rotation/models'),
     evaluate: (job_id: string, dataset_path: string, device: LocalTrainingDevice) => post<RotationEvaluation>('/api/rotation/evaluate', {job_id, dataset_path, device, split: 'test'}),
     predict: (job_id: string, image_path: string, device: LocalTrainingDevice) => post<RotationPrediction>('/api/rotation/predict', {job_id, image_path, device, include_aligned: true}),

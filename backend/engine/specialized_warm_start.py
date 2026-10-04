@@ -154,6 +154,7 @@ def load_family_weights(modules, parent, signature):
 
 
 def list_family_parents(models_dir, task, source, dataset, options=None):
+    from backend.engine.parent_summary import parent_summary
     root = Path(models_dir) / task
     parents = []
     for directory in sorted(root.iterdir()) if root.is_dir() else []:
@@ -163,5 +164,6 @@ def list_family_parents(models_dir, task, source, dataset, options=None):
             continue
         parents.append({'job_id': parent.job_id, 'architecture': parent.architecture,
             'classes': list(parent.classes), 'checkpoint_sha256': parent.checkpoint_sha256,
-            'dataset_fingerprint': parent.dataset_fingerprint, 'semantics': parent.semantics})
+            'dataset_fingerprint': parent.dataset_fingerprint, 'semantics': parent.semantics,
+            'summary': parent_summary(parent.checkpoint_path.parent)})
     return {'parents': parents, 'total': len(parents)}

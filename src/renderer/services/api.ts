@@ -1,3 +1,4 @@
+import type {ParentCandidate} from '../types/parentCandidate';
 /**
  * src/renderer/services/api.ts
  * Type-safe HTTP REST client for Python FastAPI backend with dynamic port resolution.
@@ -1103,9 +1104,8 @@ export const api = {
         const value = modelOverrides[name];
         if (typeof value === 'string' || (typeof value === 'number' && Number.isInteger(value))) query.set(name, String(value));
       }
-      return request<{ parents: Array<{
-        job_id: string; classes: string[]; architecture: string;
-        checkpoint_sha256: string; dataset_fingerprint: string;
+      return request<{ parents: Array<ParentCandidate & {
+        classes: string[]; architecture: string; dataset_fingerprint: string;
       }>; total: number }>(`/api/training/warm-start-parents?${query.toString()}`);
     },
     start: (data: {

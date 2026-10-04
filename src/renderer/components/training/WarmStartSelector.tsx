@@ -1,8 +1,9 @@
+import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from './parentCandidate';
 import { useEffect, useState } from 'react';
 import { request } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 
-type Parent = {job_id: string; checkpoint_sha256: string; semantics: string};
+type Parent = ParentCandidate;
 
 export function WarmStartSelector({family, datasetPath, value, onChange, disabled, refreshKey}: {
   family: 'ocr' | 'defect-gan' | 'rotated-detection' | 'enhancement'; datasetPath: string;
@@ -31,10 +32,11 @@ export function WarmStartSelector({family, datasetPath, value, onChange, disable
     <label className="block text-slate-300">재학습 시작 모델
       <select aria-label={`${family} 재학습 시작 모델`} value={value} disabled={disabled || loading} onChange={event => onChange(event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] px-2 py-2">
         <option value="">{loading ? '호환 모델 확인 중…' : '새 모델로 학습'}</option>
-        {parents.map(parent => <option key={parent.job_id} value={parent.job_id}>{parent.job_id.slice(0, 12)} · SHA {parent.checkpoint_sha256.slice(0, 12)}</option>)}
+        {parents.map(parent => <option key={parent.job_id} value={parent.job_id}>{parentCandidateLabel(parent)}</option>)}
       </select>
     </label>
-    <p className="mt-2 text-slate-400">현재 출처·모델 구조와 호환되는 완료 모델만 선택합니다. 부모 가중치를 보존하고 새 후보로 저장합니다. 이 전문 모델의 학습 위치는 로컬입니다.</p>
+    <p className="mt-2 text-slate-400">현재 출처·모델 구조와 호환되는 완료 모델만 선택합니다. 부모 가중치를 보존하고 새 후보로 저장합니다. 실행 위치는 학습 설정에서 확인하세요.</p>
+    <p className="mt-1 text-slate-400">{parentCandidateNotice}</p>
     {error && <p role="alert" className="mt-2 text-amber-300">호환 모델 확인: {error}</p>}
   </div>;
 }
