@@ -4,7 +4,10 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 add_library(modu_vision_runtime SHARED vision_runtime.cpp)
 target_compile_features(modu_vision_runtime PUBLIC cxx_std_17)
 target_link_libraries(modu_vision_runtime PRIVATE Python3::Python)
-target_compile_definitions(modu_vision_runtime PRIVATE MV_PYTHON_EXECUTABLE="${Python3_EXECUTABLE}")
+# A native Windows path becomes C++ escapes (notably \x64) inside a string
+# definition. Forward slashes preserve the exact interpreter path on Windows.
+string(REPLACE "\\" "/" MV_PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
+target_compile_definitions(modu_vision_runtime PRIVATE MV_PYTHON_EXECUTABLE="${MV_PYTHON_EXECUTABLE}")
 add_executable(vision_predict predict.cpp)
 target_link_libraries(vision_predict PRIVATE modu_vision_runtime)
 add_executable(vision_execute execute.cpp)

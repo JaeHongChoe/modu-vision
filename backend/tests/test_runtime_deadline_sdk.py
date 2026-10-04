@@ -107,7 +107,8 @@ def test_csharp_pinvoke_calls_the_same_native_executor(real_package,tmp_path):
     assert compiled.returncode==0,compiled.stderr
     build=subprocess.run([dotnet,'build',str(package/'native_runtime/VisionRuntime.csproj'),'-o',str(csharp)],capture_output=True,text=True,timeout=90)
     assert build.returncode==0,build.stdout+build.stderr
-    for artifact in native.glob('*modu_vision_runtime*'): shutil.copyfile(artifact,csharp/artifact.name)
+    for artifact in native.glob('*modu_vision_runtime*'):
+        if artifact.is_file(): shutil.copyfile(artifact,csharp/artifact.name)
     execute=[dotnet,str(csharp/'VisionRuntime.dll'),str(package),str(image)]
     process=subprocess.run(execute,capture_output=True,text=True,timeout=45)
     assert process.returncode==0,process.stdout+process.stderr
