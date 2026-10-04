@@ -123,8 +123,8 @@ Remote CUDA inspection and CPU package parity are distinct targets. The final se
 
 ## Pending acceptance on the latest combined source
 
-- Hosted Windows packaged restart worker readback returned HTTP422; overall packaged qualification remains failed until corrected and rerun.
-- Remote-model evaluation on a separately frozen common cohort is under independent scope/authority review and remains a distinct implementation follow-up.
+- The exact `2bcdf43` hosted Windows Server2025 unsigned packaged run passed delivered CPU execution and restart readback, as recorded below. Installed Windows11, signing, SCM/reboot and device qualification remain open.
+- Two completed remote models were evaluated on the same adopted test8 cohort on GPU2. Rebuilt native refresh and loading controls were read back on their own exact source freezes below. Representative model quality remains unverified.
 - Global-store activation and active-worker adoption, Windows11 installed/SCM/reboot, physical device/service integration and representative model quality retain their explicit pending boundaries.
 
 Earlier saved-flow CUDA, CPU package parity and SDK execution remain their own verified snapshots. They add no training attempts, no parent completion promotion and no acceptance of the latest combined native/GPU paths. This documentation update changes no global program counters.
@@ -168,3 +168,20 @@ During refresh the real screen temporarily enabled calibration while request evi
 The exact16a9ad Windows retry37207598251 failed the delivered export stage after successful training/evaluation/inference. Its retained reason was WinError5 on staged-package directory rename. No successful restart is claimed. Package publication now uses the existing short Windows-only retry for descendant-reader sharing conflicts. Persistent denial still fails and cleans only owned staging; no permission changes, destination deletion or partially visible copy fallback occurs. Controlled transient/permanent/non-Windows regressions bind the behavior; the actual hosted retry remains required.
 
 Normal project opening/authorization no longer runs the full migration artifact/global-store inventory on every request. It retains manifest compatibility, model validation, backed-up legacy normalization, labelset initialization and maintenance admission. Linked ancestors are explicitly refused. Explicit compatibility/migration preview still inventories all declared artifacts/stores and rejects unreadable sources. A causal live-control-reader regression verifies ordinary open succeeds without inspecting unrelated coordination data while explicit migration preview still refuses.61 affected package/project/migration tests passed in38.73seconds. This is not historical schema migration, installed global cutover or Windows restart acceptance.
+
+
+### Rebuilt loading-control native readback
+
+The exact2bcdf43 native freeze contains1,232 committed files, composition SHA-256 `226ed8b4cbf380c3481b70c15a91142abbbee3151d1aa70e3474078a2e5d0b46`. After normal app restart, completed models and adopted versions were available. Selecting the completed ConvNeXt/test8/GPU2 result and refreshing retained eight samples, the same cohort hash and accuracy0.25. During loading, both report and both calibration buttons were disabled. The two existing completed remote operation IDs and output hashes remained unchanged. Private readback SHA-256: `1c9eaa37484f71d0a23db1903379d36b5a908943ec885d69d3b29c17089155a2`. This proves rebuilt UI/cached-receipt behavior, not another GPU run or model quality.
+
+### Delivered Windows packaged restart pass
+
+Hosted run `37209590239` at exact source `2bcdf4329968ad4646f69a28fb39a3e86ec0e6dd` passed on Windows Server2025 x64. The delivered unsigned executable opened its packaged renderer and CPU backend, completed production train/evaluate/infer/export preflight, then restarted with identical persisted evidence. Both packaged launch identities and owned cleanup are retained in the receipt. Its SHA-256 is `caebcd1a63d8d14c11937be9527fc5f80795b77ae67e84d6ee55184aefde223c`.
+
+Independent download readback matched all 1,232 build-source entries against that committed snapshot: 1,218 text entries required only LF-to-CRLF conversion; no content mismatches remained. Downloaded portable and NSIS artifact bytes matched their recorded hashes. Frozen backend and packaged process hashes were cross-bound in receipts; standalone inner executable/ASAR bytes were not separately supplied by this artifact. Earlier failed runs remain failed at their own freezes. This pass covers hosted unsigned packaged execution and restart, not Windows11 installation, signing, update/uninstall, SCM/session0/reboot, physical hardware or model quality.
+
+### Task25: industrial camera adapter and simulator contract
+
+The production inspection service now accepts an explicit trusted `CameraAdapterFactory` for SDK integration or a finite simulator. The typed interface requires bounded open/read/release and owned uint8 BGR frames; no module loading, SDK installation or device permission changes are introduced. Both adapters feed the existing recipe, capacity, trigger and durable acquisition path. Status explicitly reports adapter kind and hardware verification as false. Constructed handles are released before reconnect waiting, including malformed open state; read/close failures retain counters without admitting invalid pixels or terminating the capture loop.
+
+Final affected camera/service/capture-policy tests passed 78 checks in 45.76 seconds. They exercised actual service lifecycle, durable restart provenance, BGR/RGB pixel preservation, buffer ownership and malformed SDK/close failures. The initial missing-interface failures and the subsequently reproduced delayed-release regression remain recorded privately. This closes the controlled interface/simulator scope of S5-03; vendor SDK timing, hung SDK process isolation and physical camera/target OS acceptance remain separate. Root review and tests were completed; a new independent agent review was unavailable after the collaborators reached their usage limit.

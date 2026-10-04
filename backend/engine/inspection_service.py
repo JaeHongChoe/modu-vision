@@ -712,6 +712,7 @@ def create_service_app(
     camera_source: str | int | None = None,
     camera_id: str | None = None,
     camera_capture_provider=None,
+    camera_adapter=None,
     camera_frame_interval: float = 1.0,
     require_approved_release: bool = False,
     release_policy: Path | None = None,
@@ -728,6 +729,12 @@ def create_service_app(
     """Verify a package before creating mutable state or loading a checkpoint."""
     if not token:
         raise ValueError("An API token is required")
+    from backend.engine.camera_adapters import CameraAdapterFactory, read_frame
+    if camera_adapter is not None:
+        if not isinstance(camera_adapter,CameraAdapterFactory) or camera_source is None:
+            raise ValueError('An explicit camera source and CameraAdapterFactory are required')
+        if camera_adapter.kind!='opencv' and camera_id is None:
+            raise ValueError('SDK/simulator camera requires an explicit opaque camera_id')
     from backend.engine.runtime_deadline import validate_deadline
     validate_deadline(deadline_ms)
     package_dir = Path(package_dir).expanduser().resolve()
@@ -772,6 +779,8 @@ def create_service_app(
     adapter_state = {
         "file_inbox": "disabled" if inbox is None else "checking",
         "camera": "disabled" if camera_source is None else "checking",
+        "camera_adapter_kind": camera_adapter.kind if camera_adapter else "opencv" if camera_source is not None else "disabled",
+        "camera_hardware_verified": False,
         "modbus": "configured" if field_config.modbus else "disabled",
         "mes": "configured" if field_config.mes else "disabled",
         "field_enabled": field_config.enabled,
@@ -826,13 +835,13 @@ def create_service_app(
             capture = None
             try:
                 try:
-                    capture = cv2.VideoCapture(source)
+                    capture = camera_adapter.create(source) if camera_adapter else cv2.VideoCapture(source)
                     opened = capture.isOpened()
+                    if type(opened) is not bool:raise ValueError('Camera open state must be bool')
                 except Exception:
-                    camera_tracker.record_failure(connection=True)
-                    adapter_state['camera'] = 'disconnected'
-                    stop.wait(5)
-                    continue
+                    # Release any constructed SDK handle in finally before
+                    # waiting for reconnect, including malformed open state.
+                    opened = False
                 if not opened:
                     camera_tracker.record_failure(connection=True)
                     adapter_state["camera"] = "disconnected"
@@ -841,7 +850,7 @@ def create_service_app(
                     adapter_state["camera"] = "connected"
                     while not stop.is_set():
                         try:
-                            ok, frame = capture.read()
+                            ok, frame = read_frame(capture)
                         except Exception:
                             camera_tracker.record_failure()
                             adapter_state['camera'] = 'disconnected'
@@ -889,7 +898,10 @@ def create_service_app(
                 adapter_state["camera"] = "error"
             finally:
                 if capture is not None:
-                    capture.release()
+                    try: capture.release()
+                    except Exception:
+                        camera_tracker.record_failure(connection=True)
+                        adapter_state['camera']='close_failed'
             stop.wait(5)
 
     @asynccontextmanager
