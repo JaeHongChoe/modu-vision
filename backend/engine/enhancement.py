@@ -63,13 +63,8 @@ def _path(root: Path, name: str) -> Path:
 
 
 def _device(name: str) -> torch.device:
-    if name not in {"cpu", "cuda", "mps"}:
-        raise ValueError("Enhancement device must be cpu, cuda or mps")
-    if name == "cuda" and not torch.cuda.is_available():
-        raise ValueError("CUDA enhancement runtime is unavailable")
-    if name == "mps" and not torch.backends.mps.is_available():
-        raise ValueError("MPS enhancement runtime is unavailable")
-    return torch.device(name)
+    from backend.engine.runtime_device import resolve_runtime_device
+    return resolve_runtime_device(name)
 
 
 def prepare_enhancement(source: str | Path, destination: str | Path, *, seed: int = 0,
