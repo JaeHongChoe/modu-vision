@@ -4,6 +4,7 @@ promoted to accepted without verified evidence for every dimension, native Windo
 The gate is scripts/check_service_plan.py, which CI runs on Linux and Windows.
 """
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -34,8 +35,8 @@ def _coverage():
     return (ROOT / 'docs/service-upgrade-coverage.md').read_text(encoding='utf-8')
 
 
-def _errors(program=None, evidence=None, coverage=None):
-    return gate.check_requirement_evidence(program or _program(), evidence if evidence is not None else _evidence(), ROOT,
+def _errors(program=None, evidence=None, coverage=None, root=ROOT):
+    return gate.check_requirement_evidence(program or _program(), evidence if evidence is not None else _evidence(), root,
                                            coverage or _coverage())
 
 
@@ -58,6 +59,71 @@ def test_the_repository_has_one_pending_record_per_legacy_feature_and_nothing_pr
     assert len(records) == 156 == len({record['id'] for record in records})
     assert {record['id'] for record in records} == {row['legacy_id'] for row in _program()['legacy_coverage']}
     assert receipt['accepted_legacy_rows'] == 0, 'no old registry claim counts as service acceptance'
+
+
+def test_missing_or_wrong_source_receipt_cannot_verify_a_dimension(tmp_path):
+    entry=_entry(kind='unit',test=None,receipt='not-retained.json',receipt_sha256='b'*64)
+    assert any('receipt file' in x for x in gate._reference_errors('F001.failure',entry,'unit',ROOT))
+    import hashlib
+    receipts=tmp_path/'docs/verification/receipts';receipts.mkdir(parents=True)
+    path=receipts/'other-source.json';path.write_text(json.dumps({'source_sha':'f'*40}))
+    entry.update(receipt=path.name,receipt_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    assert any('receipt source' in x for x in gate._reference_errors('F001.failure',entry,'unit',tmp_path))
+
+
+def test_receipt_hash_and_link_are_checked_before_use(tmp_path):
+    import hashlib
+    receipts=tmp_path/'docs/verification/receipts';receipts.mkdir(parents=True)
+    path=receipts/'actual.json';path.write_text(json.dumps({'source_sha':SHA}))
+    entry=_entry(kind='unit',test=None,receipt=path.name,receipt_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    assert gate._reference_errors('F001.failure',entry,'unit',tmp_path)==[]
+    path.write_text(json.dumps({'source_sha':SHA,'changed':True}))
+    assert any('receipt hash' in x for x in gate._reference_errors('F001.failure',entry,'unit',tmp_path))
+    path.unlink();outside=tmp_path/'outside.json';outside.write_text(json.dumps({'source_sha':SHA}));path.symlink_to(outside)
+    entry['receipt_sha256']=hashlib.sha256(outside.read_bytes()).hexdigest()
+    assert any('linked receipt' in x for x in gate._reference_errors('F001.failure',entry,'unit',tmp_path))
+
+
+def test_nonexistent_python_case_and_foreign_target_owner_are_refused():
+    assert any('test selector' in x for x in gate._test_file_errors('F001.failure','backend/tests/test_service_s7_01.py::test_not_a_real_case',ROOT))
+    record=_verified(task='S0-08',kind='target',test=None,receipt='not-retained.json',receipt_sha256='b'*64,artifacts=[{'id':'synthetic','sha256':'a'*64}])
+    errors=gate._dimension_errors('F001.target',record,'target',['S7-01'],{r['id'] for r in _program()['requirements']},ROOT)
+    assert any('does not own' in x for x in errors)
+
+
+@pytest.mark.parametrize('payload, message', [
+    (b'{"source_sha":"' + SHA.encode() + b'","source_sha":"' + SHA.encode() + b'"}', 'unique-key JSON'),
+    (b'[]', 'unique-key JSON'),
+    (b'not JSON', 'unique-key JSON'),
+    (b' ' * (1024 * 1024 + 1), 'size bound'),
+])
+def test_matching_hash_does_not_admit_malformed_or_oversized_receipts(tmp_path, payload, message):
+    path = tmp_path / 'docs/verification/receipts/rejected.json'
+    path.parent.mkdir(parents=True)
+    path.write_bytes(payload)
+    entry = _entry(kind='unit', test=None, receipt=path.name, receipt_sha256=hashlib.sha256(payload).hexdigest())
+    assert any(message in error for error in gate._reference_errors('F001.failure', entry, 'unit', tmp_path))
+
+
+def test_native_platform_evidence_also_requires_a_feature_owner():
+    value = _verified(task='S0-08', kind='native_windows', test=None,
+                      receipt='sdk-windows-8917.json',
+                      receipt_sha256=hashlib.sha256((ROOT / 'docs/verification/receipts/sdk-windows-8917.json').read_bytes()).hexdigest())
+    value['evidence'][0]['source_sha'] = '8917d8ad90dccd79aa98b338cf3652d6cc869a46'
+    errors = gate._dimension_errors('F001.platform.windows_native', value, 'windows_native', ['S7-01'],
+                                    {row['id'] for row in _program()['requirements']}, ROOT)
+    assert any('does not own' in error for error in errors)
+
+
+def test_a_python_helper_or_nested_function_is_not_a_collected_case(tmp_path):
+    path = tmp_path / 'backend/tests/test_fixture.py'
+    path.parent.mkdir(parents=True)
+    path.write_text('def helper():\n    pass\n\ndef test_outer():\n    def test_inner():\n        pass\n\n'
+                    'class TestExample:\n    async def test_method(self):\n        pass\n', encoding='utf-8')
+    for selector in ('helper', 'test_outer::test_inner'):
+        errors = gate._test_file_errors('F001.failure', f'backend/tests/test_fixture.py::{selector}', tmp_path)
+        assert any('test selector' in error for error in errors), errors
+    assert gate._test_file_errors('F001.failure', 'backend/tests/test_fixture.py::TestExample::test_method[value]', tmp_path) == []
 
 
 def test_check_program_runs_the_evidence_rules_and_refuses_an_unreadable_registry(tmp_path):
@@ -134,15 +200,23 @@ def test_a_dimension_needs_a_valid_state_and_real_evidence(dimension, value, mes
     assert any(message in error for error in errors), errors
 
 
-def test_well_formed_evidence_of_an_owner_task_is_accepted_for_its_dimension():
+def test_well_formed_evidence_of_an_owner_task_is_accepted_for_its_dimension(tmp_path):
+    for name in ('backend/tests/test_runtime_deadline_sdk.py','backend/tests/test_service_s0_08.py','scripts/e2e/service-s0-08.spec.ts'):
+        target=tmp_path/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,target)
+    receipts=tmp_path/'docs/verification/receipts';receipts.parent.mkdir(parents=True)
+    shutil.copytree(ROOT/'docs/verification/receipts',receipts)
+    hashes={}
+    for name in ('s008d-green','line-3-camera-run'):
+        path=receipts/name;path.write_text(json.dumps({'source_sha':SHA,'scope':'Controlled format-rule fixture, not operational acceptance'}))
+        hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
     evidence = _evidence()
     record = evidence['records'][0]
     record['gui'] = _verified(artifacts=[{'id': 'job_0001', 'sha256': 'a' * 64}])
     record['persist'] = _verified(kind='api', test='backend/tests/test_service_s0_08.py::test_the_command_line_runs_one_defect_for_real_and_writes_its_record')
-    record['failure'] = _verified(kind='unit', test=None, receipt='s008d-green', receipt_sha256='b' * 64)
-    record['target'] = _verified(kind='target', task='S0-08', test=None, receipt='line-3-camera-run', receipt_sha256='c' * 64,
-                                 artifacts=[{'id': 'run_0007', 'sha256': 'd' * 64}])  # platform and target evidence may come from any task
-    assert _errors(evidence=evidence) == []
+    record['failure'] = _verified(kind='unit', test=None, receipt='s008d-green', receipt_sha256=hashes['s008d-green'])
+    record['target'] = _verified(kind='target', task='S7-01', test=None, receipt='line-3-camera-run', receipt_sha256=hashes['line-3-camera-run'],
+                                 artifacts=[{'id': 'run_0007', 'sha256': 'd' * 64}])
+    assert _errors(evidence=evidence,root=tmp_path) == []
 
 
 def test_native_windows_is_required_needs_its_own_evidence_and_cannot_be_waived():

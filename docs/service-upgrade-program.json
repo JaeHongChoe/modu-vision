@@ -4105,6 +4105,12 @@
      "result": "c481021: the plan gate refuses duplicate JSON keys at any depth in the program, the evidence registry and the two existing baseline files; the coverage table reads IDs with spaces or backticks and no longer drops duplicated, added or broken rows silently; command-line errors return an ASCII JSON receipt",
      "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
      "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
+    },
+    {
+     "kind": "local-reference-integrity-correction",
+     "result": "Retained receipt bytes, SHA-256 and JSON source_sha are checked; missing, linked, oversized, duplicate-key and malformed receipts are refused. Python AST selectors must declare a test function, and all dimensions require a feature owner. Initial spoof-reference and helper-selector cases failed causally before the corrections; all97 final S7-01 checks passed.",
+     "scope": "Task35 on4a3dda3 plus owned gate/tests; reference integrity only, no historical execution or human approval inferred; no acceptance promoted",
+     "platform": "Local macOS CPU; exact hosted composed-source rerun pending"
     }
    ],
    "file_actions": {
@@ -4128,7 +4134,7 @@
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
     "fill the registry: per-feature evidence as each task verifies a dimension (F092-F096 now have implementation/failure/hosted-native-Windows evidence; their other dimensions and the remaining151 feature records remain pending)",
-    "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; commit existence and ::name are not checked; the older ASCII test strips the environment",
+    "review remaining P3s: TypeScript click citations identify a file rather than proving the executed case; the native-Windows test-only route still matches workflow text and does not prove collection or skips; historic Git commit availability and execution at the cited source are not checked; human truth, waivers, trusted run origins and independent approval require separate review",
     "Windows native evidence",
     "acceptance 2: the button/menu/shortcut/action list with success, empty, invalid, error, cancel, reopen and handoff evidence is not recorded yet (the implementation state was recorded as verified too early in a19a8a4; corrected to pending; the contract and its gate are verified)"
    ]

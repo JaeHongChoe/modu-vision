@@ -1,5 +1,7 @@
 """Fail CI on lost scope, broken dependencies, or unsupported completion claims."""
 import argparse
+import ast
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -66,27 +68,71 @@ def _test_file_errors(label, test, root):
         if part not in names:  # exact case, so a wrong-case path fails on every platform alike
             return [f"{label}: test file {test!r} does not exist"]
         folder = folder / part
-    return [] if folder.is_file() else [f"{label}: test file {test!r} does not exist"]
+    if not folder.is_file():
+        return [f"{label}: test file {test!r} does not exist"]
+    selectors = test.split("::")[1:]
+    if selectors and folder.suffix == '.py':
+        try:
+            nodes = ast.parse(folder.read_text(encoding='utf-8')).body
+            for index, selector in enumerate(selectors):
+                name = selector.split('[', 1)[0]
+                node = next((node for node in nodes if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name), None)
+                if index == len(selectors) - 1:
+                    if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not name.startswith('test_'):
+                        raise ValueError('Not a test function')
+                elif not isinstance(node, ast.ClassDef) or not name.startswith('Test') or '[' in selector:
+                    raise ValueError('Not a test class')
+                nodes = node.body
+        except (OSError, UnicodeError, SyntaxError, ValueError):
+            return [f"{label}: test selector {test!r} does not exist or cannot be parsed"]
+    return []
+
+
+def _receipt_errors(label, entry, root):
+    name = entry.get('receipt')
+    if name is None: return []
+    if not isinstance(name, str) or not _RECEIPT_NAME.fullmatch(name) or not _SHA256.fullmatch(_text(entry.get('receipt_sha256'))):
+        return [f'{label}: a receipt needs a plain name (no path) and receipt_sha256']
+    path = Path(root) / 'docs' / 'verification' / 'receipts' / name
+    if any(p.is_symlink() for p in (path, *path.parents)):
+        return [f'{label}: linked receipt paths are refused']
+    try:
+        if not path.is_file(): raise OSError('Missing receipt')
+        with path.open('rb') as handle: raw = handle.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024: return [f'{label}: receipt file exceeds the size bound']
+    except OSError:
+        return [f'{label}: receipt file could not be read']
+    if hashlib.sha256(raw).hexdigest() != entry['receipt_sha256']:
+        return [f'{label}: receipt hash differs from the retained file']
+    try:
+        value = json.loads(raw, object_pairs_hook=_unique_json_object)
+        if not isinstance(value, dict): raise ValueError('Receipt must be an object')
+    except (ValueError, UnicodeError):
+        return [f'{label}: receipt file is not unique-key JSON']
+    if value.get('source_sha') != entry.get('source_sha'):
+        return [f'{label}: receipt source differs from the evidence source']
+    return []
 
 
 def _reference_errors(label, entry, kind, root):
     """What the evidence cites must match its kind: a click is a browser/app spec run (scripts/e2e) or a hashed
     receipt; a target run is a hashed receipt with its artifacts; a native Windows run is a hashed receipt or a test the
     Windows workflow runs."""
+    retained = _receipt_errors(label, entry, root)
     test, receipt = entry.get("test"), entry.get("receipt")
     receipted = receipt is not None and _RECEIPT_NAME.fullmatch(_text(receipt)) and _SHA256.fullmatch(_text(entry.get("receipt_sha256")))
     if kind == "click" and not receipted and not (isinstance(test, str) and test.startswith("scripts/e2e/")):
-        return [f"{label}: click evidence cites a scripts/e2e spec or a receipt"]
+        retained.append(f"{label}: click evidence cites a scripts/e2e spec or a receipt")
     if kind == "target" and not (receipted and entry.get("artifacts")):
-        return [f"{label}: target evidence needs a receipt with receipt_sha256 and the run's artifacts"]
+        retained.append(f"{label}: target evidence needs a receipt with receipt_sha256 and the run's artifacts")
     if kind == "native_windows" and not receipted:
         try:
             workflow = (Path(root) / WINDOWS_WORKFLOW).read_text(encoding="utf-8")
         except OSError:
             workflow = ""
         if not (isinstance(test, str) and test.split("::", 1)[0] in workflow):
-            return [f"{label}: native Windows evidence needs a receipt or a test the Windows workflow runs"]
-    return []
+            retained.append(f"{label}: native Windows evidence needs a receipt or a test the Windows workflow runs")
+    return retained
 
 
 def _dimension_errors(where, value, dimension, owners, known, root):
@@ -114,7 +160,7 @@ def _dimension_errors(where, value, dimension, owners, known, root):
             task = entry.get("task")
             if not isinstance(task, str) or task not in known:
                 errors.append(f"{label}: unknown task {task!r}")
-            elif dimension in FUNCTIONAL and task not in owners:
+            elif task not in owners:
                 errors.append(f"{label}: task {task} does not own this legacy feature (owners: {', '.join(owners)})")
             if not _SHA40.fullmatch(_text(entry.get("source_sha"))):
                 errors.append(f"{label}: source_sha must be a full 40-character commit hash")
@@ -322,8 +368,8 @@ def check_program(program, root, evidence=None):
     return {"receipt": "ServicePlanSourceGate", "ok": not errors, "errors": errors,
             "work_packages": len(rows), "legacy_rows": len(legacy), "accepted_work_packages": accepted,
             "accepted_legacy_rows": sum(1 for row in legacy if row.get("service_acceptance") == "accepted"),
-            "scope": "registry, dependency and requirement-evidence integrity; evidence references are checked for form and "
-                     "existing test files, not re-executed"}
+            "scope": "registry, dependency and requirement-evidence integrity; retained receipt hashes/source identities and "
+                     "declared Python selectors are checked, not re-executed; historic execution and human approval are separate"}
 
 
 def main():

@@ -1,12 +1,13 @@
 """Delivery workflows use real persisted packages, source bytes and protocol adapters."""
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
 import asyncio
 import httpx
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 import pytest
 from PIL import Image
@@ -33,6 +34,52 @@ class ApiClient:
         return asyncio.run(send())
     def get(self,path,**kwargs):return self.request('GET',path,**kwargs)
     def post(self,path,**kwargs):return self.request('POST',path,**kwargs)
+
+
+class LocalPreflightTransport:
+    """Map a validated Linux target to this test's owned directory on every host OS.
+
+    Execute the actual decoder locally; no SSH or remote execution is claimed.
+    """
+    remote_root = '/controlled-preflight'
+
+    def __init__(self, root, *, fail_upload=False):
+        self.root = root.resolve()
+        self.fail_upload = fail_upload
+
+    def local_path(self, remote):
+        relative = PurePosixPath(remote).relative_to(self.remote_root)
+        destination = self.root.joinpath(*relative.parts).resolve()
+        assert destination.is_relative_to(self.root)
+        return destination
+
+    def probe(self, profile):
+        return {'ready': True, 'runtime_ready': True, 'checks': {'ssh': True, 'runtime': True}}
+
+    def runtime_argv(self, profile, args, **kwargs):
+        assert kwargs['gpu'] is False
+        return [sys.executable, *args[:-1], str(self.local_path(args[-1]))]
+
+    def exec(self, profile, args, **kwargs):
+        if args[:3] == ['rm', '-rf', '--']:
+            assert len(args) == 4
+            scratch = self.local_path(args[3])
+            assert scratch.parent == self.root / 'runs'
+            assert re.fullmatch(r'preflight_[0-9a-f]{32}', scratch.name)
+            if scratch.exists():
+                shutil.rmtree(scratch)
+            return SimpleNamespace(returncode=0, stderr='')
+        assert args[0] == sys.executable
+        return subprocess.run(args, capture_output=True, text=True, encoding='utf-8', timeout=30)
+
+    def upload(self, profile, local, relative):
+        destination = self.local_path(profile.remote_root + '/' + relative)
+        destination.parent.mkdir(parents=True)
+        if self.fail_upload:
+            destination.write_bytes(b'partial')
+            return SimpleNamespace(returncode=1, stderr='simulated disconnect')
+        shutil.copyfile(local, destination)
+        return SimpleNamespace(returncode=0, stderr='')
 
 
 def test_package_library_reopens_receipt_and_rejects_other_project(real_package,tmp_path):
@@ -181,15 +228,9 @@ def test_large_actual_source_preflight_transfers_bytes_and_cleans_owned_scratch(
     assert image.stat().st_size>48*1024
     from backend.remote.profiles import ComputeProfile
     root=tmp_path/'remote';root.mkdir()
-    profile=ComputeProfile(id='server',name='Server',ssh_target='worker',ssh_port=22,remote_root=str(root),runtime_kind='python',runtime_value=sys.executable)
-    class Transport:
-        def probe(self,profile):return {'ready':True,'runtime_ready':True,'checks':{'ssh':True,'runtime':True}}
-        def runtime_argv(self,profile,args,**kwargs):return [sys.executable,*args]
-        def exec(self,profile,args,**kwargs):return subprocess.run(args,capture_output=True,text=True,timeout=15)
-        def upload(self,profile,local,relative):
-            destination=Path(profile.remote_root)/relative;destination.parent.mkdir(parents=True);shutil.copyfile(local,destination)
-            return SimpleNamespace(returncode=0,stderr='')
-    report=module.server_preflight(p,profile,str(image),transport=Transport())
+    profile=ComputeProfile(id='server',name='Server',ssh_target='worker',ssh_port=22,
+                           remote_root=LocalPreflightTransport.remote_root,runtime_kind='python',runtime_value='python3')
+    report=module.server_preflight(p,profile,str(image),transport=LocalPreflightTransport(root))
     assert report['ready'] and report['input']['width']==256 and report['input']['local_sha256']==report['input']['remote_sha256']
     assert list((root/'runs').iterdir())==[]
 
@@ -211,14 +252,10 @@ def test_failed_preflight_transfer_removes_only_its_owned_scratch(tmp_path):
     Image.fromarray(np.random.default_rng(7).integers(0,255,(256,256,3),dtype=np.uint8)).save(image)
     from backend.remote.profiles import ComputeProfile
     root=tmp_path/'remote';foreign=root/'runs'/'existing';foreign.mkdir(parents=True);(foreign/'keep').write_text('unrelated')
-    profile=ComputeProfile(id='server',name='Server',ssh_target='worker',ssh_port=22,remote_root=str(root),runtime_kind='python',runtime_value=sys.executable)
-    class Transport:
-        def probe(self,profile):return {'ready':True,'runtime_ready':True}
-        def exec(self,profile,args,**kwargs):return subprocess.run(args,capture_output=True,text=True,timeout=15)
-        def upload(self,profile,local,relative):
-            destination=Path(profile.remote_root)/relative;destination.parent.mkdir(parents=True);destination.write_bytes(b'partial')
-            return SimpleNamespace(returncode=1,stderr='simulated disconnect')
-    with pytest.raises(ValueError,match='transfer failed'):module.server_preflight(p,profile,str(image),transport=Transport())
+    profile=ComputeProfile(id='server',name='Server',ssh_target='worker',ssh_port=22,
+                           remote_root=LocalPreflightTransport.remote_root,runtime_kind='python',runtime_value='python3')
+    with pytest.raises(ValueError,match='transfer failed'):
+        module.server_preflight(p,profile,str(image),transport=LocalPreflightTransport(root,fail_upload=True))
     assert list((root/'runs').iterdir())==[foreign]
     assert (foreign/'keep').read_text()=='unrelated'
 

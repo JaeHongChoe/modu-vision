@@ -321,3 +321,17 @@ After ordinary target writes, restore was refused. A separate untouched activati
 ### Task34: actual SDK evidence in the feature registry
 
 Sanitized public SDK receipt summaries retain exact source/run/JUnit/native-artifact hashes and every executed case. F092–F096 now link their implementation, failure and hosted-native-Windows dimensions to these actual8917d8a results:15 verified evidence cells. GUI, persistence, reopen, handoff, target and parent acceptance remain pending; no feature or parent is marked accepted. This is evidence reconciliation, not another execution or independent approval. Historical acceptance holds and failures remain visible.
+
+### Task35: retained evidence references and feature ownership
+
+The S7-01 gate now reads the cited public receipt itself: a regular unlinked unique-key JSON object bounded to1 MiB, exact cited SHA-256, and matching source_sha. Missing, changed, oversized, malformed and linked receipts fail. Python ::case selectors are inspected without importing tests; missing selectors, helper functions and nested functions cannot stand in for a collected case. Every dimension, including target and native platform, requires one of the feature owners. Three causal spoof-reference tests failed before implementation, and a further helper-selector case failed before that correction. The final local gate passed97 cases with no skips. Existing actual SDK receipt citations remain valid, and no feature or parent acceptance changed.
+
+This proves reference integrity. It does not prove historic Git availability, execution at the cited source, TypeScript case execution, test-only Windows workflow collection, truth of a reviewer statement, validity of a waiver or independent approval. Those remain separate gaps. The new composed source requires its hosted Linux/Windows gate.
+
+### Task36: Windows preflight test-target separation
+
+Actual unpackaged Windows run37224185599 at7cf7dfc retained context1,026 checks/2 failures/7 skips, workers87/8 skips and extensions58/0 skips. The two failures occurred before preflight execution: the test supplied its Windows temporary path and interpreter as a Linux SSH target profile. Source input hashes reconcile with the Windows CRLF checkout, and downloaded JUnit agrees with the CI receipts. Private failed readback SHA-256 is `e0be3c230e2130df00bf678ff9b83e60cb515ce76faa9e2e67a6c2bb3aed691e`.
+
+The test now keeps a valid POSIX target identity and maps it to its owned local fixture directory. Actual decode/tensor/hash execution stays local and CPU-only; the simulated transport refuses cleanup outside its UUID scratch directory and retains the unrelated fixture. Production profile validation and remote code are unchanged. The composed delivery/reference-integrity gate passed121 tests with no skips in17.55 seconds. An actual Windows rerun remains required; simulated transport is not SSH/GPU evidence.
+
+Linux whole-source run37224185563 at exact7cf7dfc completed successfully:1,507 backend checks with zero failures/errors and6 explicit skips, plus88 browser passes/1 opt-in skip in11.3 minutes. Downloaded source/lockfile hashes, JUnit and CI receipt were reconciled; private readback SHA-256 is `4a3a696a19b96884716776f296b55765f5a4a7193154f9fc7bbe0510bbea6ba6`. This is the pre-Task35 source. The Windows failure remains retained as failed at that same source.
