@@ -54,7 +54,10 @@ class CiPytestRunnerTests(unittest.TestCase):
     def test_timeout_is_an_error_with_last_node_and_following_selection_still_runs(self):
         stalled = self.write_test('test_stalled.py', "import time\ndef test_stalled():\n    time.sleep(30)\n")
         passed = self.write_test('test_passed.py', "def test_good():\n    assert True\n")
-        result, output, combined = self.run_gate([stalled, passed], timeout=3)
+        # Windows startup counts against this file budget. Leave time for the
+        # one-second diagnostic timer to fire after pytest starts the node;
+        # the deliberately stalled call still lasts 30 seconds and must fail.
+        result, output, combined = self.run_gate([stalled, passed], timeout=10)
         self.assertEqual(result.returncode, 1, self.diagnostics)
         summary = json.loads((output / 'summary.json').read_text())
         self.assertEqual([row['status'] for row in summary['selections']], ['timed_out', 'passed'], self.diagnostics)
@@ -107,7 +110,7 @@ class CiPytestRunnerTests(unittest.TestCase):
             "    (run / 'preflight.log').write_text('PREFLIGHT_STAGE_START train\\nowned child trace')\n"
             "    (run / 'best_model.pt').write_bytes(b'private synthetic model')\n"
             "    time.sleep(30)\n")
-        result, output, _ = self.run_gate([test], timeout=3)
+        result, output, _ = self.run_gate([test], timeout=10)
         self.assertEqual(result.returncode, 1, self.diagnostics)
         summary = json.loads((output / 'summary.json').read_text())
         row = summary['selections'][0]

@@ -512,14 +512,29 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
 def _exit_when_parent_goes(deadline: Optional[float]) -> None:
     """In the child: exit at once when the app's end of stdin closes (the app quit, crashed or was killed) or at the
     deadline, so no preflight outlives its app or runs on without a limit."""
+    # A blocking Windows CRT read holds its descriptor lock. Native Fortran
+    # initialization (SciPy BLAS) inspects stdin with fstat(0), so reading fd 0
+    # here can deadlock its first import. A duplicate has its own CRT lock and
+    # observes the same parent pipe EOF without delaying either lifetime guard.
+    watch_fd = os.dup(0)
+
     def watch_stdin():
         try:
-            while os.read(0, 65536):
+            while os.read(watch_fd, 65536):
                 pass
         except OSError:
             pass
+        finally:
+            try:
+                os.close(watch_fd)
+            except OSError:
+                pass
         os._exit(75)
-    threading.Thread(target=watch_stdin, name='preflight-parent-watch', daemon=True).start()
+    try:
+        threading.Thread(target=watch_stdin, name='preflight-parent-watch', daemon=True).start()
+    except BaseException:
+        os.close(watch_fd)
+        raise
     if deadline:
         timer = threading.Timer(deadline, lambda: os._exit(76))
         timer.daemon = True
