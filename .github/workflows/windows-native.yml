@@ -52,6 +52,7 @@ jobs:
               backend/tests/test_service_e01.py
               backend/tests/test_service_s2_01.py
               backend/tests/test_service_s2_05_no_branch.py
+              backend/tests/test_service_e02.py
           - lane: workers
             tests: >-
               backend/tests/test_service_s0_06.py
