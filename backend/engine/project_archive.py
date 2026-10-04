@@ -23,6 +23,10 @@ MAX_SOURCE_BYTES = 2 * 1024**3
 MAX_TOTAL_BYTES = 4 * 1024**3
 MAX_FILES = 100_000
 _CHUNK = 1024 * 1024
+_PROJECT_COORDINATION_FILES = {
+    '.retention/runtime_lifecycle.lock',
+    'runtime_service/runtime_lifecycle.lock',
+}
 
 
 class ArchiveError(ValueError):
@@ -175,13 +179,20 @@ def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention
         # Restored source lives inside the workspace. Archive it once under source/.
         for path in _files(folder, excluded_root=source_dir if prefix == "project" else None,
                            skip_sqlite_journals=prefix == "project"):
+            relative = path.relative_to(folder).as_posix()
+            # These are live coordination handles, not restorable data. Windows
+            # prohibits reading their locked byte while backup owns the locks.
+            # Scope the exclusion to exact project paths: source/user .lock
+            # files, and the SQLite snapshot handling, remain unchanged.
+            if prefix == 'project' and relative in _PROJECT_COORDINATION_FILES:
+                continue
             size = path.stat().st_size
             total_bytes += size
             if prefix == "source":
                 source_bytes += size
             if source_bytes > MAX_SOURCE_BYTES or total_bytes > MAX_TOTAL_BYTES:
                 raise ArchiveError("Backup exceeds the source or total size limit", 413)
-            inventory.append((f"{prefix}/{path.relative_to(folder).as_posix()}", path, size))
+            inventory.append((f"{prefix}/{relative}", path, size))
             if len(inventory) > MAX_FILES:
                 raise ArchiveError("Backup exceeds the file count limit", 413)
     destination_dir.mkdir(parents=True, exist_ok=True)

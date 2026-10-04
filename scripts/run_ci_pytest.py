@@ -18,12 +18,15 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+# Application tests deliberately replace os.replace to exercise Windows readers.
+# Receipt publication must not consume that application failure injection.
+_RECEIPT_REPLACE = os.replace
 
 
 def atomic_json(path, value):
     temporary = path.with_suffix('.tmp')
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=True), encoding='utf-8')
-    temporary.replace(path)
+    _RECEIPT_REPLACE(temporary, path)
 
 
 def merged_junit(rows, output, destination):
@@ -47,7 +50,28 @@ def merged_junit(rows, output, destination):
         error.text = json.dumps({'status': row['status'], 'last_event': row.get('last_event'), 'log': row['log']})
     temporary = destination.with_suffix('.tmp')
     ET.ElementTree(tree).write(temporary, encoding='utf-8', xml_declaration=True)
-    temporary.replace(destination)
+    _RECEIPT_REPLACE(temporary, destination)
+
+
+def preserve_preflight_logs(temporary_root, diagnostics):
+    """Copy bounded text diagnostics; synthetic models/images/DBs stay private."""
+    diagnostics.mkdir(exist_ok=True)
+    index = []
+    for source in sorted(temporary_root.rglob('preflight.log')):
+        if source.is_symlink():
+            continue
+        row = {'source': source.relative_to(temporary_root).as_posix()}
+        try:
+            size = source.stat().st_size
+            name = f'preflight-{len(index):03d}.log'
+            with source.open('rb') as reader:
+                reader.seek(max(0, size - 1024 * 1024))
+                (diagnostics / name).write_bytes(reader.read(1024 * 1024))
+            row.update(log=name, source_bytes=size, tail_only=size > 1024 * 1024)
+        except OSError as exc:
+            row['error'] = str(exc)
+        index.append(row)
+    atomic_json(diagnostics / 'preflight-log-index.json', index)
 
 
 class ProgressJournal:
@@ -94,6 +118,7 @@ def child_main(args):
     sys.path.insert(0, str(ROOT))
     import pytest
     return pytest.main([args.selections[0], '-vv', '-rA', '--tb=short', '--durations=20',
+                       f'--basetemp={args.basetemp}',
                        '-o', f'faulthandler_timeout={args.diagnostic_timeout}',
                        f'--junitxml={args.junit}'], plugins=[ProgressJournal(args.event_file)])
 
@@ -135,7 +160,9 @@ def run(args):
         rows.append({'selection': selection, 'status': 'pending', 'store': str(folder / 'stores'),
                      'log': str((folder / 'console.log').relative_to(output)),
                      'junit': str((folder / 'junit.xml').relative_to(output)),
-                     'event_file': str((folder / 'last-event.json').relative_to(output))})
+                     'event_file': str((folder / 'last-event.json').relative_to(output)),
+                     'pytest_temp': str((folder / 'pytest-temp').relative_to(output)),
+                     'diagnostics': str((folder / 'diagnostics').relative_to(output))})
     summary = {'schema_version': 1, 'status': 'running', 'file_timeout_seconds': args.file_timeout,
                'diagnostic_timeout_seconds': args.diagnostic_timeout, 'selections': rows,
                'scope': 'isolated selected pytest files; hosted platform and skip reasons require review'}
@@ -153,12 +180,14 @@ def run(args):
             persist()
             print(f'CI_SELECTION_START {row["selection"]}', flush=True)
             env = {**os.environ, 'PYTHONUNBUFFERED': '1', 'PYTHONIOENCODING': 'utf-8',
-                   'MODU_TEST_DATA_DIR': row['store'], 'PYTHONPATH': str(ROOT)}
+                   'MODU_TEST_DATA_DIR': row['store'], 'PYTHONPATH': str(ROOT),
+                   'MODU_PREFLIGHT_TRACE_SECONDS': str(args.diagnostic_timeout)}
             for name in ('VISION_AI_STUDIO_USER_DATA_DIR', 'MODU_FLOW_TEMPLATE_DIR', 'MODU_SPLIT_MANIFEST_DIR',
                          'MODU_THUMBNAIL_CACHE_DIR', 'VISION_RESOURCE_LEASE_DB', 'VISION_SCM_START_HANDLE'):
                 env.pop(name, None)
             command = [sys.executable, str(Path(__file__).resolve()), '--child', '--junit', str(output / row['junit']),
                        '--event-file', str(output / row['event_file']), '--diagnostic-timeout', str(args.diagnostic_timeout),
+                       '--basetemp', str(output / row['pytest_temp']),
                        row['selection']]
             started = time.monotonic()
             log = output / row['log']
@@ -176,6 +205,7 @@ def run(args):
                 if active is not None:
                     close_child(active)
                     active = None
+                preserve_preflight_logs(output / row['pytest_temp'], output / row['diagnostics'])
                 row['seconds'] = round(time.monotonic() - started, 3)
                 event = output / row['event_file']
                 if event.is_file():
@@ -216,6 +246,7 @@ def main():
     parser.add_argument('--diagnostic-timeout', type=float, default=120)
     parser.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--event-file', type=Path, help=argparse.SUPPRESS)
+    parser.add_argument('--basetemp', type=Path, help=argparse.SUPPRESS)
     parser.add_argument('selections', nargs='+')
     args = parser.parse_args()
     if args.file_timeout <= 0 or args.diagnostic_timeout <= 0:

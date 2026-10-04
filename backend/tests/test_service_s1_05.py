@@ -402,6 +402,45 @@ def test_a_timed_out_child_is_killed_through_its_handle(tmp_path, monkeypatch):
     assert command[command.index('--device') + 1] == 'cpu' and command[command.index('--task') + 1] == 'classification'
 
 
+def test_ci_diagnostics_enable_and_cancel_traceback_for_a_bounded_cli_stage(tmp_path):
+    import json
+    import subprocess
+    import sys
+    from backend.engine import worker_preflight
+    environment = {**worker_preflight._child_environment(), 'MODU_PREFLIGHT_TRACE_SECONDS': '0.1',
+                   'OMP_NUM_THREADS': '2', 'MKL_NUM_THREADS': '2'}
+    # Existing real preflight tests cover training. Isolate the CLI diagnostic
+    # lifecycle with one deterministic waiting stage and no ML runtime threads.
+    program = (
+        "import sys,time\nfrom pathlib import Path\n"
+        "from backend.engine import worker_preflight as worker\n"
+        "def waiting_stage(*args):\n"
+        "    time.sleep(0.4)\n"
+        "    return {'train': {'passed': True, 'reason': 'diagnostic fixture', 'seconds': 0.4}}\n"
+        "worker.run_stages = waiting_stage\n"
+        "worker.runtime_digest = lambda: 'diagnostic-fixture-runtime'\n"
+        "code = worker.main(['--task', 'classification', '--device', 'cpu', '--stages', 'train', '--workdir', sys.argv[1]])\n"
+        "print('PREFLIGHT_MAIN_RETURNED', flush=True)\n"
+        "time.sleep(0.3)\n"
+        "print('PREFLIGHT_AFTER_CANCEL', flush=True)\n"
+        "raise SystemExit(code)\n"
+    )
+    log = tmp_path / 'preflight.log'
+    with log.open('w', encoding='utf-8') as output:
+        child = subprocess.run([sys.executable, '-c', program, str(tmp_path)],
+                               cwd=tmp_path, env=environment, stdout=output, stderr=subprocess.STDOUT, timeout=10)
+    content = log.read_text(encoding='utf-8', errors='replace')
+    assert child.returncode == 0, content
+    result = json.loads((tmp_path / worker_preflight.RESULT_FILE).read_text())
+    assert result == {'runtime_digest': 'diagnostic-fixture-runtime', 'results': {
+        'train': {'passed': True, 'reason': 'diagnostic fixture', 'seconds': 0.4}}}, result
+    assert 'PREFLIGHT_CHILD_START task=classification device=cpu' in content
+    assert 'Timeout (0:00:00.100000)!' in content
+    assert 'waiting_stage' in content
+    assert 'Timeout' not in content.split('PREFLIGHT_MAIN_RETURNED', 1)[1]
+    assert 'PREFLIGHT_AFTER_CANCEL' in content
+
+
 def test_the_child_exits_when_the_app_side_of_its_stdin_closes(tmp_path):
     """An app that quits, crashes or is killed closes the pipe: the preflight child then exits instead of running on."""
     import subprocess

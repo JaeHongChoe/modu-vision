@@ -327,12 +327,17 @@ def test_repeated_replay_of_same_dead_letter_cannot_bypass_lineage_limit(package
         assert store.get(second)['replay_root']==job
 
 
-def test_late_delivery_ack_preserves_ack_but_never_sets_operational_ok(tmp_path):
+def test_late_delivery_ack_preserves_ack_but_never_sets_operational_ok(tmp_path,monkeypatch):
+    # Advance only after delivery was claimed: Windows disk latency must not
+    # accidentally turn this delivery-ack contract into an admission expiry.
+    clock=[time.time()]
+    monkeypatch.setattr(service.time,'time',lambda:clock[0])
     store=service.InspectionStore(tmp_path/'state',max_queue_age_seconds=.05)
     job=store.enqueue(image(tmp_path),'file')
-    store.claim();store.finish(job,result={'final_verdict':'OK'},require_delivery=True)
-    store.claim_delivery()
-    time.sleep(.06)
+    assert store.claim()['job_id']==job
+    store.finish(job,result={'final_verdict':'OK'},require_delivery=True)
+    assert store.claim_delivery()['job_id']==job
+    clock[0]+=.06
     store.finish_delivery(job,None)
     row=store.get(job)
     assert row['verdict']=='REVIEW'

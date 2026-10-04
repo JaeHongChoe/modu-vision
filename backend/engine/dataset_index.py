@@ -290,8 +290,14 @@ def _discover(source: Path, task: str, project: Path, follow_links: bool,
     return _Inventory(entries, gaps, skipped)
 
 
+def _stat_identity(value: int) -> int | str:
+    # Windows file IDs can be wider than SQLite's signed 64-bit INTEGER. A nonnumeric prefix keeps the full value
+    # as TEXT under INTEGER affinity; decimal text could be coerced to a lossy REAL. Existing small IDs stay integers.
+    return value if -(1 << 63) <= value < (1 << 63) else f'id:{value:x}'
+
+
 def _stat_key(stat: os.stat_result) -> tuple:
-    return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+    return (_stat_identity(stat.st_dev), _stat_identity(stat.st_ino), stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
 
 
 def _decode_copy(copy) -> tuple:

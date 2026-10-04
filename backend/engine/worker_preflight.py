@@ -307,6 +307,9 @@ def _export(task: str, model: Path, image: Path, workdir: Path, device: str) -> 
 def run_stages(task: str, device: str, workdir: Path, stages: tuple[str, ...] = PREFLIGHT_STAGES) -> dict[str, dict]:
     """Run ``stages`` of ``task`` for real on ``device`` in ``workdir``; each later stage uses the trained model. A
     device this process cannot use fails every stage with that reason, and a stage that ran elsewhere fails."""
+    diagnostics = bool(os.environ.get('MODU_PREFLIGHT_TRACE_SECONDS'))
+    if diagnostics:
+        print('PREFLIGHT_PREPARE_IMPORTS', flush=True)
     import torch
     from backend.engine.runtime_device import resolve_runtime_device
     architecture = preflight_architecture(task)
@@ -326,6 +329,8 @@ def run_stages(task: str, device: str, workdir: Path, stages: tuple[str, ...] = 
         if stage not in stages and not (stage == 'train' and stages):
             continue
         started = time.monotonic()
+        if diagnostics:
+            print(f'PREFLIGHT_STAGE_START {stage}', flush=True)
         if stage != 'train' and model is None:
             results[stage] = {'passed': False, 'reason': 'not run: training did not produce a model', 'seconds': 0.0}
             continue
@@ -356,6 +361,8 @@ def run_stages(task: str, device: str, workdir: Path, stages: tuple[str, ...] = 
         except Exception as exc:  # the stage's own failure is the result; later stages say why they did not run
             results[stage] = {'passed': False, 'reason': f'{type(exc).__name__}: {exc}'[:500], 'seconds': time.monotonic() - started,
                               'evidence': {'architecture': architecture}}
+        if diagnostics:
+            print(f'PREFLIGHT_STAGE_END {stage} {"passed" if results[stage]["passed"] else "failed"}', flush=True)
     return {stage: row for stage, row in results.items() if stage in stages}
 
 
@@ -532,7 +539,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     if options.exit_with_parent:
         _exit_when_parent_goes(options.deadline)
     stages = tuple(item for item in options.stages.split(',') if item)
-    results = run_stages(options.task, options.device, options.workdir, stages)
+    # Explicit CI diagnostics are enabled before the expensive stage imports.
+    # Normal application runs keep their existing logging and time budgets.
+    trace_seconds = os.environ.get('MODU_PREFLIGHT_TRACE_SECONDS')
+    if trace_seconds:
+        import faulthandler
+        interval = float(trace_seconds)
+        if not math.isfinite(interval) or interval <= 0:
+            raise ValueError('Preflight trace interval must be a finite positive number')
+        faulthandler.dump_traceback_later(interval, repeat=True)
+        print(f'PREFLIGHT_CHILD_START task={options.task} device={options.device}', flush=True)
+    try:
+        results = run_stages(options.task, options.device, options.workdir, stages)
+    finally:
+        if trace_seconds:
+            faulthandler.cancel_dump_traceback_later()
     # The result goes to a file in the run folder, not the shared stdout, which library output could interleave with.
     target = options.workdir / RESULT_FILE
     staging = target.with_suffix('.partial')

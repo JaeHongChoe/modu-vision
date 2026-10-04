@@ -2,6 +2,7 @@
 import json
 import hashlib
 import plistlib
+import shlex
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
@@ -25,7 +26,14 @@ def test_descriptor_has_no_release_or_token_and_only_bootstraps_project(tmp_path
     content=Path(prepared['files'][0]).read_text()
     assert 'old-release' not in content and item.config['token'] not in content
     assert 'managed-service-project' in content or 'backend.engine.service_bootstrap' in content
-    assert str(item.root.parent) in content
+    if host == 'Linux':
+        # systemd escapes backslashes even when this descriptor contract runs
+        # on Windows. Check the decoded project argument, not raw text bytes.
+        line = next(line for line in content.splitlines() if line.startswith('ExecStart='))
+        arguments = shlex.split(line.removeprefix('ExecStart='))
+        assert arguments[arguments.index('--project-dir') + 1] == str(item.root.parent)
+    else:
+        assert str(item.root.parent) in content
     assert not prepared['registered'] and not prepared['verified']
 
 
@@ -40,12 +48,14 @@ def test_launch_agent_install_is_durable_idempotent_and_owned(tmp_path,monkeypat
         if argv[1]=='bootout':registered=False
         return SimpleNamespace(returncode=0,stdout='',stderr='')
     monkeypatch.setattr(native.subprocess,'run',run)
+    monkeypatch.setattr(native.os, 'getuid', lambda: 501, raising=False)
     controller=native.NativeAutostart(item,system='Darwin',home=tmp_path/'home')
     result=controller.install();again=controller.install()
     assert result['registered'] and again['registered']
     durable=tmp_path/'home'/'Library'/'LaunchAgents'/(item.native_identity()+'.plist')
     assert durable.exists()
     assert len([row for row in calls if row[1]=='bootstrap'])==1
+    assert ['launchctl', 'bootstrap', 'gui/501', str(durable)] in calls
     controller.remove();controller.remove();assert not durable.exists()
 
 

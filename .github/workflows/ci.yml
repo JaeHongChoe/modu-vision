@@ -52,6 +52,7 @@ jobs:
           backend/tests/test_source_mask_annotations.py
           backend/tests/test_service_joint_augmentation.py
           backend/tests/test_service_score_contract.py
+          backend/tests/test_dataset_index_stat_identity.py
           backend/tests/test_service_release_eligibility.py
           backend/tests/test_fleet_emergency_rollback.py
           backend/tests/test_service_s0_06.py
@@ -99,6 +100,7 @@ jobs:
           backend/tests/test_service_s5_06.py
           backend/tests/test_service_s5_08_drift.py
           backend/tests/test_service_s5_09.py
+          backend/tests/test_project_archive_runtime_locks.py
       - name: Core defect baseline evidence
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Install test browser
