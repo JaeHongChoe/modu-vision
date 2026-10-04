@@ -254,6 +254,19 @@ export interface DatasetDuplicateGroup {
 /** What the quick folder inspection decoded; only `complete` speaks for every image of the inventory. */
 export interface DatasetQuickValidation { requested: boolean; checked_images: number; complete: boolean; scope: string }
 
+export interface RemoteEvaluationOperation {
+  op_id: string; job_id: string; dataset_version_id: string; cohort_sha256: string;
+  evaluation_binding_sha256: string; compute_profile_id: string; device: string;
+  execution_profile_sha256: string; task: VisionTask; labelset_id: string; state: string;
+  cancel_requested_at?: string | null; cancel_acknowledged_at?: string | null; worker_exit_confirmed?: boolean;
+}
+export type RemoteEvaluationResult = EvaluationResults & {
+  common_cohort?: { dataset_version_id: string; cohort_sha256: string; image_count: number; split: string };
+  execution_target?: string; compute_profile_id?: string; compute_profile_name?: string;
+  device?: string; resolved_device?: string; runtime_device_identity?: unknown;
+  remote_operation_id?: string; evaluation_binding_sha256?: string; execution_profile_sha256?: string;
+};
+
 export interface DatasetVersionSummary {
   id: string;
   name: string;
@@ -261,6 +274,8 @@ export interface DatasetVersionSummary {
   kind: 'manual' | 'auto_backup';
   created_at: string;
   source_dataset_dir: string;
+  task?: VisionTask;
+  labelset_id?: string;
   image_count: number;
   label_file_count: number;
   total_image_bytes: number;
@@ -1177,9 +1192,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+    getRemoteOperations: (jobId: string) => request<{ operations: RemoteEvaluationOperation[] }>(`/api/evaluation/remote-operations?job_id=${encodeURIComponent(jobId)}`),
+    cancelRemoteOperation: (opId: string, binding: {job_id: string; cohort_sha256: string; evaluation_binding_sha256: string}) => request<RemoteEvaluationOperation>(`/api/evaluation/remote-operations/${encodeURIComponent(opId)}/cancel`, {method:'POST', body:JSON.stringify(binding)}),
     getResults: (jobId?: string, options?: {
       datasetPath?: string;
       forceRecompute?: boolean;
+      evaluationDatasetVersionId?: string;
+      computeProfileId?: string;
+      device?: string;
       sourceDatasetPath?: string;
       sourceTask?: VisionTask;
     }) => {
@@ -1189,7 +1209,10 @@ export const api = {
       if (options?.forceRecompute) q.set('force_recompute', 'true');
       if (options?.sourceDatasetPath) q.set('source_dataset_path', options.sourceDatasetPath);
       if (options?.sourceTask) q.set('source_task', options.sourceTask);
-      return request<EvaluationResults>(`/api/evaluation/results?${q.toString()}`);
+      if (options?.evaluationDatasetVersionId) q.set('evaluation_dataset_version_id', options.evaluationDatasetVersionId);
+      if (options?.computeProfileId) q.set('compute_profile_id', options.computeProfileId);
+      if (options?.device) q.set('device', options.device);
+      return request<RemoteEvaluationResult>(`/api/evaluation/results?${q.toString()}`);
     },
 
     getHeatmap: (imageId: string, jobId?: string, threshold?: number, filePath?: string, scoreSpec?: import('../types').ScoreSpec) => {

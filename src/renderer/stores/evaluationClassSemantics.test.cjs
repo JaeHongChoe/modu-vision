@@ -101,7 +101,7 @@ test('threshold calibration requires a real normal role and respects explicit al
 
 function renderStudio(storeState) {
   const jsx = (type, props) => ({ type, props: props || {}, children: [props?.children].flat(Infinity).filter(v => v !== null && v !== undefined && v !== false) });
-  const react = { useEffect() {}, useMemo: fn => fn(), useState: initial => [initial, () => {}] };
+  const react = { useEffect() {}, useRef: value => ({current:value}), useMemo: fn => fn(), useState: initial => [initial, () => {}] };
   const project = { language: 'ko', task: 'classification', projectDir: '/project', setStep() {} };
   const dataset = { folderPath: '/source', datasetKey: '/source\0classification', isLoading: false, importError: null };
   const evaluation = fixture();
@@ -114,8 +114,9 @@ function renderStudio(storeState) {
     '../../stores/useProjectStore': { useProjectStore: Object.assign(sel => sel ? sel(project) : project, { getState: () => project }) },
     '../../stores/useDatasetStore': { useDatasetStore: sel => sel(dataset) },
     '../../stores/useTrainingStore': { useTrainingStore: sel => sel({ status: 'idle' }) },
+    '../../stores/useComputeStore': {useComputeStore: Object.assign(() => ({profiles:[],selectedProfileId:null,transportRevision:0}), {getState:()=>({selectedProfileId:null})})},
     '../../stores/useEvaluationStore': { ...evaluation, useEvaluationStore },
-    '../../services/api': { resolveApiUrl: value => value },
+    '../../services/api': { resolveApiUrl: value => value, getApiPersistenceIdentity:()=> 'local', getProjectContextGeneration:()=>0 },
     '../common/OperatorGuidanceBanner': {}, '../common/JargonTooltip': {}, '../common/GuardrailBanner': {},
     './ZeroEscapeTradeoffChart': {}, './SynchronizedDualViewport': {},
     './DetectionEvaluationGrains': {}, './ModelComparisonPanel': {}, './ModelDeploymentPanel': {},

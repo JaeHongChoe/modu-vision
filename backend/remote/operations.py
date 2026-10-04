@@ -149,6 +149,136 @@ def _save_operation(path: Path, journal: dict[str, Any]) -> None:
     _atomic_json(path, journal)
 
 
+
+def _common_cancel_path(context,journal):
+    op_id=journal.get('op_id')
+    if not isinstance(op_id,str) or not re.fullmatch(r'op_[0-9a-f]{32}',op_id):
+        raise ArtifactValidationError('Invalid common operation identity')
+    return context.output_dir/'remote_operations'/op_id/'cancel-intent.json'
+
+
+def _common_cancel(context,journal):
+    if journal.get('spec',{}).get('common_cohort_contract')!=1:return None
+    path=_common_cancel_path(context,journal)
+    if path.is_symlink():raise ArtifactValidationError('Common cancellation receipt is linked')
+    if not path.exists():return None
+    intent=json.loads(path.read_text(encoding='utf-8'))
+    spec=journal['spec']
+    expected={'op_id':journal['op_id'],'job_id':context.job_id,
+              'cohort_sha256':spec['evaluation_cohort']['cohort_sha256'],
+              'evaluation_binding_sha256':spec['evaluation_binding_sha256']}
+    if not isinstance(intent,dict) or any(intent.get(k)!=v for k,v in expected.items()) or not isinstance(intent.get('cancel_requested_at'),(int,float)):
+        raise ArtifactValidationError('Common cancellation receipt belongs to another binding')
+    return intent
+
+
+class _CommonUploadCancel:
+    def __init__(self,context,journal):self.context=context;self.journal=journal
+    def is_set(self):return _common_cancel(self.context,self.journal) is not None
+
+
+def _operation_row(context,journal):
+    spec=journal['spec'];cohort=spec['evaluation_cohort'];intent=_common_cancel(context,journal)
+    state=journal['state']
+    if intent and state not in ('completed','failed','aborted'):state='cancel_requested'
+    return {'op_id':journal['op_id'],'job_id':context.job_id,'cohort_sha256':cohort['cohort_sha256'],
+            'evaluation_binding_sha256':spec['evaluation_binding_sha256'],'dataset_version_id':cohort['dataset_version_id'],
+            'task':spec['task'],'labelset_id':cohort['labelset_id'],'compute_profile_id':spec['compute_profile_id'],
+            'execution_profile_sha256':spec['execution_profile_sha256'],'device':spec['device'],'state':state,
+            'cancel_requested_at':(intent or {}).get('cancel_requested_at'),
+            'cancel_acknowledged_at':journal.get('cancel_acknowledged_at'),
+            'worker_exit_confirmed':bool(journal.get('worker_exit_confirmed')),
+            'receipt_verified':journal.get('receipt_verified'),'receipt_error':journal.get('receipt_error')}
+
+
+def common_operation_authority(project_id):
+    """Freeze middleware-authenticated identity, never a caller-supplied actor."""
+    from backend.contracts.context import current_project_context
+    authority=current_project_context.get()
+    if authority is None or authority.project_id!=project_id:
+        raise ArtifactValidationError('Common operation requires its authenticated project context')
+    return authority.model_dump()
+
+
+def _common_journals(context, *, scoped=False):
+    from backend.remote.evaluation_cohort import validate_binding
+    root=context.output_dir/'remote_operations'
+    if root.is_symlink():raise ArtifactValidationError('Common operation directory is linked')
+    project=json.loads((context.output_dir.parent.parent/'project.json').read_text(encoding='utf-8'))
+    authority=common_operation_authority(project['id']) if scoped else None
+    rows=[]
+    for path in sorted(root.glob('evaluate_*.json')):
+        if path.is_symlink():raise ArtifactValidationError('Common operation journal is linked')
+        journal=json.loads(path.read_text(encoding='utf-8'))
+        spec=journal.get('spec',{})
+        if spec.get('common_cohort_contract')!=1:continue
+        # Older operations without an initiating authority cannot be attributed
+        # retrospectively. Foreign actors may neither discover nor cancel them.
+        if scoped and spec.get('operation_authority')!=authority:continue
+        validate_binding(spec)
+        if (journal.get('job_id')!=context.job_id or spec.get('job_id')!=context.job_id
+                or ComputeProfile.model_validate(journal['profile'])!=context.profile
+                or spec['evaluation_cohort']['project_id']!=project['id']
+                or path!=_operation_journal_path(context,'evaluate',spec)):
+            raise ArtifactValidationError('Common journal project, model or profile binding changed')
+        rows.append((path,journal))
+    return rows
+
+
+def common_operation_rows(context):
+    return [_operation_row(context,journal) for _,journal in _common_journals(context,scoped=True)]
+
+
+def cancel_common_operation(context,op_id,cohort_sha256,evaluation_binding_sha256):
+    selected=next(((path,row) for path,row in _common_journals(context,scoped=True) if row['op_id']==op_id),None)
+    if selected is None:raise FileNotFoundError('Common operation is not owned by this active project model')
+    _,journal=selected;spec=journal['spec']
+    if spec['evaluation_cohort']['cohort_sha256']!=cohort_sha256 or spec['evaluation_binding_sha256']!=evaluation_binding_sha256:
+        raise ValueError('Cancellation binding changed')
+    if journal.get('state') in ('completed','failed','aborted','worker_completed'):
+        raise ValueError('Common operation is already terminal')
+    intent=_common_cancel(context,journal)
+    if intent is None:
+        intent={'op_id':op_id,'job_id':context.job_id,'cohort_sha256':cohort_sha256,
+                'evaluation_binding_sha256':evaluation_binding_sha256,'cancel_requested_at':time.time()}
+        # Separate durable intent cannot be erased by the monitor's older journal.
+        _atomic_json(_common_cancel_path(context,journal),intent)
+    return _operation_row(context,journal)
+
+
+
+def record_common_verification(context,op_id,passed,error=None):
+    selected=next(((path,row) for path,row in _common_journals(context) if row['op_id']==op_id),None)
+    if selected is None:raise ArtifactValidationError('Common result operation journal is missing')
+    path,journal=selected
+    if not journal.get('worker_exit_confirmed'):raise ArtifactValidationError('Common result has no confirmed owned worker exit')
+    journal.update(receipt_verified=bool(passed),receipt_error=error,receipt_checked_at=time.time())
+    if not passed:journal.update(state='failed',retry_requires_force=True)
+    _save_operation(path,journal)
+
+
+def _deliver_common_cancel(context,journal,transport):
+    intent=_common_cancel(context,journal)
+    if intent is None:return
+    from backend.remote.coordinator import CANCEL_GRACE_SECONDS,CANCEL_TERMINATE_SECONDS,CANCEL_CONFIRM_SECONDS
+    now=time.time();handle=journal.get('remote_handle')
+    if not journal.get('cancel_signal_sent_at'):
+        transport.touch_cancel(context.profile,journal['op_id'])
+        journal['cancel_signal_sent_at']=now
+    elif handle and not journal.get('cancel_terminate_sent_at') and now-journal['cancel_signal_sent_at']>=CANCEL_GRACE_SECONDS:
+        if transport.stop_owned(context.profile,journal['op_id'],handle,force=False) is not True:
+            raise RemoteDisconnected('Owned common evaluation termination could not be confirmed')
+        journal['cancel_terminate_sent_at']=now
+    elif handle and journal.get('cancel_terminate_sent_at') and not journal.get('cancel_kill_sent_at') and now-journal['cancel_terminate_sent_at']>=CANCEL_TERMINATE_SECONDS:
+        if transport.stop_owned(context.profile,journal['op_id'],handle,force=True) is not True:
+            raise RemoteDisconnected('Owned common evaluation kill could not be confirmed')
+        journal['cancel_kill_sent_at']=now
+    elif journal.get('cancel_kill_sent_at') and now-journal['cancel_kill_sent_at']>=CANCEL_CONFIRM_SECONDS:
+        if transport.is_running(context.profile,journal['op_id'],handle) is not False:
+            raise RemoteDisconnected('Owned common evaluation exit is uncertain after cancellation')
+    journal['state']='cancel_requested'
+
+
 def _launch_or_resume(
     context: RemoteJobContext, operation: str, spec: dict[str, Any],
     transport: SSHTransport, *, force_new: bool = False,
@@ -161,10 +291,17 @@ def _launch_or_resume(
         if (journal.get("job_id") != context.job_id or ComputeProfile.model_validate(journal["profile"]) != context.profile
                 or journal.get("spec") != spec):
             raise ArtifactValidationError("Operation journal is bound to a different job or server")
+        if spec.get('common_cohort_contract')==1 and journal.get('retry_requires_force') and not force_new:
+            raise ArtifactValidationError('Common evaluation receipt was refused; an explicit rerun is required')
+        if spec.get('common_cohort_contract')==1 and journal.get('state')=='aborted':
+            if force_new and journal.get('worker_exit_confirmed'):journal=None
+            else:raise RuntimeError('Common evaluation binding was cancelled; an explicit rerun is required')
+        if journal is not None and spec.get('common_cohort_contract')==1 and journal.get('state')=='failed' and journal.get('remote_handle') and not journal.get('worker_exit_confirmed'):
+            raise RemoteDisconnected('Failed common evaluation still has uncertain owned worker state')
         # preparing is durably written before any worker launch. An interrupted
         # upload can be safely prepared afresh; launching remains ambiguous and
         # must continue polling the same worker rather than launch a duplicate.
-        if journal.get("state") in ("failed", "preparing") or (journal.get("state") == "completed" and force_new):
+        if journal is not None and (journal.get("state") in ("failed", "preparing") or (journal.get("state") == "completed" and force_new)):
             journal = None
     if journal is not None:
         return journal
@@ -176,19 +313,31 @@ def _launch_or_resume(
         "state": "preparing", "created_at": time.time(),
     }
     _save_operation(journal_path, journal)
+    upload_cancel=_CommonUploadCancel(context,journal) if spec.get("common_cohort_contract")==1 else None
+    def check_upload_cancel():
+        if upload_cancel is not None and upload_cancel.is_set():
+            journal.update(state="aborted",worker_exit_confirmed=True,cancel_acknowledged_at=time.time())
+            _save_operation(journal_path,journal)
+            raise RuntimeError("Common evaluation cancelled before launch")
     local_dir = context.output_dir / "remote_operations" / op_id
     local_dir.mkdir(parents=True, exist_ok=True)
     code_archive = _bundle_backend(local_dir)
     spec_path = local_dir / "spec.json"
     _atomic_json(spec_path, spec)
     for source, name in ((code_archive, "code.tar.gz"), (spec_path, "spec.json")):
-        transport.upload(context.profile, source, f"runs/{op_id}/{name}")
+        check_upload_cancel()
+        if upload_cancel is None:transport.upload(context.profile, source, f"runs/{op_id}/{name}")
+        else:transport.upload(context.profile, source, f"runs/{op_id}/{name}",cancel=upload_cancel)
+        check_upload_cancel()
     for relative, source in (input_files or {}).items():
         if not relative.startswith("inputs/") or any(part in ("", ".", "..") for part in relative.split("/")):
             raise ValueError("Remote operation input path is unsafe")
         if not source.is_file():
             raise FileNotFoundError(source)
-        transport.upload(context.profile, source, f"runs/{op_id}/{relative}")
+        check_upload_cancel()
+        if upload_cancel is None:transport.upload(context.profile, source, f"runs/{op_id}/{relative}")
+        else:transport.upload(context.profile, source, f"runs/{op_id}/{relative}",cancel=upload_cancel)
+        check_upload_cancel()
     code_dir = _remote_path(context.profile, op_id, "code")
     code_archive_remote = _remote_path(context.profile, op_id, "code.tar.gz")
     mkdir = transport.exec(context.profile, ["mkdir", "-p", code_dir])
@@ -198,6 +347,7 @@ def _launch_or_resume(
         journal["error"] = unpack.stderr
         _save_operation(journal_path, journal)
         raise RuntimeError(f"Could not prepare remote {operation} worker: {unpack.stderr}")
+    check_upload_cancel()
     journal["state"] = "launching"
     _save_operation(journal_path, journal)
     try:
@@ -236,6 +386,10 @@ def _run_remote_operation_artifacts(
         if journal_path.is_file():
             journal = json.loads(journal_path.read_text(encoding="utf-8"))
             if journal.get("state") == "preparing":
+                if _common_cancel(context,journal) is not None:
+                    journal.update(state='aborted',worker_exit_confirmed=True,cancel_acknowledged_at=time.time())
+                    _save_operation(journal_path,journal)
+                    raise RuntimeError('Common evaluation upload cancelled before launch')
                 journal["state"] = "failed"
                 _save_operation(journal_path, journal)
         raise
@@ -244,6 +398,9 @@ def _run_remote_operation_artifacts(
     start = time.monotonic()
     missing_status_polls = 0
     while True:
+        if _common_cancel(context,journal) is not None:
+            _deliver_common_cancel(context,journal,transport)
+            _save_operation(journal_path,journal)
         status = _remote_json(transport, context.profile, status_path)
         if status is None:
             missing_status_polls += 1
@@ -251,6 +408,10 @@ def _run_remote_operation_artifacts(
             if (status.get("protocol_version") != 1 or status.get("job_id") != context.job_id
                     or status.get("operation") != operation):
                 raise ArtifactValidationError("Operation status is bound to a different job")
+            if spec.get('common_cohort_contract')==1:
+                local_spec=context.output_dir/'remote_operations'/op_id/'spec.json'
+                if status.get('spec_sha256')!=_sha256(local_spec) or (status.get('status')!='preparing' and status.get('device')!=spec['device']):
+                    raise ArtifactValidationError('Common status spec or selected device binding changed')
             if not journal.get('remote_handle') and hasattr(transport, 'recover_handle'):
                 spec_path = context.output_dir / 'remote_operations' / op_id / 'spec.json'
                 handle = transport.recover_handle(context.profile, op_id, job_id=context.job_id,
@@ -258,11 +419,17 @@ def _run_remote_operation_artifacts(
                 if handle:
                     journal.update(remote_handle=handle, state='launched', launch_acknowledgment_recovered=True)
                     _save_operation(journal_path, journal)
+            if status.get('cancel_acknowledged_at'):
+                journal['cancel_acknowledged_at']=status['cancel_acknowledged_at']
             if status.get('status') in ('completed', 'failed', 'aborted'):
                 journal['worker_terminal_state'] = status['status']
                 _save_operation(journal_path, journal)
                 _confirm_owned_exit(transport, context.profile, op_id, journal.get('remote_handle'))
                 journal['worker_exit_confirmed'] = True
+                if _common_cancel(context,journal) is not None:
+                    journal.update(state='aborted',cancel_acknowledged_at=journal.get('cancel_acknowledged_at') or time.time())
+                    _save_operation(journal_path,journal)
+                    raise RuntimeError('Common evaluation cancelled; completed output was not adopted')
             if status.get("status") == "completed":
                 journal['state']='worker_completed'
                 _save_operation(journal_path,journal)
@@ -297,6 +464,10 @@ def _run_remote_operation_artifacts(
             raise RemoteDisconnected(f"Remote {operation} has not returned a terminal status; reconnect to the same run")
         time.sleep(OP_POLL_INTERVAL_SECONDS)
 
+    if _common_cancel(context,journal) is not None:
+        journal.update(state="aborted",cancel_acknowledged_at=time.time())
+        _save_operation(journal_path,journal)
+        raise RuntimeError("Common evaluation cancelled before result adoption")
     manifest = _remote_json(transport, context.profile, _remote_path(context.profile, op_id, "artifacts.json"))
     if manifest is None or (manifest.get("protocol_version") != 1 or manifest.get("job_id") != context.job_id
                             or manifest.get("operation") != operation
@@ -341,6 +512,10 @@ def _run_remote_operation_artifacts(
             if not destination.resolve().is_relative_to(local_dir.resolve()):
                 raise ArtifactValidationError("Remote operation output escaped its local directory")
             downloads[relative] = staged
+        if _common_cancel(context,journal) is not None:
+            journal.update(state="aborted",cancel_acknowledged_at=time.time())
+            _save_operation(journal_path,journal)
+            raise RuntimeError("Common evaluation cancelled before result adoption")
         published: dict[str, Path] = {}
         for relative, staged in downloads.items():
             destination = local_dir.joinpath(*PurePosixPath(relative).parts)

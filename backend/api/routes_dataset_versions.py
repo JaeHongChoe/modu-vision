@@ -133,7 +133,7 @@ def _summary(manifest: Dict[str, Any], *, status: str = "not_checked") -> Dict[s
     return {
         "id": manifest["id"], "name": manifest["name"], "note": manifest["note"],
         "labelset_id": manifest.get("labelset_id", "default"),
-        "kind": manifest["kind"], "created_at": manifest["created_at"],
+        "kind": manifest["kind"], "task": manifest.get("task"), "created_at": manifest["created_at"],
         "source_dataset_dir": manifest["source_dataset_dir"],
         "image_count": manifest["image_count"], "label_file_count": manifest["label_file_count"],
         "total_image_bytes": manifest["total_image_bytes"],

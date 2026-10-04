@@ -244,6 +244,12 @@ export type CohortRequest = {
   relative_paths?: Array<string> | null;
 };
 
+export type CommonOperationCancel = {
+  job_id: string;
+  cohort_sha256: string;
+  evaluation_binding_sha256: string;
+};
+
 export type ComparisonRequest = {
   source_dataset_path: string;
   task: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification";
@@ -1722,6 +1728,7 @@ export interface ApiRequestBody {
   "POST /api/evaluation/model-comparisons": ComparisonRequest;
   "POST /api/evaluation/model-comparisons/jobs": AsyncComparisonRequest;
   "POST /api/evaluation/reevaluate": ReevaluateRequest;
+  "POST /api/evaluation/remote-operations/{op_id}/cancel": CommonOperationCancel;
   "POST /api/evaluation/zero-escape-calibrate": ZeroEscapeCalibrateRequest;
   "POST /api/export/flow": ExportFlowRequest;
   "POST /api/export/flow/optimization-jobs/{job_id}/approve": PrecisionApprovalRequest;

@@ -13,7 +13,7 @@ import type {
   TestPredictionItem,
   VisionTask,
 } from '../types';
-import { api, getApiBaseUrl } from '../services/api';
+import { api, getApiBaseUrl, type RemoteEvaluationOperation, type RemoteEvaluationResult } from '../services/api';
 import { useTrainingStore } from './useTrainingStore';
 import { classRole, isDefectClass, type ClassRoles } from '../utils/classSemantics';
 
@@ -97,7 +97,18 @@ export function computeSampleVerdict(
   }
 }
 
+export interface EvaluationSource {
+  folderPath: string; task: VisionTask; labelsetId?: string;
+  evaluationDatasetVersionId?: string; computeProfileId?: string; device?: string;
+  isCurrent?: () => boolean;
+}
 interface EvaluationState {
+  executionEvidence: RemoteEvaluationResult | null;
+  remoteOperation: RemoteEvaluationOperation | null;
+  remoteRequest: {jobId: string; source: EvaluationSource; generation: number} | null;
+  remoteOperationError: string | null;
+  refreshRemoteOperation: () => Promise<void>;
+  cancelRemoteEvaluation: () => Promise<void>;
   jobId: string | null;
   allowLatestRecovery: boolean;
   isLoading: boolean;
@@ -136,7 +147,7 @@ interface EvaluationState {
   benchmarkResult: BenchmarkResult | null;
   isBenchmarking: boolean;
 
-  loadEvaluation: (jobId?: string, source?: { folderPath: string; task: VisionTask }) => Promise<void>;
+  loadEvaluation: (jobId?: string, source?: EvaluationSource) => Promise<void>;
   invalidateForDataChange: (allowSourceRecovery?: boolean) => void;
   selectCell: (trueClass: string, predClass: string) => void;
   clearCellSelection: () => void;
@@ -151,6 +162,7 @@ interface EvaluationState {
 }
 
 export const useEvaluationStore = create<EvaluationState>((set, get) => ({
+  executionEvidence: null, remoteOperation: null, remoteRequest: null, remoteOperationError: null,
   jobId: null,
   allowLatestRecovery: true,
   isLoading: false,
@@ -239,6 +251,33 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     }
   },
 
+  refreshRemoteOperation: async () => {
+    const pending = get().remoteRequest;
+    if (!pending || pending.generation !== evaluationGeneration || pending.source.isCurrent?.() === false) return;
+    try {
+      const response = await api.evaluation.getRemoteOperations(pending.jobId);
+      if (pending.generation !== evaluationGeneration || pending.source.isCurrent?.() === false) return;
+      const source = pending.source;
+      const row = response.operations.find(row => row.job_id === pending.jobId
+        && row.dataset_version_id === source.evaluationDatasetVersionId
+        && row.compute_profile_id === source.computeProfileId && row.device === source.device
+        && row.task === source.task && row.labelset_id === (source.labelsetId || 'default')
+        && ['preparing','launching','launched','running','stopping','cancel_requested'].includes(row.state));
+      set({remoteOperation: row || null, remoteOperationError: null});
+    } catch (error) {
+      if (pending.generation === evaluationGeneration && pending.source.isCurrent?.() !== false)
+        set({remoteOperation: null, remoteOperationError: error instanceof Error ? error.message : String(error)});
+    }
+  },
+  cancelRemoteEvaluation: async () => {
+    const pending = get().remoteRequest, row = get().remoteOperation;
+    if (!pending || !row || pending.generation !== evaluationGeneration || pending.source.isCurrent?.() === false) return;
+    const response = await api.evaluation.cancelRemoteOperation(row.op_id, {job_id:row.job_id,
+      cohort_sha256:row.cohort_sha256, evaluation_binding_sha256:row.evaluation_binding_sha256});
+    if (pending.generation !== evaluationGeneration || pending.source.isCurrent?.() === false) return;
+    if (response.op_id !== row.op_id || response.evaluation_binding_sha256 !== row.evaluation_binding_sha256) throw new Error('취소 응답의 평가 바인딩이 다릅니다.');
+    set({remoteOperation: response});
+  },
   loadEvaluation: async (jobId, source) => {
     const training = useTrainingStore.getState();
     const completedCurrentJob = training.isCurrentData && training.status === 'completed' ? training.jobId : null;
@@ -249,7 +288,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         || (!requestedJob && (!get().allowLatestRecovery || !source?.folderPath)))) {
       evaluationGeneration += 1;
       currentHeatmapRequestId += 1;
-      set({ isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null,
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null, isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null,
         testPredictions: [], filteredPredictions: [], selectedPrediction: null, selectedCell: null,
         overkillAnalysis: null, heatmapOverlayBase64: null, heatmapLoading: false,
         errorMessage: '현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.' });
@@ -258,15 +297,21 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const generation = ++evaluationGeneration;
     // The renderer store is transient. Let the backend resolve its latest
     // completed checkpoint when this window has lost the training job ID.
-    set({ isLoading: true, errorMessage: null, classSemantics: null, overkillAnalysis: null });
+    set({ isLoading: true, errorMessage: null, classSemantics: null, overkillAnalysis: null,
+      executionEvidence:null, remoteOperation:null, remoteOperationError:null,
+      remoteRequest: requestedJob && source?.evaluationDatasetVersionId && source.computeProfileId
+        ? {jobId:requestedJob, source, generation} : null });
     try {
       const res = await api.evaluation.getResults(requestedJob || undefined, source?.folderPath ? {
         sourceDatasetPath: source.folderPath,
         sourceTask: source.task,
+        evaluationDatasetVersionId: source.evaluationDatasetVersionId, computeProfileId: source.computeProfileId, device: source.device,
       } : undefined);
-      if (generation !== evaluationGeneration) return;
+      if (generation !== evaluationGeneration || source?.isCurrent?.() === false) return;
+      if (source?.evaluationDatasetVersionId && (res.common_cohort?.dataset_version_id !== source.evaluationDatasetVersionId || res.compute_profile_id !== source.computeProfileId || res.device !== source.device)) throw new Error("반환된 코호트 버전/실행 대상이 요청과 다릅니다.");
       if(jobId&&res.job_id!==jobId)throw new Error('요청한 평가 작업과 반환된 작업 ID가 다릅니다. 작업 센터에서 다시 확인하세요.');
       set({
+        executionEvidence:res, remoteRequest:null, remoteOperation:null,
         jobId: res.job_id,
         metrics: res.metrics || {},
         confidenceThreshold: Number.isFinite(res.metrics?.active_threshold) ? res.metrics.active_threshold : .5,
@@ -282,14 +327,14 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       get().computeFilteredList();
 
       // Also proactively load overkill/underkill analysis
-      get().loadOverkillUnderkill().catch(() => {});
+      if (!res.common_cohort) get().loadOverkillUnderkill().catch(() => {});
 
       if (res.test_predictions?.[0]) {
         get().updateHeatmap();
       }
     } catch (e) {
-      if (generation !== evaluationGeneration) return;
-      set({ isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
+      if (generation !== evaluationGeneration || source?.isCurrent?.() === false) return;
+      set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
         filteredPredictions: [], selectedPrediction: null, selectedCell: null, overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
       throw e;
@@ -297,6 +342,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   invalidateForDataChange: (allowSourceRecovery = false) => {
+    set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null});
     evaluationGeneration += 1;
     currentHeatmapRequestId += 1;
     if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
@@ -342,6 +388,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   updateHeatmap: async () => {
+    if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
     const { selectedPrediction, confidenceThreshold, jobId } = get();
     if (!selectedPrediction) return;
     const requestId = ++currentHeatmapRequestId;
@@ -365,6 +412,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   exportReport: async (format) => {
+    if (get().executionEvidence?.common_cohort) throw new Error('선택 코호트 보고서 내보내기는 아직 지원되지 않습니다. 원래 학습 코호트 보고서로 대체하지 않습니다.');
     if (!get().jobId) throw new Error('평가를 완료한 모델이 있어야 보고서를 내보낼 수 있습니다.');
     set({ isExportingReport: true });
     try {
@@ -382,6 +430,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   loadOverkillUnderkill: async (targetUnderkill, escapeCost, scrapCost) => {
+    if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
     const generation = evaluationGeneration;
     const { jobId, confidenceThreshold } = get();
     if (!jobId || get().metrics.score_spec?.domain === 'distance') {
@@ -421,6 +470,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   calibrateZeroEscape: async (jobIdOverride) => {
+    if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
     const generation = evaluationGeneration;
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();
     const activeJob = jobIdOverride || jobId;
@@ -475,6 +525,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   runBenchmark: async (iterations = 25, resolution = 256) => {
+    if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
     const generation = evaluationGeneration;
     const training = useTrainingStore.getState();
     const jobId = (training.isCurrentData ? training.jobId : null) || get().jobId;

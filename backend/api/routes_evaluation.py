@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 import cv2
 import numpy as np
 import torch
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from PIL import Image
 
@@ -438,6 +438,7 @@ def _evaluate_classification(
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
+    cancel=None,
 ) -> Dict[str, Any]:
     selected_split = "test"
     val_ds = ClassificationDataset(root_dir=dataset_dir, split=selected_split)
@@ -481,6 +482,7 @@ def _evaluate_classification(
 
     with torch.no_grad():
         for img_path, _ in val_ds.samples:
+            if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             cname = img_path.parent.name
             target_idx = class_to_idx.get(cname, 0)
 
@@ -655,6 +657,7 @@ def _evaluate_detection(
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
+    cancel=None,
 ) -> Dict[str, Any]:
     img_size = tuple(meta.get("image_size", [256, 256]))
     ckpt = torch.load(model_pt, map_location=device, weights_only=False)
@@ -707,6 +710,7 @@ def _evaluate_detection(
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
+            if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             img_id = val_ds.image_ids[idx]
             img_meta = val_ds.images[img_id]
             img_path = val_ds.images_dir / img_meta["file_name"]
@@ -789,6 +793,7 @@ def _evaluate_segmentation(
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
+    cancel=None,
 ) -> Dict[str, Any]:
     img_size = tuple(meta.get("image_size", [256, 256]))
     classes = list(meta.get("classes") or ["background", "defect"])
@@ -823,6 +828,7 @@ def _evaluate_segmentation(
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
+            if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             img_p, _ = val_ds.samples[idx]
             img_t, target_mask = val_ds[idx]
 
@@ -909,6 +915,7 @@ def _evaluate_anomaly(
     meta: Dict[str, Any],
     dataset_dir: Path,
     device: torch.device,
+    cancel=None,
 ) -> Dict[str, Any]:
     val_ds = _manifest_evaluation_dataset("anomaly", dataset_dir, tuple(meta.get("image_size", [256, 256])))
     if val_ds is None:
@@ -945,6 +952,7 @@ def _evaluate_anomaly(
 
     with torch.no_grad():
         for idx in range(len(val_ds)):
+            if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             img_p, label, mask_path = val_ds.samples[idx]
             rgb = _read_image_rgb(img_p)
             resized = rgb if patch_scores else cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
@@ -1104,6 +1112,99 @@ def _annotate_predictions(predictions: List[Dict[str, Any]], task: str, roles: O
     return predictions
 
 
+def _common_project(request):
+    from backend.api.routes_project import get_current_project
+    project=get_current_project(request)
+    account=getattr(request.state,'account_user',None)
+    if account and request.app.state.accounts.project_role(account['id'],project['id']) not in {'owner','reviewer','trainer'}:
+        raise HTTPException(403,'This project role cannot control remote evaluation')
+    return project
+
+
+def _common_model(project,job_id):
+    if not project or not isinstance(job_id,str) or not is_job_id(job_id):
+        raise HTTPException(422,'Common evaluation requires an explicit completed project job')
+    models=Path(project['models_dir']).resolve()
+    output=models/job_id
+    if output.is_symlink() or not output.is_dir() or output.parent!=models:
+        raise HTTPException(404,'Completed model is not in the active project')
+    from backend.remote.operations import remote_job_context
+    from backend.remote.coordinator import ArtifactValidationError
+    try:context=remote_job_context(output,job_id)
+    except (ArtifactValidationError,ValueError,KeyError,OSError) as exc:
+        raise HTTPException(502,f'Completed remote model could not be verified: {exc}') from exc
+    if context is None:raise HTTPException(422,'Common cohort requires a completed verified remote model')
+    return context,json.loads((output/'model_meta.json').read_text(encoding='utf-8'))
+
+
+def _run_common_evaluation(project,job_id,dataset_path,version_id,profile_id,device,force_recompute,source_task):
+    from backend.remote.evaluation_cohort import freeze_cohort,execute_common
+    from backend.remote.profiles import get_profile_store
+    from backend.remote.coordinator import ArtifactValidationError,RemoteDisconnected
+    from backend.remote.operations import RemoteComputeBusy
+    from backend.engine.evaluation_history import EvaluationHistory,evaluation_model_context
+    from backend.api.routes_dataset_versions import _read_manifest,_verify
+    context,meta=_common_model(project,job_id)
+    if not isinstance(version_id,str) or not isinstance(profile_id,str) or device not in ('cpu','cuda:0'):
+        raise HTTPException(422,'Common evaluation requires a saved version, original profile, and explicit CPU or logical CUDA 0')
+    if profile_id!=context.profile.id or get_profile_store().get(profile_id)!=context.profile:
+        raise HTTPException(409,'Common evaluation currently supports the unchanged original model compute profile')
+    if source_task is not None and source_task!=context.task:raise HTTPException(409,'Common evaluation source task changed')
+    try:
+        cohort=freeze_cohort(project,version_id,Path(dataset_path or project['source_dataset_dir']),context.task,meta,context)
+        result=execute_common(context,cohort,device,force_recompute=bool(force_recompute))
+        directory,manifest=_read_manifest(project,version_id)
+        verification=_verify(project,directory,manifest)
+        if verification['status']!='verified' or verification['editable_changed_files']:
+            raise HTTPException(409,'Common source labels or split changed during execution')
+    except RemoteComputeBusy as exc:raise HTTPException(409,str(exc)) from exc
+    except RemoteDisconnected as exc:raise HTTPException(503,f'Remote evaluation connection lost; retry the same binding: {exc}') from exc
+    except ArtifactValidationError as exc:raise HTTPException(502,str(exc)) from exc
+    except (ValueError,KeyError,TypeError,OSError) as exc:raise HTTPException(422,f'Common evaluation refused: {exc}') from exc
+    except RuntimeError as exc:raise HTTPException(409,str(exc)) from exc
+    from backend.api.routes_model_comparisons import _fingerprint,_sha256
+    binding={'source_dataset_path':str(cohort['source']),'dataset_fingerprint':_fingerprint(cohort['source']),
+             'checkpoint_sha256':_sha256(context.output_dir/'best_model.pt'),**evaluation_model_context(Path(project['project_dir']),meta),
+             'common_cohort':result['common_cohort'],'evaluation_binding_sha256':result['evaluation_binding_sha256'],
+             'execution_target':result['execution_target'],'compute_profile_id':result['compute_profile_id'],
+             'execution_profile_sha256':result['execution_profile_sha256'],'device':result['device'],
+             'runtime_device_identity':result['runtime_device_identity'],'input_receipt':result['input_receipt']}
+    from backend.engine.dataset_metadata import metadata_for_path
+    from backend.api import routes_dataset
+    for row in result['test_predictions']:
+        metadata=metadata_for_path(Path(project['project_dir']),cohort['source'],Path(row['file_path']),routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        row.update({key:metadata.get(key) for key in ('image_uuid','content_hash','content_version','revision','tags','product','lot','group','workflow_state')})
+    from backend.engine.evaluation_evidence import evaluation_analysis
+    result['analysis']=evaluation_analysis(result['test_predictions'],context.task,result['class_semantics']['roles'])
+    record=EvaluationHistory(Path(project['reports_dir'])/'evaluations').append(result,binding)
+    result.update(evaluation_id=record['evaluation_id'],binding=binding,grouped_errors=record['grouped_errors'])
+    with _eval_file_lock:_atomic_write_json(context.output_dir/'eval_results.json',result)
+    return result
+
+
+@router.get('/remote-operations')
+def common_operation_readback(request:Request,job_id:str=Query(...)):
+    from backend.remote.operations import common_operation_rows
+    project=_common_project(request);context,_=_common_model(project,job_id)
+    return {'operations':common_operation_rows(context)}
+
+
+class CommonOperationCancel(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    job_id:str
+    cohort_sha256:str
+    evaluation_binding_sha256:str
+
+
+@router.post('/remote-operations/{op_id}/cancel')
+def cancel_common_operation(op_id:str,body:CommonOperationCancel,request:Request):
+    from backend.remote.operations import cancel_common_operation as cancel_operation
+    project=_common_project(request);context,_=_common_model(project,body.job_id)
+    try:return cancel_operation(context,op_id,body.cohort_sha256,body.evaluation_binding_sha256)
+    except FileNotFoundError as exc:raise HTTPException(404,str(exc)) from exc
+    except (ValueError,RuntimeError) as exc:raise HTTPException(409,str(exc)) from exc
+
+
 def run_or_load_evaluation(
     job_id: Optional[str] = None,
     dataset_path: Optional[str] = None,
@@ -1111,7 +1212,13 @@ def run_or_load_evaluation(
     source_dataset_path: Optional[str] = None,
     source_task: Optional[str] = None,
     allow_source_revision: bool = False,
+    evaluation_dataset_version_id: Optional[str] = None,
+    compute_profile_id: Optional[str] = None,
+    device: Optional[str] = None,
+    project: Optional[dict] = None,
 ) -> Dict[str, Any]:
+    if evaluation_dataset_version_id is not None or compute_profile_id is not None or device is not None:
+        return _run_common_evaluation(project, job_id, dataset_path, evaluation_dataset_version_id, compute_profile_id, device, force_recompute, source_task)
     job_id_clean = job_id if isinstance(job_id, str) else None
     ds_path_clean = str(dataset_path) if isinstance(dataset_path, (str, Path)) else None
     force_clean = bool(force_recompute) if isinstance(force_recompute, bool) else False
@@ -1255,11 +1362,15 @@ def run_or_load_evaluation(
 
 @router.get("/results")
 def get_evaluation_results(
+    request: Request,
     job_id: Optional[str] = Query(None),
     dataset_path: Optional[str] = Query(None),
     force_recompute: bool = Query(False),
     source_dataset_path: Optional[str] = Query(None),
     source_task: Optional[str] = Query(None),
+    evaluation_dataset_version_id: Optional[str] = Query(None),
+    compute_profile_id: Optional[str] = Query(None),
+    device: Optional[str] = Query(None),
 ):
     """
     Returns genuine metrics, clickable Confusion Matrix (with real cell_samples on disk),
@@ -1271,6 +1382,8 @@ def get_evaluation_results(
     return run_or_load_evaluation(
         job_id=job_id_clean, dataset_path=ds_path_clean, force_recompute=force_clean,
         source_dataset_path=source_dataset_path, source_task=source_task,
+        evaluation_dataset_version_id=evaluation_dataset_version_id, compute_profile_id=compute_profile_id, device=device,
+        project=_common_project(request) if evaluation_dataset_version_id is not None or compute_profile_id is not None or device is not None else None,
     )
 
 

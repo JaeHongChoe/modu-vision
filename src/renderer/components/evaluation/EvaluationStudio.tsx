@@ -6,7 +6,7 @@
  */
 
 import {useTaskHandoff} from '../training/useTaskHandoff';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Activity,
   FileText,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
+import { useComputeStore } from '../../stores/useComputeStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import type { FlowModelTask } from '../../types';
 import {
@@ -30,7 +31,7 @@ import {
   isDefectLabel,
   isNormalLabel,
 } from '../../stores/useEvaluationStore';
-import { resolveApiUrl } from '../../services/api';
+import { api, resolveApiUrl, getApiPersistenceIdentity, getProjectContextGeneration, type DatasetVersionSummary } from '../../services/api';
 import { host } from '../../services/hostAdapter';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
@@ -92,6 +93,15 @@ export const EvaluationStudio: React.FC = () => {
   const datasetIsLoading = useDatasetStore((state) => state.isLoading);
   const importError = useDatasetStore((state) => state.importError);
   const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
+  const project = useProjectStore(state => state.project);
+  const {selectedProfileId, profiles, transportRevision} = useComputeStore();
+  const [cohortVersions, setCohortVersions] = useState<DatasetVersionSummary[]>([]);
+  const [cohortVersion, setCohortVersion] = useState('');
+  const [evaluationDevice, setEvaluationDevice] = useState('cpu');
+  const [cohortError, setCohortError] = useState<string | null>(null);
+  const profileIdentity = JSON.stringify(profiles.find(profile=>profile.id===selectedProfileId) || null);
+  const scope = JSON.stringify([profileIdentity, project?.id, projectDir, sourceFolder, task, project?.active_labelset_id, selectedProfileId, transportRevision, getApiPersistenceIdentity()]);
+  const scopeRef = useRef(scope); scopeRef.current = scope;
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
   const [comparisonTask, setComparisonTask] = useState<FlowModelTask>(task);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -106,7 +116,7 @@ export const EvaluationStudio: React.FC = () => {
 
   const {
     jobId,
-    isLoading,
+    isLoading, executionEvidence, remoteOperation, remoteRequest, remoteOperationError, refreshRemoteOperation, cancelRemoteEvaluation, invalidateForDataChange,
     metrics,
     classSemantics,
     confusionMatrix,
@@ -135,6 +145,50 @@ export const EvaluationStudio: React.FC = () => {
     applyOptimalThreshold,
     calibrateZeroEscape,
   } = useEvaluationStore();
+
+  useEffect(() => {
+    let active = true;
+    setCohortVersions([]); setCohortVersion(''); setCohortError(null);
+    invalidateForDataChange(true);
+    if (sourceFolder) api.datasetVersions.list().then(({versions}) => {
+      if (!active) return;
+      setCohortVersions(versions.filter(version => version.source_dataset_dir === sourceFolder
+        && version.task === task && (version.labelset_id || 'default') === (project?.active_labelset_id || 'default')
+        && !['changed','corrupt'].includes(version.status)));
+    }).catch(error => { if(active) setCohortError(error instanceof Error ? error.message : String(error)); });
+    return () => { active=false; invalidateForDataChange(true); };
+  }, [scope, invalidateForDataChange]);
+
+  useEffect(() => {
+    if (!isLoading || !remoteRequest) return;
+    let active=true, busy=false;
+    const poll = async () => { if(!active || busy)return; busy=true; try {await refreshRemoteOperation();} finally {busy=false;} };
+    void poll(); const timer=setInterval(()=>void poll(),1000);
+    return()=>{active=false;clearInterval(timer);};
+  }, [isLoading,remoteRequest,refreshRemoteOperation,scope]);
+
+  const cancelSelectedCohort = async () => {
+    const expected=scope, generation=getProjectContextGeneration();
+    try { await cancelRemoteEvaluation(); }
+    catch(error) { if(scopeRef.current===expected && getProjectContextGeneration()===generation)
+      setCohortError(error instanceof Error ? error.message : String(error)); }
+  };
+
+  const runSelectedCohort = async () => {
+    const requestedJob = handoff?.step===4 && handoff.family===task ? handoff.jobId : jobId || (useTrainingStore.getState().status==='completed' ? useTrainingStore.getState().jobId : null);
+    if (!requestedJob || !sourceFolder || !cohortVersion || !selectedProfileId) return;
+    const expected=scope, generation=getProjectContextGeneration();
+    setCohortError(null);
+    try { await loadEvaluation(requestedJob,{folderPath:sourceFolder,task,labelsetId:project?.active_labelset_id || 'default',
+      evaluationDatasetVersionId:cohortVersion,computeProfileId:selectedProfileId,device:evaluationDevice,
+      isCurrent:()=>scopeRef.current===expected && getProjectContextGeneration()===generation
+        && useComputeStore.getState().selectedProfileId===selectedProfileId
+        && JSON.stringify(useComputeStore.getState().profiles.find(profile=>profile.id===selectedProfileId) || null)===profileIdentity
+        && useProjectStore.getState().project?.id===project?.id
+        && useProjectStore.getState().project?.active_labelset_id===project?.active_labelset_id
+        && useDatasetStore.getState().folderPath===sourceFolder && useProjectStore.getState().task===task});
+    } catch(error) { if(scopeRef.current===expected) setCohortError(error instanceof Error ? error.message : String(error)); }
+  };
 
   useEffect(() => {
     loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
@@ -335,6 +389,17 @@ export const EvaluationStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden select-none">
       <OperatorGuidanceBanner step={4} />
+
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
+        <label>고정 테스트 코호트<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">기존 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
+        <span>선택 계산 서버: {profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId || '선택 없음'}</span>
+        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">CUDA GPU0</option></select></label>
+        <button aria-label="선택 코호트 평가" disabled={isLoading || !cohortVersion || !selectedProfileId || !sourceFolder} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
+        {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
+        {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
+        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
+        {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
+      </div>
 
       {/* Top Evaluation Toolbar */}
       <div className="h-14 bg-[#131822] border-b border-[#2B3547] px-6 flex items-center justify-between text-xs">

@@ -793,14 +793,23 @@ def run_evaluate(spec_path: Path) -> dict[str, Any]:
         if metadata.get("task") != spec["task"]:
             raise SnapshotValidationError("Evaluation task does not match source model")
         status.update(status="running")
-        payload = _evaluate_model(spec, checkpoint, metadata, data_path)
+        if 'evaluation_cohort' in spec or 'common_cohort_contract' in spec:
+            from backend.remote.evaluation_cohort import extract_cohort,worker_evaluate
+            common_data,descriptor=extract_cohort(run_dir,spec)
+            payload,artifact_paths=worker_evaluate(spec,checkpoint,metadata,common_data,descriptor,run_dir,_SentinelCancel(run_dir/'cancel'))
+        else:
+            payload = _evaluate_model(spec, checkpoint, metadata, data_path)
+            artifact_paths=("outputs/eval_results.json",)
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         output_path = run_dir / "outputs" / "eval_results.json"
         _atomic_json(output_path, payload)
-        manifest = _operation_artifact_manifest(run_dir, spec, "evaluate", ("outputs/eval_results.json",))
+        manifest = _operation_artifact_manifest(run_dir, spec, "evaluate", artifact_paths)
         _atomic_json(run_dir / "artifacts.json", manifest)
         return status.update(status="completed")
+    except InterruptedError:
+        status.acknowledge_cancel()
+        return status.update(status="aborted")
     except Exception as exc:
         return _failed_status(status, exc, run_dir)
 
