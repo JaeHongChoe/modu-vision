@@ -31,7 +31,7 @@ import {
   isDefectLabel,
   isNormalLabel,
 } from '../../stores/useEvaluationStore';
-import { api, resolveApiUrl, getApiPersistenceIdentity, getProjectContextGeneration, type DatasetVersionSummary } from '../../services/api';
+import { api, resolveApiUrl, getApiPersistenceIdentity, getProjectContextGeneration, type DatasetVersionSummary, type ModelComparisonModel } from '../../services/api';
 import { host } from '../../services/hostAdapter';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
@@ -97,6 +97,9 @@ export const EvaluationStudio: React.FC = () => {
   const {selectedProfileId, profiles, transportRevision} = useComputeStore();
   const [cohortVersions, setCohortVersions] = useState<DatasetVersionSummary[]>([]);
   const [cohortVersion, setCohortVersion] = useState('');
+  const [cohortModels,setCohortModels]=useState<ModelComparisonModel[]>([]);
+  const [cohortModel,setCohortModel]=useState('');
+  const modelSelectionRevision=useRef(0);
   const [evaluationDevice, setEvaluationDevice] = useState('cpu');
   const [cohortError, setCohortError] = useState<string | null>(null);
   const profileIdentity = JSON.stringify(profiles.find(profile=>profile.id===selectedProfileId) || null);
@@ -148,10 +151,11 @@ export const EvaluationStudio: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    setCohortVersions([]); setCohortVersion(''); setCohortError(null);
+    setCohortVersions([]); setCohortVersion(''); setCohortModels([]);setCohortModel('');modelSelectionRevision.current++;setCohortError(null);
     invalidateForDataChange(true);
-    if (sourceFolder) api.datasetVersions.list().then(({versions}) => {
+    if (sourceFolder) Promise.all([api.datasetVersions.list(),api.evaluation.comparisonModels(sourceFolder,task)]).then(([{versions},{models}]) => {
       if (!active) return;
+      setCohortModels(models.filter(model=>model.task===task));
       setCohortVersions(versions.filter(version => version.source_dataset_dir === sourceFolder
         && version.task === task && (version.labelset_id || 'default') === (project?.active_labelset_id || 'default')
         && !['changed','corrupt'].includes(version.status)));
@@ -174,14 +178,16 @@ export const EvaluationStudio: React.FC = () => {
       setCohortError(error instanceof Error ? error.message : String(error)); }
   };
 
+  const linkedJob = handoff?.step===4 && handoff.family===task ? handoff.jobId : jobId || (useTrainingStore.getState().status==='completed' ? useTrainingStore.getState().jobId : null);
+  const requestedCohortJob=cohortModel || (cohortModels.some(model=>model.job_id===linkedJob) ? linkedJob : null);
   const runSelectedCohort = async () => {
-    const requestedJob = handoff?.step===4 && handoff.family===task ? handoff.jobId : jobId || (useTrainingStore.getState().status==='completed' ? useTrainingStore.getState().jobId : null);
+    const requestedJob=requestedCohortJob,selectionRevision=modelSelectionRevision.current;
     if (!requestedJob || !sourceFolder || !cohortVersion || !selectedProfileId) return;
     const expected=scope, generation=getProjectContextGeneration();
     setCohortError(null);
     try { await loadEvaluation(requestedJob,{folderPath:sourceFolder,task,labelsetId:project?.active_labelset_id || 'default',
       evaluationDatasetVersionId:cohortVersion,computeProfileId:selectedProfileId,device:evaluationDevice,
-      isCurrent:()=>scopeRef.current===expected && getProjectContextGeneration()===generation
+      isCurrent:()=>modelSelectionRevision.current===selectionRevision && scopeRef.current===expected && getProjectContextGeneration()===generation
         && useComputeStore.getState().selectedProfileId===selectedProfileId
         && JSON.stringify(useComputeStore.getState().profiles.find(profile=>profile.id===selectedProfileId) || null)===profileIdentity
         && useProjectStore.getState().project?.id===project?.id
@@ -391,10 +397,11 @@ export const EvaluationStudio: React.FC = () => {
       <OperatorGuidanceBanner step={4} />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
+        <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
         <label>고정 테스트 코호트<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">기존 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
         <span>선택 계산 서버: {profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId || '선택 없음'}</span>
-        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">CUDA GPU0</option></select></label>
-        <button aria-label="선택 코호트 평가" disabled={isLoading || !cohortVersion || !selectedProfileId || !sourceFolder} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
+        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">CUDA · 선택 서버 GPU {profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'}</option></select></label>
+        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !selectedProfileId || !sourceFolder} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
         {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
         {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
         {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
