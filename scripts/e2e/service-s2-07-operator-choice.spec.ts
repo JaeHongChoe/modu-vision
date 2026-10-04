@@ -48,14 +48,17 @@ test('operator choice restores exact identity, blocks changed content and remain
   const selector = () => panel.getByLabel('운영자 검사 이미지', { exact: true });
   const ok = workspace.images.find(image => image.label === 'ok')!;
   const ng = workspace.images.find(image => image.label === 'ng')!;
+  // The backend inventory uses canonical paths even when the fixture root is a symlink.
+  const okPath = fs.realpathSync(ok.path);
+  const ngPath = fs.realpathSync(ng.path);
   await expect(inspect()).toBeDisabled();
   await expect(selector().locator('option', { hasText: 'sample-ok.png' })).toHaveCount(1);
-  await selector().selectOption(ok.path);
-  await expect(panel).toContainText(`현재 선택: sample-ok.png · ${ok.path}`);
+  await selector().selectOption(okPath);
+  await expect(panel).toContainText(`현재 선택: sample-ok.png · ${okPath}`);
   await expect(inspect()).toBeEnabled();
   await page.reload();
   panel = await open();
-  await expect(selector()).toHaveValue(ok.path);
+  await expect(selector()).toHaveValue(okPath);
   await expect(inspect()).toBeEnabled();
   await evidence.screenshot(page, 'operator-choice-restored');
 
@@ -77,7 +80,7 @@ test('operator choice restores exact identity, blocks changed content and remain
   panel = await open();
   await expect(selector()).toHaveValue('');
   await expect(inspect()).toBeDisabled();
-  await selector().selectOption(ng.path);
+  await selector().selectOption(ngPath);
   await expect(inspect()).toBeEnabled();
 
   expect((await page.request.post(`${renderer.origin}/api/project/create`, { data: { name: 'Other operator', task: 'classification' } })).ok()).toBe(true);
@@ -90,7 +93,7 @@ test('operator choice restores exact identity, blocks changed content and remain
   expect((await page.request.post(`${renderer.origin}/api/project/open`, { data: { project_dir: primary.project_dir } })).ok()).toBe(true);
   await page.reload();
   panel = await open();
-  await expect(selector()).toHaveValue(ng.path);
+  await expect(selector()).toHaveValue(ngPath);
   await expect(inspect()).toBeEnabled();
   expect(inspectRequests).toBe(0);
 });

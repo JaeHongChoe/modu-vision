@@ -108,7 +108,7 @@ class _RefuseFirstSwitch(sqlite3.Connection):
 def test_every_store_ends_in_wal(tmp_path, monkeypatch):
     from backend.api import routes_inspections, routes_model_deployments
     from backend.engine import dataset_index, evaluation_history, inspection_service, job_store, model_operations
-    from backend.engine import runtime_deployment, shared_scheduler
+    from backend.engine import intake_sampling, runtime_deployment, shared_scheduler
 
     def entered(manager):
         with manager:
@@ -124,6 +124,9 @@ def test_every_store_ends_in_wal(tmp_path, monkeypatch):
         'inspection_history': ('inspection_history.sqlite3', lambda d: entered(routes_inspections._store(object()))),
         'inspection_run_index': ('inspection_run_index.sqlite3', lambda d: entered(routes_inspections._run_index(object()))),
         'model_deployments': ('model_deployments.sqlite3', lambda d: entered(routes_model_deployments._store({'project_dir': str(d)}))),
+        'intake_sampling': ('intake.sqlite3', lambda d: intake_sampling.IntakeSampler(d / 'intake.sqlite3', intake_sampling.IntakeSamplingPolicy(
+            revision=1, seed=1, eligibility_reasons=('ng_verdict',), window_seconds=60, max_items_per_window=2,
+            max_bytes_per_window=1, per_product_lot_camera_quota=1, normal_baseline_fraction=0)).status(0)),
     }
     _clock(monkeypatch)
     real_connect = sqlite3.connect
