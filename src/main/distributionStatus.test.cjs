@@ -20,3 +20,60 @@ async function withWindowsFlushRule(run){const readOnly=new Set(),{openSync,clos
   try{return await run();}finally{Object.assign(fs,{openSync,closeSync,fsyncSync});}}
 test('saved settings are flushed through a handle Windows can flush',async t=>withWindowsFlushRule(async()=>{const m=fixture(t);
   await m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'});assert.equal((await m.status()).update.configuration.channel,'stable');}));
+
+test('Windows transient replacement retries the same flushed file without removing old settings',async t=>{
+  const m=fixture(t,{platform:'win32',arch:'x64'}),file=path.join(m.options.userDataPath,'distribution-channel.json');
+  await m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'});
+  const before=fs.readFileSync(file),{renameSync,fsyncSync,writeFileSync,closeSync}=fs;let attempts=0,flushed=0,temporary,writeFd,closed=false;
+  fs.writeFileSync=(fd,...args)=>{if(typeof fd==='number')writeFd=fd;return writeFileSync(fd,...args);};
+  fs.fsyncSync=fd=>{assert.equal(fd,writeFd,'flush must follow the actual write');flushed++;return fsyncSync(fd);};
+  fs.closeSync=fd=>{if(fd===writeFd){assert.equal(flushed,1,'flush must precede close');closed=true;}return closeSync(fd);};
+  fs.renameSync=(from,to)=>{if(to===file){attempts++;assert.equal(flushed,1);assert.equal(closed,true);assert.deepEqual(fs.readFileSync(file),before);if(temporary)assert.equal(from,temporary);temporary=from;
+    if(attempts<3){const error=new Error('controlled sharing violation');error.code=attempts===1?'EPERM':'EBUSY';throw error;}}return renameSync(from,to);};
+  try{await m.configure({channel:'beta',manifest_url:'https://releases.example/beta.json'});}
+  finally{Object.assign(fs,{renameSync,fsyncSync,writeFileSync,closeSync});}
+  assert.equal(attempts,3);assert.equal((await m.status()).update.configuration.channel,'beta');
+  assert.equal(fs.readdirSync(m.options.userDataPath).some(x=>x.endsWith('.tmp')),false);
+});
+
+test('a persistent Windows sharing error is bounded and preserves reopened settings',async t=>{
+  const m=fixture(t,{platform:'win32',arch:'x64'}),file=path.join(m.options.userDataPath,'distribution-channel.json');
+  await m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'});
+  const before=fs.readFileSync(file),{renameSync}=fs;let attempts=0;
+  fs.renameSync=(from,to)=>{if(to===file){attempts++;const error=new Error('controlled permanent lock');error.code='EACCES';throw error;}return renameSync(from,to);};
+  try{await assert.rejects(()=>m.configure({channel:'beta',manifest_url:'https://releases.example/beta.json'}),/permanent lock/);}
+  finally{fs.renameSync=renameSync;}
+  assert.equal(attempts,4);assert.deepEqual(fs.readFileSync(file),before);
+  const {DistributionManager}=load();assert.equal((await new DistributionManager(m.options).status()).update.configuration.channel,'stable');
+  assert.equal(fs.readdirSync(m.options.userDataPath).some(x=>x.endsWith('.tmp')),false);
+});
+
+for(const [platform,code] of [['darwin','EPERM'],['win32','ENOENT']])test(`replacement fails immediately for ${platform}/${code}`,async t=>{
+  const m=fixture(t,{platform}),{renameSync}=fs;let attempts=0;
+  fs.renameSync=()=>{attempts++;const error=new Error('controlled unexpected replacement error');error.code=code;throw error;};
+  try{await assert.rejects(()=>m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'}),/unexpected replacement error/);}
+  finally{fs.renameSync=renameSync;}
+  assert.equal(attempts,1);assert.equal(fs.readdirSync(m.options.userDataPath).length,0);
+});
+
+test('settings flush failure cannot rename or acknowledge the new channel',async t=>{
+  const m=fixture(t),file=path.join(m.options.userDataPath,'distribution-channel.json');
+  await m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'});
+  const before=fs.readFileSync(file),{fsyncSync,renameSync}=fs;let renames=0;
+  fs.fsyncSync=()=>{throw new Error('controlled failed settings flush');};fs.renameSync=(...args)=>{renames++;return renameSync(...args);};
+  try{await assert.rejects(()=>m.configure({channel:'beta',manifest_url:'https://releases.example/beta.json'}),/failed settings flush/);}
+  finally{Object.assign(fs,{fsyncSync,renameSync});}
+  assert.equal(renames,0);assert.deepEqual(fs.readFileSync(file),before);assert.equal((await m.status()).update.configuration.channel,'stable');
+  assert.equal(fs.readdirSync(m.options.userDataPath).some(x=>x.endsWith('.tmp')),false);
+});
+
+test('journal flush failure during recovery preserves the previous recovery record',async t=>{
+  const m=fixture(t),file=path.join(m.options.userDataPath,'distribution-delivery.json');
+  const record={schema_version:1,status:'downloading',version:'2.4.0',manifest_sha256:'a'.repeat(64),candidate_sha256:'b'.repeat(64),installed_sha256:null};
+  fs.writeFileSync(file,JSON.stringify(record));const before=fs.readFileSync(file),{fsyncSync,renameSync}=fs,{DistributionManager}=load();let renames=0;
+  fs.fsyncSync=()=>{throw new Error('controlled failed journal flush');};fs.renameSync=(...args)=>{renames++;return renameSync(...args);};
+  try{assert.throws(()=>new DistributionManager(m.options),/failed journal flush/);}
+  finally{Object.assign(fs,{fsyncSync,renameSync});}
+  assert.equal(renames,0);assert.deepEqual(fs.readFileSync(file),before);
+  assert.equal(fs.readdirSync(m.options.userDataPath).some(x=>x.endsWith('.tmp')),false);
+});

@@ -3803,6 +3803,12 @@
      "result": "Actual b146414 hosted Windows context suite: 1036 tests, 10 failures, 2 errors, 7 skips; worker/extension suites pass. Receipt CRLF conversion caused all ten assertion failures; the oversized parameter ID caused setup/teardown environment-length errors. A scoped -text Git attribute preserves hashed receipt bytes, and explicit short parameter IDs retain the full oversized payload. Real local Git autocrlf checkout regression failed before correction; final S6-05/S7-01 suite passes 105 with no skips; all 98 S7-01 collected IDs are at most 165 characters.",
      "scope": "Exact SHA-256 checks are unchanged. Historical failed run 37226476893 and its source-bound JUnit/receipt readback remain failed. New hosted Windows run required.",
      "platform": "Hosted failure plus macOS Git/CPU correction checks; installed Windows acceptance pending"
+    },
+    {
+     "kind": "bounded-distribution-replacement-and-flush-tests-local",
+     "result": "The same flushed settings/journal temporary file receives at most four Windows EPERM/EACCES/EBUSY rename attempts, with configured delays totaling 70 ms. Persistent/unknown/non-Windows failures retain the old destination; a failed settings/journal flush prevents rename/acknowledgment. Local main-process gate 14 passed; renderer/main suite 595 passed; TypeScript and build passed. Removing the shared fsync call makes both flush-failure tests fail.",
+     "scope": "Real private files with controlled sharing/flush faults, root review only. Retry count is bounded; OS syscall/scheduling duration is not a hard 70 ms wall-clock guarantee. No Windows ACL, field/install or directory-durability acceptance.",
+     "platform": "macOS controlled Windows-error semantics; newer exact-source hosted run required"
     }
    ],
    "file_actions": {
@@ -3841,7 +3847,7 @@
     "Unknown or unreproduced decoder-header errors remain visible; the narrow source geometry classifier covers only tested plain Pillow messages. Native Windows execution of the new header regressions remains pending.",
     "Validate the newly composed source in hosted Windows after source-label decoding and byte-preserving receipt checkout fixes; earlier exact-source Windows results remain retained separately.",
     "Hosted source-bound readbacks enumerate context 7 and worker 8 platform-specific skips; these do not provide installed Windows 11 or native POSIX-equivalent acceptance.",
-    "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test",
+    "Native Windows ACL behavior and installed-user-store/directory durability remain unqualified; POSIX 0o600/0o700 modes are not Windows ACL enforcement.",
     "native Windows run of the LabelMe encoding regressions (cp949 on a Korean-locale Windows)"
    ]
   },
@@ -3969,13 +3975,19 @@
     "S4-14",
     "S5-02"
    ],
-   "status": "planned",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "actual SDK and batch execution; root readback, independent review pending",
      "result": "Exact8917d8a: Linux run37221752546 passes21 and Windows run37221754562 passes20, zero skips/failures/errors. Actual Python/C++/C# full DAG, deadline/cancel/reuse/error, batch CLI; local loopback HTTP/OpenAPI/restart evidence is separately source-bound in the continuation record.",
      "scope": "Five SDK legacy IDs F092-F096 now carry implementation/failure/hosted-native-Windows evidence; other dimensions and parent acceptance stay pending. Public sanitized receipt summaries preserve source/JUnit/artifact hashes.",
      "platform": "Hosted Linux x64 and Windows Server2025; actual macOS CPU headless service; no Win11 installation/SCM/field/model-quality approval"
+    },
+    {
+     "kind": "whole-SDK-software-clause-readback",
+     "result": "Exact0640405: Linux37228930318 executes21 and Windows37228932174 executes20 SDK/batch cases with zero skips/errors/failures, actual Python/C++/C# whole-DAG/schema/deadline/cancel/reuse/integrity/CLI behavior. Current backend/native inputs also execute two actual authenticated loopback HTTP inspections, generated OpenAPI route readback, source/image/package hashes, durable event/export readback and re-open the identical two records in a new owned OS process. Both owned HTTP services are reaped. Installation/runtime dependencies remain documented as CPython-backed.",
+     "scope": "Both S6-08 software implementation clauses have controlled actual execution evidence; implementation only is reconciled. Independent review, every other parent acceptance dimension and installed target/SCM/device/model-quality approval remain pending. Existing8917 receipts stay retained; 15 feature cells append newer source-bound evidence without changing their states.",
+     "platform": "Hosted Linux x64/Windows Server2025 native SDKs and actual macOS CPU headless REST; not installed Windows11/field acceptance"
     }
    ],
    "file_actions": {
@@ -3986,7 +3998,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",

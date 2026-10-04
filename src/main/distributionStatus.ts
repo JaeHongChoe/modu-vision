@@ -43,9 +43,23 @@ function unlinked(target:string):void {
 
 /** Replaces a small settings file atomically and durably: the text is written and flushed through the handle that created
  *  the temporary file (Windows flushes only through a handle opened for writing), which is then renamed over the file. */
-function writeDurably(file:string,text:string):void {
+function writeDurably(file:string,text:string,platform:string):void {
   const temporary=file+'.'+crypto.randomUUID()+'.tmp';
-  try{const fd=fs.openSync(temporary,'wx',0o600);try{fs.writeFileSync(fd,text);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}fs.renameSync(temporary,file);}
+  try{
+    const fd=fs.openSync(temporary,'wx',0o600);
+    try{fs.writeFileSync(fd,text);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}
+    // Antivirus/indexing readers can briefly deny replacement on Windows.
+    // Retain the old destination and retry the same already-flushed temporary
+    // file in at most four rename attempts, with delays totaling 70 ms.
+    for(let attempt=0;;attempt++){
+      try{fs.renameSync(temporary,file);break;}
+      catch(cause){
+        const code=(cause as NodeJS.ErrnoException).code;
+        if(platform!=='win32'||attempt>=3||!['EPERM','EACCES','EBUSY'].includes(code||''))throw cause;
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,10*2**attempt);
+      }
+    }
+  }
   finally{fs.rmSync(temporary,{force:true});}
 }
 
@@ -80,7 +94,7 @@ export class DistributionManager {
   }
   private saveDelivery(value:DeliveryRecovery&{partial_path?:string}):void {
     const file=this.deliveryPath();unlinked(file);fs.mkdirSync(this.options.userDataPath,{recursive:true});
-    writeDurably(file,JSON.stringify(value));
+    writeDurably(file,JSON.stringify(value),this.options.platform);
   }
   private installedSHA():string|null {
     return fs.existsSync(this.options.executablePath)&&fs.statSync(this.options.executablePath).isFile()?crypto.createHash('sha256').update(fs.readFileSync(this.options.executablePath)).digest('hex'):null;
@@ -111,7 +125,7 @@ export class DistributionManager {
   async configure(value:UpdateChannel|null):Promise<DistributionState> {
     if(value)this.validateChannel(value);
     const file=this.configPath();unlinked(file);fs.mkdirSync(this.options.userDataPath,{recursive:true});
-    if(value)writeDurably(file,JSON.stringify({channel:value.channel,manifest_url:value.manifest_url}));
+    if(value)writeDurably(file,JSON.stringify({channel:value.channel,manifest_url:value.manifest_url}),this.options.platform);
     else fs.rmSync(file,{force:true});
     this.revision++;this.release=null;this.manifestSHA=null;return this.status();
   }

@@ -1,0 +1,281 @@
+{
+  "schema": "SDKGateReadback/v1",
+  "source_sha": "0640405466d9f1c31c5aeb76371a593e9181185f",
+  "run_id": 37228932174,
+  "platform": "Windows",
+  "tests": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "duration_seconds": 188.032,
+  "test_cases": [
+    "test_python_predictor_executor_use_same_full_dag_and_strict_options",
+    "test_runtime_package_deadline_survives_reopen_and_cli",
+    "test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+    "test_csharp_pinvoke_calls_the_same_native_executor",
+    "test_python_cancellation_reaps_child_and_reuses_handle",
+    "test_generator_cancellation_publishes_no_candidate_and_reuses_handle",
+    "test_cpp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_csharp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_interruption_reaps_the_actual_owned_child",
+    "test_delivered_batch_cli_retains_order_hashes_full_graph_and_input_errors",
+    "test_delivered_batch_deadline_records_review_for_each_image",
+    "test_duplicate_batch_identity_refuses_before_any_result",
+    "test_batch_expected_hash_refuses_without_executing",
+    "test_batch_discards_a_result_when_input_changes",
+    "test_malformed_batch_refuses_before_package_initialization[rows0]",
+    "test_malformed_batch_refuses_before_package_initialization[rows1]",
+    "test_malformed_batch_refuses_before_package_initialization[rows2]",
+    "test_malformed_batch_refuses_before_package_initialization[rows3]",
+    "test_malformed_batch_refuses_before_package_initialization[rows4]",
+    "test_duplicate_keys_and_large_batch_refuse_before_initialization"
+  ],
+  "hosted_receipt_sha256": "df2ace3e6207251cc23aaad8ed5c45e98d9bb4ada06673e6455774a8df394b06",
+  "junit_sha256": "918d8831beb67bbeea2023cca71d44448f1991694fe422435768f2c159aacb16",
+  "downloaded_readback_sha256": "a424cd4e33018cbdde3944892a3a92cfe92fd84d519b904d77c473ed3a35bf3c",
+  "compiled_artifacts": [
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "10423a328f2f58236c9221bc354f6dcf60123ad4e697c0372fb27c1ab4144002",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "a2b36609c2e581b1977a673995efa550e42b09444a6c13257ba655431d6cbbc1",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "e4ea3b430babe548d1ff074487575b7401301367aaa36190cbb1219a728d68c4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "eba41a712f355d2385d798bf9f4e52b0ed37ef8cb1f95a3c2cfee163e37bf5b7",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "10423a328f2f58236c9221bc354f6dcf60123ad4e697c0372fb27c1ab4144002",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "a2b36609c2e581b1977a673995efa550e42b09444a6c13257ba655431d6cbbc1",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "e4ea3b430babe548d1ff074487575b7401301367aaa36190cbb1219a728d68c4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "eba41a712f355d2385d798bf9f4e52b0ed37ef8cb1f95a3c2cfee163e37bf5b7",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "fe286647cde260c83718d41b8316e45bf2642f0dee083ac999d7ad3d7561d9c3",
+      "architecture": "PE32 executable (console) Intel 80386 Mono/.Net assembly, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "30328e470f1d45020d523b74f4370dd2793d65ea9772894f7e1b779dd4f51957",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "30328e470f1d45020d523b74f4370dd2793d65ea9772894f7e1b779dd4f51957",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "b5a978c7622fc0b1f88e455f1e3cf6f9a46781c60843ef3082e81b38269c2e08",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "f11831dfc519d3f743f82e40d8584f576af0536e2dc235f9d0f76333bfcad405",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "613d62b058fe0e4aef464b62e09c8fffec9d99e6455785dd1b09901e94df7554",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "fe286647cde260c83718d41b8316e45bf2642f0dee083ac999d7ad3d7561d9c3",
+      "architecture": "PE32 executable (console) Intel 80386 Mono/.Net assembly, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "30328e470f1d45020d523b74f4370dd2793d65ea9772894f7e1b779dd4f51957",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "30328e470f1d45020d523b74f4370dd2793d65ea9772894f7e1b779dd4f51957",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "b5a978c7622fc0b1f88e455f1e3cf6f9a46781c60843ef3082e81b38269c2e08",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "f11831dfc519d3f743f82e40d8584f576af0536e2dc235f9d0f76333bfcad405",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "613d62b058fe0e4aef464b62e09c8fffec9d99e6455785dd1b09901e94df7554",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "47ceedcb73c38c30674b1beb00ca904547796340f18c543939aa52fe203e9f00",
+      "architecture": "PE32 executable (console) Intel 80386 Mono/.Net assembly, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "58a4045b9702986abd1ce42c27a5170067ec83c8e9ad72bd5d706eea2aa1a32e",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "58a4045b9702986abd1ce42c27a5170067ec83c8e9ad72bd5d706eea2aa1a32e",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "3d5881ff752caf07627559b7182e1b45aecc805979b427c334b13ff34db35de9",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "1e366d0d9466143d72284d95cf558617f6c55edc452ef9ada06bccb8dad435b6",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "2d78b0766e8d3b842676c8a8055c725dd0b44e2becbcb115b9c31de91d89a3be",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "47ceedcb73c38c30674b1beb00ca904547796340f18c543939aa52fe203e9f00",
+      "architecture": "PE32 executable (console) Intel 80386 Mono/.Net assembly, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "58a4045b9702986abd1ce42c27a5170067ec83c8e9ad72bd5d706eea2aa1a32e",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "58a4045b9702986abd1ce42c27a5170067ec83c8e9ad72bd5d706eea2aa1a32e",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "3d5881ff752caf07627559b7182e1b45aecc805979b427c334b13ff34db35de9",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "1e366d0d9466143d72284d95cf558617f6c55edc452ef9ada06bccb8dad435b6",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "2d78b0766e8d3b842676c8a8055c725dd0b44e2becbcb115b9c31de91d89a3be",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "6cb9b0635e56fceb37a06a51e8554c90ee23182efce735a4264ae0138c7010de",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "f33f9ae10d7d36f60a74e391ceb066df05c8e94b192cdd16abbcb99a039352f4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "644c027c9fffcbe69642c0ec6fa9ddeb7cd77e5bb4b25842e78dec8d32d1f4e4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "bdfec1f3e4f2a1fd4ae0701a28390513c339206370837693406c03397ba4d8cd",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "6cb9b0635e56fceb37a06a51e8554c90ee23182efce735a4264ae0138c7010de",
+      "architecture": "PE32+ executable (DLL) (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "f33f9ae10d7d36f60a74e391ceb066df05c8e94b192cdd16abbcb99a039352f4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "644c027c9fffcbe69642c0ec6fa9ddeb7cd77e5bb4b25842e78dec8d32d1f4e4",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    },
+    {
+      "path": "windows-native-sdk-0640405466d9f1c31c5aeb76371a593e9181185f/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "bdfec1f3e4f2a1fd4ae0701a28390513c339206370837693406c03397ba4d8cd",
+      "architecture": "PE32+ executable (console) x86-64, for MS Windows"
+    }
+  ],
+  "scope": "Actual hosted SDK/batch execution and byte readback; no installed Windows/SCM/device/model-quality approval."
+}
