@@ -46,6 +46,8 @@ npm ci
 
 개발 모드 실행: `npm run dev`. 화면과 백엔드를 함께 띄웁니다.
 
+Windows 실행·검사 순서는 [빠른 시작](docs/quickstart-windows.md), 오류 재현·진단 자료와 공개 후보 검사는 [문제 해결](docs/troubleshooting.md)을 확인하세요.
+
 ### 환경 변수 지정
 
 이 안내의 환경 변수는 셸마다 이렇게 지정합니다.

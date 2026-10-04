@@ -15,7 +15,6 @@ import sysconfig
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import urlsplit, urlunsplit
 
 from backend.engine.runtime_process_control import atomic_private_json, runtime_state_lock
 from backend.engine.flow_package_runtime import verify_flow_package, _sha256
@@ -191,13 +190,17 @@ def server_preflight(project,profile,image_path,*,transport=None):
 
 
 def redact_diagnostics(value):
-    if isinstance(value,dict):return {str(k):('[REDACTED]' if re.search(r'token|password|secret|authorization|credential|ssh_target|(?:^|_)path$|(?:^|_)dir$',str(k),re.I) else redact_diagnostics(v)) for k,v in value.items()}
+    if isinstance(value,dict):return {str(k):('[REDACTED]' if re.search(r'token|password|secret|authorization|credential|api[_-]?key|access[_-]?key|private[_-]?key|cookie|ssh_target|(?:^|_)path$|(?:^|_)dir$',str(k),re.I) else redact_diagnostics(v)) for k,v in value.items()}
     if isinstance(value,list):return [redact_diagnostics(v) for v in value]
     if isinstance(value,str):
-        if value.startswith(('http://','https://')):
-            parsed=urlsplit(value);host=parsed.hostname or '';host+=':'+str(parsed.port) if parsed.port else ''
-            return urlunsplit((parsed.scheme,host,parsed.path,'',''))
+        # Endpoint paths/hosts may themselves contain private identities or keys.
+        # Scrub complete URLs even when malformed or embedded in an error text.
+        value=re.sub(r'(?i)\b(?:https?|wss?|ssh)://[^\s<>"\']+', '[URL]',value)
+        value=re.sub(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*', '[REDACTED]',value)
+        value=re.sub(r'\b(?:gh[pousr]_[A-Za-z0-9_]{24,}|github_pat_[A-Za-z0-9_]{40,}|sk-(?:proj-)?[A-Za-z0-9_-]{24,}|AKIA[0-9A-Z]{16})\b', '[REDACTED]',value)
         value=re.sub(r'(?i)(bearer\s+|(?:token|password|secret)\s*[:=]\s*)[^\s,;]+',r'\1[REDACTED]',value)
+        value=re.sub(r'\b(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})\b', '[PRIVATE_ADDRESS]',value)
+        value=re.sub(r'\b[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', '[CONTACT]',value)
         return re.sub(r'(?:[A-Za-z]:[\\/]|/)[^\s<>"\']+', '[PATH]',value)
     return value
 

@@ -99,6 +99,8 @@ jobs:
           backend/tests/test_service_s4_07.py
           backend/tests/test_model_comparisons.py
           backend/tests/test_flow_batch_cli.py
+          backend/tests/test_product_delivery.py
+          scripts/tests/test_publication_audit.py
           backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
           backend/tests/test_mixed_comparison_truth.py
           backend/tests/test_cross_task_comparison.py

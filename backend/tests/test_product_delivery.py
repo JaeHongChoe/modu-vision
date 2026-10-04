@@ -87,7 +87,7 @@ def test_diagnostics_redacts_secrets_paths_and_url_credentials(tmp_path):
     module=delivery();value={'token':'SECRET','Authorization':'Bearer SECRET','nested':{'password':'SECRET','image_path':'/private/customer/sample.png','endpoint':'https://user:SECRET@device.example/api?token=SECRET'},'message':'Authorization: Bearer SECRET /private/customer/sample.png'}
     redacted=module.redact_diagnostics(value)
     encoded=json.dumps(redacted);assert 'SECRET' not in encoded and '/private/customer' not in encoded
-    assert redacted['nested']['endpoint']=='https://device.example/api'
+    assert redacted['nested']['endpoint']=='[URL]'
     p=project(tmp_path);report=module.installation_readiness(p)
     assert report['sdk']['C++']['requires_embedded_python'] is True
     assert report['sdk']['C#']['requires_embedded_python'] is True
@@ -250,3 +250,33 @@ def test_saved_package_api_executes_actual_image_and_reopens_device_receipt(real
     reopened=client.get('/api/product-delivery/hardware').json()
     cpu=next(row for row in reopened['devices'] if row['device']=='cpu')
     assert cpu['live_verified'] and not cpu['approved']
+
+
+def test_support_bundle_redacts_url_paths_api_keys_and_private_endpoints():
+    from backend.engine.product_delivery import redact_diagnostics
+    token = 'ghp_' + 'a' * 36
+    report = {'api_key': token,
+              'url': 'https://private.example.invalid/' + token + '?password=hidden#fragment',
+              'message': 'Connection to ' + '10.55.8.9' + ' failed; token ' + token,
+              'malformed': 'https://endpoint.invalid:bad-port/path',
+              'status': 'failed', 'build': 'sdk-1'}
+    sanitized = redact_diagnostics(report)
+    encoded = json.dumps(sanitized)
+    assert token not in encoded and '10.55.8.9' not in encoded
+    assert 'private.example.invalid' not in encoded and 'bad-port' not in encoded
+    assert sanitized['status'] == 'failed' and sanitized['build'] == 'sdk-1'
+
+
+def test_diagnostics_api_persists_only_the_sanitized_bundle(tmp_path, monkeypatch):
+    from fastapi import FastAPI
+    from backend.api.routes_product_delivery import router
+    module=delivery();p=project(tmp_path);app=FastAPI();app.state.current_project=p;app.include_router(router)
+    token='ghp_'+'z'*36
+    monkeypatch.setattr(module,'installation_readiness',lambda _: {'api_key':token,'endpoint':'https://private.example.invalid:bad-port/'+token,'status':'failed'})
+    response=ApiClient(app).post('/api/product-delivery/diagnostics',json={'sections':['installation']})
+    assert response.status_code==200,response.text
+    value=response.json();bundle=value['bundle']
+    persisted=json.loads((Path(p['project_dir'])/'delivery'/'diagnostics.json').read_bytes())
+    assert persisted==bundle and value['includes_source_images'] is False and value['redacted'] is True
+    assert bundle['installation']=={'api_key':'[REDACTED]','endpoint':'[URL]','status':'failed'}
+    assert token not in json.dumps(persisted)
