@@ -44,8 +44,9 @@ jobs:
             backend/tests/test_runtime_deadline_sdk.py::test_runtime_package_deadline_survives_reopen_and_cli \
             backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph \
             backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor \
+            backend/tests/test_runtime_deadline_sdk.py::test_local_dlopen_host_can_import_python_extensions \
             backend/tests/test_sdk_cancellation.py 2>&1 | tee sdk-evidence/execution.log
-          python -c "import xml.etree.ElementTree as E; s=E.parse('sdk-evidence/pytest.xml').getroot().find('testsuite'); assert int(s.get('tests'))==8 and int(s.get('skipped'))==0, 'All eight SDK checks must execute without skips'"
+          python -c "import xml.etree.ElementTree as E; s=E.parse('sdk-evidence/pytest.xml').getroot().find('testsuite'); assert int(s.get('tests'))==9 and int(s.get('skipped'))==0, 'All nine SDK checks must execute without skips'"
       - name: Source and execution receipt
         if: always()
         run: python scripts/write_ci_receipt.py --output sdk-evidence/receipt.json --junit sdk-evidence/pytest.xml

@@ -4,6 +4,9 @@
 #include <cstring>
 #include <mutex>
 #include <string>
+#ifdef __linux__
+#include <dlfcn.h>
+#endif
 
 #ifndef MV_PYTHON_EXECUTABLE
 #define MV_PYTHON_EXECUTABLE "python3"
@@ -29,6 +32,22 @@ char* error_text() {
 }
 bool initialize(char** error) {
     std::lock_guard<std::mutex> guard(initialization);
+#ifdef __linux__
+    // P/Invoke and plugin hosts may load this SDK with RTLD_LOCAL. Linux Python
+    // extension modules resolve their C API from the global symbol namespace.
+    // Promote the already-linked interpreter, retaining its handle for the
+    // interpreter lifetime; never load a guessed or different Python library.
+    static void* python_library=nullptr;
+    if (!python_library) {
+        Dl_info info{};
+        if (!dladdr(reinterpret_cast<void*>(Py_IsInitialized), &info) || !info.dli_fname) {
+            if(error)*error=copy("Cannot locate the linked Python shared library");
+            return false;
+        }
+        python_library=dlopen(info.dli_fname, RTLD_NOW | RTLD_GLOBAL);
+        if (!python_library) { if(error)*error=copy(dlerror());return false; }
+    }
+#endif
     if (Py_IsInitialized()) return true;
     PyConfig config;PyConfig_InitPythonConfig(&config);
     config.parse_argv=0;config.use_environment=0;config.user_site_directory=0;

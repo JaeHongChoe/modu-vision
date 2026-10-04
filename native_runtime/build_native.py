@@ -33,7 +33,8 @@ else:
     common=[compiler,'-std=c++17','-O2','-I'+str(root)]
     subprocess.run(common+['-shared','-fPIC','-I'+sysconfig.get_paths()['include'],
         '-DMV_PYTHON_EXECUTABLE='+json.dumps(sys.executable),str(root/'vision_runtime.cpp'),
-        '-L'+libdir,'-l'+library,'-Wl,-rpath,'+libdir,'-o',str(output)],check=True)
+        '-L'+libdir,'-l'+library,'-Wl,-rpath,'+libdir,'-o',str(output)]
+        + (['-ldl'] if platform.system()=='Linux' else []),check=True)
     for source,name in [('predict.cpp','vision_predict'),('execute.cpp','vision_execute'),('cancel.cpp','vision_cancel_demo')]:
         subprocess.run(common+['-pthread',str(root/source),'-L'+str(args.output),'-lmodu_vision_runtime',
             '-Wl,-rpath,'+str(args.output),'-o',str(args.output/name)],check=True)

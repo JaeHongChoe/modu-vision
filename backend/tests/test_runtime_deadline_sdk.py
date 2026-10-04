@@ -115,3 +115,51 @@ def test_csharp_pinvoke_calls_the_same_native_executor(real_package,tmp_path):
     assert compare_flow_results(Predictor(package).predict(image),json.loads(process.stdout))['status']=='passed'
     timeout=subprocess.run(execute+['1'],capture_output=True,text=True,encoding="utf-8",timeout=25)
     assert timeout.returncode==3 and json.loads(timeout.stdout)['deadline']['terminated'] is True
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason='Linux shared-library loader contract')
+def test_local_dlopen_host_can_import_python_extensions(real_package, tmp_path):
+    """A P/Invoke-style local loader must preserve verified full-graph execution."""
+    import shutil
+    from backend.engine.flow_package_runtime import Predictor, compare_flow_results
+    package, image = real_package
+    native = tmp_path / 'native'
+    built = subprocess.run([sys.executable, str(package / 'native_runtime/build_native.py'), '--output', str(native)],
+                           capture_output=True, text=True, encoding='utf-8', timeout=60)
+    assert built.returncode == 0, built.stdout + built.stderr
+    host = tmp_path / 'local-loader.cpp'
+    host.write_text(r'''
+#include <dlfcn.h>
+#include <cstdio>
+int main(int argc, char** argv) {
+    if (argc != 4) return 1;
+    void* library = dlopen(argv[1], RTLD_NOW | RTLD_LOCAL);
+    if (!library) { std::fprintf(stderr, "%s\n", dlerror()); return 1; }
+    auto create = reinterpret_cast<void*(*)(const char*, const char*, char**)>(dlsym(library, "mv_create"));
+    auto predict = reinterpret_cast<int(*)(void*, const char*, const char*, char**)>(dlsym(library, "mv_predict"));
+    auto release = reinterpret_cast<void(*)(void*)>(dlsym(library, "mv_release"));
+    auto free_result = reinterpret_cast<void(*)(char*)>(dlsym(library, "mv_free"));
+    if (!create || !predict || !release || !free_result) return 1;
+    char* output = nullptr;
+    void* handle = create(argv[2], "{\"deadline_ms\":30000}", &output);
+    if (!handle) { std::fprintf(stderr, "%s\n", output ? output : "No handle"); free_result(output); return 1; }
+    int status = predict(handle, argv[3], nullptr, &output);
+    std::printf("%s\n", output ? output : "null");
+    free_result(output); release(handle);
+    // CPython retains the runtime for the lifetime of the embedding process.
+    return status;
+}
+''', encoding='utf-8')
+    compiled = subprocess.run([shutil.which('g++'), '-std=c++17', str(host), '-ldl', '-o', str(tmp_path / 'local-loader')],
+                              capture_output=True, text=True, encoding='utf-8', timeout=60)
+    assert compiled.returncode == 0, compiled.stderr
+    command = [str(tmp_path / 'local-loader'), str(native / 'libmodu_vision_runtime.so'), str(package), str(image)]
+    result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', timeout=45)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert compare_flow_results(Predictor(package).predict(image), json.loads(result.stdout))['status'] == 'passed'
+    marker = tmp_path / 'unverified-code-executed'
+    bridge = package / 'backend/engine/native_runtime_bridge.py'
+    bridge.write_text(bridge.read_text(encoding='utf-8') + f'\nfrom pathlib import Path\nPath({str(marker)!r}).write_text("escaped")\n', encoding='utf-8')
+    refused = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', timeout=20)
+    assert refused.returncode != 0 and 'checksum' in refused.stderr.lower()
+    assert not marker.exists()

@@ -3,7 +3,7 @@ project(modu_vision_runtime LANGUAGES CXX)
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 add_library(modu_vision_runtime SHARED vision_runtime.cpp)
 target_compile_features(modu_vision_runtime PUBLIC cxx_std_17)
-target_link_libraries(modu_vision_runtime PRIVATE Python3::Python)
+target_link_libraries(modu_vision_runtime PRIVATE Python3::Python ${CMAKE_DL_LIBS})
 # A native Windows path becomes C++ escapes (notably \x64) inside a string
 # definition. Forward slashes preserve the exact interpreter path on Windows.
 string(REPLACE "\\" "/" MV_PYTHON_EXECUTABLE "${Python3_EXECUTABLE}")
