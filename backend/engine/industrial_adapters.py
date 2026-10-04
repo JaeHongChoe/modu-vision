@@ -17,6 +17,7 @@ Features:
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import re
@@ -833,6 +834,16 @@ class LabelMeSegmentationDataset(Dataset):
 # 4. Flexible Industrial Anomaly Dataset Loader
 # ============================================================================
 
+def _shared_listings(init):
+    """The constructor's fixed-name lookups share one listing of each folder (dataset_loaders.folder_listings)."""
+    @functools.wraps(init)
+    def wrapped(self, *args, **kwargs):
+        from backend.engine.dataset_loaders import folder_listings
+        with folder_listings():
+            return init(self, *args, **kwargs)
+    return wrapped
+
+
 class FlexibleAnomalyDataset(Dataset):
     """
     Industrial anomaly dataset loader that accepts normal-image folders without requiring root/train/good.
@@ -840,6 +851,7 @@ class FlexibleAnomalyDataset(Dataset):
     with an optional anomaly directory for evaluation.
     """
 
+    @_shared_listings
     def __init__(
         self,
         root_dir: Optional[Union[str, Path]] = None,
@@ -864,24 +876,19 @@ class FlexibleAnomalyDataset(Dataset):
         norm_dir = self.normal_dir
         anom_dir = self.anomaly_dir
 
+        from backend.engine.dataset_loaders import named_child_dir  # fixed folder names, whatever their letter case
+        named = (lambda *names: named_child_dir(named(*names[:-1]), names[-1]) if len(names) > 1
+                 else named_child_dir(self.root_dir, names[0]))
         if norm_dir is None and self.root_dir is not None:
             # Check standard anomaly layout first
-            if (self.root_dir / "train" / "good").is_dir():
-                norm_dir = self.root_dir / "train" / "good"
-            elif (self.root_dir / "OK").is_dir():
-                norm_dir = self.root_dir / "OK"
-            elif (self.root_dir / "test_crop_output").is_dir():
-                norm_dir = self.root_dir / "test_crop_output"
+            if named("train", "good").is_dir():
+                norm_dir = named("train", "good")
+            elif named("OK").is_dir():
+                norm_dir = named("OK")
+            elif named("test_crop_output").is_dir():
+                norm_dir = named("test_crop_output")
             elif any(self.root_dir.glob("*.png")) or any(self.root_dir.glob("*.jpg")):
                 norm_dir = self.root_dir
-
-        if anom_dir is None and self.root_dir is not None:
-            if (self.root_dir / "fail").is_dir():
-                anom_dir = self.root_dir / "fail"
-            elif (self.root_dir / "NG").is_dir():
-                anom_dir = self.root_dir / "NG"
-            elif (self.root_dir / "scan_anomalies").is_dir():
-                anom_dir = self.root_dir / "scan_anomalies"
 
         if self.split not in ("train", "val", "test"):
             raise ValueError(f"Unknown anomaly split: {split}")
@@ -889,11 +896,20 @@ class FlexibleAnomalyDataset(Dataset):
         # The standard anomaly layout supplies a separate train/good directory. Reuse its explicit
         # layout handling so held-out test images and masks stay associated.
         if (self.root_dir is not None and self.normal_dir is None and self.anomaly_dir is None
-                and (self.root_dir / "train" / "good").is_dir()
-                and ((self.root_dir / "test").is_dir() or (self.root_dir / "val").is_dir())):
+                and named("train", "good").is_dir()
+                and (named("test").is_dir() or named("val").is_dir())):
             from backend.engine.dataset_loaders import AnomalyDataset
             self.samples = AnomalyDataset(root_dir=self.root_dir, split=self.split).samples
             return
+
+        # Only val and test read defects, and only after the hand-off above (which reads its own layout).
+        if anom_dir is None and self.root_dir is not None and self.split in ("val", "test"):
+            if named("fail").is_dir():
+                anom_dir = named("fail")
+            elif named("NG").is_dir():
+                anom_dir = named("NG")
+            elif named("scan_anomalies").is_dir():
+                anom_dir = named("scan_anomalies")
 
         if norm_dir and norm_dir.is_dir():
             all_normals = [
