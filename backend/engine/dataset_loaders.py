@@ -13,6 +13,7 @@ Supports:
 
 from __future__ import annotations
 
+import functools
 import glob
 import hashlib
 import json
@@ -966,6 +967,60 @@ class SegmentationDataset(Dataset):
 # Task 4: Unsupervised Anomaly Detection Dataset
 # ============================================================================
 
+# The folder listings of one dataset construction: a root holding many images is listed once for all the fixed names a
+# layout looks up, and never served to a later construction (a folder added since, however coarse the file system's
+# clock, is seen by the next one).
+_LISTINGS: ContextVar[Optional[dict]] = ContextVar('_LISTINGS', default=None)
+
+
+@contextmanager
+def folder_listings():
+    """Within the block each folder is listed once for named_child_dir; nested blocks share the outer one."""
+    if _LISTINGS.get() is not None:
+        yield
+        return
+    token = _LISTINGS.set({})
+    try:
+        yield
+    finally:
+        _LISTINGS.reset(token)
+
+
+def _with_folder_listings(init: Callable) -> Callable:
+    """A dataset constructor whose fixed-name lookups share one listing of each folder."""
+    @functools.wraps(init)
+    def wrapped(self, *args, **kwargs):
+        with folder_listings():
+            return init(self, *args, **kwargs)
+    return wrapped
+
+
+def _folder_names(root: Path) -> List[str]:
+    memo, key = _LISTINGS.get(), str(root)
+    if memo is not None and key in memo:
+        return memo[key]
+    try:
+        names = [child.name for child in root.iterdir()]
+    except OSError:
+        names = []
+    if memo is not None:
+        memo[key] = names
+    return names
+
+
+def named_child_dir(root: Path, name: str) -> Path:
+    """``root / name`` for a folder name a layout fixes (train, test, val, ground_truth, test_crop_output, OK, fail, NG,
+    ...), found whatever its letter case, so a case-sensitive file system (Linux, a case-sensitive Windows folder) reads
+    a layout as macOS and Windows do by default. The folder is returned as spelled on disk. Two spellings of the name
+    side by side are refused rather than one silently left out (neither is preferred). Without a match, ``root / name``
+    (which does not exist)."""
+    root, lowered = Path(root), name.lower()
+    matches = [root / child for child in _folder_names(root) if child.lower() == lowered and (root / child).is_dir()]
+    if len(matches) > 1:
+        raise ValueError(f"Folder names in {root} differ only in letter case: {', '.join(sorted(child.name for child in matches))}")
+    return matches[0] if matches else Path(root) / name
+
+
 class AnomalyDataset(Dataset):
     """
     Unsupervised industrial anomaly detection dataset (PaDiM / PatchCore style).
@@ -977,6 +1032,7 @@ class AnomalyDataset(Dataset):
       Test: (img_tensor, label, mask_tensor)
     """
 
+    @_with_folder_listings
     def __init__(
         self,
         root_dir: Optional[Union[str, Path]] = None,
@@ -1005,7 +1061,7 @@ class AnomalyDataset(Dataset):
             return [
                 p for p in paths
                 if p.is_file() and str(p.resolve()) not in unused and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-                and not (directory.name == "test_crop_output" and p.name.startswith("mask_"))
+                and not (directory.name.lower() == "test_crop_output" and p.name.startswith("mask_"))
             ]
 
         def train_normal_paths(directory: Path) -> List[Path]:
@@ -1027,22 +1083,22 @@ class AnomalyDataset(Dataset):
                     (p, 0, None) for p in partition_normal_images(image_paths(self.normal_dir))["train"]
                 )
             elif self.root_dir is not None:
-                train_dir = self.root_dir / "train"
-                if train_dir.exists():
+                train_dir = named_child_dir(self.root_dir, "train")
+                if train_dir.is_dir():
                     self.samples.extend((p, 0, None) for p in train_normal_paths(train_dir))
-                    if not (self.root_dir / "test").is_dir() and not (self.root_dir / "val").is_dir():
+                    if not named_child_dir(self.root_dir, "test").is_dir() and not named_child_dir(self.root_dir, "val").is_dir():
                         self.samples = [
                             (p, 0, None)
                             for p in partition_normal_images(p for p, _, _ in self.samples)["train"]
                         ]
-                elif (self.root_dir / "OK").is_dir():
+                elif (normal_root := named_child_dir(self.root_dir, "OK")).is_dir():
                     self.samples.extend(
-                        (p, 0, None) for p in partition_normal_images(image_paths(self.root_dir / "OK"))["train"]
+                        (p, 0, None) for p in partition_normal_images(image_paths(normal_root))["train"]
                     )
-                elif (self.root_dir / "test_crop_output").is_dir():
+                elif (crop_dir := named_child_dir(self.root_dir, "test_crop_output")).is_dir():
                     self.samples.extend(
                         (p, 0, None) for p in partition_normal_images(
-                            image_paths(self.root_dir / "test_crop_output", recursive=False)
+                            image_paths(crop_dir, recursive=False)
                         )["train"]
                     )
                 else:
@@ -1061,11 +1117,11 @@ class AnomalyDataset(Dataset):
                         (p, 1, None) for p in partition_evaluation_images(image_paths(self.anomaly_dir))[self.split]
                     )
             elif self.root_dir is not None:
-                test_dir = self.root_dir / "test"
-                val_dir = self.root_dir / "val"
-                gt_dir = self.root_dir / "ground_truth"
+                test_dir = named_child_dir(self.root_dir, "test")
+                val_dir = named_child_dir(self.root_dir, "val")
 
                 if test_dir.is_dir() or val_dir.is_dir():
+                    gt_dir = named_child_dir(self.root_dir, "ground_truth")
                     has_named_splits = test_dir.is_dir() and val_dir.is_dir()
                     source_dir = (val_dir if self.split == "val" else test_dir) if has_named_splits else (
                         test_dir if test_dir.is_dir() else val_dir
@@ -1099,16 +1155,16 @@ class AnomalyDataset(Dataset):
                             sample for sample in normal_samples + defect_samples if sample[0] in selected
                         )
                 else:
-                    norm_dir = next((directory for directory in (
-                        self.root_dir / "test_crop_output",
-                        self.root_dir / "OK",
-                        self.root_dir / "train",
-                    ) if directory.is_dir()), self.root_dir / "OK")
-                    anom_dir = (self.root_dir / "fail") if (self.root_dir / "fail").is_dir() else (self.root_dir / "NG")
+                    # The first of these folders present, each looked up only when the ones before it are absent.
+                    norm_name, norm_dir = next(((name, directory) for name in ("test_crop_output", "OK", "train")
+                                                if (directory := named_child_dir(self.root_dir, name)).is_dir()),
+                                               ("OK", self.root_dir / "OK"))
+                    fail_dir = named_child_dir(self.root_dir, "fail")
+                    anom_dir = fail_dir if fail_dir.is_dir() else named_child_dir(self.root_dir, "NG")
                     if norm_dir.is_dir():
                         normal_paths = (
                             train_normal_paths(norm_dir)
-                            if norm_dir == self.root_dir / "train" else image_paths(norm_dir)
+                            if norm_name == "train" else image_paths(norm_dir)
                         )
                         self.samples.extend(
                             (p, 0, None) for p in partition_normal_images(normal_paths)[self.split]
