@@ -15,6 +15,19 @@ import uuid
 from fastapi import HTTPException
 
 
+class OperationsBusy(ValueError):
+    code = 'operations_busy'
+
+
+class PolicyRevisionConflict(ValueError):
+    code = 'policy_revision_conflict'
+
+    def __init__(self, expected_revision, current_revision):
+        self.expected_revision = expected_revision
+        self.current_revision = current_revision
+        super().__init__(f'Operations policy changed from revision {expected_revision} to {current_revision}; the old cycle cannot update it')
+
+
 class OperationsStore:
     def __init__(self, project_dir):
         root=Path(project_dir)
@@ -28,8 +41,18 @@ class OperationsStore:
     def policy(self):
         with self.connect() as conn:row=conn.execute('SELECT payload FROM policy WHERE id=1').fetchone()
         return json.loads(row[0]) if row else None
-    def save_policy(self, value):
-        with self.connect() as conn:conn.execute('INSERT INTO policy VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',(json.dumps(value,allow_nan=False),))
+    def save_policy(self, value, *, expected_revision=None):
+        payload = json.dumps(value, allow_nan=False)
+        with self.connect() as conn:
+            if expected_revision is not None:
+                # Read and write share the SQLite writer transaction, including
+                # an absent/legacy policy whose initial revision is zero.
+                conn.execute('BEGIN IMMEDIATE')
+                row = conn.execute('SELECT payload FROM policy WHERE id=1').fetchone()
+                current_revision = json.loads(row[0]).get('revision', 0) if row else 0
+                if current_revision != expected_revision:
+                    raise PolicyRevisionConflict(expected_revision, current_revision)
+            conn.execute('INSERT INTO policy VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload', (payload,))
     def save(self, value):
         with self.connect() as conn:conn.execute('INSERT INTO cycles VALUES(?,?) ON CONFLICT(cycle_id) DO UPDATE SET payload=excluded.payload',(value['cycle_id'],json.dumps(value,allow_nan=False)))
         return value
@@ -122,7 +145,7 @@ def _cycle_lock(project,name='operations.lock'):
             else:
                 import fcntl
                 fcntl.flock(writer.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
-        except OSError as exc:raise ValueError('This project already has an operations cycle') from exc
+        except OSError as exc:raise OperationsBusy('This project already has an operations cycle') from exc
         try:yield
         finally:
             if os.name=='nt':
@@ -162,10 +185,10 @@ def configure_program(project, supplied):
         policy['inference_device']=str(resolve_runtime_device(policy['inference_device']))
     if policy['auto_label'] and policy['task'] not in ('classification','detection','segmentation','ocr','rotated_detection'):
         raise ValueError('High confidence automatic labels require a calibrated classification, detection, segmentation, OCR or rotated detection model')
-    with project_scope(project):
+    with _cycle_lock(project), project_scope(project):
         checkpoint=_checkpoint(project,policy['task'],policy['parent_job_id'])
         store=OperationsStore(project['project_dir']);previous=store.policy()
-        if any(row['status']=='running' for row in store.history()):raise ValueError('Cancel the active cycle before changing its policy')
+        if any(row['status']=='running' for row in store.history()):raise OperationsBusy('Cancel the active cycle before changing its policy')
         policy.update(project_id=project['id'],labelset_id=project.get('active_labelset_id','default'),source_dataset_path=str(Path(project['source_dataset_dir']).resolve()),
                       parent_checkpoint_sha256=_sha(checkpoint),holdout=_holdout(project),seen={} if policy['process_existing'] else _inventory(project),
                       revision=(previous or {}).get('revision',0)+1,created_at=time.time())
@@ -176,7 +199,7 @@ def configure_program(project, supplied):
             from backend.engine.flow_provenance import pipeline_sha256
             policy['pipeline_id']=pipeline.id
             policy['pipeline_sha256']=pipeline_sha256(pipeline)
-        store.save_policy(policy);return policy
+        store.save_policy(policy, expected_revision=(previous or {}).get('revision', 0));return policy
 
 
 def _authorized_flow(project,policy):
@@ -368,6 +391,13 @@ def _deploy_candidate(project,policy,candidate,approval,event):
 
 
 def run_cycle(project,event,*,training_fn=None,evaluation_fn=None):
+    # Capture the policy and publish the running journal under the same
+    # admission lock used to authorize configuration changes.
+    with _cycle_lock(project):
+        return _run_cycle_locked(project,event,training_fn=training_fn,evaluation_fn=evaluation_fn)
+
+
+def _run_cycle_locked(project,event,*,training_fn=None,evaluation_fn=None):
     store=OperationsStore(project['project_dir']);policy=store.policy()
     if not policy:raise ValueError('Configure an operations policy first')
     cycle={'cycle_id':'cycle_'+uuid.uuid4().hex,'status':'running','phase':'discover','created_at':time.time(),'updated_at':time.time(),'owner_pid':os.getpid(),'owner_created_at':__import__('psutil').Process(os.getpid()).create_time(),
@@ -375,7 +405,7 @@ def run_cycle(project,event,*,training_fn=None,evaluation_fn=None):
     def step(phase,**evidence):
         cycle.update(phase=phase,updated_at=time.time());cycle['events'].append({'at':time.time(),'phase':phase,**evidence});store.save(cycle)
         if event.is_set():raise InterruptedError('Operations cycle cancelled')
-    with _cycle_lock(project), project_scope(project):
+    with project_scope(project):
         try:
             step('discover')
             if policy['labelset_id']!=project.get('active_labelset_id','default'):raise ValueError('Active label set differs from the configured policy')
@@ -422,11 +452,14 @@ def run_cycle(project,event,*,training_fn=None,evaluation_fn=None):
             else:cycle['status']='needs_review' if any(row['status']=='needs_review' for row in labels) else 'completed'
             policy['seen'].update({path:inventory[path] for path in new})
             policy.setdefault('seen_labels',{}).update({path:_image_binding(project,path) for path in new})
-            policy['input_version']=_input_version(project,policy);store.save_policy(policy)
+            policy['input_version']=_input_version(project,policy);store.save_policy(policy, expected_revision=cycle['policy_revision'])
             if cycle['result'].get('activation_state'):
                 cycle.update(phase='finish',updated_at=time.time());cycle['events'].append({'at':time.time(),'phase':'finish','cancellation_requested':event.is_set()})
             else:step('finish')
             return store.save(cycle)
         except InterruptedError as exc:cycle.update(status='approved_deployment_cancelled' if cycle['result'].get('approval') else 'cancelled',error=str(exc))
+        except PolicyRevisionConflict as exc:
+            cycle.update(status='interrupted',error=str(exc),error_code=exc.code,
+                         policy_conflict={'expected_revision':exc.expected_revision,'current_revision':exc.current_revision})
         except Exception as exc:cycle.update(status='blocked' if cycle['phase']=='discover' else 'failed',error=str(getattr(exc,'detail',exc)))
         cycle['updated_at']=time.time();return store.save(cycle)

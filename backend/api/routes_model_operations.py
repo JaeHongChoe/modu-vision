@@ -8,7 +8,7 @@ from fastapi import APIRouter,HTTPException,Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel,ConfigDict,Field,model_validator
 from backend.api.routes_project import get_current_project
-from backend.engine.model_operations import OperationsStore,configure_program,run_cycle
+from backend.engine.model_operations import OperationsStore,OperationsBusy,PolicyRevisionConflict,configure_program,run_cycle
 
 router=APIRouter(prefix='/api/model-operations',tags=['model-operations'])
 _EVENTS={};_LOCK=threading.RLock()
@@ -127,6 +127,11 @@ def legacy_impact_report(request: Request):
 @router.put('/policy')
 def policy(payload:OperationsPolicy,request:Request):
     try:return configure_program(project(request),payload.model_dump())
+    except (OperationsBusy,PolicyRevisionConflict) as exc:
+        detail={'code':exc.code,'message':str(exc)}
+        if isinstance(exc,PolicyRevisionConflict):
+            detail.update(expected_revision=exc.expected_revision,current_revision=exc.current_revision)
+        raise HTTPException(409,detail=detail) from exc
     except (ValueError,OSError,KeyError) as exc:raise HTTPException(422,str(exc)) from exc
 
 @router.post('/run')

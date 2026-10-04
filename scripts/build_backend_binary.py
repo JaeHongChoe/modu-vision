@@ -146,6 +146,30 @@ def pyinstaller_command(root: Path, output: Path, target: str) -> list[str]:
     command.append(str(root / 'scripts' / 'frozen_backend_entry.py'))
     return command
 
+
+# Public API documented at https://pyinstaller.org/en/stable/usage.html#running-pyinstaller-from-python-code.
+# Keep the process command fixed-size as dynamic imports/resources grow.
+_PYINSTALLER_RUNNER = (
+    "import json, sys\n"
+    "from PyInstaller.__main__ import run\n"
+    "with open(sys.argv[1], encoding='utf-8') as stream:\n"
+    "    arguments = json.load(stream)\n"
+    "run(arguments)\n"
+)
+
+
+def pyinstaller_invocation(command: list[str], build_dir: Path) -> list[str]:
+    """Preserve every compiler argument without putting it in CreateProcess's argv."""
+    import uuid
+    if command[1:3] != ['-m', 'PyInstaller']:
+        raise ValueError('Expected the PyInstaller module command')
+    arguments_path = Path(build_dir) / ('pyinstaller-arguments-' + uuid.uuid4().hex + '.json')
+    with arguments_path.open('x', encoding='utf-8') as writer:
+        json.dump(command[3:], writer, ensure_ascii=False)
+        writer.flush()
+        os.fsync(writer.fileno())
+    return [command[0], '-c', _PYINSTALLER_RUNNER, str(arguments_path)]
+
 NATIVE_EXPORT_SOURCES = (
     "build_native.py", "vision_runtime.h", "vision_runtime.hpp", "vision_runtime.cpp",
     "predict.cpp", "execute.cpp", "VisionRuntime.cs", "VisionRuntime.csproj",
@@ -206,7 +230,8 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
     print(" ".join(cmd))
     print("\nCompiling... (this may take a few minutes for PyTorch symbols)\n")
 
-    res = subprocess.run(cmd, cwd=str(ROOT_DIR))
+    invocation = pyinstaller_invocation(cmd, output / '.build')
+    res = subprocess.run(invocation, cwd=str(ROOT_DIR))
     if res.returncode != 0:
         print(f"\n[ERROR] PyInstaller compilation failed with exit code {res.returncode}")
         sys.exit(res.returncode)
