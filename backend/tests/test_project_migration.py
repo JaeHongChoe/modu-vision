@@ -31,6 +31,23 @@ def test_future_schema_rejected_before_any_write(tmp_path):
     assert tree(root)==before
 
 
+def test_project_inventory_permission_failure_identifies_underlying_io_operation(tmp_path, monkeypatch):
+    root=tmp_path/'project';manifest(root,1)
+    original=(root/'project.json').read_bytes()
+    def denied_read(*args, **kwargs):
+        failure=PermissionError(13, 'Permission denied')
+        failure.winerror=32
+        raise failure
+    monkeypatch.setattr('backend.engine.migration_inventory.project_snapshot',denied_read)
+    with pytest.raises(HTTPException) as failure:routes_project._load_project(root)
+    assert failure.value.status_code==422
+    assert 'stage=inventory' in failure.value.detail
+    assert 'errno=13' in failure.value.detail and 'winerror=32' in failure.value.detail
+    assert 'source=denied_read' in failure.value.detail
+    assert (root/'project.json').read_bytes()==original
+    assert not (root/'labelsets.json').exists()
+
+
 def test_legacy_schema_has_original_backup_and_preserves_unknown_fields(tmp_path):
     root=tmp_path/'legacy';manifest(root);original=(root/'project.json').read_bytes()
     result=routes_project._load_project(root)

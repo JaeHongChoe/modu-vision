@@ -9,6 +9,7 @@ import os
 import re
 import tempfile
 import time
+import traceback
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -144,17 +145,23 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Project directory not found: {path}")
     if not manifest.is_file():
         raise HTTPException(status_code=422, detail=f"No project.json in {path}. Create a project here first.")
+    stage = "inventory"
     try:
         preview_migration(path)
+        stage = "manifest-read"
         saved = json.loads(manifest.read_text(encoding="utf-8"))
         if not isinstance(saved, dict):
             raise ValueError("project.json must contain an object")
         # A workspace can be moved; its managed folders move with project.json.
         data = dict(saved)
         # Validate the project shape before the backed-up schema normalization.
+        stage = "manifest-validation"
         ProjectConfigResponse.model_validate(saved)
+        stage = "legacy-normalization"
         normalize_legacy_manifest(path)
+        stage = "normalized-manifest-read"
         saved = json.loads(manifest.read_text(encoding="utf-8"));data=dict(saved)
+        stage = "labelset-read"
         active_set = load_labelsets(path)["active_id"]
         data.update({
             "project_dir": str(path),
@@ -165,9 +172,32 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
             "active_labelset_id": active_set,
         })
         data.setdefault("source_dataset_dir", None)
+        stage = "resolved-validation"
         project = ProjectConfigResponse.model_validate(data).model_dump()
     except (OSError, ValueError, TypeError, ValidationError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid project.json: {exc}") from exc
+        # An inventory error can concern a live coordination file, not the
+        # manifest. Preserve the refusal and identify the actual I/O operation
+        # without disclosing traceback paths, arguments or local variables.
+        diagnostics = [f"stage={stage}"]
+        cause = exc
+        seen = set()
+        while cause is not None and id(cause) not in seen:
+            seen.add(id(cause))
+            if isinstance(cause, OSError):
+                for attribute in ("errno", "winerror"):
+                    number = getattr(cause, attribute, None)
+                    if type(number) is int:
+                        diagnostics.append(f"{attribute}={number}")
+                frames = traceback.extract_tb(cause.__traceback__)
+                if frames and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]{0,79}", frames[-1].name):
+                    diagnostics.append(f"source={frames[-1].name}")
+                operations = [frame.name for frame in frames if "backend" in Path(frame.filename).parts
+                              and re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]{0,79}", frame.name)][-3:]
+                if operations:
+                    diagnostics.append(f"via={'/'.join(operations)}")
+                break
+            cause = cause.__cause__
+        raise HTTPException(status_code=422, detail=f"Invalid project.json: {exc} [{';'.join(diagnostics)}]") from exc
     if any(project[key] != saved.get(key) for key in
            ("project_dir", "dataset_dir", "models_dir", "reports_dir", "annotations_dir")):
         _write_json(manifest, project)
