@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 // S2-09: every model family's job is read the same way: label, progress, location, uncertainty, failure and next action.
 function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);
   m.require=ref=>ref in mocks?mocks[ref]:ref.startsWith('.')?load(ref+'.ts'):require(ref);
-  m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
+  m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{fileName:name,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const model=()=>load('jobProgress.ts');
 test('S2-09: recorded pending cancel suppresses another cancel and permits observation',()=>{
  const {jobProgress}=model();
@@ -99,3 +99,21 @@ test('S2-09: the bar takes the job tone, and a stopping job that cannot be cance
  assert.match(html({job_id:'r',status:'running',epoch:2,epochs:4}),/h-full bg-cyan-500/);
  assert.doesNotMatch(html({job_id:'s',status:'stopping',cancel_supported:false}),/종료 확인 중<\/button>/);
  assert.match(html({job_id:'s',status:'stopping'}),/종료 확인 중<\/button>/);});
+
+test('S2-09: only local patch worker observation offers local reconnection before terminal state',()=>{
+ const {jobProgress}=model();const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ const {JobProgressView}=load('JobProgressView.tsx',{'../../stores/useComputeStore':{useComputeStore:selector=>selector({profiles:[]})},'./jobProgress':model()});
+ for(const status of ['disconnected','stopping']){
+  const job={job_id:'patch-owned',task:'patch_classification',status};assert.equal(jobProgress(job).canReconnect,true);
+  const html=renderToStaticMarkup(React.createElement(JobProgressView,{job,busy:false,onCancel(){},onReconnect(){}}));
+  assert.match(html,/같은 로컬 작업 재연결/);assert.doesNotMatch(html,/같은 서버 작업 재연결/);
+ }
+ for(const task of ['rotation','ocr','enhancement'])assert.equal(jobProgress({job_id:'x',task,status:'disconnected'}).canReconnect,false);
+ for(const status of ['completed','failed','interrupted','aborted','running'])assert.equal(jobProgress({job_id:'x',task:'patch_classification',status}).canReconnect,false);
+});
+test('S2-09: patch local reconnect posts the original owned job id to the core endpoint',async()=>{
+ const calls=[];const request=async(path,options)=>{calls.push({path,method:options?.method,body:JSON.parse(options.body)});return {job_id:'patch-owned',status:'running',optimizer_resume:false};};
+ const {modelTrainingProgram}=load('../../services/modelTrainingProgram.ts',{'./api':{request},'./modelExecution':{}});
+ const row=await modelTrainingProgram.patch.reconnect('patch-owned');assert.equal(row.job_id,'patch-owned');assert.equal(row.optimizer_resume,false);
+ assert.deepEqual(calls,[{path:'/api/training/reconnect',method:'POST',body:{job_id:'patch-owned'}}]);
+});

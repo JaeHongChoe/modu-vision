@@ -28,3 +28,9 @@ test('closing rejects old completion; reopen reads after old request releases',a
 test('unmount drops queued refresh and stale completion',async()=>{const h=harness();try{h.event();h.unmount();h.pending[0].resolve(h.reply());await flush();assert.equal(h.pending.length,1);h.render();assert.doesNotMatch(h.text(),/마지막 응답 확인/);}finally{h.dispose();}});
 test('failed read releases the gate, displays error and later poll recovers',async()=>{const h=harness();try{h.poll();assert.equal(h.pending.length,1);h.pending[0].reject(Error('fixture failed read'));await flush();h.render();assert.match(h.text(),/fixture failed read/);h.poll();assert.equal(h.pending.length,2);h.pending[1].resolve(h.reply());await flush();h.render();assert.match(h.text(),/현재 프로젝트 1개/);assert.doesNotMatch(h.text(),/fixture failed read/);}finally{h.dispose();}});
 test('same open details toggle and stable scope rerenders do not restart polling',()=>{const h=harness();try{for(let i=0;i<4;i++){h.toggle(true);h.state.project={...h.state.project};h.render();}assert.equal(h.pending.length,1);}finally{h.dispose();}});
+
+test('task center offers the same local patch job observation with a local label',async()=>{
+ const h=harness();try{const r=h.reply();r.tasks=[{kind:'training',task:'patch_classification',job_id:'patch-owned',status:'disconnected',source_dataset_path:'/source'}];h.pending[0].resolve(r);await flush();h.render();
+ assert.ok(h.buttons().find(b=>b.text==='같은 로컬 작업 재연결'));assert.equal(h.buttons().find(b=>b.text==='같은 서버 작업 재연결'),undefined);
+ }finally{h.dispose();}
+});

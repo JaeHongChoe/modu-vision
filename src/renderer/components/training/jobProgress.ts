@@ -65,6 +65,7 @@ export function jobProgress(job: Record<string, any>): JobProgress {
     loss: number(job.current_train_loss, job.loss),
     server, failure,
     nextAction: status === 'completed' ? null : observed ?? DEFAULT_NEXT[status] ?? null,
-    canCancel: !cancelPending && cancellable({status, cancel_supported: job.cancel_supported}), canReconnect: ['disconnected','stopping'].includes(status) && server !== null,
+    canCancel: !cancelPending && cancellable({status, cancel_supported: job.cancel_supported}),
+    canReconnect: ['disconnected','stopping'].includes(status) && (server !== null || job.task === 'patch_classification'),
   };
 }

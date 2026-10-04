@@ -78,7 +78,12 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
   });
   const reconnect = () => action('재연결 요청', async () => {
     if (!job) return;
-    const result = await reconnectModelTraining<ProgramJob>(job);
+    let result: ProgramJob;
+    if (family === 'patch' && !job.compute_profile_id) {
+      await modelTrainingProgram.patch.reconnect(job.job_id);
+      if (!isCurrent()) return;
+      result = await modelTrainingProgram.patch.status(job.job_id);
+    } else result = await reconnectModelTraining<ProgramJob>(job);
     if (isCurrent()) setJob({...job, ...result});
   });
   return {family, source, scope, projectDir, datasets, dataset, selectDataset, addDataset, models, modelId, setModelId,

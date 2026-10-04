@@ -40,6 +40,7 @@ export const modelTrainingProgram = {
     status: (job_id: string) => request<ProgramJob>(`/api/training/status?${query({job_id})}`),
     jobs: () => request<{jobs: ProgramJob[]}>('/api/training/jobs'),
     cancel: (job_id: string) => post<ProgramJob>('/api/training/stop', {job_id}),
+    reconnect: (job_id: string) => post<ProgramJob>('/api/training/reconnect', {job_id}),
     parents: (dataset_path: string, backbone: string) => request<{parents: Array<{job_id: string; checkpoint_sha256: string}>}>(`/api/training/warm-start-parents?${query({dataset_path, task: 'patch_classification', preset: 'fast', backbone})}`),
     models: (source_dataset_path: string) => request<{models: FamilyModel[]}>(`/api/evaluation/model-comparisons/models?${query({source_dataset_path, task: 'patch_classification'})}`),
     evaluate: (job_id: string) => post<Record<string, unknown>>('/api/patch-classification/evaluate', {job_id, force_recompute: true}),

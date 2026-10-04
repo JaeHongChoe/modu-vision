@@ -43,7 +43,7 @@ export function JobProgressView({job, busy, onCancel, onReconnect, showActions =
       {(view.canCancel || stopping) && <button type="button" className={button} disabled={busy || view.stopping} onClick={onCancel}>
         <Square className="mr-1 inline h-3 w-3" />{view.stopping ? '종료 확인 중' : '취소 요청'}</button>}
       {view.canReconnect && onReconnect && <button type="button" className={button} disabled={busy} onClick={onReconnect}>
-        <RefreshCw className="mr-1 inline h-3 w-3" />같은 서버 작업 재연결</button>}
+        <RefreshCw className="mr-1 inline h-3 w-3" />{view.server ? '같은 서버 작업 재연결' : '같은 로컬 작업 재연결'}</button>}
     </div>}
   </div>;
 }

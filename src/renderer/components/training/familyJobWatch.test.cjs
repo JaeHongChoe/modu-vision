@@ -82,3 +82,21 @@ test('S2-09: after a failed read the OCR and defect-generation hook keeps watchi
     assert.equal(delays.at(-1),600,'a successful read returns to the active pace');
   }
 });
+
+test('S2-09: local patch reconnect observes the same owned job and reads canonical status, including refusal',async()=>{
+ const h=hookHarness(),calls=[];let refuse=false;
+ const local=row('patch-owned','disconnected',{task:'patch_classification',output_dir:'/project/models/patch-owned'});
+ const active={...local,status:'running',epoch:3,observation:{cause:null,next_action:null}};
+ const program={patch:{datasets:async()=>({datasets:[]}),jobs:async()=>({jobs:[local]}),models:async()=>({models:[]}),
+  reconnect:async id=>{calls.push(['reconnect',id]);if(refuse)throw new Error('This job cannot be reconnected');return {job_id:id,status:'running',optimizer_resume:false};},
+  status:async id=>{calls.push(['status',id]);return active;}}};
+ const execution={controlModelTraining:async job=>job,reconnectModelTraining:async()=>assert.fail('local patch must not call the server reconnect helper')};
+ const m=load('useProgramWorkbench.ts',{react:h.react,'../../stores/useProjectStore':{useProjectStore:projectStore},'../../stores/useComputeStore':{useComputeStore:computeStore},
+  '../../services/modelTrainingProgram':{...load('../../services/modelTrainingProgram.ts',{'./api':{request:async()=>null},'./modelExecution':{}}),modelTrainingProgram:program},
+  '../../services/modelExecution':execution,'../../services/api':{getApiPersistenceIdentity:()=>'local'},'./useTaskHandoff':{useTaskHandoff:()=>null}},TIMERS);
+ h.render(()=>m.useProgramWorkbench('patch'));await new Promise(setImmediate);await new Promise(setImmediate);
+ const restored=h.render(()=>m.useProgramWorkbench('patch'));await new Promise(setImmediate);calls.length=0;
+ await restored.reconnect();let after=h.render(()=>m.useProgramWorkbench('patch'));assert.deepEqual(calls,[['reconnect','patch-owned'],['status','patch-owned']]);assert.equal(after.job.epoch,3);assert.deepEqual(after.job.observation,active.observation);
+ after.setJob(local);refuse=true;calls.length=0;after=h.render(()=>m.useProgramWorkbench('patch'));await new Promise(setImmediate);calls.length=0;await after.reconnect();after=h.render(()=>m.useProgramWorkbench('patch'));
+ assert.deepEqual(calls,[['reconnect','patch-owned']]);assert.equal(after.job.status,'disconnected');assert.match(after.error,/cannot be reconnected/);
+});
