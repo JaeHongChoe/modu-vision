@@ -8746,8 +8746,21 @@
     "Repeated texture/occlusion/insufficient features route to REVIEW rather than arbitrary fixture.",
     "Template revision invalidates dependent evidence; package round-trip and Windows CPU execution retain identical transforms."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "0fb105e: backend/engine/fixture_pose.py locates a reference fixture region in an observed image with OpenCV keypoints (ORB, cross-checked, the reference region padded by reflection) and a robust similarity fit, in a rigid scope or a similarity scope within its calibrated scale range (0.7 to 1.4). A pose is used only when it bounds where reference points land: enough inliers at enough distinct places, most matches on the located part agreeing, no second position with similar support, a homography and (when the places show real curvature, an F test of a quadratic over an affine fit above 6) a quadratic fit agreeing with the scope's, and a placement bound under 3 px. The bound is an estimate: on the review's 5,000 held-out scenes 2.27 % of located poses exceeded it, 0.55 % by more than 3 px, at most 4.0 px (strong defocus on fine regular textures is the weak case); summing the terms instead would exceed about half as often but locate about a fifth fewer poses with the same share over 3 px, so the located share is kept. The region must be rigid (a bend confined to part of it is not detected); the pose records its matched hull and coverage, and placing an ROI reports its support and can refuse one below a minimum. Every pose names the reference (grey pixels, region, revision), the limits it met and the provider. Independent review: freezes 1-4 changed per review (P1/P2s), freeze 5 ACCEPT (0 P1; the P2 was the stated reason for keeping the composition, corrected).",
+     "scope": "frozen tree (422a2d2 + 2 files), published on f499544 with the CI line composed (neither file changed on main since): backend/tests/test_service_e02.py 29 passed (also under the CI lock), red 3 of 29 on freeze 4's module; CI lists on the published tree under the CI lock: Linux 829 passed 2 skipped, Windows 606 passed 2 skipped (run on this Mac).",
+     "platform": "macOS development; engine only (nothing calls it yet)"
+    }
+   ],
+   "remaining": [
+    "the flow node that uses it (S2-05/S4-08) and its renderer",
+    "review e02s5 P3: validate min_support (NaN, negative, booleans and strings), coverage wording (full clean views read about 0.8-0.95), min_support documented as mattering only for regions that may bend, mutant M18 and the rigid scale bound",
+    "lens distortion is not modelled; real fixtures and cameras (no real-image evidence yet)",
+    "native Windows"
+   ]
   },
   {
    "id": "E03",
