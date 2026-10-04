@@ -153,7 +153,9 @@ def verified_backup(root,directory,before):
                 shutil.copyfile(copied,target,follow_symlinks=False)
             if hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']:raise ValueError('Migration source changed while verifying backup')
             target.chmod(0o600)
-            with target.open('rb') as stored:os.fsync(stored.fileno())
+            # Windows _commit (used by fsync) requires a writable descriptor.
+            # This is the owned backup, never the source being migrated.
+            with target.open('r+b') as stored:os.fsync(stored.fileno())
             records.append({'scope':scope,**row})
     if os.name!='nt':
         for parent in sorted({p.parent for p in (Path(directory)/'full_backup').rglob('*')},key=lambda p:len(p.parts),reverse=True):
@@ -165,7 +167,7 @@ def verified_backup(root,directory,before):
 
 def verify_backup(directory,receipt):
     records=receipt['backup_verified']['files']
-    expected={str(Path(row['scope'])/row['path']) for row in records}
+    expected={(Path(row['scope'])/row['path']).as_posix() for row in records}
     backup_root=Path(directory)/'full_backup'
     actual={path.relative_to(backup_root).as_posix() for path in backup_root.rglob('*') if path.is_file() or path.is_symlink()}
     if actual!=expected:raise ValueError('Migration backup file count or membership failed')

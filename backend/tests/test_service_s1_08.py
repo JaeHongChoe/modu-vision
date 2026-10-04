@@ -40,6 +40,35 @@ def test_backup_restores_only_unchanged_transaction_output(tmp_path):
     assert (root/'labels/annotation.json').read_text()=='{"later":true}'
 
 
+def test_backup_flushes_a_writable_handle_without_changing_source(tmp_path, monkeypatch):
+    # Windows _commit rejects a read-only descriptor. Emulate that constraint
+    # around real backup files while still performing the actual fsync.
+    import os
+    from pathlib import Path
+    original_open, original_fsync = Path.open, os.fsync
+    handles, flushed = {}, []
+    def tracked_open(path, *args, **kwargs):
+        handle = original_open(path, *args, **kwargs)
+        if 'full_backup' in path.parts:
+            handles[handle.fileno()] = (path, handle)
+        return handle
+    def writable_fsync(fd):
+        if fd in handles and not handles[fd][1].closed:
+            path, handle = handles[fd]
+            if not handle.writable():
+                raise OSError(9, 'Bad file descriptor')
+            flushed.append(path)
+        return original_fsync(fd)
+    root = project(tmp_path)
+    before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    monkeypatch.setattr(Path, 'open', tracked_open)
+    monkeypatch.setattr(os, 'fsync', writable_fsync)
+    result = migration.apply_migration(root)
+    assert len(flushed) == result['receipt']['backup_verified']['file_count'] == 4
+    migration.restore_migration(root, result['receipt']['migration_id'])
+    assert {name: (root/name).read_bytes() for name in before} == before
+
+
 def test_live_job_blocks_migration_without_opening_writer_or_adopting(tmp_path):
     root=project(tmp_path);db=root/'local_jobs.sqlite3'
     with sqlite3.connect(db) as conn:
