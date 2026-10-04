@@ -1535,6 +1535,8 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
 
     profile = None
     if req.compute_profile_id:
+        if not req.queue or req.priority != 0:
+            raise HTTPException(422, 'Remote queue uses FIFO; queue=false and nonzero priority are unsupported')
         from backend.remote.profiles import get_profile_store
 
         try:
@@ -1705,6 +1707,13 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         if replay is not None:
             return replay
         reserved.append(ledger)
+        if req.max_runtime_s:
+            # Both worker paths may start immediately. Commit the requested limit before either can launch.
+            # A budget that could not be persisted must not silently become an unlimited run.
+            try:
+                ledger.store.set_budget(ledger.job_id, {"max_runtime_s": req.max_runtime_s, "max_attempts": 1})
+            except _LEDGER_ERRORS as exc:
+                raise HTTPException(503, 'The runtime budget could not be recorded; no worker was launched') from exc
     out_dir.mkdir(parents=True, exist_ok=True)
     dataset_binding = None
     if request is not None:
@@ -1808,11 +1817,6 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
             queue_when_busy=req.queue, priority=req.priority,
             budget={"max_runtime_s": req.max_runtime_s, "max_attempts": 1} if req.max_runtime_s else None,
         )
-        if ledger is not None and req.max_runtime_s and getattr(record, "status", None) != "queued":
-            try:
-                ledger.store.set_budget(job_id, {"max_runtime_s": req.max_runtime_s, "max_attempts": 1})
-            except _LEDGER_ERRORS as exc:
-                logger.warning("Job ledger could not record the budget of %s: %s", job_id, exc)
 
     response = {
         "job_id": job_id,

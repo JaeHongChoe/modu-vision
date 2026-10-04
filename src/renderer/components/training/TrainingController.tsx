@@ -46,9 +46,11 @@ import {useTaskHandoff} from './useTaskHandoff';
 import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
 import { trainingLogLines } from './trainingLog';
+import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingSchedulingSettings} from './TrainingSchedulingSettings';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
+  const [scheduling, setScheduling] = useState({...defaultTrainingScheduling});
   const [warmParentId, setWarmParentId] = useState('');
   const [warmParents, setWarmParents] = useState<Array<{ job_id: string; checkpoint_sha256: string }>>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
@@ -117,6 +119,11 @@ export const TrainingController: React.FC = () => {
   } = useComputeStore();
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId);
+  let schedulingError: string | null = null;
+  let schedulingOptions = {};
+  try { schedulingOptions = trainingSchedulingOptions(scheduling, !!selectedProfileId); }
+  catch (error) { schedulingError = error instanceof Error ? error.message : String(error); }
+  useEffect(() => {setScheduling({...defaultTrainingScheduling});}, [projectDir, project?.id, task, selectedProfileId]);
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
   const jobProfile = profiles.find((profile) => profile.id === jobComputeProfileId);
   const jobGpuSelector = jobProfile?.gpu_selector?.trim();
@@ -182,12 +189,12 @@ export const TrainingController: React.FC = () => {
   }, [jobId, isTraining, refreshCurrentJob]);
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
-    !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && computeReady;
+    !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && !schedulingError && computeReady;
   const startBlocker = isProjectBusy || isLoading || isSplitting ? '프로젝트·데이터 변경이 진행 중입니다.'
     : !sourceReady || importError ? '현재 데이터 원본을 다시 가져와야 합니다.'
     : totalImages<1 || split.train<1 || split.val<1 ? '저장된 Train·Val 분할과 검수 이미지를 준비하세요.'
     : isRecoveringTraining ? '이전 학습의 실행 상태를 확인 중입니다.'
-    : modelOptionsError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
+    : modelOptionsError || schedulingError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);
 
   const handleStart = async () => {
@@ -195,7 +202,7 @@ export const TrainingController: React.FC = () => {
     setActionError(null);
     try {
       if(resumeState)setNextSettings({batchSize:Number(resumeState.recipe.batch_size)||undefined,device:resumeState.device});
-      await startTraining(folderPath, task, resumeState?undefined:warmParentId || undefined, modelOptions);
+      await startTraining(folderPath, task, resumeState?undefined:warmParentId || undefined, modelOptions, schedulingOptions);
     }
     catch (error) { setActionError(error instanceof Error ? error.message : '학습 시작에 실패했습니다.'); }
   };
@@ -395,6 +402,7 @@ export const TrainingController: React.FC = () => {
         </div>}
 
         <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
+        <TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={isTraining || isRecoveringTraining} error={schedulingError} />
         {/* Dark Steel Execution Control Toolbar */}
         <div className="p-3 bg-[#131822] rounded-[4px] border border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-4">

@@ -78,6 +78,8 @@ export interface TrainingRecoverySource {
   task: VisionTask;
 }
 
+export type TrainingSchedulingOptions = {queue?: boolean; priority?: number; max_runtime_s?: number};
+
 interface TrainingState {
   jobId: string | null;
   warmStartParentJobId: string | null;
@@ -115,7 +117,7 @@ interface TrainingState {
   hardware: HardwareStats;
 
   setPreset: (preset: TrainingPreset) => void;
-  startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string, modelOverrides?: Record<string, unknown>) => Promise<void>;
+  startTraining: (datasetPath: string, task: VisionTask, warmStartParentJobId?: string, modelOverrides?: Record<string, unknown>, scheduling?: TrainingSchedulingOptions) => Promise<void>;
   stopTraining: () => Promise<void>;
   recoverActiveJob: (source?: TrainingRecoverySource) => Promise<void>;
   refreshCurrentJob: () => Promise<void>;
@@ -188,7 +190,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
 
   setPreset: (preset) => set({ preset }),
 
-  startTraining: async (datasetPath, task, warmStartParentJobId, modelOverrides) => {
+  startTraining: async (datasetPath, task, warmStartParentJobId, modelOverrides, scheduling = {}) => {
     if (useDatasetStore.getState().isSplitting) {
       throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
     }
@@ -200,6 +202,11 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       throw new Error(`컴퓨팅 위치를 확인할 수 없습니다: ${compute.loadError}`);
     }
     const selectedProfileId = compute.selectedProfileId;
+    const {queue, priority, max_runtime_s} = scheduling;
+    if (queue !== undefined && typeof queue !== 'boolean') throw new Error('대기열 설정은 켜기 또는 끄기여야 합니다.');
+    if (priority !== undefined && (!Number.isInteger(priority) || priority < -10 || priority > 10)) throw new Error('우선순위는 -10~10 정수여야 합니다.');
+    if (max_runtime_s !== undefined && (!Number.isFinite(max_runtime_s) || max_runtime_s <= 0 || max_runtime_s > 604800)) throw new Error('시간 제한은 0초 초과, 7일 이하여야 합니다.');
+    if (selectedProfileId && (queue === false || (priority !== undefined && priority !== 0))) throw new Error('서버 대기열은 등록 순서로 실행합니다. 대기 거절·우선순위 변경은 지원하지 않습니다.');
     const profile = selectedProfileId ? compute.getSelectedProfile() : undefined;
     if (selectedProfileId) {
       const readiness = trainingComputeReadiness(compute.probeResults[selectedProfileId], task, get().preset, modelOverrides, !!warmStartParentJobId);
@@ -243,6 +250,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         config_overrides: {...modelOverrides, ...(get().nextBatchSize ? {batch_size: get().nextBatchSize} : {})},
         ...(!selectedProfileId && get().nextDevice && get().nextDevice!=='auto' ? {device: get().nextDevice!} : {}),
         ...(selectedProfileId ? { compute_profile_id: selectedProfileId } : {}),
+        ...(queue !== undefined ? {queue} : {}), ...(priority !== undefined ? {priority} : {}),
+        ...(max_runtime_s !== undefined ? {max_runtime_s} : {}),
       });
       const res = await startRequest;
       if (selectedProfileId && res.compute_profile_id !== selectedProfileId) {

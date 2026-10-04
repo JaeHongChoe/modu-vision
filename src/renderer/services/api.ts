@@ -1117,6 +1117,10 @@ export const api = {
       compute_profile_id?: string;
       device?: string;
       warm_start_job_id?: string;
+      dataset_version_id?: string;
+      queue?: boolean;
+      priority?: number;
+      max_runtime_s?: number;
     }) => {
       // An explicit literal of the generated request type: a field the backend renames or removes fails typecheck here
       // (a variable or a spread would not be checked for extra fields). Undefined fields are left out as before.
@@ -1124,6 +1128,8 @@ export const api = {
         task: data.task, preset: data.preset, dataset_path: data.dataset_path,
         output_dir: data.output_dir, config_overrides: data.config_overrides, compute_profile_id: data.compute_profile_id,
         device: data.device, warm_start_job_id: data.warm_start_job_id,
+        dataset_version_id: data.dataset_version_id, queue: data.queue, priority: data.priority,
+        max_runtime_s: data.max_runtime_s,
       };
       return request<{ job_id: string; status: string; preset: string; task: string; compute_profile_id?: string | null; phase?: string; warm_start_parent_job_id?: string | null }>('/api/training/start', {
         method: 'POST',
