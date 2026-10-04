@@ -147,6 +147,136 @@ def test_maintenance_guard_rejects_existing_writer_and_blocks_new_api_mutations(
     assert seen==['GET','POST']
 
 
+def test_windows_shared_admission_does_not_use_exclusive_crt_lock(tmp_path, monkeypatch):
+    """Exercise both OS branches using a byte-lock API emulator on any host."""
+    import ctypes, os, sys
+    from contextvars import Context
+    from types import SimpleNamespace
+    from backend.engine import migration_guard as guard
+    root=project(tmp_path); locks={}; calls=[]
+    def key(fd):
+        stat=os.fstat(fd);return (stat.st_dev,stat.st_ino)
+    def acquire(fd,exclusive):
+        held=locks.setdefault(key(fd),{})
+        if held and (exclusive or any(held.values())):raise OSError(33,'fixture conflicting byte lock')
+        held[fd]=exclusive
+    def release(fd):locks[key(fd)].pop(fd)
+    def crt_lock(fd,mode,size):
+        assert size==1
+        if mode==2:release(fd)
+        else:acquire(fd,True)  # LK_NBLCK and LK_NBRLCK are both exclusive.
+    monkeypatch.setitem(sys.modules,'msvcrt',SimpleNamespace(LK_NBLCK=1,LK_UNLCK=2,
+        locking=crt_lock,get_osfhandle=lambda fd:fd))
+    class ApiCall:
+        def __init__(self,unlock=False):self.unlock=unlock
+        def __call__(self,fd,*args):
+            fd=fd.value if hasattr(fd,'value') else fd
+            if self.unlock:
+                reserved,low,high,overlapped=args
+                assert (reserved,low,high)==(0,1,0)
+                release(fd);return 1
+            flags,reserved,low,high,overlapped=args
+            assert (reserved,low,high)==(0,1,0)
+            fields=overlapped._obj
+            assert fields.Internal==fields.InternalHigh==fields.Offset==fields.OffsetHigh==0
+            assert not fields.hEvent
+            calls.append(flags)
+            try:acquire(fd,bool(flags & 2));return 1
+            except OSError:return 0
+    dll=SimpleNamespace(LockFileEx=ApiCall(),UnlockFileEx=ApiCall(True))
+    monkeypatch.setattr(ctypes,'WinDLL',lambda name,**kw:dll,raising=False)
+    monkeypatch.setattr(ctypes,'get_last_error',lambda:33,raising=False)
+    monkeypatch.setattr(ctypes,'WinError',lambda code:OSError(code,'fixture conflicting byte lock'),raising=False)
+    monkeypatch.setattr(guard,'os',SimpleNamespace(**{**vars(os),'name':'nt'}))
+    def independent_shared():
+        with guard.maintenance_guard(root):assert sum(len(value) for value in locks.values())==2
+    def independent_exclusive():
+        with guard.maintenance_guard(root,exclusive=True):pass
+    with guard.maintenance_guard(root):
+        Context().run(independent_shared)
+        with pytest.raises(ValueError,match='writers|drain'):Context().run(independent_exclusive)
+    Context().run(independent_exclusive)
+    assert calls==[1,1,3,3]
+    assert all(not value for value in locks.values())
+    assert (root/'migration_admission.lock').read_bytes()==b''
+
+
+@pytest.mark.parametrize('failure',['acquire','unlock'])
+def test_windows_admission_error_closes_handle_and_clears_request_ownership(tmp_path,monkeypatch,failure):
+    import os
+    from types import SimpleNamespace
+    from backend.engine import migration_guard as guard
+    root=project(tmp_path);handles=[]
+    def lock(handle,exclusive):
+        handles.append(handle)
+        if failure=='acquire':raise OSError('fixture acquire failure')
+        def unlock():raise OSError('fixture unlock failure')
+        return unlock
+    monkeypatch.setattr(guard,'os',SimpleNamespace(**{**vars(os),'name':'nt'}))
+    monkeypatch.setattr(guard,'_windows_admission',lock)
+    with pytest.raises((ValueError,OSError),match='writers|unlock failure'):
+        with guard.maintenance_guard(root):pass
+    assert len(handles)==1 and handles[0].closed and not guard._HELD.get()
+
+
+@pytest.mark.parametrize('holder_exclusive,contender_exclusive,allowed',[
+    (False,False,True),(False,True,False),(True,False,False),(True,True,False),
+])
+def test_native_process_project_admission_shared_and_cutover(tmp_path,holder_exclusive,contender_exclusive,allowed):
+    import subprocess, sys, time
+    from backend.engine.migration_guard import maintenance_guard
+    root=project(tmp_path);ready=tmp_path/'child-held'
+    script='''from pathlib import Path
+import sys
+from backend.engine.migration_guard import maintenance_guard
+with maintenance_guard(sys.argv[1],exclusive=sys.argv[2]=='1'):
+    Path(sys.argv[3]).write_text('held')
+    assert sys.stdin.readline().strip()=='release'
+'''
+    process=subprocess.Popen([sys.executable,'-c',script,str(root),str(int(holder_exclusive)),str(ready)],
+        stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    try:
+        deadline=time.monotonic()+10
+        while not ready.exists() and process.poll() is None and time.monotonic()<deadline:time.sleep(.02)
+        assert ready.exists(), 'child could not acquire admission'
+        if allowed:
+            with maintenance_guard(root,exclusive=contender_exclusive):pass
+        else:
+            with pytest.raises(ValueError,match='writers|drain'):
+                with maintenance_guard(root,exclusive=contender_exclusive):pass
+    finally:
+        try:stdout,stderr=process.communicate('release\n',timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill();stdout,stderr=process.communicate(timeout=5)
+    assert process.returncode==0,stderr
+    with maintenance_guard(root,exclusive=True):pass
+
+
+def test_real_http_project_reads_and_writers_share_ordinary_admission(tmp_path,monkeypatch):
+    import asyncio, threading
+    from fastapi.testclient import TestClient
+    from backend.main import create_app
+    monkeypatch.setenv('VISION_AI_STUDIO_API_TOKEN','fixture-process-token')
+    app=create_app(project_dir=str(tmp_path/'projects'))
+    client=TestClient(app,headers={'X-Vision-Token':'fixture-process-token'})
+    created=client.post('/api/project/create',json={'name':'Shared admission QA','task':'classification'})
+    assert created.status_code==200,created.text
+    entered=threading.Event();release=threading.Event();responses={}
+    @app.post('/api/fixture-shared-writer')
+    async def held_writer():
+        entered.set();assert await asyncio.to_thread(release.wait,10)
+        return {'finished':True}
+    thread=threading.Thread(target=lambda:responses.update(writer=client.post('/api/fixture-shared-writer')))
+    thread.start()
+    try:
+        assert entered.wait(5)
+        read=client.get('/api/project/current');assert read.status_code==200,read.text
+        write=client.put('/api/project/update',json={'description':'concurrent ordinary writer'})
+        assert write.status_code==200,write.text
+    finally:release.set();thread.join(10)
+    assert not thread.is_alive() and responses['writer'].status_code==200
+
+
 def test_prepared_cutover_restart_recovers_only_verified_output(tmp_path,monkeypatch):
     root=project(tmp_path);writer=migration._atomic_json
     def fail(path,value):

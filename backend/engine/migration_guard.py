@@ -8,6 +8,32 @@ from pathlib import Path
 _HELD=ContextVar("project_maintenance_admission",default=())
 
 
+def _windows_admission(handle, exclusive):
+    # The CRT locking API has no shared mode. LockFileEx permits overlapping
+    # ordinary admissions while an exclusive migration still refuses them.
+    import ctypes
+    import msvcrt
+    class Overlapped(ctypes.Structure):
+        _fields_=[('Internal',ctypes.c_size_t),('InternalHigh',ctypes.c_size_t),
+                  ('Offset',ctypes.c_uint32),('OffsetHigh',ctypes.c_uint32),
+                  ('hEvent',ctypes.c_void_p)]
+    kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+    dword=ctypes.c_uint32;pointer=ctypes.POINTER(Overlapped)
+    kernel.LockFileEx.argtypes=[ctypes.c_void_p,dword,dword,dword,dword,pointer]
+    kernel.UnlockFileEx.argtypes=[ctypes.c_void_p,dword,dword,dword,pointer]
+    kernel.LockFileEx.restype=kernel.UnlockFileEx.restype=ctypes.c_int32
+    native=ctypes.c_void_p(msvcrt.get_osfhandle(handle.fileno()))
+    overlapped=Overlapped()
+    # Synchronous, immediate failure; byte zero may be beyond EOF. Writing an
+    # initializer here would conflict with another request's shared lock.
+    if not kernel.LockFileEx(native,1 | (2 if exclusive else 0),0,1,0,ctypes.byref(overlapped)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    def release():
+        if not kernel.UnlockFileEx(native,0,1,0,ctypes.byref(overlapped)):
+            raise ctypes.WinError(ctypes.get_last_error())
+    return release
+
+
 @contextmanager
 def maintenance_guard(root, *, exclusive=False):
     root=Path(root).expanduser()
@@ -25,9 +51,7 @@ def maintenance_guard(root, *, exclusive=False):
     try:
         try:
             if os.name=='nt':
-                import msvcrt
-                if os.fstat(handle.fileno()).st_size==0:handle.write(b'0');handle.flush()
-                handle.seek(0);msvcrt.locking(handle.fileno(),msvcrt.LK_NBLCK,1)
+                unlock=_windows_admission(handle,exclusive)
             else:
                 import fcntl
                 fcntl.flock(handle.fileno(),(fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)|fcntl.LOCK_NB)
@@ -37,12 +61,13 @@ def maintenance_guard(root, *, exclusive=False):
         token=_HELD.set((*_HELD.get(),ownership))
         yield
     finally:
-        if ownership:ownership['active']=False
-        if token is not None:_HELD.reset(token)
-        if held:
-            if os.name=='nt':handle.seek(0);msvcrt.locking(handle.fileno(),msvcrt.LK_UNLCK,1)
-            else:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
-        handle.close()
+        try:
+            if ownership:ownership['active']=False
+            if token is not None:_HELD.reset(token)
+            if held:
+                if os.name=='nt':unlock()
+                else:fcntl.flock(handle.fileno(),fcntl.LOCK_UN)
+        finally:handle.close()
 
 
 class ProjectMaintenanceMiddleware:
