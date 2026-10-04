@@ -21,7 +21,7 @@
 | Operations | S5-06, S5-08, S5-09 | Staged fleet rollout, distribution drift, protected retention and backup/restore |
 | Verification | S7-01, S6-09 | Slice receipts, fresh combined regression, independent review and publication hygiene |
 
-Claude retains S2-01/S2-05, E01–E06 and labeling layout changes. In particular, E06 sampling stays with Claude; Codex consumes that contract after handoff and does not duplicate it. Root coordinates the shared OCR flow fields, frozen Windows entry, selected-profile search service wrapper, generated API types and retention UI after lane ownership is established. Global parent status and CI are unchanged.
+As of the final 2026-10-04 handoff, Codex owns the remaining development, including E01–E08, S2-01/S2-05, labeling and native app QA. The extension batch is merged in PR #3, NQA4 in PR #4, and the E06 sampling component in PR #5. Preserve the received source separately and compose reviewed slices onto current main. Parent acceptance stays scoped; the current progress summary is in `../../implementation-ledger/SERVICE-UPGRADE.md`. GPU execution is temporarily deferred for the user's network move; local implementation continues.
 
 ## Execution checks for every lane
 

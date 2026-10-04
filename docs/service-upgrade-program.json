@@ -1169,7 +1169,7 @@
     "S1-06",
     "S1-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "slice-reviewed-published",
@@ -1194,6 +1194,15 @@
      "result": "670a789: each reconnection catch-up page announces its changed jobs (or a reset) to the panels; stale or empty pages announce nothing and a failing panel never stops the catch-up; an open Task Center reads its list at once on a change (the 2.5 s poll stays as the fallback). Independent review ACCEPT (P3s)",
      "scope": "frozen tree (0715df1 + 5 files): unit 21, renderer 415, typecheck, e2e service-s1-10 (3), Linux CI list 595 passed 2 skipped, Windows list 372 passed 2 skipped (run on this Mac); red: the two slice-4 tests fail on main",
      "platform": "macOS development; renderer only; no end-to-end reconnection into an open Task Center"
+    },
+    {
+     "kind": "implementation-reconciled-to-hosted-source",
+     "source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+     "result": "Project-scoped event cursors/reset/deduplication/stale guards, desktop/browser host adapters and generated request/response client types are implemented. Exact-source Linux and Windows each passed 7 event and 7 type contracts; Linux browser passed 3 adapter/cursor cases. Native Windows UI and broader panel integration follow-ups remain pending.",
+     "scope": "Parent software implementation only; all other acceptance dimensions retain their prior states. Tested merge 3893e0b6e6db220ac80799ff0157f24ba87a4131 has the same tree ea8248352a8fe7387403eb98d41123e4f1d5551d.",
+     "platform": "Linux CPU and Windows Server 2025 source CI; native target/field/quality acceptance is separate",
+     "receipt": "hosted-e376db1-final-summary",
+     "receipt_sha256": "e8915b0b160ea850228ef1aaf59a403f3f0fd44c21fb6d14c40e7fceb8ccf775"
     }
    ],
    "file_actions": {
@@ -1204,7 +1213,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",
@@ -1216,7 +1225,6 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_10.py",
    "remaining": [
-    "slice 3: OpenAPI-generated TypeScript client types and a schema drift check",
     "review P3s (follow-up): the retry test does not show a later failure in the same session is retried again after a failed retry; App's catch-up wiring is checked by source text, not by rendering App",
     "review P3s (recorded): global cursor positions reveal other projects' event counts and timing; reads take the ledger write lock through ledger_id(); the anchor covers (job, seq) only; raw payloads reach every project member; openLink returns false in a real browser; browser pickers explain themselves only in a tooltip",
     "since 670a789 an open Task Center reads its list at once when a reconnection catch-up reports changed jobs; other panels (inspection history, dataset imports, specialized workbenches) still only poll; review P3s: the unsubscribe on close or scope change is not tested, a throwing listener is tested only last, no coalescing of N pulls, async listeners must not reject",
@@ -1241,13 +1249,22 @@
     "S1-05",
     "S1-09"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "slice-reviewed-published",
      "result": "4c51552: a first-run guide shows the order of a first project and offers an example: a synthetic surface dataset drawn on this computer from a fixed seed (nothing downloaded or shipped), a project made from it, a short CPU training without pretrained weights, a saved single-model flow and an inspection of its test images, all through the calls a user's clicks make. The example project is marked and never backs a quality approval or a release; on a team connection the guide does not open by itself and the example is refused; a folder that no longer matches the example is left alone and a new one drawn. The guide's state is read after the first project sync, and a stage chosen while that sync is in flight is kept. When the example's training ends the training store reads the job again, so a finished example no longer blocks opening or creating a project. Independent review: freezes 1-3 changed per review (P1/P2s, including the startup race shown by service-s2-04), freeze 4 ACCEPT WITH FIXES (a bookkeeping P1: the manifest named freeze-3 receipts, regenerated before publish; P3s).",
      "scope": "frozen tree (422a2d2 + the QA freeze 4 + this freeze, 30 files) published on 08eb293 with the CI line composed: backend (test_service_s2_01, test_service_s1_10_types, test_service_release_eligibility) 43 passed, 23 passed with the CI lock, red 2 of 16 on freeze 3 code; renderer 486 passed, red 2 of 13; typecheck and the e2e typecheck ok; the S2-01 browser e2e passed (the example trains resnet18 without pretrained weights for 20 epochs on this Mac's CPU), red on freeze 3 code (the user's own project not created after the example); browser suite 52 passed, the one failure the operator-choice spec from 422a2d2; Linux CI list 766 passed 2 skipped, Windows list 543 passed 2 skipped (run on this Mac).",
      "platform": "macOS development; browser (Chrome) with the actual backend, the CI-locked .venv and the test-only desktop host shim, CPU; not the Electron app, not native Windows"
+    },
+    {
+     "kind": "implementation-reconciled-to-hosted-source",
+     "source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+     "result": "The first-run ordering and deterministic offline CPU example are implemented through the actual project/data/training/saved-flow/inspection paths with explicit example-quality refusal. Exact-source Linux passed 15 backend cases with 1 case-sensitive-filesystem skip, Windows passed all 16; the actual Linux browser example workflow passed. Native Electron/Windows UI and recorded concurrency follow-ups remain pending.",
+     "scope": "Parent software implementation only; all other acceptance dimensions retain their prior states. Tested merge 3893e0b6e6db220ac80799ff0157f24ba87a4131 has the same tree ea8248352a8fe7387403eb98d41123e4f1d5551d.",
+     "platform": "Linux CPU and Windows Server 2025 source CI; native target/field/quality acceptance is separate",
+     "receipt": "hosted-e376db1-final-summary",
+     "receipt_sha256": "e8915b0b160ea850228ef1aaf59a403f3f0fd44c21fb6d14c40e7fceb8ccf775"
     }
    ],
    "file_actions": {
@@ -1257,7 +1274,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",
@@ -1948,6 +1965,13 @@
      "result": "f16d9a5: the project API saves a dataset source resolved (a symlinked folder, or a mapped network drive on Windows, gets another spelling); the dataset store now imports under that saved spelling and decides 'the same folder again', another task in the same folder and latest-model recovery with it, and a source save retried before a project action follows it too, so step 3 no longer waits for 'the current source' forever (found by the app-flow QA on macOS /var vs /private/var). Independent review: freezes 1-3 changed per review (P2s), freeze 4 ACCEPT WITH FIXES (P3 record-keeping only, done: the freeze-4 typecheck receipt, the reload note, the app-qa record and red reason outside $TMPDIR)",
      "scope": "frozen tree (422a2d2 + 10 files), published unchanged on 64b8181 (the move touches none of them): renderer unit tests 14 (datasetSourcePath 5, flowSaveAdoption 3, trainingLog 1 and the existing store tests) green, red 10 of 14 on freeze 1 code; renderer suite 475 passed; typecheck and the e2e typecheck ok on the freeze-4 tree; Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac); the app-flow e2e passed once run alone (9.7 min), skipped by default without MV_E2E_APP_FLOW=1, red on freeze 1 code (stops at the disabled training start button)",
      "platform": "macOS development; browser (Chrome) with the actual backend, the repo .venv and the test-only desktop host shim, CPU; not the Electron app, not GPU, not native Windows"
+    },
+    {
+     "kind": "merged-native-qa-slice",
+     "source_sha": "d1300cc20bb7d34407c39f299e2966984b65fa84",
+     "result": "Current dataset-source validation/read-error recovery; independently reviewed and merged in PR #4.",
+     "scope": "NQA4 scope only; full data/tool/format and target acceptance remains pending.",
+     "platform": "Actual macOS Electron interaction plus source-qualified Linux browser and Windows Server gates"
     }
    ],
    "file_actions": {
@@ -2122,8 +2146,16 @@
     "S3-01",
     "S3-04"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-native-qa-slice",
+     "source_sha": "d1300cc20bb7d34407c39f299e2966984b65fa84",
+     "result": "Label focus layout, shared edit locks and save/reopen persistence; independently reviewed and merged in PR #4.",
+     "scope": "NQA4 scope only; full data/tool/format and target acceptance remains pending.",
+     "platform": "Actual macOS Electron interaction plus source-qualified Linux browser and Windows Server gates"
+    }
+   ],
    "file_actions": {
     "src/renderer/components/labeling/CanvasToolbar.tsx": "Modify",
     "src/renderer/components/labeling/BrushTool.tsx": "Modify",
@@ -2250,8 +2282,16 @@
     "S3-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Immutable derived brightness versions and provenance; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Full edit/review/retrain/comparison/reapproval workflow and other-OS qualification.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/annotation_transactions.py": "Modify",
     "backend/engine/workflow_impact.py": "Modify",
@@ -2293,8 +2333,16 @@
     "S3-04",
     "S5-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Durable review priority with source/run identity; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Representative captured jobs, human label adoption and full parent UI workflow.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/capture_intake.py": "Modify",
     "src/renderer/components/dataset/CaptureIntakePanel.tsx": "Modify",
@@ -2378,8 +2426,16 @@
     "S1-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "DINOv3 head/partial/full training controls; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Authentic pretrained and representative evaluation plus full native model workflow.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/model_backbones.py": "Modify",
     "backend/engine/trainer.py": "Modify",
@@ -2581,8 +2637,16 @@
     "S3-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "OCR horizontal-region recognition, multiline ordering and rules; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Learned/vertical detector, representative Korean scene quality and native model workflow.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/ocr.py": "Modify",
     "backend/api/routes_ocr.py": "Modify",
@@ -2622,8 +2686,16 @@
     "S3-07",
     "S6-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Explicit local YOLO OBB adapter, training/prediction and trust; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Remote weight transfer, representative evaluation and approved weight/runtime licenses.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/rotated_detection.py": "Modify",
     "backend/api/routes_rotated_detection.py": "Modify",
@@ -2835,8 +2907,16 @@
     "S1-03",
     "S4-11"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Selected-profile AutoDL and local exact resume; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Independent representative evaluation; remote exact resume and remote OBB transfer remain unsupported.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/api/routes_automated_training.py": "Modify",
     "backend/engine/training_engine.py": "Modify",
@@ -2962,8 +3042,16 @@
     "S1-09",
     "S4-14"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Windows SCM dispatcher and owned lifecycle; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Actual registration, service identity, reboot/Session0, devices and installer.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/inspection_service.py": "Modify",
     "backend/engine/service_runtime.py": "Modify",
@@ -3001,8 +3089,16 @@
    "depends_on": [
     "S5-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Recipe-bound durable admission and bounded backpressure; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Deployed continuous input, crash/recovery and throughput qualification.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/inspection_service.py": "Modify",
     "backend/engine/input_adapters.py": "Create",
@@ -3169,8 +3265,16 @@
     "S4-14",
     "S5-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Durable staged rollout and reverse rollback; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Actual device ACK/readback and field rollout/rollback.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/fleet.py": "Modify",
     "backend/engine/fleet_agent.py": "Modify",
@@ -3255,8 +3359,16 @@
     "S5-05",
     "S5-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Immutable reference drift reports and controls; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Representative baseline, full improvement loop and sampling integration.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/workflow_impact.py": "Modify",
     "backend/engine/capture_intake.py": "Modify",
@@ -3299,8 +3411,16 @@
     "S3-10",
     "S5-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-implementation-slice",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "result": "Protected retention, recoverable trash and restore; independently reviewed and merged in PR #3.",
+     "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Real recovery drill, operational policy and full target qualification.",
+     "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/storage/backup.py": "Create",
     "backend/engine/project_archive.py": "Modify",
@@ -3762,13 +3882,22 @@
    "depends_on": [
     "S6-05"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "reviewed-published",
      "result": "published in e18f4c6: CONTRIBUTING.md (per-OS fresh checkout with the locked installs CI uses: Windows PowerShell without changing the execution policy, Linux, macOS; the CPU demo; focused tests and the CI lists; test data isolation; fork/branch/push/PR; evidence kinds; module map; coding rules; ownership; support matrix; change, deprecation and release policy), SECURITY.md, CODE_OF_CONDUCT.md, a neutral private contact request form with no free-text field, bug and feature forms with a required hygiene confirmation, a PR template with the evidence kinds, README aligned with the guide and the pinned versions; scripts/cpu_demo.py trains and evaluates small_cnn_angle_v1 on synthetic images with the app's training CLI on the CPU (no GPU, network or downloaded weights) and keeps its records in its own folder; backend/tests/test_service_s6_07.py (19) keeps the documents true to the repository and runs in both CI workflows; independent review freezes 1-3 (freeze 1: 1 P1, 5 P2; freeze 2: 2 P2; freeze 3 ACCEPT)",
      "scope": "frozen tree (a4c713c + 13 files): test 19 passed, demo 13.8 s on this Mac (angular MAE 1.85 degrees on 16 test images, environment data folders untouched); reviewer walk-through of the macOS steps without network installs",
      "platform": "macOS development; the Windows steps were checked by reading; the hosted Windows job runs the test and the demo after publish"
+    },
+    {
+     "kind": "implementation-reconciled-to-hosted-source",
+     "source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+     "result": "Contributor setup, module map, ownership, support/change/security policies, PR and issue templates, and the real CPU training/evaluation demo are implemented. Exact-source Linux and Windows each passed all 19 contributor contracts including actual CPU demo training/evaluation. Fresh Windows11/Linux PC walkthrough and optional maintainer settings remain pending.",
+     "scope": "Parent software implementation only; all other acceptance dimensions retain their prior states. Tested merge 3893e0b6e6db220ac80799ff0157f24ba87a4131 has the same tree ea8248352a8fe7387403eb98d41123e4f1d5551d.",
+     "platform": "Linux CPU and Windows Server 2025 source CI; native target/field/quality acceptance is separate",
+     "receipt": "hosted-e376db1-final-summary",
+     "receipt_sha256": "e8915b0b160ea850228ef1aaf59a403f3f0fd44c21fb6d14c40e7fceb8ccf775"
     }
    ],
    "file_actions": {
@@ -3780,7 +3909,7 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
    "acceptance_state": {
-    "implementation": "pending",
+    "implementation": "verified",
     "contract": "pending",
     "gui": "pending",
     "persist": "pending",
@@ -8696,17 +8825,152 @@
   "mode": "exclusive-file-ownership",
   "ledger": "docs/implementation-ledger/SERVICE-UPGRADE.md",
   "active_tasks": [
-   "S0-08",
+   "S2-05",
+   "S2-08",
+   "S3-04",
+   "S3-07",
+   "S3-08",
+   "S5-05",
+   "S5-10",
    "S1-02",
-   "S1-03",
-   "S1-07",
-   "S2-02",
-   "S2-04",
-   "S3-01",
-   "S6-05"
+   "S1-08",
+   "S4-11",
+   "S5-08"
   ],
-  "last_verified_on": "2026-10-02",
-  "git_publication": "main 8716df7: bundle (91033b2), inspection scope (25235a2, 021b5e5), S3-01 slices 1-2 (3d42284, 021b5e5, 8716df7) pushed after independent review and clean-clone runs; S3-01 slices 1-3 and follow-ups published; S1-04 cancel/failure observation and S1-05 capability slice in review"
+  "last_verified_on": "2026-10-04",
+  "git_publication": "Main e376db11e586a1866658349da6888c8eaf783d1b: independently verified PR #3 extension batch (6885e8b), PR #4 NQA4 (d1300cc), PR #5 E06/operator fixture (e376db1), all merged. Claude has handed off source ownership to Codex.",
+  "owner": "Codex",
+  "verified_source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+  "progress": {
+   "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
+   "parent_implementation": {
+    "verified": 24,
+    "pending": 58
+   },
+   "parent_status": {
+    "verification_pending": 18,
+    "in_progress": 25,
+    "planned": 39
+   },
+   "merged_extension_slices": 12,
+   "additional_improved_parent_areas": 2,
+   "slice_records": [
+    {
+     "slice_id": "PR3-S4-06",
+     "task": "S4-06",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "OCR horizontal-region recognition, multiline ordering and rules",
+     "remaining": "Learned/vertical detector, representative Korean scene quality and native model workflow."
+    },
+    {
+     "slice_id": "PR3-S4-07",
+     "task": "S4-07",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Explicit local YOLO OBB adapter, training/prediction and trust",
+     "remaining": "Remote weight transfer, representative evaluation and approved weight/runtime licenses."
+    },
+    {
+     "slice_id": "PR3-S4-01",
+     "task": "S4-01",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "DINOv3 head/partial/full training controls",
+     "remaining": "Authentic pretrained and representative evaluation plus full native model workflow."
+    },
+    {
+     "slice_id": "PR3-S4-12",
+     "task": "S4-12",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Selected-profile AutoDL and local exact resume",
+     "remaining": "Independent representative evaluation; remote exact resume and remote OBB transfer remain unsupported."
+    },
+    {
+     "slice_id": "PR3-S3-08",
+     "task": "S3-08",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Immutable derived brightness versions and provenance",
+     "remaining": "Full edit/review/retrain/comparison/reapproval workflow and other-OS qualification."
+    },
+    {
+     "slice_id": "PR3-S3-09",
+     "task": "S3-09",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Durable review priority with source/run identity",
+     "remaining": "Representative captured jobs, human label adoption and full parent UI workflow."
+    },
+    {
+     "slice_id": "PR3-S5-01",
+     "task": "S5-01",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Windows SCM dispatcher and owned lifecycle",
+     "remaining": "Actual registration, service identity, reboot/Session0, devices and installer."
+    },
+    {
+     "slice_id": "PR3-S5-02",
+     "task": "S5-02",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Recipe-bound durable admission and bounded backpressure",
+     "remaining": "Deployed continuous input, crash/recovery and throughput qualification."
+    },
+    {
+     "slice_id": "PR3-S5-06",
+     "task": "S5-06",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Durable staged rollout and reverse rollback",
+     "remaining": "Actual device ACK/readback and field rollout/rollback."
+    },
+    {
+     "slice_id": "PR3-S5-08",
+     "task": "S5-08",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Immutable reference drift reports and controls",
+     "remaining": "Representative baseline, full improvement loop and sampling integration."
+    },
+    {
+     "slice_id": "PR3-S5-09",
+     "task": "S5-09",
+     "source_sha": "6885e8b5e105fd12eff48202084621f339b03e93",
+     "pr": 3,
+     "summary": "Protected retention, recoverable trash and restore",
+     "remaining": "Real recovery drill, operational policy and full target qualification."
+    },
+    {
+     "slice_id": "NQA4-S3-01",
+     "task": "S3-01",
+     "source_sha": "d1300cc20bb7d34407c39f299e2966984b65fa84",
+     "pr": 4,
+     "summary": "Current dataset-source validation/read-error recovery",
+     "remaining": "Full parent workflow and target acceptance."
+    },
+    {
+     "slice_id": "NQA4-S3-05",
+     "task": "S3-05",
+     "source_sha": "d1300cc20bb7d34407c39f299e2966984b65fa84",
+     "pr": 4,
+     "summary": "Label focus layout, shared edit locks and save/reopen persistence",
+     "remaining": "Full parent workflow and target acceptance."
+    },
+    {
+     "slice_id": "PR5-E06",
+     "task": "S5-08",
+     "refinement": "E06",
+     "source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+     "pr": 5,
+     "summary": "Bounded deterministic sampling storage component",
+     "remaining": "Production intake/retention and API/UI/drift integration."
+    }
+   ],
+   "gpu_execution": "temporarily deferred per user network move; local work continues"
+  }
  },
  "scope_refinements": [
   {
@@ -8841,8 +9105,21 @@
     "High-volume stream respects item/byte quotas and retains a stated ordinary-input baseline; low-confidence scores from different domains are not compared untyped.",
     "Quota exhaustion/retention failure is visible; selections retain run/node/recipe origins and never become test truth automatically."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "merged-sampling-component",
+     "source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+     "result": "Deterministic sampling storage component with current whole item/byte/key caps, immutable replay receipts and retention accounting merged in PR #5; all 28 E06 contracts passed on exact-source Linux and Windows.",
+     "scope": "Engine/tests only. Production intake/retention callers and API/UI/drift integration remain pending.",
+     "platform": "Linux CPU and Windows Server 2025 source CI"
+    }
+   ],
+   "remaining": [
+    "Wire production intake and retention callers plus API/UI controls.",
+    "Integrate drift/review/retention without changing immutable historical receipt semantics.",
+    "Qualify representative continuous input and operational retention policy."
+   ]
   },
   {
    "id": "E07",

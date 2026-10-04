@@ -2,7 +2,37 @@
 
 기준 계획: [82개 작업](../superpowers/plans/2026-10-02-windows-open-source-service-upgrade.md), [작업 상태](../service-upgrade-program.json), [기존 기능 연결](../service-upgrade-coverage.md).
 
-기준 소스: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`. 목표 플랫폼은 Windows 11 x64이며, 현재 실행 근거는 macOS 개발 환경에서 수집했다. 구현·계약 테스트·화면·저장 및 재열기·실제 대상 실행·서명·모델 품질을 각각 기록한다.
+초기 기준 소스: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`. 목표 플랫폼은 Windows 11 x64다. 최초 실행 근거는 macOS 개발 환경에서 수집했으며, 최신 소스와 추가 플랫폼 근거는 아래 날짜별 기록을 따른다. 구현·계약 테스트·화면·저장 및 재열기·실제 대상 실행·서명·모델 품질을 각각 기록한다.
+
+## 2026-10-04 진척 집계 갱신
+
+확인 소스: `e376db11e586a1866658349da6888c8eaf783d1b`, tree `ea8248352a8fe7387403eb98d41123e4f1d5551d`. [PR #3](https://github.com/JaeHongChoe/modu-vision/pull/3), [PR #4](https://github.com/JaeHongChoe/modu-vision/pull/4), [PR #5](https://github.com/JaeHongChoe/modu-vision/pull/5)는 모두 main에 병합됐다. Claude의 소스 담당은 Codex로 인계됐다. 아래는 최신 집계이며, 이후 절의 이전 날짜 결과는 해당 소스의 역사 기록이다.
+
+- 82개 부모 작업의 소프트웨어 구현: **verified 24 / pending 58**. S1-10, S2-01, S6-07의 구현 근거를 최신 source-bound 실행과 대조해 pending에서 verified로 갱신했다. 각 작업의 다른 acceptance 차원은 유지했다.
+- 별도의 게시 진척: **확장 구현 slice 12개 + 추가 데이터·라벨링 개선 영역 2개**. 아래 14행은 부모 작업과 겹치므로 24에 더하지 않는다.
+- 전체 부모 acceptance 및 기존 기능 acceptance는 pending이다. Windows Server 소스 실행, 실제 macOS 상호작용, GPU 기능 smoke와 Windows11 설치·현장·품질 합격은 각각 범위를 가진다.
+- GPU/원격 실행은 사용자 네트워크 이동 동안 보류하고 로컬 작업을 계속한다.
+
+| 게시 범위 | main에 반영한 구현 | 아직 남은 범위 |
+| --- | --- | --- |
+| S4-06 · PR 3 | OCR horizontal-region recognition, multiline ordering and rules | Learned/vertical detector, representative Korean scene quality and native model workflow. |
+| S4-07 · PR 3 | Explicit local YOLO OBB adapter, training/prediction and trust | Remote weight transfer, representative evaluation and approved weight/runtime licenses. |
+| S4-01 · PR 3 | DINOv3 head/partial/full training controls | Authentic pretrained and representative evaluation plus full native model workflow. |
+| S4-12 · PR 3 | Selected-profile AutoDL and local exact resume | Independent representative evaluation; remote exact resume and remote OBB transfer remain unsupported. |
+| S3-08 · PR 3 | Immutable derived brightness versions and provenance | Full edit/review/retrain/comparison/reapproval workflow and other-OS qualification. |
+| S3-09 · PR 3 | Durable review priority with source/run identity | Representative captured jobs, human label adoption and full parent UI workflow. |
+| S5-01 · PR 3 | Windows SCM dispatcher and owned lifecycle | Actual registration, service identity, reboot/Session0, devices and installer. |
+| S5-02 · PR 3 | Recipe-bound durable admission and bounded backpressure | Deployed continuous input, crash/recovery and throughput qualification. |
+| S5-06 · PR 3 | Durable staged rollout and reverse rollback | Actual device ACK/readback and field rollout/rollback. |
+| S5-08 · PR 3 | Immutable reference drift reports and controls | Representative baseline, full improvement loop and sampling integration. |
+| S5-09 · PR 3 | Protected retention, recoverable trash and restore | Real recovery drill, operational policy and full target qualification. |
+| S3-01 · PR 4 | Current dataset-source validation/read-error recovery | Full parent workflow and target acceptance. |
+| S3-05 · PR 4 | Label focus layout, shared edit locks and save/reopen persistence | Full parent workflow and target acceptance. |
+| E06 · PR 5 | Bounded deterministic sampling storage component | Production intake/retention and API/UI/drift integration. |
+
+S1-10은 프로젝트별 이벤트 cursor/reset/deduplication/stale guard, host adapter와 생성 타입/CI drift 검사를 구현했다. 최신 Linux/Windows에서 이벤트 7개와 타입 7개씩 통과했고 Linux browser adapter/cursor 3개가 통과했다. S2-01은 실제 CPU 예제의 데이터→학습→저장 flow→검사→이력/재열기와 예제의 품질 승인 거절을 구현했다. Linux 15개 통과/파일시스템 조건 1개 skip, Windows 16개 통과 및 실제 Linux browser 예제 1개 통과를 확인했다. S6-07은 기여·설치·CPU demo·PR·모듈 지도·소유권·지원/변경/보안 자료를 구현했고 실제 CPU 모델 학습·평가를 포함한 19개가 Linux/Windows 각각 통과했다. 원래 기록된 후속·Windows11 새 PC·실환경 검증은 유지한다.
+
+최신 source gate는 Linux run 37176316809(backend 1060 통과/3 skip, renderer 503 통과, browser 58 통과/opt-in 1 skip), Windows run 37176316846(backend 791 통과/12 skip, renderer 503 통과, 실제 Electron 2 통과)다. 두 실행의 merge `3893e0b6e6db220ac80799ff0157f24ba87a4131`은 위 소스와 같은 tree이며, 네 artifact의 바이트·SHA256과 실제 JUnit/Playwright 기록을 확인했다. 사적 source-bound 최종 receipt 이름 `hosted-e376db1-final-summary`, SHA256 `e8915b0b160ea850228ef1aaf59a403f3f0fd44c21fb6d14c40e7fceb8ccf775`. 겹치는 실행 수는 합산하지 않는다.
 
 ## 2026-10-02 구현 회차
 
