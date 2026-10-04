@@ -168,6 +168,42 @@
       },
       "receipt_sha256": "e60d5571a6f8ef361cb264eaaf12433193f73571c2fd71097812f21fcbc1cef1",
       "cause": "Four package-output reads used Windows cp1252 instead of declared UTF-8; one inventory assertion compared Windows backslashes to its POSIX report namespace. These failed before their final assertions."
+    },
+    "windows_replay_940": {
+      "source_commit": "94000d6b243cda354ba671e29e8ce5b32a90fd86",
+      "run_id": 37182868678,
+      "conclusion": "success",
+      "counts": {
+        "collected": 870,
+        "passed": 858,
+        "failure": 0,
+        "error": 0,
+        "skipped": 12
+      },
+      "renderer_passed": 524,
+      "Electron_passed": 2,
+      "five_historical_failed_cases_now_native_pass": true,
+      "E03_E04_E07_passed": {
+        "E03": 46,
+        "E04": 9,
+        "E07": 12
+      },
+      "artifacts": {
+        "context": {
+          "sha256": "04e88d495fe5aa45ccecf38019a28fe75d1a720115561e00e5ba2009a7463976",
+          "bytes": 7187591
+        },
+        "workers": {
+          "sha256": "897cd931ce1cab9e6160aaf4d15606ffe20c90754fc6aecd6918ed78a7130b52",
+          "bytes": 45244
+        },
+        "extensions": {
+          "sha256": "cdf3c081a212542c4627ee9d62e7978fdc8191b8cd0bdb840c6b82b8b487a65e",
+          "bytes": 49161
+        }
+      },
+      "receipt_sha256": "b4463c474c5ec7471eaa0fd0cff2ba37572de54057b04a7f3511f31aa52fa7b3",
+      "scope": "Actual GitHub-hosted Windows2025Server AMD64 CPU unpackaged source CI, not Windows11 installer/reboot/SCM/camera/field/model-quality acceptance. Windows workflow has Electron2 smoke, not the full browser transport suite."
     }
   },
   "limits": [
@@ -192,7 +228,7 @@
       "receipt_sha256": "ce97ca05d45cab7b96fcca0a6d2e3f94281ea1c79242fd557e170fb3d2eb6d6c"
     },
     "independent_review_sha256": "d1ffeab2baf1859777ab074423e52b0cca081d1c104dff839f0e2f6232d524f2",
-    "native_windows_replay": "required; not yet claimed at this documentation commit",
+    "native_windows_replay": "Verified on exact940 in run37182868678: all five historical failures now pass; aggregate858 passed/12 skipped, zero failures/errors. Original993 failure is retained.",
     "original_source_gate_provenance": "226/524/31 local gates are on original993 bytes; this58-test fixture replay is a separate overlapping result."
   }
 }

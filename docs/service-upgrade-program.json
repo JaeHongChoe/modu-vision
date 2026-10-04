@@ -8838,7 +8838,7 @@
    "S5-08"
   ],
   "last_verified_on": "2026-10-04",
-  "git_publication": "Main 99317cf08ff612e35a04d3aba70647687d7dc341: prior PR #3/#4/#5 retained; E03 calibration, E04 immutable change audit and E07 dependency preflight published by ordinary fast-forward push. Local source gates verified; hosted runs are recorded separately.",
+  "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
   "verified_source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
   "progress": {
@@ -8852,7 +8852,7 @@
     "in_progress": 25,
     "planned": 39
    },
-   "merged_extension_slices": 15,
+   "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
    "slice_records": [
     {
@@ -8991,11 +8991,19 @@
      "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
      "summary": "Node-specific dependency preflight, artifact rehashing, package CLI/reopen and late-response guard",
      "remaining": "Actual target process/device execution, installer and field readiness remain separate."
+    },
+    {
+     "slice_id": "MAIN5b29557-E05",
+     "task": "S3-07",
+     "refinement": "E05",
+     "source_sha": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
+     "summary": "Persisted approved-gold comparison with located conflicts, stale reference checks, training exclusion and scoped image opening",
+     "remaining": "Representative human review acceptance, whole parent workflow and target quality remain separate."
     }
    ],
-   "gpu_execution": "temporarily deferred per user network move; local work continues"
+   "gpu_execution": "Read-only server connectivity restored; app SSH keychain compatibility correction underway. No new GPU job in this slice."
   },
-  "latest_slice_source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+  "latest_slice_source_sha": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
   "latest_fixture_source_sha": "7722537435121e2fcc3b1a7fe8bed93ecf8047aa"
  },
  "scope_refinements": [
@@ -9082,7 +9090,7 @@
      "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
      "kind": "local_cpu_browser_source_slice",
      "receipt": "e347-calibration-audit-preflight",
-     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "receipt_sha256": "8215bbdd2d2e7e582766e2fa40505109f4f0f2ec07ea45d09d5f20324dd8a49b",
      "summary": "Known-length/manual calibration artifacts, original-coordinate measurement and packaged plane eligibility",
      "remaining": "Full editing/retraining parent workflow, lens/perspective adapters and target calibration quality remain separate.",
      "full_parent_acceptance": false
@@ -9111,7 +9119,7 @@
      "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
      "kind": "local_cpu_browser_source_slice",
      "receipt": "e347-calibration-audit-preflight",
-     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "receipt_sha256": "8215bbdd2d2e7e582766e2fa40505109f4f0f2ec07ea45d09d5f20324dd8a49b",
      "summary": "Immutable authenticated before/after change audit, stale conflict refusal and activation UI scope guard",
      "remaining": "Operational retention/access/traceability and real runtime apply ACK remain separate.",
      "full_parent_acceptance": false
@@ -9133,8 +9141,21 @@
     "Gold samples are excluded from ordinary training/test exports unless explicit dataset policy says otherwise; no leakage from QA reference into test truth.",
     "Unsupported task/shape types explicitly rejected; report persists/reopens."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "source_sha": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
+     "kind": "local_cpu_browser_native_source_slice",
+     "receipt": "e05-gold-label-review",
+     "receipt_sha256": "e9a2b4f8704a5b96e4e06a8a0e6f64cabede3c0c1a747321d1bc92405b51f477",
+     "summary": "Approved gold reference comparison, stable located conflicts, stale report exclusion, default training/test exclusion and actual macOS Electron UI",
+     "full_parent_acceptance": false
+    }
+   ],
+   "remaining": [
+    "Representative gold guideline/label quality and human review/adoption.",
+    "Full parent workflow, target model quality and Windows11 installed-app acceptance."
+   ]
   },
   {
    "id": "E06",
@@ -9189,7 +9210,7 @@
      "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
      "kind": "local_cpu_browser_source_slice",
      "receipt": "e347-calibration-audit-preflight",
-     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "receipt_sha256": "8215bbdd2d2e7e582766e2fa40505109f4f0f2ec07ea45d09d5f20324dd8a49b",
      "summary": "Node-specific dependency preflight, artifact rehashing, package CLI/reopen and late-response guard",
      "remaining": "Actual target process/device execution, installer and field readiness remain separate.",
      "full_parent_acceptance": false

@@ -4,6 +4,22 @@
 
 초기 기준 소스: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`. 목표 플랫폼은 Windows 11 x64다. 최초 실행 근거는 macOS 개발 환경에서 수집했으며, 최신 소스와 추가 플랫폼 근거는 아래 날짜별 기록을 따른다. 구현·계약 테스트·화면·저장 및 재열기·실제 대상 실행·서명·모델 품질을 각각 기록한다.
 
+<a id="gold-label-review-20261004"></a>
+
+## 2026-10-04 정답 기준 라벨 검수 · 5b29557
+
+코드 소스 `5b2955749dd9a5dc6a621dd24a2b28441050f9ed`는 E05를 기존 데이터·라벨링 구조에 연결한다. 승인된 정답과 후보 라벨의 누락·추가·클래스·형상 차이를 위치와 함께 저장하며, 정답·가이드 변경 뒤에는 이전 결과를 승인 근거로 쓰지 않는다. 정답 이미지는 기본적으로 일반 학습·시험에서 제외하고 명시적 정책의 작성자·revision을 기록한다. [소스별 검증 기록](2026-10-04-gold-label-review.json)에 변경된 25개 코드 경로와 실행·독립 검토 hash를 저장했다.
+
+검토에서 찾은 충돌 식별자 중복, 동결된 학습 revision 호환성, 늦은 검수 응답의 다른 프로젝트 후속 요청, 갤러리 밖 이미지 선택 초기화를 RED로 재현하고 수정했다. 기존 저장·프로젝트·라벨셋·경로 검사를 유지했다. 이미 전송한 서버 쓰기는 취소하지 않으며 늦은 응답의 화면·후속 요청 반영을 차단한다.
+
+최종 로컬 통합: backend234 통과, renderer527 통과, 타입·생성 API·계획 검사 통과, browser21 통과/0 skip/0 flaky, 실제 macOS Electron1 통과. Browser21 중9개는 실제 renderer와 격리 backend이고12개는 실제 ReactDOM/store에 지연 transport를 붙인 경쟁 상태 검사다. Electron에서는 실제 main/preload와 소유 backend를 사용해 프로젝트 생성, 검수 실행, 저장 결과 재열기, 정답 변경에 따른 오래된 결과 차단 및 이미지 열기를 확인했다. 소유 backend10개와 Electron의 종료를 확인했다. Browser console25건은 분류가 완료되지 않았으므로 console 무오류로 확대하지 않는다. 소스1174개 경로가 최종 화면 검사 전후에 일치했고, 원래 인수인계 파일159개의 hash와 Git 상태 경로를 보존했다. 검사 수는 서로 겹치므로 합산하지 않는다.
+
+별도 게시 진척은 확장 구현 slice16개와 데이터·라벨링 개선 영역2개다. 부모 구현24 verified/58 pending과 부모 전체 acceptance는 그대로다. 이 E05 소스의 hosted 플랫폼 근거, 대표 라벨·모델 품질, Windows11 설치와 현장 검증은 각각 확인한다.
+
+### 교정·감사·배포 전 점검의 native Windows 후속 확인
+
+정확한 소스 `94000d6b243cda354ba671e29e8ce5b32a90fd86`의 Windows run37182868678은 backend858 통과/12 skip/실패·오류0, renderer524 통과, 실제 Electron2 통과다. 원래993에서 실패한5개 node가 native JUnit에서 모두 통과했다. 실제 ZIP 세 개의 바이트·SHA256, 각 소스/run binding과 owned teardown을 대조했다. 원래993의 실패는 아래 기록에 유지한다. 근거는 Windows Server2025의 CPU·unpackaged source이며 Windows11 설치·SCM/재부팅·장비·모델 품질 근거는 별도다.
+
 <a id="calibration-audit-preflight-20261004"></a>
 
 ## 2026-10-04 교정·변경 기록·배포 전 점검 · 99317cf

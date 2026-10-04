@@ -6,8 +6,8 @@
 
 - F001–F123: 123개, U001–U033: 33개, 합계 156개. 누락 0개.
 - 신규 계획: 8개 phase/82개 작업 묶음. in_progress 25개, planned 39개, verification_pending 18개. accepted 0개.
-- 부모 구현 근거 소스 `e376db11`: verified 24개/pending 58개. 최신 추가 코드 `99317cf08ff612e35a04d3aba70647687d7dc341`에서 E03/E04/E07을 반영해 별도 게시 진척은 확장 구현 slice 15개와 데이터·라벨링 개선 영역 2개다. 이 slice 집계는 부모 작업과 겹치므로 더하지 않는다.
-- 최신 구현 slice와 게시 근거는 [실행 기록](implementation-ledger/SERVICE-UPGRADE.md#calibration-audit-preflight-20261004)에 기록한다.
+- 부모 구현 근거 소스 `e376db11`: verified 24개/pending 58개. 최신 추가 코드 `5b2955749dd9a5dc6a621dd24a2b28441050f9ed`에서 E03/E04/E05/E07을 반영해 별도 게시 진척은 확장 구현 slice 16개와 데이터·라벨링 개선 영역 2개다. 이 slice 집계는 부모 작업과 겹치므로 더하지 않는다.
+- 최신 구현 slice와 게시 근거는 [실행 기록](implementation-ledger/SERVICE-UPGRADE.md#gold-label-review-20261004)에 기록한다.
 - source registry: `docs/feature-program.json`, `docs/product-upgrade-program.json`.
 - source baseline: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`.
 - source registry의 acceptance와 최신 실행 ledger가 충돌하면 개별 최신 evidence를 다시 확인한다.

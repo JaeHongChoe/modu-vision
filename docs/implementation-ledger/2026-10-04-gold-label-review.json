@@ -1,0 +1,150 @@
+{
+  "schema": "SourceSliceVerification/v1",
+  "source_commit": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
+  "base_commit": "94000d6b243cda354ba671e29e8ce5b32a90fd86",
+  "verified_on": "2026-10-04",
+  "refinements": [
+    "E05"
+  ],
+  "changed_code_paths": {
+    ".github/workflows/ci.yml": "3629d031121bc09dea559068ff4ee3f03a28f7ac00e783b2f4ccfea6b150f85f",
+    ".github/workflows/windows-native.yml": "db34fdadd18c37cdfa8ead6c675f6ee66439f69e96f5d0fa897d2f59014c77fa",
+    "backend/api/routes_team_data.py": "8d516eda7fd054fccfbd17c34c6c64651f9a2001ef75acad3ae3f2ff5ac2acb7",
+    "backend/api/shared_authorization.py": "ae07ad4c5509ad51f769221efce5f69aca6deadb9b1fe4957962795b1ca8df01",
+    "backend/engine/annotation_quality.py": "dc0cd38e67a09adc8be12e04960091558db3206063a326c2a98541c1d6e80c4e",
+    "backend/engine/dataset_usage.py": "bcc21f610bc5b6db67a1fcaa715e45f811dd462b4f8c62739116eb54a0ebb019",
+    "backend/engine/flow_evaluation.py": "7f937b29ed315e1db5a65bee6950b3ceedae1c1472fc742688fa6a3bf5e1387a",
+    "backend/engine/project_archive.py": "d237270a0bc4341532ca63bee65c1328e6f4bb98068d792d1f2ffab10b64f304",
+    "backend/engine/team_data.py": "a77967a37497839015f5a1705cccc5be65fdad39bc234ca1561f585c450554b2",
+    "backend/engine/training_provenance.py": "1dfef570e3becc73d40e1f096d3ad72eb0fce249b8f260ff0075310a15f2181e",
+    "backend/tests/test_e05_conflict_identity_contract.py": "7f8f2176e4c3b76626421b0ad762f799883ed0d1623c0cd297dc800a8456be8d",
+    "backend/tests/test_e05_training_binding_contract.py": "7764401ace6408a485530bb9c4ce594f4da1dfab6eab20ab1fb864004f33875d",
+    "backend/tests/test_service_e05.py": "1d28e2b2fcf257fa678192cfebd35e3bca62b4c578bb44895c497d51e1a77037",
+    "scripts/e2e/service-e05-gold-review.spec.ts": "09ef970c2e134e9e95bec81a5942f5621c6207f22a0fc787f13ae639d1eb4063",
+    "scripts/e2e/service-e05-image-open.spec.ts": "f1fab6dae8bda7512725ca38e189e552f8a897d71519d05ed09bafade18ed490",
+    "scripts/e2e/service-e05-native-review.spec.ts": "2cf274a6434f1efd43890dc3c0e94e6d366efca792331a50252c6f677faf8da0",
+    "scripts/e2e/service-e05-review-race.spec.ts": "dfbae45a65cfd75c55c11f8a52c8f16f8d96ebe6d7aed4c4bb392735118c3ba9",
+    "src/renderer/components/labeling/GoldLabelReview.tsx": "0112cca2b0e7ae33edda7f1b1f2395e4caf932afa7b742bc70bd848a50d8428a",
+    "src/renderer/components/labeling/TeamDataPanel.tsx": "32e989eb3c170c1f414c96e6c7ba720bce7808e641a3fdab5f9f7b7bcd2a4a01",
+    "src/renderer/components/labeling/goldReview.test.cjs": "e20d755ac6dec915ce0ee503c69fc68901b7b0e0920d9aacc8a67e00318125f3",
+    "src/renderer/components/labeling/goldReview.ts": "9fa3646272b816aee38ad69e4d7752b2a5e989603b7e76dd402858f5b491f3d3",
+    "src/renderer/services/generated/apiTypes.ts": "8f3769fcb2842f3567390e9ee1f4a2a72c4ecc8b569fa3fa72790a3e020d6711",
+    "src/renderer/services/teamDataApi.ts": "ec89e628df72bd8c2a7258ca64df915095577e02740bc63d80da7db027bc2934",
+    "src/renderer/stores/useAnnotationStore.ts": "536bf44de421812d7a6b62c5b18a487e9a1bcf13ce17e85e7e06270249504446",
+    "src/renderer/stores/useProjectStore.ts": "dc1d304a25c6a8af8c7ce0c6d19457f7ee34f5766413070faadff40dd0d14f41"
+  },
+  "local_checks": {
+    "integrated-backend": {
+      "receipt_sha256": "4c16c404d901183c89a8f3bd9021804e07e82c7e33ceb0abb7063d0fb6738eeb",
+      "source_manifest_sha256": "739b7b7267e206375c743aa0ff8a898cefd1710e3bbf132eae14e3951f534348",
+      "bound_paths": 555,
+      "results": {
+        "passed": 234
+      }
+    },
+    "integrated-renderer-final": {
+      "receipt_sha256": "ec21687a0a8c35250ba840969f90f503edea55037aaa3f0b1f61d40157836222",
+      "source_manifest_sha256": "35772faedf62c5e8afd00929e855c317f92b72a45b664955be5def3de8c73fef",
+      "bound_paths": 1174,
+      "results": {
+        "passed": 527,
+        "failed": 0,
+        "type_API_plan_checks_exit": 0
+      }
+    },
+    "integrated-browser-final": {
+      "receipt_sha256": "4ec843854eda35271ab7d5813d8f901fdcdfdf20585b0b214c4375a52dd793ff",
+      "source_manifest_sha256": "35772faedf62c5e8afd00929e855c317f92b72a45b664955be5def3de8c73fef",
+      "bound_paths": 1174,
+      "results": {
+        "startTime": "2026-10-04T07:14:04.716Z",
+        "duration": 111418.446,
+        "expected": 21,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "manifests": 21,
+      "owned_backends_stopped": 9,
+      "page_errors": 0,
+      "blocked_requests": 0,
+      "console_errors_unclassified": 25,
+      "teardown_sha256": "359869db1a40c5189079cc6073f880990e99e36f9218c9f0f29e483606977e1d"
+    },
+    "integrated-electron-final": {
+      "receipt_sha256": "1bccdf64eee59345c1ffcec505d5e7421193d988f648cb782dd0abe6e657634a",
+      "source_manifest_sha256": "35772faedf62c5e8afd00929e855c317f92b72a45b664955be5def3de8c73fef",
+      "bound_paths": 1174,
+      "results": {
+        "startTime": "2026-10-04T07:14:14.691Z",
+        "duration": 19272.818000000003,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "manifests": 1,
+      "owned_backends_stopped": 1,
+      "page_errors": 0,
+      "blocked_requests": 0,
+      "console_errors_unclassified": 0,
+      "teardown_sha256": "9706e44fad441a7222e3bf6606985860d55fcf463b338abda5cec9add5dd34aa"
+    }
+  },
+  "causal_regressions": {
+    "conflict_identity": "Duplicate/sentinel object identifiers reproduced collisions; typed occurrence-bound conflict keys retain distinct missing, extra, class and geometry records. Seven focused tests pass.",
+    "training_binding": "Real frozen legacy revisions failed validation and a zero-gold policy change escaped the modern binding. Legacy bytes and digest now round-trip unchanged; policy/schema changes fail closed. Final independent binding gate67 passed; overlaps integrated backend234.",
+    "review_async_authority": "Ten of eleven original real ReactDOM/store transport controls failed before the fix; same-scope control passed. Final12 pass with project, actor, role, labelset, backend/project-generation and transport ABA authority fences. Already-issued server writes are not canceled.",
+    "image_open": "Unchanged actual gold browser case failed both before and after the authority guard. Mounted labeling studio reset outside-gallery selection during annotation load; a selected-path marker now commits atomically. Focused actual RED1 failure/2 stale-scope controls pass; identical focused tests pass after correction, with raw image digest, canvas pixels, annotation and dialog-close assertions."
+  },
+  "actual_native_UI": {
+    "platform": "macOS arm64, unpackaged Electron44.5.1 with real main/preload and owned supervised backend; synthetic data",
+    "project_created_in_UI": true,
+    "profile_created_and_run_in_UI": true,
+    "persisted_report_reopened": true,
+    "counts": {
+      "missing": 1,
+      "extra": 0,
+      "class": 1,
+      "geometry": 0,
+      "not_comparable": 0
+    },
+    "changed_gold_stales_approval": true,
+    "source_image_HTTP": 200,
+    "dialog_closes_after_image_selection": true,
+    "screenshots": {
+      "current": "dd7a1de257d64d4e6c132d6bb22b32a5584364b4356b98763bd0036355e8cb35",
+      "stale": "2c92dfba6980a715c8a2792ed716f81ee0189d79872bc5ffd526f18834d49c49"
+    },
+    "credential_handling": "Real Electron-main request credential injection; test never reads or prints the credential",
+    "owned_backend_and_Electron_stopped": true
+  },
+  "independent_reviews": {
+    "bounded-source-composition-review.json": "202c3c6b2c9e00d0e303a3e0efb4e24f3e3bb99e893489c0c5bd1828a634aea8",
+    "identity-blocker-review.json": "1498dd7414552c1756aa55e2587d365e7894e38cf6603247abe49064f6eae3f1",
+    "binding-blocker-review.json": "d19b38e3cbd01118e3ff68ea9b6046e447e7fff73ae206d881a5b5f86e36d1f6",
+    "ui-race-independent-review.json": "d26a0f1214d92e851f643ef291bbdb787e083a714dc808bb8116871f8463df90",
+    "image-open-independent-review.json": "141b224412211d2bbd11c4e313b60ac498ed9e9363be21c2a919f61eab67f23f"
+  },
+  "source_privacy_scan_sha256": "e3755ac39b0a996cd57bcc5ad3e8b0a7b68603aa75afc415c8f169e402b20432",
+  "final_readback_sha256": "08838f291087bb0c9cc75ec049d565b5029fc4da11dce344cf3e734d43d6b8ae",
+  "compatibility": [
+    "Current archive relocation/retention/trash/WAL and flow evaluation behavior retained; quality reports rebind separately.",
+    "Gold samples excluded by default from ordinary training and whole-flow test cohorts; explicit policy is authenticated and revision-bound.",
+    "Source, project, labelset, dirty-save and ordinary gallery navigation guards retained.",
+    "Git workflows add only three CPU selectors each; existing native glob executes the new Electron test."
+  ],
+  "limits": [
+    "No representative label/model-quality or human review acceptance.",
+    "Linux/Windows hosted gates on this source still require exact run/artifact readback.",
+    "No Windows11 installer, SCM/Session0/reboot, field/device execution or new GPU training.",
+    "Browser25 console errors remain unclassified; page errors and blocked loopback requests were zero. No blanket clean-console claim.",
+    "Parent implementation remains24 verified/58 pending. Sixteen published extension slices overlap these parents and are not additive."
+  ],
+  "counting_rule": "Local and independent suites overlap and must not be added.",
+  "original_handoff_preserved": {
+    "paths": 159,
+    "all_file_hashes_and_status_paths_unchanged": true
+  },
+  "full_parent_acceptance": false
+}
