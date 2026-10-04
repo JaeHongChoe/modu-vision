@@ -1,0 +1,74 @@
+{
+  "schema": "SourceSliceVerification/v1",
+  "source_commit": "76959441cc4fac7a75eb0046f025c6d2392f5610",
+  "base_commit": "3e7e42aef5b5da99da0a9485e2318fc014b7ffbd",
+  "verified_on": "2026-10-04",
+  "changed_code_paths": {
+    "backend/remote/ssh_transport.py": "918de6affe50a4bf92185d5a6ef5a177698912933e819184261f3f472d940ce3",
+    "backend/tests/test_ssh_keychain_transport.py": "ea78c21a41578db26fdc953d84c0b71893ff02c110bbf9d687b889ad4041daeb",
+    ".github/workflows/ci.yml": "c3f69d9fbf89592d6fe918397190876d9de6269ca18ea2cff869b01c5150feee",
+    ".github/workflows/windows-native.yml": "a55b14203ada1502279d9fed27a531cfe6fafd2eb5b42282ec0e2f17bf81b69c"
+  },
+  "fix": "On macOS, SSH/SCP and rsync SSH children read existing Keychain passphrases with UseKeychain=yes and AddKeysToAgent=no. Other platforms preserve the existing argument lists.",
+  "preserved_bounds": [
+    "StrictHostKeyChecking=yes",
+    "BatchMode=yes",
+    "Explicit target, port, connection attempt, connection and keepalive deadlines",
+    "Validated user/host/port control path; shell=False and remote argv quoting",
+    "No SSH config, Keychain, agent identity, profile selection, password or access-grant changes"
+  ],
+  "causal_verification": {
+    "corrected_RED": {
+      "failed": 7,
+      "passed": 11
+    },
+    "same_test_GREEN": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0
+    },
+    "new_cases": 18,
+    "existing_transport_preservation_cases": 14,
+    "native_macOS_config_parser_cases": 3,
+    "live_exact_transport_hostname": "Original255 authentication refusal; corrected0 on the same existing profile and credentials"
+  },
+  "local_receipts": {
+    "green": "cf79836cf86a01e66588a032bd9172463ae25fedb89254f47ab398af19c269c6",
+    "causal_owner": "c6619d512a058e541685229e1738fafa89cdd9cefd275db3e7e6bb448e241125",
+    "independent_review": "474d3be0176b7ba558006343f9c5a570f13a04287402c913105ab13255e461d1",
+    "publication_scan": "4d026cdafb801de408e42e0142d27f85ab924939a023ed3c5cb723f8979e1b13",
+    "committed_runtime_binding": "420eec7b3f697a8fd953397f196ba29ba36cdef70c292f925a5d671165da5868"
+  },
+  "actual_read_only_worker_probe": {
+    "ssh": true,
+    "runtime_ready": true,
+    "device_type": "cuda",
+    "device_name": "NVIDIA L40S",
+    "selected_GPU_memory_used_MiB_after": 0,
+    "selected_GPU_utilization_percent_after": 0,
+    "optional_runtime_dependencies_absent": [
+      "timm",
+      "safetensors",
+      "huggingface_hub",
+      "ultralytics"
+    ],
+    "profile_store_and_saved_selection_unchanged": true,
+    "source_hash_bound_runtime_receipt": "23e554ee5f63fde6b4dca28f57b731b6f4d233e7b6122f4b81176e8b0dc92ea0",
+    "pretrained_cache_checks": {
+      "performed": true,
+      "standard_preset_caches_verified": 7,
+      "YOLO26n_ok": false,
+      "YOLO26s_ok": false,
+      "YOLO_content_verified": false,
+      "DINOv3_cache_checks": "not executed because required hub module is absent"
+    }
+  },
+  "CI_scope": "One additional CPU regression selector per existing Linux/Windows workflow; no other actions/permissions changed. Native Apple parser cases are conditional on macOS.",
+  "limits": [
+    "Actual app transport function was probed; native app UI connection click and installed-app update are separate.",
+    "Temporary read-only Docker probe had no network and selected only the existing GPU; no training/inference/job/data upload or existing-process interruption.",
+    "General CUDA readiness does not qualify DINOv3/YOLO; their additional runtime dependencies are absent in the registered worker.",
+    "No model quality, expensive GPU workload, installer, deployment or operational acceptance.",
+    "Hosted checks on this source require exact run/artifact readback."
+  ]
+}

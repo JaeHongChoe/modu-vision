@@ -4,6 +4,16 @@
 
 초기 기준 소스: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`. 목표 플랫폼은 Windows 11 x64다. 최초 실행 근거는 macOS 개발 환경에서 수집했으며, 최신 소스와 추가 플랫폼 근거는 아래 날짜별 기록을 따른다. 구현·계약 테스트·화면·저장 및 재열기·실제 대상 실행·서명·모델 품질을 각각 기록한다.
 
+<a id="macos-ssh-keychain-20261004"></a>
+
+## 2026-10-04 Mac SSH 키체인 인증 · 7695944
+
+서버가 응답하지만 앱의 SSH 연결만 인증에 실패하는 차이를 같은 기존 계정·키로 재현했다. macOS에서 SSH·SCP·rsync의 SSH 자식에 기존 키체인 사용을 명시하고 에이전트에 키를 추가하지 않는다. 다른 OS의 명령 목록과 host 확인·batch mode·대상·port·timeout·control path·인용 규칙을 유지했다. [소스별 기록](2026-10-04-macos-ssh-keychain.json)은 코드 `76959441cc4fac7a75eb0046f025c6d2392f5610`과 실행 hash를 연결한다.
+
+동일한 새 회귀 검사 RED7 실패/11 통과에서, 수정 후 새18개와 기존14개가 모두 통과했다. 실제 Apple SSH의 구성 parser도 확인했다. 동일한 기존 profile에서 앱의 실제 transport 함수로 hostname 인증 거절255→성공0을 확인했다. 이어서 읽기 전용·네트워크 없는 기존 worker 진단에서 SSH·CUDA 준비도와 L40S를 확인했으며 진단 후 선택 GPU의 사용 메모리0 MiB·사용률0%였다. 등록 profile과 앱의 기존 선택은 변경하지 않았다.
+
+이 worker에는 timm·safetensors·huggingface_hub·ultralytics가 없어 DINOv3/YOLO 준비 완료로 판정하지 않는다. 새 학습·추론·작업·파일 전송과 기존 프로세스 중단은 실행하지 않았다. 설치된 앱의 갱신과 실제 UI 연결 클릭, 모델 품질은 별도이며 부모24 verified/58 pending과 확장 slice16개는 그대로다.
+
 <a id="gold-label-review-20261004"></a>
 
 ## 2026-10-04 정답 기준 라벨 검수 · 5b29557

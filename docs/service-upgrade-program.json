@@ -9001,7 +9001,7 @@
      "remaining": "Representative human review acceptance, whole parent workflow and target quality remain separate."
     }
    ],
-   "gpu_execution": "Read-only server connectivity restored; app SSH keychain compatibility correction underway. No new GPU job in this slice."
+   "gpu_execution": "Existing private Docker target read-only SSH/CUDA readiness verified through corrected app transport. DINOv3/YOLO optional runtime dependencies absent; no new GPU job."
   },
   "latest_slice_source_sha": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
   "latest_fixture_source_sha": "7722537435121e2fcc3b1a7fe8bed93ecf8047aa"
