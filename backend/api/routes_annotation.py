@@ -358,8 +358,12 @@ def save_annotations(req: AnnotationSaveRequest, request: Request = None):
         result = _save_annotations_impl(req, metadata_engine.annotation_file_transaction(ledger))
         row["workflow_state"] = "needs_review"
         row["reviewer"] = None
-        row["annotation_hash"] = metadata_engine._annotation_hash(project, source, Path(req.image_path))
-        row["mask_hash"] = metadata_engine._mask_hash(project, source, Path(req.image_path))
+        # The image under the resolved dataset folder, as _ensure uses it: _mask_hash places the image inside that folder,
+        # so another spelling of it (a symlink, macOS /var for /private/var, a mapped drive) failed the save after the
+        # labels were written.
+        _source, image = metadata_engine._visible_path(source, req.image_path)
+        row["annotation_hash"] = metadata_engine._annotation_hash(project, source, image)
+        row["mask_hash"] = metadata_engine._mask_hash(project, source, image)
         annotation_written(row, req.actor)
         metadata_engine._event(row, req.actor.strip() or "operator", "annotation_changed", {"workflow_state":"needs_review"})
         result["metadata"] = public_image(row)

@@ -9,7 +9,8 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { resolveApiUrl } from '../../services/api';
 
-export const ImageFilmstrip: React.FC = () => {
+/** ``compact`` (focus editing): one slim row with the position and the arrows, no thumbnails. */
+export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { images, currentImageIndex, selectImageByIndex, nextImage, prevImage } = useAnnotationStore();
   const { page, pageSize, totalImagesCount, loadImages } = useDatasetStore();
   const pageCount = Math.max(1, Math.ceil(totalImagesCount / pageSize));
@@ -41,7 +42,7 @@ export const ImageFilmstrip: React.FC = () => {
   };
 
   return (
-    <div className="h-20 bg-slate-950 border-t border-slate-800 px-3 flex items-center space-x-2 select-none">
+    <div data-labeling-filmstrip className={`${compact ? 'h-8' : 'h-20'} bg-slate-950 border-t border-slate-800 px-3 flex items-center space-x-2 select-none`}>
       <button
         onClick={goBack}
         disabled={!canGoBack}
@@ -52,7 +53,8 @@ export const ImageFilmstrip: React.FC = () => {
       </button>
 
       <div className="flex-1 flex items-center space-x-2 overflow-x-auto py-1">
-        {images.map((img, idx) => {
+        {compact && images[currentImageIndex] && <span className="truncate text-xs font-mono text-slate-300">{images[currentImageIndex].file_name}</span>}
+        {!compact && images.map((img, idx) => {
           const isSelected = idx === currentImageIndex;
           const thumbSrc = resolveApiUrl(
             img.thumbnail_url ||

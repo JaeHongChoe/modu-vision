@@ -14,6 +14,7 @@ import { useFoundationPromptStore } from '../../stores/useFoundationPromptStore'
 import { brushEditTarget } from './foundationRequest';
 import { resolveApiUrl } from '../../services/api';
 import { resolveLabelingShortcut } from './labelingShortcuts';
+import { refitAfterResize } from './labelingLayout';
 import {
   calcRotatedCorners,
   calculateFitToScreen,
@@ -601,9 +602,32 @@ export const LabelingCanvas: React.FC = () => {
 
   useEffect(() => {
     resizeCanvases();
-    window.addEventListener('resize', resizeCanvases);
-    return () => window.removeEventListener('resize', resizeCanvases);
   }, [resizeCanvases]);
+
+  // The work area also changes size without a window resize (focus editing folds the panels above it): the canvases
+  // follow their container, and an image shown at Fit is fitted again to the new size.
+  const resizeRef = useRef(resizeCanvases);
+  resizeRef.current = resizeCanvases;
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let size: { width: number; height: number } | null = null;
+    const follow = () => {
+      const rect = container.getBoundingClientRect();
+      const next = { width: rect.width, height: rect.height };
+      const refit = baseImageRef.current
+        ? refitAfterResize(useAnnotationStore.getState().viewTransform, size, next, imgDimensionsRef.current, calculateFitToScreen)
+        : null;
+      size = next;
+      if (refit) setViewTransform(refit);
+      resizeRef.current();
+    };
+    follow();
+    window.addEventListener('resize', follow); // a device pixel ratio change leaves the CSS size alone
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(follow);
+    observer?.observe(container);
+    return () => { window.removeEventListener('resize', follow); observer?.disconnect(); };
+  }, [setViewTransform]);
 
   useEffect(() => {
     redrawLayer1();

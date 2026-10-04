@@ -151,6 +151,13 @@ export interface DatasetRevisionRow {
   duplicate_images: number | null; conflicting_duplicates: number | null; cross_split_duplicates: number | null;
   annotations_bind: number | null;
 }
+/** Whether a revision still matches its source, by the index's own inventory definition (nothing decoded or hashed).
+ *  ``basis`` 'stat_without_ctime' (Windows): a file is confirmed by size and modification time, not a change time. */
+export interface DatasetSourceStatus {
+  revision_id: string; source_root: string; images: number; revision_images: number; added: number; removed: number;
+  changed: number; gaps: number; gaps_changed: boolean; skipped_links: number; matches: boolean;
+  basis: 'stat' | 'stat_without_ctime'; checked_ns: number;
+}
 export interface DatasetRevisionImage {
   relative_path: string; image_uuid: string; sha256: string | null; size: number; width: number | null; height: number | null;
   label: string | null; split: string | null; valid: number; error_code: string | null; error_detail: string | null; via_link: number;
@@ -779,6 +786,8 @@ export const api = {
     revisions: () => request<{ active_revision: string | null; revisions: DatasetRevisionRow[] }>('/api/dataset/revisions'),
     gaps: (revisionId: string) => request<{ revision_id: string; gaps: Array<{ relative_path: string; reason: string }> }>(
       `/api/dataset/revisions/${encodeURIComponent(revisionId)}/gaps`),
+    sourceStatus: (revisionId: string) => request<DatasetSourceStatus>(
+      `/api/dataset/revisions/${encodeURIComponent(revisionId)}/source-status`),
     images: (revisionId: string, params: { cursor?: string | null; limit?: number; valid?: boolean; label?: string; annotationLabel?: string; annotationError?: boolean } = {}) => {
       const query = new URLSearchParams();
       if (params.cursor) query.set('cursor', params.cursor);

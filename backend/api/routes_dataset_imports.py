@@ -235,6 +235,17 @@ def revision_duplicates(revision_id: str, request: Request, cursor: Optional[str
         raise HTTPException(422, str(exc)) from exc
 
 
+@router.get("/revisions/{revision_id}/source-status")
+def revision_source_status(revision_id: str, request: Request):
+    """Whether the revision still matches its source by the index's inventory definition (images added, removed or not
+    confirmed unchanged, unreadable folders that differ); nothing is decoded or hashed."""
+    _context, project_key, _project = _scope(request)
+    try:
+        return _jobs(request).index.source_status(project_key, revision_id)
+    except KeyError:
+        raise HTTPException(404, "Revision not found in this project") from None
+
+
 @router.get("/revisions/{revision_id}/gaps")
 def revision_gaps(revision_id: str, request: Request):
     """Folders the revision could not read; under the exclude policy they are the receipt of what is missing."""

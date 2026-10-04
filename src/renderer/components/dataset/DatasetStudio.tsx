@@ -3,7 +3,7 @@
  * Step 1: Industrial Dataset Studio with folder import, synthetic generator, split controls, and distribution charts.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FolderOpen,
   Sparkles,
@@ -18,12 +18,12 @@ import {
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import { resolveApiUrl } from '../../services/api';
+import { api, resolveApiUrl, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
 import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
 import { DatasetImportPanel } from './DatasetImportPanel';
-import { quickValidationNotice } from './datasetImportView';
+import { validationStatus } from './datasetImportView';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import {CaptureIntakePanel} from './CaptureIntakePanel';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
@@ -83,7 +83,34 @@ export const DatasetStudio: React.FC = () => {
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [showImports, setShowImports] = useState(false);
-  const validationNotice = quickValidationNotice(quickValidation);
+  // The active validated version of this project (full validation), so the step can say validation is done.
+  const [activeRevision, setActiveRevision] = useState<DatasetRevisionRow | null>(null);
+  // Only the latest read applies: an older read still in flight (from the mount) never replaces a later one.
+  const revisionRead = useRef(0);
+  const loadActiveRevision = useCallback(() => {
+    const read = ++revisionRead.current;
+    api.datasetImports.revisions().then(listed => {
+      if (revisionRead.current === read) setActiveRevision(listed.revisions.find(row => row.revision_id === listed.active_revision) || null);
+    }).catch(() => { if (revisionRead.current === read) setActiveRevision(null); });
+    return () => { if (revisionRead.current === read) revisionRead.current += 1; };
+  }, []);
+  useEffect(() => loadActiveRevision(), [loadActiveRevision, project?.id, project?.source_dataset_dir, task]);
+  // Whether the active version still matches the source, asked of the backend by the index's own inventory definition
+  // (the quick import counts differently: nqa2 review P2-1); asked again after each import of the folder.
+  const [sourceStatus, setSourceStatus] = useState<DatasetSourceStatus | null>(null);
+  const statusRead = useRef(0);
+  const activeRevisionId = activeRevision?.revision_id ?? null;
+  useEffect(() => {
+    const read = ++statusRead.current;
+    setSourceStatus(null);
+    if (activeRevisionId && !isLoading && hasSelectedFolder) {
+      api.datasetImports.sourceStatus(activeRevisionId).then(status => {
+        if (statusRead.current === read) setSourceStatus(status);
+      }).catch(() => { if (statusRead.current === read) setSourceStatus(null); });
+    }
+    return () => { if (statusRead.current === read) statusRead.current += 1; };
+  }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation]);
+  const validation = validationStatus(quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
   const [imageOpenError, setImageOpenError] = useState<string | null>(null);
   const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);
   const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
@@ -332,9 +359,11 @@ export const DatasetStudio: React.FC = () => {
               결함 주석만 확인되었습니다. 정상(OK) 이미지가 없으면 과검률과 양산 판정 품질을 검증할 수 없습니다.
             </div>
           )}
-          {validationNotice && (
-            <div role="status" className="p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200">
-              {validationNotice}
+          {validation && (
+            <div role="status" className={validation.tone === 'ok'
+              ? 'p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-200'
+              : 'p-2.5 bg-amber-950/30 border border-amber-500/40 rounded text-xs text-amber-200'}>
+              {validation.text}
             </div>
           )}
           {corruptedImages.length > 0 && (
@@ -913,7 +942,7 @@ export const DatasetStudio: React.FC = () => {
       <ProceduralGeneratorModal />
       {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
         registeredSource={project.source_dataset_dir || null} task={task}
-        onClose={() => setShowImports(false)} onAccepted={() => undefined} />}
+        onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }} />}
       {showVersions && <DatasetVersionPanel datasetPath={folderPath} onClose={() => setShowVersions(false)} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}

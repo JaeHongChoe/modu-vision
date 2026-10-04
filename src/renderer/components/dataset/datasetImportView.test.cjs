@@ -64,3 +64,56 @@ test('a ZIP import names the archive it read and the upload step is stated hones
  assert.equal(v.archiveProgressText({phase:'uploading',done:0,total:0}).startsWith('업로드 중 100%'),true,'an empty file never divides by zero');
  assert.equal(v.archiveProgressText({phase:'verifying',done:4,total:4}),'서버에서 파일 해시 확인 중');
  assert.equal(v.archiveProgressText(null),'');});
+
+// The backend's answer whether the active revision still matches its source, by the index's own inventory definition.
+const sourceStatus = (revision, over = {}) => ({ revision_id: revision.revision_id, matches: true, added: 0, removed: 0, changed: 0,
+  gaps: 0, gaps_changed: false, images: revision.image_count, revision_images: revision.image_count, skipped_links: 0, basis: 'stat', ...over });
+test('once a full validation of this source and task is the active version, the data step says so instead of warning', () => {
+  const { validationStatus } = view();
+  const partial = { requested: true, complete: false, checked_images: 64, scope: 'sampled_first_64' };
+  const active = { revision_id: '39d55e103d26abcdef', active: true, state: 'prepared', task: 'segmentation', source_root: '/data/line3',
+    image_count: 90, valid_count: 88, error_count: 2, unreadable_folders: 0, skipped_links: 0 };
+  const now = sourceStatus(active);
+  const done = validationStatus(partial, active, '/data/line3/', 'segmentation', now);
+  assert.equal(done.tone, 'ok');
+  assert.match(done.text, /전체 검증 완료 · 활성 버전 39d55e103d26 · 90장 중 유효 88장, 손상·제외 2장\./);
+  assert.match(done.text, /빠른 확인\(64장\)은 미리보기 범위입니다/);
+  const whole = validationStatus({ requested: true, complete: true, checked_images: 90, scope: 'all' }, active, '/data/line3', 'segmentation', now);
+  assert.equal(whole.tone, 'ok');
+  assert.doesNotMatch(whole.text, /미리보기/, 'a complete quick check is no preview');
+  assert.doesNotMatch(validationStatus(null, { ...active, error_count: 0, valid_count: 90 }, '/data/line3', 'segmentation', now).text, /제외/);
+  for (const other of [{ ...active, active: false }, { ...active, task: 'classification' }, { ...active, source_root: '/data/line4' }, { ...active, state: 'rejected' }, null]) {
+    const status = validationStatus(partial, other, '/data/line3', 'segmentation', now);
+    assert.equal(status.tone, 'warn', JSON.stringify(other));
+    assert.match(status.text, /전체 이미지 검증은 '검증된 데이터 버전'에서 실행하세요/);
+  }
+  assert.equal(validationStatus(partial, active, null, 'segmentation', now).tone, 'warn', 'no registered source: no claim');
+  assert.equal(validationStatus(partial, active, '/data/line3', 'segmentation', null).tone, 'warn', 'status not loaded: no claim');
+  assert.equal(validationStatus(partial, active, '/data/line3', 'segmentation', { ...now, revision_id: 'another' }).tone, 'warn',
+    "another revision's status: no claim");
+  const windows = validationStatus(null, active, '/data/line3', 'segmentation', { ...now, basis: 'stat_without_ctime' });
+  assert.equal(windows.tone, 'ok');
+  assert.match(windows.text, /원본 일치는 파일 크기·수정 시각으로 확인했습니다/, 'where stat is weaker evidence, the step says how it checked');
+  assert.equal(validationStatus({ requested: true, complete: true, checked_images: 88, scope: 'all' }, null, '/data/line3', 'segmentation', now), null);
+});
+test('a version that did not read the whole source, or is older than it, is never called complete (nqa1 review P2-3, P2-4)', () => {
+  const { validationStatus } = view();
+  const partial = { requested: true, complete: false, checked_images: 6, scope: 'partial: 6 image files decoded; unreadable folder' };
+  const active = { revision_id: '4d155e906951ffff', active: true, state: 'prepared', task: 'classification', source_root: '/data/a',
+    image_count: 6, valid_count: 6, error_count: 0, unreadable_folders: 1, skipped_links: 0 };
+  const gaps = validationStatus(partial, active, '/data/a', 'classification', sourceStatus(active));
+  assert.equal(gaps.tone, 'warn');
+  assert.match(gaps.text, /활성 버전 4d155e906951은 원본 일부를 읽지 못했습니다\(읽지 못한 폴더 1곳\)/);
+  assert.match(gaps.text, /빠른 확인 범위가 일부입니다\(6장\): partial: 6 image files decoded; unreadable folder/, "the quick check's own gap stays");
+  assert.match(validationStatus(null, { ...active, unreadable_folders: 0, skipped_links: 3 }, '/data/a', 'classification', sourceStatus(active)).text, /건너뛴 링크 3개/);
+  const clean = { ...active, unreadable_folders: 0 };
+  const grown = validationStatus(null, clean, '/data/a', 'classification', sourceStatus(clean, { matches: false, added: 3, changed: 1, images: 9 }));
+  assert.equal(grown.tone, 'warn');
+  assert.match(grown.text, /활성 버전 4d155e906951\(6장\)은 지금 원본\(9장\)과 다릅니다\(추가 3장 · 바뀌었거나 확인되지 않은 1장\)/);
+  assert.match(validationStatus(null, clean, '/data/a', 'classification', sourceStatus(clean, { matches: false, removed: 1, images: 5 })).text,
+    /삭제 1장/, 'fewer images now');
+  assert.match(validationStatus(null, clean, '/data/a', 'classification', sourceStatus(clean, { matches: false, gaps_changed: true, gaps: 1 })).text,
+    /읽지 못한 폴더가 달라짐/, 'a folder unreadable since');
+  assert.equal(validationStatus(null, clean, '/data/a', 'classification', sourceStatus(clean)).tone, 'ok',
+    'a fresh validation of an unchanged source is complete, however the quick import counted it (nqa2 review P2-1)');
+});

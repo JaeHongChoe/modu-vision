@@ -1,4 +1,4 @@
-import type { DatasetImportView, DatasetQuickValidation, DatasetRevisionReceipt, DatasetRevisionRow } from '../../services/api';
+import type { DatasetImportView, DatasetQuickValidation, DatasetRevisionReceipt, DatasetRevisionRow, DatasetSourceStatus } from '../../services/api';
 
 const ENDED = new Set(['completed', 'failed', 'aborted', 'interrupted']);
 const STATE_TEXT: Record<string, string> = {
@@ -91,6 +91,35 @@ export function quickValidationNotice(validation: DatasetQuickValidation | undef
     return `빠른 확인은 처음 ${validation.checked_images}장만 열어 봤습니다. 전체 이미지 검증은 '검증된 데이터 버전'에서 실행하세요.`;
   }
   return `빠른 확인 범위가 일부입니다(${validation.checked_images}장): ${validation.scope}. 전체 검증은 '검증된 데이터 버전'에서 실행하세요.`;
+}
+
+/** What the data step says about validation. "Complete" is said only when a full validation of this source and task is
+ *  the active version, it read the whole source (no unreadable folder, no skipped link), and it still matches the source
+ *  by the backend index's inventory and source-status check. Invalid files remain excluded and are named in the
+ *  counts; a recorded unreadable file matches only while its error state still holds. The quick check may use a
+ *  different inventory or open only some images, so it is a preview. A version with gaps, or older than the source,
+ *  says so; without an answer for the active revision nothing is claimed. */
+export function validationStatus(validation: DatasetQuickValidation | undefined | null, active: DatasetRevisionRow | null | undefined,
+  source: string | null | undefined, task: string, current: DatasetSourceStatus | null): { tone: 'ok' | 'warn'; text: string } | null {
+  const normalize = (value: string) => value.replace(/[\\/]+$/, '');
+  const quick = quickValidationNotice(validation);
+  const matches = active && active.active && active.state === 'prepared' && active.task === task && source && normalize(active.source_root) === normalize(source);
+  // The backend's answer for this very revision, by the same inventory definition the validation read (nqa2 review P2-1).
+  if (!matches || !current || current.revision_id !== active.revision_id) return quick ? { tone: 'warn', text: quick } : null;
+  const id = active.revision_id.slice(0, 12);
+  if (active.unreadable_folders > 0 || active.skipped_links > 0) {
+    const gaps = [active.unreadable_folders ? `읽지 못한 폴더 ${active.unreadable_folders}곳` : '', active.skipped_links ? `건너뛴 링크 ${active.skipped_links}개` : ''].filter(Boolean).join(' · ');
+    return { tone: 'warn', text: `활성 버전 ${id}은 원본 일부를 읽지 못했습니다(${gaps}). 그 안의 이미지는 버전에 없습니다. 권한·링크를 확인한 뒤 '검증된 데이터 버전'에서 다시 검증하세요.${quick ? ` ${quick}` : ''}` };
+  }
+  if (!current.matches) {
+    const changes = [current.added ? `추가 ${current.added}장` : '', current.removed ? `삭제 ${current.removed}장` : '',
+      current.changed ? `바뀌었거나 확인되지 않은 ${current.changed}장` : '', current.gaps_changed ? '읽지 못한 폴더가 달라짐' : ''].filter(Boolean).join(' · ');
+    return { tone: 'warn', text: `활성 버전 ${id}(${active.image_count}장)은 지금 원본(${current.images}장)과 다릅니다(${changes}). 바뀐 원본은 아직 전체 검증되지 않았습니다. '검증된 데이터 버전'에서 다시 검증하세요.` };
+  }
+  const excluded = active.error_count ? `, 손상·제외 ${active.error_count}장` : '';
+  const preview = validation?.requested && !validation.complete ? ` 위의 빠른 확인(${validation.checked_images}장)은 미리보기 범위입니다.` : '';
+  const basis = current.basis === 'stat_without_ctime' ? ' 원본 일치는 파일 크기·수정 시각으로 확인했습니다.' : '';
+  return { tone: 'ok', text: `전체 검증 완료 · 활성 버전 ${id} · ${active.image_count}장 중 유효 ${active.valid_count}장${excluded}.${basis}${preview}` };
 }
 
 /** The source the server will read is the project's registered one; say so when the screen shows another folder. */

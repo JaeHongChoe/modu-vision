@@ -9,7 +9,7 @@
  *   - Category Selector & Image Filmstrip
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -27,6 +27,7 @@ import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
 import {TeamDataPanel} from './TeamDataPanel';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
+import { FOCUS_SWITCH_NAME, focusStatus, readLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -36,6 +37,15 @@ export const LabelingStudio: React.FC = () => {
     autoSelectError, clearAutoSelectError,
   } = useAnnotationStore();
   const { task: projectTask } = useProjectStore();
+  // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered.
+  const [focus, setFocus] = useState(() => readLabelingFocus());
+  const toggleFocus = () => setFocus(value => { writeLabelingFocus(!value); return !value; });
+  // Every folded panel is named in LABELING_HELPER_PANELS (the record's keys must be exactly that list).
+  const helperPanels: Record<LabelingHelperPanel, React.ReactNode> = {
+    '이미지 검토': <ImageReviewPanel />, '파생 이미지': <DerivedImagePanel />, '저장된 검토 대기열': <SavedReviewQueuePanel />,
+    '워크플로 영향': <WorkflowImpactPanel />, '모델 보조': <ModelAssistPanel />,
+  };
+  const folded = (...names: LabelingHelperPanel[]) => focus ? null : names.map(name => <React.Fragment key={name}>{helperPanels[name]}</React.Fragment>);
 
   // Sync vision task from project store
   useEffect(() => {
@@ -57,12 +67,15 @@ export const LabelingStudio: React.FC = () => {
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
       <LabelingToolbar />
-      <LabelSetBar />
-      <TeamDataPanel />
-      <ImageReviewPanel />
-      <DerivedImagePanel />
-      <SavedReviewQueuePanel />
-      <WorkflowImpactPanel />
+      <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
+        {focus && <span>{focusStatus(focus)}</span>}
+        <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}
+          className={`rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
+      </div>
+      <LabelSetBar compact={focus} />
+      {/* The team row stays: it loads the team settings and the label book and holds the shared editing lock. */}
+      <TeamDataPanel compact={focus} />
+      {folded('이미지 검토', '파생 이미지', '저장된 검토 대기열', '워크플로 영향')}
       <DicomPanel />
 
       {currentImage && annotationLoadStatus === 'error' && (
@@ -83,10 +96,10 @@ export const LabelingStudio: React.FC = () => {
 
       {/* Class Tag Bar */}
       <CategorySelector />
-      <ModelAssistPanel />
+      {folded('모델 보조')}
 
       {/* Center Work Area: 3-Layer Canvas + Mask Controls + Annotation Sidebar */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative" data-labeling-work-area>
         <div className="flex-1 relative h-full bg-[#0B0E14]">
           <LabelingCanvas />
           <MaskLayerControls />
@@ -104,7 +117,7 @@ export const LabelingStudio: React.FC = () => {
       </div>
 
       {/* Bottom Thumbnail Filmstrip */}
-      <ImageFilmstrip />
+      <ImageFilmstrip compact={focus} />
     </div>
   );
 };

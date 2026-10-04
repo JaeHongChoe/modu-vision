@@ -640,6 +640,69 @@ class DatasetIndex:
             db.execute('INSERT OR REPLACE INTO dataset_active VALUES(?, ?)', (project_key, revision_id))
             return revision_id
 
+    def source_status(self, project_key: str, revision_id: str) -> dict:
+        """Whether a revision still matches its source, by this index's own inventory definition (the one a build
+        reads), without decoding or hashing anything: images added or removed since, images whose current file the stat
+        cache cannot confirm to be the bytes the revision read (rewritten, or touched without a new read), and unreadable
+        folders that differ from the revision's. Where ctime is a change time the whole stat key confirms a file
+        (``basis`` 'stat'); on Windows, where it is the creation time, the key without it does ('stat_without_ctime'),
+        so a rewrite that restores size and modification time is not seen there. Recorded unreadable or unstorable
+        exclusions match while their error state still holds; that does not make them valid images. A READ_ERROR
+        entry gets a read-only stat/open/one-byte probe, with no decode, digest, or cache write. Recovery or disappearance
+        requires a new validation. KeyError for another project's revision."""
+        with self._connect() as db:
+            self._owned(db, project_key, revision_id)
+            row = db.execute('SELECT source_root, project_root, task, follow_links FROM dataset_revisions WHERE revision_id=?',
+                             (revision_id,)).fetchone()
+            recorded = {item[0]: (item[1], item[2]) for item in db.execute(
+                'SELECT relative_path, sha256, error_code FROM dataset_index_images WHERE revision_id=?', (revision_id,))}
+            recorded_gaps = {item[0] for item in db.execute(
+                'SELECT relative_path FROM dataset_index_gaps WHERE revision_id=?', (revision_id,))}
+            cache = {item['relative_path']: item for item in db.execute(
+                'SELECT relative_path, validator, dev, ino, size, mtime_ns, ctime_ns, sha256 FROM dataset_stat_cache '
+                'WHERE project_key=? AND source_root=?', (project_key, row['source_root']))}
+        inventory = _discover(Path(row['source_root']), row['task'], Path(row['project_root']), bool(row['follow_links']), None)
+        width = 5 if _STAT_CACHE_TRUSTED else 4
+        added = changed = 0
+        present = set()
+        for relative, path, _via_link, storable in inventory.entries:
+            present.add(relative)
+            if relative not in recorded:
+                added += 1
+                continue
+            digest, error = recorded[relative]
+            if not storable:
+                confirmed = error == 'UNREPRESENTABLE_NAME'
+            elif error == 'READ_ERROR':
+                confirmed = False
+                try:
+                    stat = path.stat()
+                    if stat.st_size:  # a now-empty file would be ZERO_BYTE on a new validation
+                        with path.open('rb') as handle:
+                            handle.read(1)
+                except FileNotFoundError:
+                    pass  # disappearance after the listing cannot confirm the old exclusion
+                except OSError:
+                    confirmed = True  # same unusable state, never a reusable cache row
+            else:
+                hit = cache.get(relative)
+                try:
+                    key = _stat_key(path.stat())
+                except OSError:
+                    key = None
+                confirmed = (hit is not None and key is not None and hit['validator'] == VALIDATOR
+                             and (hit['dev'], hit['ino'], hit['size'], hit['mtime_ns'], hit['ctime_ns'])[:width] == key[:width]
+                             and hit['sha256'] == digest)
+            changed += not confirmed
+        removed = sum(1 for relative in recorded if relative not in present)
+        gaps_now = {relative for relative, _reason in inventory.gaps}
+        gaps_changed = gaps_now != recorded_gaps
+        return {'revision_id': revision_id, 'source_root': row['source_root'], 'images': len(inventory.entries),
+                'revision_images': len(recorded), 'added': added, 'removed': removed, 'changed': changed,
+                'gaps': len(gaps_now), 'gaps_changed': gaps_changed, 'skipped_links': inventory.skipped_links,
+                'matches': not (added or removed or changed or gaps_changed),
+                'basis': 'stat' if _STAT_CACHE_TRUSTED else 'stat_without_ctime', 'checked_ns': time.time_ns()}
+
     def gaps(self, project_key: str, revision_id: str) -> list[dict]:
         with self._connect() as db:
             self._owned(db, project_key, revision_id)
