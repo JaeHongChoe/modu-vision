@@ -464,7 +464,26 @@ export interface ModelComparisonModel {
   preset: string | null;
 }
 
+export interface ComparisonBinaryMetrics {
+  scope: 'shared_known_truth_binary_verdicts';
+  selected_images: number;
+  evaluated_images: number;
+  excluded: {unknown_truth: number; review: number; error: number};
+  incumbent: ComparisonBinaryModelMetrics;
+  candidate: ComparisonBinaryModelMetrics;
+}
+
+export interface ComparisonBinaryModelMetrics {
+  counts: {tp: number; tn: number; fp: number; fn: number};
+  accuracy: number | null;
+  precision_ng: number | null;
+  recall_ng: number | null;
+  miss_rate: number | null;
+  overkill_rate: number | null;
+}
+
 export interface ModelComparisonSummary {
+  binary_metrics?: ComparisonBinaryMetrics;
   selected_images: number;
   comparable_images: number;
   error_images: number;

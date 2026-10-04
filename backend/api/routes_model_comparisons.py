@@ -349,6 +349,35 @@ def _outcome(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _binary_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Same known-truth binary intersection for both models; NG is positive."""
+    selected = []
+    excluded = {'unknown_truth': 0, 'review': 0, 'error': 0}
+    for row in rows:
+        if row.get('ground_truth_verdict') not in {'OK', 'NG'}:
+            excluded['unknown_truth'] += 1
+        elif any(row[role].get('error') or row[role].get('verdict') not in {'OK', 'NG', 'REVIEW'}
+                 for role in ('incumbent', 'candidate')):
+            excluded['error'] += 1
+        elif any(row[role]['verdict'] == 'REVIEW' for role in ('incumbent', 'candidate')):
+            excluded['review'] += 1
+        else:
+            selected.append(row)
+    metrics = {'scope': 'shared_known_truth_binary_verdicts', 'positive_verdict': 'NG',
+               'selected_images': len(rows), 'evaluated_images': len(selected), 'excluded': excluded}
+    ratio = lambda numerator, denominator: numerator / denominator if denominator else None
+    for role in ('incumbent', 'candidate'):
+        counts = {key: 0 for key in ('tp', 'tn', 'fp', 'fn')}
+        for row in selected:
+            truth, verdict = row['ground_truth_verdict'], row[role]['verdict']
+            counts[{('NG', 'NG'): 'tp', ('OK', 'OK'): 'tn', ('OK', 'NG'): 'fp', ('NG', 'OK'): 'fn'}[truth, verdict]] += 1
+        tp, tn, fp, fn = (counts[key] for key in ('tp', 'tn', 'fp', 'fn'))
+        metrics[role] = {'counts': counts, 'accuracy': ratio(tp + tn, len(selected)),
+                         'precision_ng': ratio(tp, tp + fp), 'recall_ng': ratio(tp, tp + fn),
+                         'miss_rate': ratio(fn, tp + fn), 'overkill_rate': ratio(fp, tn + fp)}
+    return metrics
+
+
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     compared = [row for row in rows if row["incumbent"]["verdict"] and row["candidate"]["verdict"]]
     disagreements = [row for row in compared if row["incumbent"]["verdict"] != row["candidate"]["verdict"]]
@@ -372,6 +401,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "known_ok_images": sum(row["ground_truth_verdict"] == "OK" for row in rows),
         "known_ng_images": sum(row["ground_truth_verdict"] == "NG" for row in rows),
         "unknown_truth_images": sum(row["ground_truth_verdict"] is None for row in rows),
+        'binary_metrics': _binary_metrics(rows),
     }
 
 
@@ -829,3 +859,24 @@ def get_comparison(comparison_id: str, request: Request, source_dataset_path: st
     if report.get("comparison_id") != comparison_id or not _report_available(report, request):
         raise HTTPException(409, "Durable comparison report is not verified/available in this actor scope")
     return report
+
+
+@router.get('/{comparison_id}/export')
+def export_comparison(comparison_id: str, request: Request, source_dataset_path: str, task: Task):
+    report = get_comparison(comparison_id, request, source_dataset_path, task)
+    project, _ = _scope(request, source_dataset_path, task)
+    path = _report_dir(project) / f'{comparison_id}.json'
+    if path.is_symlink():
+        raise HTTPException(409, 'Comparison changed during export')
+    try:
+        raw = path.read_bytes()
+        if json.loads(raw) != report:
+            raise ValueError('Comparison changed during export')
+    except (OSError, ValueError) as exc:
+        raise HTTPException(409, 'Comparison changed during export') from exc
+    return {'schema': 'ModelComparisonEvidenceExport/v1',
+            'saved_report_sha256': hashlib.sha256(raw).hexdigest(), 'report': report,
+            'binary_metrics': _binary_metrics(report['images']),
+            'task_specific_metrics': {'status': 'unavailable',
+                'reason': 'Image OK/NG verdict evidence does not establish object, pixel, text, angle or enhancement metrics.'},
+            'scope': 'Saved comparison evidence; not threshold tuning, representative quality approval or deployment.'}

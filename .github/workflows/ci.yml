@@ -97,6 +97,12 @@ jobs:
           backend/tests/test_service_s3_09_extensions.py
           backend/tests/test_service_s4_06.py
           backend/tests/test_service_s4_07.py
+          backend/tests/test_model_comparisons.py
+          backend/tests/test_mixed_comparison_truth.py
+          backend/tests/test_cross_task_comparison.py
+          backend/tests/test_comparison_durable_jobs.py
+          backend/tests/test_comparison_compute_target.py
+          backend/tests/test_comparison_metric_export.py
           backend/tests/test_service_s5_01.py
           backend/tests/test_service_s5_02.py
           backend/tests/test_service_s5_06.py

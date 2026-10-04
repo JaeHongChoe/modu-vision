@@ -75,6 +75,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [reportScope, setReportScope] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [fullTest, setFullTest] = useState(true);
   const [comparisonJob, setComparisonJob] = useState<ComparisonJob | null>(null);
   const [jobs, setJobs] = useState<ComparisonJob[]>([]);
@@ -95,6 +96,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
     setOriginPath('');
     setIsLoading(false);
     setIsRunning(false);
+    setIsExporting(false);
     setComparisonJob(null); setJobs([]); setProductFilter(''); setLotFilter('');
     setMaxImages(task === 'segmentation' ? 1 : 4);
     if (!projectDir || !sourceFolder) return () => { active = false; };
@@ -216,6 +218,30 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   };
 
   const visibleReport = reportScope === scopeKey ? report : null;
+  const exportReport = async () => {
+    if (!visibleReport || isLoading || isRunning || isExporting) return;
+    const expectedScope = scopeKey;
+    const identifier = visibleReport.comparison_id;
+    setIsExporting(true);
+    setError(null);
+    try {
+      const exported = await request<Record<string, unknown>>(`/api/evaluation/model-comparisons/${identifier}/export?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`);
+      if (currentScope.current !== expectedScope) return;
+      const url = URL.createObjectURL(new Blob([JSON.stringify(exported, null, 2)], {type: 'application/json;charset=utf-8'}));
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${identifier}-evidence.json`;
+        link.click();
+      } finally { URL.revokeObjectURL(url); }
+    } catch (cause) {
+      if (currentScope.current === expectedScope) setError(errorMessage(cause));
+    } finally {
+      if (currentScope.current === expectedScope) setIsExporting(false);
+    }
+  };
+  const binaryMetrics = visibleReport?.summary.binary_metrics;
+  const metricRate = (value: number | null) => value === null ? (isKo ? '산출 불가' : 'Unavailable') : `${(value * 100).toFixed(1)}%`;
   const comparisonImages = (visibleReport?.images || []) as Array<ModelComparisonReport['images'][number] & { product?: string; lot?: string }>;
   const filteredImages = comparisonImages.filter((row) => (!productFilter || (row.product || '(미지정)') === productFilter) && (!lotFilter || (row.lot || '(미지정)') === lotFilter));
   const differentTrainingData = visibleReport
@@ -351,6 +377,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           <div className="flex flex-wrap items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
             <span className="font-semibold text-slate-100">{isKo ? '저장된 비교 근거' : 'Saved comparison evidence'}</span>
+            <button type="button" disabled={isLoading || isRunning || isExporting} onClick={() => void exportReport()}
+              className="rounded border border-slate-500 px-2 py-1 text-sky-200 disabled:opacity-40">
+              {isKo ? '비교 근거 JSON 저장' : 'Save comparison evidence JSON'}
+            </button>
             <span className="ml-auto font-mono text-[10px] text-slate-400">{visibleReport.created_at.slice(0, 19).replace('T', ' ')}</span>
           </div>
           <p className="break-all font-mono text-[10px] text-slate-400">{visibleReport.incumbent_job_id} → {visibleReport.candidate_job_id}</p>
@@ -384,6 +414,19 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             {' · '}{isKo ? '실행 오류' : 'Errors'} {visibleReport.summary.error_images}
             {' · '}{isKo ? '정답 미확인' : 'Unknown truth'} {visibleReport.summary.unknown_truth_images}
           </p>
+          {binaryMetrics && <div className="space-y-1 overflow-x-auto rounded border border-slate-600/50 p-2">
+            <p>{isKo ? '동일 정답·OK/NG 판정 표본' : 'Shared known-truth binary sample'}: {binaryMetrics.evaluated_images}/{binaryMetrics.selected_images}
+              {' · '}{isKo ? '제외: 정답 미확인' : 'Excluded: unknown truth'} {binaryMetrics.excluded.unknown_truth}
+              {' · REVIEW '}{binaryMetrics.excluded.review}{' · '}{isKo ? '오류' : 'Error'} {binaryMetrics.excluded.error}</p>
+            <table className="w-full text-left text-[10px]" aria-label={isKo ? '공통 표본 판정 지표' : 'Common-sample verdict metrics'}>
+              <thead><tr>{[isKo ? '모델' : 'Model', 'TP', 'TN', 'FP', 'FN', isKo ? '정확도' : 'Accuracy', isKo ? '미검률' : 'Miss rate', isKo ? '과검률' : 'Overkill rate'].map(label => <th key={label} className="p-1">{label}</th>)}</tr></thead>
+              <tbody>{(['incumbent', 'candidate'] as const).map(role => {const metric = binaryMetrics[role]; return <tr key={role}>
+                <td className="p-1">{role === 'incumbent' ? (isKo ? '기준' : 'Baseline') : (isKo ? '후보' : 'Candidate')}</td>
+                {[metric.counts.tp, metric.counts.tn, metric.counts.fp, metric.counts.fn, metricRate(metric.accuracy), metricRate(metric.miss_rate), metricRate(metric.overkill_rate)].map((value, index) => <td key={index} className="p-1 font-mono">{value}</td>)}
+              </tr>;})}</tbody>
+            </table>
+            <p className="text-slate-400">{isKo ? 'NG를 양성으로 계산합니다. REVIEW·오류·정답 미확인은 두 모델의 공통 분모에서 제외합니다. 객체·픽셀·문자·각도·개선 성능은 이 원판정 표로 산출하지 않습니다.' : 'NG is positive. REVIEW, errors and unknown truth are excluded from both denominators. Object, pixel, text, angle and enhancement metrics are unavailable in this verdict comparison.'}</p>
+          </div>}
           {visibleReport.summary.new_missed_ng > 0 && (
             <p role="alert" className="rounded border border-rose-500/50 bg-rose-950/30 p-2 text-[11px] font-semibold text-rose-200">
               {isKo
