@@ -486,6 +486,7 @@ export type FlowCompare = {
 export type FlowDraftSaveRequest = {
   pipeline: FlowchartPipeline_Input;
   context: { [key: string]: unknown };
+  base_version_id?: string | null;
 };
 
 export type FlowEdge = {
@@ -527,6 +528,13 @@ export type FlowNodeData = {
   crop_padding?: number | null;
   rule?: string | null;
   params?: { [key: string]: unknown };
+};
+
+export type FlowPreflightRequest = {
+  source_dataset_path: string;
+  recipe_task: string;
+  version_id: string;
+  target: { [key: string]: unknown };
 };
 
 export type FlowchartModelReference = {
@@ -691,6 +699,17 @@ export type IndustrialImportOptions = {
   max_dim?: number | null;
 };
 
+export type KnownLengthCalibrationRequest = {
+  camera_id: string;
+  acquisition_config: { [key: string]: unknown };
+  source_size: Array<number>;
+  segments: Array<{ [key: string]: unknown }>;
+  tolerance_mm: number;
+  isotropic?: boolean;
+  valid_plane?: { [key: string]: unknown } | null;
+  reference_image_path?: string | null;
+};
+
 export type LabelSetCreateRequest = {
   name: string;
 };
@@ -745,6 +764,15 @@ export type Login = {
 export type ManifestRequest = {
   dataset_path: string;
   samples: Array<RotatedSampleInput>;
+};
+
+export type ManualCalibrationRequest = {
+  camera_id: string;
+  acquisition_config: { [key: string]: unknown };
+  source_size: Array<number>;
+  mm_per_pixel_x: number;
+  mm_per_pixel_y: number;
+  valid_plane?: { [key: string]: unknown } | null;
 };
 
 export type MaskExportRequest = {
@@ -1645,6 +1673,7 @@ export interface ApiRequestBody {
   "POST /api/export/flow": ExportFlowRequest;
   "POST /api/export/flow/optimization-jobs/{job_id}/approve": PrecisionApprovalRequest;
   "POST /api/export/flow/optimize": OptimizeFlowRequest;
+  "POST /api/export/flow/preflight": FlowPreflightRequest;
   "POST /api/export/runtime": ExportRuntimeRequest;
   "POST /api/fleet/rollouts": RolloutRequest;
   "POST /api/fleet/rollouts/{plan_id}/advance": RolloutAdvanceRequest;
@@ -1664,7 +1693,10 @@ export interface ApiRequestBody {
   "PUT /api/flowchart/execution-resources": FlowExecutionResourcesRequest;
   "POST /api/flowchart/models/verify": FlowchartModelVerificationRequest;
   "POST /api/flowchart/pipeline": FlowchartPipeline_Input;
+  "POST /api/flowchart/pipeline/diff": FlowchartPipeline_Input;
   "POST /api/flowchart/run": FlowchartRunRequest;
+  "POST /api/geometry/calibrations/known-lengths": KnownLengthCalibrationRequest;
+  "POST /api/geometry/calibrations/manual": ManualCalibrationRequest;
   "POST /api/geometry/measure": GeometryMeasureRequest;
   "PUT /api/image-truth": TruthRequest;
   "POST /api/inspections/runs": CreateRun;

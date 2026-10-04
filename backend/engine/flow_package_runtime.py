@@ -67,6 +67,13 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
             raise ValueError('Runtime configuration differs from the verified manifest')
     pipeline = FlowchartPipeline.model_validate(json.loads((root / "pipeline.json").read_text(encoding="utf-8")))
     ordered_linear_nodes(pipeline)
+    from backend.engine.spatial_calibration import calibration_refs, package_calibrations
+    needed = calibration_refs(pipeline)
+    if needed - set(manifest.get('calibrations') or []):
+        raise ValueError('The flow package does not list every calibration its flow measures with')
+    for ref in needed:
+        if f"calibrations/{ref.rsplit(':', 1)[-1]}.json" not in seen or package_calibrations(root).load(ref) is None:
+            raise ValueError(f'The flow package lacks calibration {ref}')
     expected = {
         (node.data.model_job_id, flow_model_task(node))
         for node in pipeline.nodes if flow_model_task(node) is not None
@@ -148,12 +155,14 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
         return checkpoints.get(job_id)
 
     engine = FlowchartEngine(device='cpu' if openvino_device else device, checkpoint_resolver=resolve)
-    if openvino_device:
-        from backend.engine.openvino_runtime import OpenVINOSession
-        with OpenVINOSession(root,openvino_device,options['cpu_threads']) as session:
-            result=engine.execute(pipeline=pipeline,image_path=image,image_id=image_id)
-            result['model_runtime']=session.receipt()
-    else:result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
+    from backend.engine.spatial_calibration import calibration_scope, package_calibrations
+    with calibration_scope(package_calibrations(root).load):
+        if openvino_device:
+            from backend.engine.openvino_runtime import OpenVINOSession
+            with OpenVINOSession(root,openvino_device,options['cpu_threads']) as session:
+                result=engine.execute(pipeline=pipeline,image_path=image,image_id=image_id)
+                result['model_runtime']=session.receipt()
+        else:result = engine.execute(pipeline=pipeline, image_path=image, image_id=image_id)
     return result.model_dump() if hasattr(result, "model_dump") else result
 
 
@@ -322,6 +331,9 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run a saved Modu Vision inspection flow offline")
     parser.add_argument("--verify-only", action="store_true", help="Verify graph, code, and model checksums")
+    parser.add_argument("--preflight", action="store_true",
+                        help="Check every node's model, calibration, runtime and device on this computer and keep the report")
+    parser.add_argument("--show-preflight", action="store_true", help="Show the last kept preflight report and whether it is current")
     parser.add_argument("--image", type=Path, help="Image to inspect")
     parser.add_argument("--device", default=None, help="Explicit execution device; unavailable devices fail")
     parser.add_argument("--image-id", help="Optional source image ID")
@@ -331,6 +343,16 @@ def main() -> int:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     try:
+        if args.preflight or args.show_preflight:
+            from backend.engine.flow_preflight import latest_package_preflight, package_preflight
+            result = (package_preflight(root, device=args.device) if args.preflight
+                      else latest_package_preflight(root, device=args.device) or {"status": "not_run"})
+            payload = json.dumps(result, ensure_ascii=False, indent=2)
+            if args.output:
+                args.output.write_text(payload + "\n", encoding="utf-8")
+            else:
+                print(payload)
+            return 4 if result.get("status") == "blocked" or result.get("stale") else 0
         if args.verify_only:
             pipeline, checkpoints = verify_flow_package(root)
             result = {"status": "verified", "pipeline_id": pipeline.id, "model_job_ids": sorted(checkpoints)}

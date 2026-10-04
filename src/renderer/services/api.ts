@@ -66,6 +66,60 @@ export interface SavedFlowVersion {
   is_active: boolean;
 }
 
+/** One inspection-rule difference between two flows (E04): a node added, removed or changed, an edge added or removed,
+ * or the execution settings. */
+export interface FlowSemanticChange {
+  kind: 'node_added' | 'node_removed' | 'node_changed' | 'edge_added' | 'edge_removed' | 'execution_changed';
+  node_id?: string;
+  node_type?: string;
+  field?: string;
+  before?: unknown;
+  after?: unknown;
+  source?: string;
+  target?: string;
+  [key: string]: unknown;
+}
+
+export interface FlowSemanticDelta {
+  changes: FlowSemanticChange[];
+  layout_only: boolean;
+  semantic_sha256_before: string | null;
+  semantic_sha256_after: string;
+}
+
+export interface FlowChangePreview {
+  parent_revision: string | null;
+  stale: boolean;
+  semantic_delta: FlowSemanticDelta;
+  layout_only: boolean;
+}
+
+export interface FlowConfigurationChange {
+  change_id: string;
+  time_ns: number;
+  actor: { kind: 'account' | 'local'; id: string; name: string };
+  subject: { kind: string; recipe_task?: string; pipeline_id?: string; source_dataset_path?: string | null };
+  action: 'save' | 'activate';
+  parent_revision: string | null;
+  next_revision: string;
+  semantic_delta: FlowSemanticDelta;
+  layout_only: boolean;
+  reason: string | null;
+  observed_runtime_release: { deployment_id?: string; manifest_sha256?: string; acknowledged?: boolean; unreadable?: boolean } | null;
+  row_hash: string;
+}
+
+export interface FlowRuntimeStatus {
+  active: { deployment_id: string; manifest_sha256: string | null; acknowledged: boolean } | null;
+  pending: { operation_id: string; status: string; manifest_sha256: string | null } | null;
+  unreadable?: boolean;
+}
+
+/** The version a change is based on, as the API takes it: a version id, "none" (no active version) or not given. */
+export function expectedVersionParam(base: string | null | undefined): string | undefined {
+  return base === undefined ? undefined : base ?? 'none';
+}
+
 export interface ComputeProbeResult {
   ready: boolean;
   runtime_ready?: boolean;
@@ -1186,11 +1240,32 @@ export const api = {
       ),
     getPipelineVersion: (versionId: string) =>
       request<FlowchartPipeline>(`/api/flowchart/pipelines/${encodeURIComponent(versionId)}`),
-    activatePipelineVersion: (versionId: string, sourceDatasetPath: string) =>
-      request<{ status: 'active'; version_id: string; pipeline: FlowchartPipeline }>(
-        `/api/flowchart/pipelines/${encodeURIComponent(versionId)}/activate?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`,
+    activatePipelineVersion: (versionId: string, sourceDatasetPath: string,
+      change?: { changeReason?: string; expectedVersionId?: string | null }) => {
+      const query = new URLSearchParams({ source_dataset_path: sourceDatasetPath });
+      if (change?.changeReason) query.set('change_reason', change.changeReason);
+      const expected = expectedVersionParam(change?.expectedVersionId);
+      if (expected) query.set('expected_version_id', expected);
+      return request<{ status: 'active'; version_id: string; pipeline: FlowchartPipeline }>(
+        `/api/flowchart/pipelines/${encodeURIComponent(versionId)}/activate?${query.toString()}`,
         { method: 'PUT' },
-      ),
+      );
+    },
+    /** The project's active flow version (null: none), the base a save is checked against. */
+    activeVersionId: () => request<{ version_id: string | null }>('/api/flowchart/pipeline/active-version'),
+    /** The active flow with its version id, read together. */
+    getActivePipelineRecord: (sourceDatasetPath: string) =>
+      request<{ version_id: string | null; pipeline: FlowchartPipeline }>(
+        `/api/flowchart/pipeline/active/record?source_dataset_path=${encodeURIComponent(sourceDatasetPath)}`),
+    /** The inspection-rule difference a save would record, from the active version; nothing is saved. */
+    previewChange: (pipeline: FlowchartPipeline, expectedVersionId?: string | null) => {
+      const expected = expectedVersionParam(expectedVersionId);
+      return request<FlowChangePreview>(`/api/flowchart/pipeline/diff${expected ? `?expected_version_id=${expected}` : ''}`, {
+        method: 'POST', body: JSON.stringify(pipeline),
+      });
+    },
+    listChanges: (limit = 100) => request<{ changes: FlowConfigurationChange[]; integrity: { intact: boolean; rows: number; broken_at?: string };
+      active_version_id: string | null; runtime: FlowRuntimeStatus }>(`/api/flowchart/changes?limit=${limit}`),
     getPipeline: (inspectionTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
       const query = new URLSearchParams();
       if (inspectionTask) query.set('inspection_task', inspectionTask);
@@ -1222,11 +1297,15 @@ export const api = {
       request<{ verified_job_ids: string[] }>('/api/flowchart/models/verify', {
         method: 'POST', body: JSON.stringify(data),
       }),
-    savePipeline: (data: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => {
+    savePipeline: (data: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string,
+      change?: { changeReason?: string; expectedVersionId?: string | null }) => {
       const query = new URLSearchParams();
       if (recipeTask) query.set('recipe_task', recipeTask);
       if (sourceDatasetPath) query.set('source_dataset_path', sourceDatasetPath);
-      return request<{ status: string; pipeline_id: string; node_count: number; version_id: string }>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`, {
+      if (change?.changeReason) query.set('change_reason', change.changeReason);
+      const expected = expectedVersionParam(change?.expectedVersionId);
+      if (expected) query.set('expected_version_id', expected);
+      return request<{ status: string; pipeline_id: string; node_count: number; version_id: string; change_id?: string; layout_only?: boolean }>(`/api/flowchart/pipeline${query.size ? `?${query.toString()}` : ''}`, {
         method: 'POST',
         body: JSON.stringify(data),
       });

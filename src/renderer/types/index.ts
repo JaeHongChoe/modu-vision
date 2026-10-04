@@ -288,11 +288,17 @@ export interface GeometryCalibration {
   mm_per_pixel_y: number;
   source_size: [number, number];
 }
+/** The calibration a result row was measured with: an inline manual scale, a project calibration artifact (E03), or
+ *  a reference that did not apply (refused: why millimetres were not used). */
+export type GeometryRowCalibration = Partial<GeometryCalibration> & {
+  ref?: string | null; method?: string; refused?: string; camera_id?: string; residual_mm?: number | null; acquisition_verified?: boolean;
+};
 export interface GeometryMeasurement {
   id: string;
   coordinate_space: 'original_image';
   source_size: number[];
-  calibration?: GeometryCalibration | null;
+  calibration?: GeometryRowCalibration | null;
+  threshold_unit?: 'px' | 'mm';
   measurement_source: string;
   length?: number;
   length_px?: number;

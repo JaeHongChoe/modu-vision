@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { Page, Request, Route } from '@playwright/test';
 import { expect, test, type Evidence, type RendererServer, type Workspace } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
+import { confirmFlowSave } from './fixtures/flowChange';
 
 // S0-05: flow versions, stale results and failure states in the real renderer
 // against the real backend. Responses that would need a trained model or a
@@ -510,6 +511,7 @@ test('S0-02: a raw distance threshold of 8 is saved, reopened and used for the r
   await expect(page.getByText('8.00', { exact: true })).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
+  await confirmFlowSave(page, 'threshold 8 for the anomaly check');
   expect((await saved).status()).toBe(200);
   await evidence.screenshot(page, '01-threshold-8-saved');
 

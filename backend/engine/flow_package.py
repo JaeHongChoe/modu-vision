@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import pickle
 from pathlib import Path
 import re
 import shutil
@@ -117,6 +116,14 @@ Verify the package before use:
 
     python run_flow.py --verify-only
 
+Check this computer for everything the flow needs (each node's model and
+calibration, the Python packages its model families need, the device) and keep
+the report in the preflight folder; a missing item names its node and what to do,
+and the exit code is 4 while anything blocks a node:
+
+    python run_flow.py --preflight
+    python run_flow.py --show-preflight
+
 Inspect one image and save all node evidence:
 
     python run_flow.py --image /absolute/path/to/image.jpg --output result.json
@@ -177,28 +184,11 @@ def _model_jobs(pipeline: FlowchartPipeline) -> dict[str, str]:
 
 
 def _runtime_requirements(checkpoints: Mapping[str, Path]) -> str:
-    """Add only the optional adapters that the packaged checkpoints require."""
-    import torch
+    """Add only the optional adapters that the packaged checkpoints require (the same rule the preflight checks)."""
+    from backend.engine.flow_preflight import checkpoint_requirements
     extra: set[str] = set()
     for checkpoint in checkpoints.values():
-        metadata = Path(checkpoint).with_name("model_meta.json")
-        records = []
-        if metadata.is_file() and not metadata.is_symlink():
-            records.append(json.loads(metadata.read_text(encoding="utf-8")))
-        try:
-            records.append(torch.load(checkpoint, map_location="cpu", weights_only=True))
-        except (OSError, ValueError, RuntimeError, EOFError, IndexError, KeyError, pickle.UnpicklingError):
-            # Checksum-only legacy exports remain supported by the builder. The
-            # API's scoped checkpoint resolver validates genuine weights.
-            pass
-        for record in records:
-            if not isinstance(record, dict):
-                continue
-            identifiers = [str(record.get(key, "")).lower() for key in ("backbone", "model_name", "architecture")]
-            if any("dinov3" in name for name in identifiers):
-                extra.add("timm>=1.0.24")
-            if any(name.startswith("yolo") or "detection:yolo" in name for name in identifiers):
-                extra.add("ultralytics>=8.4.41")
+        extra |= checkpoint_requirements(Path(checkpoint))
     return _REQUIREMENTS + "".join(f"{requirement}\n" for requirement in sorted(extra))
 
 
@@ -213,8 +203,11 @@ def build_flow_package(
     target_os: str | None = None,
     target_arch: str | None = None,
     runtime_config: dict | None = None,
+    calibrations=None,
 ) -> dict[str, Any]:
-    """Create a new package, never overwriting an existing release."""
+    """Create a new package, never overwriting an existing release. ``calibrations`` finds the spatial calibration
+    artifacts the flow's measurement nodes name (E03); each is copied into the package, and a flow that names one it
+    cannot find is refused (its mm limits could never be judged)."""
     from backend.engine.runtime_configuration import runtime_options
     configured_runtime=runtime_options(runtime_config)
     if deployment_profile=='edge_cpu' and configured_runtime['device']!='cpu':
@@ -230,6 +223,14 @@ def build_flow_package(
         configured_runtime['device']='cuda:0'
     deployment = create_edge_profile(target_os, target_arch, _REQUIREMENTS,device=configured_runtime['device']) if deployment_profile in ('edge_cpu','edge_cuda') else None
     ordered_linear_nodes(pipeline)
+    from backend.engine.spatial_calibration import calibration_refs, current_scope
+    resolve_calibration = calibrations or (current_scope().resolve if current_scope() else None)
+    packaged_calibrations = {}
+    for ref in sorted(calibration_refs(pipeline)):
+        found = resolve_calibration(ref) if resolve_calibration else None
+        if found is None:
+            raise ValueError(f'The flow measures with calibration {ref}, which this project does not have')
+        packaged_calibrations[ref] = found
     jobs = _model_jobs(pipeline)
     if set(checkpoints) != set(jobs):
         raise ValueError("Checkpoint jobs do not match the saved flow")
@@ -277,6 +278,11 @@ def build_flow_package(
         (staging / "pipeline.json").write_text(
             json.dumps(pipeline.model_dump(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )
+        if packaged_calibrations:
+            from backend.engine.spatial_calibration import package_calibrations
+            store = package_calibrations(staging)
+            for calibration in packaged_calibrations.values():
+                store.save(calibration)
         (staging / "run_flow.py").write_text(_RUNNER, encoding="utf-8")
         (staging / "serve_flow.py").write_text(_SERVICE_RUNNER, encoding="utf-8")
         (staging / "requirements.txt").write_text(requirements, encoding="utf-8")
@@ -344,6 +350,8 @@ def build_flow_package(
             ],
             "files": files,
         }
+        if packaged_calibrations:
+            manifest["calibrations"] = sorted(packaged_calibrations)
         if release_revisions is not None:
             manifest["release"] = {"approval_revisions": release_revisions}
         if deployment is not None:
@@ -586,7 +594,9 @@ def verify_flow_parity_cohort(
             continue
         try:
             engine = engine or FlowchartEngine(device=str(resolved), checkpoint_resolver=resolve)
-            reference = engine.execute(pipeline=pipeline, image_path=item["path"], image_id=item["image_id"])
+            from backend.engine.spatial_calibration import calibration_scope, package_calibrations
+            with calibration_scope(package_calibrations(package).load):  # the same artifacts the package measures with
+                reference = engine.execute(pipeline=pipeline, image_path=item["path"], image_id=item["image_id"])
             reference = reference.model_dump() if hasattr(reference, "model_dump") else reference
             packaged = _run_packaged_image(package, item, device, timeout_per_image)
             if _file_sha256(Path(item["path"])) != item["sha256"]:

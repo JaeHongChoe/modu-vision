@@ -3,6 +3,7 @@ import {join} from 'node:path';
 import type {Page,Route} from '@playwright/test';
 import {expect,test,type RendererServer,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+import { confirmFlowSave } from './fixtures/flowChange';
 
 // Actual renderer on the owned synthetic harness. Only completed-model catalog,
 // reference verification and approval readback are transport fixtures: no trained
@@ -93,7 +94,7 @@ test('model verification refusal and cancellation during held verification prese
 
 test('approval readback is explicit and invalidates after semantic editing without claiming target deployment',async({page,renderer,workspace,evidence})=>{
  const fixture=await setup(page,renderer,workspace,evidence),dialog=await map(page);await dialog.getByRole('button',{name:'매핑 확인·새 초안으로 채택'}).click();await expect(dialog).toHaveCount(0);
- await page.getByRole('button',{name:'플로우 저장',exact:true}).click();await expect(page.getByRole('region',{name:'플로우 식별 정보'})).not.toContainText('저장 미선택');
+ await page.getByRole('button',{name:'플로우 저장',exact:true}).click();await confirmFlowSave(page,'first saved flow');await expect(page.getByRole('region',{name:'플로우 식별 정보'})).not.toContainText('저장 미선택');
  await area(page,'배포').click();await page.getByRole('button',{name:'이 저장 버전의 승인 근거 확인'}).click();await expect(page.getByRole('region',{name:'플로우 식별 정보'})).toContainText('조회 시점의 revision 검증됨');
  expect(fixture.requests.filter(row=>row.path.includes('approval-prerequisites'))).toHaveLength(1);await expect(page.getByRole('region',{name:'플로우 식별 정보'})).toContainText('대상 적용 응답 확인 필요');
  await expect(page.getByRole('button',{name:'패키지·배포로 이동',exact:true})).toBeEnabled();

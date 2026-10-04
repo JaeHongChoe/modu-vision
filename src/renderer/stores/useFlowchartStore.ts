@@ -16,7 +16,7 @@ import type {
   FlowModelTask,
 } from '../types';
 import { api } from '../services/api';
-import { flowDraft, type FlowDraftContext } from '../services/flowDraft';
+import { flowDraft, type FlowDraft, type FlowDraftContext } from '../services/flowDraft';
 import { useProjectStore } from './useProjectStore';
 import { getFlowchartModelTask } from '../components/flowchart/flowchartStartup';
 
@@ -93,6 +93,9 @@ interface FlowchartState {
   pipelineDirty: boolean;
   pipelineIsDraft: boolean;
   persistedDraftHash: string | null;
+  /** The active version this editor started from (null: there was none; undefined: unknown, as in a draft of an older
+   * editor). A save or activation is checked against it, so a change made elsewhere meanwhile is never overwritten. */
+  baseVersionId: string | null | undefined;
   saveMessage: string | null;
   errorMessage: string | null;
   modelContextInvalidated: boolean;
@@ -116,7 +119,9 @@ interface FlowchartState {
   loadPipelineVersion: (versionId: string, sourceDatasetPath: string) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
-  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string) => Promise<void>;
+  savePipeline: (customPipeline?: FlowchartPipeline, recipeTask?: FlowModelTask | 'mixed', sourceDatasetPath?: string,
+    change?: { changeReason?: string }) => Promise<boolean>;
+  setBaseVersionId: (versionId: string | null | undefined) => void;
   saveDraft: (isCurrent?: () => boolean) => Promise<boolean>;
   loadDraft: () => Promise<FlowchartPipeline | null>;
   runPipeline: (customImagePath?: string, customImageId?: string,
@@ -155,6 +160,24 @@ function sameContext(expected: FlowDraftContext | null, actual: FlowDraftContext
   return JSON.stringify(expected) === JSON.stringify(actual);
 }
 
+function draftBase(draft: FlowDraft): string | null | undefined {
+  return draft.base_version_id === 'none' ? null : draft.base_version_id || undefined;
+}
+
+/** The project's active version now (undefined when it cannot be read: the save is then not checked). */
+async function activeBase(): Promise<string | null | undefined> {
+  try { return (await api.flowchart.activeVersionId()).version_id ?? null; } catch { return undefined; }
+}
+
+/** The refusal of a save or activation based on a version that is no longer active (not another 409, such as a
+ * changed dataset). */
+export function isStaleBaseError(error: unknown): boolean {
+  const value = error as { status?: number; message?: string } | null;
+  return value?.status === 409 && /active flow changed since/.test(String(value?.message ?? ''));
+}
+
+export const STALE_SAVE_MESSAGE = '이 편집을 시작한 뒤 다른 곳에서 활성 플로우가 바뀌었습니다. 편집 내용은 그대로 있습니다. 활성 버전을 다시 열어 확인한 뒤 저장하세요.';
+
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   executionChoiceOverride: null,
   setExecutionChoice: (choice) => { get().resetExecution(); set({ executionChoiceOverride: choice }); },
@@ -171,6 +194,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   pipelineDirty: false,
   pipelineIsDraft: false,
   persistedDraftHash: null,
+  baseVersionId: undefined,
   saveMessage: null,
   errorMessage: null,
   modelContextInvalidated: false,
@@ -201,7 +225,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
           data = draft.pipeline;
           set({ ...loadedIdentity(get()), pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
-            persistedDraftHash: draft.draft_sha256,
+            persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
             pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
             inspectedCrop: null, isLoading: false });
@@ -210,12 +234,16 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           if ((error as { status?: number }).status !== 404) throw error;
         }
       }
+      let base: string | null | undefined;
       if (sourceDatasetPath) {
         try {
-          data = await api.flowchart.getActivePipeline(sourceDatasetPath);
+          const record = await api.flowchart.getActivePipelineRecord(sourceDatasetPath);
+          data = record.pipeline;
+          base = record.version_id;
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error;
           data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
+          base = await activeBase();
         }
       } else {
         data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
@@ -225,6 +253,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         ...loadedIdentity(get()),
         pipeline: data,
         cleanPipeline: data,
+        baseVersionId: base,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false,
         pipelineIsDraft: false,
@@ -253,7 +282,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
       if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
       set({ ...loadedIdentity(get()), pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
-        persistedDraftHash: draft.draft_sha256,
+        persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
         pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: null, errorMessage: null });
       return draft.pipeline;
@@ -272,7 +301,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const saveGeneration = ++flowchartSaveGeneration;
     set({ isSaving: true, errorMessage: null, saveMessage: null });
     try {
-      const saved = await flowDraft.save(target, context);
+      const base = get().baseVersionId;
+      const saved = await flowDraft.save(target, context, base === undefined ? undefined : base ?? 'none');
       if (isCurrent && !isCurrent()) return false;
       const readback = await flowDraft.get();
       if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration
@@ -298,11 +328,12 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     set({ isLoading: true, errorMessage: null });
     try {
       const data = await api.flowchart.getPipelineVersion(versionId);
+      const base = await activeBase();
       if (generation !== flowchartGeneration) return null;
       flowchartRunInputRevision += 1;
       set({
         ...loadedIdentity(get()),
-        pipeline: data, cleanPipeline: data, pipelineIsDraft: false,
+        pipeline: data, cleanPipeline: data, pipelineIsDraft: false, baseVersionId: base,
         persistedDraftHash: null,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
         pipelineDirty: false, selectedNodeId: null,
@@ -366,23 +397,24 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     }
   },
 
-  savePipeline: async (customPipeline, recipeTask, sourceDatasetPath) => {
-    if (get().isSaving) return;
+  savePipeline: async (customPipeline, recipeTask, sourceDatasetPath, change) => {
+    if (get().isSaving) return false;
     const target = customPipeline || get().pipeline;
-    if (!target) return;
+    if (!target) return false;
     const generation = flowchartGeneration;
     const saveGeneration = ++flowchartSaveGeneration;
     set({ isSaving: true, errorMessage: null, saveMessage: null });
     try {
-      const saved = await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath);
-      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+      const saved = await api.flowchart.savePipeline(target, recipeTask, sourceDatasetPath,
+        { changeReason: change?.changeReason, expectedVersionId: get().baseVersionId });
+      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return false;
       // The server stores the flow with its defaults filled in (null branch and predicate fields, node type, threshold,
       // padding, execution limits). A graph built here (a recipe, a palette node) then never equals its saved version,
       // so the editor adopts the stored version when nothing was edited since: the same rules, now equal to what was saved.
       let stored: FlowchartPipeline | null = null;
       if (get().pipeline === target && saved?.version_id) {
         try { stored = await api.flowchart.getPipelineVersion(saved.version_id); } catch { stored = null; }
-        if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+        if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return false;
       }
       const currentVersionSaved = get().pipeline === target;
       const adopted = currentVersionSaved && stored ? stored : null;
@@ -394,17 +426,21 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         pipelineDirty: currentVersionSaved ? false : get().pipelineDirty,
         pipelineIsDraft: currentVersionSaved ? false : get().pipelineIsDraft,
         persistedDraftHash: currentVersionSaved ? null : get().persistedDraftHash,
+        // The saved version is active now: the next save is based on it.
+        baseVersionId: saved?.version_id ?? get().baseVersionId,
         saveMessage: currentVersionSaved
           ? '파이프라인이 저장되었습니다.'
           : '이전 버전이 저장되었습니다. 새 변경 사항은 미저장입니다.',
       });
       setTimeout(() => set({ saveMessage: null }), 3000);
+      return currentVersionSaved;
     } catch (e: any) {
-      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return;
+      if (generation !== flowchartGeneration || saveGeneration !== flowchartSaveGeneration) return false;
       console.error('Failed to save flowchart pipeline:', e);
-      set({ errorMessage: e?.recovery_incomplete
+      set({ errorMessage: isStaleBaseError(e) ? STALE_SAVE_MESSAGE : e?.recovery_incomplete
         ? '저장 복구가 완료되지 않았습니다. 현재 활성 플로우와 저장 버전을 다시 확인하세요.'
         : e?.message || '파이프라인 저장 실패' });
+      return false;
     } finally {
       if (saveGeneration === flowchartSaveGeneration) set({ isSaving: false });
     }
@@ -647,6 +683,8 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     set({ executionResult: null, inspectedCrop: null, activeRunningNodeId: null });
   },
 
+  setBaseVersionId: (versionId) => set({ baseVersionId: versionId }),
+
   invalidateForDataChange: () => {
     flowchartGeneration += 1;
     flowchartSaveGeneration += 1;
@@ -660,6 +698,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       pipelineDirty: false,
       pipelineIsDraft: false,
       persistedDraftHash: null,
+      baseVersionId: undefined,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
       executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false,

@@ -314,7 +314,11 @@ def list_evidence(project, kind):
             row = read_cohort(project,file.parent.name) if kind=='cohorts' else read_evaluation(project,file.parent.name)
             if row['scope']['source_dataset_path'] != str(Path(project.get('source_dataset_dir') or '').resolve()): continue
             if row['scope']['labelset_id'] != project.get('active_labelset_id','default'): continue
-            result.append({key:value for key,value in row.items() if key not in {'samples','records','pipeline','escapes','overkills','unknown_truth','errors'}})
+            listed = {key:value for key,value in row.items() if key not in {'samples','records','pipeline','escapes','overkills','unknown_truth','errors'}}
+            if kind == 'runs' and row.get('pipeline'):
+                from backend.engine.flow_provenance import semantic_sha256
+                listed['semantic_sha256'] = semantic_sha256(row['pipeline'])  # the rules evaluated, apart from the layout
+            result.append(listed)
         except (ValueError,OSError,KeyError): continue
     return sorted(result,key=lambda row:row['created_at'],reverse=True)
 

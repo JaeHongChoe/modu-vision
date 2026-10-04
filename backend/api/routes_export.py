@@ -40,6 +40,7 @@ from backend.engine.checkpoint_paths import is_job_id
 from backend.engine.flowchart_engine import FlowchartPipeline, ordered_linear_nodes
 from backend.engine import flow_package as flow_package_engine
 from backend.engine.flow_package import build_flow_package
+from backend.engine.spatial_calibration import project_calibration_store
 from backend.engine.specialized_models import FLOW_TASKS, SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.edge_runtime import SUPPORTED_TARGETS, normalize_target
@@ -106,8 +107,25 @@ class ExportFlowRequest(BaseModel):
         return self
 
 
-def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, version_id: Optional[str]):
-    """Load a saved, source-matched graph and resolve every model checkpoint it names."""
+def _resolve_flow_checkpoint(project: Dict[str, Any], source: Path, task: str, job_id: str) -> Path:
+    """The completed checkpoint of one flow model for this dataset; raises when it is missing or does not match."""
+    if task in SPECIALIZED_TASKS:
+        checkpoint, _ = resolve_specialized_checkpoint(project["models_dir"], job_id, task, str(source))
+    else:
+        _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
+            job_id, source_dataset_path=str(source), source_task=task,
+        )
+        from backend.remote.operations import remote_job_context
+        remote_job_context(checkpoint.parent, job_id)
+    payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
+    if (not isinstance(payload, dict) or str(payload.get("task", "")).lower() != task
+            or "model_state_dict" not in payload):
+        raise ValueError("Checkpoint task or model weights do not match the flow")
+    return checkpoint
+
+
+def _saved_flow(project: Dict[str, Any], source: Path, recipe_task: str, version_id: Optional[str]) -> FlowchartPipeline:
+    """Load a saved, source-matched graph."""
     project_dir = Path(project["project_dir"]).resolve()
     if version_id:
         if not re.fullmatch(r"[0-9a-f]{32}", version_id):
@@ -129,7 +147,12 @@ def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, 
             ordered_linear_nodes(pipeline)
         except (OSError, ValueError, KeyError) as exc:
             raise HTTPException(status_code=409, detail=f"Saved flow is invalid: {exc}") from exc
+    return pipeline
 
+
+def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, version_id: Optional[str]):
+    """Load a saved, source-matched graph and resolve every model checkpoint it names."""
+    pipeline = _saved_flow(project, source, recipe_task, version_id)
     checkpoints: Dict[str, Path] = {}
     job_tasks: Dict[str, str] = {}
     for node in pipeline.nodes:
@@ -145,18 +168,7 @@ def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, 
         if job_id in checkpoints:
             continue
         try:
-            if task in SPECIALIZED_TASKS:
-                checkpoint, _ = resolve_specialized_checkpoint(project["models_dir"], job_id, task, str(source))
-            else:
-                _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
-                    job_id, source_dataset_path=str(source), source_task=task,
-                )
-                from backend.remote.operations import remote_job_context
-                remote_job_context(checkpoint.parent, job_id)
-            payload = torch.load(checkpoint, map_location="cpu", weights_only=True)
-            if (not isinstance(payload, dict) or str(payload.get("task", "")).lower() != task
-                    or "model_state_dict" not in payload):
-                raise ValueError("Checkpoint task or model weights do not match the flow")
+            checkpoint = _resolve_flow_checkpoint(project, source, task, job_id)
         except (HTTPException, OSError, ValueError, RuntimeError, pickle.UnpicklingError,
                 ArtifactValidationError) as exc:
             raise HTTPException(
@@ -244,6 +256,107 @@ def flow_approval_prerequisites(source_dataset_path: str, recipe_task: str, requ
             "approval_created": False}
 
 
+class FlowPreflightRequest(BaseModel):
+    """A deployment preflight of one saved flow version on a target (E07)."""
+    model_config = ConfigDict(extra="forbid")
+    source_dataset_path: str = Field(..., min_length=1)
+    recipe_task: str
+    version_id: str = Field(..., pattern=r"^[0-9a-f]{32}$")
+    target: Dict[str, Any]
+
+
+def _preflight_store(project: Dict[str, Any]):
+    from backend.engine.flow_preflight import PreflightStore
+    return PreflightStore(Path(project["project_dir"]).resolve() / "deployment_preflight")
+
+
+def _preflight_release(project: Dict[str, Any], source: Path, recipe_task: str, version_id: str) -> tuple[FlowchartPipeline, dict]:
+    from backend.engine.flow_provenance import pipeline_sha256
+    pipeline = _saved_flow(project, source, recipe_task, version_id)
+    return pipeline, {"kind": "saved_flow", "version_id": version_id, "recipe_task": recipe_task,
+                      "pipeline_sha256": pipeline_sha256(pipeline)}
+
+
+def _preflight_requirements(project: Dict[str, Any], source: Path, pipeline: FlowchartPipeline, target: dict):
+    """Resolve local artifacts identically for a fresh report and when its kept evidence is reopened."""
+    from backend.engine import flow_preflight as preflight
+    here = target["kind"] == "this_computer"
+    checked: Dict[str, Dict[str, Any]] = {}
+
+    def resolve_model(node, task, job_id):
+        if not valid_flow_job(job_id, task) or task not in FLOW_TASKS:
+            return {"state": "missing", "detail": "no completed model is connected"}
+        if job_id not in checked:
+            try:
+                checkpoint = _resolve_flow_checkpoint(project, source, task, job_id)
+                checked[job_id] = {"state": "ready", "checkpoint": checkpoint,
+                                   "evidence_ref": f"sha256:{hashlib.sha256(checkpoint.read_bytes()).hexdigest()}"}
+            except HTTPException as exc:
+                checked[job_id] = {"state": "missing" if exc.status_code == 404 else "mismatch", "detail": str(exc.detail)}
+            except (OSError, ValueError, RuntimeError, pickle.UnpicklingError, ArtifactValidationError) as exc:
+                checked[job_id] = {"state": "mismatch", "detail": str(exc)}
+        return checked[job_id]
+
+    return preflight.collect_requirements(pipeline, target=target, resolve_model=resolve_model,
+                                         resolve_calibration=project_calibration_store(project).load, here=here)
+
+
+@router.post("/flow/preflight")
+def flow_preflight(req: FlowPreflightRequest, request: Request):
+    """Check every dependency of a saved flow version on a target, node by node, and keep the report. On this computer
+    the runtime and device are checked; for an edge target they stay unverified until the package's own preflight runs
+    there. Nothing is installed, downloaded or substituted."""
+    from backend.engine import flow_preflight as preflight
+    if req.recipe_task not in (*FLOW_TASKS, "mixed"):
+        raise HTTPException(status_code=422, detail="Unsupported flow recipe task")
+    try:
+        target = preflight.normalize_target(req.target)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    source = _canonical_source(req.source_dataset_path)
+    project = get_current_project(request)
+    pipeline, release = _preflight_release(project, source, req.recipe_task, req.version_id)
+    here = target["kind"] == "this_computer"
+    requirements = _preflight_requirements(project, source, pipeline, target)
+    report = preflight.build_report(pipeline, requirements, release=release, target=target,
+                                    environment_value=preflight.environment() if here else None)
+    _preflight_store(project).save(report)
+    return {**report, "stale": False, "stale_reasons": []}
+
+
+@router.get("/flow/preflights")
+def list_flow_preflights(request: Request, version_id: Optional[str] = None):
+    rows = _preflight_store(get_current_project(request)).list()
+    return {"reports": [row for row in rows if version_id is None or (row.get("recipe_release") or {}).get("version_id") == version_id]}
+
+
+@router.get("/flow/preflights/{report_id}")
+def read_flow_preflight(report_id: str, request: Request, source_dataset_path: str, target: Optional[str] = None):
+    """A kept report with whether it still speaks for its flow version, the target now selected (``target``, JSON) and
+    this computer's environment (a runtime pack or version changed, a device appeared or went)."""
+    from backend.engine import flow_preflight as preflight
+    project = get_current_project(request)
+    try:
+        report = _preflight_store(project).load(report_id)
+        selected = preflight.normalize_target(json.loads(target)) if target else None
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="No such preflight report") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    release = report["recipe_release"]
+    requirements = None
+    try:
+        source = _canonical_source(source_dataset_path)
+        pipeline, current = _preflight_release(project, source, release["recipe_task"], release["version_id"])
+        requirements = _preflight_requirements(project, source, pipeline, report["target_identity"])
+    except HTTPException:
+        current = {"kind": "saved_flow", "version_id": None}
+    here = report["target_identity"].get("kind") == "this_computer"
+    reasons = preflight.staleness(report, release=current, target=selected, environment_value=preflight.environment() if here else None,
+                                 current_requirements=requirements)
+    return {**report, "stale": bool(reasons), "stale_reasons": reasons}
+
+
 def _validated_cohort(req: ExportFlowRequest, source: Path) -> List[Dict[str, Optional[str]]]:
     from backend.engine.runtime_device import resolve_runtime_device
     try:
@@ -310,6 +423,7 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             approved_revisions=approved_revisions,
             deployment_profile=req.deployment_profile, target_os=req.target_os, target_arch=req.target_arch,
             runtime_config=req.runtime_config,
+            calibrations=project_calibration_store(project).load,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

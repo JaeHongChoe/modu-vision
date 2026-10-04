@@ -91,19 +91,19 @@ def _analyze(project):
         if data_state=='changed':actions.update(('review_data','train_candidate','evaluate_model','compare_fixed_cohort','approve_model'))
         if data_state=='unverified':actions.add('verify_dataset_version')
     index={m['job_id']:m for m in models};flows=[]
-    from backend.engine.flow_provenance import pipeline_sha256
+    from backend.engine.flow_provenance import pipeline_sha256, semantic_sha256
     for path in sorted((root/'flowcharts'/'versions').glob('*.json')):
         record=_read(path)
         if not record:continue
         scope_matches=record.get('source_dataset_path')==source
         graph=record.get('pipeline',{});ids=list(dict.fromkeys(n.get('data',{}).get('model_job_id') for n in graph.get('nodes',[]) if n.get('data',{}).get('model_job_id')))
         try:
-            actual=pipeline_sha256(graph);declared=record.get('pipeline_hash')
+            actual=pipeline_sha256(graph);declared=record.get('pipeline_hash');semantic=semantic_sha256(graph)
             changed=bool(declared and declared!=actual) or any(i not in index or index[i]['checkpoint_state']=='changed' for i in ids)
             stale_data=any(index[i]['data_state']=='changed' for i in ids if i in index)
             state='different_source' if not scope_matches else 'changed' if changed else 'revalidation_required' if stale_data else 'unverified'
-        except (ValueError,TypeError):actual=None;state='changed'
-        flows.append({'version_id':record.get('version_id'),'name':graph.get('name'),'graph_sha256':actual,'model_job_ids':ids,'state':state,'scope_matches':scope_matches,'source_dataset_path':record.get('source_dataset_path'),
+        except (ValueError,TypeError):actual=semantic=None;state='changed'
+        flows.append({'version_id':record.get('version_id'),'name':graph.get('name'),'graph_sha256':actual,'semantic_sha256':semantic,'model_job_ids':ids,'state':state,'scope_matches':scope_matches,'source_dataset_path':record.get('source_dataset_path'),
                       'reason':'Run a whole-flow evaluation for this exact saved version and current truth'})
         if state in ('changed','revalidation_required'):actions.update(('evaluate_flow','export_package','verify_target'))
     evaluations=[]
@@ -130,7 +130,9 @@ def _analyze(project):
         from backend.engine.flow_evaluation import list_evidence
         flow_evaluations=list_evidence(project,'runs')
         for flow in flows:
-            matches=[row for row in flow_evaluations if row.get('version_id')==flow['version_id'] and row.get('graph_sha256')==flow['graph_sha256']]
+            # Evidence of this version, or of another version with the same inspection rules (only the layout moved, E04).
+            matches=[row for row in flow_evaluations if (row.get('version_id')==flow['version_id'] and row.get('graph_sha256')==flow['graph_sha256'])
+                     or (flow.get('semantic_sha256') and row.get('semantic_sha256')==flow['semantic_sha256'])]
             if flow['state']=='unverified' and any(row.get('validity',{}).get('valid') for row in matches):
                 flow['state']='current'
                 flow['reason']='Whole-flow evidence matches current inputs; deployment and quality approval are separate'

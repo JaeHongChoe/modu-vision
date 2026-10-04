@@ -234,7 +234,7 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
               </div>
             </div>
           )}
-          {nodeType === 'measurement' && <div className="space-y-1 text-teal-200"><div>SOURCE LENGTH / AREA</div><div>{node.data.params?.paths?.length || 0} 경로 · {node.data.params?.calibration?'mm / mm²':'px / px²'}</div></div>}
+          {nodeType === 'measurement' && <div className="space-y-1 text-teal-200"><div>SOURCE LENGTH / AREA</div><div>{node.data.params?.paths?.length || 0} 경로 · {(node.data.params?.threshold_unit ?? (node.data.params?.calibration || node.data.params?.calibration_ref ? 'mm' : 'px'))==='mm'?'mm / mm²':'px / px²'}</div></div>}
           {nodeType === 'preprocess' && <div className="text-sky-200">{({learned_rotation:'학습 회전 보정',fitted_roi:'원본 회전 ROI 맞춤',enhancement:'학습 영상 개선',rotate:'회전',align:'방향 정렬',improve:'영상 개선'} as Record<string,string>)[node.data.params?.operation||'rotate']}</div>}
           {nodeType === 'blob_measure' && <>
             <div className="flex justify-between items-center">

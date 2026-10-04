@@ -4,6 +4,7 @@ import { crc32, deflateSync } from 'node:zlib';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
+import { confirmFlowSave } from './fixtures/flowChange';
 
 // S0-08: the S0-02 anomaly threshold path on the actual backend, with no fixture response. A model is trained through
 // the app's training API on the CPU (PaDiM, no pretrained weights, so nothing is downloaded); its calibrated distance
@@ -101,6 +102,7 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await expect(page.getByText('결함 판정 임계치 · mahalanobis_distance')).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
+  await confirmFlowSave(page, 'threshold 8');
   expect((await saved).status()).toBe(200);
   const active = await (await page.request.get(`${renderer.origin}/api/flowchart/pipeline/active?source_dataset_path=${encodeURIComponent(source)}`)).json() as Json;
   const stored = (active.nodes as Json[]).find(node => node.data.node_type === 'inspection')!.data;
@@ -140,6 +142,7 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await thresholdInput(page).fill('9');
   const savedAgain = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
+  await confirmFlowSave(page, 'threshold 9');
   expect((await savedAgain).status()).toBe(200);
   const activeAgain = await (await page.request.get(`${renderer.origin}/api/flowchart/pipeline/active?source_dataset_path=${encodeURIComponent(source)}`)).json() as Json;
   expect((activeAgain.nodes as Json[]).find(node => node.data.node_type === 'inspection')!.data.threshold, 'the second version holds 9').toBe(9);

@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { expect, test } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
 import { closeDialog, createProject, openTaskCenter, pickDataset, segmentationDataset, stage, startTraining, trainingStatus } from './qa/appFlow';
+import { confirmFlowSave } from './fixtures/flowChange';
 
 // The app's user flow on the actual backend, driven through the screens only (no API shortcut, no fixture answer).
 // In the browser project the desktop host bridge is the test-only shim and its folder dialog is answered with the
@@ -130,6 +131,7 @@ test('app flow · segmentation (UNet) on this computer: register data, train, ab
   await evidence.screenshot(page, 'qa-08-flow-branch');
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST', { timeout: 60_000 });
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
+  await confirmFlowSave(page, 'QA: fixed ROI with the class branch');
   expect((await saved).status()).toBe(200);
   // QA finding fixed: right after saving, the editor equals its saved version (no 'rules differ' readiness block). The
   // readiness bar first decides (its next item is the whole-flow evaluation), then the block must be absent.

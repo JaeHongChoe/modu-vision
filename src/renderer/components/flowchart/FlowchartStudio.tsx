@@ -23,7 +23,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { flowSemanticKey, isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
+import { flowSemanticKey, isExecutionResultCurrent, isStaleBaseError, STALE_SAVE_MESSAGE, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -47,6 +47,9 @@ import {createFlowRecipe, FLOW_RECIPES, type FlowRecipeKind} from './flowRecipes
 import type {FlowEvaluation} from '../../services/flowEvaluation';
 import {flowPackageExport, type FlowApprovalPrerequisites} from '../../services/flowPackageExport';
 import {FlowDraftControls,flowDraftStatus} from './FlowDraftControls';
+import { FlowChangeDialog } from './FlowChangeDialog';
+import { FlowChangeHistory } from './FlowChangeHistory';
+import { FlowPreflightPanel } from './FlowPreflightPanel';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport';
@@ -134,6 +137,8 @@ export const FlowchartStudio: React.FC = () => {
     pipelineDirty,
     pipelineIsDraft,
     persistedDraftHash,
+    baseVersionId,
+    setBaseVersionId,
     contextRevision,
     executionResult,
     executionIdentity,
@@ -196,6 +201,13 @@ export const FlowchartStudio: React.FC = () => {
   const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
   const [savedVersions, setSavedVersions] = useState<SavedFlowVersion[]>([]);
   const [selectedVersionId, setSelectedVersionId] = useState('');
+  // E04: a save or activation waits in this dialog for the rule difference and the reason.
+  const [changeDialog, setChangeDialog] = useState<null
+    | { mode: 'save'; recipeTask: FlowModelTask | 'mixed'; pipeline: FlowchartPipeline; sourceKey: string | null; scope: string; revision: number }
+    | { mode: 'activate'; versionId: string; pipeline: FlowchartPipeline; sourceKey: string | null; scope: string; revision: number }>(null);
+  const changeRequest = useRef(0);
+  const [changeHistoryOpen, setChangeHistoryOpen] = useState(false);
+  const [changeRevision, setChangeRevision] = useState(0);
   const [modelHandoffDismissed,setModelHandoffDismissed]=useState('');
   const [handoffNode,setHandoffNode]=useState('');
   const handoffState={...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()};
@@ -372,24 +384,21 @@ export const FlowchartStudio: React.FC = () => {
     if (graphError) { setActionValidationError(graphError); return; }
     const currentPipeline = pipeline;
     const sourceKey = datasetKey;
+    const scope = recipeScope(), revision = useFlowchartStore.getState().contextRevision;
+    const current = () => recipeScope() === scope && useFlowchartStore.getState().contextRevision === revision;
     setIsVerifyingAction(true);
     setActionValidationError(null);
     try {
       await verifyCurrentPipeline(currentPipeline, folderPath);
-      if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== currentPipeline) return;
+      if (!current() || useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== currentPipeline) return;
       const inspectionTasks = new Set(currentPipeline.nodes.filter((node) => node.data.node_type === 'inspection').map((node) => node.data.task));
       const recipeTask = inspectionTasks.size > 1 ? 'mixed'
         : inspectionTasks.size === 1 ? [...inspectionTasks][0] as FlowModelTask : 'detection';
-      await savePipeline(undefined, recipeTask, folderPath);
-      const versions = await api.flowchart.listPipelines(folderPath);
-      if (useDatasetStore.getState().datasetKey === sourceKey) {
-        setSavedVersions(versions.pipelines);
-        setSelectedVersionId(versions.pipelines.find((version) => version.is_active)?.version_id || '');
-      }
+      setChangeDialog({ mode: 'save', recipeTask, pipeline: currentPipeline, sourceKey, scope, revision });
     } catch (error) {
-      setActionValidationError(error instanceof Error ? error.message : '모델의 데이터 출처를 확인할 수 없습니다.');
+      if (current()) setActionValidationError(error instanceof Error ? error.message : '모델의 데이터 출처를 확인할 수 없습니다.');
     } finally {
-      setIsVerifyingAction(false);
+      if (current()) setIsVerifyingAction(false);
     }
   };
 
@@ -437,8 +446,9 @@ export const FlowchartStudio: React.FC = () => {
   const [approvalError,setApprovalError]=useState('');
   const approvalRequest=useRef(0);
   const semanticKey=flowSemanticKey(pipeline);
-  useEffect(()=>()=>{recipeToken.current++;approvalRequest.current++;},[]);
+  useEffect(()=>()=>{recipeToken.current++;approvalRequest.current++;changeRequest.current++;},[]);
   useEffect(()=>{setActiveTab('edit');recipeToken.current++;setRecipe(null);setEvaluationReceipt(null);},[scopeKey]);
+  useEffect(()=>{changeRequest.current++;setChangeDialog(null);setActionValidationError(null);setIsVerifyingAction(false);},[scopeKey,contextRevision]);
   useEffect(()=>{approvalRequest.current++;setApproval(null);setApprovalError('');setApprovalBusy(false);},[scopeKey,selectedVersionId,semanticKey]);
   const closeRecipe=()=>{recipeToken.current++;setRecipe(null);};
   // While the flow opens (load, model check and the completed model's automatic binding) the graph is still about to
@@ -550,19 +560,70 @@ export const FlowchartStudio: React.FC = () => {
   const activateSavedVersion = async () => {
     if (!selectedVersionId || !pipeline || pipelineDirty || pipelineIsDraft || isVerifyingAction || isRunning || isSaving) return;
     const selected = savedVersions.find(v => v.version_id === selectedVersionId);
-    if (!selected || !window.confirm(`“${selected.name}” 버전을 활성 검사 흐름으로 지정할까요? 다음 일괄 검사와 자동 운영에서 사용됩니다.`)) return;
+    if (!selected) return;
     const sourceKey = datasetKey;
     const graph = pipeline;
+    const scope = recipeScope(), revision = useFlowchartStore.getState().contextRevision;
+    const current = () => recipeScope() === scope && useFlowchartStore.getState().contextRevision === revision;
     setIsVerifyingAction(true); setActionValidationError(null);
     try {
       await verifyCurrentPipeline(graph, folderPath);
+      if (!current()) return;
       if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== graph) throw new Error('검증 중 데이터 또는 플로우가 바뀌었습니다.');
-      await api.flowchart.activatePipelineVersion(selectedVersionId, folderPath);
+      // The next batch inspection and automatic operation use the activated version: the dialog shows what changes.
+      setChangeDialog({ mode: 'activate', versionId: selected.version_id, pipeline: graph, sourceKey, scope, revision });
+    } catch (cause) { if (current()) setActionValidationError(cause instanceof Error ? cause.message : String(cause)); }
+    finally { if (current()) setIsVerifyingAction(false); }
+  };
+
+  const confirmChange = async (reason: string) => {
+    const dialog = changeDialog;
+    if (!dialog) return;
+    if (recipeScope() !== dialog.scope || useFlowchartStore.getState().contextRevision !== dialog.revision) {
+      setChangeDialog(null);
+      return;
+    }
+    if (useDatasetStore.getState().datasetKey !== dialog.sourceKey || useFlowchartStore.getState().pipeline !== dialog.pipeline) {
+      setChangeDialog(null);
+      setActionValidationError('확인하는 동안 데이터 또는 플로우가 바뀌었습니다. 다시 저장하세요.');
+      return;
+    }
+    const changeReason = reason || undefined;
+    const requestId = ++changeRequest.current;
+    let expectedBase = useFlowchartStore.getState().baseVersionId;
+    // Recheck live authority after each await, including A→B→A and a reset that reopens the same graph/base.
+    const current = () => requestId === changeRequest.current && recipeScope() === dialog.scope
+      && useFlowchartStore.getState().contextRevision === dialog.revision
+      && (dialog.mode === 'save' || (useFlowchartStore.getState().pipeline === dialog.pipeline
+        && useFlowchartStore.getState().baseVersionId === expectedBase));
+    try {
+      if (dialog.mode === 'save') {
+        await savePipeline(undefined, dialog.recipeTask, folderPath, { changeReason });
+      } else {
+        await api.flowchart.activatePipelineVersion(dialog.versionId, folderPath,
+          { changeReason, expectedVersionId: expectedBase });
+        if (!current()) return;
+        expectedBase = dialog.versionId;
+        setBaseVersionId(dialog.versionId);
+      }
+      if (!current()) return;
+      setChangeDialog(null);
       const readback = await api.flowchart.listPipelines(folderPath);
-      if (!readback.pipelines.some(v => v.version_id === selectedVersionId && v.is_active)) throw new Error('활성 버전 변경을 확인하지 못했습니다.');
-      if (useDatasetStore.getState().datasetKey === sourceKey && useFlowchartStore.getState().pipeline === graph) setSavedVersions(readback.pipelines);
-    } catch (cause) { setActionValidationError(cause instanceof Error ? cause.message : String(cause)); }
-    finally { setIsVerifyingAction(false); }
+      if (!current()) return;
+      if (dialog.mode === 'activate' && !readback.pipelines.some(v => v.version_id === dialog.versionId && v.is_active))
+        throw new Error('활성 버전 변경을 확인하지 못했습니다.');
+      if (useDatasetStore.getState().datasetKey === dialog.sourceKey) {
+        setSavedVersions(readback.pipelines);
+        if (dialog.mode === 'save') setSelectedVersionId(readback.pipelines.find((version) => version.is_active)?.version_id || '');
+      }
+    } catch (cause) {
+      if (current()) {
+        setChangeDialog(null);
+        setActionValidationError(isStaleBaseError(cause) ? STALE_SAVE_MESSAGE : cause instanceof Error ? cause.message : String(cause));
+      }
+    } finally {
+      if (current()) setChangeRevision(revision => revision + 1);
+    }
   };
 
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
@@ -932,6 +993,13 @@ export const FlowchartStudio: React.FC = () => {
             <button onClick={() => void activateSavedVersion()} disabled={pipelineDirty || pipelineIsDraft || isLoading || isSaving || isRunning || isVerifyingAction || needsModel || Boolean(graphError)}
               title="저장 버전을 열면 편집 화면에만 표시됩니다. 검증 후 이 버튼으로 활성 검사 흐름을 지정하세요."
               className="shrink-0 rounded border border-emerald-700 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-100 disabled:opacity-40">이 버전 활성화</button>}
+          <div className="relative shrink-0">
+            <button type="button" aria-expanded={changeHistoryOpen} onClick={() => setChangeHistoryOpen(open => !open)}
+              className="rounded border border-[#344255] px-2 py-1 text-xs text-slate-300 hover:bg-[#222B3D]">변경 기록</button>
+            {changeHistoryOpen && <div className="absolute left-0 top-full z-30 mt-2 w-[28rem] max-w-[90vw] shadow-xl">
+              <FlowChangeHistory refreshKey={`${changeRevision}:${datasetKey}`} />
+            </div>}
+          </div>
           <span className="shrink-0 rounded border border-[#344255] px-2 py-1 text-xs text-slate-300">
             모델 {pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null && Boolean(node.data.model_job_id)).length || 0}/{pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null).length || 0} 연결
           </span>
@@ -1690,6 +1758,8 @@ export const FlowchartStudio: React.FC = () => {
         <button className="workspace-button" disabled={!exactSaved||approvalBusy} onClick={()=>void checkApproval()}>{approvalBusy?'승인 근거 조회 중…':'이 저장 버전의 승인 근거 확인'}</button>
         {approvalError&&<p role="alert" className="text-amber-200">{approvalError}</p>}
         {currentApproval&&<details><summary className="cursor-pointer text-cyan-300">승인 조회 응답 · 모델/체크포인트/revision</summary><pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(currentApproval,null,2)}</pre></details>}
+        <FlowPreflightPanel versionId={exactSaved ? selectedVersionId || null : null} recipeTask={selectedSaved?.recipe_task ?? null}
+          sourceDatasetPath={folderPath} pipeline={pipeline} onSelectNode={nodeId => { selectNode(nodeId); setActiveTab('edit'); }} />
         <p className="text-slate-400">배포: 대상 적용 응답 확인 필요. 다음 화면에서 패키지 생성·동등성 검증·대상 상태를 확인하세요.</p>
         <button data-primary-action="true" className="workspace-button workspace-button--primary" disabled={!exactSaved||isSaving||isRunning} aria-describedby={!exactSaved||isSaving||isRunning?'flow-release-reason':undefined} onClick={()=>setStep(6)}>패키지·배포로 이동</button>
         {(!exactSaved||isSaving||isRunning)&&<p id="flow-release-reason" className="text-amber-200">{isSaving||isRunning?'저장·실행이 끝난 뒤 이동하세요.':'저장된 버전을 연 상태에서만 패키지·배포로 이동합니다.'}</p>}
@@ -1697,6 +1767,8 @@ export const FlowchartStudio: React.FC = () => {
       {recipe&&<FlowRecipeDialog key={recipe.token} preview={recipe.preview} models={modelCatalog} onClose={closeRecipe} onAdopt={adoptRecipe}/>}
       {/* Modals */}
       <ImagePickerModal isOpen={isImagePickerOpen} onClose={() => setImagePickerOpen(false)} />
+      {changeDialog && <FlowChangeDialog mode={changeDialog.mode} pipeline={changeDialog.pipeline} baseVersionId={baseVersionId}
+        onConfirm={confirmChange} onCancel={() => {changeRequest.current++;setChangeDialog(null);}} />}
       <CropDetailModal crop={inspectedCrop} onClose={() => setInspectedCrop(null)} />
     </div>
   );

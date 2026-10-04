@@ -340,7 +340,9 @@ def _deploy_candidate(project,policy,candidate,approval,event):
         approvals[node.data.model_job_id]=verified
     if not replacements:raise ValueError('Selected saved flow does not contain the configured parent model')
     destination=Path(project['reports_dir'])/'operations_packages'/uuid.uuid4().hex
-    built=build_flow_package(pipeline=pipeline,checkpoints=checkpoints,output_base_dir=destination.parent,package_name=destination.name,approved_revisions=approvals)
+    from backend.engine.spatial_calibration import project_calibration_store
+    built=build_flow_package(pipeline=pipeline,checkpoints=checkpoints,output_base_dir=destination.parent,package_name=destination.name,approved_revisions=approvals,
+        calibrations=project_calibration_store(project).load)
     # The whole frozen holdout (sorted, at most 16 images) on the service device; one image is not acceptance.
     holdout=sorted(policy['holdout'])[:16]
     if len(holdout)<2:raise ValueError('Automatic deployment needs at least two held-out images for package parity')

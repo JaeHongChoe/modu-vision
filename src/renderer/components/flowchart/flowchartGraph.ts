@@ -703,8 +703,18 @@ export function updateFlowEdgePayload(pipeline: FlowchartPipeline, edgeId: strin
 const finite=(value: unknown): value is number => typeof value==='number' && Number.isFinite(value);
 const whole=(value:unknown,minimum=0):value is number => finite(value)&&Number.isInteger(value)&&value>=minimum;
 const point=(value:unknown):value is [number,number]=>Array.isArray(value)&&value.length===2&&value.every(finite);
+/** The unit a measurement node's limits are written in: declared, or (older flows) mm when a calibration is set. */
+export function measurementThresholdUnit(params:Record<string,any>):'px'|'mm' {
+  return params.threshold_unit ?? (params.calibration || params.calibration_ref ? 'mm' : 'px');
+}
 export function measurementIssue(params:Record<string,any>):string|null {
   const cal=params.calibration;
+  if(params.calibration_ref!==undefined) {
+    if(cal) return '교정 artifact와 직접 입력한 교정값을 함께 쓸 수 없습니다.';
+    if(typeof params.calibration_ref!=='string'||!/^spatial-cal:sha256:[0-9a-f]{64}$/.test(params.calibration_ref)) return '교정 artifact 참조가 올바르지 않습니다.';
+  }
+  if(params.threshold_unit!==undefined&&!['px','mm'].includes(params.threshold_unit)) return '측정 기준 단위는 px 또는 mm입니다.';
+  if(measurementThresholdUnit(params)==='mm'&&!cal&&!params.calibration_ref) return 'mm 기준에는 교정이 필요합니다.';
   if(cal && (cal.unit!=='mm'||!finite(cal.mm_per_pixel_x)||cal.mm_per_pixel_x<=0||!finite(cal.mm_per_pixel_y)||cal.mm_per_pixel_y<=0||!Array.isArray(cal.source_size)||cal.source_size.length!==2||!cal.source_size.every((n:unknown)=>whole(n,1)))) return '원본 크기와 양수 mm/px 교정값을 입력하세요.';
   const paths=params.paths ?? [];
   if(!Array.isArray(paths)||paths.length>64) return '측정 경로는 최대 64개입니다.';

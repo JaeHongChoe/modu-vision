@@ -54,7 +54,13 @@ def cohort(cohort_id: str, request: Request):
 @router.post('')
 def evaluate(body: EvaluationRequest, request: Request):
     project = get_current_project(request); require_role(request, project, {'owner','reviewer','trainer'})
-    return execute(lambda: flow_evaluation.evaluate_flow(project, **body.model_dump()))
+    from backend.engine.spatial_calibration import calibration_scope, project_calibration_store
+
+    def run():
+        # Measurement nodes find the project's spatial calibrations by reference (E03).
+        with calibration_scope(project_calibration_store(project).load):
+            return flow_evaluation.evaluate_flow(project, **body.model_dump())
+    return execute(run)
 
 
 @router.get('')

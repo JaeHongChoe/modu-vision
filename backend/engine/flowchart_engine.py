@@ -2164,7 +2164,8 @@ class FlowchartEngine:
                             parents = self._detected_defect_crops(img_rgb, node_rois[source])
                         for crop in parents:
                             masks = [
-                                {'id': f"class_{row['class_id']}", 'class_id': row['class_id'], 'mask': decoded_array(row['mask'])}
+                                {'id': f"class_{row['class_id']}", 'class_id': row['class_id'], 'mask': decoded_array(row['mask']),
+                                 'bbox': row.get('bbox'), 'source_transform': row.get('source_transform')}
                                 for row in crop.segmentation_classes if row['class_id'] > 0 and row.get('selected', True) and row.get('mask')
                             ]
                             polygon = crop.polygon

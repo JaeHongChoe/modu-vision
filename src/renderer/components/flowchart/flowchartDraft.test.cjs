@@ -32,6 +32,7 @@ const flowDraft = {
 item.require = name => {
   if (name === '../services/api') return { api: { flowchart: {
     getPipeline: async () => structuredClone(initial), getActivePipeline: async () => structuredClone(initial),
+    getActivePipelineRecord: async () => ({ version_id: null, pipeline: structuredClone(initial) }), activeVersionId: async () => ({ version_id: null }),
     run: async () => { runCalls++; return {}; }, savePipeline: async () => ({}),
   } } };
   if (name === '../services/flowDraft') return { flowDraft };

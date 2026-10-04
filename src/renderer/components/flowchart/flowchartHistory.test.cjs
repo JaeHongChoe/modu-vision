@@ -24,6 +24,8 @@ const api = { flowchart: {
   getSingleSegmentationTemplate: async () => structuredClone(initial),
   getPipeline: async () => structuredClone(initial),
   getActivePipeline: async () => structuredClone(initial),
+  getActivePipelineRecord: async () => ({ version_id: null, pipeline: structuredClone(initial) }),
+  activeVersionId: async () => ({ version_id: null }),
   savePipeline: async () => ({}),
 } };
 loaded.require = (name) => {

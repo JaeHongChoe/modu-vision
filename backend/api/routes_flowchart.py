@@ -23,7 +23,7 @@ import uuid
 from typing import Any, Dict, List, Literal, Optional
 import urllib.parse
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, ConfigDict
 import torch
 
@@ -199,6 +199,18 @@ def _active_flow_file(project_dir: Path) -> Path:
 class FlowDraftSaveRequest(BaseModel):
     pipeline: FlowchartPipeline
     context: Dict[str, Any]
+    # The active version the editor started from ("none": there was none), so a save of the restored draft is checked
+    # against it (E04); not given by older editors.
+    base_version_id: Optional[str] = None
+
+
+def _valid_expected_version(value: Optional[str]) -> bool:
+    return value is None or value == "none" or (isinstance(value, str) and re.fullmatch(r"[0-9a-f]{32}", value) is not None)
+
+
+def _stale(expected_version_id: Optional[str], parent_version: Optional[str]) -> bool:
+    """Whether a change based on ``expected_version_id`` ("none": no active version) was overtaken by another."""
+    return expected_version_id is not None and expected_version_id != (parent_version or "none")
 
 
 def _draft_context(project: dict) -> dict:
@@ -247,9 +259,11 @@ def save_flow_draft(req: FlowDraftSaveRequest, request: Request) -> dict:
         if (len(set(identifiers)) != len(identifiers) or len(set(edge_ids)) != len(edge_ids)
                 or any(edge.source not in identifiers or edge.target not in identifiers for edge in req.pipeline.edges)):
             raise HTTPException(status_code=422, detail="Draft node/edge identifiers are invalid")
+        if not _valid_expected_version(req.base_version_id):
+            raise HTTPException(status_code=422, detail="base_version_id must be a saved flow version id or none")
         checksum = pipeline_sha256(req.pipeline)
         record = {"version": 1, "context": context, "draft_sha256": checksum,
-                  "saved_at_ns": time.time_ns(), "pipeline": req.pipeline.model_dump()}
+                  "saved_at_ns": time.time_ns(), "pipeline": req.pipeline.model_dump(), "base_version_id": req.base_version_id}
         _write_json(_draft_file(project, context), record)
         return {**record, "active_version_id": _draft_active_version(project, context, checksum)}
 
@@ -277,7 +291,7 @@ def get_flow_draft(request: Request) -> dict:
                         and active.get("labelset_id", "default") == context["labelset_id"]
                         and _draft_active_version(project, context, checksum) is None):
                     raise HTTPException(status_code=404, detail="A newer saved flow supersedes this draft")
-            return {**record, "pipeline": pipeline.model_dump(),
+            return {**record, "pipeline": pipeline.model_dump(), "base_version_id": record.get("base_version_id"),
                     "active_version_id": _draft_active_version(project, context, checksum)}
         except (OSError, ValueError, KeyError, TypeError) as exc:
             raise HTTPException(status_code=409, detail=f"Saved draft is invalid: {exc}") from exc
@@ -661,13 +675,50 @@ def _save_class_model_metadata(node, project, source_dataset_path):
     return {"metadata": metadata, "task": task}
 
 
+def _audit_change(project: Optional[dict], project_dir: Optional[Path], request: Optional[Request], *, action: str,
+                  task: str, source: Optional[str], parent: Optional[str], parent_pipeline, pipeline: FlowchartPipeline,
+                  version_id: str, reason: Optional[str]) -> Optional[dict]:
+    """Record the inspection-rule change (E04) inside the caller's lock: a failure here undoes the change."""
+    if project_dir is None or project is None:
+        return None
+    from backend.engine.config_audit import ConfigAuditStore, actor_from_request, observed_runtime_release
+    from backend.engine.flow_provenance import semantic_delta
+    return ConfigAuditStore(project_dir).append(
+        actor=actor_from_request(request),
+        subject={'kind': 'flow', 'project_id': project.get('id'), 'recipe_task': task, 'source_dataset_path': source,
+                 'pipeline_id': pipeline.id},
+        action=action, parent_revision=parent, next_revision=version_id,
+        semantic_delta=semantic_delta(parent_pipeline, pipeline), reason=reason,
+        observed_runtime_release=observed_runtime_release(project_dir))
+
+
+def _active_version(project_dir: Optional[Path]) -> tuple[Optional[str], Optional[FlowchartPipeline]]:
+    """The active flow version and its graph (None, None when there is none or it cannot be read)."""
+    if project_dir is None:
+        return None, None
+    try:
+        active = json.loads(_active_flow_file(project_dir).read_text(encoding="utf-8"))
+        record = json.loads((_version_dir(project_dir) / f"{active['version_id']}.json").read_text(encoding="utf-8"))
+        return active["version_id"], FlowchartPipeline.model_validate(record["pipeline"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None, None
+
+
 @router.post("/pipeline")
 def save_pipeline(
     pipeline: FlowchartPipeline, recipe_task: Optional[PipelineTask] = None,
     source_dataset_path: Optional[str] = None,
     request: Request = None,
+    change_reason: Optional[str] = None,
+    expected_version_id: Optional[str] = None,
 ):
-    """Save a flow inside the active project without corrupting the prior file."""
+    """Save a flow inside the active project without corrupting the prior file. The change is audited (actor from the
+    session, the inspection-rule difference from the active version, the reason); with ``expected_version_id`` a save
+    based on a version that is no longer active is refused, and a refused or failed save leaves no audit row."""
+    if change_reason is not None and (not isinstance(change_reason, str) or len(change_reason) > 2000):
+        raise HTTPException(status_code=422, detail="The change reason must be text of at most 2000 characters.")
+    if not _valid_expected_version(expected_version_id):
+        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
     try:
         ordered_linear_nodes(pipeline)
         task = recipe_task or _inferred_recipe(pipeline)
@@ -694,6 +745,9 @@ def save_pipeline(
         active_path = _active_flow_file(project_dir) if project_dir is not None else None
         previous_recipe: Optional[bytes] = None
         previous_active: Optional[bytes] = None
+        parent_version, parent_pipeline = _active_version(project_dir)
+        if _stale(expected_version_id, parent_version):
+            raise HTTPException(status_code=409, detail="The active flow changed since this one was opened; reopen it before saving.")
         try:
             previous_recipe = target_path.read_bytes() if target_path.exists() else None
             previous_active = active_path.read_bytes() if active_path and active_path.exists() else None
@@ -710,10 +764,15 @@ def save_pipeline(
                         str(Path(effective_source).expanduser().resolve()) if effective_source else None
                     ),
                 })
+            change = _audit_change(project, project_dir, request, action="save", task=task,
+                                   source=str(Path(effective_source).expanduser().resolve()) if effective_source else None,
+                                   parent=parent_version, parent_pipeline=parent_pipeline, pipeline=pipeline,
+                                   version_id=version_id, reason=change_reason)
             return {
                 "status": "saved", "pipeline_id": pipeline.id,
                 "node_count": len(pipeline.nodes), "recipe_task": task,
                 "version_id": version_id,
+                **({"change_id": change["change_id"], "layout_only": change["layout_only"]} if change else {}),
             }
         except Exception as e:
             logger.exception("Failed to save pipeline: %s", e)
@@ -834,8 +893,15 @@ def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: 
 @router.put("/pipelines/{version_id}/activate")
 def activate_saved_pipeline_version(
     version_id: str, source_dataset_path: str, request: Request,
+    change_reason: Optional[str] = None,
+    expected_version_id: Optional[str] = None,
 ):
-    """Make a saved revision the active flow for this project and dataset."""
+    """Make a saved revision the active flow for this project and dataset (audited like a save; with
+    ``expected_version_id``, refused when the active flow changed since it was shown)."""
+    if change_reason is not None and (not isinstance(change_reason, str) or len(change_reason) > 2000):
+        raise HTTPException(status_code=422, detail="The change reason must be text of at most 2000 characters.")
+    if not _valid_expected_version(expected_version_id):
+        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
     if not re.fullmatch(r"[0-9a-f]{32}", version_id):
         raise HTTPException(status_code=404, detail="Flow version not found.")
     project = get_current_project(request)
@@ -861,7 +927,12 @@ def activate_saved_pipeline_version(
                 raise ValueError("Saved flow model tasks do not match its recipe.")
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
-        _write_json(_active_flow_file(project_dir), {
+        parent_version, parent_pipeline = _active_version(project_dir)
+        if _stale(expected_version_id, parent_version):
+            raise HTTPException(status_code=409, detail="The active flow changed since this one was shown; reopen it before activating.")
+        active_path = _active_flow_file(project_dir)
+        previous_active = active_path.read_bytes() if active_path.exists() else None
+        _write_json(active_path, {
             "version_id": version_id,
             "project_id": project["id"],
             "labelset_id": project.get("active_labelset_id", "default"),
@@ -869,7 +940,58 @@ def activate_saved_pipeline_version(
             "recipe_task": task,
             "source_dataset_path": requested_source,
         })
+        try:
+            _audit_change(project, project_dir, request, action="activate", task=task, source=requested_source,
+                          parent=parent_version, parent_pipeline=parent_pipeline, pipeline=pipeline,
+                          version_id=version_id, reason=change_reason)
+        except Exception as exc:
+            _restore_flow_file(active_path, previous_active)
+            raise HTTPException(status_code=500, detail=f"The flow was not activated: its change could not be recorded ({exc})") from exc
     return {"status": "active", "version_id": version_id, "pipeline": pipeline}
+
+
+@router.get("/changes")
+def list_configuration_changes(request: Request, limit: int = Query(100, ge=1, le=1000)):
+    """The project's inspection-rule changes, newest first, whether the record is intact, and the runtime release
+    running now (a saved change reaches inspection only through an applied and acknowledged release)."""
+    from backend.engine.config_audit import ConfigAuditStore, runtime_release_status
+    project_dir = Path(get_current_project(request)["project_dir"]).resolve()
+    store = ConfigAuditStore(project_dir)
+    with _FLOW_SAVE_LOCK:
+        active_version, _ = _active_version(project_dir)
+    return {"changes": store.list(limit), "integrity": store.verify(), "active_version_id": active_version,
+            "runtime": runtime_release_status(project_dir)}
+
+
+@router.get("/pipeline/active-version")
+def get_active_version_id(request: Request) -> dict:
+    """The project's active flow version (None when there is none): the base an editor's save is checked against."""
+    with _FLOW_SAVE_LOCK:
+        version_id, _ = _active_version(Path(get_current_project(request)["project_dir"]).resolve())
+    return {"version_id": version_id}
+
+
+@router.get("/pipeline/active/record")
+def get_active_pipeline_record(request: Request, source_dataset_path: Optional[str] = None) -> dict:
+    """The active graph with its version id, read together (an editor's save base must be the version it shows)."""
+    with _FLOW_SAVE_LOCK:
+        pipeline = _get_active_pipeline_unlocked(source_dataset_path, request)
+        version_id, _ = _active_version(Path(get_current_project(request)["project_dir"]).resolve())
+    return {"version_id": version_id, "pipeline": pipeline}
+
+
+@router.post("/pipeline/diff")
+def preview_pipeline_change(pipeline: FlowchartPipeline, request: Request, expected_version_id: Optional[str] = None) -> dict:
+    """The inspection-rule difference a save of ``pipeline`` would record (from the active version), shown before the
+    reason is asked; ``stale`` when the active flow is no longer ``expected_version_id``."""
+    from backend.engine.flow_provenance import semantic_delta
+    if not _valid_expected_version(expected_version_id):
+        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
+    with _FLOW_SAVE_LOCK:
+        parent_version, parent_pipeline = _active_version(Path(get_current_project(request)["project_dir"]).resolve())
+    delta = semantic_delta(parent_pipeline, pipeline)
+    return {"parent_revision": parent_version, "stale": _stale(expected_version_id, parent_version),
+            "semantic_delta": delta, "layout_only": bool(delta.get("layout_only"))}
 
 
 @router.get("/pipelines/{version_id}", response_model=FlowchartPipeline)
@@ -940,6 +1062,16 @@ def get_sample_images(request: Request = None):
             break
 
     return {"images": candidates, "total": len(candidates)}
+
+
+def _project_calibrations(project):
+    """Measurement nodes find the project's spatial calibrations by reference (E03); the images' camera and setup are
+    not known to this run, so results record that the unit claim was not checked against them."""
+    from contextlib import nullcontext
+    from backend.engine.spatial_calibration import calibration_scope, project_calibration_store
+    if not project:
+        return nullcontext()
+    return calibration_scope(project_calibration_store(project).load)
 
 
 @router.post("/run")
@@ -1056,7 +1188,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             try:
                 with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
                     engine = _local_execution_engine(device)
-                    with verified_checkpoint_scope(verified_checkpoints):
+                    with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
                         result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}))
             except ValueError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -1101,7 +1233,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 raise HTTPException(status_code=503, detail=f"Remote flowchart connection lost; retry the same run: {exc}") from exc
             except ArtifactValidationError as exc:
                 raise HTTPException(status_code=502, detail=f"Remote flowchart result could not be verified: {exc}") from exc
-        with verified_checkpoint_scope(verified_checkpoints):
+        with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
             result = _ENGINE.execute(
                 pipeline=pipeline,
                 image_path=req.image_path,
