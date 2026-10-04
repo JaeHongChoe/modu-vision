@@ -49,11 +49,12 @@ jobs:
             backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph `
             backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor `
             backend/tests/test_sdk_cancellation.py `
+            backend/tests/test_flow_batch_cli.py `
             2>&1 | Tee-Object sdk-evidence/execution.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           [xml]$tests = Get-Content sdk-evidence/pytest.xml
           $suite = $tests.testsuites.testsuite
-          if ([int]$suite.tests -ne 8 -or [int]$suite.skipped -ne 0) { throw 'All eight SDK execution checks must run without skips' }
+          if ([int]$suite.tests -ne 20 -or [int]$suite.skipped -ne 0) { throw 'All 20 SDK and batch checks must run without skips' }
       - name: Source and execution receipt
         if: always()
         run: python scripts/write_ci_receipt.py --output sdk-evidence/receipt.json --junit sdk-evidence/pytest.xml
@@ -69,5 +70,7 @@ jobs:
             ${{ runner.temp }}/native-sdk/**/native/*.exe
             ${{ runner.temp }}/native-sdk/**/native/csharp/*.dll
             ${{ runner.temp }}/native-sdk/**/native/csharp/*.json
+            ${{ runner.temp }}/native-sdk/**/result.json
+            ${{ runner.temp }}/native-sdk/**/timed.json
           retention-days: 14
           if-no-files-found: error

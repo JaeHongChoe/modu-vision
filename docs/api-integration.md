@@ -68,6 +68,34 @@ python /absolute/package/run_flow.py --verify-only
 python /absolute/package/run_flow.py --image /absolute/image.png --deadline-ms 30000 --output result.json
 ```
 
+For a sequential batch, supply an explicit JSON manifest:
+
+```json
+{"schema":"FlowBatchInput/v1","images":[
+  {"image_id":"part-001","image_path":"images/001.png"},
+  {"image_id":"part-002","image_path":"images/002.png"}
+]}
+```
+
+```sh
+python /absolute/package/run_flow.py --batch /absolute/batch.json --deadline-ms 30000 --output batch-result.json
+```
+
+Paths resolve relative to the input manifest, or may be absolute. Require unique
+nonempty image IDs, one to 1000 inputs and a manifest no larger than one MiB.
+An optional `sha256` pins each expected input to 64 lowercase hexadecimal
+characters. Unknown fields and duplicate keys/IDs fail before execution.
+`FlowBatchResult/v1` retains input/package manifest hashes, per-image hashes,
+ordered full graph results and summary counts. A missing, unreadable or changed
+image becomes REVIEW/error; other inputs continue. A result whose image bytes
+change during execution is discarded. Keep inputs stable for the entire batch.
+Each image has its own deadline. Exit0 means no execution error or timeout;
+exit2 indicates an image error, and exit3 indicates timeout/cancellation when
+there is no image error. Inspect each verdict, including REVIEW, before use.
+Ctrl+C aborts the batch and reaps its owned active inference process; an
+interrupted batch has no completed batch receipt. Re-export older packages to
+deliver this command.
+
 The isolated service entry point is `python -m
 backend.engine.inspection_service --package /absolute/package --state-dir
 /absolute/owned-state`. Supply the existing `VISION_INSPECTION_TOKEN` securely;

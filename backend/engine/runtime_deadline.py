@@ -43,6 +43,19 @@ def validate_deadline(value):
     return value
 
 
+def _terminate_owned(process):
+    if process.poll() is None:
+        if os.name == 'nt':
+            subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, check=False)
+        else:
+            try: os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
+        if process.poll() is None:
+            process.kill()
+    process.wait(timeout=5)
+
+
 def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_event=None) -> dict[str, Any]:
     """The budget includes initialization; termination also targets descendant work."""
     validate_deadline(deadline_ms)
@@ -64,17 +77,15 @@ def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_eve
                     try:process.wait(timeout=.1)
                     except subprocess.TimeoutExpired:pass
         except subprocess.TimeoutExpired:
-            if os.name=='nt':
-                subprocess.run(['taskkill','/PID',str(process.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5,check=False)
-            else:
-                try: os.killpg(process.pid,signal.SIGKILL)
-                except ProcessLookupError: pass
-            process.kill() if process.poll() is None else None
-            process.wait(timeout=5)
+            _terminate_owned(process)
             return {'status':'cancelled' if cancelled else 'timeout','final_verdict':'REVIEW','rejection_reason':'CANCELLED' if cancelled else 'INFERENCE_DEADLINE_EXCEEDED',
                 'roi_count':0,'defective_roi_count':0,'crops':[],'execution_steps':[],
                 'deadline':{'deadline_ms':deadline_ms,'elapsed_ms':round((time.monotonic()-started)*1000,3),
                             'pid':process.pid,'terminated':True,'termination_scope':'owned_process_group'}}
+        except BaseException:
+            # Ctrl+C or another interrupted wait must not leave inference behind.
+            _terminate_owned(process)
+            raise
         stdout.seek(0);stderr.seek(0)
         return {'status':'completed','returncode':process.returncode,
                 'stdout':stdout.read(65536).decode('utf-8',errors='replace'),

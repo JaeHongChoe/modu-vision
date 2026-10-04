@@ -75,6 +75,8 @@ jobs:
               backend/tests/test_training_inventory_parity.py
               backend/tests/test_fixture_pose_json_parity.py
               backend/tests/test_service_s1_08.py
+              backend/tests/test_flow_batch_cli.py
+              backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
               backend/tests/test_anomaly_folder_case.py
           - lane: workers
             tests: >-

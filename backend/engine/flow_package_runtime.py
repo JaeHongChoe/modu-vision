@@ -349,6 +349,81 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
     }
 
 
+def run_flow_batch(package_dir: Path, input_manifest: Path, *, device=None,
+                   deadline_ms=None, cpu_threads=None) -> dict[str, Any]:
+    """Run explicit image identities sequentially through the verified executor."""
+    input_manifest = Path(input_manifest).resolve()
+    with input_manifest.open('rb') as source:
+        raw = source.read(1024 * 1024 + 1)
+    if len(raw) > 1024 * 1024:
+        raise ValueError('Batch manifest exceeds one MiB')
+    def unique_keys(pairs):
+        record = {}
+        for key, value in pairs:
+            if key in record:
+                raise ValueError('Duplicate batch manifest key')
+            record[key] = value
+        return record
+    manifest = json.loads(raw, object_pairs_hook=unique_keys)
+    if (not isinstance(manifest, dict) or set(manifest) != {'schema', 'images'}
+            or manifest['schema'] != 'FlowBatchInput/v1'
+            or not isinstance(manifest['images'], list)
+            or not 1 <= len(manifest['images']) <= 1000):
+        raise ValueError('Batch requires FlowBatchInput/v1 and one to 1000 images')
+    inputs, identities = [], set()
+    for row in manifest['images']:
+        if not isinstance(row, dict) or set(row) - {'image_path', 'image_id', 'sha256'}:
+            raise ValueError('Unknown or invalid batch image fields')
+        image_id, image_path = row.get('image_id'), row.get('image_path')
+        if not isinstance(image_id, str) or not image_id.strip() or len(image_id) > 256:
+            raise ValueError('Batch image identity must be a nonempty string of at most 256 characters')
+        if image_id in identities:
+            raise ValueError('Duplicate image identity in batch')
+        identities.add(image_id)
+        if not isinstance(image_path, str) or not image_path.strip():
+            raise ValueError('Batch image path must be nonempty')
+        expected = row.get('sha256')
+        if expected is not None and (not isinstance(expected, str) or len(expected) != 64
+                or any(character not in '0123456789abcdef' for character in expected)):
+            raise ValueError('Batch expected sha256 must be 64 lowercase hexadecimal characters')
+        path = Path(image_path)
+        if not path.is_absolute():
+            path = input_manifest.parent / path
+        inputs.append((image_id, path.resolve(), expected))
+    # Validate the entire input manifest before initializing or executing models.
+    executor = Executor(package_dir, device=device, deadline_ms=deadline_ms, cpu_threads=cpu_threads)
+    package_sha = _sha256(Path(package_dir) / 'manifest.json')
+    results = []
+    for image_id, image, expected in inputs:
+        observed = None
+        reason = 'INPUT_ERROR'
+        try:
+            observed = _sha256(image)
+            if expected is not None and observed != expected:
+                raise ValueError('Batch input checksum mismatch')
+            reason = 'EXECUTION_ERROR'
+            result = executor.predict(image, image_id)
+            reason = 'INPUT_CHANGED'
+            if _sha256(image) != observed:
+                raise ValueError('Batch input changed during execution')
+        except (ValueError, OSError, RuntimeError) as error:
+            result = {'status': 'error', 'image_id': image_id, 'final_verdict': 'REVIEW',
+                      'rejection_reason': reason, 'error': str(error)}
+        results.append({'image_id': image_id, 'image_path': str(image), 'input_sha256': observed,
+                        'status': result['status'] if result.get('status') in ('error', 'timeout', 'cancelled')
+                                  else 'completed', 'result': result})
+    summary = {'total': len(results),
+               'completed': sum(row['status'] == 'completed' for row in results),
+               'errors': sum(row['status'] == 'error' for row in results),
+               'timeouts': sum(row['status'] == 'timeout' for row in results),
+               'cancelled': sum(row['status'] == 'cancelled' for row in results),
+               'review': sum(row['result'].get('final_verdict') == 'REVIEW' for row in results)}
+    return {'schema': 'FlowBatchResult/v1',
+            'status': 'completed_with_review' if summary['review'] else 'completed',
+            'input_manifest_sha256': hashlib.sha256(raw).hexdigest(),
+            'package_manifest_sha256': package_sha, 'summary': summary, 'results': results}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run a saved Modu Vision inspection flow offline")
     parser.add_argument("--verify-only", action="store_true", help="Verify graph, code, and model checksums")
@@ -356,12 +431,15 @@ def main() -> int:
                         help="Check every node's model, calibration, runtime and device on this computer and keep the report")
     parser.add_argument("--show-preflight", action="store_true", help="Show the last kept preflight report and whether it is current")
     parser.add_argument("--image", type=Path, help="Image to inspect")
+    parser.add_argument("--batch", type=Path, help="FlowBatchInput/v1 image manifest; sequential per-image execution")
     parser.add_argument("--device", default=None, help="Explicit execution device; unavailable devices fail")
     parser.add_argument("--image-id", help="Optional source image ID")
     parser.add_argument("--deadline-ms",type=int,help="Hard wall time budget including model initialization")
     parser.add_argument("--cpu-threads",type=int)
     parser.add_argument("--output", type=Path, help="Write the complete JSON result here")
     args = parser.parse_args()
+    if args.batch and (args.image or args.image_id or args.verify_only or args.preflight or args.show_preflight):
+        parser.error('--batch cannot be combined with single-image or verification commands')
     root = Path(__file__).resolve().parents[2]
     try:
         if args.preflight or args.show_preflight:
@@ -374,7 +452,10 @@ def main() -> int:
             else:
                 print(payload)
             return 4 if result.get("status") == "blocked" or result.get("stale") else 0
-        if args.verify_only:
+        if args.batch:
+            result = run_flow_batch(root, args.batch, device=args.device, deadline_ms=args.deadline_ms,
+                                    cpu_threads=args.cpu_threads)
+        elif args.verify_only:
             pipeline, checkpoints = verify_flow_package(root)
             result = {"status": "verified", "pipeline_id": pipeline.id, "model_job_ids": sorted(checkpoints)}
         else:
@@ -386,8 +467,10 @@ def main() -> int:
             args.output.write_text(payload + "\n", encoding="utf-8")
         else:
             print(payload)
+        if args.batch:
+            return 2 if result['summary']['errors'] else 3 if result['summary']['timeouts'] or result['summary']['cancelled'] else 0
         return 3 if result.get('status')=='timeout' else 0
-    except (ValueError, FileNotFoundError, OSError, json.JSONDecodeError) as exc:
+    except (ValueError, OSError, RuntimeError) as exc:
         parser.exit(2, f"Flow package error: {exc}\n")
 
 

@@ -120,3 +120,35 @@ def test_csharp_cancel_is_callable_during_execute_and_handle_is_reusable(real_pa
     process = subprocess.run([dotnet, str(csharp / 'VisionRuntime.dll'), str(package), '--cancel-demo', str(image)],
                              capture_output=True, text=True, encoding="utf-8", timeout=45)
     _assert_demo(process)
+
+
+def test_interruption_reaps_the_actual_owned_child(monkeypatch):
+    from backend.engine.runtime_deadline import execute_owned_process
+    original = subprocess.Popen
+    children = []
+    def launch(*args, **kwargs):
+        process = original(*args, **kwargs)
+        if children:
+            return process
+        children.append(process)
+        wait = process.wait
+        interrupted = False
+        def interrupt_once(*args, **kwargs):
+            nonlocal interrupted
+            if not interrupted:
+                interrupted = True
+                raise KeyboardInterrupt()
+            return wait(*args, **kwargs)
+        process.wait = interrupt_once
+        return process
+    monkeypatch.setattr(subprocess, 'Popen', launch)
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            execute_owned_process([sys.executable, '-c', 'import time;time.sleep(30)'], deadline_ms=30000)
+        assert children[0].poll() is not None, 'Interrupted CLI must reap its owned inference child'
+    finally:
+        # Preserve cleanup even when reproducing the pre-fix failure.
+        for process in children:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
