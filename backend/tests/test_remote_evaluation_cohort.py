@@ -632,3 +632,21 @@ def test_completed_status_must_match_uploaded_common_spec(common_workspace,monke
     response=request_common(common_workspace)
     assert response.status_code==502,response.text
     assert not (jobs[0]/'eval_results.json').exists()
+
+@pytest.mark.parametrize('runtime_uuid',['680335ce-4e6c-c68f-e3ee-7135586d4a04','GPU-680335ce-4e6c-c68f-e3ee-7135586d4a04'])
+def test_actual_pytorch_and_nvml_uuid_forms_bind_same_physical_gpu(monkeypatch,runtime_uuid):
+    from backend.remote.evaluation_cohort import target_identity
+    from backend.engine import runtime_device,runtime_device_identity
+    monkeypatch.setattr(runtime_device,'resolve_runtime_device',lambda _:torch.device('cuda:0'))
+    identity={'device':'cuda:0','process_id':1,'gpu_uuid':runtime_uuid}
+    monkeypatch.setattr(runtime_device_identity,'runtime_device_identity',lambda _:identity)
+    assert target_identity({'device':'cuda:0','expected_runtime_gpu_uuid':'GPU-680335ce-4e6c-c68f-e3ee-7135586d4a04'})[1]==identity
+    with pytest.raises(ValueError,match='GPU'):
+        target_identity({'device':'cuda:0','expected_runtime_gpu_uuid':'GPU-680335ce-4e6c-c68f-e3ee-7135586d4a05'})
+    with pytest.raises(ValueError,match='GPU'):
+        target_identity({'device':'cuda:0','expected_runtime_gpu_uuid':'MIG-680335ce-4e6c-c68f-e3ee-7135586d4a04'})
+
+@pytest.mark.parametrize('actual,expected',[(1,2),(['GPU'],['GPU']),({'uuid':'GPU'},{'uuid':'GPU'}),('', ''),(None,None)])
+def test_malformed_gpu_identity_never_matches(actual,expected):
+    from backend.remote.evaluation_cohort import _gpu_uuid_matches
+    assert not _gpu_uuid_matches(actual,expected)

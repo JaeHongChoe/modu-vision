@@ -10,6 +10,7 @@ import hashlib
 from io import BytesIO
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import tarfile
@@ -418,6 +419,15 @@ def extract_cohort(run_dir, spec):
     return data,descriptor
 
 
+def _gpu_uuid_matches(actual,expected):
+    """PyTorch omits NVML's GPU- prefix; never equate MIG or different UUIDs."""
+    if not isinstance(actual,str) or not isinstance(expected,str) or not actual or not expected:return False
+    def canonical_uuid(value):
+        match=re.fullmatch(r'(?:GPU-)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',value)
+        return match.group(1).lower() if match else value
+    return canonical_uuid(actual)==canonical_uuid(expected)
+
+
 def target_identity(spec):
     from backend.engine.runtime_device import resolve_runtime_device
     from backend.engine.runtime_device_identity import runtime_device_identity
@@ -425,7 +435,7 @@ def target_identity(spec):
     identity=runtime_device_identity(str(device))
     if identity.get('device')!=spec['device'] or not isinstance(identity.get('process_id'),int) or identity['process_id']<=0:
         raise ValueError('Evaluation runtime identity is unavailable')
-    if spec['device']=='cuda:0' and (not spec.get('expected_runtime_gpu_uuid') or identity.get('gpu_uuid')!=spec['expected_runtime_gpu_uuid']):
+    if spec['device']=='cuda:0' and (not _gpu_uuid_matches(identity.get('gpu_uuid'),spec.get('expected_runtime_gpu_uuid'))):
         raise ValueError('Evaluation ran on a different or unproven selected GPU')
     return device,identity
 
@@ -531,7 +541,7 @@ def validate_result(result,spec,cohort,artifacts):
     identity=result.get('runtime_device_identity')
     if result.get('execution_target')!='model_compute' or result.get('resolved_device')!=spec['device'] or not isinstance(identity,dict) or identity.get('device')!=spec['device'] or type(identity.get('process_id')) is not int or identity['process_id']<=0:
         raise ValueError('Common result runtime identity is absent or stale')
-    if spec['device']=='cuda:0' and (not spec.get('expected_runtime_gpu_uuid') or identity.get('gpu_uuid')!=spec['expected_runtime_gpu_uuid']):
+    if spec['device']=='cuda:0' and (not _gpu_uuid_matches(identity.get('gpu_uuid'),spec.get('expected_runtime_gpu_uuid'))):
         raise ValueError('Common result GPU UUID differs from selected resource')
     if result.get('input_receipt')!={'checkpoint_sha256':spec['checkpoint_sha256'],'metadata_sha256':spec['metadata_sha256'],
             'training_snapshot_sha256':spec['input_manifest_sha256'],'archive_sha256':spec['evaluation_cohort']['archive_sha256'],
