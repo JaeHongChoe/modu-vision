@@ -5,7 +5,7 @@ import shutil
 
 _REQUIRED = (
     'build_native.py', 'vision_runtime.h', 'vision_runtime.hpp', 'vision_runtime.cpp',
-    'predict.cpp', 'execute.cpp', 'VisionRuntime.cs', 'VisionRuntime.csproj',
+    'predict.cpp', 'execute.cpp', 'cancel.cpp', 'VisionRuntime.cs', 'VisionRuntime.csproj',
     'CMakeLists.txt', 'README.md',
 )
 

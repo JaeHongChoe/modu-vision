@@ -81,7 +81,17 @@ class GeneratorExecutor:
         from backend.engine.runtime_configuration import runtime_options
         self.root=verify_generator_package(package_dir);self.options=runtime_options({'device':device,'deadline_ms':deadline_ms,'cpu_threads':cpu_threads})
         if device.startswith('openvino:'):raise ValueError('GAN generation package requires its verified PyTorch device')
+        from backend.engine.runtime_deadline import CancellableExecution
+        self._execution = CancellableExecution()
+
+    def cancel(self):
+        return self._execution.cancel()
+
     def execute(self,request):
+        with self._execution.running() as event:
+            return self._execute(request, event)
+
+    def _execute(self,request,cancel_event):
         import os
         import sys
         from backend.engine.runtime_deadline import execute_owned_process
@@ -96,9 +106,9 @@ class GeneratorExecutor:
             staged=Path(temporary)/'candidate';request_path=Path(temporary)/'request.json';result_path=Path(temporary)/'result.json'
             request_path.write_text(json.dumps({**request,'output_dir':str(staged),'device':self.options['device']}),encoding='utf-8')
             bootstrap='from backend.engine.gan_package_runtime import generator_worker;generator_worker()'
-            result=execute_owned_process([sys.executable,'-c',bootstrap,str(self.root),str(request_path),str(result_path)],deadline_ms=self.options['deadline_ms'],cwd=self.root,
+            result=execute_owned_process([sys.executable,'-c',bootstrap,str(self.root),str(request_path),str(result_path)],deadline_ms=self.options['deadline_ms'],cwd=self.root,cancel_event=cancel_event,
                 env={**os.environ,'PYTHONPATH':str(self.root),'OMP_NUM_THREADS':str(self.options['cpu_threads']),'MKL_NUM_THREADS':str(self.options['cpu_threads'])})
-            if result['status']=='timeout':return {**result,'task':'defect_gan','output_state':'synthetic_unreviewed','quality_status':'unvalidated'}
+            if result['status'] in ('timeout','cancelled'):return {**result,'task':'defect_gan','output_state':'synthetic_unreviewed','quality_status':'unvalidated'}
             if result['returncode']!=0:raise RuntimeError('Owned generation failed: '+result['stderr'])
             def relocate(value):
                 if isinstance(value,str) and value.startswith(str(staged)):return str(output.resolve())+value[len(str(staged)):]

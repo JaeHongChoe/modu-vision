@@ -172,7 +172,7 @@ def pyinstaller_invocation(command: list[str], build_dir: Path) -> list[str]:
 
 NATIVE_EXPORT_SOURCES = (
     "build_native.py", "vision_runtime.h", "vision_runtime.hpp", "vision_runtime.cpp",
-    "predict.cpp", "execute.cpp", "VisionRuntime.cs", "VisionRuntime.csproj",
+    "predict.cpp", "execute.cpp", "cancel.cpp", "VisionRuntime.cs", "VisionRuntime.csproj",
     "CMakeLists.txt", "README.md",
 )
 HTTP_EXPORT_CLIENTS = ("inspection-service-client.mjs", "InspectionServiceClient.cs")

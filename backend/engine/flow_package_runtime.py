@@ -180,7 +180,7 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     return result
 
 
-def _run_isolated(package_dir, image_path, image_id, options):
+def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None):
     from backend.engine.runtime_deadline import execute_owned_process
     root=Path(package_dir).expanduser().resolve()
     # Validate graph and content before executing a packaged Python entry point.
@@ -205,8 +205,8 @@ def _run_isolated(package_dir, image_path, image_id, options):
             command=[python,'-c',bootstrap,str(root),str(request),str(output)]
         env={**os.environ,'PYTHONPATH':str(root),'PYTHONNOUSERSITE':'1',
              'OMP_NUM_THREADS':str(options['cpu_threads']),'MKL_NUM_THREADS':str(options['cpu_threads'])}
-        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root)
-        if outcome['status']=='timeout':
+        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root,cancel_event=cancel_event)
+        if outcome['status'] in ('timeout','cancelled'):
             outcome['image_id']=image_id
             return outcome
         if outcome['returncode']!=0:
@@ -241,11 +241,18 @@ class Predictor:
             if value is not None:saved[key]=value
         if saved.get('deadline_ms') is None:saved['deadline_ms']=300000
         self.options=runtime_options(saved)
+        from backend.engine.runtime_deadline import CancellableExecution
+        self._execution = CancellableExecution()
 
     def predict(self,image_path,image_id=None):
         if image_id is not None and (not isinstance(image_id,str) or len(image_id)>512):
             raise ValueError('image_id must be a string of at most 512 characters')
-        return _run_isolated(self.package_dir,image_path,image_id,self.options)
+        with self._execution.running() as event:
+            return _run_isolated(self.package_dir,image_path,image_id,self.options,cancel_event=event)
+
+    def cancel(self):
+        """Request cancellation of the active call; its returned status confirms the outcome."""
+        return self._execution.cancel()
 
 
 class Executor(Predictor):

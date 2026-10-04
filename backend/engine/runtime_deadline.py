@@ -4,8 +4,37 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import threading
 import time
+from contextlib import contextmanager
 from typing import Any
+
+
+class CancellableExecution:
+    """Serialize a handle and cancel only its active call, never queued future work."""
+    def __init__(self):
+        self._execution_lock = threading.Lock()
+        self._state_lock = threading.Lock()
+        self._active = None
+
+    @contextmanager
+    def running(self):
+        with self._execution_lock:
+            event = threading.Event()
+            with self._state_lock:
+                self._active = event
+            try:
+                yield event
+            finally:
+                with self._state_lock:
+                    self._active = None
+
+    def cancel(self):
+        with self._state_lock:
+            if self._active is None:
+                return False
+            self._active.set()
+            return True
 
 
 def validate_deadline(value):

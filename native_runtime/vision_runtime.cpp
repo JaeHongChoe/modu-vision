@@ -85,7 +85,8 @@ int call(Handle* handle,PyObject* input,char** output) {
     *output=copy(PyUnicode_AsUTF8(result));
     Py_DECREF(result);
     // The Python bridge serializes the complete graph result with this status.
-    return *output&&std::strstr(*output,"\"status\": \"timeout\"")?2:0;
+    if (*output&&std::strstr(*output,"\"status\": \"timeout\""))return 2;
+    return *output&&std::strstr(*output,"\"status\": \"cancelled\"")?3:0;
 }
 }
 
@@ -130,5 +131,15 @@ extern "C" MV_API void mv_release(void* opaque) {
     auto handle=static_cast<Handle*>(opaque);auto gil=PyGILState_Ensure();
     Py_DECREF(handle->executor);Py_DECREF(handle->execute);PyGILState_Release(gil);delete handle;
     // Never finalize a Python runtime that may still be used by another host/library.
+}
+extern "C" MV_API int mv_cancel(void* opaque) {
+    if(!opaque)return -1;
+    // Execution releases the GIL while waiting on its owned process. Do not take
+    // the execution mutex here: that would defer cancellation until completion.
+    auto handle=static_cast<Handle*>(opaque);auto gil=PyGILState_Ensure();
+    PyObject* result=PyObject_CallMethod(handle->executor,"cancel",nullptr);
+    int status=result?PyObject_IsTrue(result):-1;
+    Py_XDECREF(result);if(PyErr_Occurred())PyErr_Clear();
+    PyGILState_Release(gil);return status;
 }
 extern "C" MV_API void mv_free(char* value){std::free(value);}

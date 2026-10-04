@@ -70,7 +70,7 @@ def test_runtime_package_deadline_survives_reopen_and_cli(real_package,tmp_path)
     assert result['status']=='timeout' and result['final_verdict']=='REVIEW'
     assert result['deadline']['terminated'] is True
     process=subprocess.run([sys.executable,str(package/'run_flow.py'),'--image',str(image),
-                            '--deadline-ms','1'],capture_output=True,text=True,timeout=20)
+                            '--deadline-ms','1'],capture_output=True,text=True,encoding="utf-8",timeout=20)
     assert process.returncode==3,process.stderr
     assert json.loads(process.stdout)['status']=='timeout'
 
@@ -80,19 +80,19 @@ def test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph(real_pack
     package,image=real_package
     build=package/'native_runtime'/'build_native.py'
     assert build.is_file(),'A native C ABI and C++ SDK must be bundled'
-    compiled=subprocess.run([sys.executable,str(build),'--output',str(tmp_path/'native')],capture_output=True,text=True,timeout=45)
+    compiled=subprocess.run([sys.executable,str(build),'--output',str(tmp_path/'native')],capture_output=True,text=True,encoding="utf-8",timeout=45)
     assert compiled.returncode==0,compiled.stderr
     command=[str(tmp_path/'native'/'vision_predict'),str(package),str(image)]
-    process=subprocess.run(command,capture_output=True,text=True,timeout=45)
+    process=subprocess.run(command,capture_output=True,text=True,encoding="utf-8",timeout=45)
     assert process.returncode==0,process.stderr
     native=json.loads(process.stdout)
     assert compare_flow_results(Predictor(package,deadline_ms=30000).predict(image),native)['status']=='passed'
-    timed=subprocess.run(command+['1'],capture_output=True,text=True,timeout=20)
+    timed=subprocess.run(command+['1'],capture_output=True,text=True,encoding="utf-8",timeout=20)
     assert timed.returncode==3 and json.loads(timed.stdout)['status']=='timeout'
     marker=tmp_path/'unverified-code-executed'
     bridge=package/'backend/engine/native_runtime_bridge.py'
     bridge.write_text(bridge.read_text()+f'\nfrom pathlib import Path\nPath({str(marker)!r}).write_text("escaped")\n')
-    rejected=subprocess.run(command,capture_output=True,text=True,timeout=20)
+    rejected=subprocess.run(command,capture_output=True,text=True,encoding="utf-8",timeout=20)
     assert rejected.returncode!=0 and 'checksum' in rejected.stderr.lower()
     assert not marker.exists(),'Native create must verify package code before importing it'
 
@@ -103,15 +103,15 @@ def test_csharp_pinvoke_calls_the_same_native_executor(real_package,tmp_path):
     if not dotnet: pytest.skip('A .NET 8 SDK is required for the C# compilation gate')
     from backend.engine.flow_package_runtime import Predictor,compare_flow_results
     package,image=real_package;native=tmp_path/'native';csharp=native/'csharp'
-    compiled=subprocess.run([sys.executable,str(package/'native_runtime/build_native.py'),'--output',str(native)],capture_output=True,text=True,timeout=45)
+    compiled=subprocess.run([sys.executable,str(package/'native_runtime/build_native.py'),'--output',str(native)],capture_output=True,text=True,encoding="utf-8",timeout=45)
     assert compiled.returncode==0,compiled.stderr
-    build=subprocess.run([dotnet,'build',str(package/'native_runtime/VisionRuntime.csproj'),'-o',str(csharp)],capture_output=True,text=True,timeout=90)
+    build=subprocess.run([dotnet,'build',str(package/'native_runtime/VisionRuntime.csproj'),'-o',str(csharp)],capture_output=True,text=True,encoding="utf-8",timeout=90)
     assert build.returncode==0,build.stdout+build.stderr
     for artifact in native.glob('*modu_vision_runtime*'):
         if artifact.is_file(): shutil.copyfile(artifact,csharp/artifact.name)
     execute=[dotnet,str(csharp/'VisionRuntime.dll'),str(package),str(image)]
-    process=subprocess.run(execute,capture_output=True,text=True,timeout=45)
+    process=subprocess.run(execute,capture_output=True,text=True,encoding="utf-8",timeout=45)
     assert process.returncode==0,process.stdout+process.stderr
     assert compare_flow_results(Predictor(package).predict(image),json.loads(process.stdout))['status']=='passed'
-    timeout=subprocess.run(execute+['1'],capture_output=True,text=True,timeout=25)
+    timeout=subprocess.run(execute+['1'],capture_output=True,text=True,encoding="utf-8",timeout=25)
     assert timeout.returncode==3 and json.loads(timeout.stdout)['deadline']['terminated'] is True

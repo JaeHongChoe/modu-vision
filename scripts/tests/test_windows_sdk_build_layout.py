@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / 'native_runtime' / 'build_native.py'
-ARTIFACTS = ('modu_vision_runtime.dll', 'modu_vision_runtime.lib', 'vision_predict.exe', 'vision_execute.exe')
+ARTIFACTS = ('modu_vision_runtime.dll', 'modu_vision_runtime.lib', 'vision_predict.exe', 'vision_execute.exe', 'vision_cancel_demo.exe')
 
 
 class WindowsBuildLayout(unittest.TestCase):
