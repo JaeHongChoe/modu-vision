@@ -6,6 +6,7 @@ import io
 import json
 import uuid
 import threading
+from contextvars import copy_context
 import re
 import time
 from pathlib import Path
@@ -37,6 +38,7 @@ class Prepare(BaseModel):
 
 class Train(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    max_runtime_s: float | None = Field(default=None, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str
     epochs: int = Field(default=1, ge=1, le=500)
     batch_size: int = Field(default=4, ge=1, le=256)
@@ -148,6 +150,7 @@ def train(req: Train, request: Request):
               "dataset_path": req.dataset_path, "source_dataset_path": manifest["provenance"]["source_dataset_path"],
               "owner_instance": _PROCESS_INSTANCE, "device": req.device, "created_at": time.time(), "error": None}
     record['training_provenance'] = binding
+    record['budget'] = {'max_runtime_s':req.max_runtime_s} if req.max_runtime_s is not None else {}
     if parent is not None:
         record['warm_start'] = parent.lineage()
     def persist(**changes):
@@ -158,17 +161,25 @@ def train(req: Train, request: Request):
                 changes['status'] = 'stopping'
             record.update(changes)
             _atomic(folder / "job.json", json.dumps(record, ensure_ascii=False).encode())
+    from backend.engine.runtime_budget import RuntimeBudget
+    def expired():
+        with _JOB_LOCK:
+            if record['status'] in {'queued','running','stopping'}:
+                persist(status='stopping',stop_reason='time_limit')
+    budget=RuntimeBudget(req.max_runtime_s,event,lambda started:persist(runtime_started_at=started),expired)
     def execute():
         try:
             if event.is_set(): raise InterruptedError("Enhancement training cancelled")
             from backend.engine.shared_scheduler import compute_lease_scope
-            with compute_lease_scope(folder.name, req.device):
+            with compute_lease_scope(folder.name, req.device), budget:
                 persist(status="running")
                 validate_training_binding(binding)
                 def progress(epoch, epochs, loss):
+                    budget.check()
                     persist(epoch=epoch, epochs=epochs, loss=loss)
                 result = train_enhancement(req.dataset_path, folder, epochs=req.epochs, batch_size=req.batch_size,
                                            learning_rate=req.learning_rate, device=req.device, cancel_event=event, on_progress=progress, warm_start=parent)
+                budget.check()
                 validate_training_binding(binding)
                 if event.is_set(): raise InterruptedError('Enhancement training cancelled')
                 persist_model_binding(folder, binding)
@@ -177,6 +188,7 @@ def train(req: Train, request: Request):
                 path = folder / "best_model.pt"
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 with _JOB_LOCK:
+                    budget.seal()
                     if event.is_set(): raise InterruptedError('Enhancement training cancelled')
                     _atomic(folder / 'job_receipt.json', json.dumps({
                         'job_id': folder.name, 'task': 'enhancement', 'status': 'completed',
@@ -190,7 +202,8 @@ def train(req: Train, request: Request):
         except InterruptedError as exc:
             for name in ('best_model.pt', 'model_meta.json', 'metadata.json', 'job_receipt.json'):
                 (folder / name).unlink(missing_ok=True)
-            persist(status="stopped", error=str(exc))
+            persist(status="stopped", error="Training runtime limit exceeded" if budget.spent else str(exc),
+                    **({"stop_reason":"time_limit"} if budget.spent else {}))
             if not req.background: raise HTTPException(409, str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
             for name in ('best_model.pt', 'model_meta.json', 'metadata.json', 'job_receipt.json'):
@@ -203,7 +216,8 @@ def train(req: Train, request: Request):
     with _JOB_LOCK: _CANCEL_EVENTS[key] = event
     if req.background:
         persist()
-        threading.Thread(target=execute, daemon=True, name=f"enhancement-{folder.name}").start()
+        context=copy_context()
+        threading.Thread(target=lambda:context.run(execute), daemon=True, name=f"enhancement-{folder.name}").start()
         return JSONResponse({**record}, status_code=202)
     return execute()
 

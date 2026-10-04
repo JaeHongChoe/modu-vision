@@ -1,3 +1,4 @@
+import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
 import {JobProgressView} from './JobProgressView';
@@ -55,6 +56,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   const isActive = !!job&&['queued','preparing','running','stopping','transferring','syncing'].includes(job.status);
   const compute=useComputeStore(),apiIdentity=getApiPersistenceIdentity();
 
+  const runtime=useTrainingRuntime(`${projectDir}\0${projectSource}\0${labelsetId}`);
   const sameProject = () => useProjectStore.getState().projectDir === projectDir &&
     (useProjectStore.getState().project?.source_dataset_dir || '') === projectSource &&
     (useProjectStore.getState().project?.active_labelset_id || 'default') === labelsetId&&useComputeStore.getState().selectedProfileId===compute.selectedProfileId&&useComputeStore.getState().transportRevision===compute.transportRevision&&getApiPersistenceIdentity()===apiIdentity;
@@ -147,9 +149,10 @@ export const RotatedDetectionPanel: React.FC = () => {
 
   const startTraining = async () => {
     if (!datasetPath || !sampleCount || busy || isActive) return;
+    if(runtime.error)return;
     setBusy('train'); setError(''); setNotice(''); setEvaluation(null); setPrediction(null);
     try {
-      const options={dataset_path:datasetPath,epochs,device,recipe:obbRecipePayload(adapter,localModelPath,trustNativeWeights),...(warmParentId?{warm_start_job_id:warmParentId}:{})};
+      const options={dataset_path:datasetPath,epochs,device,...runtime.getOptions(),recipe:obbRecipePayload(adapter,localModelPath,trustNativeWeights),...(warmParentId?{warm_start_job_id:warmParentId}:{})};
       const started=await submitModelTraining<RotatedJob>('rotated_detection',options,()=>request<RotatedJob>('/api/rotated-detection/train',{method:'POST',body:JSON.stringify(options)}));
       if (!sameProject()) return;
       setJob(started);
@@ -245,7 +248,8 @@ export const RotatedDetectionPanel: React.FC = () => {
         <label>학습 epoch<input type="number" min="1" max="200" value={epochs}
           onChange={(event) => setEpochs(Math.max(1, Math.min(200, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!busy || isActive || (adapter==='ultralytics_yolo_obb'&&!trustNativeWeights)}
+        <TrainingRuntimeSettings {...runtime} disabled={!!busy||isActive} />
+        <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!runtime.error || !!busy || isActive || (adapter==='ultralytics_yolo_obb'&&!trustNativeWeights)}
           className="rounded bg-amber-700 px-3 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-40">후보 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}

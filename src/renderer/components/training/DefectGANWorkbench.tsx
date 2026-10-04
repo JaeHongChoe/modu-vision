@@ -1,3 +1,4 @@
+import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import React, { useEffect, useRef, useState } from 'react';
 import { Images, Loader2, RefreshCw } from 'lucide-react';
@@ -85,6 +86,8 @@ export const DefectGANWorkbench: React.FC = () => {
     return () => { active = false; };
   }, [projectDir,projectSource,activeLabelset,handoff?.jobId,handoff?.selectionId]);
 
+  const runtime=useTrainingRuntime(`${projectDir}\0${projectSource}\0${activeLabelset}`);
+
   const sameProject = () => {const state=useProjectStore.getState();return state.projectDir===projectDir && (state.project?.source_dataset_dir ?? '')===projectSource && (state.project?.active_labelset_id ?? 'default')===activeLabelset;};
   const loadManifest = async () => {
     if (!datasetPath.trim() || !projectDir || busy) return;
@@ -113,10 +116,10 @@ export const DefectGANWorkbench: React.FC = () => {
     finally { if (sameProject()) setBusy(null); }
   };
   const train = async () => {
-    if (!datasetPath.trim() || !projectDir || !sampleCount || busy) return;
+    if (!datasetPath.trim() || !projectDir || !sampleCount || busy || runtime.error) return;
     setBusy('train'); setError(''); setNotice(''); setCandidates([]);
     try {
-      await training.start(datasetPath.trim(),epochs,warmParentId || undefined,device);
+      await training.start(datasetPath.trim(),epochs,warmParentId || undefined,device,runtime.getOptions());
       if(sameProject())setNotice('학습 작업을 저장했습니다. 중지하거나 다시 열어 진행 상태를 확인할 수 있습니다.');
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -179,13 +182,14 @@ export const DefectGANWorkbench: React.FC = () => {
       </div>
       <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||training.active}/>
       <SpecializedTrainingStatus {...training} />
+      <TrainingRuntimeSettings {...runtime} disabled={!!busy||training.active} />
       <WarmStartSelector family="defect-gan" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training.active} refreshKey={training.job?.status === 'completed' ? training.job.job_id : null} />
       <label className="flex items-center gap-2"><input type="checkbox" checked={compose} disabled={!!busy||training.active} onChange={e=>setCompose(e.target.checked)}/>원본 영역에 결함 후보 합성</label>
       {compose&&<GANCompositionEditor source={projectSource} scope={`${projectDir}\0${projectSource}\0${activeLabelset}`} imagePath={sourceImage} onImageChange={setSourceImage} regions={regions} onRegionsChange={setRegions} onPreview={setSourcePreview} disabled={!!busy||training.active}/>}
       <div className="flex flex-wrap items-end gap-2 border-t border-[#344255] pt-4">
         <label>학습 epoch<input type="number" min="1" max="500" value={epochs} onChange={(event) => setEpochs(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
-        <button type="button" onClick={() => void train()} disabled={!sampleCount || (!!busy || training.active)} className="rounded bg-violet-700 px-3 py-2 font-semibold hover:bg-violet-600 disabled:opacity-40">생성 모델 학습</button>
+        <button type="button" onClick={() => void train()} disabled={!sampleCount || !!runtime.error || (!!busy || training.active)} className="rounded bg-violet-700 px-3 py-2 font-semibold hover:bg-violet-600 disabled:opacity-40">생성 모델 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
           <select disabled={!!busy||training.active} value={jobId} onChange={(event) => { setJobId(event.target.value); setCandidates([]); }} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}

@@ -92,7 +92,8 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
     record={'job_id':output.name,'task':task,'status':'queued','epoch':0,'batch':0,'batches':0,
         'epochs':options.epochs,'dataset_path':str(dataset),'source_dataset_path':str(source),
         'device':device,'owner_instance':PROCESS_INSTANCE,'created_at':time.time(),'error':None,
-        'training_provenance':binding,'events':[]}
+        'training_provenance':binding,'events':[],
+        'budget':{'max_runtime_s':options.max_runtime_s} if getattr(options,'max_runtime_s',None) is not None else {}}
     if warm_start is not None:
         record['warm_start'] = warm_start.lineage()
     def persist(**changes):
@@ -106,18 +107,27 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
     with _LOCK:
         if any(row['status'] in ACTIVE for row in list_jobs(root)):raise ValueError('Another family training job is active in this project')
         _EVENTS[key]=event;persist()
+    from backend.engine.runtime_budget import RuntimeBudget
+    def expired():
+        with _LOCK:
+            if record['status'] in ACTIVE:
+                persist(status='stopping',stop_reason='time_limit')
+    budget=RuntimeBudget(getattr(options,'max_runtime_s',None),event,
+        lambda started:persist(runtime_started_at=started),expired)
     def execute():
         lease=None;lease_stack=ExitStack()
         try:
             if event.is_set():raise InterruptedError('Training cancelled')
             from backend.engine.shared_scheduler import compute_lease_scope
             lease=lease_stack.enter_context(compute_lease_scope(output.name,device))
+            lease_stack.enter_context(budget)
             persist(status='running');validate_training_binding(binding)
             def progress(values):
+                budget.check()
                 if lease is not None:lease.heartbeat(output.name)
                 persist(**values)
             result=runner(event,progress,device)
-            if event.is_set():raise InterruptedError('Training cancelled')
+            budget.check()
             validate_training_binding(binding)
             if family_digest()!=current_digest:raise ValueError('Family training labels or source changed during training')
             persist_model_binding(output,binding)
@@ -140,17 +150,22 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             # Serialize completion with cancel acceptance. A stopping journal never
             # publishes an executable checkpoint, even if binding writes took time.
             with _LOCK:
+                budget.seal()
                 if event.is_set():raise InterruptedError('Training cancelled during finalization')
                 _write(output/'job_receipt.json',receipt)
                 persist(status='completed',model_sha256=digest,result=result)
             return response
         except (InterruptedError,ValueError,OSError,RuntimeError) as exc:
             for name in ('best_model.pt','model_meta.json','job_receipt.json'):(output/name).unlink(missing_ok=True)
-            persist(status='stopped' if isinstance(exc,InterruptedError) else 'failed',error=str(exc))
+            persist(status='stopped' if isinstance(exc,InterruptedError) else 'failed',
+                error='Training runtime limit exceeded' if budget.spent and isinstance(exc,InterruptedError) else str(exc),
+                **({'stop_reason':'time_limit'} if budget.spent else {}))
             if not options.background:raise
         finally:
-            lease_stack.close()
-            with _LOCK:_EVENTS.pop(key,None)
+            try:
+                lease_stack.close()
+            finally:
+                with _LOCK:_EVENTS.pop(key,None)
     if options.background:
         context=copy_context();threading.Thread(target=lambda:context.run(execute),daemon=True,name=f'{task}-{output.name[:8]}').start()
         with _LOCK:return copy.deepcopy(record)

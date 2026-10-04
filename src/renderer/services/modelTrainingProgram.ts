@@ -53,7 +53,7 @@ export const modelTrainingProgram = {
     prepare: (source_dataset_path: string, samples: RotationRow[]) => post<PreparedDataset>('/api/rotation/prepare', {source_dataset_path, samples}),
     manifest: (dataset_path: string) => request<PreparedDataset & {samples: RotationRow[]}>(`/api/rotation/manifest?${query({dataset_path})}`),
     train: (options: {dataset_path: string; epochs: number; batch_size: number; image_size: number; width: number;
-      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string}) => submitModelTraining('rotation',options,()=>post<ProgramJob>('/api/rotation/train', {...options, background: true})),
+      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; max_runtime_s?: number}) => submitModelTraining('rotation',options,()=>post<ProgramJob>('/api/rotation/train', {...options, background: true})),
     jobs: () => request<{jobs: ProgramJob[]}>('/api/rotation/jobs'),
     status: (job_id: string) => request<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}`),
     cancel: (job_id: string) => post<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}/cancel`, {}),

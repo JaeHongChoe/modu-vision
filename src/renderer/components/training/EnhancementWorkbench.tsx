@@ -1,3 +1,4 @@
+import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
 import {JobProgressView} from './JobProgressView';
@@ -44,6 +45,7 @@ export function EnhancementWorkbench() {
   const [job, setJob] = useState<EnhancementJob | null>(null);
   const compute=useComputeStore();
   const scope = `${projectId || ''}\n${source}\n${labelsetId}\n${compute.selectedProfileId}\n${compute.transportRevision}\n${getApiPersistenceIdentity()}`;
+  const runtime=useTrainingRuntime(scope);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const training = job !== null && activeStatus(job.status);
@@ -112,7 +114,8 @@ export function EnhancementWorkbench() {
     setSampleCount(result.records.length);
   });
   const train = () => action('이미지 개선 학습', async () => {
-    const options={dataset_path:datasetPath,epochs,device,background:true,...(warmParentId?{warm_start_job_id:warmParentId}:{})};
+    if(runtime.error)throw new Error(runtime.error);
+    const options={dataset_path:datasetPath,epochs,device,background:true,...runtime.getOptions(),...(warmParentId?{warm_start_job_id:warmParentId}:{})};
     const result=await submitModelTraining<EnhancementJob>('enhancement',options,()=>request<EnhancementJob>('/api/enhancement/train',{method:'POST',body:JSON.stringify(options)}));
     if (currentScope.current !== scope) return;
     setJob(result); setJobs((old) => [result, ...old.filter((item) => item.job_id !== result.job_id)]);
@@ -162,7 +165,8 @@ export function EnhancementWorkbench() {
         <TrainingDeviceSelector value={device} onChange={setDevice} disabled={!!busy||training}/>
         <WarmStartSelector family="enhancement" datasetPath={datasetPath} value={warmParentId} onChange={setWarmParentId} disabled={!!busy || training} refreshKey={job?.status === 'completed' ? job.job_id : null} />
         <label>학습 epoch<input aria-label="이미지 개선 학습 epoch" type="number" min={1} max={500} value={epochs} onChange={(e) => setEpochs(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className={`${input} max-w-24`} /></label>
-        <button type="button" disabled={!sampleCount || !!busy || training} onClick={() => void train()} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">이미지 개선 후보 학습</button>
+        <TrainingRuntimeSettings {...runtime} disabled={!!busy||training} />
+      <button type="button" disabled={!sampleCount || !!busy || training || !!runtime.error} onClick={() => void train()} className="rounded bg-cyan-700 px-3 py-2 font-semibold hover:bg-cyan-600 disabled:opacity-40">이미지 개선 후보 학습</button>
         <label className="min-w-56 flex-1">완료 후보 모델<select value={jobId} onChange={(e) => {
           setJobId(e.target.value); setMetrics(null);
           const model = models.find((m) => m.job_id === e.target.value);

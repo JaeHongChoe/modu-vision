@@ -54,11 +54,15 @@ class _LiveJob:
     cancel: threading.Event = field(default_factory=threading.Event, repr=False)
     thread: threading.Thread | None = field(default=None, repr=False)
     warm_start: Any = field(default=None, repr=False)
+    budget: dict[str, Any] = field(default_factory=dict)
+    runtime_started_at: float | None = None
+    stop_reason: str | None = None
 
     def summary(self) -> dict[str, Any]:
         return {"job_id": self.job_id, "status": self.status,
                 "epochs_completed": self.epochs_completed, "total_epochs": self.total_epochs,
                 "started_at": self.started_at, "result": self.result, "error": self.error,
+                "budget": self.budget, "runtime_started_at": self.runtime_started_at, "stop_reason": self.stop_reason,
                 "training_provenance": self.training_provenance,
                 "dataset_path":str(self.dataset_path),"source_dataset_path":self.source_dataset_path,
                 "device":self.device,
@@ -156,6 +160,7 @@ def fit_box(req:FitBoxRequest,request:Request):
 
 class TrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    max_runtime_s: float | None = Field(default=None, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str = Field(min_length=1)
     epochs: int = Field(default=10, ge=1, le=200)
     batch_size: int = Field(default=8, ge=1, le=64)
@@ -264,47 +269,60 @@ def _set_job(job: _LiveJob, status: str, *, result: dict[str, Any] | None = None
 
 
 def _run_job(job: _LiveJob, options: TrainRequest) -> None:
+    from backend.engine.runtime_budget import RuntimeBudget
+    def started(value):
+        with _LOCK:
+            job.runtime_started_at=value
+            _write_state(job)
+    def expired():
+        with _LOCK:
+            if job.status in {'running','stopping'}:
+                job.stop_reason='time_limit'
+                _set_job(job,'stopping')
+    budget=RuntimeBudget(options.max_runtime_s,job.cancel,started,expired)
     try:
         from backend.engine.training_provenance import validate_training_binding,persist_model_binding
         validate_training_binding(job.training_provenance)
         original_digest=load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']
         from backend.engine.shared_scheduler import compute_lease_scope
-        with compute_lease_scope(job.job_id,options.device):
+        with compute_lease_scope(job.job_id,options.device), budget:
             result = train_rotated_detector(
                 job.dataset_path, job.output_dir, epochs=options.epochs,
                 batch_size=options.batch_size, image_size=options.image_size,
                 learning_rate=options.learning_rate, device=options.device, cancel_event=job.cancel, warm_start=job.warm_start,
                 recipe=options.recipe,
             )
-        validate_training_binding(job.training_provenance)
-        if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
-            raise ValueError('Rotated labels/source changed during training')
-        with _LOCK:
-            if job.cancel.is_set():
-                for name in ("best_model.pt", "model_meta.json", "job_receipt.json"):
-                    (job.output_dir / name).unlink(missing_ok=True)
-                _set_job(job, "aborted")
-            else:
-                persist_model_binding(job.output_dir,job.training_provenance)
-                from backend.engine.specialized_training_jobs import persist_training_configuration
-                persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
-                checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
-                meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text(encoding='utf-8'))
-                meta.update(checkpoint_sha256=checksum,source_dataset_path=job.source_dataset_path,dataset_path=str(job.dataset_path),
-                            training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
-                meta_path.write_text(json.dumps(meta),encoding='utf-8')
-                receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
-                    'source_dataset_path':job.source_dataset_path,'dataset_path':str(job.dataset_path),
-                    'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
-                    'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
-                if job.warm_start:
-                    receipt['warm_start'] = job.warm_start.lineage()
-                (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
-                result.update(checkpoint_sha256=checksum,model_sha256=checksum)
-                _set_job(job, "completed", result=result)
-    except RotatedTrainingCancelled:
+            budget.check()
+            validate_training_binding(job.training_provenance)
+            if load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']!=original_digest:
+                raise ValueError('Rotated labels/source changed during training')
+            with _LOCK:
+                if job.cancel.is_set():
+                    for name in ("best_model.pt", "model_meta.json", "job_receipt.json"):
+                        (job.output_dir / name).unlink(missing_ok=True)
+                    _set_job(job, "aborted")
+                else:
+                    persist_model_binding(job.output_dir,job.training_provenance)
+                    from backend.engine.specialized_training_jobs import persist_training_configuration
+                    persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
+                    checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
+                    meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text(encoding='utf-8'))
+                    meta.update(checkpoint_sha256=checksum,source_dataset_path=job.source_dataset_path,dataset_path=str(job.dataset_path),
+                                training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
+                    meta_path.write_text(json.dumps(meta),encoding='utf-8')
+                    receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
+                        'source_dataset_path':job.source_dataset_path,'dataset_path':str(job.dataset_path),
+                        'training_provenance':job.training_provenance,'checkpoint_sha256':checksum,
+                        'dataset_fingerprint':job.training_provenance['dataset_fingerprint']}
+                    if job.warm_start:
+                        receipt['warm_start'] = job.warm_start.lineage()
+                    budget.seal()
+                    (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
+                    result.update(checkpoint_sha256=checksum,model_sha256=checksum)
+                    _set_job(job, "completed", result=result)
+    except (RotatedTrainingCancelled, InterruptedError):
         for name in ('best_model.pt','model_meta.json','job_receipt.json'):(job.output_dir/name).unlink(missing_ok=True)
-        _set_job(job, "aborted")
+        _set_job(job, "aborted", error="Training runtime limit exceeded" if budget.spent else None)
     except Exception as exc:
         for name in ('best_model.pt','model_meta.json','job_receipt.json'):(job.output_dir/name).unlink(missing_ok=True)
         _set_job(job, "failed", error=str(exc))
@@ -402,7 +420,8 @@ def start_training(req: TrainRequest, request: Request):
                 raise HTTPException(status_code=409, detail="Another rotated training job is already running")
         job_id = uuid.uuid4().hex
         job = _LiveJob(Path(project["project_dir"]).resolve(), job_id,
-                       source, root / job_id, req.epochs,source_dataset_path=project['source_dataset_dir'],device=req.device,training_provenance=binding, warm_start=parent)
+                       source, root / job_id, req.epochs,source_dataset_path=project['source_dataset_dir'],device=req.device,training_provenance=binding, warm_start=parent,
+                       budget={'max_runtime_s':req.max_runtime_s} if req.max_runtime_s is not None else {})
         _JOBS[_key(job)] = job
         _write_state(job)
         context=copy_context()

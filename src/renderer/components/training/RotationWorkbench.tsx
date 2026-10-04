@@ -1,3 +1,4 @@
+import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from './parentCandidate';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {openModelFlow} from './ProgramWorkbenchControls';
@@ -31,6 +32,7 @@ export function RotationWorkbench() {
   const [rate, setRate] = useState(.001); const [device, setDevice] = useState<LocalTrainingDevice>('cpu');
   const [parents, setParents] = useState<ParentCandidate[]>([]); const [parent, setParent] = useState('');
   const [evaluation, setEvaluation] = useState<RotationEvaluation | null>(null); const [prediction, setPrediction] = useState<RotationPrediction | null>(null);
+  const runtime=useTrainingRuntime(state.scope);
   const disabled = !!state.busy || state.active;
   useEffect(() => {setRowsText(''); setSampleImage(''); setEvaluation(null); setPrediction(null); setParents([]); setParent('');}, [state.scope]);
   useEffect(() => {
@@ -70,8 +72,9 @@ export function RotationWorkbench() {
       <ProgramField label="학습률"><input type="number" min={.000001} max={1} step={.001} value={rate} onChange={e => setRate(Number(e.target.value))} className={programInput} /></ProgramField><TrainingDeviceSelector value={device} onChange={setDevice} disabled={disabled} /></div>
     <div className="mt-3"><ProgramField label="동일 구조의 완료 부모 모델"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={disabled}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>{parentCandidateLabel(row,index)}</option>)}</select></ProgramField></div>
     <p className="mt-1 text-slate-400">{parentCandidateNotice}</p>
-    <button type="button" className={`${programPrimary} my-4`} disabled={!state.dataset || disabled || epochs < 1 || batch < 1 || rate <= 0} onClick={() => void state.action('보정 모델 학습 등록', async () => {
-      if (!state.dataset) return; const row = await modelTrainingProgram.rotation.train({dataset_path: state.dataset.dataset_path, epochs, batch_size: batch, image_size: size, width, learning_rate: rate, device, ...(parent ? {warm_start_job_id: parent} : {})});
+    <TrainingRuntimeSettings {...runtime} disabled={disabled} />
+    <button type="button" className={`${programPrimary} my-4`} disabled={!state.dataset || disabled || !!runtime.error || epochs < 1 || batch < 1 || rate <= 0} onClick={() => void state.action('보정 모델 학습 등록', async () => {
+      if (!state.dataset || runtime.error) return; const row = await modelTrainingProgram.rotation.train({dataset_path: state.dataset.dataset_path, epochs, batch_size: batch, image_size: size, width, learning_rate: rate, device, ...runtime.getOptions(), ...(parent ? {warm_start_job_id: parent} : {})});
       if (state.isCurrent()) {state.setJob(row); setEvaluation(null); setPrediction(null);}
     })}>정방향 모델 후보 학습</button>
     <JobProgressView job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} onReconnect={() => void state.reconnect()} />

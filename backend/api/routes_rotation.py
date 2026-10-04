@@ -37,6 +37,7 @@ class PrepareRequest(BaseModel):
 
 
 class TrainRequest(BaseModel):
+    max_runtime_s: float | None = Field(default=None, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str
     epochs: int = Field(default=20,ge=1,le=500)
     batch_size: int = Field(default=8,ge=1,le=128)
