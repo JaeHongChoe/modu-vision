@@ -227,7 +227,9 @@ def test_estimated_earlier_boot_with_only_unrelated_session_members_is_exited_wi
     def denied_environment():
         raise psutil.AccessDenied(unmarked_session.pid)
     with monkeypatch.context() as denied:
+        process_type = worker.psutil.Process
         denied.setattr(unreadable, 'environ', denied_environment)
+        denied.setattr(worker.psutil, 'Process', lambda pid: unreadable if pid == unmarked_session.pid else process_type(pid))
         denied.setattr(worker.psutil, 'process_iter', lambda attrs: [unreadable])
         assert worker._owned_members(journal) is None
     assert unmarked_session.poll() is None, 'the unrelated session is never signalled'

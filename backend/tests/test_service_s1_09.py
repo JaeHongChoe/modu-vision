@@ -156,10 +156,45 @@ def _journal(token, now):
 
 def _listing(monkeypatch, processes):
     from backend.engine import local_training_worker
-    def gone(pid):
-        raise psutil.NoSuchProcess(pid)
-    monkeypatch.setattr(local_training_worker.psutil, 'Process', gone)
+    by_pid = {process.pid: process for process in processes}
+    def current(pid):
+        if pid not in by_pid:
+            raise psutil.NoSuchProcess(pid)
+        return by_pid[pid]
+    monkeypatch.setattr(local_training_worker.psutil, 'Process', current)
     monkeypatch.setattr(local_training_worker.psutil, 'process_iter', lambda attrs=None: iter(processes))
+
+
+def test_a_stale_iterator_creation_time_does_not_hide_the_current_owned_member(monkeypatch):
+    """The iterator can retain an earlier PID lifetime while its token read describes the current process."""
+    from backend.engine import local_training_worker
+    token, now = uuid.uuid4().hex, time.time()
+    journal = _journal(token, now)
+    cached = _Listed(journal['owner_pid'], 'me', token, created=now - 60)
+    current = _Listed(journal['owner_pid'], 'me', token, created=now)
+    monkeypatch.setattr(local_training_worker, '_WINDOWS', False)
+    monkeypatch.setattr(local_training_worker.os, 'getsid', lambda pid: journal['owner_session'], raising=False)
+    monkeypatch.setattr(local_training_worker.psutil, 'process_iter', lambda attrs=None: iter([cached]))
+    monkeypatch.setattr(local_training_worker.psutil, 'Process', lambda pid: current)
+    assert local_training_worker._owned_members(journal) == [current]
+    assert local_training_worker._liveness(journal) is True
+
+
+@pytest.mark.parametrize('changed_identity', ['wrong-token', 'denied', 'older'])
+def test_a_cached_valid_member_never_overrides_unknown_current_ownership(monkeypatch, changed_identity):
+    from backend.engine import local_training_worker
+    token, now = uuid.uuid4().hex, time.time()
+    journal = _journal(token, now)
+    cached = _Listed(journal['owner_pid'], 'me', token, created=now)
+    current = _Listed(journal['owner_pid'], 'me', token if changed_identity != 'wrong-token' else 'another-run',
+                      created=now - 1 if changed_identity == 'older' else now,
+                      denied={'environ'} if changed_identity == 'denied' else ())
+    monkeypatch.setattr(local_training_worker, '_WINDOWS', False)
+    monkeypatch.setattr(local_training_worker.os, 'getsid', lambda pid: journal['owner_session'], raising=False)
+    monkeypatch.setattr(local_training_worker.psutil, 'process_iter', lambda attrs=None: iter([cached]))
+    monkeypatch.setattr(local_training_worker.psutil, 'Process', lambda pid: current)
+    assert local_training_worker._owned_members(journal) is None
+    assert local_training_worker._liveness(journal) is None
 
 
 def test_windows_processes_this_backend_cannot_open_are_not_its_workers(monkeypatch):
@@ -185,7 +220,6 @@ def test_a_windows_worker_this_backend_cannot_open_is_unknown_never_exited(monke
     elevated_leader = _Listed(journal['owner_pid'], 'me', denied={'username', 'status', 'environ'}, created=now)
     # the leader at the recorded number with the recorded start time, which this backend cannot open
     _listing(monkeypatch, [_Listed(4, 'SYSTEM', denied={'username'}), elevated_leader])
-    monkeypatch.setattr(local_training_worker.psutil, 'Process', lambda pid: elevated_leader)
     assert local_training_worker._owned_members(journal) is None
     assert local_training_worker._liveness(journal) is None, 'its reservation is kept'
     # a process the leader started, which this backend cannot open, while the leader itself is gone
@@ -238,13 +272,11 @@ def test_children_at_a_reused_windows_number_count_only_from_before_the_new_occu
     occupant = _Listed(journal['owner_pid'], 'SYSTEM', denied=SERVICE, created=now + 50)
     its_child = _Listed(51, 'SYSTEM', denied=SERVICE, created=now + 60, parent=journal['owner_pid'])
     _listing(monkeypatch, [occupant, its_child])
-    monkeypatch.setattr(local_training_worker.psutil, 'Process', lambda pid: occupant)
     assert local_training_worker._owned_members(journal) == []
     assert local_training_worker._liveness(journal) is False
     # a process the worker started before it exited, which this backend cannot open, is still the run's
     orphan = _Listed(52, 'me', denied={'environ'}, created=now + 10, parent=journal['owner_pid'])
     _listing(monkeypatch, [occupant, its_child, orphan])
-    monkeypatch.setattr(local_training_worker.psutil, 'Process', lambda pid: occupant)  # the occupant still holds the number
     assert local_training_worker._owned_members(journal) is None
 
 

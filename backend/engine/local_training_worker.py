@@ -249,6 +249,9 @@ def _owned_members(journal):
         unmarked = False
         for process in psutil.process_iter(['pid']):
             try:
+                # The iterator caches Process objects across PID lifetimes.
+                # Read the current identity before its ownership evidence.
+                process = psutil.Process(process.pid)
                 if not _WINDOWS:
                     if os.getsid(process.pid) != journal['owner_session']:
                         continue
