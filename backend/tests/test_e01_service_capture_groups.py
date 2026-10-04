@@ -78,9 +78,24 @@ def test_pipeline_export_reopen_retains_optional_join_policy(package,tmp_path):
     assert reopened.capture_group_policy==configured.capture_group_policy
 
 
-def test_actual_service_http_admission_join_and_restart_readback(package,tmp_path,monkeypatch):
-    from backend.engine import inspection_service
-    monkeypatch.setattr(inspection_service,'run_flow_package',lambda *_args,**_kwargs:{'final_verdict':'OK','crops':[]})
+@pytest.mark.parametrize('second_view_late',[False,True],ids=['within-deadline','expired-during-inference'])
+def test_actual_service_http_admission_join_and_restart_readback(package,tmp_path,monkeypatch,second_view_late):
+    from backend.engine import inspection_service,service_capture_groups
+    # Real HTTP/SQLite lifecycle; only the join clock and inference are controlled.
+    # A loaded Windows runner must not turn the normal-join case into a timeout.
+    # The second case crosses the unchanged deadline while inference is running.
+    clock=[0];calls=[];capture_groups=service_capture_groups.CaptureGroups
+    def groups_with_clock(*args,**kwargs):
+        return capture_groups(*args,**kwargs,wall_ms=lambda:1_700_000_000_000+clock[0],monotonic_ms=lambda:clock[0])
+    monkeypatch.setattr(service_capture_groups,'CaptureGroups',groups_with_clock)
+    def infer(*_args,**_kwargs):
+        calls.append(True)
+        if len(calls)==2:
+            clock[0]=1001 if second_view_late else 500
+        return {'final_verdict':'OK','crops':[]}
+    monkeypatch.setattr(inspection_service,'run_flow_package',infer)
+    expected_verdict='REVIEW' if second_view_late else 'OK'
+    expected_state='EXPIRED' if second_view_late else 'COMPLETE'
     state=tmp_path/'state';app=inspection_service.create_service_app(package,state,token='secret')
     source=image(tmp_path,'http')
     with TestClient(app) as client:
@@ -90,12 +105,17 @@ def test_actual_service_http_admission_join_and_restart_readback(package,tmp_pat
         first=client.post('/v1/jobs/file',json={'image_path':str(source),'capture':frame('A','back')}).json()['job_id']
         assert _wait(client,first,'completed')['verdict']=='REVIEW'
         last=client.post('/v1/jobs/file',json={'image_path':str(source),'capture':frame('A','front')}).json()['job_id']
-        assert _wait(client,last,'completed')['verdict']=='OK'
+        result=_wait(client,last,'completed')
+        assert result['verdict']==expected_verdict
+        assert result['result']['capture_group']['state']==expected_state
+        if second_view_late:assert result['result']['capture_group']['disposition']=='late'
+        assert len(calls)==2
         assert client.post('/v1/jobs/file',json={'image_path':str(source),'capture':frame('A','front')}).json()['job_id']==last
-        assert client.get('/v1/capture-groups').json()['groups'][0]['state']=='COMPLETE'
+        assert client.get('/v1/capture-groups').json()['groups'][0]['state']==expected_state
     reopened=inspection_service.create_service_app(package,state,token='secret',auto_worker=False)
     with TestClient(reopened,headers={'X-Vision-Token':'secret'}) as client:
-        assert client.get('/v1/capture-groups').json()['groups'][0]['verdict']=='OK'
+        group=client.get('/v1/capture-groups').json()['groups'][0]
+        assert group['verdict']==expected_verdict and group['state']==expected_state
 
 
 def test_optin_device_event_missing_group_identity_is_review(tmp_path):

@@ -1066,6 +1066,12 @@
      "result": "Task51 replaces exclusive-only Windows ordinary admission with shared LockFileEx and exclusive migration locking.40 local affected cases pass, including actual fresh subprocess contention and real concurrent HTTP requests; one native macOS E05 saves/reopens synthetic review and rejects stale approval.",
      "scope": "Root review only; exact Windows ee68 native failure is retained. Corrected-source hosted Windows, installed Windows11/SCM and live historical-worker adoption remain pending. Private local readback SHA-25687fc114773c3e1e537ef01d9c4338626fdc6135561148109707469a8f2571d2a. No whole-parent or final acceptance promoted.",
      "platform": "Actual macOS subprocess/HTTP/Electron plus controlled Windows API emulation; no GPU or target store mutation"
+    },
+    {
+     "kind": "takeover-follow-up-exact-hosted-verified",
+     "result": "Exact dfb Windows run37242452375 passes actual owned Electron3, including E05 review save/reopen/stale refusal, and collects the new native shared/exclusive admission regressions. Task51 Windows shared-admission refusal is resolved in this hosted source.",
+     "scope": "The overall Windows run remains failed on one independent HTTP capture-join timing fixture:1246 backend cases,1230 passed,15 skipped,1 failed. Exact source/JUnit readback SHA-2565bc429f1ca706eeaa01c8ed3969ef8afb94e35e6ae1e2ff7c81b2c377f6e7332.",
+     "platform": "Hosted Windows Server2025 only; installed Windows11/SCM, historical live-worker adoption, independent review and whole-parent/final acceptance pending."
     }
    ],
    "file_actions": {
@@ -3209,7 +3215,14 @@
     "S1-05"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "Task53 separates normal and expired-during-inference timelines in the actual HTTP/SQLite two-view join test using the existing injectable join clocks. Deadline and production behavior remain unchanged; both cases retain duplicate identity and reopen verdict/state.",
+     "scope": "Original1000ms wall-time fixture fails with controlled1.2s inference and durable EXPIRED/REVIEW/late result. Corrected focused13 and affected85 pass with no skips; readback SHA-2562d95370349878e0bc0e38c06fae021429fb00ad5694a27e15d11744013ec1a64.",
+     "platform": "Owned macOS synthetic HTTP/store fixture. Root review only. New composed full hosted source, physical camera and whole-parent/final acceptance pending."
+    }
+   ],
    "file_actions": {
     "backend/engine/capture_adapters.py": "Create",
     "backend/engine/service_runtime.py": "Modify",
