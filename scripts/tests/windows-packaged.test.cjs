@@ -53,3 +53,10 @@ test('actual API refusal retains bounded diagnostic detail and redacts capabilit
   });
  }finally{global.window=previous;await new Promise(resolve=>server.close(resolve));}
 });
+
+test('failed CPU export keeps its actual diagnostic result before qualification rejects',()=>{
+ const receipt={},results=Object.fromEntries(rows);results.export={passed:false,error:'Worker export failed: missing runtime module',evidence:{architecture:'resnet18',device:'cpu'}};
+ const reply={last_preflight:{error:null},workers:[{preflight:Object.fromEntries(Object.entries(results).map(([stage,row])=>[`classification:${stage}:cpu`,row]))}]};
+ assert.throws(()=>h.capturePreflight(receipt,reply),/export did not pass/);
+ assert.equal(receipt.cpu_results.export.error,results.export.error);assert.equal(receipt.cpu_results.train.passed,true);
+});

@@ -35,6 +35,11 @@ async function api(page,route,payload){
  catch(error){throw Error(redact(error.message));}
 }
 function workerResults(reply){const all=reply.workers?.[0]?.preflight||{};return Object.fromEntries(['train','evaluate','infer','export'].map(stage=>[stage,all[`classification:${stage}:cpu`]]));}
+function capturePreflight(receipt,reply){
+ const results=workerResults(reply);receipt.cpu_results=JSON.parse(redact(JSON.stringify(results)));
+ receipt.preflight_error=reply.last_preflight?.error?redact(reply.last_preflight.error):null;
+ assert.equal(reply.last_preflight.error,null,'CPU preflight failed');verifyPreflight(results);return results;
+}
 async function closeOwned(application){let timer;try{await Promise.race([application.close(),new Promise((_,reject)=>{timer=setTimeout(()=>{application.process().kill();reject(Error('owned application close timed out'));},30000);})]);}finally{clearTimeout(timer);}}
 function finalizeEvidence(receipt,out,root,diagnostics,io={remove:fs.rmSync,write:fs.writeFileSync}){
  let cleaned=true;
@@ -68,7 +73,7 @@ async function run(options){
    if(iteration===0){
     await api(page,'/api/workers/local/preflight',{task:'classification',device:'cpu',stages:['train','evaluate','infer','export']});
     const reply=await waitFor(async()=>{const value=await api(page,'/api/workers');return !value.running_preflight&&value.last_preflight?value:null;},900000,'CPU preflight');
-    assert.equal(reply.last_preflight.error,null,'CPU preflight failed');initial=workerResults(reply);verifyPreflight(initial);receipt.cpu_results=initial;
+    initial=capturePreflight(receipt,reply);
    }else{verifyReadback(initial,workerResults(await api(page,'/api/workers')));receipt.restart_readback='identical';}
    await page.screenshot({path:path.join(out,`packaged-${iteration}.png`)});
    receipt.launches.push({identity,health,renderer_url:page.url()});
@@ -88,5 +93,5 @@ async function run(options){
   if(!finalizeEvidence(receipt,out,root,diagnostics))throw Error('Owned temporary state cleanup failed');
  }
 }
-module.exports={api,verifyIdentity,verifyPreflight,verifyObservation,launchEnv,verifyReadback,redact,workerResults,finalizeEvidence,run};
+module.exports={capturePreflight,api,verifyIdentity,verifyPreflight,verifyObservation,launchEnv,verifyReadback,redact,workerResults,finalizeEvidence,run};
 if(require.main===module){const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i+=2)options[args[i].replace(/^--/,'')]=args[i+1];run(options).catch(error=>{process.stderr.write(redact(error.message)+'\n');process.exitCode=1;});}
