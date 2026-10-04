@@ -761,6 +761,8 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         raise ValueError("Decision incomplete_policy must be review or ng.")
     if decision.data.params.get("review_fallback") not in (None, "pass", "fail"):
         raise ValueError("Decision review_fallback must be pass or fail when configured.")
+    if decision.data.params.get("no_branch_policy") not in (None, "review", "ok", "ng"):
+        raise ValueError("Decision no_branch_policy must be review, ok or ng.")
     if rule == "score_gt_threshold":
         from backend.engine.score_contract import validate_score_rule
         validate_score_rule([node.data.score_spec for node in models], decision.data.score_spec, decision.data.threshold)
@@ -2036,9 +2038,16 @@ class FlowchartEngine:
         effective_slots = min(pipe.execution_config.device_slots, self._max_device_concurrency)
         run_gate = threading.BoundedSemaphore(effective_slots)
 
+        # Nodes no image reached because a condition before them was not met (filled layer by layer); with the decision's
+        # explicit no_branch_policy a result node fed only by such nodes, or by answers whose edges stayed inactive, is
+        # not reached either (S2-05). Without the rule, flows keep their earlier handling of such a node.
+        not_reached: set = set()
+        no_branch_rule_set = decision_node.data.params.get("no_branch_policy") is not None
+
         def process_node(selected_node):
             # Predecessors are immutable for this dependency layer. Clone only
             # the selected node's incoming state so siblings cannot alter it.
+            skipped = False
             parent_ids = {edge.source for edge in incoming[selected_node.id]}
             node_rois = {key: deepcopy(value) for key, value in shared_rois.items() if key in parent_ids}
             node_evidence = {key: [crop.model_copy(deep=True) for crop in value] for key, value in shared_evidence.items() if key in parent_ids}
@@ -2052,6 +2061,19 @@ class FlowchartEngine:
                     parent_edges = [
                         edge for edge in incoming[node.id] if edge.id in active_edges
                     ]
+                    if no_branch_rule_set and not parent_edges and incoming[node.id] and all(
+                            node_branch_verdict.get(edge.source) in ("OK", "NG") or edge.source in not_reached
+                            for edge in incoming[node.id]):
+                        # Every input answered (or was itself not reached) and none of its conditions led here: this
+                        # node was not reached, as a model behind an unmet condition is not.
+                        skipped = True
+                        execution_steps.append(FlowchartExecutionStep(
+                            node_id=node.id, name=node.data.label, status="skipped", latency_ms=0.0,
+                            input_payload_type="result", input_count=0, output_count=0, skip_reason="condition_not_met"))
+                        node_rois[node.id] = []
+                        node_evidence[node.id] = []
+                        node_branch_verdict[node.id] = "REVIEW"
+                        continue
                     evidence: List[CropInspectionResult] = []
                     branch_verdict: Literal["OK", "NG", "REVIEW"] = "REVIEW"
                     if node.data.node_type == "blob_measure" and parent_edges:
@@ -2196,6 +2218,7 @@ class FlowchartEngine:
                 parent = nodes[parent_edge.source]
                 payload_type = _edge_payload_type(parent_edge, parent.data.node_type, node.data.node_type)
                 if parent_edge.id not in active_edges:
+                    skipped = True
                     execution_steps.append(FlowchartExecutionStep(
                         node_id=node.id, name=node.data.label, status="skipped", latency_ms=0.0,
                         input_payload_type=payload_type, input_count=0, output_count=0,
@@ -2330,7 +2353,7 @@ class FlowchartEngine:
                 ))
             return (node_rois[selected_node.id], node_evidence[selected_node.id],
                     node_branch_verdict[selected_node.id], execution_steps,
-                    active_edges - shared_active_edges, incomplete_reasons)
+                    active_edges - shared_active_edges, incomplete_reasons, skipped)
 
         shared_rois, shared_evidence, shared_verdicts = node_rois, node_evidence, node_branch_verdict
         shared_active_edges = active_edges
@@ -2344,7 +2367,9 @@ class FlowchartEngine:
             return process_node(node)
 
         for layer in execute_layers([node for node in processing_nodes if node.id in debug_scope], incoming, bounded_node, pipe.execution_config.max_workers):
-            for node, (regions, evidence, branch, steps, selected_edges, reasons) in layer:
+            for node, (regions, evidence, branch, steps, selected_edges, reasons, skipped) in layer:
+                if skipped:
+                    not_reached.add(node.id)
                 node_rois[node.id] = regions
                 node_evidence[node.id] = evidence
                 node_branch_verdict[node.id] = branch
@@ -2382,11 +2407,32 @@ class FlowchartEngine:
                     crop.model_copy(update={"roi_id": f"{edge.source}:{crop.roi_id}"})
                     if len(decision_edges) > 1 else crop
                 )
-        if not decision_edges:
-            incomplete_reasons.append("No active route reached the decision; review required.")
+        # Every condition toward the decision was evaluated and none was met (for example a "defect present" branch on
+        # an image without that defect): a known outcome, judged by the decision's explicit no_branch_policy when the
+        # flow sets one (a flow without it keeps treating the image as incomplete). A step that failed, received nothing
+        # or answered REVIEW keeps the image incomplete, so an unknown never becomes OK this way; and a step that answered
+        # NG never ends OK through the rule (the image goes to REVIEW unless the rule is NG). Not in a debug run.
+        processing_ids = {node.id for node in processing_nodes}
+        evaluated = [step for step in execution_steps if step.node_id in processing_ids and step.skip_reason != "condition_not_met"]
+        rule = decision_node.data.params.get("no_branch_policy")
+        no_branch = (rule is not None and not stop_node_id and not decision_edges and not incomplete_reasons
+                     and all(step.status in ("passed", "flagged_ng") and step.branch_verdict in ("OK", "NG") for step in evaluated)
+                     and not (rule == "ok" and any(step.branch_verdict == "NG" for step in evaluated)))
+        if not decision_edges and not no_branch:
+            answered_ng = [step.node_id for step in evaluated if step.branch_verdict == "NG"]
+            if rule == "ok" and answered_ng and not stop_node_id and not incomplete_reasons:
+                incomplete_reasons.append(f"No active route reached the decision; its rule OK was not used because "
+                                          f"{', '.join(answered_ng)} answered NG; review required.")
+            else:
+                incomplete_reasons.append("No active route reached the decision; review required.")
         empty_is_ok = bool(decision_edges) and all(edge.source in detector_only_ids for edge in decision_edges)
         no_inspection_reason = "; ".join(incomplete_reasons) or None
-        if decision_node.data.rule == "aggregate_verdict" and decision_edges:
+        if no_branch:
+            verdict = {"ok": "OK", "ng": "NG"}.get(rule, "REVIEW")
+            is_ok, dec_lat = verdict == "OK", 0.0
+            reason = f"No route reached the decision: no condition toward it was met, and the decision's rule for that case is {verdict}."
+            dec_status = "review_required" if verdict == "REVIEW" else "flagged_ng" if verdict == "NG" else "passed"
+        elif decision_node.data.rule == "aggregate_verdict" and decision_edges:
             started = time.time()
             verdict = node_branch_verdict.get(decision_edges[0].source, "REVIEW")
             is_ok = verdict == "OK"

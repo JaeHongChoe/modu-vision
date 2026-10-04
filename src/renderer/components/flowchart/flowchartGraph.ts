@@ -75,6 +75,42 @@ export function decisionRulePatch(data: FlowNodeData, rule: string, sourceModels
   return { rule, threshold: typeof current === 'number' && Number.isFinite(current) && current >= 0 && current <= 1 ? current : 0.5 };
 }
 
+/** The decision's rule for an image on which every condition toward it was evaluated and none was met (the backend's
+ *  no_branch_policy; REVIEW when unset). A failed step or a model that answered nothing stays incomplete regardless. */
+export const NO_BRANCH_POLICIES = ['review', 'ok', 'ng'] as const;
+
+/** Whether an evaluated image can reach no branch at all, so the decision's no-branch rule judges it. A node always
+ *  sends an image to the decision when one of its unconditional edges leads to a node that always does, or when it
+ *  splits by conditions that cover every outcome (pass and fail, or present and absent of one class with the absent
+ *  threshold at or above the present one) and every branch of that split leads to such a node; each image takes only
+ *  one branch. The rule can apply when the input node does not always reach the decision. */
+export function decisionReachedOnlyByConditions(pipeline: FlowchartPipeline): boolean {
+  const conditional = (edge: FlowEdge) => Boolean(edge.predicate) || Boolean(edge.isBranch && edge.isBranch !== 'default');
+  const input = pipeline.nodes.find((node) => node.data.node_type === 'input');
+  const decision = pipeline.nodes.find((node) => node.data.node_type === 'decision');
+  if (!input || !decision) return false;
+  const outgoing = new Map<string, FlowEdge[]>();
+  for (const edge of pipeline.edges) outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge]);
+  const known = new Map<string, boolean>();
+  const visiting = new Set<string>();
+  const always = (id: string): boolean => {
+    if (id === decision.id) return true;
+    if (known.has(id)) return known.get(id)!;
+    if (visiting.has(id)) return false;  // a cycle guarantees nothing
+    visiting.add(id);
+    const out = outgoing.get(id) ?? [];
+    const branch = (kind: string) => out.some((edge) => edge.isBranch === kind && !edge.predicate && always(edge.target));
+    const classSplit = out.some((present) => present.predicate?.operator === 'present' && always(present.target)
+      && out.some((absent) => absent.predicate?.operator === 'absent' && absent.predicate.class_name === present.predicate!.class_name
+        && (absent.predicate.min_confidence ?? 0) >= (present.predicate!.min_confidence ?? 0) && always(absent.target)));
+    const result = out.some((edge) => !conditional(edge) && always(edge.target)) || (branch('pass') && branch('fail')) || classSplit;
+    visiting.delete(id);
+    known.set(id, result);
+    return result;
+  };
+  return !always(input.id);
+}
+
 export function shouldShowThreshold(node: FlowNode): boolean {
   return node.data.node_type === 'inspection' || node.data.node_type === 'detection_crop' ||
     (node.data.node_type === 'decision' && node.data.rule === 'score_gt_threshold');
@@ -481,6 +517,10 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
       const spec=decision.data.score_spec;
       if(models.some(node=>Boolean(node.data.score_spec)!==Boolean(spec)||
         (spec&&['domain','unit','direction','calibration_id'].some(key=>node.data.score_spec?.[key as keyof typeof spec]!==spec[key as keyof typeof spec]))))return '전역 점수 룰에는 동일한 단위와 보정 식별자가 필요합니다.';
+    }
+    const noBranch = decision.data.params?.no_branch_policy;
+    if (noBranch != null && !(NO_BRANCH_POLICIES as readonly unknown[]).includes(noBranch)) {
+      return '조건이 하나도 맞지 않은 이미지의 판정은 검토, OK, NG 중 하나여야 합니다.';
     }
     if (rule === 'max_flaws_allowed') {
       if (models.some((node) => node.data.node_type === 'inspection' && node.data.task === 'segmentation')) {
