@@ -13,6 +13,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 from uuid import uuid4
@@ -298,6 +299,13 @@ def _control_options() -> list[str]:
     return ['-o', f'ControlPath={path}', '-o', 'ControlMaster=no']
 
 
+def _keychain_options() -> list[str]:
+    """Read existing macOS Keychain passphrases without enrolling keys in the agent."""
+    if sys.platform != 'darwin':
+        return []
+    return ['-o', 'UseKeychain=yes', '-o', 'AddKeysToAgent=no']
+
+
 class SSHTransport:
     """Uses OpenSSH key/agent authentication and strict known-host checking."""
 
@@ -323,6 +331,7 @@ class SSHTransport:
             "-p", str(profile.ssh_port),
             "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
             "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
+            *_keychain_options(),
             *_control_options(),
             "--", profile.ssh_target,
         ]
@@ -334,6 +343,7 @@ class SSHTransport:
             "-P", str(profile.ssh_port),
             "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
             "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
+            *_keychain_options(),
             *_control_options(),
             "--",
         ]
