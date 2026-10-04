@@ -315,6 +315,7 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
         # Source files are customer data. Keep their verified bytes intact.
         # Version snapshots need their own hashes, paths and immutable source bytes.
         if (path.is_relative_to(staging / "versions") or path.is_relative_to(staging/'.migrations') or path.is_relative_to(staging/'.retention'/'trash') or path.name == "release_policy.json"
+                or path.is_relative_to(staging / "annotation_quality")  # hashed records: rebound below
                 or any(path.is_relative_to(root) for root in (*source_roots, *immutable_roots))):
             continue
         try:
@@ -347,6 +348,15 @@ def _rebind_json_records(staging: Path, old_project: Path, target: Path,
             ledgers.append(path)
     for ledger in ledgers:
         _rebind_annotation_hashes(ledger, annotation_hashes)
+    # E05's label review profiles and reports carry paths and label hashes inside their hashed bodies.
+    from backend.engine.annotation_quality import rebind_store
+    try:
+        rebind_store(staging / "annotation_quality", lambda value: _rebind_value(value, old_project, target, old_source, new_source),
+                     {"original_project_dir": str(old_project), "restored_project_dir": str(target),
+                      "original_source_dir": str(old_source) if old_source else None,
+                      "restored_source_dir": str(new_source) if new_source else None}, annotation_hashes)
+    except ValueError as exc:
+        raise ArchiveError(f"Label review record integrity failure: {exc}") from exc
 
 
 def _rebind_annotation_hashes(path: Path, replacements: dict[str, str]) -> None:

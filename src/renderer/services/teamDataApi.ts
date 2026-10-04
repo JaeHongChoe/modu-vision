@@ -9,6 +9,12 @@ export interface TeamReadiness {ready:boolean;counts:{approved:number;pending:nu
 export interface EditLease {image_uuid:string;token:string;owner:string;expires_at:number}
 export interface TeamQueue {items:ImageReviewMetadata[];total:number;offset:number;limit:number}
 type ImageMutation={image:ImageReviewMetadata;lease_token?:string};
+/** E05: gold-sample label review. */
+export interface QualityProfile {retired?:{actor:string;at:string};profile_id:string;created_at:string;actor:string;task:'detection'|'segmentation';reference_labelset:string;candidate_labelset:string;reference_snapshot:{relative_path:string;annotation_sha256:string;mask_sha256:string|null}[];guideline_revision:{book_id:string;version:number;sha256:string}|null;class_match:string;shape_metric:string;tolerance:number;profile_sha256:string}
+export interface QualityConflict {conflict_id:string;kind:'missing'|'extra'|'class'|'geometry';reference_object?:string;candidate_object?:string;label?:string;reference_label?:string;candidate_label?:string;overlap?:number;bbox:number[];candidate_bbox?:number[]}
+export type QualityCounts=Record<'missing'|'extra'|'class'|'geometry',number>&{not_comparable?:number};
+export interface QualityReport {report_id:string;profile_id:string;created_at:string;task:string;images:{relative_path:string;image_path:string;labeled:boolean;conflicts:QualityConflict[];error?:string}[];counts:QualityCounts;agreeing_images:number;limitations:string[];stale:boolean;stale_reasons:string[];current:boolean;candidate_changes:string[];passes:boolean;approval_eligible:boolean}
+export interface QualityReportSummary {report_id:string;profile_id:string|null;created_at:string|null;task:string|null;counts:QualityCounts|null;agreeing_images:number|null;images:number|null;passes?:boolean;integrity_error?:string}
 const json=(method:string,body:unknown):RequestInit=>({method,body:JSON.stringify(body)});
 const imageAction=(image:ImageReviewMetadata,action:string,actor:string,extra:Record<string,unknown>={})=>request<ImageMutation>(`/api/team-data/images/${encodeURIComponent(image.image_uuid)}/${action}`,json('POST',{expected_revision:image.revision,actor,...extra}));
 export const teamDataApi={
@@ -24,4 +30,11 @@ export const teamDataApi={
  release:(image:ImageReviewMetadata,actor:string,token:string)=>imageAction(image,'lease/release',actor,{lease_token:token}),
  review:(image:ImageReviewMetadata,actor:string,decision:'approve'|'reject',reason:string)=>imageAction(image,'review',actor,{decision,reason}),
  adjudicate:(image:ImageReviewMetadata,actor:string,decision:'approve'|'reject',reason:string)=>imageAction(image,'adjudicate',actor,{decision,reason}),
+ qualityProfiles:()=>request<{profiles:QualityProfile[];gold_policy:{include_gold_in_training:boolean}}>('/api/team-data/quality/profiles'),
+ createQualityProfile:(body:{task:'detection'|'segmentation';reference_labelset:string;candidate_labelset:string;gold_images:string[];tolerance:number;actor?:string})=>request<QualityProfile>('/api/team-data/quality/profiles',json('POST',body)),
+ runQualityReport:(profileId:string)=>request<QualityReport>(`/api/team-data/quality/profiles/${encodeURIComponent(profileId)}/reports`,{method:'POST'}),
+ qualityReports:(profileId?:string)=>request<{reports:QualityReportSummary[]}>(`/api/team-data/quality/reports${profileId?`?profile_id=${encodeURIComponent(profileId)}`:''}`),
+ qualityReport:(reportId:string)=>request<QualityReport>(`/api/team-data/quality/reports/${encodeURIComponent(reportId)}`),
+ setGoldPolicy:(include:boolean,actor?:string)=>request<{include_gold_in_training:boolean}>('/api/team-data/quality/gold-policy',json('PUT',{include_gold_in_training:include,...(actor?{actor}:{})})),
+ retireQualityProfile:(profileId:string,actor:string)=>request<{profile_id:string;actor:string;at:string}>(`/api/team-data/quality/profiles/${encodeURIComponent(profileId)}/retire`,json('POST',{actor})),
 };

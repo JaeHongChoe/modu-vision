@@ -103,7 +103,9 @@ class SharedAuthorizationMiddleware:
             if path.startswith('/api/capture-intake/'):
                 delivery_allowed=(path.endswith('/register') and role in {'labeler','trainer','reviewer'}) or ((path.endswith(('/review','/adopt')) or path=='/api/capture-intake/drift/references') and role=='reviewer')
             if path.startswith('/api/team-data/'):
-                management=path in {'/api/team-data/books','/api/team-data/settings'} or path.endswith('/assign')
+                # E05: the label review's profiles, reports, retirement and gold policy are a reviewer's work too.
+                management=(path in {'/api/team-data/books','/api/team-data/settings'} or path.endswith('/assign')
+                            or path.startswith('/api/team-data/quality/'))
                 voting=path.endswith(('/review','/adjudicate'))
                 editing='/lease/' in path
                 team_allowed=(management or voting) and role=='reviewer' or editing and role in {'labeler','trainer','reviewer'}

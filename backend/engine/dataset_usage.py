@@ -17,11 +17,14 @@ def unused_image_paths(source=None):
     if source is None:
         return set()
     source=Path(source).resolve()
+    # Gold samples of the label review (E05) are its reference, not training or test data, unless the policy keeps them.
+    from backend.engine.annotation_quality import gold_image_paths
+    gold=gold_image_paths({'project_dir':str(project),'source_dataset_dir':str(source)})
     ledger=dataset_annotation_dir(source)/'metadata'/'workflow.json'
     if ledger.is_symlink():
         raise ValueError('Usage ledger cannot be a symbolic link')
     if not ledger.is_file():
-        return set()
+        return gold
     rows=json.loads(ledger.read_text(encoding='utf-8')).get('images',{})
     if not isinstance(rows,dict):
         raise ValueError('Invalid image usage ledger')
@@ -41,4 +44,4 @@ def unused_image_paths(source=None):
     scoped={**configuration_data,'project_dir':str(project),'source_dataset_dir':str(source),
             'annotations_dir':str(scoped_annotation_root(project/'annotations'))}
     excluded.update(training_excluded_paths(scoped,source))
-    return excluded
+    return excluded|gold

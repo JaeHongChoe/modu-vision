@@ -10,6 +10,10 @@ export type AccountState = {
   disabled: boolean;
 };
 
+export type ActorRequest = {
+  actor?: string;
+};
+
 export type AdvanceRequest = {
   expected_revision: number;
   relative_path: string;
@@ -647,6 +651,11 @@ export type GeometryMeasureRequest = {
   polygons?: Array<{ [key: string]: unknown }>;
 };
 
+export type GoldPolicyRequest = {
+  include_gold_in_training: boolean;
+  actor?: string;
+};
+
 export type HTTPMESConfig = {
   url: string;
   timeout?: number;
@@ -1071,6 +1080,15 @@ export type ProjectUpdateRequest = {
 export type ProtocolTest = {
   protocol: "http" | "modbus";
   mode?: "success" | "reject" | "timeout";
+};
+
+export type QualityProfileRequest = {
+  actor?: string;
+  task: "detection" | "segmentation";
+  reference_labelset: string;
+  candidate_labelset: string;
+  gold_images: Array<string>;
+  tolerance?: number;
 };
 
 export type QueueRequest = {
@@ -1769,6 +1787,9 @@ export interface ApiRequestBody {
   "POST /api/team-data/images/{image_uuid}/lease/release": OwnedLeaseRequest;
   "POST /api/team-data/images/{image_uuid}/lease/renew": OwnedLeaseRequest;
   "POST /api/team-data/images/{image_uuid}/review": backend__api__routes_team_data__ReviewRequest;
+  "PUT /api/team-data/quality/gold-policy": GoldPolicyRequest;
+  "POST /api/team-data/quality/profiles": QualityProfileRequest;
+  "POST /api/team-data/quality/profiles/{profile_id}/retire": ActorRequest;
   "PUT /api/team-data/settings": SettingsRequest;
   "POST /api/training-workspace/import-weights": WeightImportRequest;
   "POST /api/training-workspace/readiness": ReadinessRequest;

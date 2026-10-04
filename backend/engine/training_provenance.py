@@ -23,16 +23,19 @@ def bind_training_version(project, source, supplied_version=None):
         raise HTTPException(409,'Training dataset version does not match active source, labels, and split')
     if team_binding is None:team_binding=training_binding(project,source)
     receipt=directory/'team-data.json'
-    team_digest=hashlib.sha256(json.dumps(team_binding,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
     if receipt.is_symlink():raise ValueError('Team-data training receipt cannot be linked')
     if receipt.exists():
         previous=json.loads(receipt.read_text(encoding='utf-8'))
-        if previous!=team_binding:raise ValueError('Team-data policy differs from the selected training version; create a new version')
+        if previous!=team_binding and not _bound_before_gold(previous,team_binding):
+            raise ValueError('Team-data policy differs from the selected training version; create a new version')
+        # Return the accepted frozen body without rewriting immutable receipt bytes.
+        team_binding=previous
     else:
         with tempfile.NamedTemporaryFile('w',encoding='utf-8',dir=directory,prefix='team-data-',delete=False) as handle:
             json.dump(team_binding,handle,ensure_ascii=False,indent=2);handle.flush();os.fsync(handle.fileno());temporary=Path(handle.name)
         try:os.replace(temporary,receipt)
         finally:temporary.unlink(missing_ok=True)
+    team_digest=hashlib.sha256(json.dumps(team_binding,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
     split_rows=[row['sha256'] for row in manifest['files'] if row['origin']=='split']
     # Folder partitions and patch manifests are also exact split evidence.
     split_digest = split_rows[0] if len(split_rows)==1 else hashlib.sha256(json.dumps(
@@ -42,6 +45,26 @@ def bind_training_version(project, source, supplied_version=None):
             'dataset_fingerprint':manifest['dataset_fingerprint'],'manifest_sha256':manifest['content_digest'],
             'split_sha256':split_digest, 'split_binding': 'saved_manifest' if split_rows else 'versioned_dataset_layout','version_dir':str(directory),
             'team_data':team_binding,'team_data_sha256':team_digest}
+
+
+def _valid_gold_receipt(gold):
+    if not isinstance(gold,dict) or set(gold)!={'include_gold_in_training','gold_images','gold_set_sha256'}:
+        return False
+    count=gold['gold_images'];digest=gold['gold_set_sha256']
+    return (isinstance(gold['include_gold_in_training'],bool) and type(count) is int and count>=0
+            and isinstance(digest,str) and len(digest)==64 and all(char in '0123456789abcdef' for char in digest)
+            and (count!=0 or digest==hashlib.sha256(b'[]').hexdigest()))
+
+
+def _default_empty_gold(gold):
+    return _valid_gold_receipt(gold) and gold['gold_images']==0 and gold['include_gold_in_training'] is False
+
+
+def _bound_before_gold(previous,current):
+    """A version bound before gold images had a policy (E05) has no 'gold' in its receipt. It still matches while no gold
+    image is set aside under the default policy, which is what it was bound under; any gold image needs a new version."""
+    return (isinstance(previous,dict) and 'gold' not in previous and _default_empty_gold(current.get('gold'))
+            and previous=={key:value for key,value in current.items() if key!='gold'})
 
 
 def persist_model_binding(output,binding,*,checkpoint=True):
@@ -98,6 +121,14 @@ def validate_training_binding(binding):
             current=training_binding(configuration,Path(frozen['scope']['source']))
             if any(current[key]!=frozen[key] for key in ('book_sha256','policy_sha256','eligibility_sha256')):
                 raise ValueError('Team-data guidance, review policy or eligible cohort changed during training')
+            if 'gold' in frozen:
+                gold_matches=(_valid_gold_receipt(frozen['gold']) and _valid_gold_receipt(current.get('gold'))
+                              and frozen['gold']==current['gold'])
+            else:
+                # Both absent retains the legitimate producer contract before E05.
+                gold_matches='gold' not in current or _default_empty_gold(current['gold'])
+            if not gold_matches:
+                raise ValueError('Team-data gold policy or set changed during training')
     manifest=json.loads((directory/'manifest.json').read_text(encoding='utf-8'))
     from backend.api.routes_dataset_versions import _manifest_digest, _file_hash, _safe_backup_path
     if manifest.get('content_digest')!=binding['manifest_sha256'] or _manifest_digest(manifest)!=binding['manifest_sha256']:

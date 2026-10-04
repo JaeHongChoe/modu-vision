@@ -99,7 +99,7 @@ interface AnnotationState {
 
   // Actions
   setTask: (task: TaskType) => void;
-  setImages: (images: ImageMeta[], initialIndex?: number) => Promise<boolean>;
+  setImages: (images: ImageMeta[], initialIndex?: number, externalSelectionPath?: string | null) => Promise<boolean>;
   syncDatasetImages: (images: ImageMeta[]) => Promise<boolean>;
   setActiveImage: (image: ImageMeta | null) => Promise<void>;
   selectImageByIndex: (index: number) => Promise<void>;
@@ -193,7 +193,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setTask: (task) => set({ task }),
 
-  setImages: async (images, initialIndex = 0) => {
+  setImages: async (images, initialIndex = 0, externalSelectionPath = null) => {
     if (get().isDirty) {
       const saved = await get().saveAnnotations();
       if (!saved || get().isDirty) return false;
@@ -203,7 +203,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({
       images,
       ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
-      externalSelectionPath: null,
+      externalSelectionPath: current?.file_path === externalSelectionPath ? externalSelectionPath : null,
       metadata: null,
       currentImageIndex: idx,
       currentImage: current,

@@ -161,7 +161,11 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
     scope = graph_truth_scope(project,graph,models)
     participating_tasks = _participating_tasks(graph) if scope['task'] == 'mixed' else None
     split_file, assignments = _split(project); source = Path(project['source_dataset_dir']).resolve()
-    selected = sorted(relative_paths if relative_paths is not None else [name for name,part in assignments.items() if part=='test'])
+    # Gold samples of the label review (E05) are its reference, not test truth, unless the dataset policy keeps them.
+    from backend.engine.annotation_quality import gold_image_paths
+    gold = gold_image_paths(project)
+    selected = sorted(relative_paths if relative_paths is not None else
+                      [name for name,part in assignments.items() if part=='test' and str((source/name).resolve()) not in gold])
     if not selected or len(selected)>5000 or len(selected)!=len(set(selected)): raise ValueError('Choose 1–5000 unique held-out test images')
     if not isinstance(name,str) or not name.strip() or len(name)>200: raise ValueError('Enter a cohort name under 200 characters')
     selected_hashes = set(); snapshots = []
@@ -174,6 +178,8 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
             if (path.is_absolute() or '..' in path.parts or '\\' in relative or assignments.get(relative) != 'test'):
                 raise ValueError('Every cohort image must belong to the saved held-out test split')
             image = source/path
+            if str(image.resolve()) in gold:
+                raise ValueError(f'{relative} is a gold sample of the label review; gold images are not test truth unless the dataset policy keeps them')
             # Keep the resolver basis identical to the graph's recorded roles.
             roles = scope['class_semantics']['roles'] if any(b=='explicit' for b in scope['class_semantics']['basis'].values()) else None
             truth = read_truth(project,str(image),task=scope['task'],classes=scope['classes'],class_roles=roles,
@@ -221,6 +227,9 @@ def _cohort_changes(project, cohort):
             or scope['labelset_id'] != project.get('active_labelset_id','default')):
         return ['source_or_labelset_changed']
     if dm._hash(Path(cohort['split_path'])) != cohort['split_sha256']: reasons.append('held_out_split_changed')
+    from backend.engine.annotation_quality import gold_image_paths
+    gold = gold_image_paths(project)
+    reasons += [f"gold_image:{sample['relative_path']}" for sample in cohort['samples'] if str(Path(sample['image_path']).resolve()) in gold]
     root = _root(project)/'cohorts'/cohort['cohort_id']
     for sample in cohort['samples']:
         if dm._hash(root/sample['frozen_image']) != sample['input_sha256']: reasons.append(f"frozen_input_changed:{sample['relative_path']}")

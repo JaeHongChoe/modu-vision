@@ -370,12 +370,17 @@ def work_queue(project, source, assignee=None, state=None, offset=0, limit=100):
 
 
 def _training_state(ledger, project, source, root, annotations):
-    settings = _state(ledger)['settings']; counts = dict.fromkeys(('approved', 'pending', 'rejected', 'disputed', 'unused', 'total', 'eligible'), 0)
+    settings = _state(ledger)['settings']; counts = dict.fromkeys(('approved', 'pending', 'rejected', 'disputed', 'unused', 'gold', 'total', 'eligible'), 0)
     eligibility = []; blockers = []; books = _state(ledger)['books']; book = books[-1] if books else None
     unmapped=set()
+    # Gold samples of the label review (E05) leave training unless the dataset policy keeps them, as in the loaders.
+    from backend.engine.annotation_quality import gold_image_paths, gold_receipt
+    quality_scope = {'project_dir': str(root), 'source_dataset_dir': str(source)}
+    gold = gold_image_paths(quality_scope)
     for path in _inventory(project, source):
         row = dm._ensure(ledger, root, source, path, annotations); team = ensure_image_team(row); counts['total'] += 1
         if row.get('usage_state') == 'not_used': counts['unused'] += 1; continue
+        if str(Path(path).resolve()) in gold: counts['gold'] += 1; continue
         status = 'approved' if row['workflow_state'] == 'approved' else team['review_status']
         counts[status if status in {'approved', 'rejected', 'disputed'} else 'pending'] += 1
         if not settings['approved_only_training'] or row['workflow_state'] == 'approved':
@@ -402,7 +407,7 @@ def _training_state(ledger, project, source, root, annotations):
             'book_version': book['version'] if book else 0, 'book_sha256': book['sha256'] if book else None,
             'policy_sha256': policy_sha256(ledger), 'eligibility_sha256': _digest(eligibility),
             'eligible_image_uuids': [row['image_uuid'] for row in eligibility],
-            'eligibility': eligibility, 'settings': copy.deepcopy(settings)}
+            'eligibility': eligibility, 'settings': copy.deepcopy(settings), 'gold': gold_receipt(quality_scope)}
 
 
 def training_readiness(project, source):
@@ -420,7 +425,7 @@ def training_binding(project, source):
         mismatches = [reason for reason in result['blockers'] if reason.startswith('활성 라벨북')]
         if mismatches:
             raise ValueError(' · '.join(mismatches))
-        return {key: result[key] for key in ('book_version', 'book_sha256', 'policy_sha256', 'eligibility_sha256', 'eligibility', 'settings')} | {
+        return {key: result[key] for key in ('book_version', 'book_sha256', 'policy_sha256', 'eligibility_sha256', 'eligibility', 'settings', 'gold')} | {
             'scope': {'project_id': project['id'], 'source': str(source), 'labelset_id': project.get('active_labelset_id', 'default')}}
 
 

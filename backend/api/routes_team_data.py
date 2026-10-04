@@ -163,3 +163,80 @@ def review(image_uuid: str, body: ReviewRequest, request: Request):
 def adjudicate(image_uuid: str, body: ReviewRequest, request: Request):
     project, source = _context(request); actor = _identity(request, body.actor, {'owner','reviewer'})
     return _run(lambda: td.adjudicate_image(project, source, image_uuid, body.expected_revision, actor, body.decision, body.reason))
+
+
+class QualityProfileRequest(ActorRequest):
+    """A gold-sample label review profile (E05)."""
+    task: Literal['detection', 'segmentation']
+    reference_labelset: str = Field(..., min_length=1, max_length=64)
+    candidate_labelset: str = Field(..., min_length=1, max_length=64)
+    gold_images: list[str] = Field(..., min_length=1, max_length=2000)
+    tolerance: float = Field(0.5, gt=0.1, le=1.0)
+
+
+class GoldPolicyRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    include_gold_in_training: bool
+    actor: str = Field('this computer', min_length=1, max_length=100)
+
+
+QUALITY_ROLES = {'owner', 'reviewer'}  # E05: who makes profiles, runs reports, retires them and sets the gold policy
+
+
+def _quality(call):
+    from backend.engine import annotation_quality as aq
+    try:
+        return call(aq)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, 'No such label review profile or report.') from exc
+    except (ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/quality/profiles')
+def quality_profiles(request: Request):
+    project, _source = _context(request)
+    return _quality(lambda aq: {'profiles': aq.list_profiles(project), 'gold_policy': aq.gold_policy(project)})
+
+
+@router.post('/quality/profiles')
+def create_quality_profile(body: QualityProfileRequest, request: Request):
+    project, _source = _context(request)
+    actor = _identity(request, body.actor, QUALITY_ROLES)
+    return _quality(lambda aq: aq.create_profile(project, task=body.task, reference_labelset=body.reference_labelset,
+                                                 candidate_labelset=body.candidate_labelset, gold_images=body.gold_images,
+                                                 tolerance=body.tolerance, actor=actor))
+
+
+@router.post('/quality/profiles/{profile_id}/reports')
+def run_quality_report(profile_id: str, request: Request):
+    project, _source = _context(request)
+    _identity(request, 'this computer', QUALITY_ROLES)
+    return _quality(lambda aq: aq.run_report(project, profile_id))
+
+
+@router.post('/quality/profiles/{profile_id}/retire')
+def retire_quality_profile(profile_id: str, body: ActorRequest, request: Request):
+    """Stop using a profile: its gold images return to ordinary use; its reports stay readable (stale)."""
+    project, _source = _context(request)
+    actor = _identity(request, body.actor, QUALITY_ROLES)
+    return _quality(lambda aq: {'profile_id': profile_id, **aq.retire_profile(project, profile_id, actor)})
+
+
+@router.get('/quality/reports')
+def quality_reports(request: Request, profile_id: Optional[str] = None):
+    project, _source = _context(request)
+    return _quality(lambda aq: {'reports': aq.list_reports(project, profile_id)})
+
+
+@router.get('/quality/reports/{report_id}')
+def read_quality_report(report_id: str, request: Request):
+    project, _source = _context(request)
+    return _quality(lambda aq: aq.read_report(project, report_id))
+
+
+@router.put('/quality/gold-policy')
+def set_quality_gold_policy(body: GoldPolicyRequest, request: Request):
+    project, _source = _context(request)
+    actor = _identity(request, body.actor, QUALITY_ROLES)
+    return _quality(lambda aq: aq.set_gold_policy(project, body.include_gold_in_training, actor))

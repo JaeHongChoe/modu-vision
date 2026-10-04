@@ -297,10 +297,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         index = images.length - 1;
       }
       if (!sameContext()) return false;
-      const opened = await useAnnotationStore.getState().setImages(images, index);
+      // Mark an exact result selection with the image, before its annotation read
+      // yields to the mounted labeling view's gallery synchronization.
+      const externalSelectionPath = dataset.images.some(image => image.file_path === filePath) ? null : filePath;
+      const opened = await useAnnotationStore.getState().setImages(images, index, externalSelectionPath);
       if (!opened || !sameContext()) return false;
-      // Preserve an exact result selection when its gallery page/filter excludes it.
-      useAnnotationStore.setState({ externalSelectionPath: dataset.images.some(image => image.file_path === filePath) ? null : filePath });
       await get().setStep(2);
       return sameContext() && get().activeStep === 2 && useAnnotationStore.getState().currentImage?.file_path === filePath;
     } catch (error) {
