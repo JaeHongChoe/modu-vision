@@ -14,9 +14,11 @@ export async function submitModelTraining<T>(task:ModelFamily,options:Record<str
  if(!target.isLoaded)throw new Error('실행 서버 설정을 먼저 확인하세요.');
  const profile=target.profiles.find(row=>row.id===target.selectedProfileId);if(!profile)throw new Error('선택한 실행 서버를 찾지 못했습니다.');
  const project=useProjectStore.getState().project;if(!project?.source_dataset_dir)throw new Error('프로젝트 원본을 연결하세요.');
- const {dataset_path,device,background,warm_start_job_id,...config}=options;
+ const {dataset_path,device,background,warm_start_job_id,queue,priority,max_runtime_s,...config}=options;
  const row=await request<ExecutionIdentity>('/api/compute/jobs',{method:'POST',body:JSON.stringify({task,operation:'train',dataset_path:project.source_dataset_dir,
-   family_dataset_path:dataset_path,compute_profile_id:profile.id,device:profile.gpu_selector?'cuda:0':'cpu',config_overrides:config,...(warm_start_job_id?{warm_start_job_id}:{})})});
+   family_dataset_path:dataset_path,compute_profile_id:profile.id,device:profile.gpu_selector?'cuda:0':'cpu',config_overrides:config,
+   ...(queue!==undefined?{queue}:{}),...(priority!==undefined?{priority}:{}),...(max_runtime_s!==undefined?{max_runtime_s}:{}),
+   ...(warm_start_job_id?{warm_start_job_id}:{})})});
  return normalizeExecution({...row,compute_profile_id:profile.id,dataset_path:dataset_path,source_dataset_path:project.source_dataset_dir}) as T;
 }
 export async function controlModelTraining<T>(row:ExecutionIdentity,action:'status'|'cancel',local:()=>Promise<T>):Promise<T>{

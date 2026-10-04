@@ -1,6 +1,6 @@
 """Owned patch preparation and the standard completed-checkpoint lifecycle."""
 from pathlib import Path
-import time
+import logging
 import uuid
 
 from fastapi import APIRouter,HTTPException,Request
@@ -32,6 +32,9 @@ class TrainRequest(BaseModel):
     device:str='cpu'
     warm_start_job_id:str|None=None
     dataset_version_id:str|None=None
+    queue:bool=True
+    priority:int=Field(0,ge=-10,le=10)
+    max_runtime_s:float|None=Field(None,gt=0,le=7*24*3600)
 
 class EvaluateRequest(BaseModel):
     job_id:str
@@ -81,10 +84,11 @@ def datasets(request:Request):
 @router.post('/train')
 def train(body:TrainRequest,request:Request):
     project=get_current_project(request)
+    ledger=None
     try:
         data=_owned(project,body.dataset_path)
         if body.backbone not in {'dinov3_vits16','dinov3_vitb16'}:raise ValueError('Patch training requires a supported DINOv3 pretrained backbone')
-        from backend.api.routes_training import training_job_manager
+        from backend.api.routes_training import training_job_manager,TrainingStartRequest,_reserve_training_job,_LEDGER_ERRORS
         from backend.engine.training_provenance import bind_family_training
         from backend.engine.warm_start import architecture_for,resolve_warm_start_parent
         options={'backbone':body.backbone,'epochs':body.epochs,'batch_size':body.batch_size,
@@ -98,15 +102,41 @@ def train(body:TrainRequest,request:Request):
             parent=resolve_warm_start_parent(body.warm_start_job_id,Path(project['models_dir']),source,
                 'patch_classification',architecture_for('patch_classification','fast',options))
             if tuple(data.classes)!=parent.classes:raise ValueError('Patch parent class mapping differs')
+        # Bind idempotency to the client's selected settings, before inferred
+        # weights, family-version writes, a job directory or worker launch.
+        selected={key:value for key,value in body.model_dump().items()
+            if key in {'backbone','epochs','batch_size','image_size','learning_rate','pretrained_checkpoint','pretrained_sha256'} and value is not None}
+        admission=TrainingStartRequest(task='patch_classification',dataset_path=str(data.root),
+            device=body.device,config_overrides=selected,warm_start_job_id=body.warm_start_job_id,
+            dataset_version_id=body.dataset_version_id,queue=body.queue,priority=body.priority,max_runtime_s=body.max_runtime_s)
+        try:
+            ledger,replay=_reserve_training_job(request,admission,data.root,Path(project['models_dir']))
+            if replay is not None:return replay
+            if body.max_runtime_s is not None:
+                ledger.store.set_budget(ledger.job_id,{'max_runtime_s':body.max_runtime_s,'max_attempts':1})
+        except _LEDGER_ERRORS as exc:raise HTTPException(503,'Patch admission or runtime budget could not be recorded; no worker was launched') from exc
         binding=bind_family_training(project,data.root,'patch_classification',body.dataset_version_id)
-        job_id=f'job_{int(time.time())}_{uuid.uuid4().hex[:6]}'
-        output=Path(project['models_dir'])/job_id
+        job_id=ledger.job_id;output=Path(project['models_dir'])/job_id
         record=training_job_manager.start_job(job_id,'patch_classification',str(data.root),str(output),
             device=body.device,config_overrides=options,source_dataset_path=source,
-            dataset_fingerprint=binding['dataset_fingerprint'],dataset_binding=binding,warm_start=parent)
-        return {'job_id':job_id,'status':record.status,'dataset_path':str(data.root),'source_dataset_path':source,
+            dataset_fingerprint=binding['dataset_fingerprint'],dataset_binding=binding,warm_start=parent,
+            ledger=ledger,queue_when_busy=body.queue,priority=body.priority,
+            budget={'max_runtime_s':body.max_runtime_s,'max_attempts':1} if body.max_runtime_s is not None else None)
+        response={'job_id':job_id,'status':record.status,'dataset_path':str(data.root),'source_dataset_path':source,
                 'training_provenance':binding}
-    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+        ledger.store.set_response(job_id,response)
+        return response
+    except Exception as exc:
+        if ledger is not None:
+            try:
+                if ledger.store.get(ledger.job_id).state=='accepted':
+                    ledger.finished('failed',{'message':str(exc.detail if isinstance(exc,HTTPException) else exc)})
+            except _LEDGER_ERRORS:
+                # Keep the original refusal; an unavailable store is not proof
+                # of a recorded terminal state or permission to launch again.
+                logging.getLogger(__name__).warning('Patch admission cleanup could not be recorded for %s',ledger.job_id)
+        if isinstance(exc,(ValueError,OSError)):raise HTTPException(422,str(exc)) from exc
+        raise
 
 @router.post('/evaluate')
 def evaluate(body:EvaluateRequest,request:Request):

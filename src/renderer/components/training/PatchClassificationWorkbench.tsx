@@ -8,9 +8,18 @@ import { ProgramField, TrainingDeviceSelector, programButton, programInput, prog
 import { JobProgressView } from './JobProgressView';
 import { AutoDLWorkbench } from './AutoDLWorkbench';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {defaultTrainingScheduling,trainingSchedulingOptions,TrainingSchedulingSettings} from './TrainingSchedulingSettings';
+import type {TrainingSchedulingOptions} from '../../stores/useTrainingStore';
 
 export function PatchClassificationWorkbench() {
   const state = useProgramWorkbench('patch');
+  const {selectedProfileId}=useComputeStore();
+  const [scheduling,setScheduling]=useState({...defaultTrainingScheduling});
+  let schedulingOptions:TrainingSchedulingOptions={};let schedulingError:string|null=null;
+  try{schedulingOptions=trainingSchedulingOptions(scheduling,!!selectedProfileId);}
+  catch(cause){schedulingError=cause instanceof Error?cause.message:String(cause);}
+  useEffect(()=>{setScheduling({...defaultTrainingScheduling});},[state.scope]);
   const [patchSize, setPatchSize] = useState(256); const [stride, setStride] = useState(128);
   const [normalClass, setNormalClass] = useState('OK'); const [overlap, setOverlap] = useState(.05);
   const [backbone, setBackbone] = useState('dinov3_vits16'); const [checkpoint, setCheckpoint] = useState('');
@@ -33,10 +42,10 @@ export function PatchClassificationWorkbench() {
     state.setNotice(`정답 패치 ${prepared.patch_count || 0}개를 프로젝트에 준비했습니다.`);
   });
   const train = () => state.action('패치 학습 등록', async () => {
-    if (!state.dataset) return;
+    if (!state.dataset || schedulingError) return;
     const row = await modelTrainingProgram.patch.train({dataset_path: state.dataset.dataset_path, backbone, epochs, batch_size: batch,
       image_size: imageSize, learning_rate: learningRate, device, ...(parent ? {warm_start_job_id: parent} : {}),
-      ...(checkpoint.trim() ? {pretrained_checkpoint: checkpoint.trim()} : {})});
+      ...(checkpoint.trim() ? {pretrained_checkpoint: checkpoint.trim()} : {}),...schedulingOptions});
     if (state.isCurrent()) {state.setJob(row); setEvaluation(null);}
   });
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
@@ -65,7 +74,8 @@ export function PatchClassificationWorkbench() {
     <details className="mt-3 text-slate-400"><summary className="cursor-pointer">사전학습 파일 지정</summary><input aria-label="패치 DINOv3 사전학습 파일" placeholder="비워 두면 검증된 기본 pretrained 사용" value={checkpoint} onChange={e => setCheckpoint(e.target.value)} className={programInput} /></details>
     <div className="mt-3"><ProgramField label="호환 완료 모델에서 재학습"><select value={parent} onChange={e => setParent(e.target.value)} className={programInput} disabled={disabled}><option value="">새 후보 학습</option>{parents.map((row, index) => <option key={row.job_id} value={row.job_id}>{parentCandidateLabel(row,index)}</option>)}</select></ProgramField></div>
     <p className="mt-1 text-slate-400">{parentCandidateNotice}</p>
-    <div className="my-4"><button type="button" onClick={() => void train()} disabled={!state.dataset || disabled || epochs < 1 || batch < 1 || learningRate <= 0} className={programPrimary}>패치 분류 후보 학습</button></div>
+    <div className="mt-4"><TrainingSchedulingSettings value={scheduling} onChange={setScheduling} remote={!!selectedProfileId} disabled={disabled} error={schedulingError} /></div>
+    <div className="my-4"><button type="button" onClick={() => void train()} disabled={!state.dataset || disabled || !!schedulingError || epochs < 1 || batch < 1 || learningRate <= 0} className={programPrimary}>패치 분류 후보 학습</button></div>
     <JobProgressView job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} onReconnect={() => void state.reconnect()} />
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 패치 분류 후보"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · {row.job_id.slice(-6)}</option>)}</select></ProgramField></div>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('시험 평가', async () => {const result = await modelTrainingProgram.patch.evaluate(state.modelId); if (state.isCurrent()) setEvaluation(result);})}>시험 평가</button>

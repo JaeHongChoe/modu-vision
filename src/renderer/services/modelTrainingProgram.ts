@@ -1,6 +1,7 @@
 import type {ParentCandidate} from '../types/parentCandidate';
 import { request } from './api';
 import {submitModelTraining} from './modelExecution';
+import type {TrainingSchedulingOptions} from '../stores/useTrainingStore';
 
 export type ModelFamily = 'classification' | 'segmentation' | 'detection' | 'anomaly' |
   'patch_classification' | 'ocr' | 'rotated_detection' | 'rotation' | 'defect_gan' | 'enhancement';
@@ -37,7 +38,7 @@ export const modelTrainingProgram = {
     prepare: (options: {patch_size: number; stride: number; normal_class: string; minimum_overlap: number}) => post<PreparedDataset>('/api/patch-classification/prepare', options),
     manifest: (dataset_path: string) => request<PreparedDataset>(`/api/patch-classification/manifest?${query({dataset_path})}`),
     train: (options: {dataset_path: string; backbone: string; epochs: number; batch_size: number; image_size: number;
-      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string}) => submitModelTraining('patch_classification',options,()=>post<ProgramJob>('/api/patch-classification/train', options)),
+      learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string} & TrainingSchedulingOptions) => submitModelTraining('patch_classification',options,()=>post<ProgramJob>('/api/patch-classification/train', options)),
     status: (job_id: string) => request<ProgramJob>(`/api/training/status?${query({job_id})}`),
     jobs: () => request<{jobs: ProgramJob[]}>('/api/training/jobs'),
     cancel: (job_id: string) => post<ProgramJob>('/api/training/stop', {job_id}),

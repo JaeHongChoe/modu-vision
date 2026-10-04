@@ -15,6 +15,13 @@ test('remote specialist task opens its saved model and input rather than executi
  const row={key:'training:worker:job_execute',id:'job_execute',kind:'training',task:'ocr',status:'completed',source:'/source',labelset:'one',transport:'worker',raw:{execution_job_id:'job_execute',model_id:'saved',dataset_path:'/prepared'}};
  const value=m.saveTaskHandoff(storage,scope,row);assert.equal(value.jobId,'saved');assert.equal(value.executionJobId,'job_execute');assert.equal(value.datasetPath,'/prepared');
 });
+test('specialist remote scheduling is serialized at admission level and never leaks into model configuration',async()=>{
+ const calls=[];const m=load('../../services/modelExecution.ts',{'./api':{request:async(url,options)=>{calls.push(JSON.parse(options.body));return{job_id:'exec',model_id:'saved',status:'queued'};}},'../stores/useComputeStore':{useComputeStore:{getState:()=>({selectedProfileId:'worker',profiles:[{id:'worker'}],isLoaded:true})}},'../stores/useProjectStore':{useProjectStore:{getState:()=>({project:{source_dataset_dir:'/source'}})}}});
+ await m.submitModelTraining('patch_classification',{dataset_path:'/patch',epochs:3,queue:false,priority:0,max_runtime_s:90},()=>assert.fail('remote selection'));
+ assert.deepEqual(calls[0].config_overrides,{epochs:3});assert.equal(calls[0].queue,false);assert.equal(calls[0].priority,0);assert.equal(calls[0].max_runtime_s,90);
+ await m.submitModelTraining('ocr',{dataset_path:'/ocr',epochs:2},()=>assert.fail('remote selection'));
+ for(const key of ['queue','priority','max_runtime_s'])assert.equal(key in calls[1],false);
+});
 test('flow binding retains existing DAG and selected identity; GAN never becomes an inspection node',()=>{
  const m=load('../flowchart/modelFlowHandoff.ts',{'../training/taskHandoff':load('taskHandoff.ts')});const original={id:'flow',name:'Existing',nodes:[{id:'input',position:{x:0,y:0},data:{node_type:'input'}},{id:'old',position:{x:300,y:0},data:{node_type:'inspection',task:'classification',model_job_id:'old_model'}}],edges:[{id:'e',source:'input',target:'old'}]};
  const before=JSON.stringify(original);const candidate={job_id:'saved',task:'ocr',source_dataset_path:'/source',capabilities:{role:'inspection'}};
