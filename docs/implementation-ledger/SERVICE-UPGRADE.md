@@ -4,9 +4,25 @@
 
 초기 기준 소스: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`. 목표 플랫폼은 Windows 11 x64다. 최초 실행 근거는 macOS 개발 환경에서 수집했으며, 최신 소스와 추가 플랫폼 근거는 아래 날짜별 기록을 따른다. 구현·계약 테스트·화면·저장 및 재열기·실제 대상 실행·서명·모델 품질을 각각 기록한다.
 
-## 2026-10-04 진척 집계 갱신
+<a id="calibration-audit-preflight-20261004"></a>
 
-확인 소스: `e376db11e586a1866658349da6888c8eaf783d1b`, tree `ea8248352a8fe7387403eb98d41123e4f1d5551d`. [PR #3](https://github.com/JaeHongChoe/modu-vision/pull/3), [PR #4](https://github.com/JaeHongChoe/modu-vision/pull/4), [PR #5](https://github.com/JaeHongChoe/modu-vision/pull/5)는 모두 main에 병합됐다. Claude의 소스 담당은 Codex로 인계됐다. 아래는 최신 집계이며, 이후 절의 이전 날짜 결과는 해당 소스의 역사 기록이다.
+## 2026-10-04 교정·변경 기록·배포 전 점검 · 99317cf
+
+코드 소스 `99317cf08ff612e35a04d3aba70647687d7dc341`을 기존 main에 일반 push했다. [소스별 검증 기록](2026-10-04-calibration-audit-preflight.json)에 변경된 58개 코드 경로의 SHA256과 실제 실행 receipt hash를 저장했다.
+
+- E03: 실제 치수 교정 artifact의 카메라·설정·원본 크기·유효 영역 일치 검사와 패키지 보존. 정상 영역의 측정은 유지하고 영역 밖 경로/마스크를 REVIEW로 거절한다. 수동 교정을 켜고 끌 때 기존 임계값 단위를 유지한다.
+- E04: 저장·활성화 전 차이와 사유 확인, 인증 문맥의 작성자, 불변 before/after 기록 및 동시 편집 충돌 거절. 화면 문맥 전환 뒤 도착한 활성화 응답은 새 기준 버전을 덮어쓰지 않는다.
+- E07: 배포 전 모델·교정·runtime·target 의존성을 노드별로 표시하고 해시를 다시 확인한다. 대상 변경 뒤 늦은 점검 응답으로 준비 상태를 표시하지 않는다. 저장·재열기와 패키지 CLI 계약을 포함한다.
+
+현재 별도 게시 진척은 **확장 구현 slice 15개 + 데이터·라벨링 개선 영역 2개**다. 부모 작업의 구현 **24 verified/58 pending** 및 전체 acceptance는 그대로다. 세 slice는 S3-08/S5-10/S5-05 등의 일부 범위와 겹치므로 부모 완료 수에 더하지 않는다.
+
+로컬 통합 검사: backend **226 통과**, renderer **524 통과**, 타입·생성 API·계획 검사 통과, browser **31 통과/0 flaky**. Browser31 중23개는 실제 renderer와 격리 backend,8개는 실제 ReactDOM/store에 지연 transport fixture를 붙인 경쟁 상태 검사다. 종료된 소유 backend23개, page error0, blocked loopback request0을 확인했다. Console의 connection-refused12건은 요청 URL/시각을 남기지 않아 원인 분류가 완료되지 않았다. 화면 assertion 통과를 console 무오류 판정으로 확대하지 않는다. 개별 E03/수동/활성화 검사는 통합 검사와 겹치므로 합산하지 않는다.
+
+Linux run37180963980는 backend1127 통과/3 skip, renderer524 통과, browser72 통과/opt-in1 skip으로 성공했다. 실제 ZIP의 바이트·SHA256과 JUnit/화면 실행 기록을 대조했다. Console 무오류와 전체 실행 시점의 소스 청결성은 별도 판정하지 않았다. Windows run37180963992는 backend853 통과/5 실패/12 skip으로 종료됐으며, renderer524개와 실제 Electron2개는 통과했다. 실패5건은 테스트의 UTF-8 읽기와 경로 표기 문제였다. 수정 소스 `7722537435121e2fcc3b1a7fe8bed93ecf8047aa`는 테스트6줄만 변경하고 모든 assertion을 보존한다. 독립 검토와 로컬58개 재검사를 통과했으며, 새 native Windows 실행은 별도로 확인해야 한다. 이 문서 작성 시점에는 Windows 전체 통과로 판정하지 않았다. 원래993의226/524/31 결과와 수정 후58개는 서로 겹치므로 합산하지 않는다. GPU/원격 작업은 사용자 네트워크 이동으로 계속 보류한다. Windows11 설치·SCM·실장비 ACK·대표 모델 품질 및 부모 전체 acceptance는 미완료다.
+
+## 2026-10-04 부모 진척 근거 · e376db1
+
+확인 소스: `e376db11e586a1866658349da6888c8eaf783d1b`, tree `ea8248352a8fe7387403eb98d41123e4f1d5551d`. [PR #3](https://github.com/JaeHongChoe/modu-vision/pull/3), [PR #4](https://github.com/JaeHongChoe/modu-vision/pull/4), [PR #5](https://github.com/JaeHongChoe/modu-vision/pull/5)는 모두 main에 병합됐다. Claude의 소스 담당은 Codex로 인계됐다. 아래는 e376db1 소스에서 확인한 집계이며, 새 slice는 앞 절에 따로 기록한다.
 
 - 82개 부모 작업의 소프트웨어 구현: **verified 24 / pending 58**. S1-10, S2-01, S6-07의 구현 근거를 최신 source-bound 실행과 대조해 pending에서 verified로 갱신했다. 각 작업의 다른 acceptance 차원은 유지했다.
 - 별도의 게시 진척: **확장 구현 slice 12개 + 추가 데이터·라벨링 개선 영역 2개**. 아래 14행은 부모 작업과 겹치므로 24에 더하지 않는다.

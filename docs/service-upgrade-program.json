@@ -8838,7 +8838,7 @@
    "S5-08"
   ],
   "last_verified_on": "2026-10-04",
-  "git_publication": "Main e376db11e586a1866658349da6888c8eaf783d1b: independently verified PR #3 extension batch (6885e8b), PR #4 NQA4 (d1300cc), PR #5 E06/operator fixture (e376db1), all merged. Claude has handed off source ownership to Codex.",
+  "git_publication": "Main 99317cf08ff612e35a04d3aba70647687d7dc341: prior PR #3/#4/#5 retained; E03 calibration, E04 immutable change audit and E07 dependency preflight published by ordinary fast-forward push. Local source gates verified; hosted runs are recorded separately.",
   "owner": "Codex",
   "verified_source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
   "progress": {
@@ -8852,7 +8852,7 @@
     "in_progress": 25,
     "planned": 39
    },
-   "merged_extension_slices": 12,
+   "merged_extension_slices": 15,
    "additional_improved_parent_areas": 2,
    "slice_records": [
     {
@@ -8967,10 +8967,36 @@
      "pr": 5,
      "summary": "Bounded deterministic sampling storage component",
      "remaining": "Production intake/retention and API/UI/drift integration."
+    },
+    {
+     "slice_id": "MAIN993-E03",
+     "task": "S3-08",
+     "refinement": "E03",
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "summary": "Known-length/manual calibration artifacts, original-coordinate measurement and packaged plane eligibility",
+     "remaining": "Full editing/retraining parent workflow, lens/perspective adapters and target calibration quality remain separate."
+    },
+    {
+     "slice_id": "MAIN993-E04",
+     "task": "S5-10",
+     "refinement": "E04",
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "summary": "Immutable authenticated before/after change audit, stale conflict refusal and activation UI scope guard",
+     "remaining": "Operational retention/access/traceability and real runtime apply ACK remain separate."
+    },
+    {
+     "slice_id": "MAIN993-E07",
+     "task": "S5-05",
+     "refinement": "E07",
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "summary": "Node-specific dependency preflight, artifact rehashing, package CLI/reopen and late-response guard",
+     "remaining": "Actual target process/device execution, installer and field readiness remain separate."
     }
    ],
    "gpu_execution": "temporarily deferred per user network move; local work continues"
-  }
+  },
+  "latest_slice_source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+  "latest_fixture_source_sha": "7722537435121e2fcc3b1a7fe8bed93ecf8047aa"
  },
  "scope_refinements": [
   {
@@ -9050,8 +9076,18 @@
     "Crop/resize/rotate carry transform metadata; length/area use correct coordinate space; no evidence keeps units px.",
     "Flow/package/reopen retain calibration hash; missing artifact blocks physical-unit claim."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "kind": "local_cpu_browser_source_slice",
+     "receipt": "e347-calibration-audit-preflight",
+     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "summary": "Known-length/manual calibration artifacts, original-coordinate measurement and packaged plane eligibility",
+     "remaining": "Full editing/retraining parent workflow, lens/perspective adapters and target calibration quality remain separate.",
+     "full_parent_acceptance": false
+    }
+   ]
   },
   {
    "id": "E04",
@@ -9069,8 +9105,18 @@
     "Layout move has no inspection-rule approval invalidation; semantic rule change does.",
     "Current active runtime stays accurately displayed until verified apply ACK."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "kind": "local_cpu_browser_source_slice",
+     "receipt": "e347-calibration-audit-preflight",
+     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "summary": "Immutable authenticated before/after change audit, stale conflict refusal and activation UI scope guard",
+     "remaining": "Operational retention/access/traceability and real runtime apply ACK remain separate.",
+     "full_parent_acceptance": false
+    }
+   ]
   },
   {
    "id": "E05",
@@ -9137,8 +9183,18 @@
     "One unavailable optional runtime blocks affected path without fake fallback; unaffected historical results remain viewable.",
     "Target change or pack/version change invalidates old preflight; report persists, reopens and is available from exported package CLI."
    ],
-   "status": "planned",
-   "evidence": []
+   "status": "in_progress",
+   "evidence": [
+    {
+     "source_sha": "99317cf08ff612e35a04d3aba70647687d7dc341",
+     "kind": "local_cpu_browser_source_slice",
+     "receipt": "e347-calibration-audit-preflight",
+     "receipt_sha256": "6a4d66b57683bbdeca7763bb035a60762de7dcccb7ecb79bd0a47cbf00a5237d",
+     "summary": "Node-specific dependency preflight, artifact rehashing, package CLI/reopen and late-response guard",
+     "remaining": "Actual target process/device execution, installer and field readiness remain separate.",
+     "full_parent_acceptance": false
+    }
+   ]
   },
   {
    "id": "E08",

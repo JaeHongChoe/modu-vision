@@ -1,0 +1,198 @@
+{
+  "schema": "SourceSliceVerification/v1",
+  "source_commit": "99317cf08ff612e35a04d3aba70647687d7dc341",
+  "base_commit": "b5900a6a29f61dcba09f0b9bb9f6d25f116401bb",
+  "verified_on": "2026-10-04",
+  "refinements": [
+    "E03",
+    "E04",
+    "E07"
+  ],
+  "changed_code_paths": {
+    ".github/workflows/ci.yml": "29e7aebe68a10da66f7db0731a14b4689f992ee5b13b3cd041585dca6bdf71db",
+    ".github/workflows/windows-native.yml": "6c9056674a62768bc63fb0278069156010f231320d74bfc45f62d4555f1659f2",
+    "backend/api/routes_export.py": "b712d8417af56f8b2cfc6eb6dfb84f37f9ceae4fe0b16f57e33434330bd622dc",
+    "backend/api/routes_flow_evaluation.py": "6163115413d29364c19b7d16f171d4da5bcd1910d0f1b8d225cf87fc3ef3e1c7",
+    "backend/api/routes_flowchart.py": "d6b74200b143b5b36934e113a274c691ca2e0aac60be443de4af4d8275db3441",
+    "backend/api/routes_geometry.py": "b2ab4b5515018a715887f5edad1270f2ae44ad7847682e2bf2641e7ea8a3c844",
+    "backend/engine/config_audit.py": "50779ffdf4a7b3254d76f0644c9a6ed5d1758e1376b8e76aaffe470491714d23",
+    "backend/engine/flow_evaluation.py": "6c1f813f6708bd6c04ad3ada61d023c604de1e1e31aa969de96ef1326533b4a1",
+    "backend/engine/flow_package.py": "6532597c645f1720e67f127c817cdc0bef38541cbd00559c4407bf0c45b5215a",
+    "backend/engine/flow_package_runtime.py": "d4bc0a1d90f67c7ee03299015cb807b54847fcae109e12367855391fd1570cb7",
+    "backend/engine/flow_preflight.py": "f72e61dfd5d2545c708dbd1122ba392aa160ec2fcd031742cb94df38f1d98490",
+    "backend/engine/flow_provenance.py": "7a78a60c3869788a00b8e75a631a41e6b9400a899880b3c06e55383b5e05ccd5",
+    "backend/engine/flowchart_engine.py": "18c9b8b26c803753cfd2a0168cb8008517bd9edfc47c13d1099387d69a8adaed",
+    "backend/engine/geometry_measurement.py": "72bd5a73d0cada5b13d38d9d033836be797f99ae483923d218a7462db728897b",
+    "backend/engine/model_operations.py": "7b18a4b08bc7fd74575f926434a84b263eb3ca4575e11ed7c6a8276727792927",
+    "backend/engine/spatial_calibration.py": "071a43bbcd7aa1d734f682adc6e64223dbf6ceceb7fc46f5ae7f960a6cc4bfbd",
+    "backend/engine/workflow_impact.py": "f93297ee5f80b8cad5a91d82e95b607b2799a29d9d2b9d8367edfd8558a921dc",
+    "backend/tests/test_flowchart_flow_contract.py": "b99bc9da08f5e8ddbdd9b07bda64c10147bd8ee285d3086e773cd44d284f858a",
+    "backend/tests/test_service_e03.py": "fc7fcb312bda7aac126012fe6b28055d700b895b59ed2d8278c5374ce678f874",
+    "backend/tests/test_service_e04.py": "4d4da602aec38401cdc4af09aea82d4bbbdf4a31fe50edade7479feca13c9396",
+    "backend/tests/test_service_e07.py": "43a002b79a07bc29df06d28eaf24e8c1dd268ac27828821cbe75afbfaf6f1ec1",
+    "scripts/e2e/fixtures/flowChange.ts": "2d3da9b318ec9df598e4debcceacca817c2b4147db0b8a297072a2de871ccd68",
+    "scripts/e2e/qa-app-flow.spec.ts": "38c5f3c837007fd840dbfc69c888863905dbd5d34f21cc1c7f19999478098114",
+    "scripts/e2e/service-e03-calibration.spec.ts": "e5a0e92b9349ac368d755bbeb0137b7ebb82b19824d7acfaaf5c34f48ed5c9db",
+    "scripts/e2e/service-e04-activation-race.spec.ts": "b254898c1e5eee3c7cf6e45ac6227553ec418bb9225cfbb689937111508c6900",
+    "scripts/e2e/service-e04-change-record.spec.ts": "480bf89c4a78344a2fc2bcf6aac86db1da3cd13262ab6d1eaef5ccb987d0834f",
+    "scripts/e2e/service-e07-preflight-race.spec.ts": "1135a9057644aa5420969905ed709daa2f6a7cc2baca9c903996efc41522d24b",
+    "scripts/e2e/service-e07-preflight.spec.ts": "1bbdfda171926ff6d2d33a5694909501883ed8b39ee07b3bdefe2f4e8d36dfcf",
+    "scripts/e2e/service-s0-05.spec.ts": "4397c282344346beee52d0e6c50c319c4009ab9dea7159b81d0d9d5c486cd509",
+    "scripts/e2e/service-s0-08.spec.ts": "077346344cd21c6b608b2f103dc7c67c22a7ab4e8b6a21640a20ecc1dd1c1e58",
+    "scripts/e2e/service-s2-04.spec.ts": "90e15e4b477094e59771023a94ee205b5cfedcc0bc6953d3942c4d288e0b56d8",
+    "src/renderer/components/flowchart/CropDetailModal.tsx": "e15ad9cabd18eef88e0d8792d74e36adae77e747eb4a09efb6d9e69d9599f664",
+    "src/renderer/components/flowchart/CustomNode.tsx": "b331df3800918a40e6379b60a6a7cc1a33745c4b0459732cd1abea438f5d6d4a",
+    "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
+    "src/renderer/components/flowchart/FlowChangeHistory.tsx": "f8995dc3a20d7ebc161701d3878595022f47008645b58b2ca27405a0163fbe50",
+    "src/renderer/components/flowchart/FlowDraftControls.test.cjs": "ce1c1d0b8df743e05b866e7bb88b2ec5ec99e847bc3db39a5a21e0435228b199",
+    "src/renderer/components/flowchart/FlowGeometryEditors.test.cjs": "7dee38ce2fa9d25edfbad68a1a8437cd08e76998e03e7be303446dd8d37d31ca",
+    "src/renderer/components/flowchart/FlowGeometryEditors.tsx": "5320b70170088e1b0f101f91647c23586aebefea4cd468a839de71da9fabfe82",
+    "src/renderer/components/flowchart/FlowPreflightPanel.tsx": "88dcb647cb2676a58763fbb3ce1966e76abb5a203b4004d17d9ecb203efe578b",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "b0ae1ab9c6d9a40c01d4dfc79b23f91b4e512213ce477ff30202b2566b6ac8fb",
+    "src/renderer/components/flowchart/SpatialCalibrationPanel.tsx": "f53546c6d9581c993079215ebe3f36686cbb41a69ed3b68d096c6c66cf906b7a",
+    "src/renderer/components/flowchart/flowChangeText.test.cjs": "b53aa5d3cc158bdf6ee4893be62fd02ae6c0aeef793dd1039f941e26e7e14694",
+    "src/renderer/components/flowchart/flowChangeText.ts": "ef5eb9088256947e164dbb0626a2e2333c287bbb44663bec21053561dc98a892",
+    "src/renderer/components/flowchart/flowPreflightText.test.cjs": "fbbe4030697083cf9c916a82def47290346a7617600107d736a6d74c7aa8c9e4",
+    "src/renderer/components/flowchart/flowPreflightText.ts": "910bc79c37c44217e6b6a27318a241c3e4a9d65b387f0116b905ca25d48aeba8",
+    "src/renderer/components/flowchart/flowchartDraft.test.cjs": "f3d7e73acf665bd60de322792024793cb944e187960cfdf22803fcdb0b43ba6b",
+    "src/renderer/components/flowchart/flowchartGraph.ts": "2bd156e8b8d966d154207df94abbd8701a4570cb21cf39681e9212a110977d87",
+    "src/renderer/components/flowchart/flowchartHistory.test.cjs": "de03f7930f51fd39b38de1781317500c3e8e43cfe71a9af3fd77cffc4fc9199d",
+    "src/renderer/components/flowchart/measurementCalibration.test.cjs": "fcd2599a4a4533851bc9a9970badf84653c73bed88d8e58aec4c080ec1e6a79f",
+    "src/renderer/components/flowchart/spatialCalibration.test.cjs": "e611f69d4914c6ade04314e85df554dc4006e60d41258c449eab8a154db7d1bb",
+    "src/renderer/components/flowchart/spatialCalibration.ts": "007b4c01beb1917800f90cede03cadcbda9429e5d9b2305815b58c4f70ff8d2f",
+    "src/renderer/services/api.ts": "623d7bf077a82087b8a954cd9a239312d19ed2f79f2efe0e24cc47ad101b15e6",
+    "src/renderer/services/flowDraft.ts": "f8cd76aab7d1045c3af1fa41f68ae09daa757c0db05772f4085e2e093348b800",
+    "src/renderer/services/flowPreflight.ts": "c21b4f66e1863b5e301fcd1dbd26014a868fd0c6238c69b79d33416ab2f1b93f",
+    "src/renderer/services/generated/apiTypes.ts": "6f7a047fc98070093ba25579011ca6e58ea7163e6a450d41959ff027cbec952c",
+    "src/renderer/services/geometryFlowApi.ts": "baac5f6afdd6ac6a1c9ab03b771885ec20f5a265fb56400e18b4c911d9d6428e",
+    "src/renderer/stores/useFlowchartStore.ts": "857a7dae15010fb2dcc95bf8b09681e992b4a07623941fc7df7b620374531184",
+    "src/renderer/types/index.ts": "0c8b5897cd87187ac3fcb6a373cb7ecd8bdf91a2d0b5abf3c7c7b08002fd2e8c"
+  },
+  "local_checks": {
+    "backend": {
+      "passed": 226,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "tests": [
+        "test_service_e03.py",
+        "test_service_e04.py",
+        "test_service_e07.py",
+        "test_flow_package.py",
+        "test_flow_export_release.py",
+        "test_flowchart_flow_contract.py",
+        "test_geometry_flow_completion.py",
+        "test_workflow_lifecycle.py",
+        "test_service_e06.py"
+      ],
+      "receipt_name": "e347-b590-backend",
+      "receipt_sha256": "1e856d9b014957cecb0af2c2ae31d4d8ba91e6064554ec7d7f4fc5d83185a3b0"
+    },
+    "renderer": {
+      "passed": 524,
+      "failed": 0,
+      "type_checks": [
+        "renderer",
+        "Electron main",
+        "E2E"
+      ],
+      "generated_api_types": "PASS",
+      "service_plan": "PASS",
+      "receipt_name": "e347-b590-renderer",
+      "receipt_sha256": "200927547a7136718faae9d7548334c52b68a900b6319dbbee327e079b82bce5"
+    },
+    "browser": {
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "actual_renderer_backend_cases": 23,
+      "actual_component_transport_fixture_cases": 8,
+      "owned_backends_stopped": 23,
+      "page_errors": 0,
+      "blocked_loopback_requests": 0,
+      "console_clean_acceptance": "UNVERIFIED:12 connection-refused console messages across9 actual renderer/backend cases; exact failed URLs/timing were not retained. Expected HTTP refusal responses are separate. Assertions and teardown passed.",
+      "receipt_name": "e347-b590-browser",
+      "receipt_sha256": "c87dbb481a7beb296461601e981c69498859beb0469667706a8f9932a14251a3"
+    }
+  },
+  "independent_reviews": {
+    "composition-review.json": "08b7673118618ba6838f460a6f98410aaf04b15bd6a9dfcd3214b763e3292d0f",
+    "independent-manual-review.json": "1e0b6dae6ee06ae2e379d4436a993e88f280d2d2a78cc133f2730cab85283989",
+    "independent-region-review.json": "c80db2c7b7c2e66d6f77c5343ffb3540fa26c66beb86925a7c29faab26df2de8",
+    "independent-activation-review.json": "b2abcacf7a49369129df379821f449058d38146690d05bd38f5e2521283d3678",
+    "final-publication-scan.json": "9c1d9c627c524de887706b6979cd1d6e622a6e15c895c5e6c9b87de9f8114e54"
+  },
+  "closed_defects": [
+    "Declared calibration plane was ignored at physical measurement. Closed point boundaries and half-open raster support now enforced; source-bound crop masks supported, unknown transforms refused.",
+    "Manual calibration toggles reinterpreted numeric threshold units. Effective units now materialized before enabling/disabling calibration.",
+    "Late activation replies overwrote another editor base. Scope epoch, context revision and request generation fence successful/error/readback/finally mutations."
+  ],
+  "compatibility": [
+    "Existing calibration artifact references/schema round-trip identically for bounded/default known-length and manual artifacts.",
+    "Known good packaged inside-region measurement stays OK; outside path/mask returns REVIEW with zero measurement rows.",
+    "PR5 intake sampling, operator choice and native dataset/annotation source changes preserved."
+  ],
+  "hosted_checks": {
+    "source_commit": "99317cf08ff612e35a04d3aba70647687d7dc341",
+    "linux": {
+      "run_id": 37180963980,
+      "conclusion": "success",
+      "backend": {
+        "passed": 1127,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "renderer_passed": 524,
+      "browser": {
+        "passed": 72,
+        "failed": 0,
+        "skipped": 1,
+        "flaky": 0
+      },
+      "artifact_sha256": "d2d6825663e0b01ca8f102e39dd9eb562b6bf26213a8700e059a265716097f49",
+      "artifact_bytes": 298162935,
+      "receipt_sha256": "a86eed400a09a1dc39ca7c4d629de27e6506247b9c54985595e39ba64d937eb1",
+      "scope": "Actual Linux CPU source CI; source/run/artifact bindings verified. Console errors remain unclassified; full execution-time source cleanliness is not separately proven beyond verified inputs and baseline source-change records."
+    },
+    "windows": {
+      "run_id": 37180963992,
+      "conclusion": "failure",
+      "counts": {
+        "collected": 870,
+        "passed": 853,
+        "failure": 5,
+        "error": 0,
+        "skipped": 12
+      },
+      "receipt_sha256": "e60d5571a6f8ef361cb264eaaf12433193f73571c2fd71097812f21fcbc1cef1",
+      "cause": "Four package-output reads used Windows cp1252 instead of declared UTF-8; one inventory assertion compared Windows backslashes to its POSIX report namespace. These failed before their final assertions."
+    }
+  },
+  "limits": [
+    "No new remote/GPU run or physical device execution.",
+    "Windows11 installer/SCM/Session0, field ACK, representative model quality and clean-console acceptance remain separate.",
+    "No full parent acceptance promotion. Parent implementation remains24 verified/58 pending;15 merged extension slices overlap those parents."
+  ],
+  "portable_fixture_correction": {
+    "source_commit": "7722537435121e2fcc3b1a7fe8bed93ecf8047aa",
+    "base_commit": "99317cf08ff612e35a04d3aba70647687d7dc341",
+    "input_sha256": {
+      "backend/tests/test_service_e03.py": "3125ce99aa26bd2e2a2a56a32d0653f924b81ad624121cb26c2b9611186055e9",
+      "backend/tests/test_service_e07.py": "54592a18fdfd2fa90c5d4ae60bdc200db63c47fd0e363de7f94f6ba65c6e1089"
+    },
+    "changed_lines": 6,
+    "production_and_assertions_unchanged": true,
+    "local_cpu": {
+      "passed": 58,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "receipt_sha256": "ce97ca05d45cab7b96fcca0a6d2e3f94281ea1c79242fd557e170fb3d2eb6d6c"
+    },
+    "independent_review_sha256": "d1ffeab2baf1859777ab074423e52b0cca081d1c104dff839f0e2f6232d524f2",
+    "native_windows_replay": "required; not yet claimed at this documentation commit",
+    "original_source_gate_provenance": "226/524/31 local gates are on original993 bytes; this58-test fixture replay is a separate overlapping result."
+  }
+}
