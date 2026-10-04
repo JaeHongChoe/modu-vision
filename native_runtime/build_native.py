@@ -13,6 +13,16 @@ args=parser.parse_args();root=Path(__file__).resolve().parent;args.output.mkdir(
 if platform.system()=='Windows':
     subprocess.run(['cmake','-S',str(root),'-B',str(args.output),f'-DPython3_EXECUTABLE={sys.executable}'],check=True)
     subprocess.run(['cmake','--build',str(args.output),'--config','Release'],check=True)
+    # Visual Studio is a multi-config generator. Keep the public command paths
+    # identical to POSIX builds and the packaged C#/C++ execution checks.
+    artifacts=('modu_vision_runtime.dll','modu_vision_runtime.lib','vision_predict.exe','vision_execute.exe')
+    release=args.output/'Release'
+    built=release if release.is_dir() else args.output
+    for name in artifacts:
+        if not (built/name).is_file():
+            raise FileNotFoundError('Native build did not produce '+name)
+    if built!=args.output:
+        for name in artifacts:shutil.copyfile(built/name,args.output/name)
 else:
     compiler=shutil.which('clang++') or shutil.which('g++')
     if not compiler: raise SystemExit('Install a C++17 compiler and matching Python development headers')

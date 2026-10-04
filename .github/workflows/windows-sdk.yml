@@ -1,0 +1,72 @@
+name: Windows native SDK execution
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-sdk:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Verify required native toolchains
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          New-Item -ItemType Directory -Force sdk-evidence | Out-Null
+          cmake --version | Tee-Object sdk-evidence/cmake.txt
+          dotnet --list-sdks | Tee-Object sdk-evidence/dotnet.txt
+          if (-not (Select-String -Path sdk-evidence/dotnet.txt -Pattern '^8\.')) { throw '.NET 8 SDK is required; C# skip is not acceptance' }
+          $env:VISION_TEST_DOTNET = (Get-Command dotnet).Source
+          "VISION_TEST_DOTNET=$env:VISION_TEST_DOTNET" >> $env:GITHUB_ENV
+      - name: Install locked CPU runtime
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-windows-py313-cpu.lock
+      - name: CMake artifact layout regression
+        run: python -m unittest scripts.tests.test_windows_sdk_build_layout -v
+      - name: Execute delivered Python, C++ and C# SDKs
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pytest -v -rA --basetemp "$env:RUNNER_TEMP/native-sdk" --junitxml sdk-evidence/pytest.xml `
+            backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options `
+            backend/tests/test_runtime_deadline_sdk.py::test_runtime_package_deadline_survives_reopen_and_cli `
+            backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph `
+            backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor `
+            2>&1 | Tee-Object sdk-evidence/execution.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [xml]$tests = Get-Content sdk-evidence/pytest.xml
+          $suite = $tests.testsuites.testsuite
+          if ([int]$suite.tests -ne 4 -or [int]$suite.skipped -ne 0) { throw 'All four SDK execution checks must run without skips' }
+      - name: Source and execution receipt
+        if: always()
+        run: python scripts/write_ci_receipt.py --output sdk-evidence/receipt.json --junit sdk-evidence/pytest.xml
+      - name: Preserve native execution evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-native-sdk-${{ github.sha }}
+          path: |
+            sdk-evidence
+            ${{ runner.temp }}/native-sdk/**/native/*.dll
+            ${{ runner.temp }}/native-sdk/**/native/*.lib
+            ${{ runner.temp }}/native-sdk/**/native/*.exe
+            ${{ runner.temp }}/native-sdk/**/native/csharp/*.dll
+            ${{ runner.temp }}/native-sdk/**/native/csharp/*.json
+          retention-days: 14
+          if-no-files-found: error

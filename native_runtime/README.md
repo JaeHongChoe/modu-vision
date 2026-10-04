@@ -31,6 +31,14 @@ architecture and dependency versions. Cross compilation does not prove target
 hardware acceptance. Each handle serializes calls; do not release a handle while
 another thread is using it. Returned C strings must be released with `mv_free`.
 
+Windows builds copy the declared Release DLL, import library and both executable
+clients into the requested output directory. CMake output missing any of these
+files is a failed build. The manual `Windows native SDK execution` workflow
+compiles and executes the delivered C++ and C# SDKs on hosted Windows Server2025
+x64, checks whole-DAG parity, deadlines and tampered-code refusal, and retains
+source/toolchain/JUnit evidence. It does not install the desktop application,
+register services, publish binaries or establish Windows11/device acceptance.
+
 Inspection dispatch covers classification, patch classification, segmentation,
 detection, anomaly, OCR, rotated detection, learned rotation and enhancement
 through the saved graph, including ROI, branches and calibrated measurements.
