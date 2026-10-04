@@ -37,6 +37,11 @@ test('the app submits runtime seconds and the owned CPU job reaches budget cance
  const job=await started.json();let observed:any=null;
  await expect.poll(async()=>{const rows=await(await page.request.get(`${renderer.origin}/api/training/jobs`)).json();observed=rows.jobs.find((row:any)=>row.job_id===job.job_id);return observed?.status;},{timeout:150_000,intervals:[1000,2000]}).toBe('aborted');
  expect(observed.observation.cause).toBe('time_limit');expect(digest()).toBe(before);
+ const progress=page.getByRole('status',{name:'학습 작업 상태',exact:true});
+ await expect(progress).toBeVisible({timeout:15_000});
+ await expect(progress).toContainText('정한 실행 시간을 넘어 중지했습니다.',{timeout:15_000});
+ await expect(progress.getByLabel('취소 확인 단계')).toContainText('✓ 예약 반환',{timeout:15_000});
+ await evidence.screenshot(page,'s209-core-budget-state');
  const center=await openTaskCenter(page);const row=center.getByRole('status').filter({hasText:job.job_id});await expect(row).toContainText('예약 반환',{timeout:15_000});
  await expect(page.getByRole('button',{name:'선택 설정으로 학습 시작',exact:true})).toBeEnabled();
  await evidence.screenshot(page,'s209-budget-cancelled');evidence.note('runtime_budget',{submitted,job_id:job.job_id,observation:observed.observation,actual_cpu_training:true,server:false,manual_stop:false,source_unchanged:true});

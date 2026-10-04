@@ -2129,6 +2129,19 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
         }
 
     duration = time.time() - record.start_time if record.status in training_job_manager.ACTIVE_STATES else 0.0
+    try:
+        reserved = {row['job_id'] for row in training_job_manager._leases.list()}
+    except (OSError, sqlite3.Error):
+        reserved = None
+    queue = None
+    if record.status == 'queued':
+        try:
+            from backend.contracts.context import get_project_context
+            project_key = request.app.state.context_registry.project_key(get_project_context(request)) if request else None
+            queue = next((row for row in JobScheduler(job_ledger(), training_job_manager._leases).queue_view(project_key)
+                          if row['job_id'] == record.job_id), None)
+        except _LEDGER_ERRORS:
+            pass  # The current queue order is unknown; do not invent a position.
 
     return {
         "job_id": record.job_id,
@@ -2153,6 +2166,9 @@ def get_training_status(job_id: Optional[str] = Query(None), request: Request = 
         "transferred_bytes": record.transferred_bytes,
         "total_bytes": record.total_bytes,
         "device_name": _job_device_name(record),
+        "observation": _job_observation(record, reserved),
+        "queue_position": queue['position'] if queue else None,
+        "wait_reason": queue.get('wait_reason') if queue else None,
     }
 
 

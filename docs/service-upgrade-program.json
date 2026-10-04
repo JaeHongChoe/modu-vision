@@ -1826,6 +1826,12 @@
      "result": "The four core-family screen exposes an optional runtime budget in minutes, local queue/reject-when-busy and integer priority. API/store serialization preserves false queue and zero priority; the durable ledger budget is stored before either local or remote worker launch. A budget storage failure refuses launch. Explicit unsupported remote queue=false/nonzero priority are rejected before probing or launching; the UI explains remote FIFO and backend/network cancellation delays.",
      "scope": "Causal API/store/backend failures retained. Final local backend scheduling/observation/remote/extension suite: 56 passed, no skips. Renderer/main: 603 passed; TypeScript/E2E typecheck/build passed. Two actual full-renderer/owned-loopback-backend cases passed: invalid budget prevents submission; a CPU UNet job started from the screen submits 6 seconds and reaches time_limit cancellation with confirmed exit and released reservation, without manual stop. All owned backends exit normally and ports close. Private readback SHA-256 6945d431fec90bc83033592e7c200337ba683913e865081fdf44fd1178869b3d.",
      "platform": "macOS CPU browser with desktop host shim and synthetic data. Remote launch in the focused API checks is observed/stubbed, not actual SSH/GPU. Root review only; whole S2-09 acceptance and installed Windows remain pending."
+    },
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "The four core-family TrainingController now uses JobProgressView, preserving the backend observation through current polling and active/completed recovery. Polling supplies the same journal/cancel/reservation evidence as the job list and project-local scheduler queue position/wait reason. Unreadable reservations/queue stay unknown. A new job/reset or failed current read clears old observation. Terminal telemetry receives a final poll; incomplete cancellation remains observed. Error catalog details are preserved. The shared view displays evidence steps and queue reason without duplicate core toolbar actions.",
+     "scope": "Three causal route failures, four initial renderer failures and one error-detail failure retained. Final affected backend suite: 83 passed, no skips. Renderer/main: 608 passed, no skips; focused store/shared-view/workflow: 30 passed. TypeScript/build/E2E typecheck pass. Final two actual full-renderer/owned-backend cases pass in41.2 seconds, including CPU UNet time-limit cancellation displayed directly in the core shared view, confirmed exit/reservation return and matching task-center record. Both owned backends exit normally; no page errors. Private source/artifact readback SHA-256 430a2e667d8ade83f4858f01cdaf285adbaa15a4c14743a1f951bcc408ed3ce5.",
+     "platform": "macOS CPU browser with desktop host shim and synthetic data; no actual SSH/GPU. Root source and screenshot review only. New tests and existing S2-09 remote-manager stub cases are included in both hosted CPU workflow lists for the next revision. Full parent/installed Windows acceptance remains pending."
     }
    ],
    "file_actions": {
@@ -1850,11 +1856,11 @@
     "E08"
    ],
    "remaining": [
-    "slice 2: the four core families' TrainingController on the shared view (uncertain states, failure cause and next action, reservations)",
+    "Four core families now use the shared status/next-action/cancellation evidence view with polling and recovery; all ten-family native and real-target consistency still needs qualification.",
     "ModelRecipeEditor: budget controls and consistency across the remaining family editors; core max_runtime_s/queue/priority are now implemented and locally exercised, parent pickers with metrics and dates, typed IDs (the specialized approval's incumbent evaluation, the flow node's manual job ID, pretrained weight paths), dataset_version_id",
-    "TaskHandoff: opening results the same way for every family; queue position and wait reason; failure classification for family jobs (job_observation)",
+    "TaskHandoff: opening results the same way for every family; core project-local queue position/wait reason are implemented, while every specialized family still needs consistent queue and failure-observation propagation.",
     "review P3: a cancel whose reconnect the manager refuses (runner gone) dead-ends at a pending stop without saying the stop was not delivered; the view offers cancel again with no sign a stop is pending; patch classification does not reconnect a local disconnected job from its workbench; M16/M17 untested; the task-center family alias, shared label and rotated epochs are covered only by the e2e",
-    "test_service_s2_09.py's server fixture uses a local-path server root (fails on Windows; fixed in the follow-up)",
+    "S2-09 server fixture uses a POSIX target identity after the existing follow-up; the file is now added to both hosted CPU lists and its new hosted execution is pending.",
     "Windows native and hosted evidence"
    ]
   },

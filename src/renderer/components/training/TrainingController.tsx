@@ -47,6 +47,7 @@ import {clearTaskHandoff} from './taskHandoff';
 import {trainingPresetBatchSize} from '../common/errorActions';
 import { trainingLogLines } from './trainingLog';
 import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingSchedulingSettings} from './TrainingSchedulingSettings';
+import {JobProgressView} from './JobProgressView';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export const TrainingController: React.FC = () => {
     jobComputeLabel,
     jobDeviceName,
     jobPhase,
+    jobObservation, jobQueuePosition, jobWaitReason,
     transferProgress,
     startError,
     jobStatusError,
@@ -182,11 +184,15 @@ export const TrainingController: React.FC = () => {
     } : undefined);
   }, [recoverActiveJob, sourceReady, isLoading, importError, project?.id, project?.active_labelset_id, projectDir, folderPath, task]);
 
+  const cancelIncomplete = !!jobObservation?.cancel?.stage && jobObservation.cancel.stage !== 'none' && !jobObservation.cancel.complete;
   useEffect(() => {
-    if (!jobId || !isTraining) return;
+    if (!jobId) return;
+    // Terminal telemetry can arrive before the worker's final journal/reservation receipt.
+    void refreshCurrentJob();
+    if (!isTraining && !cancelIncomplete) return;
     const timer = window.setInterval(() => { void refreshCurrentJob(); }, 2000);
     return () => window.clearInterval(timer);
-  }, [jobId, isTraining, refreshCurrentJob]);
+  }, [jobId, isTraining, cancelIncomplete, refreshCurrentJob]);
 
   const canStart = totalImages > 0 && split.train > 0 && split.val > 0 &&
     !isProjectBusy && sourceReady && !isLoading && !isSplitting && !isRecoveringTraining && !importError && !modelOptionsError && !schedulingError && computeReady;
@@ -477,6 +483,11 @@ export const TrainingController: React.FC = () => {
         )}
 
         <TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} />
+        <JobProgressView job={jobId ? {job_id: jobId, status, phase: jobPhase, compute_profile_id: jobComputeProfileId,
+          current_epoch: currentEpoch, total_epochs: totalEpochs, current_step: currentStep, total_steps: totalSteps,
+          current_train_loss: trainLoss, error: startError, observation: jobObservation,
+          queue_position: jobQueuePosition, wait_reason: jobWaitReason} : null}
+          busy={isStopRequestPending} onCancel={handleAbort} showActions={false} />
 
         {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Hardware Telemetry (34%) */}
         <div className="grid grid-cols-12 gap-5">

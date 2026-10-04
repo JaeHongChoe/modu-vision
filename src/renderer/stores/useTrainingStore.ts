@@ -79,6 +79,16 @@ export interface TrainingRecoverySource {
 }
 
 export type TrainingSchedulingOptions = {queue?: boolean; priority?: number; max_runtime_s?: number};
+export type TrainingObservation = {
+  cause?: string | null; next_action?: string | null; worker_recorded?: boolean | null;
+  cancel?: {stage?: string; complete?: boolean; requested_at?: number | null; acknowledged_at?: number | null;
+    signals?: string[]; exit_confirmed?: boolean | null; reservation_released?: boolean | null};
+};
+const observationFields = (job: any) => ({
+  jobObservation: job?.observation && typeof job.observation === 'object' ? job.observation as TrainingObservation : null,
+  jobQueuePosition: Number.isInteger(job?.queue_position) && job.queue_position > 0 ? job.queue_position as number : null,
+  jobWaitReason: typeof job?.wait_reason === 'string' ? job.wait_reason as string : null,
+});
 
 interface TrainingState {
   jobId: string | null;
@@ -87,6 +97,9 @@ interface TrainingState {
   jobComputeLabel: string;
   jobDeviceName: string | null;
   jobPhase: string | null;
+  jobObservation: TrainingObservation | null;
+  jobQueuePosition: number | null;
+  jobWaitReason: string | null;
   transferProgress: number | null;
   startError: string | null;
   jobStatusError: string | null;
@@ -153,6 +166,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobComputeLabel: 'This computer',
   jobDeviceName: null,
   jobPhase: null,
+  ...observationFields(null),
   transferProgress: null,
   startError: null,
   jobStatusError: null,
@@ -223,6 +237,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       jobComputeLabel: computeLabel(selectedProfileId, profile?.name),
       jobDeviceName: selectedProfileId ? compute.probeResults[selectedProfileId]?.device_name || null : null,
       jobPhase: selectedProfileId ? 'preparing' : null,
+      ...observationFields(null),
       transferProgress: null,
       startError: null,
       jobStatusError: null,
@@ -341,6 +356,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
           jobComputeLabel: computeLabel(active.compute_profile_id || null, active.compute_profile_name),
           jobDeviceName: active.device_name || active.remote_device_name || null,
           jobPhase: active.phase || active.status,
+          ...observationFields(active),
           transferProgress: transferPercent(active),
           jobStatusError: null,
           isCurrentData: false,
@@ -376,6 +392,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         jobComputeLabel: computeLabel(completed.compute_profile_id || null, completed.compute_profile_name),
         jobDeviceName: completed.device_name || completed.remote_device_name || null,
         jobPhase: 'completed', transferProgress: null, jobStatusError: null, startError: null,
+        ...observationFields(completed),
         isCurrentData: true, status: 'completed', isTraining: false, isStopRequestPending: false, stopError: null,
         currentEpoch: completed.current_epoch || 0, totalEpochs: completed.total_epochs || 0,
         currentStep: completed.current_step || 0, totalSteps: completed.total_steps || 0,
@@ -418,6 +435,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         jobPhase: ACTIVE_STATUSES.includes(status) ? (job.phase || job.status || state.jobPhase) : status,
         transferProgress: transferPercent(job) ?? state.transferProgress,
         jobStatusError: null,
+        ...observationFields(job),
         currentEpoch: job.current_epoch ?? state.currentEpoch,
         totalEpochs: job.total_epochs ?? state.totalEpochs,
         currentStep: job.current_step ?? state.currentStep,
@@ -427,13 +445,15 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         bestMetric: job.best_metric ?? state.bestMetric,
         metrics: job.metrics || state.metrics,
         lossHistory: polledHistory(job) ?? state.lossHistory,
-        startError: status === 'failed' ? (job.error?.message || job.result?.error || '학습 작업이 실패했습니다.') : null,
+        startError: status === 'failed' ? (job.error?.message || job.error?.details || job.error?.message_en
+          || (typeof job.error === 'string' ? job.error : null) || job.result?.error || '학습 작업이 실패했습니다.') : null,
       }));
     } catch (error) {
       if (get().jobId !== jobId) return;
       const message = error instanceof Error ? error.message : '학습 상태를 확인할 수 없습니다.';
       set((state) => ({
         jobStatusError: message,
+        ...observationFields(null),
         ...(state.jobComputeProfileId ? { status: 'disconnected' as const, isTraining: true } : {}),
       }));
     }
@@ -556,6 +576,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
       jobComputeLabel: 'This computer',
       jobDeviceName: null,
       jobPhase: null,
+      ...observationFields(null),
       transferProgress: null,
       startError: null,
       jobStatusError: null,

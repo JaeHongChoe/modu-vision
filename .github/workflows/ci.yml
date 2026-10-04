@@ -67,6 +67,8 @@ jobs:
           backend/tests/test_service_s6_05.py
           backend/tests/test_service_s1_04.py
           backend/tests/test_training_runtime_budget.py
+          backend/tests/test_training_status_observation.py
+          backend/tests/test_service_s2_09.py
           backend/tests/test_service_s1_03.py::test_a_spent_runtime_budget_becomes_one_cancel_intent_and_the_owner_stops_the_job
           backend/tests/test_service_s1_03.py::test_the_queue_api_shows_priority_position_budget_and_wait_reason
           backend/tests/test_service_s1_09.py

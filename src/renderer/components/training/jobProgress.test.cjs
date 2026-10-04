@@ -4,6 +4,16 @@ function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(n
   m.require=ref=>ref in mocks?mocks[ref]:ref.startsWith('.')?load(ref+'.ts'):require(ref);
   m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const model=()=>load('jobProgress.ts');
+test('S2-09: the shared view renders evidence steps, queue order and can omit duplicate controls',()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
+ const useComputeStore=selector=>selector({profiles:[]});
+ const {JobProgressView}=load('JobProgressView.tsx',{'../../stores/useComputeStore':{useComputeStore},'./jobProgress':model()});
+ const html=job=>renderToStaticMarkup(React.createElement(JobProgressView,{job,busy:false,onCancel(){},showActions:false}));
+ const done=html({job_id:'x',status:'aborted',observation:{cause:'time_limit',next_action:'時間 제한을 늘리세요.',cancel:{stage:'released',requested_at:1,acknowledged_at:2,signals:['cooperative'],exit_confirmed:true,reservation_released:true}}});
+ assert.match(done,/취소 확인 단계/);assert.match(done,/✓.*예약 반환/);assert.match(done,/다음 행동:/);
+ const queue=html({job_id:'x',status:'queued',queue_position:2,wait_reason:'device_reserved'});assert.match(queue,/이 프로젝트 대기 순서: 2/);assert.match(queue,/장치 예약이 반환되면/);assert.doesNotMatch(queue,/<button/);
+ const unknown=html({job_id:'x',status:'aborted',observation:{cancel:{stage:'exited',requested_at:1,exit_confirmed:true,reservation_released:null}}});assert.match(unknown,/○ 예약 반환/);assert.doesNotMatch(unknown,/✓ 예약 반환/);
+});
 test('S2-09: the four record shapes of the ten families read as the same progress',()=>{const {jobProgress}=model();
  const core=jobProgress({job_id:'a',status:'running',current_epoch:3,total_epochs:10,current_train_loss:0.25});
  const program=jobProgress({job_id:'b',status:'running',epoch:3,epochs:10,loss:0.25});
