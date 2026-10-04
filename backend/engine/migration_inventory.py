@@ -3,7 +3,7 @@
 Never opens JobStore/AccountStore constructors (which can migrate or reattach).
 Only counts/schema/hashes leave this module; credential values stay private.
 """
-from contextlib import contextmanager
+from contextlib import closing,contextmanager
 import hashlib,json,sqlite3,tempfile
 from pathlib import Path
 from backend.engine.project_archive import _sqlite_file,_sqlite_snapshot
@@ -52,7 +52,7 @@ def inventory(root, *, kind='project', paths=None):
         with owned_file_snapshot(path) as copied:
             row.update(bytes=copied.stat().st_size,sha256=hashlib.sha256(copied.read_bytes()).hexdigest())
             if _sqlite_file(copied):
-                with sqlite3.connect(copied.resolve().as_uri()+'?mode=ro',uri=True) as conn:
+                with closing(sqlite3.connect(copied.resolve().as_uri()+'?mode=ro',uri=True)) as conn:
                     conn.row_factory=sqlite3.Row
                     row['schema_version']=conn.execute('pragma user_version').fetchone()[0]
                     if row['schema_version']>1:blockers.append(f'Unsupported SQLite schema in {relative.as_posix()}')
