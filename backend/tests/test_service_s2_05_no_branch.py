@@ -34,7 +34,7 @@ def flow(policy=None, chain=False):
     return FlowchartPipeline(nodes=nodes, edges=edges)
 
 
-def engine_seeing(monkeypatch, label, *, verdict='OK', fail=None, empty=False):
+def engine_seeing(monkeypatch, label, *, verdict='OK', fail=None, empty=False, status='passed'):
     engine = FlowchartEngine(device='cpu')
 
     def inspect(image, rois, inspected):
@@ -43,7 +43,7 @@ def engine_seeing(monkeypatch, label, *, verdict='OK', fail=None, empty=False):
         if empty:
             return [], 1.0, 'passed'
         return [CropInspectionResult(roi_id=f'{inspected.id}-roi', label=label, bbox=[0, 0, 32, 32], defect_score=0.9 if verdict == 'NG' else 0.1,
-                                     confidence=0.95, verdict=verdict, crop_thumbnail='', flaw_type='')], 1.0, 'passed'
+                                     confidence=0.95, verdict=verdict, crop_thumbnail='', flaw_type='')], 1.0, status
     monkeypatch.setattr(engine, '_inspect_crops', inspect)
     return engine
 
@@ -139,6 +139,22 @@ def test_a_debug_run_and_an_incomplete_image_never_use_the_rule(monkeypatch):
     assert debug['final_verdict'] != 'OK'
     failed = engine_seeing(monkeypatch, 'ok', fail='model').execute(pipeline=flow('ok'), image=IMAGE)
     assert outcome(failed) == ('REVIEW', 'review') and 'too many tiles' in failed['rejection_reason']
+
+
+@pytest.mark.parametrize('missing', ['empty', 'failure', 'review'])
+@pytest.mark.parametrize('result_node', [node('summary', 'aggregate', rule='any_ng'),
+                                       node('blob', 'blob_measure', params={'min_area_px': 4})])
+def test_unknown_upstream_is_not_reported_as_a_known_unmet_condition(monkeypatch, missing, result_node):
+    engine = engine_seeing(monkeypatch, 'ok', empty=missing == 'empty',
+                           fail='model' if missing == 'failure' else None,
+                           status='review_required' if missing == 'review' else 'passed')
+    result = engine.execute(pipeline=_behind_two_steps(result_node), image=IMAGE)
+    assert outcome(result) == ('REVIEW', 'review')
+    steps = {step['node_id']: step for step in result['execution_steps']}
+    assert steps['detail']['skip_reason'] == 'upstream_incomplete'
+    assert steps['detail']['branch_verdict'] == 'REVIEW'
+    assert steps[result_node.id]['skip_reason'] != 'condition_not_met'
+    assert 'model' in result['rejection_reason'] and 'incomplete upstream' in result['rejection_reason']
 
 
 def _behind_two_steps(result_node, policy='ok'):

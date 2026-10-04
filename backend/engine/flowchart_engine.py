@@ -2256,11 +2256,19 @@ class FlowchartEngine:
                 parent = nodes[parent_edge.source]
                 payload_type = _edge_payload_type(parent_edge, parent.data.node_type, node.data.node_type)
                 if parent_edge.id not in active_edges:
-                    skipped = True
+                    known_unmet = parent.id in not_reached or node_branch_verdict.get(parent.id) in ("OK", "NG")
+                    # Only a known false branch propagates not_reached. Missing/failed/REVIEW input is an
+                    # incomplete inspection, so downstream result nodes cannot mistake it for known absence.
+                    skipped = known_unmet
+                    if not known_unmet:
+                        incomplete_reasons.append(
+                            f"Node {node.id} received no active input from incomplete upstream node {parent.id}; review required."
+                        )
                     execution_steps.append(FlowchartExecutionStep(
                         node_id=node.id, name=node.data.label, status="skipped", latency_ms=0.0,
                         input_payload_type=payload_type, input_count=0, output_count=0,
-                        skip_reason="condition_not_met",
+                        branch_verdict=None if known_unmet else "REVIEW",
+                        skip_reason="condition_not_met" if known_unmet else "upstream_incomplete",
                     ))
                     node_rois[node.id] = []
                     node_evidence[node.id] = []

@@ -28,9 +28,20 @@ export function activeInputArtifacts(nodeId:string,pipeline:FlowchartPipeline,re
   });
 }
 
+export function flowSkipReasonText(reason:string):string {
+  switch(reason) {
+    case 'condition_not_met': return '설정한 분기 조건이 맞지 않아 실행하지 않았습니다.';
+    case 'upstream_incomplete': return '상위 단계의 결과를 확정할 수 없어 실행하지 않았습니다. 상위 단계의 오류와 결과를 확인하세요.';
+    case 'empty_roi': return '상류 모델이 검사할 영역을 전달하지 않았습니다.';
+    case 'outside_debug_scope': return '선택 노드 뒤쪽 또는 별도 경로이므로 실행하지 않았습니다.';
+    case 'branch_not_selected': return '최종 판정과 다른 출력 경로입니다.';
+    default: return reason;
+  }
+}
+
 export function nodeEvidenceText(node:FlowNode,step:FlowchartExecutionStep):string[] {
   const lines=[`입력 ${step.input_count??0}개 → 출력 ${step.output_count??0}개 · ${step.branch_verdict||step.status} · ${step.latency_ms.toFixed(1)} ms`];
-  if(step.skip_reason) lines.push(({condition_not_met:'설정한 분기 조건이 맞지 않아 실행하지 않았습니다.',empty_roi:'상류 모델이 검사할 영역을 전달하지 않았습니다.',outside_debug_scope:'선택 노드 뒤쪽 또는 별도 경로이므로 실행하지 않았습니다.',branch_not_selected:'최종 판정과 다른 출력 경로입니다.'} as Record<string,string>)[step.skip_reason]||step.skip_reason);
+  if(step.skip_reason) lines.push(flowSkipReasonText(step.skip_reason));
   const rules=(node.data.params?.class_rules||[]) as Array<Record<string,number>>;
   for(const artifact of step.artifacts||[]) {
     const measured=(artifact.evidence?.blob_measurements||[]) as Array<Record<string,unknown>>;

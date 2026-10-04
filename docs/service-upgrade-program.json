@@ -1561,6 +1561,12 @@
      "result": "ee1164f: the decision node can name a rule for an image that met no condition (every route to the decision carries a condition, e.g. a 'defect present' class branch): review, OK or NG; unset, flows keep their earlier outcome. The rule applies only when every condition was evaluated and none was met: a step that failed, received nothing or answered REVIEW keeps the image incomplete, a debug run never uses it, and an image a model judged NG is never made OK by it (REVIEW under an OK rule, the reason naming the NG node). With the rule set, Blob, measurement and aggregate steps fed only by steps an unmet condition skipped count as not reached, however far behind the condition. The editor's decision inspector offers the rule, unset by default, and says whether the flow can produce such images; the graph check refuses another value as the backend does; flow packages run the same engine. Independent review: freezes 1-2 changed per review (P2s: a result node two steps behind a condition, legacy flows' unchanged outcome, the fork rule), freeze 3 ACCEPT (0 P1, 0 P2, P3s).",
      "scope": "frozen tree (422a2d2 + 6 files) published on d041261 with the CI line composed (none of the 6 files changed on main since): backend 286 passed 1 skipped (the new test with 13 flow suites), 62 passed with the CI lock, red 3 of 11 on freeze 2 code; renderer 464 passed, red 1 of 3; typecheck and the e2e typecheck ok; S2-05 browser e2e 3 passed (no model trained or run in it; the rule's execution evidence is the backend test); browser suite 51 of 53 at 422a2d2 (the operator-choice spec and S2-04, see the receipt note); Linux CI list 750 passed 2 skipped, Windows list 527 passed 2 skipped (run on this Mac).",
      "platform": "macOS development; engine and renderer; browser (Chrome) with the actual backend; not the Electron app, not native Windows"
+    },
+    {
+     "kind": "local-incomplete-upstream-history-correction",
+     "result": "Missing/failed/REVIEW upstream input now records upstream_incomplete rather than a known condition_not_met. Only known unmet branches propagate not_reached; later Blob/aggregate nodes preserve unknown evidence. Six controlled causal cases failed before correction. Affected flow contracts80 passed; renderer9 passed and both TypeScript projects passed. Actual local SDK/batch19 passed with3 declared environment skips.",
+     "scope": "Task37 onb146414 plus owned engine, tests and two renderer files; synthetic CPU adapters for the unknown cases, actual generated CPU packages for SDK checks; root review only; no parent or feature acceptance promoted",
+     "platform": "Local macOS CPU/native C++ and renderer unit checks. C# and Linux-loader cases not executed locally; exact hosted source/platform rerun pending"
     }
    ],
    "file_actions": {
@@ -1596,8 +1602,7 @@
     "class check and opening-window review P3s: the binding guard, the held version select and hand-off are not covered by a test; a threshold set on a still-unbound node during the opening window is reset by the binding; an empty requested segmentation class list being judged; the studio catalog wiring and the datalist are covered only by the gated app-flow QA",
     "Windows native and hosted evidence",
     "the app-flow QA run with the rule set, expecting the clean images OK (the QA freeze 4 recorded them REVIEW without the rule)",
-    "review s205u3 P3: tests for a skipped Blob passed on to an aggregate behind it (U04), a REVIEW source recorded as not reached (U03/M05, steps only) and the incomplete-reason guard (M08)",
-    "review s205u3 P3: when an upstream model answered nothing, the steps behind it (now including result nodes) are recorded as condition_not_met; the verdict stays a safe REVIEW but the history names the wrong cause"
+    "review s205u3 P3: tests for a skipped Blob passed on to an aggregate behind it (U04), a REVIEW source recorded as not reached (U03/M05, steps only) and the incomplete-reason guard (M08)"
    ]
   },
   {
