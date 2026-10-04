@@ -83,7 +83,15 @@ test('recipe cancel preserves current DAG; explicit mapping adopts raw-distance 
  await dialog.getByRole('button',{name:'매핑 확인·새 초안으로 채택'}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('[data-flow-node-id="node_fixed_roi"]')).toBeVisible();
  await page.locator('[data-flow-node-id="node_inspect"]').click();await expect(page.getByLabel('결함 판정 임계치')).toHaveValue('8');await expect(page.getByRole('region',{name:'플로우 식별 정보'})).toContainText(model);
  await evidence.screenshot(page,'s204-adopted-draft');expect(writes,'adoption saves and activates nothing').toEqual([]);
- await page.getByRole('button',{name:'플로우 실행 취소',exact:true}).click();await expect.poll(()=>ids(page)).toEqual(original);
+ // Explicit adoption captures a new active-version basis. Reusing old undo
+ // would resurrect a stale graph against that basis; ordinary later edits
+ // still undo within the adopted recipe.
+ const undo=page.getByRole('button',{name:'플로우 실행 취소',exact:true});
+ await expect(undo).toBeDisabled();
+ const adopted=await ids(page);expect(adopted).not.toEqual(original);
+ await page.getByLabel('결함 판정 임계치').fill('9');await expect(undo).toBeEnabled();
+ await undo.click();await expect(page.getByLabel('결함 판정 임계치')).toHaveValue('8');
+ await expect.poll(()=>ids(page)).toEqual(adopted);await expect(undo).toBeDisabled();
 });
 
 test('model verification refusal and cancellation during held verification preserve graph',async({page,renderer,workspace,evidence})=>{
