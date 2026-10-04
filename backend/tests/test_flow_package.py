@@ -83,6 +83,39 @@ def test_flow_package_contains_saved_graph_and_checksum_bound_model(tmp_path: Pa
     assert "checksum" in rejected.stderr.lower()
 
 
+@pytest.mark.parametrize("windows,busy_calls,expected_calls", [(True, 2, 3), (True, 100, 4), (False, 2, 1)])
+def test_package_publication_waits_out_windows_readers_but_refuses_persistent_errors(
+        tmp_path, monkeypatch, windows, busy_calls, expected_calls):
+    from backend.remote import file_replace
+    checkpoint = _checkpoint(tmp_path)
+    real_rename = os.rename
+    attempts, sleeps = [], []
+    def busy_reader(source, target):
+        attempts.append((Path(source), Path(target)))
+        if len(attempts) <= busy_calls:
+            raise PermissionError(13, 'Access is denied')
+        return real_rename(source, target)
+    monkeypatch.setattr(file_replace, '_WINDOWS', windows)
+    monkeypatch.setattr(file_replace, 'ATTEMPTS', 4)
+    monkeypatch.setattr(file_replace.time, 'sleep', sleeps.append)
+    monkeypatch.setattr(os, 'rename', busy_reader)
+    kwargs = dict(pipeline=get_single_detection_flowchart(job_id='job_detector'),
+                  checkpoints={'job_detector': checkpoint}, output_base_dir=tmp_path/'exports', package_name='reader_flow')
+    if windows and busy_calls < 4:
+        result = build_flow_package(**kwargs)
+        package = Path(result['package_path'])
+        from backend.engine.flow_package_runtime import verify_flow_package
+        verify_flow_package(package)
+        assert (package/'models/job_detector/best_model.pt').read_bytes() == checkpoint.read_bytes()
+    else:
+        with pytest.raises(PermissionError): build_flow_package(**kwargs)
+        assert not (tmp_path/'exports'/'reader_flow').exists()
+        assert not list((tmp_path/'exports').iterdir())
+    assert len(attempts) == expected_calls
+    assert len(sleeps) == expected_calls - 1
+    assert checkpoint.read_bytes() == b'detector checkpoint fixture'
+
+
 def test_approved_release_rejects_checkpoint_hash_mismatch_before_package_write(tmp_path: Path):
     checkpoint = _checkpoint(tmp_path)
     with pytest.raises(ValueError, match="Approved checkpoint SHA-256"):

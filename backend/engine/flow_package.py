@@ -400,7 +400,8 @@ def build_flow_package(
         target = base / package_name
         if target.exists() or target.is_symlink():
             target = base / f"{package_name}_{time.time_ns()}"
-        os.rename(staging, target)
+        from backend.remote.file_replace import rename_directory
+        rename_directory(staging, target)
         result = {
             "status": "success", "package_path": str(target), "package_name": target.name,
             "pipeline_id": pipeline.id, "model_job_ids": sorted(jobs), "total_files": len(files) + 1,

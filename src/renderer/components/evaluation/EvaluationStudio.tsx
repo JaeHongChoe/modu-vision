@@ -278,7 +278,7 @@ export const EvaluationStudio: React.FC = () => {
   [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
-  const hasCalibrationEvidence = !executionEvidence?.common_cohort && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  const hasCalibrationEvidence = !isLoading && !executionEvidence?.common_cohort && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = executionEvidence?.common_cohort
     ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'

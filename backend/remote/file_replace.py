@@ -30,6 +30,16 @@ def replace_file(source, target) -> None:
     _retrying(lambda: os.replace(source, target))
 
 
+def rename_directory(source, target) -> None:
+    """Publish a staged directory without replacing an existing Windows target.
+
+    A reader holding any descendant can deny directory rename on Windows.
+    Keep the same short bounded retry as status publication; do not change
+    permissions, remove the destination, or copy a partially visible package.
+    """
+    _retrying(lambda: os.rename(source, target))
+
+
 def read_text(path, encoding: str = "utf-8") -> str:
     """Path.read_text that waits out a replacement in progress on Windows."""
     return _retrying(lambda: Path(path).read_text(encoding=encoding))

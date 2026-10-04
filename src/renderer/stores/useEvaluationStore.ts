@@ -461,6 +461,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   applyOptimalThreshold: () => {
+    if (get().isLoading) return;
     const { overkillAnalysis, testPredictions, classSemantics } = get();
     const hasBothClasses = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles))
       && testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
@@ -470,6 +471,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   calibrateZeroEscape: async (jobIdOverride) => {
+    if (get().isLoading) return;
     if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
     const generation = evaluationGeneration;
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();

@@ -145,9 +145,12 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Project directory not found: {path}")
     if not manifest.is_file():
         raise HTTPException(status_code=422, detail=f"No project.json in {path}. Create a project here first.")
-    stage = "inventory"
+    stage = "manifest-compatibility"
     try:
-        preview_migration(path)
+        # Opening/authorizing an active project validates its manifest. A full
+        # migration dry-run inventories models, external datasets and live job
+        # stores and belongs to the explicit compatibility/migration routes.
+        legacy_preview_migration(path)
         stage = "manifest-read"
         saved = json.loads(manifest.read_text(encoding="utf-8"))
         if not isinstance(saved, dict):
@@ -175,7 +178,7 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
         stage = "resolved-validation"
         project = ProjectConfigResponse.model_validate(data).model_dump()
     except (OSError, ValueError, TypeError, ValidationError) as exc:
-        # An inventory error can concern a live coordination file, not the
+        # An activation I/O error can concern a labelset or recovery file, not the
         # manifest. Preserve the refusal and identify the actual I/O operation
         # without disclosing traceback paths, arguments or local variables.
         diagnostics = [f"stage={stage}"]

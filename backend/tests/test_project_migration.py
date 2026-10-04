@@ -31,17 +31,17 @@ def test_future_schema_rejected_before_any_write(tmp_path):
     assert tree(root)==before
 
 
-def test_project_inventory_permission_failure_identifies_underlying_io_operation(tmp_path, monkeypatch):
+def test_project_normalization_permission_failure_identifies_underlying_io_operation(tmp_path, monkeypatch):
     root=tmp_path/'project';manifest(root,1)
     original=(root/'project.json').read_bytes()
     def denied_read(*args, **kwargs):
         failure=PermissionError(13, 'Permission denied')
         failure.winerror=32
         raise failure
-    monkeypatch.setattr('backend.engine.migration_inventory.project_snapshot',denied_read)
+    monkeypatch.setattr(routes_project,'normalize_legacy_manifest',denied_read)
     with pytest.raises(HTTPException) as failure:routes_project._load_project(root)
     assert failure.value.status_code==422
-    assert 'stage=inventory' in failure.value.detail
+    assert 'stage=legacy-normalization' in failure.value.detail
     assert 'errno=13' in failure.value.detail and 'winerror=32' in failure.value.detail
     assert 'source=denied_read' in failure.value.detail
     assert (root/'project.json').read_bytes()==original
@@ -116,3 +116,27 @@ def test_receipt_after_process_exit_recovers_only_exact_normalized_output(tmp_pa
     before=(root/'project.json').read_bytes()
     with pytest.raises(MigrationError,match='current edits'):apply_migration(root)
     assert (root/'project.json').read_bytes()==before
+
+
+def test_project_open_does_not_inventory_live_artifacts_but_explicit_preview_still_refuses(tmp_path, monkeypatch):
+    from backend.engine.project_migration import preview_migration, MigrationError
+    root=tmp_path/'live';manifest(root,1)
+    model=root/'models'/'completed';model.mkdir(parents=True)
+    checkpoint=model/'best_model.pt';checkpoint.write_bytes(b'preserved completed model')
+    def live_control_reader(*args, **kwargs):
+        raise PermissionError(13, 'live coordination reader denied')
+    monkeypatch.setattr('backend.engine.migration_inventory.project_snapshot',live_control_reader)
+    loaded=routes_project._load_project(root)
+    assert loaded['schema_version']==1 and loaded['id']=='project'
+    assert checkpoint.read_bytes()==b'preserved completed model'
+    with pytest.raises(MigrationError,match='live coordination reader denied'):
+        preview_migration(root)
+
+
+def test_project_open_refuses_linked_ancestor_before_any_write(tmp_path):
+    root=tmp_path/'owned'/'project';root.parent.mkdir();manifest(root,1)
+    linked=tmp_path/'linked';linked.symlink_to(root.parent,target_is_directory=True)
+    before=tree(root)
+    with pytest.raises(HTTPException) as failure:routes_project._load_project(linked/'project')
+    assert failure.value.status_code==422
+    assert tree(root)==before

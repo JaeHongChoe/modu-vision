@@ -91,7 +91,10 @@ test('threshold calibration requires a real normal role and respects explicit al
   try {
     await f.state().calibrateZeroEscape();
     assert.equal(requests.length, 0, 'missing truth cannot supply the required normal cohort');
-    f.useEvaluationStore.setState({ testPredictions: samples });
+    f.useEvaluationStore.setState({ testPredictions: samples, isLoading:true });
+    await f.state().calibrateZeroEscape();
+    assert.equal(requests.length,0,'a pending result cannot calibrate stale samples');
+    f.useEvaluationStore.setState({isLoading:false});
     await f.state().calibrateZeroEscape();
     assert.equal(requests.length, 1, 'scratch is normal by the recorded role even though its alias sounds defective');
     assert.equal(requests[0].body.job_id, 'job');
@@ -158,6 +161,14 @@ test('fixed test-cohort result keeps its matrix visible and disables unsupported
  assert.match(buttons.find(n=>view.text(n)==='JSON').props.title,/코호트/);
 });
 
+
+test('loading a replacement result disables report and calibration actions on stale visible samples',()=>{
+ const view=renderStudio({jobId:'job',isLoading:true,metrics:{accuracy:.25},classSemantics:semantics,
+  testPredictions:samples,filteredPredictions:samples,selectedPrediction:samples[0],executionEvidence:null,
+  confusionMatrix:{classes:['OK','scratch'],matrix:[[0,1],[1,0]]}});
+ const buttons=view.nodes.filter(n=>n.type==='button'&&['HTML 리포트 내보내기','JSON','평가 임계값 적용','검증 임계값 적용'].includes(view.text(n)));
+ assert.equal(buttons.length,4);assert(buttons.every(n=>n.props.disabled));
+});
 
 test('distance evaluation inherits calibrated threshold and sends a bound heatmap override',async()=>{
  const f=fixture(),spec={domain:'distance',unit:'mahalanobis_distance',direction:'higher_is_defect',calibration_id:'saved-model',threshold:8};

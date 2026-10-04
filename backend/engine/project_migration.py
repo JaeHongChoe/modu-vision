@@ -19,7 +19,7 @@ class MigrationError(ValueError):
 def _read(root):
     root=Path(root).expanduser()
     path=root/'project.json'
-    if root.is_symlink() or path.is_symlink() or not root.is_dir() or not path.is_file():
+    if any(parent.is_symlink() for parent in (root,*root.parents)) or path.is_symlink() or not root.is_dir() or not path.is_file():
         raise MigrationError('Open an existing project with an unlinked project.json')
     if path.stat().st_size > MAX_MANIFEST_BYTES:raise MigrationError('Project manifest exceeds 4 MiB')
     raw=path.read_bytes();value=json.loads(raw)
