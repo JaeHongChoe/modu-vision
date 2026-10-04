@@ -161,6 +161,61 @@ def _wait_preflight(api, seconds=300):
     raise AssertionError('the preflight did not finish')
 
 
+def test_a_cold_scipy_import_completes_while_the_parent_pipe_watcher_is_active(tmp_path):
+    import os
+    import subprocess
+    import sys
+    import time
+    from backend.engine import worker_preflight
+    # This is a fresh interpreter: the parent pytest process may already have
+    # loaded SciPy. Exercise native BLAS initialization with the EOF guard
+    # already watching an open pipe, then prove that closing it still exits.
+    program = (
+        "import threading, faulthandler\n"
+        "faulthandler.dump_traceback_later(10, repeat=True)\n"
+        "from backend.engine import worker_preflight as worker\n"
+        "original_read = worker.os.read\n"
+        "watching = threading.Event()\n"
+        "watch_fds = []\n"
+        "def observed_read(fd, count):\n"
+        "    watch_fds.append(fd)\n"
+        "    watching.set()\n"
+        "    return original_read(fd, count)\n"
+        "worker.os.read = observed_read\n"
+        "worker._exit_when_parent_goes(30)\n"
+        "assert watching.wait(5), 'the parent watcher did not start'\n"
+        "if worker.platform.system() == 'Windows':\n"
+        "    assert not worker.os.get_blocking(watch_fds[0]), 'the Windows pipe watch must not block'\n"
+        "print('COLD_PARENT_PIPE_WATCH_ACTIVE', flush=True)\n"
+        "import numpy as np\n"
+        "from scipy.linalg import blas\n"
+        "np.testing.assert_allclose(blas.dgemm(1, np.eye(2), np.eye(2)), np.eye(2))\n"
+        "print('COLD_NATIVE_IMPORT_COMPLETED', flush=True)\n"
+        "threading.Event().wait()\n"
+    )
+    log = tmp_path / 'preflight.log'
+    environment = {**os.environ, 'PYTHONPATH': str(Path(worker_preflight.__file__).resolve().parents[2])}
+    with log.open('wb') as output:
+        child = subprocess.Popen([sys.executable, '-c', program], cwd=tmp_path, env=environment,
+                                 stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT)
+        try:
+            deadline = time.monotonic() + 35
+            while child.poll() is None and time.monotonic() < deadline:
+                if 'COLD_NATIVE_IMPORT_COMPLETED' in log.read_text(encoding='utf-8', errors='replace'):
+                    break
+                time.sleep(0.02)
+            assert 'COLD_NATIVE_IMPORT_COMPLETED' in log.read_text(encoding='utf-8', errors='replace'), log.read_text()
+            assert child.poll() is None, 'the child remains owned until its parent closes the pipe'
+            child.stdin.close()
+            assert child.wait(timeout=10) == 75
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=10)
+            if not child.stdin.closed:
+                child.stdin.close()
+
+
 def test_a_real_preflight_verifies_each_stage_for_the_runtime_it_ran_on(tmp_path, monkeypatch):
     from backend.engine import worker_preflight
     api, _ = _app(tmp_path, monkeypatch)
@@ -464,6 +519,7 @@ def test_the_parent_watcher_owns_a_separate_descriptor_and_keeps_its_deadline(mo
         timers.append((seconds, callback))
         return SimpleNamespace(start=lambda: calls.append('deadline'))
 
+    monkeypatch.setattr(worker.platform, 'system', lambda: 'Linux')
     monkeypatch.setattr(worker.os, 'dup', duplicate)
     monkeypatch.setattr(worker.os, 'read', read)
     monkeypatch.setattr(worker.os, 'close', lambda fd: calls.append(('close', fd)))
@@ -488,53 +544,53 @@ def test_a_parent_pipe_duplication_failure_cannot_start_an_unguarded_preflight(m
     assert started == []
 
 
-def test_a_cold_scipy_import_completes_while_the_parent_pipe_watcher_is_blocked(tmp_path):
-    import os
-    import subprocess
-    import sys
-    import time
-    from backend.engine import worker_preflight
-    # This is a fresh interpreter: the parent pytest process may already have
-    # loaded SciPy. Exercise native BLAS initialization with the EOF guard
-    # already blocked on an open pipe, then prove that closing it still exits.
-    program = (
-        "import threading\n"
-        "from backend.engine import worker_preflight as worker\n"
-        "original_read = worker.os.read\n"
-        "watching = threading.Event()\n"
-        "def observed_read(fd, count):\n"
-        "    watching.set()\n"
-        "    return original_read(fd, count)\n"
-        "worker.os.read = observed_read\n"
-        "worker._exit_when_parent_goes(30)\n"
-        "assert watching.wait(5), 'the parent watcher did not start'\n"
-        "import numpy as np\n"
-        "from scipy.linalg import blas\n"
-        "np.testing.assert_allclose(blas.dgemm(1, np.eye(2), np.eye(2)), np.eye(2))\n"
-        "print('COLD_NATIVE_IMPORT_COMPLETED', flush=True)\n"
-        "threading.Event().wait()\n"
-    )
-    log = tmp_path / 'cold-native-import.log'
-    environment = {**os.environ, 'PYTHONPATH': str(Path(worker_preflight.__file__).resolve().parents[2])}
-    with log.open('wb') as output:
-        child = subprocess.Popen([sys.executable, '-c', program], cwd=tmp_path, env=environment,
-                                 stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT)
-        try:
-            deadline = time.monotonic() + 35
-            while child.poll() is None and time.monotonic() < deadline:
-                if 'COLD_NATIVE_IMPORT_COMPLETED' in log.read_text(encoding='utf-8', errors='replace'):
-                    break
-                time.sleep(0.02)
-            assert 'COLD_NATIVE_IMPORT_COMPLETED' in log.read_text(encoding='utf-8', errors='replace'), log.read_text()
-            assert child.poll() is None, 'the child remains owned until its parent closes the pipe'
-            child.stdin.close()
-            assert child.wait(timeout=10) == 75
-        finally:
-            if child.poll() is None:
-                child.kill()
-                child.wait(timeout=10)
-            if not child.stdin.closed:
-                child.stdin.close()
+@pytest.mark.parametrize('read_error', [False, True])
+def test_the_windows_parent_watcher_never_blocks_on_an_empty_owned_pipe(monkeypatch, read_error):
+    from backend.engine import worker_preflight as worker
+    calls = []
+    timers = []
+    remaining = iter([BlockingIOError(), b'parent data', BlockingIOError(),
+                      OSError('the owned pipe closed') if read_error else b''])
+
+    def read(fd, count):
+        assert (fd, count) == (91, 65536)
+        calls.append('read')
+        result = next(remaining)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(worker.platform, 'system', lambda: 'Windows')
+    monkeypatch.setattr(worker.os, 'dup', lambda fd: 91 if fd == 0 else pytest.fail('only own stdin'))
+    monkeypatch.setattr(worker.os, 'set_blocking', lambda fd, blocking: calls.append(('blocking', fd, blocking)))
+    monkeypatch.setattr(worker.os, 'read', read)
+    monkeypatch.setattr(worker.os, 'close', lambda fd: calls.append(('close', fd)))
+    monkeypatch.setattr(worker.os, '_exit', lambda code: calls.append(('exit', code)))
+    monkeypatch.setattr(worker.time, 'sleep', lambda seconds: calls.append(('sleep', seconds)))
+    monkeypatch.setattr(worker.threading, 'Thread', lambda *, target, **kwargs: SimpleNamespace(start=target))
+    monkeypatch.setattr(worker.threading, 'Timer', lambda seconds, callback:
+                        timers.append((seconds, callback)) or SimpleNamespace(start=lambda: calls.append('deadline')))
+    worker._exit_when_parent_goes(12)
+    assert calls == [('blocking', 91, False), 'read', ('sleep', 0.05), 'read', 'read', ('sleep', 0.05),
+                     'read', ('close', 91), ('exit', 75), 'deadline']
+    assert timers[0][0] == 12
+    timers[0][1]()
+    assert calls[-1] == ('exit', 76)
+
+
+def test_a_windows_pipe_mode_failure_cannot_start_an_unguarded_preflight(monkeypatch):
+    from backend.engine import worker_preflight as worker
+    calls = []
+    monkeypatch.setattr(worker.platform, 'system', lambda: 'Windows')
+    monkeypatch.setattr(worker.os, 'dup', lambda fd: 91)
+    monkeypatch.setattr(worker.os, 'set_blocking', lambda *args: (_ for _ in ()).throw(OSError('cannot set pipe mode')))
+    monkeypatch.setattr(worker.os, 'close', lambda fd: calls.append(('close', fd)))
+    monkeypatch.setattr(worker.threading, 'Thread', lambda **kwargs: SimpleNamespace(start=lambda: calls.append('reader')))
+    monkeypatch.setattr(worker.threading, 'Timer', lambda *args: SimpleNamespace(start=lambda: calls.append('deadline')))
+    with pytest.raises(OSError, match='cannot set pipe mode'):
+        worker._exit_when_parent_goes(12)
+    assert calls == [('close', 91)]
+
 
 
 def test_the_child_exits_when_the_app_side_of_its_stdin_closes(tmp_path):

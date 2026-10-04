@@ -512,16 +512,26 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
 def _exit_when_parent_goes(deadline: Optional[float]) -> None:
     """In the child: exit at once when the app's end of stdin closes (the app quit, crashed or was killed) or at the
     deadline, so no preflight outlives its app or runs on without a limit."""
-    # A blocking Windows CRT read holds its descriptor lock. Native Fortran
-    # initialization (SciPy BLAS) inspects stdin with fstat(0), so reading fd 0
-    # here can deadlock its first import. A duplicate has its own CRT lock and
-    # observes the same parent pipe EOF without delaying either lifetime guard.
+    # First native SciPy imports can hang while a Windows pipe read is blocked,
+    # even on a duplicated descriptor. Keep the owned descriptor, but do not
+    # leave a pending read during native initialization. Windows pipe support
+    # in Python >= 3.12 returns BlockingIOError when the open pipe is empty.
     watch_fd = os.dup(0)
+    try:
+        if platform.system() == 'Windows':
+            os.set_blocking(watch_fd, False)
+    except BaseException:
+        os.close(watch_fd)
+        raise
 
     def watch_stdin():
         try:
-            while os.read(watch_fd, 65536):
-                pass
+            while True:
+                try:
+                    if not os.read(watch_fd, 65536):
+                        break
+                except BlockingIOError:
+                    time.sleep(0.05)
         except OSError:
             pass
         finally:
