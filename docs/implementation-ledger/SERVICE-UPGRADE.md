@@ -595,3 +595,23 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
   - 플로우 노드와 화면(S2-05/S4-08).
   - 검토 P3: min_support 값 검증, coverage 설명(깨끗한 전체 view는 약 0.8~0.95), min_support는 휠 수 있는 영역에서만 의미가 있다는 설명.
   - 렌즈 왜곡 모델, 실제 fixture·카메라 근거, Windows 실기.
+
+## 이상 탐지 폴더 이름의 대소문자(9da1093; S0-08 결함 회귀)
+
+- 2026-10-03부터 main의 hosted Linux CI가 S2-04 승인 확인에서 실패했다. 이상 탐지 가져오기가 e2e 데이터(ok/, ng/)를 "Anomaly train directory does not exist"로 거절했다(실패한 실행 trace의 POST /api/dataset/import 422).
+- 원인: 이상 탐지 loader가 OK, NG, fail, train(train/good 포함), test, val, ground_truth, test_crop_output, scan_anomalies라는 정확한 이름만 찾았다. macOS와 Windows는 디스크가 대소문자를 접어서 우연히 맞았다.
+- 고친 것:
+  - 정해진 폴더 이름은 대소문자와 관계없이 찾고, 디스크에 적힌 철자로 돌려준다(`dataset_loaders.named_child_dir`).
+  - 같은 이름이 두 철자로 나란히 있으면 하나를 조용히 빼지 않고 거절한다.
+  - 레이아웃이 읽는 폴더만 찾는다. 유연한 loader의 결함 폴더는 넘긴 뒤에 val/test에서만 찾는다.
+  - crop 폴더의 mask 파일은 철자와 관계없이 빠진다.
+  - 폴더 목록은 데이터셋 구성 한 번에 한 번만 읽고, 그보다 오래 남지 않는다.
+- 작성자 receipt(CI 잠금 .venv):
+  - 새 시험 22 통과. 이 Mac을 대소문자 구분 파일 시스템처럼 답하게 하는 fixture를 쓴다. d29d905 코드에서는 16 실패·5 오류·1 통과.
+  - 이상 탐지 시험 파일 35개 589 통과·4 건너뜀.
+  - 50,000개 항목 폴더 검사 약 460 ms(freeze 1은 2.5 s).
+  - Linux CI 목록 851 통과·2 건너뜀, Windows 목록 628 통과·2 건너뜀(이 Mac에서 실행).
+- 독립 검토: 1회차(P2 mask 누출, 시험 공백)와 2회차(N-P2 구성 사이에 남은 목록이 같은 시각 단위 안의 변경을 놓침) 지적을 고쳤고 3회차 승인(P3만). 검토자는 대소문자 구분 APFS와 1초 단위 HFS+ 이미지에서 시험을 다시 돌렸고, 대소문자 구분 디스크에서 S2-04 승인 확인 e2e 한 번을 통과시켰다.
+- 남은 것:
+  - 9da1093의 hosted Linux 실행 확인, 대소문자 구분 폴더의 Windows 실기.
+  - 검토 P3: `os.listdir`로 목록 읽기(50,000개에서 약 106 ms), inspect_dataset 구성 사이의 목록 공유, 살아남은 변이 3개.
