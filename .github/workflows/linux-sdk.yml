@@ -31,10 +31,7 @@ jobs:
           g++ --version | tee sdk-evidence/compiler.txt
           dotnet --list-sdks | tee sdk-evidence/dotnet.txt
           python3-config --includes | tee sdk-evidence/python-headers.txt
-          if ! rg '^8\.' sdk-evidence/dotnet.txt; then
-            echo '.NET 8 SDK is required; C# skip is not acceptance' >&2
-            exit 1
-          fi
+          python -c "import pathlib,re; text=pathlib.Path('sdk-evidence/dotnet.txt').read_text(); assert re.search(r'^8\.',text,re.M), '.NET 8 SDK is required; C# skip is not acceptance'"
       - name: Install locked CPU runtime
         run: >-
           python -m pip install --require-hashes --only-binary=:all:
