@@ -106,6 +106,9 @@ export type AsyncComparisonRequest = {
   candidate_task?: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification" | "rotated_detection" | "ocr" | null;
   incumbent_params?: { [key: string]: unknown };
   candidate_params?: { [key: string]: unknown };
+  execution_target?: "local_cpu" | "selected_compute";
+  compute_profile_id?: string | null;
+  device?: string;
 };
 
 export type AutoSelectRequest = {
@@ -261,6 +264,9 @@ export type ComparisonRequest = {
   candidate_task?: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification" | "rotated_detection" | "ocr" | null;
   incumbent_params?: { [key: string]: unknown };
   candidate_params?: { [key: string]: unknown };
+  execution_target?: "local_cpu" | "selected_compute";
+  compute_profile_id?: string | null;
+  device?: string;
 };
 
 export type CompatibilityApplyRequest = {

@@ -141,6 +141,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         const job = await request<ComparisonJob>(`/api/evaluation/model-comparisons/jobs/${comparisonJob.job_id}?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`);
         if (!active || currentScope.current !== scopeKey) return;
         setComparisonJob(job);
+        setJobs((current) => current.map((row) => row.job_id === job.job_id ? job : row));
         if (['queued', 'running'].includes(job.status)) { timer = window.setTimeout(poll, 800); return; }
         setIsRunning(false);
         if (job.error) setError(job.error);
