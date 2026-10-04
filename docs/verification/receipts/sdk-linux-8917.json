@@ -1,0 +1,306 @@
+{
+  "schema": "SDKGateReadback/v1",
+  "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+  "run_id": 37221752546,
+  "platform": "Linux",
+  "tests": {
+    "tests": 21,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "duration_seconds": 134.576,
+  "test_cases": [
+    "test_python_predictor_executor_use_same_full_dag_and_strict_options",
+    "test_runtime_package_deadline_survives_reopen_and_cli",
+    "test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+    "test_csharp_pinvoke_calls_the_same_native_executor",
+    "test_local_dlopen_host_can_import_python_extensions",
+    "test_python_cancellation_reaps_child_and_reuses_handle",
+    "test_generator_cancellation_publishes_no_candidate_and_reuses_handle",
+    "test_cpp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_csharp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_interruption_reaps_the_actual_owned_child",
+    "test_delivered_batch_cli_retains_order_hashes_full_graph_and_input_errors",
+    "test_delivered_batch_deadline_records_review_for_each_image",
+    "test_duplicate_batch_identity_refuses_before_any_result",
+    "test_batch_expected_hash_refuses_without_executing",
+    "test_batch_discards_a_result_when_input_changes",
+    "test_malformed_batch_refuses_before_package_initialization[rows0]",
+    "test_malformed_batch_refuses_before_package_initialization[rows1]",
+    "test_malformed_batch_refuses_before_package_initialization[rows2]",
+    "test_malformed_batch_refuses_before_package_initialization[rows3]",
+    "test_malformed_batch_refuses_before_package_initialization[rows4]",
+    "test_duplicate_keys_and_large_batch_refuse_before_initialization"
+  ],
+  "hosted_receipt_sha256": "1fbcd33fa66797f90862fd18b2a5ffbd6377e53cd9888d3038dad3c46632cb96",
+  "junit_sha256": "3a7b1587878e83aa71fd38e0578bdc962b19f7f2230cbf1e06570dec538db7b5",
+  "downloaded_readback_sha256": "b921fc16d5b34b26c359e71b69d7f1aa9508ca031f8942120b24da58b44f0956",
+  "compiled_artifacts": [
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "3a9f00eca7af5f2604c80d6693605cb42a2660237afeae9e605f8e840a97e91a",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "308bdd63234d35fa50b0c3202fe8f3a71cbc954ddbb06622902b90f708eb3dcb",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "affd692aacd2cdf23da74404f64bddf0c6f54958c09e93801704c9d96cc3fe5d",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "3a9f00eca7af5f2604c80d6693605cb42a2660237afeae9e605f8e840a97e91a",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "308bdd63234d35fa50b0c3202fe8f3a71cbc954ddbb06622902b90f708eb3dcb",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "affd692aacd2cdf23da74404f64bddf0c6f54958c09e93801704c9d96cc3fe5d",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "eab144ea06b0b81c31194965a48439a81f7062df54cbd3333ca64c3cbdb3336b",
+      "architecture": "managed .NET AnyCPU"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "af7e7f05ba65ce88e8f9ffbeb5e19afc3512b48b7c1b9b269453248fc38a07d0",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "3b94eccd200165c9561f80c30da89f89d6c605a8838b9a11523336fdb5518782",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "a0674f02eae79a91ca52d6a990e90f05b83ad3a5a9a2fdbee861e929ad79ed13",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "eab144ea06b0b81c31194965a48439a81f7062df54cbd3333ca64c3cbdb3336b",
+      "architecture": "managed .NET AnyCPU"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "af7e7f05ba65ce88e8f9ffbeb5e19afc3512b48b7c1b9b269453248fc38a07d0",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "3b94eccd200165c9561f80c30da89f89d6c605a8838b9a11523336fdb5518782",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "a0674f02eae79a91ca52d6a990e90f05b83ad3a5a9a2fdbee861e929ad79ed13",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "94e8b4b12ccad70c0fda782510f89d70daed43bfedee09a0eb5410e6fcd98fb4",
+      "architecture": "managed .NET AnyCPU"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "3deca53715d8ceb77591d5321026295b7ce1d582648910c9424a67eb8bd504f6",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "f3f17f0308678356b456a5537d85e6a36cdbafc7feb0a7e76682ad9140d3ea21",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "b5d61a970331c90b282cf336ea0b4f5c85b61b05818ce98c36ce5a48e9a79720",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "94e8b4b12ccad70c0fda782510f89d70daed43bfedee09a0eb5410e6fcd98fb4",
+      "architecture": "managed .NET AnyCPU"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "3deca53715d8ceb77591d5321026295b7ce1d582648910c9424a67eb8bd504f6",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "f3f17f0308678356b456a5537d85e6a36cdbafc7feb0a7e76682ad9140d3ea21",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "b5d61a970331c90b282cf336ea0b4f5c85b61b05818ce98c36ce5a48e9a79720",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_imp0/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_imp0/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "ebc5d75a1eba50e4899b1b7a8111e36b0fc5d6689c48089e4265906967966402",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_imp0/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "51d678221ec4e3479801d045eea9c0c1005182ee69e624862b120c7c5529b743",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_imp0/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "cc6e0bf6f2ee581a0fd7e9d22f21fe333d27ae8928522798a700dd99ddae0458",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_impcurrent/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_impcurrent/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "ebc5d75a1eba50e4899b1b7a8111e36b0fc5d6689c48089e4265906967966402",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_impcurrent/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "51d678221ec4e3479801d045eea9c0c1005182ee69e624862b120c7c5529b743",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_local_dlopen_host_can_impcurrent/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "cc6e0bf6f2ee581a0fd7e9d22f21fe333d27ae8928522798a700dd99ddae0458",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "323f55f57977dfaead275751397e6fe6fc76148224ee020c315115adfcb10ed3",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "9a082cfb52ca4ebcd364aa469e4b660d762b16e50cbe015d874636a8e007bcb0",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "9a97148ba99a17ccdb8933e0de6f5783b15cad2a3117f45bad481191435acd66",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/libmodu_vision_runtime.so",
+      "bytes": 22456,
+      "sha256": "ab4b35881247fcdb7c8b9b76c0fd6df1e3bc03cd3f78f9354131ab55fa6defd1",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_cancel_demo",
+      "bytes": 50856,
+      "sha256": "323f55f57977dfaead275751397e6fe6fc76148224ee020c315115adfcb10ed3",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_execute",
+      "bytes": 24256,
+      "sha256": "9a082cfb52ca4ebcd364aa469e4b660d762b16e50cbe015d874636a8e007bcb0",
+      "architecture": "ELF64 little-endian x86-64"
+    },
+    {
+      "path": "linux-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_predict",
+      "bytes": 23064,
+      "sha256": "9a97148ba99a17ccdb8933e0de6f5783b15cad2a3117f45bad481191435acd66",
+      "architecture": "ELF64 little-endian x86-64"
+    }
+  ],
+  "scope": "Actual hosted Linux Python/C++/C# full-DAG SDK, RTLD_LOCAL loading, checksum refusal, timeout/cancellation/reuse, interruption and delivered batch; 21 executed cases with no skips. Not model quality or field acceptance."
+}

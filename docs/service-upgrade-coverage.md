@@ -12,6 +12,7 @@
 - source baseline: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`.
 - source registry의 acceptance와 최신 실행 ledger가 충돌하면 개별 최신 evidence를 다시 확인한다.
 - 아래 mapping은 기존 제목·기능·제약을 보존하라는 실행 계약이다. task의 공통 acceptance만 확인하고 기존 제목의 동작을 생략하면 완료가 아니다.
+- 최신 SDK 근거: F092–F096의 구현·실패·hosted native Windows 15개 근거 칸을 exact8917d8a 실행 결과에 연결했다. 다른 근거 칸과 accepted 0개는 유지한다. [Linux SDK](verification/receipts/sdk-linux-8917.json), [Windows SDK](verification/receipts/sdk-windows-8917.json), [실행 기록](verification/2026-10-04-remaining-integration-evidence.md).
 - 각 legacy 항목은 GUI/persist/reopen/failure/handoff 및 target 조합의 evidence를 새 ledger에 연결한다.
 
 ## 모든 기존 항목

@@ -1,0 +1,281 @@
+{
+  "schema": "SDKGateReadback/v1",
+  "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+  "run_id": 37221754562,
+  "platform": "Windows",
+  "tests": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "duration_seconds": 204.519,
+  "test_cases": [
+    "test_python_predictor_executor_use_same_full_dag_and_strict_options",
+    "test_runtime_package_deadline_survives_reopen_and_cli",
+    "test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+    "test_csharp_pinvoke_calls_the_same_native_executor",
+    "test_python_cancellation_reaps_child_and_reuses_handle",
+    "test_generator_cancellation_publishes_no_candidate_and_reuses_handle",
+    "test_cpp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_csharp_cancel_is_callable_during_execute_and_handle_is_reusable",
+    "test_interruption_reaps_the_actual_owned_child",
+    "test_delivered_batch_cli_retains_order_hashes_full_graph_and_input_errors",
+    "test_delivered_batch_deadline_records_review_for_each_image",
+    "test_duplicate_batch_identity_refuses_before_any_result",
+    "test_batch_expected_hash_refuses_without_executing",
+    "test_batch_discards_a_result_when_input_changes",
+    "test_malformed_batch_refuses_before_package_initialization[rows0]",
+    "test_malformed_batch_refuses_before_package_initialization[rows1]",
+    "test_malformed_batch_refuses_before_package_initialization[rows2]",
+    "test_malformed_batch_refuses_before_package_initialization[rows3]",
+    "test_malformed_batch_refuses_before_package_initialization[rows4]",
+    "test_duplicate_keys_and_large_batch_refuse_before_initialization"
+  ],
+  "hosted_receipt_sha256": "2c03059c79e68ee6595228753cc175f985759a0b92408b07913348654e38e395",
+  "junit_sha256": "15bd6b737412925df50597c16c163073c62794898ef78b1115330fe8619bce3e",
+  "downloaded_readback_sha256": "5d3dc68999ec3776cff07ecab2c9f7a0e66b6b860d895ef544baa8ae0be61357",
+  "compiled_artifacts": [
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "4c58d27452b35cca06d3653b2cbe2c49a6527a080bd0932fbc3ef4f65b2e757a",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "40240fbaa6e8917fa61e3011e4bb48c2021f9ad5df21ab3bcf67c39d956a7d0b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "35594dba6a4e95133a84b75e70ed596b39df5832f9c0eb7a88ef0732874288ba",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_du0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "59d98b559aacc7c4db5454aaf759d71777766384de8c6f99b5c97b29eaabde4b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "4c58d27452b35cca06d3653b2cbe2c49a6527a080bd0932fbc3ef4f65b2e757a",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "40240fbaa6e8917fa61e3011e4bb48c2021f9ad5df21ab3bcf67c39d956a7d0b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "35594dba6a4e95133a84b75e70ed596b39df5832f9c0eb7a88ef0732874288ba",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_cpp_cancel_is_callable_ducurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "59d98b559aacc7c4db5454aaf759d71777766384de8c6f99b5c97b29eaabde4b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "fe286647cde260c83718d41b8316e45bf2642f0dee083ac999d7ad3d7561d9c3",
+      "architecture": "managed AnyCPU"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "604bea3e39ffa9d0a8822327b5360c98d98be09f2ae3a16188e7468b0667d422",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "604bea3e39ffa9d0a8822327b5360c98d98be09f2ae3a16188e7468b0667d422",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "8a5479cf1f7bdb2a5fdd594684a00c6cadd9718f33ba21b8f1f02eaf7fdd73a0",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "cfa991eb5432a56f9e0db7f73864437c1f33d80263ee9f74b3fd560bfd58c89f",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callable0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "1de9b9e978803360ac6edb119c39329c88ccb6e4ef7b6a8783f9e67ce238ce9d",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "fe286647cde260c83718d41b8316e45bf2642f0dee083ac999d7ad3d7561d9c3",
+      "architecture": "managed AnyCPU"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "604bea3e39ffa9d0a8822327b5360c98d98be09f2ae3a16188e7468b0667d422",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "604bea3e39ffa9d0a8822327b5360c98d98be09f2ae3a16188e7468b0667d422",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "8a5479cf1f7bdb2a5fdd594684a00c6cadd9718f33ba21b8f1f02eaf7fdd73a0",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "cfa991eb5432a56f9e0db7f73864437c1f33d80263ee9f74b3fd560bfd58c89f",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_cancel_is_callablecurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "1de9b9e978803360ac6edb119c39329c88ccb6e4ef7b6a8783f9e67ce238ce9d",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "47ceedcb73c38c30674b1beb00ca904547796340f18c543939aa52fe203e9f00",
+      "architecture": "managed AnyCPU"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "ab88fcf557b5f82e15f0652e6b960d0d5df1d11e257293713d14a23f996ce3b6",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "ab88fcf557b5f82e15f0652e6b960d0d5df1d11e257293713d14a23f996ce3b6",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "7788d45ce4b1b271191d7fdceab75022b27b261f7a242484f6b8e39694395904",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "81824f175ed743265ca79b5fff8364924ac20eea92ee83385748f627bd1765e5",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "29663edf022b9273a0e18e826ed7be9a5f138f74c30ebcc1b693a2d260bd760b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/csharp/VisionRuntime.dll",
+      "bytes": 12800,
+      "sha256": "47ceedcb73c38c30674b1beb00ca904547796340f18c543939aa52fe203e9f00",
+      "architecture": "managed AnyCPU"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/csharp/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "ab88fcf557b5f82e15f0652e6b960d0d5df1d11e257293713d14a23f996ce3b6",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "ab88fcf557b5f82e15f0652e6b960d0d5df1d11e257293713d14a23f996ce3b6",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "7788d45ce4b1b271191d7fdceab75022b27b261f7a242484f6b8e39694395904",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "81824f175ed743265ca79b5fff8364924ac20eea92ee83385748f627bd1765e5",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_csharp_pinvoke_calls_the_current/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "29663edf022b9273a0e18e826ed7be9a5f138f74c30ebcc1b693a2d260bd760b",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "87afefa1e537a59af874b34ffb10151e7a4cf549574e116a5cb9e7edcdfa0300",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "54e70618f5d11b7d13cf6bf3cf4dd1f082803dd7644a0aa0ed947d156c5b8cbf",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "3ad7effe8ce9b1c12e9700fd86a46aa0943f18931bb84f8bab589f264110cff5",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_e0/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "28487a20150ed63288ced99b77eb5c43ac4b31e0ae7f72cf6819569eca967097",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/modu_vision_runtime.dll",
+      "bytes": 18944,
+      "sha256": "87afefa1e537a59af874b34ffb10151e7a4cf549574e116a5cb9e7edcdfa0300",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_cancel_demo.exe",
+      "bytes": 56320,
+      "sha256": "54e70618f5d11b7d13cf6bf3cf4dd1f082803dd7644a0aa0ed947d156c5b8cbf",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_execute.exe",
+      "bytes": 40448,
+      "sha256": "3ad7effe8ce9b1c12e9700fd86a46aa0943f18931bb84f8bab589f264110cff5",
+      "architecture": "native AMD64"
+    },
+    {
+      "path": "windows-native-sdk-8917d8ad90dccd79aa98b338cf3652d6cc869a46/_temp/native-sdk/test_packaged_cpp_native_sdk_ecurrent/native/vision_predict.exe",
+      "bytes": 22528,
+      "sha256": "28487a20150ed63288ced99b77eb5c43ac4b31e0ae7f72cf6819569eca967097",
+      "architecture": "native AMD64"
+    }
+  ],
+  "scope": "Actual hosted Windows Server2025 Python/C++/C# SDK, timeout/cancellation/reuse, interruption and delivered batch; 20 executed cases with no skips. Not Win11 installer/SCM/Session0/device/quality acceptance."
+}

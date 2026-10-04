@@ -1054,7 +1054,14 @@
     "S1-06"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "actual owned drained generation execution; root review, independent review pending",
+     "result": "Exact7cf7dfc production CLI refuses active control job/lease, then activates a new owned drained current-schema generation. Two fresh OS HTTP backends use the same five stores, reject copied sessions, accept new fixture login and retain identical terminal records. Original8 files remain unchanged. Later normal writes refuse restore; separate clean restore advances fence and keeps copied authority revoked.",
+     "scope": "Synthetic private POSIX installations only; global-generation native receipt SHA-25621ef0bae49df9f4145fb10ccd526c02b2f6af63616408c0e66ef70e0f2febb90. Live/foreign historical worker adoption and Windows durability remain unsupported, so this does not close the full parent.",
+     "platform": "Actual macOS production CLI and two owned loopback OS backends; no installed user store change or GPU training"
+    }
+   ],
    "file_actions": {
     "backend/engine/project_migration.py": "Modify",
     "backend/storage/migrations.py": "Create",
@@ -3947,7 +3954,14 @@
     "S5-02"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "actual SDK and batch execution; root readback, independent review pending",
+     "result": "Exact8917d8a: Linux run37221752546 passes21 and Windows run37221754562 passes20, zero skips/failures/errors. Actual Python/C++/C# full DAG, deadline/cancel/reuse/error, batch CLI; local loopback HTTP/OpenAPI/restart evidence is separately source-bound in the continuation record.",
+     "scope": "Five SDK legacy IDs F092-F096 now carry implementation/failure/hosted-native-Windows evidence; other dimensions and parent acceptance stay pending. Public sanitized receipt summaries preserve source/JUnit/artifact hashes.",
+     "platform": "Hosted Linux x64 and Windows Server2025; actual macOS CPU headless service; no Win11 installation/SCM/field/model-quality approval"
+    }
+   ],
    "file_actions": {
     "native_runtime": "Extend directory",
     "examples": "Extend directory",
@@ -3988,7 +4002,14 @@
     "S6-07"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "implementation slice published; root review, independent review pending",
+     "result": "a6a842c supplies bounded read-only publication audit, exact finding review reasons, no credential overrides/no source overwrite, support bundle URL/API-key/private-address sanitization, Windows quickstart and troubleshooting.56 actual focused cases pass with zero skips.",
+     "scope": "Exact candidate source/static findings and causal failures are bound in docs/verification/2026-10-04-remaining-integration-evidence.md; synthetic fixtures/icons remain findings, not an assertion of secret-free release.",
+     "platform": "macOS controlled source/CLI/API; hosted composed gates running at7cf7dfc"
+    }
+   ],
    "file_actions": {
     "README.md": "Modify",
     "docs/quickstart-windows.md": "Create",
@@ -4106,7 +4127,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "fill the registry: per-feature evidence as each task verifies a dimension (all 156 records are pending)",
+    "fill the registry: per-feature evidence as each task verifies a dimension (F092-F096 now have implementation/failure/hosted-native-Windows evidence; their other dimensions and the remaining151 feature records remain pending)",
     "review P3s: a click citation is checked by folder, not by spec; the native-Windows test route matches by text over the workflow (a listed file's unlisted tests, Windows-skipped tests and --ignore paths pass); no owner rule for platform and target evidence; receipts and waivers are free text CI cannot verify; commit existence and ::name are not checked; the older ASCII test strips the environment",
     "Windows native evidence",
     "acceptance 2: the button/menu/shortcut/action list with success, empty, invalid, error, cancel, reopen and handoff evidence is not recorded yet (the implementation state was recorded as verified too early in a19a8a4; corrected to pending; the contract and its gate are verified)"

@@ -2743,7 +2743,21 @@
   {
    "id": "F092",
    "implementation": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_runtime_package_deadline_survives_reopen_and_cli",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_runtime_package_deadline_survives_reopen_and_cli",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "gui": {
     "state": "pending"
@@ -2755,7 +2769,21 @@
     "state": "pending"
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_csharp_pinvoke_calls_the_same_native_executor",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -2765,15 +2793,45 @@
    },
    "platform": {
     "windows_native": {
-     "state": "pending"
+     "state": "verified",
+     "evidence": [
+      {
+       "task": "S6-08",
+       "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+       "kind": "native_windows",
+       "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_runtime_package_deadline_survives_reopen_and_cli",
+       "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+       "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+       "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+       "test": "backend/tests/test_runtime_deadline_sdk.py::test_runtime_package_deadline_survives_reopen_and_cli",
+       "receipt": "sdk-windows-8917.json",
+       "receipt_sha256": "30686f510c20ca398258ed919160a35c350d36e4f7dadd8e9ec7831c6ff556fd"
+      }
+     ]
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "GUI, persistence, reopen, handoff and actual deployment-target dimensions are not promoted by this SDK run; independent review and installed Windows11/SCM/device/model-quality qualification remain separate."
+   ]
   },
   {
    "id": "F093",
    "implementation": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "gui": {
     "state": "pending"
@@ -2785,7 +2843,21 @@
     "state": "pending"
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -2795,15 +2867,45 @@
    },
    "platform": {
     "windows_native": {
-     "state": "pending"
+     "state": "verified",
+     "evidence": [
+      {
+       "task": "S6-08",
+       "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+       "kind": "native_windows",
+       "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+       "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+       "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+       "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+       "test": "backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph",
+       "receipt": "sdk-windows-8917.json",
+       "receipt_sha256": "30686f510c20ca398258ed919160a35c350d36e4f7dadd8e9ec7831c6ff556fd"
+      }
+     ]
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "GUI, persistence, reopen, handoff and actual deployment-target dimensions are not promoted by this SDK run; independent review and installed Windows11/SCM/device/model-quality qualification remain separate."
+   ]
   },
   {
    "id": "F094",
    "implementation": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_csharp_pinvoke_calls_the_same_native_executor",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "gui": {
     "state": "pending"
@@ -2815,7 +2917,21 @@
     "state": "pending"
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_csharp_pinvoke_calls_the_same_native_executor",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -2825,15 +2941,45 @@
    },
    "platform": {
     "windows_native": {
-     "state": "pending"
+     "state": "verified",
+     "evidence": [
+      {
+       "task": "S6-08",
+       "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+       "kind": "native_windows",
+       "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_csharp_pinvoke_calls_the_same_native_executor",
+       "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+       "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+       "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+       "test": "backend/tests/test_runtime_deadline_sdk.py::test_csharp_pinvoke_calls_the_same_native_executor",
+       "receipt": "sdk-windows-8917.json",
+       "receipt_sha256": "30686f510c20ca398258ed919160a35c350d36e4f7dadd8e9ec7831c6ff556fd"
+      }
+     ]
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "GUI, persistence, reopen, handoff and actual deployment-target dimensions are not promoted by this SDK run; independent review and installed Windows11/SCM/device/model-quality qualification remain separate."
+   ]
   },
   {
    "id": "F095",
    "implementation": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "gui": {
     "state": "pending"
@@ -2845,7 +2991,21 @@
     "state": "pending"
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -2855,15 +3015,45 @@
    },
    "platform": {
     "windows_native": {
-     "state": "pending"
+     "state": "verified",
+     "evidence": [
+      {
+       "task": "S6-08",
+       "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+       "kind": "native_windows",
+       "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+       "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+       "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+       "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+       "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+       "receipt": "sdk-windows-8917.json",
+       "receipt_sha256": "30686f510c20ca398258ed919160a35c350d36e4f7dadd8e9ec7831c6ff556fd"
+      }
+     ]
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "GUI, persistence, reopen, handoff and actual deployment-target dimensions are not promoted by this SDK run; independent review and installed Windows11/SCM/device/model-quality qualification remain separate."
+   ]
   },
   {
    "id": "F096",
    "implementation": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "gui": {
     "state": "pending"
@@ -2875,7 +3065,21 @@
     "state": "pending"
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-08",
+      "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+      "kind": "real_input",
+      "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+      "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+      "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+      "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+      "receipt": "sdk-linux-8917.json",
+      "receipt_sha256": "8ad44aae25c246c46066eb93875f3df6521a634f873f8326a45bb41f2f4ca976"
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -2885,10 +3089,26 @@
    },
    "platform": {
     "windows_native": {
-     "state": "pending"
+     "state": "verified",
+     "evidence": [
+      {
+       "task": "S6-08",
+       "source_sha": "8917d8ad90dccd79aa98b338cf3652d6cc869a46",
+       "kind": "native_windows",
+       "action": "Execute the actual Python/C++/.NET SDK gate and read downloaded receipt/JUnit/client artifacts; test_python_predictor_executor_use_same_full_dag_and_strict_options",
+       "expected": "Whole-DAG schema/parity, bounded execution and typed failure behavior; actual native Windows execution for the platform dimension",
+       "observed": "Linux21 and Windows20 executed cases with zero skips/failures/errors; includes this exact case. CPython bridge dependency is retained. Hosted Server2025 is not Win11/SCM/field/model-quality approval.",
+       "reviewer": "Codex root source and artifact readback; independent approval unavailable",
+       "test": "backend/tests/test_runtime_deadline_sdk.py::test_python_predictor_executor_use_same_full_dag_and_strict_options",
+       "receipt": "sdk-windows-8917.json",
+       "receipt_sha256": "30686f510c20ca398258ed919160a35c350d36e4f7dadd8e9ec7831c6ff556fd"
+      }
+     ]
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "GUI, persistence, reopen, handoff and actual deployment-target dimensions are not promoted by this SDK run; independent review and installed Windows11/SCM/device/model-quality qualification remain separate."
+   ]
   },
   {
    "id": "F097",

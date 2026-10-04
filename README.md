@@ -260,6 +260,7 @@ modu-vision/
 버그 제보, 기능 제안 및 풀 리퀘스트(PR)는 언제나 환영합니다.
 
 - [기여 안내](CONTRIBUTING.md): 새 PC 설치(CI와 같은 잠금 파일), GPU 없는 CPU 데모(`python scripts/cpu_demo.py`), 집중 테스트, PR 절차, 모듈 지도, 코드 규칙, 지원 범위와 릴리스 정책
+- [Windows 빠른 시작](docs/quickstart-windows.md) · [문제 해결과 진단 자료](docs/troubleshooting.md) · [SDK·REST·배치 연동](docs/api-integration.md)
 - [보안 정책](SECURITY.md): 취약점은 공개 이슈가 아닌 비공개 신고로 알려 주세요. 실제 검사 이미지나 비밀정보는 첨부하지 않습니다.
 - [행동 강령](CODE_OF_CONDUCT.md)
 
