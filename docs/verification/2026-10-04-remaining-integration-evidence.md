@@ -128,3 +128,22 @@ Remote CUDA inspection and CPU package parity are distinct targets. The final se
 - Global-store activation and active-worker adoption, Windows11 installed/SCM/reboot, physical device/service integration and representative model quality retain their explicit pending boundaries.
 
 Earlier saved-flow CUDA, CPU package parity and SDK execution remain their own verified snapshots. They add no training attempts, no parent completion promotion and no acceptance of the latest combined native/GPU paths. This documentation update changes no global program counters.
+
+
+### Task24 owned offline global control generations
+
+Implemented an explicit `python -m backend.engine.global_migration` CLI with required source root and explicit preview SHA before apply. It never discovers installed homes or marks an existing nonempty installation as owned. Only the seven declared canonical current paths are admitted; activation copies the five control stores, preserves original project data, and refuses nonempty historical journal directories. Account/context workspace and original ledger actor namespaces must match.
+
+The staged generation retains original IDs/password hashes/memberships and invalidates copied sessions/OIDC pending. One pointer and fence selects the generation on a fresh backend startup. Startup takes maintenance admission before constructors; stale store objects cannot write the original or a retired generation. Linked control paths, unsupported schemas, active jobs/leases/open attempts, source drift, foreign ownership and later-write inverse recovery are refused. Prepared interruption can finish the same sealed generation; restore creates a fresh sanitized generation without overwriting original files.
+
+Evidence: 125 affected tests passed in 38.12s; integrated primary checks passed 24 tests in 13.07s, including the published SQLite reader lifetime correction. Actual CLI preview/apply/finish was exercised against an isolated synthetic fixture. Fresh `create_app` attached all five stores to one generation. Source bytes were checked in interruption, authority refusal and restore cases.
+
+Limits: this phase is POSIX and current schemas only. Historical adapters, installed offline cutover, active worker adoption, mixed old binaries, remote reconciliation and Windows power-loss/shared-admission qualification remain open. No installed user data was activated. Collaborating agents stopped at their usage limit, so the final root-authored hardening has root review and tests but no completed independent agent review. This does not close full S1-08 or change the 82-plan acceptance count.
+
+### Native common-cohort model selection correction
+
+Actual native QA found an enabled common evaluation button that returned without action after restart when no completed model was selected. The screen now has a scoped completed-model selector, disables submission without one, and invalidates an in-flight result when that selection changes. CUDA wording identifies the selected server GPU. Four focused production handler tests and renderer/main type checks passed. Native execution qualification continues separately.
+
+### Packaged failure evidence retention
+
+The c50d5fa Windows packaged run failed its first export stage, before restart qualification. Its frozen binary build and unsigned package creation passed, but the failing stage detail was not persisted before assertion. The harness now saves the sanitized actual stage results before qualifying them. Eleven harness tests passed; the exact e0efd9b retry remains a failed diagnostic run until its stage cause is resolved. The earlier SQLite Error32 restart failure is not yet qualified on a successful Windows restart.

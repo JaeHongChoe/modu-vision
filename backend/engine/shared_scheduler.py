@@ -8,11 +8,12 @@ import uuid
 import threading
 from contextlib import contextmanager
 from pathlib import Path
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 
 
 class ResourceLeases:
     def __init__(self, path, *, owner=None, lease_seconds=30):
-        self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path = resolve_store_path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         self.owner = owner or f'{os.getpid()}:{uuid.uuid4().hex}'
         self.lease_seconds = lease_seconds
         with self.connect() as conn:
@@ -29,9 +30,14 @@ class ResourceLeases:
                     except sqlite3.OperationalError as exc:
                         if 'duplicate column' not in str(exc):raise
             conn.execute('CREATE TABLE IF NOT EXISTS devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))')
+    @contextmanager
     def connect(self, timeout=10):
-        conn = sqlite3.connect(self.path, timeout=timeout); conn.row_factory = sqlite3.Row
-        use_wal(conn, timeout); return conn
+        with store_admission(self.path):
+            conn = sqlite3.connect(self.path, timeout=timeout); conn.row_factory = sqlite3.Row
+            try:
+                use_wal(conn, timeout)
+                with conn:yield conn
+            finally:conn.close()
     @staticmethod
     def conflict(a, b):
         if a in (None, '', 'all') or b in (None, '', 'all'): return True

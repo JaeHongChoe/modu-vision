@@ -10,6 +10,7 @@ owner can never report over a later one.
 """
 from __future__ import annotations
 
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -125,7 +126,7 @@ _shared: Optional['JobStore'] = None
 def ledger() -> 'JobStore':
     """The ledger in the configured application data folder, resolved again when that folder changes."""
     global _shared
-    path = default_ledger_path()
+    path = resolve_store_path(default_ledger_path())
     with _shared_lock:
         if _shared is None or _shared.path != path:
             _shared = JobStore(path)
@@ -139,7 +140,7 @@ def _context_fields(context: Any) -> tuple[str, str, str, str]:
 
 class JobStore:
     def __init__(self, path: Path | str | None = None):
-        self.path = Path(path) if path is not None else default_ledger_path()
+        self.path = resolve_store_path(Path(path) if path is not None else default_ledger_path())
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             db.executescript(SCHEMA)
@@ -155,15 +156,16 @@ class JobStore:
 
     @contextmanager
     def _connect(self):
-        db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
-        db.row_factory = sqlite3.Row
-        try:
-            use_wal(db, 30)  # a concurrent switch of an older ledger is retried, not failed
-            db.execute('PRAGMA synchronous=FULL')
-            db.execute('PRAGMA foreign_keys=ON')
-            yield db
-        finally:
-            db.close()
+        with store_admission(self.path):
+            db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+            db.row_factory = sqlite3.Row
+            try:
+                use_wal(db, 30)  # a concurrent switch of an older ledger is retried, not failed
+                db.execute('PRAGMA synchronous=FULL')
+                db.execute('PRAGMA foreign_keys=ON')
+                yield db
+            finally:
+                db.close()
 
     @contextmanager
     def _tx(self):

@@ -1,4 +1,5 @@
 """Persistent accounts, hashed sessions and explicit shared-project memberships."""
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 from contextlib import contextmanager
 import hashlib
 import hmac
@@ -28,7 +29,7 @@ ACTIONS={
 
 class AccountStore:
     def __init__(self,path):
-        self.path=Path(path)
+        self.path=resolve_store_path(path)
         if self.path.is_symlink() or self.path.parent.is_symlink():raise ValueError('Account storage cannot be linked')
         self.path.parent.mkdir(parents=True,exist_ok=True)
         with self._db() as db:
@@ -46,12 +47,13 @@ class AccountStore:
 
     @contextmanager
     def _db(self):
-        db=sqlite3.connect(self.path,timeout=10);db.row_factory=sqlite3.Row
-        try:
-            db.execute('BEGIN IMMEDIATE');yield db;db.commit()
-        except Exception:
-            db.rollback();raise
-        finally:db.close()
+        with store_admission(self.path):
+            db=sqlite3.connect(self.path,timeout=10);db.row_factory=sqlite3.Row
+            try:
+                db.execute('BEGIN IMMEDIATE');yield db;db.commit()
+            except Exception:
+                db.rollback();raise
+            finally:db.close()
 
     @staticmethod
     def _password(password,salt):

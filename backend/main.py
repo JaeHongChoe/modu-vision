@@ -263,6 +263,13 @@ class ProjectStorageScopeMiddleware:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from backend.engine.global_store_paths import startup_admission
+    with startup_admission():
+        async with _admitted_lifespan(app):yield
+
+
+@asynccontextmanager
+async def _admitted_lifespan(app: FastAPI):
     """Lifespan context manager orchestrating clean startup and shutdown sequences."""
     # Startup Sequence
     loop = asyncio.get_running_loop()
@@ -292,6 +299,13 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str] = None) -> FastAPI:
+    from backend.engine.global_store_paths import startup_admission,validate_startup_scopes
+    with startup_admission():
+        validate_startup_scopes(project_dir or ROOT_DIR/'projects',shared_auth_dir)
+        return _admitted_create_app(project_dir,shared_auth_dir)
+
+
+def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str] = None) -> FastAPI:
     """Factory creating and configuring the FastAPI application."""
     app = FastAPI(
         title="Vision AI Studio Backend",

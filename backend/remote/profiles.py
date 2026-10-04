@@ -8,6 +8,7 @@ import re
 import tempfile
 import threading
 from pathlib import Path, PurePosixPath
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator,model_validator
@@ -106,7 +107,7 @@ def default_profile_path() -> Path:
 
 class ProfileStore:
     def __init__(self, path: Path | str | None = None):
-        self.path = Path(path) if path is not None else default_profile_path()
+        self.path = resolve_store_path(Path(path) if path is not None else default_profile_path())
 
     def _read(self) -> dict:
         if not self.path.exists():
@@ -146,15 +147,15 @@ class ProfileStore:
                 os.unlink(temporary)
 
     def list(self) -> list[ComputeProfile]:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             return list(self._read()["profiles"])
 
     def get(self, profile_id: str) -> ComputeProfile | None:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             return next((profile for profile in self._read()["profiles"] if profile.id == profile_id), None)
 
     def save(self, profile: ComputeProfile) -> ComputeProfile:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             data = self._read()
             profiles = [existing for existing in data["profiles"] if existing.id != profile.id]
             profiles.append(profile)
@@ -163,7 +164,7 @@ class ProfileStore:
             return profile
 
     def delete(self, profile_id: str) -> bool:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             data = self._read()
             profiles = [profile for profile in data["profiles"] if profile.id != profile_id]
             if len(profiles) == len(data["profiles"]):
@@ -175,11 +176,11 @@ class ProfileStore:
             return True
 
     def get_selected(self) -> str | None:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             return self._read()["selected"]
 
     def set_selected(self, profile_id: str | None) -> str | None:
-        with _STORE_LOCK:
+        with store_admission(self.path), _STORE_LOCK:
             data = self._read()
             if profile_id is not None and profile_id not in {profile.id for profile in data["profiles"]}:
                 raise KeyError(profile_id)

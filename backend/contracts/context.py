@@ -5,6 +5,7 @@ does not replace their histories or implement the S1-06 upload/object store.
 """
 from __future__ import annotations
 
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 from contextvars import ContextVar
 from contextlib import contextmanager
 import hashlib
@@ -93,7 +94,7 @@ class ContextRegistry:
     """Workspace-scoped atomic identities and project-scoped immutable references."""
     def __init__(self, root: Path):
         self.root = Path(root).resolve()
-        self.path = self.root / '.context.sqlite3'
+        self.path = resolve_store_path(self.root / '.context.sqlite3')
         self.root.mkdir(parents=True, exist_ok=True)
         with self._db() as db:
             db.executescript('''
@@ -126,13 +127,14 @@ class ContextRegistry:
 
     @contextmanager
     def _db(self):
-        db = sqlite3.connect(self.path, timeout=30)
-        db.execute('PRAGMA foreign_keys=ON')
-        try:
-            with db:
-                yield db
-        finally:
-            db.close()
+        with store_admission(self.path):
+            db = sqlite3.connect(self.path, timeout=30)
+            db.execute('PRAGMA foreign_keys=ON')
+            try:
+                with db:
+                    yield db
+            finally:
+                db.close()
 
     @contextmanager
     def transaction(self):
