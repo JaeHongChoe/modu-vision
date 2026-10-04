@@ -180,21 +180,26 @@ export const EvaluationStudio: React.FC = () => {
 
   const linkedJob = handoff?.step===4 && handoff.family===task ? handoff.jobId : jobId || (useTrainingStore.getState().status==='completed' ? useTrainingStore.getState().jobId : null);
   const requestedCohortJob=cohortModel || (cohortModels.some(model=>model.job_id===linkedJob) ? linkedJob : null);
-  const runSelectedCohort = async () => {
-    const requestedJob=requestedCohortJob,selectionRevision=modelSelectionRevision.current;
-    if (!requestedJob || !sourceFolder || !cohortVersion || !selectedProfileId) return;
+  const runCohortEvaluation = async (requestedJob:string|null, versionId:string|undefined, profileId:string|null|undefined, device:string|undefined) => {
+    const selectionRevision=modelSelectionRevision.current;
+    if (!requestedJob || !sourceFolder || !versionId || !profileId || !device || profileId!==selectedProfileId) return;
     const expected=scope, generation=getProjectContextGeneration();
+    const expectedProjectId=project?.id,expectedLabelsetId=project?.active_labelset_id;
     setCohortError(null);
     try { await loadEvaluation(requestedJob,{folderPath:sourceFolder,task,labelsetId:project?.active_labelset_id || 'default',
-      evaluationDatasetVersionId:cohortVersion,computeProfileId:selectedProfileId,device:evaluationDevice,
+      evaluationDatasetVersionId:versionId,computeProfileId:profileId,device,
       isCurrent:()=>modelSelectionRevision.current===selectionRevision && scopeRef.current===expected && getProjectContextGeneration()===generation
         && useComputeStore.getState().selectedProfileId===selectedProfileId
         && JSON.stringify(useComputeStore.getState().profiles.find(profile=>profile.id===selectedProfileId) || null)===profileIdentity
-        && useProjectStore.getState().project?.id===project?.id
-        && useProjectStore.getState().project?.active_labelset_id===project?.active_labelset_id
+        && useProjectStore.getState().project?.id===expectedProjectId
+        && useProjectStore.getState().project?.active_labelset_id===expectedLabelsetId
         && useDatasetStore.getState().folderPath===sourceFolder && useProjectStore.getState().task===task});
     } catch(error) { if(scopeRef.current===expected) setCohortError(error instanceof Error ? error.message : String(error)); }
   };
+  const runSelectedCohort = () => runCohortEvaluation(requestedCohortJob,cohortVersion,selectedProfileId,evaluationDevice);
+  const refreshEvaluation = () => executionEvidence?.common_cohort
+    ? runCohortEvaluation(jobId,executionEvidence.common_cohort.dataset_version_id,executionEvidence.compute_profile_id,executionEvidence.device)
+    : loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined);
 
   useEffect(() => {
     loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
@@ -273,9 +278,11 @@ export const EvaluationStudio: React.FC = () => {
   [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
-  const hasCalibrationEvidence = metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  const hasCalibrationEvidence = !executionEvidence?.common_cohort && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
-  const reportAvailabilityHint = !jobId
+  const reportAvailabilityHint = executionEvidence?.common_cohort
+    ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'
+    : !jobId
     ? (language === 'ko' ? '평가가 완료된 모델이 있어야 리포트를 내보낼 수 있습니다.' : 'Load an evaluated model before exporting a report.')
     : !hasReportableResult
     ? (language === 'ko' ? '평가 결과와 검증 이미지가 있어야 리포트를 내보낼 수 있습니다.' : 'Evaluation results and validation images are required for a report.')
@@ -422,7 +429,7 @@ export const EvaluationStudio: React.FC = () => {
         <div className="flex items-center space-x-3">
           <button
             type="button"
-            onClick={() => loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined)}
+            onClick={refreshEvaluation}
             disabled={isLoading}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all"
           >
@@ -433,7 +440,7 @@ export const EvaluationStudio: React.FC = () => {
           <button
             type="button"
             onClick={handleExportHtml}
-            disabled={isExportingReport || isLoading || !hasReportableResult}
+            disabled={isExportingReport || isLoading || !hasReportableResult || Boolean(executionEvidence?.common_cohort)}
             title={reportAvailabilityHint}
             className="flex items-center space-x-1.5 px-4 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] active:bg-[#1E40AF] rounded-[4px] text-white font-semibold border border-[#3B82F6] cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -445,7 +452,7 @@ export const EvaluationStudio: React.FC = () => {
           <button
             type="button"
             onClick={handleExportJson}
-            disabled={isExportingReport || isLoading || !hasReportableResult}
+            disabled={isExportingReport || isLoading || !hasReportableResult || Boolean(executionEvidence?.common_cohort)}
             title={reportAvailabilityHint}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A212E] hover:bg-[#2B3547] rounded-[4px] text-slate-300 font-medium border border-[#2B3547] cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >

@@ -8,3 +8,14 @@ test('cancel failure from old compute scope is discarded by actual Studio handle
 test('same profile ID configuration edit invalidates the actual requested context',async()=>{const f=fixture();await f.settle();await f.change('평가 데이터 버전','v1');await f.all().find(n=>n.props?.['aria-label']==='선택 코호트 평가').props.onClick();const requested=f.calls.at(-1)[1];f.compute.profiles[0].name='changed configuration';assert.equal(requested.isCurrent(),false);});
 
 test('restart needs an explicit completed model; choosing a different model invalidates in-flight selection',async()=>{const f=fixture();f.training.status='idle';f.training.jobId=null;await f.settle();await f.change('평가 데이터 버전','v1');let button=f.all().find(n=>n.props?.['aria-label']==='선택 코호트 평가');assert.equal(button.props.disabled,true);await f.change('평가 모델','candidate');button=f.all().find(n=>n.props?.['aria-label']==='선택 코호트 평가');assert.equal(button.props.disabled,false);await button.props.onClick();const request=f.calls.at(-1);assert.equal(request[0],'candidate');assert.equal(request[1].isCurrent(),true);await f.change('평가 모델','job');assert.equal(request[1].isCurrent(),false);});
+
+test('refresh of an actual common result retains its model cohort target and device after restart',async()=>{
+ const f=fixture();f.training.status='idle';f.training.jobId=null;f.state.jobId='candidate';
+ f.state.executionEvidence={common_cohort:{dataset_version_id:'v1'},compute_profile_id:'server',device:'cuda:0'};
+ await f.settle();
+ const refresh=f.all().find(n=>n.type==='button'&&nodes(n).some(child=>child.props?.children==='새로고침'));
+ assert(refresh);await refresh.props.onClick();const [job,request]=f.calls.at(-1);
+ assert.equal(job,'candidate');assert.equal(request.evaluationDatasetVersionId,'v1');
+ assert.equal(request.computeProfileId,'server');assert.equal(request.device,'cuda:0');
+ assert.equal(request.isCurrent(),true);f.project.project.id='different-project';assert.equal(request.isCurrent(),false);
+});

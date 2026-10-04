@@ -148,6 +148,16 @@ test('rendered evaluation cells, badges, and calibration controls use the record
   assert.equal(unresolved.nodes.find(n => n.type === 'button' && unresolved.text(n) === '평가 임계값 적용').props.disabled, true);
 });
 
+test('fixed test-cohort result keeps its matrix visible and disables unsupported reporting and calibration',()=>{
+ const view=renderStudio({jobId:'job',metrics:{accuracy:.25},classSemantics:semantics,testPredictions:samples,
+  filteredPredictions:samples,selectedPrediction:samples[0],executionEvidence:{common_cohort:{dataset_version_id:'v1'}},
+  confusionMatrix:{classes:['OK','scratch'],matrix:[[0,1],[1,0]]}});
+ const buttons=view.nodes.filter(n=>n.type==='button'&&['HTML 리포트 내보내기','JSON','평가 임계값 적용','검증 임계값 적용'].includes(view.text(n)));
+ assert.equal(buttons.length,4);assert(buttons.every(n=>n.props.disabled));
+ assert(view.nodes.some(n=>n.type==='td'&&n.props.onClick),'fixed result matrix is still inspectable');
+ assert.match(buttons.find(n=>view.text(n)==='JSON').props.title,/코호트/);
+});
+
 
 test('distance evaluation inherits calibrated threshold and sends a bound heatmap override',async()=>{
  const f=fixture(),spec={domain:'distance',unit:'mahalanobis_distance',direction:'higher_is_defect',calibration_id:'saved-model',threshold:8};
