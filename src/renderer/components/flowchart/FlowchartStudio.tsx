@@ -53,7 +53,7 @@ import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
-import { connectFlowNodes, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
+import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -1559,6 +1559,28 @@ export const FlowchartStudio: React.FC = () => {
                           className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
                       </div>
                     )}
+                    <div className="mt-3">
+                      <label htmlFor="flow-no-branch-policy" className="text-[#94A3B8] block mb-1">조건이 하나도 맞지 않은 이미지</label>
+                      <select id="flow-no-branch-policy" value={selectedNode.data.params?.no_branch_policy ?? ''}
+                        onChange={(event) => {
+                          const params = { ...selectedNode.data.params };
+                          if (event.target.value) params.no_branch_policy = event.target.value; else delete params.no_branch_policy;
+                          updateNodeData(selectedNode.id, { params });
+                        }}
+                        className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]">
+                        <option value="">미완료로 처리 (기본)</option>
+                        <option value="review">검토</option>
+                        <option value="ok">OK</option>
+                        <option value="ng">NG</option>
+                      </select>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {pipeline && decisionReachedOnlyByConditions(pipeline)
+                          ? '조건이 일부 결과만 다음 단계로 보내므로, 어떤 조건도 맞지 않는 이미지(예: 찾는 클래스가 없음)가 생길 수 있습니다. 그런 이미지를 이 규칙으로 판정합니다.'
+                          : '모든 결과가 다음 단계로 가므로 이 규칙이 쓰이는 이미지는 없습니다.'}
+                        {' '}미완료는 결과가 빠진 이미지로 남고(플로우의 미완료 처리에 따름), 검토는 모든 조건을 확인한 뒤 내린 검토 판정으로 기록됩니다.
+                        {' '}모델 오류나 결과가 없는 이미지는 미완료로, 모델이 NG라고 답한 이미지는 OK가 되지 않습니다(규칙이 OK면 검토).
+                      </p>
+                    </div>
                   </div>
                 )}
 

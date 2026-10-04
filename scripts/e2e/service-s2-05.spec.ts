@@ -61,3 +61,25 @@ test('an added model shows its own problem, the wrong output port is refused and
  await expect(page.getByRole('list',{name:'선택한 항목의 문제'})).toContainText('다음 모델, Blob, 집계 또는 판정 노드로 연결하세요');
  await evidence.screenshot(page,'s205-connected-next-problem');
 });
+
+test('the decision states how an image that met no condition is judged, and the choice stays with the flow',async({page,renderer,workspace,evidence})=>{
+ await setup(page,renderer,workspace);
+ const decision=page.locator('[data-flow-node-id="node_decision"]');
+ await decision.click();
+ const rule=page.getByLabel('조건이 하나도 맞지 않은 이미지');
+ await expect(rule).toHaveValue('', { timeout: 30_000 });
+ // The opened template reaches its decision without a condition, so the editor says the rule judges no image here.
+ await expect(page.getByText(/모든 결과가 다음 단계로 가므로 이 규칙이 쓰이는 이미지는 없습니다/)).toBeVisible();
+ await expect(page.getByText(/모델이 NG라고 답한 이미지는 OK가 되지 않습니다/)).toBeVisible();
+ await rule.selectOption('ok');
+ await page.locator('[data-flow-node-id="node_input"]').click();
+ await expect(rule).toHaveCount(0);
+ await decision.click();
+ await expect(page.getByLabel('조건이 하나도 맞지 않은 이미지')).toHaveValue('ok');
+ // Back to the default removes the rule from the flow (an empty value would be refused by the graph check).
+ await page.getByLabel('조건이 하나도 맞지 않은 이미지').selectOption('');
+ await expect(page.getByLabel('조건이 하나도 맞지 않은 이미지')).toHaveValue('');
+ await expect(page.getByText(/조건이 하나도 맞지 않은 이미지의 판정/)).toHaveCount(0);
+ evidence.note('no_branch_rule',{shown:'unset by default (earlier behaviour)',chosen:'ok, kept after selecting another node, then unset again'});
+ await evidence.screenshot(page,'s205-no-branch-rule');
+});
