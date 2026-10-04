@@ -50,6 +50,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   const [datasetSplit, setDatasetSplit] = useState<'all' | 'train' | 'val' | 'test'>('all');
   const [datasetLoading, setDatasetLoading] = useState(false);
   const [datasetError, setDatasetError] = useState<string | null>(null);
+  const [datasetRetry, setDatasetRetry] = useState(0);
   const pageSize = 48;
   const pageCount = Math.max(1, Math.ceil(datasetTotal / pageSize));
 
@@ -112,7 +113,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       if (!cancelled) setDatasetLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit, library]);
+  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit, library, datasetRetry]);
 
   if (!isOpen) return null;
 
@@ -293,7 +294,11 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
               {datasetLoading ? (
                 <div className="text-center py-12 text-slate-400 text-xs font-mono">이미지 목록을 불러오는 중...</div>
               ) : datasetError ? (
-                <div className="text-center py-12 text-rose-300 text-xs font-mono">{datasetError}</div>
+                <div role="alert" className="text-center py-12 text-rose-300 text-xs font-mono">
+                  <p>{datasetError}</p>
+                  <button type="button" onClick={() => setDatasetRetry(value => value + 1)}
+                    className="mt-3 rounded border border-rose-800 px-3 py-1">이미지 목록 다시 불러오기</button>
+                </div>
               ) : datasetImages.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 text-xs font-mono">
                   <Database className="w-8 h-8 mx-auto mb-2 text-slate-500" />

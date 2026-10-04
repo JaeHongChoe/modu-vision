@@ -90,6 +90,8 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
     setScrollTop(0);
     if (viewport.current) viewport.current.scrollTop = 0;
     void load(null);
+    // A closed browser must not deliver a late error or revision callback to its parent.
+    return () => { request.current += 1; };
   }, [load]);
 
   const columns = columnsFor(size.width, MIN_TILE, GAP);
@@ -108,7 +110,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded border border-[#2B3547] bg-[#0D1117] px-2 py-1.5">
           <Search className="h-3.5 w-3.5 text-slate-500" aria-hidden />
           <input value={text} onChange={(event) => setText(event.target.value)} aria-label="이미지 검색"
@@ -135,7 +137,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
         </select>
       </div>
       <div ref={viewport} onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)} role="list" aria-label="데이터 버전 이미지"
-        className="relative min-h-[320px] flex-1 overflow-y-auto rounded border border-[#2B3547] bg-[#0D1117]">
+        className="relative min-h-0 flex-1 overflow-y-auto rounded border border-[#2B3547] bg-[#0D1117]">
         <div style={{ height: rowWindow.totalHeight }} />
         <div className="absolute inset-x-0 top-0 px-2" style={{ transform: `translateY(${rowWindow.offsetTop}px)` }}>
           {rows.map((row, offset) => (
@@ -160,10 +162,14 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
         </div>
         {!loading && items.length === 0 && !error && <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-500">조건에 맞는 이미지가 없습니다.</div>}
       </div>
-      <div className="flex justify-between text-[11px] text-slate-500" aria-live="polite">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 text-[11px] text-slate-500" aria-live="polite">
         <span>{items.length.toLocaleString()}장 표시{finished ? ' · 끝' : ' · 아래로 스크롤하면 더 불러옵니다'}</span>
         {loading && <span>{scannedTo ? `조건에 맞는 이미지를 찾는 중 (${scannedTo}까지 확인)` : '불러오는 중'}</span>}
-        {error && <span className="text-red-300">{error}</span>}
+        {error && <div className="flex items-center gap-2 text-red-300" role="alert">
+          <span>{error}</span>
+          <button type="button" disabled={loading} onClick={() => void load(cursor)}
+            className="shrink-0 rounded border border-red-800 px-2 py-0.5 disabled:opacity-40">다시 불러오기</button>
+        </div>}
       </div>
     </div>
   );

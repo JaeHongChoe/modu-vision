@@ -1706,6 +1706,12 @@
      "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
      "result": "Operator manual image choices persist locally by UUID and SHA-256 in backend/workspace/actor/project/source/task/label-set scope. Unresolved identities stay visible and block inspection until explicit reselection or removal; stored failures preserve bytes. No-index path choices have their own namespace and first-64 limitation. Selection is revalidated immediately before explicit inspection; permission and active-runtime gates remain.",
      "scope": "Bounded operator selection follow-up; independent source review and actual renderer browser selection scenario recorded in docs/implementation-ledger/2026-10-03-operator-source-reliability.md. Health response is a UI fixture; library/revisions use the owned backend. No model inspection or runtime start is claimed. Resolution checks accepted revision metadata, without live source rehashing."
+    },
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "Explicit manual retry now recovers a failed validated image page at its current query/cursor, the legacy picker page and the legacy fixed-test listing without resetting selected UUIDs or saved paths. Validated library cleanup invalidates late responses, including a late 409 parent callback. The flexible viewport keeps the recovery button inside the small flow panel; legacy listing errors are separate from template/action errors and unconfirmed entries are not compared or marked missing.",
+     "scope": "Four causal component failures; 28 focused component cases and 599 complete renderer/main cases pass. Six actual full-renderer Chrome/owned-backend scenarios pass: validated 120+12 cursor recovery, legacy test-path recovery, legacy picker recovery, damaged-image refusal, moved-image handling and removed saved identity. Original image hashes stay unchanged and all owned backends exit with their ports closed. TypeScript projects, E2E typecheck and build pass. Private source/artifact readback SHA-256 4ec5efd6dda216a7ef665d8b03d437f8afc25b9185d456e289fea81065319d84.",
+     "platform": "macOS CPU full application browser with desktop host shim and bounded HTTP fault injection; not native Windows/GPU/model quality. Root review only; parent acceptance stays pending."
     }
    ],
    "file_actions": {
@@ -1729,7 +1735,7 @@
    "remaining": [
     "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
     "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
-    "a failed legacy listing has no retry within the same context; the panel tests' React stub runs no effect cleanup, so the late-answer guard and the loading resets are verified by the reviewer's cleanup-aware probe only",
+    "Manual retry and the validated browser unmount fence are now verified in controlled tests and actual browser recovery. Legacy panel/modal late answers across every project/transport namespace and installed Windows still need qualification; older panel stubs do not prove full lifecycle cleanup.",
     "the flowchart header keeps the previous path until the picker is confirmed",
     "Windows native and hosted evidence for these commits pending",
     "Operator selection synchronization across browser instances and native Windows acceptance remain pending; legacy path-only choices cannot detect changed image bytes."
