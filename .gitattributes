@@ -1,0 +1,3 @@
+# Evidence receipts are hashed as exact bytes. Do not rewrite their line endings
+# during checkout on Windows or any other platform.
+docs/verification/receipts/*.json -text

@@ -35,6 +35,7 @@ from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENS
 import torch
 from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms.functional as TF
+from backend.engine.source_text import read_source_text
 
 logger = logging.getLogger("vision_ai_studio.dataset_loaders")
 
@@ -600,8 +601,7 @@ class DetectionDataset(Dataset):
         self.annotation_file = Path(annotation_file) if annotation_file is not None else None
 
         if annotation_data is None:
-            with open(self.annotation_file, "r", encoding="utf-8") as f:
-                coco_data = json.load(f)
+            coco_data = json.loads(read_source_text(self.annotation_file))
         else:
             coco_data = annotation_data
 
@@ -1276,8 +1276,7 @@ class CocoJsonParser:
 
     @staticmethod
     def parse_file(json_path: Union[str, Path]) -> Dict[str, Any]:
-        with open(str(json_path), "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_source_text(json_path))
 
         cat_id_to_name: Dict[int, str] = {}
         for cat in data.get("categories", []):
@@ -1378,8 +1377,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             val_count = 0
 
             if train_json and train_json.exists():
-                with open(train_json, "r", encoding="utf-8") as f:
-                    data_tr = json.load(f)
+                data_tr = json.loads(read_source_text(train_json))
                 cats = {c["id"]: c["name"] for c in data_tr.get("categories", [])}
                 for cname in cats.values():
                     if cname != "__background__" and cname not in counts:
@@ -1391,8 +1389,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                         counts[cname] = counts.get(cname, 0) + 1
 
             if val_json and val_json.exists():
-                with open(val_json, "r", encoding="utf-8") as f:
-                    data_val = json.load(f)
+                data_val = json.loads(read_source_text(val_json))
                 cats = {c["id"]: c["name"] for c in data_val.get("categories", [])}
                 for cname in cats.values():
                     if cname != "__background__" and cname not in counts:

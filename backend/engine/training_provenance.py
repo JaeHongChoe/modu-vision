@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import tempfile
+from backend.engine.source_text import SourceTextError, read_source_text
 
 
 def bind_training_version(project, source, supplied_version=None):
@@ -308,7 +309,11 @@ def frozen_annotation_root(binding,source,output):
         elif row['origin']=='studio_scoped':destination=target.parent/row['relative_path']
         elif row['origin']=='source' and row['kind']=='label' and Path(row['relative_path']).suffix.lower()=='.json':
             backup=version/row['snapshot_path']
-            try:label=json.loads(backup.read_text(encoding='utf-8'))
+            try:label=json.loads(read_source_text(backup))
+            except SourceTextError:
+                # A source label accepted on a different locale must not vanish
+                # from the bound training view when this host cannot decode it.
+                raise
             except (ValueError,UnicodeError):continue
             if not isinstance(label,dict) or not isinstance(label.get('shapes'),list):continue
             annotations=[]

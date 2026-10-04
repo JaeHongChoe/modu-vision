@@ -39,6 +39,7 @@ from backend.engine.dataset_loaders import (
 )
 from backend.engine.industrial_adapters import inspect_industrial_dataset, find_matching_image, is_valid_labelme_file
 from backend.engine.annotation_storage import dataset_annotation_dir
+from backend.engine.source_text import read_source_text
 from backend.engine.synthetic_generator import generate_synthetic_dataset
 from backend.utils.error_catalog import format_error_response
 
@@ -252,7 +253,8 @@ def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_
         annotation = studio_json if studio_json.is_file() else source_annotations.get(image)
         if annotation is None:
             continue
-        data = json.loads(annotation.read_text(encoding="utf-8"))
+        text = annotation.read_text(encoding="utf-8") if annotation == studio_json else read_source_text(annotation)
+        data = json.loads(text)
         shapes = data.get("annotations", []) if annotation == studio_json else data.get("shapes", [])
         found = False
         image_labels = set()
@@ -983,14 +985,14 @@ def list_dataset_images(
                 json_candidate = studio_json if studio_json.is_file() else f.with_suffix(".json")
                 if json_candidate.exists():
                     try:
-                        with open(json_candidate, "r", encoding="utf-8") as jf:
-                            jd = json.load(jf)
-                            img_w = jd.get("image_width", jd.get("imageWidth"))
-                            img_h = jd.get("image_height", jd.get("imageHeight"))
-                            shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
-                            c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
-                                if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
-                            c_label = c_labels[0] if c_labels else None
+                        text = json_candidate.read_text(encoding="utf-8") if json_candidate == studio_json else read_source_text(json_candidate)
+                        jd = json.loads(text)
+                        img_w = jd.get("image_width", jd.get("imageWidth"))
+                        img_h = jd.get("image_height", jd.get("imageHeight"))
+                        shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
+                        c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
+                            if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
+                        c_label = c_labels[0] if c_labels else None
                     except Exception:
                         pass
                 if has_labelme and f.resolve() not in paired_images:

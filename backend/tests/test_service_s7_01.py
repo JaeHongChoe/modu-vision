@@ -61,6 +61,28 @@ def test_the_repository_has_one_pending_record_per_legacy_feature_and_nothing_pr
     assert receipt['accepted_legacy_rows'] == 0, 'no old registry claim counts as service acceptance'
 
 
+def test_hashed_receipt_bytes_survive_a_git_checkout_with_autocrlf(tmp_path):
+    """Exercise Git's checkout conversion, including on a non-Windows host."""
+    receipt = Path('docs/verification/receipts/sdk-windows-8917.json')
+    original = (ROOT / receipt).read_bytes()
+    repository = tmp_path / 'isolated-receipt-checkout'
+    repository.mkdir()
+    command = ['git', '-c', 'core.autocrlf=true', '-c', 'core.hooksPath=' + str(tmp_path / 'no-hooks')]
+    def git(*arguments):
+        subprocess.run(command + list(arguments), cwd=repository, check=True, capture_output=True)
+    git('init')
+    attributes = ROOT / '.gitattributes'
+    if attributes.exists():
+        (repository / '.gitattributes').write_bytes(attributes.read_bytes())
+    path = repository / receipt
+    path.parent.mkdir(parents=True)
+    path.write_bytes(original)
+    git('add', '--', receipt.as_posix(), *(['.gitattributes'] if attributes.exists() else []))
+    path.unlink()  # only the newly created test-owned copy
+    git('checkout-index', '--force', '--', receipt.as_posix())
+    assert path.read_bytes() == original, 'Git checkout must preserve the bytes cited by receipt_sha256'
+
+
 def test_missing_or_wrong_source_receipt_cannot_verify_a_dimension(tmp_path):
     entry=_entry(kind='unit',test=None,receipt='not-retained.json',receipt_sha256='b'*64)
     assert any('receipt file' in x for x in gate._reference_errors('F001.failure',entry,'unit',ROOT))
@@ -96,7 +118,7 @@ def test_nonexistent_python_case_and_foreign_target_owner_are_refused():
     (b'[]', 'unique-key JSON'),
     (b'not JSON', 'unique-key JSON'),
     (b' ' * (1024 * 1024 + 1), 'size bound'),
-])
+], ids=['duplicate-source', 'array', 'invalid-json', 'oversize'])
 def test_matching_hash_does_not_admit_malformed_or_oversized_receipts(tmp_path, payload, message):
     path = tmp_path / 'docs/verification/receipts/rejected.json'
     path.parent.mkdir(parents=True)

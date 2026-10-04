@@ -3791,6 +3791,18 @@
      "platform": "macOS CPU and Chrome with desktop host shim; hosted/native Windows and GPU acceptance pending",
      "result": "Size-less source LabelMe geometry recognizes reproduced plain Pillow WebP decoder and BMP header/depth/compression/bitfields failures in addition to Truncated File Read. Damaged images remain listed without geometry; OS errno/winerror, permission, missing-file and unknown failures propagate. New failure-binding regression is registered in both CPU CI lists.",
      "scope": "Narrow geometry-header follow-up, actual malformed synthetic files and gallery API checks. Training decode and DICOM behavior unchanged; unknown decoder messages remain outside the classifier."
+    },
+    {
+     "kind": "source-label-reader-consistency-local",
+     "result": "External LabelMe/COCO reads across industrial parsing/rasterization, dataset gallery/class counts, detection loader/parser/summary and frozen training source backups use the existing UTF-8-BOM/platform-locale decoder. Unsupported frozen source encoding raises a conversion hint instead of dropping labels. Related local suite: 193 passed, 3 explicit real-operational-dataset opt-in skips.",
+     "scope": "Original and backup bytes retained; app-owned Studio/manifests/telemetry remain strict UTF-8. Two initial rasterizer imports were test-only naming errors; corrected consumer fixtures separately reproduced both causal failures before the industrial source change. cp949 locale is simulated, not native Korean Windows evidence.",
+     "platform": "macOS CPU; exact-source hosted Windows and native GUI remain pending"
+    },
+    {
+     "kind": "windows-exact-receipt-checkout-repair-local",
+     "result": "Actual b146414 hosted Windows context suite: 1036 tests, 10 failures, 2 errors, 7 skips; worker/extension suites pass. Receipt CRLF conversion caused all ten assertion failures; the oversized parameter ID caused setup/teardown environment-length errors. A scoped -text Git attribute preserves hashed receipt bytes, and explicit short parameter IDs retain the full oversized payload. Real local Git autocrlf checkout regression failed before correction; final S6-05/S7-01 suite passes 105 with no skips; all 98 S7-01 collected IDs are at most 165 characters.",
+     "scope": "Exact SHA-256 checks are unchanged. Historical failed run 37226476893 and its source-bound JUnit/receipt readback remain failed. New hosted Windows run required.",
+     "platform": "Hosted failure plus macOS Git/CPU correction checks; installed Windows acceptance pending"
     }
    ],
    "file_actions": {
@@ -3826,10 +3838,9 @@
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
     "test code still has about 810 default-encoding reads outside the Windows job list",
-    "user label reads in routes_dataset, industrial_adapters, dataset_loaders COCO readers and training_provenance are still strict UTF-8 (routes_annotation's adjacent LabelMe read uses read_source_text since e7fce1c)",
     "Unknown or unreproduced decoder-header errors remain visible; the narrow source geometry classifier covers only tested plain Pillow messages. Native Windows execution of the new header regressions remains pending.",
-    "the Electron smoke step of the Windows job has not been reached since the storage step started failing",
-    "record which 9 tests the Windows job skips (pytest -rs) and confirm each skip is by design",
+    "Validate the newly composed source in hosted Windows after source-label decoding and byte-preserving receipt checkout fixes; earlier exact-source Windows results remain retained separately.",
+    "Hosted source-bound readbacks enumerate context 7 and worker 8 platform-specific skips; these do not provide installed Windows 11 or native POSIX-equivalent acceptance.",
     "review P3: renameSync has no Windows retry when another process holds the destination; 0o600/0o700 modes are mostly ignored on Windows; dropping the fsync from writeDurably is not caught by a test",
     "native Windows run of the LabelMe encoding regressions (cp949 on a Korean-locale Windows)"
    ]

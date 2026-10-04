@@ -33,6 +33,7 @@ import torch
 from torch.utils.data import Dataset
 
 from backend.engine.anomaly_split import partition_evaluation_images, partition_normal_images
+from backend.engine.source_text import read_source_text
 
 logger = logging.getLogger("vision_ai_studio.industrial_adapters")
 
@@ -112,8 +113,7 @@ def find_matching_image(json_path: Union[str, Path]) -> Optional[Path]:
     p = Path(json_path)
     # 1. Probe internal imagePath if present in JSON
     try:
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_source_text(p))
         if isinstance(data, dict):
             cand_name = data.get("imagePath")
             if cand_name:
@@ -150,8 +150,7 @@ def is_valid_labelme_file(json_path: Union[str, Path], require_image: bool = Tru
         return False
 
     try:
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_source_text(p))
     except Exception:
         return False
 
@@ -471,8 +470,7 @@ class LabelMeParser:
     @staticmethod
     def parse_file(json_path: Union[str, Path]) -> Dict[str, Any]:
         p = Path(json_path)
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_source_text(p))
 
         img_w = float(data.get("imageWidth") or 0)
         img_h = float(data.get("imageHeight") or 0)
@@ -743,8 +741,7 @@ class LabelMeRasterizer:
         binary: bool = True,
     ) -> np.ndarray:
         p = Path(json_path)
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        data = json.loads(read_source_text(p))
 
         orig_w = int(data.get("imageWidth") or 8192)
         orig_h = int(data.get("imageHeight") or 5464)
