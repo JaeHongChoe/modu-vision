@@ -150,7 +150,21 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   expect(versions).toHaveLength(2);
   const first = versions.find(version => !version.is_active)!;
   const versionSelect = page.getByLabel('저장 버전', { exact: true });
+  let releaseVersion!: () => void;
+  const versionGate = new Promise<void>(resolve => { releaseVersion = resolve; });
+  await page.route(`${renderer.origin}/api/flowchart/pipelines/${first.version_id}`, async route => {
+    await versionGate;
+    await route.continue();
+  }, {times: 1});
+  const versionRequested = page.waitForRequest(request => new URL(request.url()).pathname === `/api/flowchart/pipelines/${first.version_id}`);
   await versionSelect.selectOption(first.version_id);
+  await versionRequested;
+  await expect(versionSelect, 'the old graph is still opening a different saved version').toBeDisabled();
+  releaseVersion();
+  // Opening is asynchronous and deliberately clears the old node selection.
+  // Wait for both load and reference verification before selecting the new graph.
+  await expect(versionSelect, 'the saved version and its model references have finished opening').toBeEnabled();
+  await expect(versionSelect).toHaveValue(first.version_id);
   await inspectionNode(page).click();
   await expect(thresholdInput(page), 'the reopened first version keeps its own threshold').toHaveValue('8');
   await page.getByRole('tab', { name: '테스트', exact: true }).click();
@@ -181,5 +195,5 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await dialog.getByRole('button', { name: '취소', exact: true }).click();
   const current = await (await page.request.get(`${renderer.origin}/api/project/current`)).json() as Json;
   expect(current.task, 'the project task is unchanged').toBe('anomaly');
-  evidence.note('scope', { actual_backend: true, fixture_responses: [], training: 'PaDiM, CPU, no pretrained weights, 6 synthetic training images', model_quality: 'not assessed' });
+  evidence.note('scope', { actual_backend: true, fixture_responses: [], version_transport: 'one real HTTP version request is held until loading is observed; no response body is replaced', training: 'PaDiM, CPU, no pretrained weights, 6 synthetic training images', model_quality: 'not assessed' });
 });
