@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from backend.api import routes_dataset
 from backend.api.routes_project import get_current_project
 from backend.engine.checkpoint_paths import completed_job_receipt, is_job_id, trusted_checkpoint
@@ -45,6 +45,26 @@ class ComparisonRequest(BaseModel):
     candidate_task:Literal['classification','detection','segmentation','anomaly','patch_classification','rotated_detection','ocr']|None=None
     incumbent_params:dict[str,Any]=Field(default_factory=dict)
     candidate_params:dict[str,Any]=Field(default_factory=dict)
+    execution_target: Literal['local_cpu','selected_compute'] = 'local_cpu'
+    compute_profile_id: str | None = None
+    device: str = Field(default='cpu',pattern=r'^(cpu|mps|cuda(?::[0-9]+)?)$')
+
+    @model_validator(mode='after')
+    def explicit_target(self):
+        if self.execution_target=='local_cpu' and (self.device!='cpu' or self.compute_profile_id is not None):
+            raise ValueError('Local comparison requires CPU and no remote profile')
+        if self.execution_target=='selected_compute' and not self.compute_profile_id:
+            raise ValueError('Choose an explicit comparison compute profile')
+        return self
+
+
+def _comparison_execution(payload):
+    if payload.execution_target=='local_cpu':
+        return {'execution_target':'local_cpu','device':'cpu','compute_profile':None}
+    from backend.remote.profiles import get_profile_store
+    profile=get_profile_store().get(payload.compute_profile_id)
+    if profile is None:raise HTTPException(404,'Selected comparison compute profile is unavailable')
+    return {'execution_target':'selected_compute','device':payload.device,'compute_profile':profile.model_dump()}
 
 
 def _sha256(path: Path) -> str:
@@ -323,6 +343,9 @@ def _outcome(result: dict[str, Any]) -> dict[str, Any]:
         "max_defect_score": max((float(crop.get("defect_score") or 0) for crop in crops), default=None),
         "reason": result.get("rejection_reason") or "",
         "error": None,
+        "execution": {key:result.get(key) for key in (
+            'execution_target','execution_device','compute_profile_id','compute_gpu_selector',
+            'device_name','remote_operation_id','remote_result_sha256')},
     }
 
 
@@ -353,11 +376,11 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _summary_record(report: dict[str, Any]) -> dict[str, Any]:
-    return {key: report[key] for key in (
+    return {**{key: report[key] for key in (
         "comparison_id", "created_at", "project_id", "source_dataset_path", "task",
         "incumbent_job_id", "candidate_job_id", "status", "summary",
         "dataset_fingerprint", "selected_image_count", "total_test_images",
-    )}
+    )},'execution':report.get('execution')}
 
 
 @router.get("/models")
@@ -395,6 +418,7 @@ def create_comparison(payload: ComparisonRequest, request: Request):
 
 
 def _comparison_inputs(payload: ComparisonRequest, project, source):
+    execution=_comparison_execution(payload)
     if payload.incumbent_job_id == payload.candidate_job_id:
         raise HTTPException(status_code=422, detail="비교 기준과 후보 모델은 서로 달라야 합니다.")
     baseline_task=payload.incumbent_task or payload.task;candidate_task=payload.candidate_task or payload.task
@@ -429,7 +453,7 @@ def _comparison_inputs(payload: ComparisonRequest, project, source):
         from backend.engine.comparison_truth import bind_truth
         try:truth_binding=bind_truth(project,source,payload.task,[baseline,candidate],images)
         except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
-    return dict(baseline=baseline, candidate=candidate, baseline_task=baseline_task, candidate_task=candidate_task, model_hashes=model_hashes, dataset_fingerprint=dataset_fingerprint, intake_lineage=intake_lineage, images=images, total_test_images=total_test_images, truth_binding=truth_binding)
+    return dict(baseline=baseline, candidate=candidate, baseline_task=baseline_task, candidate_task=candidate_task, model_hashes=model_hashes, dataset_fingerprint=dataset_fingerprint, intake_lineage=intake_lineage, images=images, total_test_images=total_test_images, truth_binding=truth_binding,execution=execution)
 
 
 def _binding_from_inputs(project, source, inputs):
@@ -454,7 +478,7 @@ def _comparison_binding(payload, project, source):
 
 
 def _run_comparison(payload: ComparisonRequest, project, source, progress=None, cancelled=None,
-                    publish_report=None, expected_binding=None):
+                    publish_report=None, expected_binding=None, execution_id=None):
     inputs = _comparison_inputs(payload, project, source)
     binding = _binding_from_inputs(project, source, inputs) if expected_binding is not None else None
     if expected_binding is not None and binding != expected_binding:
@@ -464,12 +488,17 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
     model_hashes, dataset_fingerprint = inputs['model_hashes'], inputs['dataset_fingerprint']
     intake_lineage, images = inputs['intake_lineage'], inputs['images']
     total_test_images, truth_binding = inputs['total_test_images'], inputs['truth_binding']
+    execution=inputs['execution']
+    execution_id=execution_id or 'compare_'+uuid.uuid4().hex
+    operation_binding=hashlib.sha256(json.dumps({'execution_id':execution_id,'project_id':project['id'],
+        'labelset_id':project.get('active_labelset_id','default'),'inputs':inputs,
+        'parameters':payload.model_dump()},sort_keys=True,separators=(',',':')).encode()).hexdigest()
     if progress: progress(0, len(images))
     if any(_sha256(Path(model['checkpoint_path'])) != model_hashes[key]
            for key,model in (('incumbent',baseline),('candidate',candidate))):
         raise HTTPException(409,'비교 중 모델 checkpoint가 바뀌었습니다. 다시 실행해 주세요.')
     paths = {baseline["job_id"]: Path(baseline["checkpoint_path"]), candidate["job_id"]: Path(candidate["checkpoint_path"])}
-    engines = {
+    engines = {} if execution['execution_target']=='selected_compute' else {
         job_id: FlowchartEngine(device="cpu", checkpoint_resolver=lambda requested, _task, paths=paths: paths.get(requested))
         for job_id in paths
     }
@@ -497,12 +526,28 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         metadata = metadata_for_path(Path(project["project_dir"]), source, Path(image["file_path"]), routes_dataset.STUDIO_ANNOTATIONS_DIR)
         row.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "product", "lot", "group", "tags")})
         for key, model in (("incumbent", baseline), ("candidate", candidate)):
+            if cancelled and cancelled():raise InterruptedError('Comparison cancelled before next model')
             try:
-                result = engines[model["job_id"]].execute(
-                    pipeline=pipelines[model["job_id"]], image_path=image.get('evaluation_file_path') or image["file_path"], image_id=image["image_id"],
-                )
+                if execution['execution_target']=='selected_compute':
+                    from backend.remote.operations import run_verified_flowchart_on_compute
+                    from backend.remote.profiles import ComputeProfile
+                    result=run_verified_flowchart_on_compute(ComputeProfile.model_validate(execution['compute_profile']),
+                        project,pipelines[model['job_id']].model_dump(),
+                        {(model['job_id'],model['task']):Path(model['checkpoint_path'])},
+                        Path(image.get('evaluation_file_path') or image['file_path']),image['image_id'],
+                        device=execution['device'],comparison_binding_sha256=operation_binding,cancelled=cancelled)
+                else:
+                    result = engines[model["job_id"]].execute(
+                        pipeline=pipelines[model["job_id"]], image_path=image.get('evaluation_file_path') or image["file_path"], image_id=image["image_id"],
+                    )
+                    result={**result,'execution_target':'local_cpu','execution_device':'cpu','device_name':'Host CPU'}
                 row[key] = _outcome(result)
+            except InterruptedError:raise
             except Exception as exc:
+                if execution['execution_target']=='selected_compute':
+                    # An uncertain remote operation keeps its lease; do not
+                    # proceed to another model or publish a partial target claim.
+                    raise
                 row[key] = {"verdict": None, "defective_roi_count": None, "max_defect_score": None,
                             "reason": "", "error": str(exc)[:500]}
         row["disagrees"] = bool(
@@ -513,6 +558,8 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         if progress: progress(len(rows), len(images))
 
     if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
+    if _comparison_execution(payload)!=execution:
+        raise HTTPException(409,'Comparison compute profile changed during execution')
     # Reject a mixed-version comparison; the saved report must describe one
     # exact dataset, image list, and pair of checkpoint contents.
     if _fingerprint(source) != dataset_fingerprint:
@@ -567,11 +614,12 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         "grouped_errors": __import__("backend.engine.evaluation_history", fromlist=["grouped_errors"]).grouped_errors(rows, payload.task),
         "limitations": [
             "선택한 test 이미지에서 두 모델의 원판정을 비교한 결과입니다. 전체 데이터 성능을 뜻하지 않습니다.",
-            "실행 순서와 CPU 환경이 같아도 지연 시간이나 FPS 비교 근거로 사용하지 않습니다.",
+            "동일 장치에서 순차 실행해도 지연 시간이나 FPS 비교 근거로 사용하지 않습니다.",
             "OK 정답 이미지가 없으면 과검률을 판단할 수 없습니다.",
             "모델 활성화·교체·롤백은 수행하지 않았습니다.",
         ],
         "images": rows,
+        "execution": execution,
     }
     if intake_lineage:
         report['intake_lineage']={key:value for key,value in intake_lineage.items() if key!='images'}
@@ -701,7 +749,7 @@ def queue_comparison(payload: AsyncComparisonRequest, request: Request):
                     raise HTTPException(409, 'Comparison inputs changed after acceptance')
             jobs.run(identifier,
                      lambda progress, cancelled, publish, expected: _run_comparison(
-                         payload, project, source, progress, cancelled, publish_report=publish, expected_binding=expected),
+                         payload, project, source, progress, cancelled, publish_report=publish, expected_binding=expected,execution_id=identifier),
                      _report_dir(project), verify)
         import threading
         from contextvars import copy_context

@@ -72,7 +72,10 @@ class ComparisonJobs:
 
     def replay(self, context, project_key, key, payload):
         row = self.store.reserved(context, project_key, KIND, key) if key else None
-        if row is not None and json.loads(row['spec_json'])['request'] != payload:
+        # Existing durable requests preceded explicit compute fields. They are
+        # host CPU only; defaults preserve their exact dispatch, not retarget it.
+        defaults={'execution_target':'local_cpu','compute_profile_id':None,'device':'cpu'}
+        if row is not None and {**defaults,**json.loads(row['spec_json'])['request']} != {**defaults,**payload}:
             raise JobConflict('Idempotency-Key already belongs to a different comparison request')
         return row
 
@@ -211,7 +214,9 @@ class ComparisonJobs:
                     self.store.finish(identifier, 'abort', {'reason': 'Cancelled before attempt'})
                     return
                 try:
-                    attempt = self.store.begin_attempt(identifier, self.store.get(identifier).revision, 'local_comparison', _BOOT, os.getpid())
+                    target=json.loads(row['spec_json'])['request'].get('execution_target','local_cpu')
+                    attempt = self.store.begin_attempt(identifier, self.store.get(identifier).revision,
+                        'selected_compute_comparison' if target=='selected_compute' else 'local_comparison', _BOOT, os.getpid())
                     token = attempt.fencing_token
                     break
                 except StaleRevision:

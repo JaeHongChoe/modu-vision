@@ -991,6 +991,9 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
     status = started
     try:
         spec = _read_operation_spec(spec_path, "flowchart_run")
+        if spec.get('comparison_operation_contract') is not None:
+            if spec['comparison_operation_contract']!=1 or spec.get('portable_models') is not True or not isinstance(spec.get('comparison_binding_sha256'),str) or not re.fullmatch(r'[0-9a-f]{64}',spec['comparison_binding_sha256']):
+                raise ValueError('Invalid portable comparison binding')
         apply_memory_budget(spec)
         from backend.engine.flowchart_engine import FlowchartPipeline
 
@@ -1021,6 +1024,8 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
         payload["image_sha256"] = spec["image_sha256"]
         payload["model_job_ids"] = sorted(checkpoints)
         payload['execution_device']=str(actual_device)
+        if spec.get('comparison_operation_contract')==1:
+            payload['comparison_binding_sha256']=spec['comparison_binding_sha256']
         if actual_device.type=='cuda':
             import torch
             payload['device_name']=torch.cuda.get_device_name(actual_device)

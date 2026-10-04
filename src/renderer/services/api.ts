@@ -481,6 +481,7 @@ export interface ModelComparisonSummary {
 }
 
 export interface ModelComparisonOutcome {
+  execution?: {execution_target?: string | null; execution_device?: string | null; compute_profile_id?: string | null; compute_gpu_selector?: string | null; device_name?: string | null; remote_operation_id?: string | null; remote_result_sha256?: string | null};
   verdict: 'OK' | 'NG' | 'REVIEW' | null;
   defective_roi_count: number | null;
   max_defect_score: number | null;
@@ -501,6 +502,7 @@ export interface ModelComparisonRow {
 }
 
 export interface ModelComparisonRecord {
+  execution?: {execution_target: 'local_cpu' | 'selected_compute'; device: string; compute_profile: ComputeProfile | null} | null;
   comparison_id: string;
   created_at: string;
   project_id: string;
@@ -1188,6 +1190,9 @@ export const api = {
       incumbent_job_id: string;
       candidate_job_id: string;
       max_images: number;
+      execution_target?: 'local_cpu' | 'selected_compute';
+      compute_profile_id?: string | null;
+      device?: string;
     }) => request<ModelComparisonReport>('/api/evaluation/model-comparisons', {
       method: 'POST',
       body: JSON.stringify(data),

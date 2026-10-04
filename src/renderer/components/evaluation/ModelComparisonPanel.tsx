@@ -25,6 +25,7 @@ interface Props {
 interface ComparisonJob {
   job_id: string; status: string; total_images: number; completed_images: number;
   cancel_requested: number; report_id: string | null; error: string | null;
+  payload?: {execution_target?: 'local_cpu'|'selected_compute';compute_profile_id?:string|null;device?:string};
 }
 
 function errorMessage(error: unknown): string {
@@ -55,7 +56,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [incumbentThreshold,setIncumbentThreshold]=useState(.5);
   const [candidateThreshold,setCandidateThreshold]=useState(.5);
   const [expectedText,setExpectedText]=useState('');
-  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}\0${compute.transportRevision}\0${compute.selectedProfileId||'local'}\0${compute.apiTransportIdentity}`;
+  const [comparisonDevice,setComparisonDevice]=useState('cuda');
+  const selectedProfile=compute.profiles.find(profile=>profile.id===compute.selectedProfileId);
+  const missingProfile=!!compute.selectedProfileId&&!selectedProfile;
+  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}\0${compute.transportRevision}\0${compute.selectedProfileId||'local'}\0${JSON.stringify(selectedProfile)}\0${comparisonDevice}\0${compute.apiTransportIdentity}`;
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
   const [models, setModels] = useState<ModelComparisonModel[]>([]);
@@ -109,7 +113,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         void api.evaluation.getComparison(origin.comparison_id,sourceFolder,task).then(saved=>{if(active&&currentScope.current===scopeKey){setReport(saved);setReportScope(scopeKey);setOriginPath(origin.file_path||'');}}).catch(cause=>{if(active&&currentScope.current===scopeKey)setError(errorMessage(cause));});
       }
       setJobs(jobHistory.jobs);
-      const running = jobHistory.jobs.find((j) => j.status === 'queued' || j.status === 'running');
+      const running = jobHistory.jobs.find((j) => (j.status === 'queued' || j.status === 'running')
+        && (j.payload?.execution_target||'local_cpu')===(compute.selectedProfileId?'selected_compute':'local_cpu')
+        && (j.payload?.compute_profile_id||null)===compute.selectedProfileId
+        && (j.payload?.device||'cpu')===(compute.selectedProfileId?comparisonDevice:'cpu'));
       if (running) { setComparisonJob(running); setIsRunning(true); }
       const candidate = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id || '';
       const parent = catalog.models.find((model) => model.job_id === preferredParentJobId)?.job_id || '';
@@ -171,7 +178,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   };
 
   const runComparison = async () => {
-    if (!sourceFolder || !incumbentId || !candidateId || incumbentId === candidateId) return;
+    if (!sourceFolder || !incumbentId || !candidateId || incumbentId === candidateId || missingProfile) return;
     const requestedScope = scopeKey;
     setIsRunning(true);
     setError(null);
@@ -183,6 +190,9 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         candidate_job_id: candidateId,
         max_images: maxImages,
         full_test: fullTest,
+        execution_target:compute.selectedProfileId?'selected_compute':'local_cpu',
+        compute_profile_id:compute.selectedProfileId,
+        device:compute.selectedProfileId?comparisonDevice:'cpu',
         incumbent_task:models.find(m=>m.job_id===incumbentId)?.task,
         candidate_task:models.find(m=>m.job_id===candidateId)?.task,
         incumbent_params:{threshold:incumbentThreshold,...(incumbentSpec?{score_spec:{...incumbentSpec,threshold:incumbentThreshold}}:{}),...(models.find(m=>m.job_id===incumbentId)?.task==='ocr'?{expected_text:expectedText}:{})},
@@ -257,6 +267,12 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           </div>
           <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 ({incumbentSpec?.unit||'probability'}) <input aria-label="비교 기준 임계값" type="number" min="0" max={incumbentSpec?.domain==='distance'?undefined:1} step="any" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 ({candidateSpec?.unit||'probability'}) <input aria-label="비교 후보 임계값" type="number" min="0" max={candidateSpec?.domain==='distance'?undefined:1} step="any" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
           <div className="mt-2 flex flex-wrap items-end gap-2">
+            <div className="space-y-1 text-[11px] text-slate-300">
+              <p>{isKo?'실행 위치: ':'Execution target: '}{compute.selectedProfileId?(selectedProfile?.name|| (isKo?'선택 서버를 사용할 수 없습니다':'Selected server unavailable')):(isKo?'로컬 CPU':'Local CPU')}</p>
+              {compute.selectedProfileId&&<label>{isKo?'실행 장치':'Device'} <select aria-label={isKo?'비교 실행 장치':'Comparison execution device'} value={comparisonDevice} disabled={isRunning||isLoading||missingProfile} onChange={event=>setComparisonDevice(event.target.value)} className="rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5">
+                <option value="cuda">CUDA</option><option value="cpu">CPU</option>
+              </select></label>}
+            </div>
             <label className="space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? 'test 이미지 수' : 'Test images'}</span>
               <select aria-label={isKo ? 'test 이미지 수' : 'Test image count'} value={fullTest ? 0 : maxImages}
@@ -267,7 +283,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
               </select>
             </label>
             <button type="button" onClick={() => void runComparison()}
-              disabled={isRunning || isLoading || !incumbentId || !candidateId || incumbentId === candidateId}
+              disabled={isRunning || isLoading || missingProfile || !incumbentId || !candidateId || incumbentId === candidateId}
               className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded border border-sky-400/50 bg-sky-600 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40">
               {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                 : <GitCompareArrows className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -440,6 +456,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
               <div><dt className="text-slate-500">baseline checkpoint SHA-256</dt><dd>{visibleReport.model_sha256.incumbent}</dd></div>
               <div><dt className="text-slate-500">candidate checkpoint SHA-256</dt><dd>{visibleReport.model_sha256.candidate}</dd></div>
               <div><dt className="text-slate-500">report ID</dt><dd>{visibleReport.comparison_id}</dd></div>
+              <div><dt className="text-slate-500">{isKo?'실행 위치 · 장치':'Execution target · device'}</dt><dd>{visibleReport.execution ? `${visibleReport.execution.compute_profile?.name || (isKo?'로컬 CPU':'Local CPU')} · ${visibleReport.execution.device}` : (isKo?'이전 기록: 실행 위치 근거 없음':'Legacy record: execution target not recorded')}</dd></div>
             </dl>
             <ul className="mt-2 list-inside list-disc space-y-1 font-sans text-[11px] text-slate-400">
               {visibleReport.limitations.map((limit) => <li key={limit}>{limit}</li>)}

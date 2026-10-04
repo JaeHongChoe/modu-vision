@@ -157,24 +157,53 @@ def _common_cancel_path(context,journal):
     return context.output_dir/'remote_operations'/op_id/'cancel-intent.json'
 
 
+def _cancel_identity(context,journal):
+    spec=journal.get('spec',{})
+    if spec.get('common_cohort_contract')!=1 and spec.get('comparison_operation_contract')!=1:return None
+    expected={'op_id':journal['op_id'],'job_id':context.job_id}
+    if spec.get('common_cohort_contract')==1:
+        return {**expected,'cohort_sha256':spec['evaluation_cohort']['cohort_sha256'],
+                'evaluation_binding_sha256':spec['evaluation_binding_sha256']}
+    if spec.get('comparison_operation_contract')==1:
+        return {**expected,'comparison_binding_sha256':spec['comparison_binding_sha256']}
+    return None
+
+
 def _common_cancel(context,journal):
-    if journal.get('spec',{}).get('common_cohort_contract')!=1:return None
+    # The same owned-worker cancellation/exit discipline applies to a bound
+    # comparison flow. Older unbound operations gain no cancellation capability.
+    expected=_cancel_identity(context,journal)
+    if expected is None:return None
     path=_common_cancel_path(context,journal)
     if path.is_symlink():raise ArtifactValidationError('Common cancellation receipt is linked')
     if not path.exists():return None
     intent=json.loads(path.read_text(encoding='utf-8'))
-    spec=journal['spec']
-    expected={'op_id':journal['op_id'],'job_id':context.job_id,
-              'cohort_sha256':spec['evaluation_cohort']['cohort_sha256'],
-              'evaluation_binding_sha256':spec['evaluation_binding_sha256']}
     if not isinstance(intent,dict) or any(intent.get(k)!=v for k,v in expected.items()) or not isinstance(intent.get('cancel_requested_at'),(int,float)):
         raise ArtifactValidationError('Common cancellation receipt belongs to another binding')
     return intent
 
 
+def _request_comparison_cancel(context,journal,cancelled):
+    held=_common_cancel(context,journal)
+    if held is None and cancelled is not None and cancelled():
+        if journal['spec'].get('comparison_operation_contract')!=1:
+            raise ArtifactValidationError('Cancellation requires a bound comparison operation')
+        _atomic_json(_common_cancel_path(context,journal),
+                     {**_cancel_identity(context,journal),'cancel_requested_at':time.time()})
+        held=_common_cancel(context,journal)
+    return held
+
+
+def _raise_cancelled(journal,message):
+    if journal['spec'].get('comparison_operation_contract')==1:
+        raise InterruptedError(message)
+    raise RuntimeError(message)
+
+
 class _CommonUploadCancel:
-    def __init__(self,context,journal):self.context=context;self.journal=journal
-    def is_set(self):return _common_cancel(self.context,self.journal) is not None
+    def __init__(self,context,journal,cancelled=None):
+        self.context=context;self.journal=journal;self.cancelled=cancelled
+    def is_set(self):return _request_comparison_cancel(self.context,self.journal,self.cancelled) is not None
 
 
 def _operation_row(context,journal):
@@ -282,7 +311,7 @@ def _deliver_common_cancel(context,journal,transport):
 def _launch_or_resume(
     context: RemoteJobContext, operation: str, spec: dict[str, Any],
     transport: SSHTransport, *, force_new: bool = False,
-    input_files: dict[str, Path] | None = None,
+    input_files: dict[str, Path] | None = None, cancelled=None,
 ) -> dict[str, Any]:
     journal_path = _operation_journal_path(context, operation, spec)
     journal: dict[str, Any] | None = None
@@ -293,9 +322,9 @@ def _launch_or_resume(
             raise ArtifactValidationError("Operation journal is bound to a different job or server")
         if spec.get('common_cohort_contract')==1 and journal.get('retry_requires_force') and not force_new:
             raise ArtifactValidationError('Common evaluation receipt was refused; an explicit rerun is required')
-        if spec.get('common_cohort_contract')==1 and journal.get('state')=='aborted':
+        if _cancel_identity(context,journal) is not None and journal.get('state')=='aborted':
             if force_new and journal.get('worker_exit_confirmed'):journal=None
-            else:raise RuntimeError('Common evaluation binding was cancelled; an explicit rerun is required')
+            else:_raise_cancelled(journal,'Operation binding was cancelled; an explicit rerun is required')
         if journal is not None and spec.get('common_cohort_contract')==1 and journal.get('state')=='failed' and journal.get('remote_handle') and not journal.get('worker_exit_confirmed'):
             raise RemoteDisconnected('Failed common evaluation still has uncertain owned worker state')
         # preparing is durably written before any worker launch. An interrupted
@@ -313,12 +342,12 @@ def _launch_or_resume(
         "state": "preparing", "created_at": time.time(),
     }
     _save_operation(journal_path, journal)
-    upload_cancel=_CommonUploadCancel(context,journal) if spec.get("common_cohort_contract")==1 else None
+    upload_cancel=_CommonUploadCancel(context,journal,cancelled) if _cancel_identity(context,journal) is not None else None
     def check_upload_cancel():
         if upload_cancel is not None and upload_cancel.is_set():
             journal.update(state="aborted",worker_exit_confirmed=True,cancel_acknowledged_at=time.time())
             _save_operation(journal_path,journal)
-            raise RuntimeError("Common evaluation cancelled before launch")
+            _raise_cancelled(journal,"Operation cancelled before launch")
     local_dir = context.output_dir / "remote_operations" / op_id
     local_dir.mkdir(parents=True, exist_ok=True)
     code_archive = _bundle_backend(local_dir)
@@ -366,7 +395,7 @@ def _launch_or_resume(
 def _run_remote_operation_artifacts(
     context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
     *, transport: SSHTransport | None = None, force_new: bool = False,
-    timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None,
+    timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None, cancelled=None,
 ) -> dict[str, Path]:
     """Run once and download only hash-verified run-relative output files."""
     _verify_local_snapshot(context)
@@ -379,17 +408,17 @@ def _run_remote_operation_artifacts(
     journal_path = _operation_journal_path(context, operation, spec)
     try:
         journal = _launch_or_resume(context, operation, spec, transport, force_new=force_new,
-                                    input_files=input_files)
+                                    input_files=input_files,cancelled=cancelled)
     except RemoteDisconnected:
         raise
     except Exception:
         if journal_path.is_file():
             journal = json.loads(journal_path.read_text(encoding="utf-8"))
             if journal.get("state") == "preparing":
-                if _common_cancel(context,journal) is not None:
+                if _request_comparison_cancel(context,journal,cancelled) is not None:
                     journal.update(state='aborted',worker_exit_confirmed=True,cancel_acknowledged_at=time.time())
                     _save_operation(journal_path,journal)
-                    raise RuntimeError('Common evaluation upload cancelled before launch')
+                    _raise_cancelled(journal,'Operation upload cancelled before launch')
                 journal["state"] = "failed"
                 _save_operation(journal_path, journal)
         raise
@@ -398,7 +427,7 @@ def _run_remote_operation_artifacts(
     start = time.monotonic()
     missing_status_polls = 0
     while True:
-        if _common_cancel(context,journal) is not None:
+        if _request_comparison_cancel(context,journal,cancelled) is not None:
             _deliver_common_cancel(context,journal,transport)
             _save_operation(journal_path,journal)
         status = _remote_json(transport, context.profile, status_path)
@@ -412,6 +441,10 @@ def _run_remote_operation_artifacts(
                 local_spec=context.output_dir/'remote_operations'/op_id/'spec.json'
                 if status.get('spec_sha256')!=_sha256(local_spec) or (status.get('status')!='preparing' and status.get('device')!=spec['device']):
                     raise ArtifactValidationError('Common status spec or selected device binding changed')
+            if spec.get('comparison_operation_contract')==1:
+                local_spec=context.output_dir/'remote_operations'/op_id/'spec.json'
+                if status.get('spec_sha256')!=_sha256(local_spec) or (status.get('status') not in ('preparing','aborted','failed') and status.get('device')!=spec['device']):
+                    raise ArtifactValidationError('Comparison status spec or selected device binding changed')
             if not journal.get('remote_handle') and hasattr(transport, 'recover_handle'):
                 spec_path = context.output_dir / 'remote_operations' / op_id / 'spec.json'
                 handle = transport.recover_handle(context.profile, op_id, job_id=context.job_id,
@@ -429,7 +462,7 @@ def _run_remote_operation_artifacts(
                 if _common_cancel(context,journal) is not None:
                     journal.update(state='aborted',cancel_acknowledged_at=journal.get('cancel_acknowledged_at') or time.time())
                     _save_operation(journal_path,journal)
-                    raise RuntimeError('Common evaluation cancelled; completed output was not adopted')
+                    _raise_cancelled(journal,'Operation cancelled; completed output was not adopted')
             if status.get("status") == "completed":
                 journal['state']='worker_completed'
                 _save_operation(journal_path,journal)
@@ -464,10 +497,10 @@ def _run_remote_operation_artifacts(
             raise RemoteDisconnected(f"Remote {operation} has not returned a terminal status; reconnect to the same run")
         time.sleep(OP_POLL_INTERVAL_SECONDS)
 
-    if _common_cancel(context,journal) is not None:
+    if _request_comparison_cancel(context,journal,cancelled) is not None:
         journal.update(state="aborted",cancel_acknowledged_at=time.time())
         _save_operation(journal_path,journal)
-        raise RuntimeError("Common evaluation cancelled before result adoption")
+        _raise_cancelled(journal,"Operation cancelled before result adoption")
     manifest = _remote_json(transport, context.profile, _remote_path(context.profile, op_id, "artifacts.json"))
     if manifest is None or (manifest.get("protocol_version") != 1 or manifest.get("job_id") != context.job_id
                             or manifest.get("operation") != operation
@@ -512,10 +545,10 @@ def _run_remote_operation_artifacts(
             if not destination.resolve().is_relative_to(local_dir.resolve()):
                 raise ArtifactValidationError("Remote operation output escaped its local directory")
             downloads[relative] = staged
-        if _common_cancel(context,journal) is not None:
+        if _request_comparison_cancel(context,journal,cancelled) is not None:
             journal.update(state="aborted",cancel_acknowledged_at=time.time())
             _save_operation(journal_path,journal)
-            raise RuntimeError("Common evaluation cancelled before result adoption")
+            _raise_cancelled(journal,"Operation cancelled before result adoption")
         published: dict[str, Path] = {}
         for relative, staged in downloads.items():
             destination = local_dir.joinpath(*PurePosixPath(relative).parts)
@@ -562,12 +595,15 @@ def _open_operation_lock(path: Path) -> int:
 def run_remote_operation_artifacts(
     context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
     *, transport: SSHTransport | None = None, force_new: bool = False,
-    timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None,
+    timeout_seconds: int = 3600, input_files: dict[str, Path] | None = None, cancelled=None,
 ) -> dict[str, Path]:
     """Reserve selected compute through execution; uncertain workers keep leases."""
     from backend.engine.shared_scheduler import ResourceLeases,shared_leases
     spec={'protocol_version':1,'operation':operation,'job_id':context.job_id,'task':context.task,
           'input_manifest_sha256':context.input_manifest_sha256,**extra_spec}
+    if cancelled is not None and (extra_spec.get('comparison_operation_contract')!=1 or operation!='flowchart_run'
+            or extra_spec.get('portable_models') is not True or not re.fullmatch(r'[0-9a-f]{64}',extra_spec.get('comparison_binding_sha256',''))):
+        raise ArtifactValidationError('Cancellation requires a bound portable comparison flow')
     if context.profile.memory_budget_mb:
         extra_spec={**extra_spec,'resources':{'memory_budget_mb':context.profile.memory_budget_mb,'allow_sharing':context.profile.allow_sharing}}
         spec.update(resources=extra_spec['resources'])
@@ -592,7 +628,7 @@ def run_remote_operation_artifacts(
                 if not leases.heartbeat(lease_key):return
         thread=threading.Thread(target=heartbeat,daemon=True,name=lease_key);thread.start()
         return _run_remote_operation_artifacts(context,operation,extra_spec,transport=transport,force_new=force_new,
-            timeout_seconds=timeout_seconds,input_files=input_files)
+            timeout_seconds=timeout_seconds,input_files=input_files,**({'cancelled':cancelled} if cancelled is not None else {}))
     except RemoteWorkerExited:
         worker_exit_confirmed=True
         raise
@@ -792,9 +828,14 @@ def run_verified_flowchart_on_compute(
     profile: ComputeProfile, project: dict[str, Any], pipeline: dict[str, Any],
     verified_checkpoints: dict[tuple[str,str],Path], image: Path, image_id: str | None = None,
     *, device: str = 'cuda', transport: SSHTransport | None = None, stop_node_id: str | None = None,
+    comparison_binding_sha256: str | None = None, cancelled=None,
 ) -> dict[str, Any]:
     """Transfer project-owned verified models to the explicitly selected server."""
     import torch
+    if comparison_binding_sha256 is not None and (not isinstance(comparison_binding_sha256,str) or not re.fullmatch(r'[0-9a-f]{64}',comparison_binding_sha256)):
+        raise ArtifactValidationError('Comparison operation binding is invalid')
+    if cancelled is not None and comparison_binding_sha256 is None:
+        raise ArtifactValidationError('Comparison cancellation requires an explicit binding')
     from backend.engine.flowchart_engine import FlowchartPipeline,ordered_linear_nodes,debug_ancestor_ids
     from backend.engine.specialized_models import flow_model_task,valid_flow_job,SPECIALIZED_TASKS
     if not isinstance(device,str) or not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?',device):
@@ -845,8 +886,9 @@ def run_verified_flowchart_on_compute(
         'portable_models':True,'models':references,'pipeline':pipeline,'image_path':relative,
         'image_sha256':image_hash,'image_id':image_id,'device':device,
         **({'stop_node_id':stop_node_id} if stop_node_id else {}),
+        **({'comparison_operation_contract':1,'comparison_binding_sha256':comparison_binding_sha256} if comparison_binding_sha256 else {}),
         'execution_profile_sha256':hashlib.sha256(json.dumps(profile.model_dump(),sort_keys=True,separators=(',',':')).encode()).hexdigest(),
-    },transport=transport,input_files=inputs)
+    },transport=transport,input_files=inputs,**({'cancelled':cancelled} if cancelled is not None else {}))
     result_file=artifacts.get('outputs/flowchart_result.json')
     if result_file is None:raise ArtifactValidationError('Portable flow result is missing')
     result=json.loads(result_file.read_text(encoding='utf-8'))
@@ -857,6 +899,8 @@ def run_verified_flowchart_on_compute(
         raise ArtifactValidationError('Portable debug result scope differs from the selected stop node')
     if result.get('execution_device')!=device or not isinstance(result.get('device_name'),str) or not result['device_name']:
         raise ArtifactValidationError('Portable flow execution device differs from the selected device')
+    if comparison_binding_sha256 and result.get('comparison_binding_sha256')!=comparison_binding_sha256:
+        raise ArtifactValidationError('Portable comparison result has a different operation binding')
     result['annotated_image']=_verified_preview_uri(result.get('annotated_image'),artifacts)
     if not isinstance(result.get('crops'),list):raise ArtifactValidationError('Portable flow crops are missing')
     for crop in result['crops']:
@@ -866,6 +910,9 @@ def run_verified_flowchart_on_compute(
                   compute_server_name=profile.name,compute_gpu_selector=profile.gpu_selector,
                   execution_target='selected_compute',
                   model_sha256={row['job_id']:row['checkpoint_sha256'] for row in references})
+    if comparison_binding_sha256:
+        result.update(remote_operation_id=result_file.parent.parent.name,
+                      remote_result_sha256=_sha256(result_file))
     result.pop('model_job_ids',None);result.pop('image_sha256',None)
     return result
 
