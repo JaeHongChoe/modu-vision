@@ -34,18 +34,19 @@ def test_idle_worker_autonomously_delivers_missing_view_review(package,tmp_path,
     assert len(messages)==1,'confirmed delivery must stay confirmed after restart'
 
 
-def admitted_store(tmp_path):
+def admitted_store(tmp_path,monkeypatch):
+    clock=controlled_join_clock(monkeypatch)
     selected={'manifest_sha256':'a'*64,'recipe_id':'frozen'}
     store=InspectionStore(tmp_path/'state',runtime_provider=lambda:selected)
     store.configure_capture_groups(policy(deadline=5),expected_revision=0)
     source=image(tmp_path,'first');job=store.enqueue(source,'file',capture=frame('A','front'))
     store.claim();store.finish(job,result={'final_verdict':'OK'})
-    time.sleep(.02)
+    clock['now']+=20
     return store,selected,source,job
 
 
-def test_deadline_outbox_restart_retry_reuses_frozen_identity(tmp_path):
-    store,selected,source,original=admitted_store(tmp_path)
+def test_deadline_outbox_restart_retry_reuses_frozen_identity(tmp_path,monkeypatch):
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch)
     selected.update(manifest_sha256='b'*64,recipe_id='new-active')
     outputs=store.sweep_capture_deadlines(require_delivery=True)
     assert len(outputs)==1
@@ -67,7 +68,7 @@ def test_deadline_outbox_restart_retry_reuses_frozen_identity(tmp_path):
 
 
 def test_readback_expiry_before_outbox_and_failed_commit_are_recoverable(tmp_path,monkeypatch):
-    store,selected,source,original=admitted_store(tmp_path)
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch)
     assert store.capture_group_status()['groups'][0]['state']=='EXPIRED'
     old=store._event
     def fail_event(*args,**kwargs):raise RuntimeError('crash before outbox transaction commit')
@@ -79,8 +80,8 @@ def test_readback_expiry_before_outbox_and_failed_commit_are_recoverable(tmp_pat
     assert len(outputs)==1 and store.claim_delivery()['job_id']==outputs[0]
 
 
-def test_deadline_output_stays_local_when_delivery_is_not_enabled(tmp_path):
-    store,selected,source,original=admitted_store(tmp_path)
+def test_deadline_output_stays_local_when_delivery_is_not_enabled(tmp_path,monkeypatch):
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch)
     outputs=store.sweep_capture_deadlines(require_delivery=False)
     assert len(outputs)==1
     assert store.get(outputs[0])['state']=='completed' and store.get(outputs[0])['verdict']=='REVIEW'
@@ -104,9 +105,9 @@ def test_completed_group_does_not_create_second_whole_part_output(tmp_path):
     assert store.claim_delivery() is None
 
 
-def test_deadline_output_cannot_be_replayed_as_ordinary_inference(tmp_path):
+def test_deadline_output_cannot_be_replayed_as_ordinary_inference(tmp_path,monkeypatch):
     import pytest
-    store,selected,source,original=admitted_store(tmp_path)
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch)
     output=store.sweep_capture_deadlines(require_delivery=True)[0]
     store.claim_delivery();store.finish_delivery(output,'destination unavailable')
     with pytest.raises(ValueError,match='Capture'):store.replay(output,reason='retry',operator='QA')
@@ -115,7 +116,7 @@ def test_deadline_output_cannot_be_replayed_as_ordinary_inference(tmp_path):
 
 def test_deadline_transport_retries_expose_same_destination_idempotency_key(tmp_path,monkeypatch):
     from backend.engine import inspection_service
-    store,selected,source,original=admitted_store(tmp_path)
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch)
     output=store.sweep_capture_deadlines(require_delivery=True)[0];requests=[]
     def post(url,**kwargs):
         requests.append(kwargs);return SimpleNamespace(status_code=503 if len(requests)==1 else 200)
@@ -127,12 +128,24 @@ def test_deadline_transport_retries_expose_same_destination_idempotency_key(tmp_
     assert store.get(output)['state']=='completed' and store.get(output)['verdict']=='REVIEW'
 
 
-def test_many_parts_receive_one_outcome_without_outbox_capacity_overflow(tmp_path):
+def controlled_join_clock(monkeypatch):
+    # Keep real joins/SQLite/outbox and advance only the deadline clock. A five
+    # millisecond wall deadline could expire before finish under parallel load.
+    from backend.engine import service_capture_groups
+    real_groups=service_capture_groups.CaptureGroups
+    clock={'now':1000}
+    monkeypatch.setattr(service_capture_groups,'CaptureGroups',
+        lambda path,policy:real_groups(path,policy,monotonic_ms=lambda:clock['now'],wall_ms=lambda:1700000000000+clock['now']))
+    return clock
+
+
+def test_many_parts_receive_one_outcome_without_outbox_capacity_overflow(tmp_path,monkeypatch):
+    clock=controlled_join_clock(monkeypatch)
     store=InspectionStore(tmp_path/'state',runtime_provider=lambda:{'manifest_sha256':'a'*64},max_outstanding=100)
     store.configure_capture_groups(policy(deadline=5),expected_revision=0);source=image(tmp_path,'many')
     for part in range(101):
         job=store.enqueue(source,'file',capture=frame(str(part),'front'));store.claim();store.finish(job,result={'final_verdict':'OK'})
-    time.sleep(.02)
+    clock['now']+=20
     first=store.sweep_capture_deadlines(require_delivery=True)
     assert len(first)==100
     first_delivery=store.claim_delivery();store.finish_delivery(first_delivery['job_id'],None)
@@ -144,11 +157,12 @@ def test_many_parts_receive_one_outcome_without_outbox_capacity_overflow(tmp_pat
     assert len(all_outputs)==101 and all(store.get(job)['verdict']=='REVIEW' for job in all_outputs)
 
 
-def test_skewed_view_deadline_delivers_incomplete_review_identity(tmp_path):
+def test_skewed_view_deadline_delivers_incomplete_review_identity(tmp_path,monkeypatch):
+    clock=controlled_join_clock(monkeypatch)
     store=InspectionStore(tmp_path/'state',runtime_provider=lambda:{'manifest_sha256':'a'*64})
     store.configure_capture_groups(policy(deadline=5),expected_revision=0);source=image(tmp_path,'skew')
     job=store.enqueue(source,'file',capture=frame('A','front',at=100));store.claim();store.finish(job,result={'final_verdict':'OK'})
-    time.sleep(.02)
+    clock['now']+=20
     output=store.sweep_capture_deadlines(require_delivery=True)[0]
     result=store.get(output)['result']
     assert result['capture_group']['state']=='INCOMPLETE' and result['final_verdict']=='REVIEW'
@@ -159,7 +173,7 @@ def test_skewed_view_deadline_delivers_incomplete_review_identity(tmp_path):
 def test_destination_acceptance_before_local_crash_retries_same_key(tmp_path,monkeypatch):
     import pytest
     from backend.engine import inspection_service
-    store,selected,source,original=admitted_store(tmp_path);output=store.sweep_capture_deadlines(require_delivery=True)[0]
+    store,selected,source,original=admitted_store(tmp_path,monkeypatch);output=store.sweep_capture_deadlines(require_delivery=True)[0]
     accepted=set();requests=[]
     def post(url,**kwargs):
         key=kwargs['headers']['Idempotency-Key'];requests.append(key);accepted.add(key)

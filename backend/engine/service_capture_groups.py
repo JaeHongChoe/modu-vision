@@ -39,8 +39,10 @@ class ServiceCaptureGroups:
         if path.is_symlink():raise ValueError('Capture group store cannot follow links')
         return CaptureGroups(path,policy)
 
-    def admit(self,conn,job_id,capture,recipe):
+    def admit(self,conn,job_id,capture,recipe,*,observed_policy=None):
         record=self.current()
+        if observed_policy is not None and record!=validate_join_policy(observed_policy):
+            return None,'CAMERA_CAPTURE_POLICY_CHANGED'
         if not record:return None,None
         if (not isinstance(capture,dict) or set(capture)!={'part_id','trigger_id','view_id','captured_at_ms'}
                 or not all(isinstance(capture.get(key),str) and capture[key].strip() and len(capture[key])<=160 for key in ('part_id','trigger_id','view_id'))
@@ -53,6 +55,8 @@ class ServiceCaptureGroups:
         group=conn.execute('SELECT policy_json,recipe_sha256 FROM capture_bindings WHERE part_id=? AND trigger_id=?',key).fetchone()
         if group:
             record=json.loads(group['policy_json'])
+            if observed_policy is not None and record!=observed_policy:
+                return None,'CAMERA_CAPTURE_POLICY_CHANGED'
         else:
             conn.execute('INSERT INTO capture_bindings VALUES(?,?,?,?)',(*key,json.dumps(record,sort_keys=True),recipe_sha))
         groups=self.groups(record);groups.reserve(*key);groups.expire_due();status=groups.group(*key)
@@ -118,7 +122,8 @@ class ServiceCaptureGroups:
             result={'final_verdict':'REVIEW','outcome_kind':'capture_group_deadline','capture_group':joined,
                     'capture_policy':record,'runtime_identity':json.loads(anchor['runtime_binding_json']),
                     'admitted_frames':[{'job_id':row['job_id'],'image_sha256':row['image_sha256'],
-                         **{name:metadata[name] for name in ('part_id','trigger_id','view_id','captured_at_ms')}}
+                         **{name:metadata[name] for name in ('part_id','trigger_id','view_id','captured_at_ms')},
+                         **({'acquisition':json.loads(row['acquisition_json'])} if row['acquisition_json'] else {})}
                          for row,metadata in admitted]}
             state='delivery_pending' if require_delivery else 'completed'
             conn.execute("""INSERT INTO jobs(job_id,image_path,image_id,image_sha256,source,state,verdict,

@@ -40,3 +40,16 @@ test('locked private temp cleanup downgrades persisted qualification before inve
 test('passing receipt is written only after owned cleanup succeeds',()=>{
  const receipt={status:'passed'},sequence=[];assert.equal(h.finalizeEvidence(receipt,'output','temp',[],{remove(){sequence.push('removed');},write(file){sequence.push(file);}}),true);assert.equal(sequence[0],'removed');assert.equal(receipt.status,'passed');
 });
+test('actual API refusal retains bounded diagnostic detail and redacts capability',async()=>{
+ const http=require('node:http');
+ const server=http.createServer((req,res)=>{res.writeHead(422,{'Content-Type':'application/json'});res.end(JSON.stringify({detail:'Saved project schema unreadable', 'X-Vision-Token':'private-capability',padding:'x'.repeat(10000)}));});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const previous=global.window;global.window={api:{getBackendPort:async()=>server.address().port}};
+ try{
+  const page={evaluate:(fn,arg)=>fn(arg)};
+  await assert.rejects(h.api(page,'/api/workers'),error=>{
+   assert.match(error.message,/status 422/);assert.match(error.message,/Saved project schema unreadable/);
+   assert(!error.message.includes('private-capability'));assert(error.message.length<5000);return true;
+  });
+ }finally{global.window=previous;await new Promise(resolve=>server.close(resolve));}
+});

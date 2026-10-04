@@ -31,7 +31,8 @@ function verifyReadback(first,second){assert.deepEqual(second,first,'restart los
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function waitFor(fn,timeout,label){const until=Date.now()+timeout;let last;while(Date.now()<until){try{const value=await fn();if(value)return value;}catch(error){last=error;}await delay(250);}throw new Error(label+' timed out'+(last?': '+redact(last.message):''));}
 async function api(page,route,payload){
- return page.evaluate(async({route,payload})=>{const port=await window.api.getBackendPort();if(!port)throw Error('backend not ready');const response=await fetch(`http://127.0.0.1:${port}${route}`,{signal:AbortSignal.timeout(15000),method:payload?'POST':'GET',...(payload?{headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}:{})});if(!response.ok)throw Error(`API ${route} status ${response.status}`);return response.json();},{route,payload});
+ try{return await page.evaluate(async({route,payload})=>{const port=await window.api.getBackendPort();if(!port)throw Error('backend not ready');const response=await fetch(`http://127.0.0.1:${port}${route}`,{signal:AbortSignal.timeout(15000),method:payload?'POST':'GET',...(payload?{headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}:{})});if(!response.ok)throw Error(`API ${route} status ${response.status}: ${(await response.text()).slice(0,4096)}`);return response.json();},{route,payload});}
+ catch(error){throw Error(redact(error.message));}
 }
 function workerResults(reply){const all=reply.workers?.[0]?.preflight||{};return Object.fromEntries(['train','evaluate','infer','export'].map(stage=>[stage,all[`classification:${stage}:cpu`]]));}
 async function closeOwned(application){let timer;try{await Promise.race([application.close(),new Promise((_,reject)=>{timer=setTimeout(()=>{application.process().kill();reject(Error('owned application close timed out'));},30000);})]);}finally{clearTimeout(timer);}}
@@ -87,5 +88,5 @@ async function run(options){
   if(!finalizeEvidence(receipt,out,root,diagnostics))throw Error('Owned temporary state cleanup failed');
  }
 }
-module.exports={verifyIdentity,verifyPreflight,verifyObservation,launchEnv,verifyReadback,redact,workerResults,finalizeEvidence,run};
+module.exports={api,verifyIdentity,verifyPreflight,verifyObservation,launchEnv,verifyReadback,redact,workerResults,finalizeEvidence,run};
 if(require.main===module){const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i+=2)options[args[i].replace(/^--/,'')]=args[i+1];run(options).catch(error=>{process.stderr.write(redact(error.message)+'\n');process.exitCode=1;});}

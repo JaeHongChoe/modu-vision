@@ -191,8 +191,11 @@ def _sample_service(project, policy, receipt, result, path):
                 or not path.is_file() or path.is_symlink() or dm._hash(path)!=receipt.get('image_sha256')):
             raise ValueError('Captured source changed after sampling decision')
         return sampler,immutable
+    from backend.engine.camera_admission import validate_acquisition
+    acquisition=json.loads(receipt.get('acquisition_json') or 'null')
+    acquisition=validate_acquisition(acquisition) if acquisition is not None else None
     stamp=receipt['created_at']
-    captured=float(stamp) if isinstance(stamp,(int,float)) else datetime.fromisoformat(stamp.replace('Z','+00:00')).timestamp()
+    captured=acquisition['captured_unix_ms']/1000 if acquisition else (float(stamp) if isinstance(stamp,(int,float)) else datetime.fromisoformat(stamp.replace('Z','+00:00')).timestamp())
     from backend.engine.score_contract import compatible_scores, validate_score_spec
     scores=[{'value':crop['defect_score'],'spec':crop['score_spec']} for crop in result.get('crops',[])
             if isinstance(crop,dict) and crop.get('defect_score') is not None and crop.get('score_spec')]
@@ -204,10 +207,10 @@ def _sample_service(project, policy, receipt, result, path):
                 score=candidate;break
         except (TypeError,ValueError):continue
     event=IntakeEvent(event_id=receipt['job_id'],captured_at=captured,size_bytes=path.stat().st_size if path.is_file() else 0,
-        product=binding.get('product_id') or 'unknown',lot=binding.get('lot_id') or 'unknown',camera=receipt['source'] or 'unknown',
+        product=binding.get('product_id') or 'unknown',lot=binding.get('lot_id') or 'unknown',camera=acquisition['camera_id'] if acquisition else receipt['source'] or 'unknown',
         run_ref={'run_id':receipt['job_id'],'node_id':str(steps[-1].get('node_id') or 'legacy_unknown') if steps else 'legacy_unknown',
                  'recipe':str(binding.get('manifest_sha256') or result.get('graph_sha256') or 'legacy_unknown'),
-                 'image_sha256':receipt.get('image_sha256')},
+                 'image_sha256':receipt.get('image_sha256'), **({'acquisition':acquisition} if acquisition else {})},
         verdict=receipt.get('verdict') or result.get('final_verdict'),
         flags=tuple(['model_disagreement'] if result.get('models_disagree') is True else []),
         score=score)
@@ -293,6 +296,7 @@ def register_service_jobs(project, *, job_ids=None, limit=100):
                  'review_state':'pending','review':None,'history':[],'adoptions':[],
                  'origin':{'job_id':receipt['job_id'],'image_path':receipt['image_path'],'capture_source':receipt['source'],
                            'service_state':receipt['state'],'created_at':receipt['created_at'],'updated_at':receipt['updated_at'],
+                           'acquisition':json.loads(receipt.get('acquisition_json') or 'null'),
                            'runtime_identity':result.get('runtime_identity'), 'graph_sha256':result.get('graph_sha256'),
                            'node_evidence':result.get('execution_steps',[]),'roi_evidence':result.get('crops',[]),
                            'review_evidence':{'models_disagree':result.get('models_disagree') is True,

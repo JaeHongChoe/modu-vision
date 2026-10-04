@@ -205,7 +205,7 @@ class InspectionStore:
             # interrupted by a worker stop, not operator retries.
             add_missing_columns(conn, "jobs", {"model_verdict": "TEXT", "interrupted": "INTEGER NOT NULL DEFAULT 0"})
             add_missing_columns(conn, "jobs", {
-                "capture_json": "TEXT", "runtime_binding_json": "TEXT", "runtime_binding_sha256": "TEXT",
+                "capture_json": "TEXT", "acquisition_json": "TEXT", "runtime_binding_json": "TEXT", "runtime_binding_sha256": "TEXT",
                 "binding_provenance": "TEXT NOT NULL DEFAULT 'legacy_unknown'",
                 "idempotency_key": "TEXT", "payload_sha256": "TEXT", "deadline_at": "REAL",
                 "dead_letter_reason": "TEXT", "replay_of": "TEXT",
@@ -302,7 +302,10 @@ class InspectionStore:
                 self._event(conn, row["job_id"], "delivery_pending", "Result delivery resumed after restart")
 
     def enqueue(self, image_path: Path, source: str, image_id: str | None = None, *,
-                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None, capture=None) -> str:
+                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None, capture=None, acquisition=None, capture_policy=None) -> str:
+        if acquisition is not None:
+            from backend.engine.camera_admission import validate_acquisition
+            acquisition = validate_acquisition(acquisition)
         if image_path.is_symlink() or not image_path.is_file():
             raise ValueError("Inspection image is missing or is a symbolic link")
         digest = _sha256(image_path)
@@ -312,14 +315,24 @@ class InspectionStore:
                               'path': None if source == 'http' else str(image_path.resolve()),
                               'product_id': product_id, 'lot_id': lot_id})
         payload_sha = hashlib.sha256(payload.encode()).hexdigest()
+        if acquisition is not None:
+            payload_sha = hashlib.sha256(_canonical({'payload': payload, 'acquisition': acquisition}).encode()).hexdigest()
         if idempotency_key is not None and (not isinstance(idempotency_key, str) or not 1 <= len(idempotency_key) <= 160):
             raise ValueError('Input idempotency key must contain 1 to 160 characters')
         encoded, binding_sha, provenance = self._binding(binding, product_id, lot_id)
         from backend.engine.service_capture_groups import ServiceCaptureGroups
+        if capture_policy is not None:
+            from backend.engine.service_capture_groups import validate_join_policy
+            capture_policy = validate_join_policy(capture_policy)
+            payload_sha = hashlib.sha256(_canonical({'payload_sha256': payload_sha, 'observed_capture_policy': capture_policy}).encode()).hexdigest()
         groups=ServiceCaptureGroups(self)
         if groups.current():
             payload_sha=hashlib.sha256(_canonical({'image_sha256':digest,'image_id':image_id,'source':source,'product_id':product_id,'lot_id':lot_id,'capture':capture,
                 'recipe_sha256':(json.loads(encoded) if encoded else {}).get('manifest_sha256')}).encode()).hexdigest()
+            if acquisition is not None:
+                payload_sha = hashlib.sha256(_canonical({'payload_sha256': payload_sha, 'acquisition': acquisition}).encode()).hexdigest()
+            if capture_policy is not None:
+                payload_sha = hashlib.sha256(_canonical({'payload_sha256': payload_sha, 'observed_capture_policy': capture_policy}).encode()).hexdigest()
             if capture and not idempotency_key:
                 idempotency_key='capture:'+payload_sha
         with self._connection() as conn:
@@ -338,7 +351,10 @@ class InspectionStore:
                 if existing:
                     return existing["job_id"]
             self._capacity(conn)
-            capture_metadata,capture_failure=groups.admit(conn,job_id,capture,json.loads(encoded) if encoded else None)
+            clock_uncertain = bool(acquisition and acquisition['clock_discontinuity'])
+            capture_metadata,capture_failure=groups.admit(conn,job_id,None if clock_uncertain else capture,json.loads(encoded) if encoded else None,observed_policy=capture_policy)
+            if clock_uncertain:
+                capture_failure = 'CAMERA_CLOCK_DISCONTINUITY'
             conn.execute(
                 """INSERT INTO jobs(job_id,image_path,image_id,image_sha256,source,state,created_at,updated_at,
                    runtime_binding_json,runtime_binding_sha256,binding_provenance,idempotency_key,payload_sha256,deadline_at)
@@ -353,6 +369,8 @@ class InspectionStore:
                 )
             if capture_metadata:
                 conn.execute('UPDATE jobs SET capture_json=? WHERE job_id=?',(json.dumps(capture_metadata,sort_keys=True),job_id))
+            if acquisition is not None:
+                conn.execute('UPDATE jobs SET acquisition_json=? WHERE job_id=?',(_canonical(acquisition),job_id))
             if capture_failure:
                 conn.execute("UPDATE jobs SET state='error',verdict='REVIEW',error=?,dead_letter_reason=? WHERE job_id=?",(capture_failure,capture_failure,job_id))
             self._event(conn, job_id, 'error' if capture_failure else 'queued',capture_failure)
@@ -535,6 +553,7 @@ class InspectionStore:
         binding_json = item.pop('runtime_binding_json', None)
         item['runtime_binding'] = json.loads(binding_json) if binding_json else None
         capture_json=item.pop('capture_json',None);item['capture']=json.loads(capture_json) if capture_json else None
+        acquisition_json=item.pop('acquisition_json',None);item['acquisition']=json.loads(acquisition_json) if acquisition_json else None
         return item
 
     def list(self, limit: int = 100) -> list[dict[str, Any]]:
@@ -555,7 +574,7 @@ class InspectionStore:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute('SELECT * FROM jobs WHERE job_id=?', (job_id,)).fetchone()
             if row is None or row['state'] != 'error': return False
-            if row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith('CAPTURE_'): return False
+            if row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith(('CAPTURE_', 'CAMERA_')): return False
             at_limit = row['retry_count']>=self.max_attempts or (row['attempts']>=self.max_attempts and row['interrupted']==0)
             if row['dead_letter_reason'] in {'ADMISSION_DEADLINE_EXCEEDED', 'LEGACY_RECIPE_UNKNOWN'} or at_limit:
                 if at_limit:
@@ -576,7 +595,7 @@ class InspectionStore:
         with self._connection() as conn:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute('SELECT * FROM jobs WHERE job_id=?', (job_id,)).fetchone()
-            if row is not None and (row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith('CAPTURE_')):
+            if row is not None and (row['source']=='capture-group-deadline' or row['capture_json'] or str(row['dead_letter_reason'] or '').startswith(('CAPTURE_', 'CAMERA_'))):
                 raise ValueError('Capture replay requires a new explicit part and trigger identity')
             if row is None or row['state'] not in {'error', 'delivery_error'}:
                 raise ValueError('Only terminal failed inputs can be replayed')
@@ -594,6 +613,8 @@ class InspectionStore:
                 (identifier,row['image_path'],row['image_id'],row['image_sha256'],row['source'],now,now,
                  row['runtime_binding_json'],row['runtime_binding_sha256'],'explicit_replay',time.time()+self.max_queue_age_seconds,
                  job_id,row['replay_count']+1,reason,operator,replay_root))
+            if row['acquisition_json']:
+                conn.execute('UPDATE jobs SET acquisition_json=? WHERE job_id=?', (row['acquisition_json'], identifier))
             self._event(conn, identifier, 'queued', _canonical({'replay_of':job_id,'operator':operator,'reason':reason}))
             return identifier
 
@@ -689,6 +710,8 @@ def create_service_app(
     result_webhook_url: str | None = None,
     result_webhook_token: str | None = None,
     camera_source: str | int | None = None,
+    camera_id: str | None = None,
+    camera_capture_provider=None,
     camera_frame_interval: float = 1.0,
     require_approved_release: bool = False,
     release_policy: Path | None = None,
@@ -729,6 +752,15 @@ def create_service_app(
         current=ServiceCaptureGroups(store).current()
         if current and current!=pipeline.capture_group_policy:raise ValueError('Saved capture group policy differs from package join policy')
         if not current:ServiceCaptureGroups(store).configure(pipeline.capture_group_policy,expected_revision=0,package_import=True)
+    camera_tracker = None
+    if camera_source is not None:
+        from backend.engine.camera_admission import CameraAcquisition, camera_identity
+        from backend.engine.service_capture_groups import ServiceCaptureGroups
+        if camera_capture_provider is not None and not callable(camera_capture_provider):
+            raise ValueError('Camera trigger provider must be callable')
+        if ServiceCaptureGroups(store).current() and camera_capture_provider is None:
+            raise ValueError('Grouped camera requires an explicit part/trigger/view provider before startup')
+        camera_tracker = CameraAcquisition(store, camera_identity(camera_source, camera_id))
     field_config = load_adapter_config(adapter_config_path)
     require_delivery = bool(result_webhook_url) or bool(field_config.enabled and (field_config.modbus or field_config.mes))
     input_root = Path(allowed_input_root).expanduser().resolve() if allowed_input_root else None
@@ -793,17 +825,48 @@ def create_service_app(
         while not stop.is_set():
             capture = None
             try:
-                capture = cv2.VideoCapture(source)
-                if not capture.isOpened():
+                try:
+                    capture = cv2.VideoCapture(source)
+                    opened = capture.isOpened()
+                except Exception:
+                    camera_tracker.record_failure(connection=True)
+                    adapter_state['camera'] = 'disconnected'
+                    stop.wait(5)
+                    continue
+                if not opened:
+                    camera_tracker.record_failure(connection=True)
                     adapter_state["camera"] = "disconnected"
                 else:
+                    camera_tracker.start_session()
                     adapter_state["camera"] = "connected"
                     while not stop.is_set():
-                        ok, frame = capture.read()
+                        try:
+                            ok, frame = capture.read()
+                        except Exception:
+                            camera_tracker.record_failure()
+                            adapter_state['camera'] = 'disconnected'
+                            break
                         if not ok or frame is None:
+                            camera_tracker.record_failure()
                             adapter_state["camera"] = "disconnected"
                             break
+                        acquisition = camera_tracker.observe()
+                        # Consume the trigger for every observed frame, including a
+                        # frame later refused by backpressure, before another read.
+                        from backend.engine.service_capture_groups import ServiceCaptureGroups
+                        join_policy = ServiceCaptureGroups(store).current()
+                        group_capture = None
+                        if join_policy:
+                            try:
+                                from backend.engine.camera_admission import group_capture_from_trigger
+                                trigger = camera_capture_provider(frame, dict(acquisition)) if camera_capture_provider else None
+                                group_capture = group_capture_from_trigger(trigger, acquisition, join_policy)
+                            except Exception:
+                                # Provider errors do not invent part/trigger identity.
+                                # The frame still receives a durable REVIEW admission.
+                                adapter_state['camera'] = 'trigger_missing'
                         if store.pending_count() >= store.max_outstanding:
+                            camera_tracker.record_drop()
                             adapter_state["camera"] = "backpressure"
                             stop.wait(camera_frame_interval)
                             continue
@@ -811,13 +874,16 @@ def create_service_app(
                         if not cv2.imwrite(str(output), frame):
                             adapter_state["camera"] = "error"
                             break
-                        try: store.enqueue(output, "camera")
+                        key = f"camera:{acquisition['stream_session_id']}:{acquisition['sequence']}"
+                        try: store.enqueue(output, "camera", acquisition=acquisition, capture=group_capture, capture_policy=join_policy, idempotency_key=key)
                         except InboxFull:
+                            camera_tracker.record_drop()
                             output.unlink(missing_ok=True)
                             adapter_state['camera'] = 'backpressure'
                             stop.wait(camera_frame_interval)
                             continue
-                        adapter_state["camera"] = "connected"
+                        adapter_state["camera"] = ('clock_uncertain' if acquisition['clock_discontinuity'] else
+                                                   'trigger_missing' if join_policy and group_capture is None else 'connected')
                         stop.wait(camera_frame_interval)
             except Exception:
                 adapter_state["camera"] = "error"
@@ -896,12 +962,15 @@ def create_service_app(
 
     @app.put('/v1/capture-groups/policy',dependencies=[Depends(authorized)])
     def capture_policy(payload:dict):
-        try:return store.configure_capture_groups(payload['policy'],expected_revision=payload['expected_revision'])
+        try:
+            if camera_source is not None and camera_capture_provider is None:
+                raise ValueError('Grouped camera requires an explicit part/trigger/view provider')
+            return store.configure_capture_groups(payload['policy'],expected_revision=payload['expected_revision'])
         except (ValueError,KeyError) as exc:raise HTTPException(409,str(exc)) from exc
 
     @app.get("/v1/adapters", dependencies=[Depends(authorized)])
     def adapters():
-        return dict(adapter_state)
+        return {**adapter_state, **({'camera_acquisition': camera_tracker.status()} if camera_tracker else {})}
 
     @app.post("/v1/jobs/file", status_code=202, dependencies=[Depends(authorized)])
     def enqueue_file(payload: FileJob, request: Request):
@@ -1046,6 +1115,7 @@ def main() -> int:
     parser.add_argument("--result-webhook-url", help="MES/device endpoint for verdict delivery")
     parser.add_argument("--result-webhook-token", default=os.environ.get("VISION_RESULT_WEBHOOK_TOKEN"))
     parser.add_argument("--camera-source", help="OpenCV device index, video path, or RTSP URI")
+    parser.add_argument("--camera-id", help="Opaque camera identity; required for URI/file inputs")
     parser.add_argument("--camera-frame-interval", type=float, default=1.0)
     parser.add_argument("--require-approved-release", action="store_true")
     parser.add_argument("--release-policy", type=Path, help="Trusted approval policy outside the package")
@@ -1080,7 +1150,7 @@ def main() -> int:
         args.package, args.state_dir, token=args.token,
         allowed_input_root=args.input_root, inbox_dir=args.inbox,
         result_webhook_url=args.result_webhook_url, result_webhook_token=args.result_webhook_token,
-        camera_source=args.camera_source, camera_frame_interval=args.camera_frame_interval,
+        camera_source=args.camera_source, camera_id=args.camera_id, camera_frame_interval=args.camera_frame_interval,
         require_approved_release=args.require_approved_release, release_policy=args.release_policy,
         runtime_root=args.runtime_root, device=args.device, adapter_config_path=args.adapter_config,deadline_ms=args.deadline_ms,
         max_outstanding=args.max_outstanding,max_attempts=args.max_attempts,max_queue_age_seconds=args.max_queue_age_seconds,

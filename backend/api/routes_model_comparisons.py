@@ -394,7 +394,7 @@ def create_comparison(payload: ComparisonRequest, request: Request):
     return _run_comparison(payload, project, source)
 
 
-def _run_comparison(payload: ComparisonRequest, project, source, progress=None, cancelled=None):
+def _comparison_inputs(payload: ComparisonRequest, project, source):
     if payload.incumbent_job_id == payload.candidate_job_id:
         raise HTTPException(status_code=422, detail="비교 기준과 후보 모델은 서로 달라야 합니다.")
     baseline_task=payload.incumbent_task or payload.task;candidate_task=payload.candidate_task or payload.task
@@ -429,6 +429,41 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         from backend.engine.comparison_truth import bind_truth
         try:truth_binding=bind_truth(project,source,payload.task,[baseline,candidate],images)
         except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
+    return dict(baseline=baseline, candidate=candidate, baseline_task=baseline_task, candidate_task=candidate_task, model_hashes=model_hashes, dataset_fingerprint=dataset_fingerprint, intake_lineage=intake_lineage, images=images, total_test_images=total_test_images, truth_binding=truth_binding)
+
+
+def _binding_from_inputs(project, source, inputs):
+    manifest = Path(project['project_dir']) / 'project.json'
+    if manifest.is_symlink():
+        raise HTTPException(409, 'Project binding cannot be linked')
+    try:
+        current = json.loads(manifest.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(409, 'Project binding unavailable') from exc
+    for key in ('id', 'source_dataset_dir', 'active_labelset_id', 'task'):
+        default = 'default' if key == 'active_labelset_id' else None
+        if current.get(key, default) != project.get(key, default):
+            raise HTTPException(409, 'Project scope changed during comparison input capture')
+    return {"project_id": project["id"], "labelset_id": project.get("active_labelset_id", "default"),
+            "source_dataset_path": str(source), "inputs": inputs,
+            "scope_identity": {key: current.get(key) for key in ('id', 'source_dataset_dir', 'active_labelset_id', 'task')}}
+
+
+def _comparison_binding(payload, project, source):
+    return _binding_from_inputs(project, source, _comparison_inputs(payload, project, source))
+
+
+def _run_comparison(payload: ComparisonRequest, project, source, progress=None, cancelled=None,
+                    publish_report=None, expected_binding=None):
+    inputs = _comparison_inputs(payload, project, source)
+    binding = _binding_from_inputs(project, source, inputs) if expected_binding is not None else None
+    if expected_binding is not None and binding != expected_binding:
+        raise HTTPException(409, "Comparison inputs changed after acceptance")
+    baseline, candidate = inputs['baseline'], inputs['candidate']
+    baseline_task, candidate_task = inputs['baseline_task'], inputs['candidate_task']
+    model_hashes, dataset_fingerprint = inputs['model_hashes'], inputs['dataset_fingerprint']
+    intake_lineage, images = inputs['intake_lineage'], inputs['images']
+    total_test_images, truth_binding = inputs['total_test_images'], inputs['truth_binding']
     if progress: progress(0, len(images))
     if any(_sha256(Path(model['checkpoint_path'])) != model_hashes[key]
            for key,model in (('incumbent',baseline),('candidate',candidate))):
@@ -542,6 +577,9 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         report['intake_lineage']={key:value for key,value in intake_lineage.items() if key!='images'}
         report['image_selection']='Verified intake ancestor frozen held-out image bytes and original scoped truth'
     if truth_binding:report['truth_binding']=truth_binding
+    if publish_report is not None:
+        publish_report(report)
+        return report
     output = _report_dir(project)
     output.mkdir(parents=True, exist_ok=True)
     path = output / f"{report['comparison_id']}.json"
@@ -557,6 +595,19 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
     return report
 
 
+def _report_available(report, request):
+    marker = report.get('_durable_comparison')
+    if marker is None:
+        return True
+    try:
+        context, key, _, jobs = _durable_scope(request)
+        jobs.scoped(marker['job_id'], context, key)
+        result = jobs.store.checkpoint_value(marker['job_id']).get('result', {})
+        return result.get('id') == report.get('comparison_id') and jobs.available(marker['job_id'])
+    except (KeyError, ValueError, OSError, TypeError):
+        return False
+
+
 @router.get("")
 def list_comparisons(request: Request, source_dataset_path: str, task: Task):
     project, source = _scope(request, source_dataset_path, task)
@@ -569,7 +620,7 @@ def list_comparisons(request: Request, source_dataset_path: str, task: Task):
             try:
                 report = json.loads(path.read_text(encoding="utf-8"))
                 if (report.get("project_id") == project["id"] and report.get("source_dataset_path") == str(source)
-                        and report.get("task") == task):
+                        and report.get("task") == task and report.get("comparison_id") == path.stem and _report_available(report, request)):
                     reports.append(_summary_record(report))
             except (OSError, ValueError, KeyError, TypeError):
                 continue
@@ -582,57 +633,134 @@ class AsyncComparisonRequest(ComparisonRequest):
 
 
 def _jobs(project):
+    """Legacy receipt API, retained for existing callers."""
     from backend.engine.evaluation_history import ComparisonJobs
     return ComparisonJobs(Path(project["project_dir"]) / "reports" / "comparison_jobs.sqlite3")
 
 
+def _durable_scope(request):
+    from backend.contracts.context import get_project_context
+    from backend.engine.comparison_jobs import ComparisonJobs
+    from backend.engine.job_store import ledger
+    context = get_project_context(request)
+    return context, request.app.state.context_registry.project_key(context), get_current_project(request), ComparisonJobs(ledger())
+
+
+def _legacy_rows(project):
+    from backend.engine.evaluation_history import ComparisonJobs
+    path = Path(project["project_dir"]) / "reports" / "comparison_jobs.sqlite3"
+    if not path.is_file() or path.is_symlink() or path.parent.is_symlink():
+        return []
+    rows = ComparisonJobs(path, recover=False, read_only=True).list()
+    for row in rows:
+        row.update(durable=False, legacy=True, ownership_verified=False, resumable=False)
+    return rows
+
+
+def _job_view(jobs, identifier, request):
+    decision = getattr(request.state, 'permission_decision', None)
+    may_recover = decision is None or decision.role in ('owner', 'trainer', 'reviewer')
+    return jobs.view(identifier, recover=may_recover)
+
+
+def _durable_row(jobs, identifier, context, key, source, task, request):
+    try:
+        record = jobs.scoped(identifier, context, key)
+    except KeyError:
+        raise HTTPException(404, "Comparison job not found in this actor/project scope") from None
+    payload = json.loads(record['spec_json'])['request']
+    if payload['source_dataset_path'] != str(source) or payload['task'] != task:
+        raise HTTPException(404, "Comparison job belongs to another source")
+    return _job_view(jobs, identifier, request)
+
+
 @router.post("/jobs", status_code=202)
 def queue_comparison(payload: AsyncComparisonRequest, request: Request):
-    project, source = _scope(request, payload.source_dataset_path, payload.task)
-    if payload.incumbent_job_id == payload.candidate_job_id or any(_model(project, source, model_task, job) is None for model_task,job in ((payload.incumbent_task or payload.task,payload.incumbent_job_id),(payload.candidate_task or payload.task,payload.candidate_job_id))):
-        raise HTTPException(409, "Comparison requires two distinct completed source-bound models")
-    jobs = _jobs(project)
-    record = jobs.create(payload.model_dump())
-    def worker():
+    from backend.engine.job_store import JobConflict
+    context, key, project, jobs = _durable_scope(request)
+    idempotency = request.headers.get('Idempotency-Key')
+    if idempotency is not None and not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', idempotency):
+        raise HTTPException(422, 'Invalid Idempotency-Key')
+    normalized = payload.model_dump()
+    normalized['source_dataset_path'] = str(Path(payload.source_dataset_path).expanduser().resolve())
+    try:
+        held = jobs.replay(context, key, idempotency, normalized)
+        if held is not None:
+            return jobs.view(held['id'])
+        project, source = _scope(request, normalized['source_dataset_path'], payload.task)
+        if payload.incumbent_job_id == payload.candidate_job_id:
+            raise HTTPException(409, 'Comparison requires two distinct completed source-bound models')
+        binding = _comparison_binding(payload, project, source)
+        identifier, created = jobs.submit(context, key, project, normalized, binding, idempotency)
+    except JobConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if created:
+        def worker():
+            def verify(expected):
+                if _comparison_binding(payload, project, source) != expected:
+                    raise HTTPException(409, 'Comparison inputs changed after acceptance')
+            jobs.run(identifier,
+                     lambda progress, cancelled, publish, expected: _run_comparison(
+                         payload, project, source, progress, cancelled, publish_report=publish, expected_binding=expected),
+                     _report_dir(project), verify)
+        import threading
+        from contextvars import copy_context
+        copied = copy_context()
         try:
-            if jobs.cancelled(record["job_id"]): return
-            def progress(completed, total):
-                if completed == 0: jobs.start(record["job_id"], total)
-                jobs.progress(record["job_id"], completed)
-            report = _run_comparison(payload, project, source, progress, lambda: jobs.cancelled(record["job_id"]))
-            jobs.finish(record["job_id"], report["status"], report["comparison_id"])
-        except InterruptedError: jobs.finish(record["job_id"], "cancelled")
-        except Exception as exc: jobs.finish(record["job_id"], "failed", error=str(exc))
-    import threading
-    from contextvars import copy_context
-    context=copy_context()
-    threading.Thread(target=context.run,args=(worker,), daemon=True, name=record["job_id"]).start()
-    return record
+            threading.Thread(target=copied.run, args=(worker,), daemon=True, name=identifier).start()
+        except Exception:
+            # Accepted evidence remains durable; view resolves undispatched work as interrupted.
+            from backend.engine.comparison_jobs import release_dispatch
+            release_dispatch(jobs, identifier, failed=True)
+            return jobs.view(identifier)
+    return jobs.view(identifier)
 
 
 @router.get("/jobs")
 def list_comparison_jobs(request: Request, source_dataset_path: str, task: Task):
     project, source = _scope(request, source_dataset_path, task)
-    jobs = [row for row in _jobs(project).list() if row["payload"]["source_dataset_path"] == str(source) and row["payload"]["task"] == task]
-    # A stale thread cannot survive process restart; mark interrupted after its last progress.
-    return {"jobs": jobs, "total": len(jobs)}
+    context, key, _, jobs = _durable_scope(request)
+    from backend.engine.comparison_jobs import KIND
+    from backend.engine.job_state import TERMINAL
+    records = jobs.store.active(KIND) + jobs.store.ended(KIND, key, TERMINAL)
+    rows = []
+    for record in records:
+        try:
+            jobs.scoped(record['id'], context, key)
+            payload = json.loads(record['spec_json'])['request']
+            if payload['source_dataset_path'] == str(source) and payload['task'] == task:
+                rows.append(_job_view(jobs, record['id'], request))
+        except KeyError:
+            continue
+    rows.extend(row for row in _legacy_rows(project)
+                if row['payload']['source_dataset_path'] == str(source) and row['payload']['task'] == task)
+    rows.sort(key=lambda row: row['created_at'], reverse=True)
+    return {'jobs': rows, 'total': len(rows)}
 
 
 @router.get("/jobs/{job_id}")
 def comparison_job(job_id: str, request: Request, source_dataset_path: str, task: Task):
     project, source = _scope(request, source_dataset_path, task)
-    try: row = _jobs(project).get(job_id)
-    except KeyError: raise HTTPException(404, "Comparison job not found")
-    if row["payload"]["source_dataset_path"] != str(source) or row["payload"]["task"] != task: raise HTTPException(404, "Comparison job belongs to another source")
-    return row
+    context, key, _, jobs = _durable_scope(request)
+    try:
+        jobs.store.record(job_id)
+    except KeyError:
+        for row in _legacy_rows(project):
+            if row['job_id'] == job_id and row['payload']['source_dataset_path'] == str(source) and row['payload']['task'] == task:
+                return row
+        raise HTTPException(404, 'Comparison job not found') from None
+    return _durable_row(jobs, job_id, context, key, source, task, request)
 
 
 @router.post("/jobs/{job_id}/cancel")
 def cancel_comparison_job(job_id: str, request: Request, source_dataset_path: str, task: Task):
     row = comparison_job(job_id, request, source_dataset_path, task)
-    project, _ = _scope(request, source_dataset_path, task)
-    _jobs(project).cancel(job_id)
-    return _jobs(project).get(job_id)
+    context, key, project, jobs = _durable_scope(request)
+    if row.get('legacy'):
+        _jobs(project).cancel(job_id)
+        return comparison_job(job_id, request, source_dataset_path, task)
+    jobs.cancel(job_id)
+    return jobs.view(job_id)
 
 
 @router.get("/{comparison_id}")
@@ -650,4 +778,6 @@ def get_comparison(comparison_id: str, request: Request, source_dataset_path: st
     if (report.get("project_id") != project["id"] or report.get("source_dataset_path") != str(source)
             or report.get("task") != task):
         raise HTTPException(status_code=404, detail="현재 프로젝트의 모델 비교 기록이 아닙니다.")
+    if report.get("comparison_id") != comparison_id or not _report_available(report, request):
+        raise HTTPException(409, "Durable comparison report is not verified/available in this actor scope")
     return report

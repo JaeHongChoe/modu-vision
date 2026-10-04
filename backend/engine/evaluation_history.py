@@ -123,13 +123,19 @@ def evaluation_model_context(project_root,metadata):
 
 
 class ComparisonJobs:
-    def __init__(self, path):
-        self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, path, *, recover=True, read_only=False):
+        self.path = Path(path); self.read_only = read_only
+        if read_only: return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as conn:
             conn.execute('CREATE TABLE IF NOT EXISTS jobs(job_id TEXT PRIMARY KEY, payload TEXT NOT NULL, status TEXT NOT NULL, total_images INTEGER DEFAULT 0, completed_images INTEGER DEFAULT 0, cancel_requested INTEGER DEFAULT 0, report_id TEXT, error TEXT, created_at REAL, updated_at REAL)')
             add_missing_columns(conn, 'jobs', {'owner_pid': 'INTEGER', 'owner_created_at': 'REAL', 'owner_command_sha256': 'TEXT'})
-        self.recover()
+        if recover: self.recover()
     def connect(self):
+        if self.read_only:
+            conn = sqlite3.connect(self.path.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+            conn.row_factory = sqlite3.Row
+            return conn
         conn = sqlite3.connect(self.path, timeout=10); conn.row_factory = sqlite3.Row
         use_wal(conn); return conn
     def create(self, payload):
