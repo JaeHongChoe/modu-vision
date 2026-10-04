@@ -9,6 +9,7 @@ from backend.engine.inspection_service import InspectionStore
 
 def test_idle_worker_autonomously_delivers_missing_view_review(package,tmp_path,monkeypatch):
     from backend.engine import inspection_service
+    clock=controlled_join_clock(monkeypatch)
     messages=[]
     def post(url,**kwargs):
         messages.append(kwargs['json']);return SimpleNamespace(status_code=200)
@@ -19,6 +20,7 @@ def test_idle_worker_autonomously_delivers_missing_view_review(package,tmp_path,
         client.put('/v1/capture-groups/policy',json={'policy':policy(deadline=250),'expected_revision':0})
         admitted=client.post('/v1/jobs/file',json={'image_path':str(image(tmp_path,'view')),'capture':frame('part-A','front')}).json()['job_id']
         original=_wait(client,admitted,'completed')
+        clock['now']+=300
         started=time.monotonic()
         while not messages and time.monotonic()-started<2:time.sleep(.02)
         assert len(messages)==1,'idle worker must enqueue and deliver one missing-view whole-part outcome'
@@ -90,7 +92,8 @@ def test_deadline_output_stays_local_when_delivery_is_not_enabled(tmp_path,monke
     assert store.claim_delivery() is None,'enabling transport later must not reinterpret an already local-only outcome'
 
 
-def test_completed_group_does_not_create_second_whole_part_output(tmp_path):
+def test_completed_group_does_not_create_second_whole_part_output(tmp_path,monkeypatch):
+    clock=controlled_join_clock(monkeypatch)
     selected={'manifest_sha256':'a'*64}
     store=InspectionStore(tmp_path/'state',runtime_provider=lambda:selected)
     store.configure_capture_groups(policy(deadline=20),expected_revision=0)
@@ -100,7 +103,7 @@ def test_completed_group_does_not_create_second_whole_part_output(tmp_path):
         store.finish(job,result={'final_verdict':'OK'},require_delivery=True)
     delivery=store.claim_delivery();assert delivery is not None
     store.finish_delivery(delivery['job_id'],None)
-    time.sleep(.04)
+    clock['now']+=40
     assert store.sweep_capture_deadlines(require_delivery=True)==[]
     assert store.claim_delivery() is None
 

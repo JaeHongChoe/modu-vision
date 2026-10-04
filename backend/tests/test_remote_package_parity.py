@@ -1,7 +1,7 @@
 """Selected package parity crosses only the transport boundary in these tests."""
 import json
 import hashlib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -12,6 +12,14 @@ from backend.tests.test_remote_coordinator import FakeRemote
 
 class PackageWorkerTransport(FakeRemote):
     """Controlled SSH boundary: run the production worker on a local fake server."""
+    def exec(self, profile, argv, **kwargs):
+        # The selected Linux server uses POSIX paths even from a Windows client.
+        # Translate only fake transport filesystem commands into its local root.
+        if argv[0] in {'mkdir', 'cat'}:
+            relative = PurePosixPath(argv[-1]).relative_to(profile.remote_root)
+            argv = [*argv[:-1], str(self.root / Path(*relative.parts))]
+        return super().exec(profile, argv, **kwargs)
+
     def launch(self, profile, argv, run_id):
         from backend.remote.package_parity import run_package_parity
         self.launches += 1
@@ -24,9 +32,9 @@ def setup_remote(tmp_path, monkeypatch):
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
     client, project, source, images, _ = _project_flow(tmp_path, monkeypatch, count=2)
     profile = ComputeProfile(id='package-target', name='Selected package server', ssh_target='selected-host',
-                             ssh_port=22, remote_root=str(tmp_path / 'remote'), runtime_kind='python', runtime_value='python3')
+                             ssh_port=22, remote_root='/controlled/package-target', runtime_kind='python', runtime_value='python3')
     get_profile_store().save(profile)
-    remote = PackageWorkerTransport(Path(profile.remote_root))
+    remote = PackageWorkerTransport(tmp_path / 'remote')
     from backend.remote import operations
     monkeypatch.setattr(operations, 'SSHTransport', lambda: remote)
     return client, project, source, images, profile, remote

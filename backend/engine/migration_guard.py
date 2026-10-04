@@ -46,9 +46,11 @@ def maintenance_guard(root, *, exclusive=False):
 
 
 class ProjectMaintenanceMiddleware:
-    # These specific handlers perform their own exclusive admission; preview is read-only.
+    # Migration handlers own admission; preview is read-only. Restore writes a
+    # validated fresh destination and must work when the old project is missing.
     CONTROL_PATHS={'/api/project/compatibility/apply','/api/project/compatibility/recover',
-                   '/api/project/compatibility/preview','/api/project/compatibility/global-preview'}
+                   '/api/project/compatibility/preview','/api/project/compatibility/global-preview',
+                   '/api/project/restore'}
     def __init__(self,app,project_app):self.app=app;self.project_app=project_app
     async def __call__(self,scope,receive,send):
         # A fresh HTTP request must not inherit a caller/background admission capability.

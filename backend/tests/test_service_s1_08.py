@@ -3,6 +3,14 @@ import pytest
 from backend.engine import project_migration as migration
 
 
+@pytest.fixture(autouse=True)
+def isolated_installation(tmp_path, monkeypatch):
+    # Other suites deliberately retain synthetic active jobs. A migration must
+    # inspect its own installation while still refusing fixtures it owns here.
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'installation'))
+    monkeypatch.delenv('VISION_RESOURCE_LEASE_DB', raising=False)
+
+
 def project(tmp_path):
     root=tmp_path/'project';root.mkdir();(root/'project.json').write_text(json.dumps({'id':'p','name':'legacy','extension':{'kept':True}}))
     for path,data in [('labels/annotation.json',b'{"truth":1}'),('models/checkpoint.bin',b'weights'),('flows/approved.json',b'{"approved":true}')]:

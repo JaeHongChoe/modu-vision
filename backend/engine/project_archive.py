@@ -24,6 +24,7 @@ MAX_TOTAL_BYTES = 4 * 1024**3
 MAX_FILES = 100_000
 _CHUNK = 1024 * 1024
 _PROJECT_COORDINATION_FILES = {
+    'migration_admission.lock',
     '.retention/runtime_lifecycle.lock',
     'runtime_service/runtime_lifecycle.lock',
 }
@@ -952,7 +953,10 @@ def _publish_fresh_directory(staging: Path, target: Path) -> None:
     import ctypes
     import sys
     if os.name == 'nt':
-        os.rename(staging,target)  # Windows rename refuses an existing destination.
+        try:
+            os.rename(staging,target)  # Windows rename refuses an existing destination.
+        except OSError as exc:
+            raise ArchiveError(f'Restore destination publication refused: {exc}',409) from exc
         return
     library = ctypes.CDLL(None,use_errno=True)
     if sys.platform == 'darwin':

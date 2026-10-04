@@ -52,6 +52,39 @@ def test_backup_omits_only_owned_locks_and_retains_same_named_user_files(tmp_pat
             assert archive.read(member) == content
 
 
+def test_backup_does_not_archive_the_held_project_admission_byte(tmp_path):
+    from backend.engine.migration_guard import maintenance_guard
+    project, root, source = _project(tmp_path)
+    user_lock = source / 'migration_admission.lock'
+    user_lock.write_bytes(b'source user data with the same filename')
+    with maintenance_guard(root):
+        result = create_archive(project, tmp_path / 'backups')
+        assert (root / 'migration_admission.lock').is_file()
+    with ZipFile(result['archive_path']) as archive:
+        assert 'project/migration_admission.lock' not in archive.namelist()
+        assert archive.read('source/migration_admission.lock') == user_lock.read_bytes()
+
+
+def test_windows_fresh_publication_refusal_preserves_the_conflict(tmp_path, monkeypatch):
+    import pytest
+    from backend.engine import project_archive
+    staging = tmp_path / 'owned-stage'
+    target = tmp_path / 'foreign-destination'
+    staging.mkdir()
+    target.mkdir()
+    (staging / 'owned.txt').write_bytes(b'owned restoration')
+    def refuse(*args):
+        raise FileExistsError('Windows destination already exists')
+    with monkeypatch.context() as scoped:
+        scoped.setattr(project_archive.os, 'name', 'nt')
+        scoped.setattr(project_archive.os, 'rename', refuse)
+        with pytest.raises(project_archive.ArchiveError, match='publication refused') as failure:
+            project_archive._publish_fresh_directory(staging, target)
+    assert failure.value.status_code == 409
+    assert target.is_dir() and list(target.iterdir()) == []
+    assert (staging / 'owned.txt').read_bytes() == b'owned restoration'
+
+
 def test_backup_snapshots_committed_wal_data_and_omits_only_sqlite_journals(tmp_path):
     project, root, _ = _project(tmp_path)
     database = root / 'runtime_service' / 'records.sqlite3'
