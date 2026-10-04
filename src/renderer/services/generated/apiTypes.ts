@@ -1220,6 +1220,11 @@ export type Row = {
   source_sha256?: string | null;
 };
 
+export type SamplingPolicyRequest = {
+  expected_revision: number;
+  policy: { [key: string]: unknown };
+};
+
 export type ScmConfiguration = {
   service_account: string;
   network_required?: boolean;
@@ -1640,6 +1645,7 @@ export interface ApiRequestBody {
   "POST /api/capture-intake/candidates/{identifier}/review": backend__api__routes_capture_intake__ReviewRequest;
   "POST /api/capture-intake/drift/references": DriftReferenceRequest;
   "POST /api/capture-intake/register": RegisterRequest;
+  "POST /api/capture-intake/sampling": SamplingPolicyRequest;
   "POST /api/compute/jobs": ComputeJobInput;
   "POST /api/compute/jobs/{job_id}/predict": ComputePredictionInput;
   "POST /api/compute/profiles": ProfileInput;

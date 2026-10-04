@@ -26,7 +26,12 @@ export type DriftReference={reference_id:string;name:string;actor:string;created
 export type DriftReport={reference_id:string;reference_sha256:string;report_sha256:string;state:string;reference_count:number;observed_count:number;excluded_count:number;quality_status:string;image_statistics:{mean_luminance_delta:number|null;histogram_l1_distance:number|null};prediction_rates:Record<string,{reference:number;observed:number|null;delta:number|null}>;strata:Array<{product_id:string;lot_id:string;camera:string;reference_count:number;observed_count:number;model_changed:boolean}>};
 const json=(method:string,body:unknown):RequestInit=>({method,body:JSON.stringify(body)});
 export function captureRoutingLabel(value:CaptureRouting):string{return {unknown:'정답 미확인',duplicate:'중복',failed:'실패'}[value];}
+export type SamplingStatus={policy:Record<string,unknown>|null;policy_ref:string|null;held_items:number;held_bytes:number;
+  windows:Array<{selected:number;skipped:number;quota_exhausted:string[];retention_failed:number;retention_overdue:number}>;
+  receipts:Array<{event_id:string;decision:string;reason:string;policy_ref:string}>};
 export const captureIntake={
+  samplingStatus:()=>request<SamplingStatus>('/api/capture-intake/sampling'),
+  saveSamplingPolicy:(policy:Record<string,unknown>,expected_revision:number)=>request<SamplingStatus>('/api/capture-intake/sampling',json('POST',{policy,expected_revision})),
   driftReferences:()=>request<{references:DriftReference[]}>('/api/capture-intake/drift/references'),
   freezeDrift:(candidate_ids:string[],actor:string,name:string)=>request<DriftReference>('/api/capture-intake/drift/references',json('POST',{candidate_ids,actor,name})),
   driftReport:(id:string)=>request<DriftReport>(`/api/capture-intake/drift/references/${encodeURIComponent(id)}/report`),

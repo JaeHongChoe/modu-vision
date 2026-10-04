@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_import_job import KIND as IMPORT_KIND, DatasetImportJobs, ImportNotAcceptable, ImportSpec
 from backend.engine.dataset_index import DatasetIndex, RevisionNotActivatable, StaleActiveRevision, index_path
-from backend.engine.job_store import JobConflict, ledger
+from backend.engine.job_store import JobConflict, StaleRevision, ledger
 
 router = APIRouter(prefix="/api/dataset", tags=["Dataset imports"])
 _IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9_.:-]{1,128}$")
@@ -59,8 +59,10 @@ def _jobs(request: Request) -> DatasetImportJobs:
         return jobs
 
 
-def _view(jobs: DatasetImportJobs, job_id: str, project_key: str) -> dict:
+def _view(jobs: DatasetImportJobs, job_id: str, project_key: str, actor_id: str) -> dict:
     try:
+        if jobs.store.record(job_id)['actor_id'] != actor_id:
+            raise KeyError(job_id)
         return jobs.view(job_id, project_key)
     except KeyError:
         raise HTTPException(404, "Import not found in this project") from None
@@ -86,7 +88,7 @@ def submit_import(payload: ImportRequest, request: Request):
         raise HTTPException(409, str(exc)) from exc
     if ref.created:
         jobs.start(ref.id)
-    return {**_view(jobs, ref.id, project_key), "idempotent_replay": not ref.created}
+    return {**_view(jobs, ref.id, project_key, context.actor_id), "idempotent_replay": not ref.created}
 
 
 class ArchiveImportRequest(BaseModel):
@@ -137,7 +139,7 @@ def submit_archive_import(payload: ArchiveImportRequest, request: Request):
             recorded = {name: spec_json.get(name) for name in intended}  # every field but the extracted folder
             if recorded != intended:
                 raise HTTPException(409, "This idempotency key was already used for a different request.")
-            return {**_view(jobs, reserved["id"], project_key), "idempotent_replay": True, "source_root": spec_json["source_root"]}
+            return {**_view(jobs, reserved["id"], project_key, context.actor_id), "idempotent_replay": True, "source_root": spec_json["source_root"]}
     imports = Path(project["project_dir"]) / "dataset_imports"
     target = imports / ref.sha256
     if target.exists() and not verify_extraction(target, ref.sha256):
@@ -165,29 +167,44 @@ def submit_archive_import(payload: ArchiveImportRequest, request: Request):
         raise HTTPException(409, str(exc)) from exc
     if submitted.created:
         jobs.start(submitted.id)
-    return {**_view(jobs, submitted.id, project_key), "idempotent_replay": not submitted.created,
+    return {**_view(jobs, submitted.id, project_key, context.actor_id), "idempotent_replay": not submitted.created,
             "source_root": str(target)}
 
 
 @router.get("/imports/{job_id}")
 def get_import(job_id: str, request: Request):
-    _context, project_key, _project = _scope(request)
-    return _view(_jobs(request), job_id, project_key)
+    context, project_key, _project = _scope(request)
+    return _view(_jobs(request), job_id, project_key, context.actor_id)
 
 
 @router.post("/imports/{job_id}/cancel")
 def cancel_import(job_id: str, request: Request):
     context, project_key, _project = _scope(request)
     jobs = _jobs(request)
-    _view(jobs, job_id, project_key)
+    _view(jobs, job_id, project_key, context.actor_id)
     return jobs.cancel(job_id, project_key, context.actor_id)
+
+
+@router.post("/imports/{job_id}/resume")
+def resume_import(job_id: str, request: Request):
+    context, project_key, _project = _scope(request)
+    jobs = _jobs(request)
+    try:
+        ref = jobs.resume(job_id, project_key, context.actor_id)
+    except KeyError:
+        raise HTTPException(404, "Import not found in this project") from None
+    except (ImportNotAcceptable, StaleRevision) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if ref.state == 'accepted':
+        jobs.start(ref.id)
+    return _view(jobs, job_id, project_key, context.actor_id)
 
 
 @router.post("/imports/{job_id}/accept")
 def accept_import(job_id: str, payload: AcceptRequest, request: Request):
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     jobs = _jobs(request)
-    _view(jobs, job_id, project_key)
+    _view(jobs, job_id, project_key, context.actor_id)
     try:
         active = jobs.accept(job_id, project_key, payload.revision_id, payload.expected_active)
     except (ImportNotAcceptable, RevisionNotActivatable, StaleActiveRevision) as exc:
@@ -197,7 +214,7 @@ def accept_import(job_id: str, payload: AcceptRequest, request: Request):
 
 @router.get("/revisions")
 def list_revisions(request: Request):
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     jobs = _jobs(request)
     return {"active_revision": jobs.index.active(project_key), "revisions": jobs.index.revisions(project_key)}
 
@@ -209,7 +226,7 @@ def revision_images(revision_id: str, request: Request, cursor: Optional[str] = 
                     annotation_label: Optional[str] = Query(None, max_length=512), annotation_error: Optional[bool] = None):
     """Rows of one immutable revision with their source annotations, in relative-path order; the cursor is bound to
     the revision and filters. label is the folder label, annotation_label a label of the source annotations."""
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     try:
         return _jobs(request).index.page(project_key, revision_id, cursor=cursor, limit=limit, label=label,
                                          split=split, valid=valid, annotation_label=annotation_label,
@@ -226,7 +243,7 @@ def revision_duplicates(revision_id: str, request: Request, cursor: Optional[str
                         kind: Optional[Literal["conflicting", "cross_split"]] = None):
     """Groups of valid images with the same bytes; conflicting groups carry different labels, cross-split groups sit in
     more than one split. Duplicates are reported, never removed."""
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     try:
         return _jobs(request).index.duplicates(project_key, revision_id, cursor=cursor, limit=limit, kind=kind)
     except KeyError:
@@ -239,7 +256,7 @@ def revision_duplicates(revision_id: str, request: Request, cursor: Optional[str
 def revision_source_status(revision_id: str, request: Request):
     """Whether the revision still matches its source by the index's inventory definition (images added, removed or not
     confirmed unchanged, unreadable folders that differ); nothing is decoded or hashed."""
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     try:
         return _jobs(request).index.source_status(project_key, revision_id)
     except KeyError:
@@ -249,7 +266,7 @@ def revision_source_status(revision_id: str, request: Request):
 @router.get("/revisions/{revision_id}/gaps")
 def revision_gaps(revision_id: str, request: Request):
     """Folders the revision could not read; under the exclude policy they are the receipt of what is missing."""
-    _context, project_key, _project = _scope(request)
+    context, project_key, _project = _scope(request)
     try:
         return {"revision_id": revision_id, "gaps": _jobs(request).index.gaps(project_key, revision_id)}
     except KeyError:
@@ -267,7 +284,78 @@ def recover_imports_at_startup(app) -> dict:
     try:
         jobs = DatasetImportJobs(store, DatasetIndex(index_path(app.state.context_registry.root)))
         app.state.dataset_imports = jobs
-        return jobs.recover_orphans()
+        result = jobs.recover_orphans()
+        result['backups'] = _backup_jobs().recover_orphans()
+        return result
     except Exception:  # a recovery problem never blocks the backend from starting
         logging.getLogger(__name__).exception("Dataset import recovery failed at startup")
         return {"completed": [], "interrupted": [], "error": True}
+
+
+def _backup_jobs():
+    from backend.engine.data_backup_job import DataBackupJobs
+    return DataBackupJobs(ledger())
+
+
+@router.post('/operations/backups')
+def submit_backup(request: Request):
+    context, project_key, project = _scope(request)
+    key = request.headers.get('Idempotency-Key')
+    if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):
+        raise HTTPException(422, 'Invalid Idempotency-Key')
+    jobs = _backup_jobs()
+    try:
+        ref = jobs.submit(context, project_key, project, key)
+    except (JobConflict, ImportNotAcceptable, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if ref.created:
+        jobs.start(ref.id)
+    return {**jobs.view(ref.id, project_key, context.actor_id), 'idempotent_replay': not ref.created}
+
+
+@router.get('/operations/backups/{job_id}')
+def get_backup(job_id: str, request: Request):
+    context, project_key, _project = _scope(request)
+    try:
+        return _backup_jobs().view(job_id, project_key, context.actor_id)
+    except KeyError:
+        raise HTTPException(404, 'Backup not found') from None
+
+
+@router.post('/operations/backups/{job_id}/resume')
+def resume_backup(job_id: str, request: Request):
+    context, project_key, _project = _scope(request)
+    jobs = _backup_jobs()
+    try:
+        ref = jobs.resume(job_id, project_key, context.actor_id)
+    except KeyError:
+        raise HTTPException(404, 'Backup not found') from None
+    except (ImportNotAcceptable, StaleRevision) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if ref.state == 'accepted':
+        jobs.start(ref.id)
+    return jobs.view(job_id, project_key, context.actor_id)
+
+
+@router.post('/operations/backups/{job_id}/cancel')
+def cancel_backup(job_id: str, request: Request):
+    context, project_key, _project = _scope(request)
+    view = get_backup(job_id, request)
+    _backup_jobs().store.request_cancel(job_id, context.actor_id, 'cancelled by the user')
+    return get_backup(job_id, request)
+
+
+@router.get('/operations/backups/{job_id}/download')
+def download_backup(job_id: str, request: Request):
+    from fastapi.responses import FileResponse
+    view = get_backup(job_id, request)
+    if not view['downloadable']:
+        raise HTTPException(409, 'Backup output is unfinished, expired, missing or changed')
+    return FileResponse(view['result_ref']['path'], filename=Path(view['result_ref']['path']).name,
+                        media_type='application/zip')
+
+
+@router.post('/operations/backups/{job_id}/restore')
+def durable_restore_unsupported(job_id: str, request: Request):
+    get_backup(job_id, request)
+    raise HTTPException(409, 'Durable restore is unsupported; use explicit restore to a new owned directory')

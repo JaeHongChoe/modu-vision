@@ -191,6 +191,8 @@ export interface DatasetImportView {
   job_id: string; state: string; revision: number; attempts: number; cancel_requested: boolean;
   progress: { phase?: string; processed?: number; total?: number | null; total_known?: boolean } | null;
   result: { revision?: DatasetRevisionReceipt; reason?: string; error?: { message: string } } | null;
+  resumable?: boolean;
+  operation?: { source_snapshot?: string; attempt: number; progress_unit: string; expires_at: number | null; result_ref?: { count: number; sha256: string } | null };
   idempotent_replay?: boolean;
   /** What the import read: the registered source (artifact null) or an uploaded archive extracted into the project. */
   source?: { root: string; artifact: ArtifactRef | null };
@@ -832,6 +834,7 @@ export const api = {
         method: 'POST', body: JSON.stringify(data), headers: { 'Idempotency-Key': idempotencyKey },
       }),
     get: (jobId: string) => request<DatasetImportView>(`/api/dataset/imports/${encodeURIComponent(jobId)}`),
+    resume: (jobId: string) => request<DatasetImportView>(`/api/dataset/imports/${encodeURIComponent(jobId)}/resume`, { method: 'POST' }),
     cancel: (jobId: string) => request<DatasetImportView>(`/api/dataset/imports/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' }),
     accept: (jobId: string, revisionId: string, expectedActive: string | null) =>
       request<{ active_revision: string; job_id: string }>(`/api/dataset/imports/${encodeURIComponent(jobId)}/accept`, {

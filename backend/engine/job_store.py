@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 
 _ADDED_COLUMNS = (
-    ('jobs', 'registry_root', 'TEXT'), ('jobs', 'project_dir', 'TEXT'),
+    ('jobs', 'operation_json', 'TEXT'), ('jobs', 'registry_root', 'TEXT'), ('jobs', 'project_dir', 'TEXT'),
     ('jobs', 'priority', 'INTEGER NOT NULL DEFAULT 0'), ('jobs', 'resources_json', 'TEXT'), ('jobs', 'budget_json', 'TEXT'),
     ('jobs', 'wait_reason', 'TEXT'), ('jobs', 'queued_ns', 'INTEGER'),
     ('attempts', 'lease_expires_ns', 'INTEGER'), ('attempts', 'worker_id', 'TEXT'),
@@ -396,6 +396,20 @@ class JobStore:
         with self._connect() as db:
             row = db.execute('SELECT * FROM cancel_intents WHERE job_id=?', (job_id,)).fetchone()
             return dict(row) if row else None
+
+    def checkpoint(self, job_id: str, value: dict, fencing_token: Optional[int] = None, *, require_uncancelled: bool = False) -> None:
+        with self._tx() as db:
+            self._job(db, job_id)
+            if fencing_token is not None:
+                latest = db.execute('SELECT MAX(fencing_token) FROM attempts WHERE job_id=?', (job_id,)).fetchone()[0]
+                if latest != fencing_token:
+                    raise StaleFencingToken(job_id)
+            if require_uncancelled and db.execute('SELECT 1 FROM cancel_intents WHERE job_id=?', (job_id,)).fetchone():
+                raise InterruptedError('cancelled before verified checkpoint')
+            db.execute('UPDATE jobs SET operation_json=? WHERE id=?', (json.dumps(value, sort_keys=True), job_id))
+
+    def checkpoint_value(self, job_id: str) -> dict:
+        return json.loads(self.record(job_id).get('operation_json') or '{}')
 
     def set_response(self, job_id: str, response: dict) -> None:
         """The first successful response, replayed for a repeated idempotency key."""

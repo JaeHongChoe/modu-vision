@@ -20,3 +20,9 @@ test('adoption names only selected reviewed candidates and does not switch sourc
   assert.equal(calls[0].path,'/api/capture-intake/adopt');
   assert.deepEqual(calls[0].body,{candidate_ids:['capture_one'],actor:'Reviewer',name:'Owned version'});
 });
+test('sampling policy saves its expected revision and reopens status',async()=>{
+  const calls=[];const {captureIntake}=service(async (path,options)=>{calls.push({path,body:options?JSON.parse(options.body):null});return {policy:{revision:2}};});
+  await captureIntake.saveSamplingPolicy({revision:2},1);
+  await captureIntake.samplingStatus();
+  assert.deepEqual(calls,[{path:'/api/capture-intake/sampling',body:{policy:{revision:2},expected_revision:1}},{path:'/api/capture-intake/sampling',body:null}]);
+});

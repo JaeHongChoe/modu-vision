@@ -1,5 +1,5 @@
 """Explicit service-capture intake; adoption returns a new source for user selection."""
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Request, Query, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 import base64
@@ -105,3 +105,25 @@ def versions(request:Request):
 @router.get('/versions/{identifier}')
 def version(identifier:str,request:Request):
     return execute(lambda:capture_intake.read_version(get_current_project(request),identifier))
+
+
+class SamplingPolicyRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    expected_revision:int=Field(ge=0)
+    policy:dict
+
+
+@router.get('/sampling')
+def sampling_status(request:Request,limit:int=Query(100,ge=1,le=500)):
+    if getattr(request.app.state,'accounts',None) is not None and not getattr(request.state,'account_user',None):
+        raise HTTPException(401,'Authentication required for sampling policy')
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer','trainer','labeler','viewer'})
+    return execute(lambda:capture_intake.sampling_status(project,limit=limit))
+
+
+@router.post('/sampling')
+def sampling_policy(body:SamplingPolicyRequest,request:Request):
+    if getattr(request.app.state,'accounts',None) is not None and not getattr(request.state,'account_user',None):
+        raise HTTPException(401,'Authentication required for sampling policy')
+    project=get_current_project(request);require_role(request,project,{'owner'})
+    return execute(lambda:capture_intake.save_sampling_policy(project,body.policy,expected_revision=body.expected_revision))

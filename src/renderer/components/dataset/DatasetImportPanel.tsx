@@ -226,6 +226,11 @@ export const DatasetImportPanel: React.FC<Props> = ({ projectId, datasetPath, re
             {job && (
               <section aria-label="현재 가져오기" className="rounded-lg border border-[#344963] bg-[#152233] p-4">
                 <div className="flex items-center justify-between text-xs"><span className="font-semibold text-slate-100">{importHeadline(job, revisions)}</span><span className="font-mono text-[10px] text-slate-500">{job.job_id}</span></div>
+                {job.resumable && <button type="button" className="workspace-button" disabled={Boolean(busy)} onClick={() => {
+                  setBusy('resume'); setError(null);
+                  void api.datasetImports.resume(job.job_id).then(setJob).catch((caught) => setError(message(caught))).finally(() => setBusy(null));
+                }}>중단된 검증 재개</button>}
+                {job.operation && <div className="mt-1 text-[11px] text-slate-400">시도 {job.operation.attempt} · 단위 {job.operation.progress_unit} · {job.operation.result_ref ? `검증 ${job.operation.result_ref.count}장 · SHA-256 ${job.operation.result_ref.sha256}` : '결과 검증 대기'}</div>}
                 {importSourceText(job) && <div className="mt-1 text-[11px] text-slate-400" title={job.source?.root}>{importSourceText(job)}</div>}
                 <div className="mt-3" aria-live="polite">
                   {progress.percent === null

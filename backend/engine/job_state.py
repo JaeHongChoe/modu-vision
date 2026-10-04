@@ -10,6 +10,7 @@ TERMINAL = frozenset({'completed', 'failed', 'aborted', 'interrupted'})
 STATES = ACTIVE | TERMINAL
 
 _MOVES = {
+    ('interrupted', 'resume'): 'accepted',
     ('accepted', 'prepare'): 'preparing',
     ('accepted', 'queue'): 'queued',
     ('accepted', 'start'): 'running',

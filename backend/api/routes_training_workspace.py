@@ -189,6 +189,23 @@ def tasks(request:Request):
                 'status':'completed' if row.get('integrity')=='verified' else 'unverified','source_dataset_path':source,
                 'scope_kind':'project','cancel_supported':False})
     except (ImportError,HTTPException,ValueError,OSError,KeyError,TypeError) as exc:errors.append({'kind':'delivery','message':str(exc)})
+    # E08: data jobs share the same ledger and task center, scoped to their creator/project.
+    try:
+        from backend.api.routes_dataset_imports import _scope, _jobs, _backup_jobs
+        from backend.engine.job_store import ledger
+        context, project_key, _ = _scope(request)
+        store = ledger()
+        records = store.active() + store.ended('dataset_import', project_key, ('completed', 'failed', 'aborted', 'interrupted')) + store.ended('project_backup', project_key, ('completed', 'failed', 'aborted', 'interrupted'))
+        for record in records:
+            if record['project_key'] != project_key or record['actor_id'] != context.actor_id or record['kind'] not in ('dataset_import', 'project_backup'):
+                continue
+            view = _jobs(request).view(record['id'], project_key) if record['kind'] == 'dataset_import' else _backup_jobs().view(record['id'], project_key, context.actor_id)
+            operation = view.get('operation', view)
+            rows.append({**view, 'kind': record['kind'], 'status': view['state'], 'task': record['kind'],
+                'scope_kind': 'project', 'source_dataset_path': source, 'phase': (view.get('progress') or {}).get('phase', view['state']),
+                'data_operation': operation})
+    except (ValueError, OSError, KeyError, sqlite3.Error) as exc:
+        errors.append({'kind': 'data_operations', 'message': str(exc)})
     try:reservations=[{k:v for k,v in row.items() if k!='owner'} for row in shared_leases().list() if row.get('project_id')==project['id'] or any((item.get('job_id') or item.get('search_id'))==row['job_id'] for item in rows)]
     except (ValueError,OSError,sqlite3.Error) as exc:reservations=None;errors.append({'kind':'reservations','message':str(exc)})
     return {'tasks':rows,'reservations':reservations,'errors':errors,'source_dataset_path':source,'labelset_id':labelset}

@@ -26,7 +26,7 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   const [releaseNotice,setReleaseNotice]=useState('');
   useEffect(()=>{setReleaseReason(null);setReleaseNotice('');},[selected,scope]);
   const refresh=async()=>{
-    if(!source)return;const sequence=++generation.current;
+    const sequence=++generation.current;
     try {
       const result=await request<{tasks:Record<string,any>[];reservations:Reservation[]|null;errors:Array<{kind:string;message:string}>;source_dataset_path:string;labelset_id:string}>('/api/training-workspace/tasks');
       if(current.current!==scope||generation.current!==sequence)return;
@@ -78,6 +78,8 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
     try {
       const id=encodeURIComponent(job.id);let path:string;let body:Record<string,string>={};
       if(job.kind==='training'){path=`/api/training/${action==='cancel'?'stop':'reconnect'}`;body={job_id:job.id};}
+      else if(job.kind==='dataset_import'){path=`/api/dataset/imports/${id}/cancel`;}
+      else if(job.kind==='project_backup'){path=`/api/dataset/operations/backups/${id}/cancel`;}
       else if(job.kind==='labeling-batch'){path=`/api/label-candidates/batches/${id}/cancel`;}
       else if(job.kind==='labeling-feature'){path=`/api/label-suggestions/feature-train/${id}/cancel`;}
       else if(job.kind==='optimization'){path=`/api/export/flow/optimization-jobs/${id}/cancel`;}
@@ -86,9 +88,32 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
     }catch(cause){if(current.current===scope)setError(cause instanceof Error?cause.message:String(cause));}
     finally{if(current.current===scope)setBusy(false);}
   };
+  const dataAction=async(action:'resume'|'download')=>{
+    if(!job||busy)return;setBusy(true);setError('');const started=scope;
+    try {
+      const base=job.kind==='dataset_import'?`/api/dataset/imports/${encodeURIComponent(job.id)}`:`/api/dataset/operations/backups/${encodeURIComponent(job.id)}`;
+      if(action==='resume')await request(`${base}/resume`,{method:'POST'});
+      else {
+        const blob=await request<Blob>(`${base}/download`,{responseType:'blob'});
+        if(current.current!==started)return;
+        const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`backup-${job.id}.mvision.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      }
+      if(current.current===started)await refresh();
+    }catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(current.current===started)setBusy(false);}
+  };
+  const startBackup=async()=>{
+    if(busy)return;setBusy(true);setError('');const started=scope;
+    const key=`vision-backup-request:${stableScope}`;
+    const id=localStorage.getItem(key)||crypto.randomUUID();localStorage.setItem(key,id);
+    try{await request('/api/dataset/operations/backups',{method:'POST',headers:{'Idempotency-Key':id}});localStorage.removeItem(key);if(current.current===started)await refresh();}
+    catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(current.current===started)setBusy(false);}
+  };
   if(!projectDir)return null;
   return <details open={opened} onToggle={event=>setOpened(event.currentTarget.open)} className="rounded-xl border border-slate-600 bg-[#101A28] p-4 text-sm text-slate-200"><summary className="cursor-pointer font-semibold"><ListChecks className="mr-2 inline h-4 w-4 text-cyan-300" />작업 센터 · 현재 프로젝트 {visibleRows.length}개</summary><div className="mt-4 space-y-3">
-    <p className="text-slate-300">학습·라벨링·검사·내보내기·최적화 기록을 같은 작업 ID로 다시 확인합니다. 취소 요청 후 실행 종료와 예약 반환을 확인하세요.</p>
+    <p className="text-slate-300">가져오기·백업·학습·라벨링·검사·내보내기·최적화 기록을 같은 작업 ID로 다시 확인합니다. 취소 요청 후 실행 종료와 예약 반환을 확인하세요.</p>
+    <button type="button" className={programButton} disabled={busy} onClick={()=>void startBackup()}>검증된 프로젝트 백업 만들기</button>
     <label className="block">작업 모델 종류<select aria-label="작업 모델 종류" value={familyFilter} onChange={event=>{const family=event.target.value;setFamilyFilter(family);setSelected(visibleRows.find(row=>family==='all'||taskDestination(row).family===family)?.key||'');}} className={programInput}><option value="all">전체 작업</option>{modelFamilies.map(family=><option key={family} value={family}>{familyLabels[family]}</option>)}</select></label><div className="flex gap-3"><select aria-label="저장 작업 다시 열기" value={selected} onChange={event=>setSelected(event.target.value)} className={programInput}><option value="">저장된 작업 선택</option>{filteredRows.map((row,index)=><option key={row.key} value={row.key}>작업 {index+1} · {familyLabels[taskDestination(row).family||row.task]||row.task}{row.totalEpochs?` · Epoch ${row.epoch}/${row.totalEpochs}`:''} · {jobProgress(row.raw).label} · {row.transport==='local'?'이 컴퓨터':profiles.find(profile=>profile.id===row.transport)?.name || '서버'}</option>)}</select><button type="button" className={programButton} disabled={busy} onClick={()=>void refresh()}><RefreshCw className="mr-1 inline h-3 w-3" />같은 작업 확인</button></div>
     {job&&lifecycle&&<div role="status" className="rounded border border-slate-600 p-3"><strong>{jobProgress(job.raw).label}</strong><p className="mt-2">{familyLabels[taskDestination(job).family||job.task]||job.task} · {job.transport==='local'?'이 컴퓨터':profiles.find(row=>row.id===job.transport)?.name || '저장 서버'} · Epoch {job.epoch}/{job.totalEpochs||'미기록'}</p>{!observationSummary(job)&&<p className="mt-1">취소: {lifecycle.cancellation==='requested'?'요청 접수':lifecycle.cancellation==='acknowledged'?'종료 응답 확인':'요청 없음'} · 실행 종료: {lifecycle.termination==='confirmed'?'확인':lifecycle.termination==='unconfirmed'?'미확인':'진행 중'} · {resourceLabels[lifecycle.resource]}</p>}
       {/* the family workbenches' next action fits only a model family's job (not a labeling batch, an optimization or an export) */}
@@ -107,7 +132,8 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
           <button type="button" className={programButton} disabled={busy||releaseReason.trim().length<3} onClick={()=>void releaseReservation(lease)}>해제 확정</button>
           <button type="button" className={programButton} disabled={busy} onClick={()=>setReleaseReason(null)}>취소</button></div>}
       </div>;})()}
-      <div className="mt-3 flex flex-wrap gap-2">{job.raw.cancel_supported!==false&&(cancellable({status:job.status})||['stopping','cancelling'].includes(job.status))&&<button type="button" disabled={busy||['stopping','cancelling'].includes(job.status)} onClick={()=>void control('cancel')} className={programButton}><Square className="mr-1 inline h-3 w-3" />취소 요청</button>}{job.status==='disconnected'&&job.kind==='training'&&<button type="button" className={programButton} disabled={busy} onClick={()=>void control('reconnect')}>같은 서버 작업 재연결</button>}<button type="button" disabled={busy||isProjectBusy} onClick={()=>navigate()} className={programButton}>{job.kind==='inspection'?'검사 기록 화면':job.task==='labeling'?'라벨 검토 화면':['optimization','export'].includes(job.kind)?'패키지·배포 화면':job.status==='completed'?'완료 후보 평가로 이동':'학습 화면으로 이동'}</button></div>
+      {job.raw.data_operation&&<div className="mt-3 text-xs text-slate-300"><p>진행 단위: {job.raw.data_operation.progress_unit} · 시도: {job.raw.data_operation.attempt} · {job.raw.data_operation.result_ref?`검증 ${job.raw.data_operation.result_ref.count}개 · SHA-256 ${job.raw.data_operation.result_ref.sha256}`:'결과 검증 대기'}</p>{job.raw.data_operation.expires_at&&<p>결과 만료: {new Date(job.raw.data_operation.expires_at*1000).toLocaleString()}</p>}<p>{job.raw.restore_reason}</p>{job.raw.resumable&&<button type="button" className={programButton} disabled={busy} onClick={()=>void dataAction('resume')}>같은 작업 재개</button>}{job.kind==='project_backup'&&<button type="button" className={programButton} disabled={busy||!job.raw.downloadable} onClick={()=>void dataAction('download')}>{job.raw.downloadable?'검증된 백업 저장':'백업 결과 사용 불가'}</button>}</div>}
+      <div className="mt-3 flex flex-wrap gap-2">{job.raw.cancel_supported!==false&&(cancellable({status:job.status})||['stopping','cancelling'].includes(job.status))&&<button type="button" disabled={busy||['stopping','cancelling'].includes(job.status)} onClick={()=>void control('cancel')} className={programButton}><Square className="mr-1 inline h-3 w-3" />취소 요청</button>}{job.status==='disconnected'&&job.kind==='training'&&<button type="button" className={programButton} disabled={busy} onClick={()=>void control('reconnect')}>같은 서버 작업 재연결</button>}<button type="button" disabled={busy||isProjectBusy} onClick={()=>navigate()} className={programButton}>{['dataset_import','project_backup'].includes(job.kind)?'데이터 화면':job.kind==='inspection'?'검사 기록 화면':job.task==='labeling'?'라벨 검토 화면':['optimization','export'].includes(job.kind)?'패키지·배포 화면':job.status==='completed'?'완료 후보 평가로 이동':'학습 화면으로 이동'}</button></div>
       <details className="mt-3 text-slate-400"><summary className="cursor-pointer">작업 식별자·저장 근거</summary><p className="mt-2 break-all">{job.key}</p><p className="break-all">출처: {job.source} · 정답 버전: {job.labelset || '작업 기록에 없음 · 프로젝트 범위'}</p></details></div>}
     {checked&&<p className="text-slate-400">마지막 응답 확인: {new Date(checked).toLocaleTimeString()}</p>}{error&&<p role="alert" className="rounded bg-rose-950/30 p-3 text-rose-200">{error}</p>}
   </div></details>;

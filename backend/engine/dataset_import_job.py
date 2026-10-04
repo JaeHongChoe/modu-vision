@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import hashlib
 import logging
 import os
 import threading
@@ -69,8 +70,61 @@ class DatasetImportJobs:
         for optional in ('artifact', 'annotation_root'):
             if payload[optional] is None:
                 del payload[optional]  # a request keeps the digest it had before these fields existed
-        return self.store.submit(context, project_key, KIND, payload, idempotency_key, parent_id=parent_id,
+        ref = self.store.submit(context, project_key, KIND, payload, idempotency_key, parent_id=parent_id,
                                  project_dir=str(Path(spec.project_root).resolve()))
+        if ref.created:
+            try:
+                snapshot = self._snapshot(spec)
+            except (OSError, ImportNotAcceptable):
+                snapshot = None  # legacy submission still records a failed run; unsafe resume is refused
+            self.store.checkpoint(ref.id, {'source_snapshot': snapshot,
+                'expected_target_revision': self.index.active(project_key), 'progress_unit': 'image',
+                'staged_output': str(self.index.path), 'expires_at': None})
+        return ref
+
+    @staticmethod
+    def _snapshot(spec: ImportSpec) -> str:
+        digest = hashlib.sha256()
+        for label, root in (('source', spec.source_root), ('annotations', spec.annotation_root)):
+            if root is None:
+                continue
+            folder = Path(root)
+            if not folder.is_dir():
+                raise ImportNotAcceptable('source folder is unavailable')
+            for directory, folders, files in os.walk(folder, followlinks=spec.follow_links):
+                folders.sort()
+                if spec.follow_links and any((Path(directory) / name).is_symlink() for name in folders):
+                    raise ImportNotAcceptable('Durable resume does not support linked source directories')
+                for name in sorted(files):
+                    path = Path(directory) / name
+                    if path.is_symlink() and not spec.follow_links:
+                        digest.update((label + str(path.relative_to(folder)) + ':link').encode())
+                        continue
+                    content = hashlib.sha256()
+                    with path.open('rb') as handle:
+                        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                            content.update(chunk)
+                    digest.update(json.dumps([label, str(path.relative_to(folder)), content.hexdigest()], ensure_ascii=False).encode('utf-8'))
+        return digest.hexdigest()
+
+    def resume(self, job_id: str, project_key: str, actor_id: str) -> JobRef:
+        self.view(job_id, project_key)
+        record = self.store.record(job_id)
+        if record['actor_id'] != actor_id:
+            raise KeyError(job_id)
+        ref = self.store.get(job_id)
+        if ref.state in ('accepted', 'running', 'completed'):
+            return ref
+        if ref.state != 'interrupted' or self.store.cancel_intent(job_id):
+            raise ImportNotAcceptable('Only an interrupted, uncancelled import can resume')
+        operation = self.store.checkpoint_value(job_id) or {}
+        if not operation.get('source_snapshot'):
+            raise ImportNotAcceptable('Legacy import has no immutable source snapshot; submit a new import')
+        if operation['source_snapshot'] != self._snapshot(ImportSpec(**json.loads(record['spec_json']))):
+            raise ImportNotAcceptable('The source changed since submission')
+        if operation['expected_target_revision'] != self.index.active(project_key):
+            raise ImportNotAcceptable('The target revision changed since submission')
+        return self.store.transition(job_id, ref.revision, 'resume')
 
     def run(self, job_id: str, *, executor: str = 'local-thread') -> JobRef:
         """Build the revision under a fenced attempt and finish the job with its receipt (or the reason it ended).
@@ -89,7 +143,7 @@ class DatasetImportJobs:
         try:
             return self._run_attempt(job_id, fence, record, spec)
         except _AttemptLost:
-            self._set_progress(job_id, {'phase': 'superseded'})
+            self._set_progress(job_id, {'phase': 'superseded'}, persist=False)
             return self.store.get(job_id)
         except InterruptedError:
             return self._finish(job_id, fence, 'abort', {'reason': 'cancelled before a revision was recorded'})
@@ -145,7 +199,7 @@ class DatasetImportJobs:
         self._set_progress(job_id, {'phase': 'listing', 'processed': 0, 'total': None, 'total_known': False})
 
         def progress(done: int, total: int) -> None:
-            self._set_progress(job_id, {'phase': 'reading', 'processed': done, 'total': total, 'total_known': True})
+            self._set_progress(job_id, {'phase': 'reading', 'processed': done, 'total': total, 'total_known': True}, fence)
             if time.monotonic() - clock['beat'] >= _HEARTBEAT_SECONDS:
                 owns()
                 clock['beat'] = time.monotonic()
@@ -156,21 +210,36 @@ class DatasetImportJobs:
                 clock['cancelled'] = self.store.cancel_intent(job_id) is not None
             return clock['cancelled']
 
+        def verify_before_seal() -> None:
+            owns()
+            if self.store.cancel_intent(job_id) is not None:
+                raise InterruptedError('cancelled before verification')
+            operation = self.store.checkpoint_value(job_id)
+            if operation.get('source_snapshot') and operation['source_snapshot'] != self._snapshot(spec):
+                raise ImportNotAcceptable('The source changed during verification')
+            if 'expected_target_revision' in operation and operation['expected_target_revision'] != self.index.active(record['project_key']):
+                raise ImportNotAcceptable('The target revision changed during verification')
+            owns()
+            if self.store.cancel_intent(job_id) is not None:
+                raise InterruptedError('cancelled during verification')
+
         # The job id is the publication key: whichever attempt seals first defines this job's revision, and a later
         # attempt (or a crash recovery) receives that same receipt; owns() right before sealing keeps a superseded
         # attempt from sealing work the current attempt is still doing.
         receipt = self.index.build_revision(record['project_key'], spec.project_root, spec.source_root, spec.task,
                                             spec.invalid_policy, verify=spec.verify, follow_links=spec.follow_links,
-                                            publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=owns,
+                                            publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=verify_before_seal,
                                             overlay_root=spec.annotation_root)
         return self._finish(job_id, fence, 'complete', {'revision': asdict(receipt)})
 
     def _finish(self, job_id: str, fence: int, event: str, payload: dict) -> JobRef:
+        persisted = True
         try:
             ref = self.store.finish(job_id, event, payload, fencing_token=fence)
         except StaleFencingToken:
+            persisted = False
             ref = self.store.get(job_id)  # a newer attempt owns the job: this run reports nothing
-        self._set_progress(job_id, {'phase': ref.state})
+        self._set_progress(job_id, {'phase': ref.state}, persist=persisted)
         return ref
 
     def start(self, job_id: str, *, on_error: Optional[Callable[[BaseException], None]] = None) -> threading.Thread:
@@ -220,7 +289,8 @@ class DatasetImportJobs:
         spec = json.loads(record['spec_json'])
         return {'job_id': job_id, 'state': record['state'], 'revision': record['revision'],
                 'attempts': len(self.store.attempts(job_id)), 'cancel_requested': self.store.cancel_intent(job_id) is not None,
-                'progress': live or None, 'result': ended['payload'] if ended else None,
+                'progress': live or (self.store.checkpoint_value(job_id) or {}).get('progress'), 'result': ended['payload'] if ended else None,
+                'operation': self._operation(job_id, ended), 'resumable': record['state'] == 'interrupted' and bool((self.store.checkpoint_value(job_id) or {}).get('source_snapshot')),
                 # what the import read: the registered source, or an uploaded archive extracted into the project
                 'source': {'root': spec['source_root'], 'artifact': spec.get('artifact')}}
 
@@ -261,7 +331,24 @@ class DatasetImportJobs:
                 logger.exception('Could not recover dataset import %s', row['id'])
         return outcome
 
-    def _set_progress(self, job_id: str, value: dict) -> None:
+    def _operation(self, job_id: str, ended: Optional[dict]) -> dict:
+        operation = self.store.checkpoint_value(job_id) or {}
+        receipt = (ended['payload'] or {}).get('revision') if ended else None
+        return {**operation, 'attempt': len(self.store.attempts(job_id)),
+            'result_ref': {'revision_id': receipt['revision_id'], 'sha256': receipt['manifest_sha256'],
+                           'count': receipt['image_count']} if receipt else None,
+            'capabilities': {'resume': bool(operation.get('source_snapshot')), 'download': False},
+            'resume_reason': None if operation.get('source_snapshot') else 'No immutable snapshot: source unavailable, unsupported links, or legacy job; submit a new import',
+            'downloadable': False}  # index revisions are accepted, never downloadable files
+
+    def _set_progress(self, job_id: str, value: dict, fence: Optional[int] = None, *, persist: bool = True) -> None:
+        operation = self.store.checkpoint_value(job_id) or {}
+        operation['progress'] = {**operation.get('progress', {}), **value}
+        try:
+            if persist:
+                self.store.checkpoint(job_id, operation, fence)
+        except StaleFencingToken as exc:
+            raise _AttemptLost(str(exc)) from None
         with self._lock:
             self._progress[job_id] = {**self._progress.pop(job_id, {}), **value}
             while len(self._progress) > 256:  # live progress is a convenience; the ledger keeps the record
