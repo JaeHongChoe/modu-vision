@@ -197,6 +197,66 @@ def test_a_cached_valid_member_never_overrides_unknown_current_ownership(monkeyp
     assert local_training_worker._liveness(journal) is None
 
 
+@pytest.fixture
+def attached_observation(monkeypatch):
+    from backend.engine import local_training_worker
+    clock = [0.0]
+    monkeypatch.setattr(local_training_worker.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(local_training_worker.time, 'sleep', lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Observing a worker never signals, cancels, or launches one')
+    monkeypatch.setattr(local_training_worker, '_stop_owned', forbidden)
+    monkeypatch.setattr(local_training_worker, 'request_local_cancellation', forbidden)
+    monkeypatch.setattr(local_training_worker.subprocess, 'Popen', forbidden)
+    return local_training_worker, {'owner_pid': 11, 'status': 'running'}, clock
+
+
+@pytest.mark.parametrize('confirmed_state, expected', [(True, None), (False, -1)])
+def test_attached_poll_reobserves_unknown_until_fresh_identity_proves_liveness(attached_observation, monkeypatch,
+                                                                            confirmed_state, expected):
+    worker, journal, clock = attached_observation
+    states = iter([None, confirmed_state])
+    monkeypatch.setattr(worker, '_liveness', lambda current: next(states))
+    assert worker._AttachedProcess(journal).poll() == expected
+    assert journal == {'owner_pid': 11, 'status': 'running'}
+    assert 0 < clock[0] <= 1.0
+
+
+def test_attached_poll_keeps_persistent_unknown_ownership_uncertain_at_its_deadline(attached_observation, monkeypatch):
+    worker, journal, clock = attached_observation
+    monkeypatch.setattr(worker, '_liveness', lambda current: None)
+    with pytest.raises(worker.LocalWorkerUncertain):
+        worker._AttachedProcess(journal).poll()
+    assert clock[0] == pytest.approx(1.0)
+    assert journal == {'owner_pid': 11, 'status': 'running'}
+
+
+def test_attached_poll_budget_starts_before_the_initial_identity_probe(attached_observation, monkeypatch):
+    worker, journal, clock = attached_observation
+    def slow_unknown(current):
+        clock[0] += 1.25
+        return None
+    monkeypatch.setattr(worker, '_liveness', slow_unknown)
+    with pytest.raises(worker.LocalWorkerUncertain):
+        worker._AttachedProcess(journal).poll()
+    assert clock[0] == 1.25, 'a probe that used the budget is never followed by another probe or sleep'
+    assert journal == {'owner_pid': 11, 'status': 'running'}
+
+
+def test_attached_poll_never_starts_a_fresh_probe_after_its_deadline(attached_observation, monkeypatch):
+    worker, journal, clock = attached_observation
+    probes = []
+    def unknown(current):
+        probes.append(clock[0])
+        return None
+    monkeypatch.setattr(worker, '_liveness', unknown)
+    with pytest.raises(worker.LocalWorkerUncertain):
+        worker._AttachedProcess(journal).poll()
+    assert clock[0] == pytest.approx(1.0)
+    assert all(started < 1.0 for started in probes)
+    assert journal == {'owner_pid': 11, 'status': 'running'}
+
+
 def test_windows_processes_this_backend_cannot_open_are_not_its_workers(monkeypatch):
     from backend.engine import local_training_worker
     token, now = uuid.uuid4().hex, time.time()

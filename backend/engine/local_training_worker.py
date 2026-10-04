@@ -27,6 +27,7 @@ from backend.engine.runtime_process_control import atomic_private_json, command_
 from backend.remote.file_replace import read_text
 
 POLL_SECONDS = .05
+OWNERSHIP_RECHECK_SECONDS = 1.
 _WINDOWS = os.name == 'nt'
 CANCEL_GRACE_SECONDS = 15.
 CANCEL_TERMINATE_SECONDS = 5.
@@ -348,9 +349,16 @@ class _AttachedProcess:
         self.pid = journal['owner_pid']
 
     def poll(self):
+        deadline = time.monotonic() + OWNERSHIP_RECHECK_SECONDS
         state = _liveness(self.journal)
-        if state is None:
-            raise LocalWorkerUncertain('Local worker ownership could not be inspected during reconnection')
+        while state is None:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise LocalWorkerUncertain('Local worker ownership could not be inspected during reconnection')
+            time.sleep(min(POLL_SECONDS, remaining))
+            if time.monotonic() >= deadline:
+                raise LocalWorkerUncertain('Local worker ownership could not be inspected during reconnection')
+            state = _liveness(self.journal)
         return None if state else -1
 
     def wait(self, timeout):

@@ -62,6 +62,8 @@ def test_training_cancel_returns_immediately_and_waits_for_worker_exit(monkeypat
             self.abort_requested = True
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
+    # Cleanup ordering has its own blocked-cleanup test below.
+    monkeypatch.setattr(routes_training, "clear_device_cache", lambda: None)
     manager = routes_training.TrainingJobManager(local_execution='embedded')
     record = manager.start_job("cancel_qa", "segmentation", str(tmp_path), str(tmp_path))
     assert started.wait(timeout=2)
@@ -183,6 +185,8 @@ def test_training_stop_routes_report_stopping_then_aborted(monkeypatch, tmp_path
             pass
 
     monkeypatch.setattr(routes_training, "UnifiedAutoMLTrainer", SlowTrainer)
+    # This route contract uses a fake trainer with no device resources.
+    monkeypatch.setattr(routes_training, "clear_device_cache", lambda: None)
     manager = routes_training.TrainingJobManager(local_execution='embedded')
     monkeypatch.setattr(routes_training, "training_job_manager", manager)
     started = routes_training.start_training(routes_training.TrainingStartRequest(
