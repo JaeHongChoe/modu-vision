@@ -1,3 +1,5 @@
+import {copyFileSync,mkdirSync} from 'node:fs';
+import {join} from 'node:path';
 import type {Page,Route} from '@playwright/test';
 import {expect,test,type RendererServer,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
@@ -8,15 +10,32 @@ import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 const model='s204-distance-model';
 const score={domain:'distance',unit:'mahalanobis_distance',direction:'higher_is_defect',calibration_id:'s204-model-calibration',threshold:8};
 const json=(route:Route,body:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+// Anomaly import needs normal-only train data and explicit evaluation folders.
+// The generic ok/ng tree only works via the OK fallback on case-insensitive filesystems.
+function anomalyDataset(workspace:Workspace){
+ const root=join(workspace.root,'anomaly-dataset'),ok=workspace.images.find(image=>image.label==='ok')!.path,ng=workspace.images.find(image=>image.label==='ng')!.path;
+ const layout:Array<[string,Array<[string,string]>]>=[
+  ['train/good',[['sample-ok-1.png',ok],['sample-ok-2.png',ok],['sample-ok-3.png',ok]]],
+  ['test/good',[['sample-ok.png',ok]]],['test/defect',[['sample-ng.png',ng]]],
+ ];
+ for(const [folder,files] of layout){mkdirSync(join(root,folder),{recursive:true});for(const [name,from] of files)copyFileSync(from,join(root,folder,name));}
+ return root;
+}
 async function setup(page:Page,renderer:RendererServer,workspace:Workspace,evidence:Evidence){
+ const source=anomalyDataset(workspace);
  const created=await page.request.post(`${renderer.origin}/api/project/create`,{data:{name:'S204 workspace',task:'anomaly'}});expect(created.ok()).toBe(true);
- expect((await page.request.put(`${renderer.origin}/api/project/update`,{data:{source_dataset_dir:workspace.dataset}})).ok()).toBe(true);
+ const updated=await page.request.put(`${renderer.origin}/api/project/update`,{data:{source_dataset_dir:source}});expect(updated.ok()).toBe(true);
+ const dataset=(await updated.json()).source_dataset_dir;expect(typeof dataset).toBe('string');evidence.note('source_dataset',{picked:source,saved:dataset});
  let refuse=false,hold=false,release=()=>{};const requests:Array<{path:string;body:unknown}>=[];
  const record=(route:Route)=>{requests.push({path:new URL(route.request().url()).pathname,body:route.request().postData()});evidence.note('transport_fixtures',requests);};
- await page.route('**/api/flowchart/models/catalog?*',route=>{record(route);return json(route,{models:[{job_id:model,task:'anomaly',label:'Recorded distance model',preset:null,created_at:null,best_metric:null,source_dataset_path:workspace.dataset,class_names:['ng','ok'],class_ids:[1,2],score_spec:score}],total:1});});
+ await page.route('**/api/flowchart/models/catalog?*',route=>{record(route);return json(route,{models:[{job_id:model,task:'anomaly',label:'Recorded distance model',preset:null,created_at:null,best_metric:null,source_dataset_path:dataset,class_names:['ng','ok'],class_ids:[1,2],score_spec:score}],total:1});});
  await page.route('**/api/flowchart/models/verify',async route=>{record(route);if(hold)await new Promise<void>(resolve=>{release=resolve;});return json(route,refuse?{detail:'fixture: model reference revoked'}:{verified_job_ids:[model]},refuse?409:200);});
  await page.route('**/api/export/flow/approval-prerequisites?*',route=>{record(route);return json(route,{status:'ready',approval_created:false,approval_revision_ids:{[model]:'revision-fixture'},models:[{job_id:model,task:'anomaly',node_ids:['node_inspect'],checkpoint_sha256:'a'.repeat(64),candidates:[],selected_revision_id:'revision-fixture',reason:null}]});});
- await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
+ await installDesktopHostShim(page,renderer.port);
+ const imported=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/import'&&response.request().method()==='POST');
+ await page.goto(renderer.url);const importResponse=await imported;expect(importResponse.status()).toBe(200);
+ const importReadback=await importResponse.json();expect(importReadback.total_images).toBe(5);evidence.note('dataset_import',importReadback);
+ await expect(page.getByRole('button',{name:/\.png 라벨링에서 열기$/})).toHaveCount(5);
  await page.getByRole('button',{name:/05.*플로우차트/}).click();
  await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();
  await expect(page.locator('[data-flow-node-id]')).not.toHaveCount(0);

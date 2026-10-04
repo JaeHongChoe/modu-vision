@@ -18,6 +18,55 @@ jobs:
     # This is Windows Server x64; Windows 11 installation remains a separate gate.
     runs-on: windows-2025
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: context
+            tests: >-
+              backend/tests/test_flow_class_save_validation.py
+              backend/tests/test_source_mask_annotations.py
+              backend/tests/test_service_s0_08.py
+              backend/tests/test_service_s1_01.py
+              backend/tests/test_service_s1_06.py
+              backend/tests/test_service_image_path_alias.py
+              backend/tests/test_service_ci_dependencies.py
+              backend/tests/test_service_s6_05.py
+              backend/tests/test_service_text_encoding.py
+              backend/tests/test_service_file_identity.py
+              backend/tests/test_service_s1_04.py
+              backend/tests/test_service_s1_09.py
+              backend/tests/test_service_s1_10.py
+              backend/tests/test_service_s6_07.py
+              backend/tests/test_sqlite_wal.py
+              backend/tests/test_service_s1_02.py::test_an_opener_whose_wal_switch_is_refused_by_a_concurrent_switch_tries_again
+              backend/tests/test_service_s7_01.py
+              backend/tests/test_segmentation_mask_folder_classes.py
+              backend/tests/test_annotation_source_encoding.py
+              backend/tests/test_annotation_truncated_source.py
+              backend/tests/test_source_annotation_failure_binding.py
+              backend/tests/test_source_coco_relative_paths.py
+              backend/tests/test_sqlite_schema.py
+              backend/tests/test_service_s1_10_types.py
+              backend/tests/test_service_e01.py
+              backend/tests/test_service_s2_01.py
+          - lane: workers
+            tests: >-
+              backend/tests/test_service_s0_06.py
+              backend/tests/test_service_s1_05.py
+              backend/tests/test_service_s5_01.py
+              backend/tests/test_managed_service.py
+              backend/tests/test_native_autostart.py
+          - lane: extensions
+            tests: >-
+              backend/tests/test_service_s5_02.py
+              backend/tests/test_service_s5_06.py
+              backend/tests/test_service_s5_08_drift.py
+              backend/tests/test_service_s5_09.py
+              backend/tests/test_extension_integration_review.py
+              backend/tests/test_extension_root_lane_review.py
+              backend/tests/test_service_s3_08_extensions.py
+              backend/tests/test_service_s3_09_extensions.py
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
@@ -37,6 +86,7 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-windows-py313-cpu.lock
       - run: npm ci
       - name: Type, build, and renderer checks
+        if: matrix.lane == 'context'
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
           python scripts/check_service_plan.py
@@ -45,38 +95,8 @@ jobs:
           npm run test:renderer
           npm run build
           npm run test:e2e:harness
-      - name: Windows context, storage, and recovery checks
-        run: >-
-          python -m pytest -q --junitxml=ci-pytest.xml
-          backend/tests/test_flow_class_save_validation.py
-          backend/tests/test_source_mask_annotations.py
-          backend/tests/test_service_s0_06.py
-          backend/tests/test_service_s0_08.py
-          backend/tests/test_service_s1_01.py
-          backend/tests/test_service_s1_06.py
-          backend/tests/test_service_image_path_alias.py
-          backend/tests/test_service_ci_dependencies.py
-          backend/tests/test_service_s6_05.py
-          backend/tests/test_service_text_encoding.py
-          backend/tests/test_service_file_identity.py
-          backend/tests/test_service_s1_04.py
-          backend/tests/test_service_s1_09.py
-          backend/tests/test_service_s1_10.py
-          backend/tests/test_service_s6_07.py
-          backend/tests/test_sqlite_wal.py
-          backend/tests/test_service_s1_02.py::test_an_opener_whose_wal_switch_is_refused_by_a_concurrent_switch_tries_again
-          backend/tests/test_service_s7_01.py
-          backend/tests/test_segmentation_mask_folder_classes.py
-          backend/tests/test_annotation_source_encoding.py
-          backend/tests/test_annotation_truncated_source.py
-          backend/tests/test_source_annotation_failure_binding.py
-          backend/tests/test_source_coco_relative_paths.py
-          backend/tests/test_service_s1_05.py
-          backend/tests/test_sqlite_schema.py
-          backend/tests/test_service_s1_10_types.py
-          backend/tests/test_service_e01.py
-          backend/tests/test_service_s2_01.py
       - name: Actual Electron main and preload smoke
+        if: matrix.lane == 'context'
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
         shell: pwsh
@@ -84,7 +104,16 @@ jobs:
           $env:MV_E2E_PYTHON = (Get-Command python).Source
           npm run test:e2e:electron
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify bounded runner behavior
+        run: python -m unittest discover -s scripts/tests -p test_run_ci_pytest.py -v
+      - name: Windows selected file checks with durable diagnostics
+        if: ${{ always() && !cancelled() }}
+        run: >-
+          python scripts/run_ci_pytest.py --output-dir ci-pytest --junit ci-pytest.xml
+          --file-timeout 600 --diagnostic-timeout 120
+          ${{ matrix.tests }}
       - name: Core defect baseline evidence
+        if: ${{ always() && !cancelled() && matrix.lane == 'context' }}
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Record native evidence and inventory
         if: always()
@@ -96,12 +125,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows-unpackaged-${{ github.sha }}
+          name: windows-unpackaged-${{ github.sha }}-${{ matrix.lane }}
           path: |
             ci-receipt.json
             ci-baseline-evidence.json
             ci-license-inventory.json
             ci-pytest.xml
+            ci-pytest
             ${{ runner.temp }}/modu-e2e
           retention-days: 14
           if-no-files-found: error

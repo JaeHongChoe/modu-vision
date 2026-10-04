@@ -79,6 +79,26 @@ jobs:
           backend/tests/test_service_s1_10_types.py
           backend/tests/test_service_e01.py
           backend/tests/test_service_s2_01.py
+          backend/tests/test_extension_adapter_review.py
+          backend/tests/test_extension_dino_finetune.py
+          backend/tests/test_extension_integration_review.py
+          backend/tests/test_extension_ocr_flow_evidence.py
+          backend/tests/test_extension_remote_autodl.py
+          backend/tests/test_extension_resume_snapshot.py
+          backend/tests/test_extension_resume_state.py
+          backend/tests/test_extension_root_lane_review.py
+          backend/tests/test_extension_search_reuse.py
+          backend/tests/test_extension_training_api.py
+          backend/tests/test_p04_training_api.py
+          backend/tests/test_service_s3_08_extensions.py
+          backend/tests/test_service_s3_09_extensions.py
+          backend/tests/test_service_s4_06.py
+          backend/tests/test_service_s4_07.py
+          backend/tests/test_service_s5_01.py
+          backend/tests/test_service_s5_02.py
+          backend/tests/test_service_s5_06.py
+          backend/tests/test_service_s5_08_drift.py
+          backend/tests/test_service_s5_09.py
       - name: Core defect baseline evidence
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Install test browser
