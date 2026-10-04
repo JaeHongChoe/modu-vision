@@ -1233,8 +1233,15 @@
     "S1-05",
     "S1-09"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "slice-reviewed-published",
+     "result": "4c51552: a first-run guide shows the order of a first project and offers an example: a synthetic surface dataset drawn on this computer from a fixed seed (nothing downloaded or shipped), a project made from it, a short CPU training without pretrained weights, a saved single-model flow and an inspection of its test images, all through the calls a user's clicks make. The example project is marked and never backs a quality approval or a release; on a team connection the guide does not open by itself and the example is refused; a folder that no longer matches the example is left alone and a new one drawn. The guide's state is read after the first project sync, and a stage chosen while that sync is in flight is kept. When the example's training ends the training store reads the job again, so a finished example no longer blocks opening or creating a project. Independent review: freezes 1-3 changed per review (P1/P2s, including the startup race shown by service-s2-04), freeze 4 ACCEPT WITH FIXES (a bookkeeping P1: the manifest named freeze-3 receipts, regenerated before publish; P3s).",
+     "scope": "frozen tree (422a2d2 + the QA freeze 4 + this freeze, 30 files) published on 08eb293 with the CI line composed: backend (test_service_s2_01, test_service_s1_10_types, test_service_release_eligibility) 43 passed, 23 passed with the CI lock, red 2 of 16 on freeze 3 code; renderer 486 passed, red 2 of 13; typecheck and the e2e typecheck ok; the S2-01 browser e2e passed (the example trains resnet18 without pretrained weights for 20 epochs on this Mac's CPU), red on freeze 3 code (the user's own project not created after the example); browser suite 52 passed, the one failure the operator-choice spec from 422a2d2; Linux CI list 766 passed 2 skipped, Windows list 543 passed 2 skipped (run on this Mac).",
+     "platform": "macOS development; browser (Chrome) with the actual backend, the CI-locked .venv and the test-only desktop host shim, CPU; not the Electron app, not native Windows"
+    }
+   ],
    "file_actions": {
     "src/renderer/components/onboarding/FirstRunStudio.tsx": "Create",
     "examples/demo-project": "Create",
@@ -1252,7 +1259,13 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s2-01.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s2-01.spec.ts",
+   "remaining": [
+    "the example in the Electron app and on native Windows CPU (native QA)",
+    "transient refusals other than the project step are not retried; dismiss errors on a team server (403) are not shown",
+    "concurrent draws of the example dataset are not locked; switching projects while the example runs is not guarded",
+    "review P3 tests: the onboarding route's dismiss argument, a step chosen during a later sync that changes project, a link in the guide record place"
+   ]
   },
   {
    "id": "S2-02",
