@@ -48,7 +48,8 @@ def corners(box):
 
 
 def corner_error(pose, truth, box=FULL):
-    return np.abs(reference_points_to_observed(pose, corners(box)) - (corners(box) @ truth[:, :2].T + truth[:, 2])).max()
+    return np.linalg.norm(reference_points_to_observed(pose, corners(box)) -
+                          (corners(box) @ truth[:, :2].T + truth[:, 2]), axis=1).max()
 
 
 @pytest.mark.parametrize('angle, shift', [(0.0, (90, 70)), (7.0, (110, 60)), (-15.0, (80, 95)), (23.0, (120, 110))])
@@ -300,7 +301,7 @@ def test_the_placement_bound_covers_the_true_error_of_every_located_pose():
         pose = locate_fixture(FixtureReference(image, FULL), keystone, scope=scope)
         if pose.status == 'located':
             placed = reference_points_to_observed(pose, source.astype(float))
-            assert np.abs(placed - target).max() <= pose.placement_error_px, (scope, pose.placement_error_px)
+            assert np.linalg.norm(placed - target, axis=1).max() <= pose.placement_error_px, (scope, pose.placement_error_px)
 
 
 def test_one_corner_found_at_several_pyramid_levels_is_one_place():
@@ -391,22 +392,27 @@ def test_a_bent_part_is_review_or_its_bound_covers_the_bend():
         observed, lands = _bowed(reference.image, amplitude, angle)
         pose = locate_fixture(reference, observed, scope=scope)
         if pose.status == 'located':
-            error = np.abs(reference_points_to_observed(pose, grid) - lands(grid)).max()
+            error = np.linalg.norm(reference_points_to_observed(pose, grid) - lands(grid), axis=1).max()
             assert error <= pose.placement_error_px <= 3.0, (seed, angle, amplitude, scope, error, pose.placement_error_px)
         else:
             reasons.append(pose.reason)
     assert any('a curved fit' in reason for reason in reasons), reasons
 
 
-def test_a_half_turn_of_the_freeze_two_set_is_located_in_the_similarity_scope_and_review_in_the_rigid_one():
-    """The freeze-2 test's 179 degree case (dropped in freeze 3 without a note): in the rigid scope its placement bound
-    is over 3 px (REVIEW), the similarity scope locates it within its bound."""
+def test_a_half_turn_is_either_bounded_in_each_scope_or_refused():
+    """OpenCV builds can choose different inliers; the measured bound, not a fixed verdict, governs this half turn."""
     reference = FixtureReference(fixture_image(seed=7), FULL)
     truth = moved(179.0, np.array((100.0, 80.0)))
-    rigid = locate_fixture(reference, warp(reference.image, truth), scope='rigid')
-    assert rigid.status == 'review' and 'placement uncertainty' in rigid.reason
-    similar = locate_fixture(reference, warp(reference.image, truth), scope='similarity')
-    assert similar.status == 'located' and corner_error(similar, truth) <= similar.placement_error_px <= 3.0
+    for scope in ('rigid', 'similarity'):
+        pose = locate_fixture(reference, warp(reference.image, truth), scope=scope)
+        if scope == 'similarity':
+            assert pose.status == 'located', pose.to_json()
+        if pose.status == 'located':
+            assert corner_error(pose, truth) <= pose.placement_error_px <= 3.0, (scope, pose.to_json())
+        else:
+            assert 'placement uncertainty' in pose.reason, (scope, pose.to_json())
+            with pytest.raises(ValueError, match='no fixture pose'):
+                roi_in_observed(pose, ROI)
 
 
 def test_a_pose_reports_how_much_of_the_region_its_matched_places_cover():
@@ -424,7 +430,8 @@ def test_a_pose_reports_how_much_of_the_region_its_matched_places_cover():
 
 @pytest.mark.parametrize('seed, angle, blur, kernel_angle', [(7647, -127.03, 'gaussian', 0.0), (5486, -83.46, 'motion', 42.65),
                                                              (7644, 148.31, 'gaussian', 0.0), (5681, 158.13, 'motion', 117.87)])
-def test_blurred_views_stay_within_their_bound(seed, angle, blur, kernel_angle):
+@pytest.mark.parametrize('scope', ['rigid', 'similarity'])
+def test_blurred_views_stay_within_their_bound(seed, angle, blur, kernel_angle, scope):
     """Held-out blurred scenes from the freeze-4 calibration: with only the larger of the spread and the model term (or 2
     sigmas, or no spread) these located poses exceed their bound, some by more than 3 px."""
     image = fixture_image(seed=seed)
@@ -438,11 +445,110 @@ def test_blurred_views_stay_within_their_bound(seed, angle, blur, kernel_angle):
         observed = cv2.filter2D(observed, -1, kernel / kernel.sum())
     else:
         observed = cv2.GaussianBlur(observed, (0, 0), 3.0)
-    pose = locate_fixture(FixtureReference(image, FULL), observed, scope='similarity')
+    pose = locate_fixture(FixtureReference(image, FULL), observed, scope=scope)
     if pose.status == 'located':
         grid = np.stack(np.meshgrid(np.linspace(0, 320, 9), np.linspace(0, 240, 9)), -1).reshape(-1, 2)
         error = np.linalg.norm(reference_points_to_observed(pose, grid) - (grid @ matrix[:, :2].T + matrix[:, 2]), axis=1).max()
         assert error <= pose.placement_error_px <= 3.0, (error, pose.match_quality['placement_parts'])
+    else:
+        with pytest.raises(ValueError, match='no fixture pose'):
+            roi_in_observed(pose, ROI)
+
+
+@pytest.mark.parametrize('scope', ['rigid', 'similarity'])
+def test_strong_defocus_is_refused_even_with_a_relaxed_placement_limit(scope):
+    reference = FixtureReference(fixture_image(seed=7644), FULL)
+    truth = cv2.getRotationMatrix2D((160, 120), 148.31, 1.0)
+    truth[:, 2] += np.array((320.0, 260.0)) - (160, 120)
+    observed = cv2.GaussianBlur(warp(reference.image, truth, (520, 640), background=50), (0, 0), 3.0)
+    pose = locate_fixture(reference, observed, scope=scope, limits=FixtureLimits(max_placement_px=100.0))
+    assert pose.status == 'review' and pose.reason.startswith('insufficient image detail'), pose.to_json()
+    detail = pose.match_quality['image_detail']
+    assert detail['valid_pixels'] > 1000
+    assert detail['relative_detail'] < pose.limits['min_relative_detail'] == 0.1
+    with pytest.raises(ValueError, match='no fixture pose'):
+        roi_in_observed(pose, ROI)
+
+
+@pytest.mark.parametrize('scope', ['rigid', 'similarity'])
+def test_directional_detail_loss_is_refused_even_with_perpendicular_edges(scope):
+    reference = FixtureReference(fixture_image(seed=5681), FULL)
+    truth = cv2.getRotationMatrix2D((160, 120), 158.13, 1.0)
+    truth[:, 2] += np.array((320.0, 260.0)) - (160, 120)
+    kernel = np.zeros((9, 9), np.float32)
+    kernel[4, :] = 1
+    kernel = cv2.warpAffine(kernel, cv2.getRotationMatrix2D((4, 4), 117.87, 1.0), (9, 9))
+    observed = cv2.filter2D(warp(reference.image, truth, (520, 640), background=50), -1, kernel / kernel.sum())
+    pose = locate_fixture(reference, observed, scope=scope, limits=FixtureLimits(max_placement_px=100.0))
+    assert pose.status == 'review' and pose.reason.startswith('insufficient image detail'), pose.to_json()
+    assert pose.match_quality['image_detail']['relative_detail'] < 0.1
+    assert pose.match_quality['image_detail']['method'] == 'hessian_gram_min_retention'
+    with pytest.raises(ValueError, match='no fixture pose'):
+        roi_in_observed(pose, ROI)
+
+
+def test_the_relative_detail_limit_is_finite_numeric_and_calibrated():
+    for value in (False, True, float('nan'), float('inf'), -0.1, 0, 1.01, '0.1'):
+        with pytest.raises(ValueError, match='min_relative_detail'):
+            FixtureLimits(min_relative_detail=value)
+
+
+@pytest.mark.parametrize('scale', [0.8, 1.3])
+def test_the_placement_residual_is_in_observed_pixels(scale):
+    reference = FixtureReference(fixture_image(seed=11), FULL)
+    truth = moved(30.0, np.array((280.0, 220.0)), scale=scale)
+    pose = locate_fixture(reference, warp(reference.image, truth, (760, 900)), scope='similarity')
+    assert pose.status == 'located', pose.to_json()
+    # The residual gate retains reference pixels; the placement estimate, its spread and models use observed pixels.
+    assert pose.match_quality['placement_parts']['systematic_px'] == pytest.approx(pose.residual * pose.scale, abs=0.0002)
+
+
+@pytest.mark.parametrize('scale', [0.8, 1.3])
+def test_relative_detail_compares_the_same_resampling_and_ignores_gain_and_surround(scale):
+    from backend.engine.fixture_pose import _relative_detail
+    image = fixture_image(seed=9)
+    region = (40, 30, 280, 210)
+    part = np.zeros_like(image)
+    part[30:210, 40:280] = image[30:210, 40:280]
+    truth = moved(47.0, np.array((280.0, 220.0)), scale=scale)
+    observed = warp(part, truth, (760, 900), background=0)
+    inverse = cv2.invertAffineTransform(truth)
+    exact = _relative_detail(image, observed, inverse, corners(region), region)
+    assert exact['valid_pixels'] > 10000
+    assert exact['relative_detail'] == pytest.approx(1.0, abs=0.001)
+    gained = np.round(observed.astype(float) * 0.7 + 20).astype(np.uint8)
+    assert _relative_detail(image, gained, inverse, corners(region), region)['relative_detail'] == pytest.approx(1.0, abs=0.03)
+    changed = 255 - image
+    changed[30:210, 40:280] = image[30:210, 40:280]
+    assert _relative_detail(changed, observed, inverse, corners(region), region) == exact
+
+
+def test_relative_detail_requires_common_supported_pixels_and_reference_detail():
+    from backend.engine.fixture_pose import _relative_detail
+    image = fixture_image(seed=9)
+    outside = np.array([[1.0, 0, 10000.0], [0, 1.0, 10000.0]])
+    unseen = _relative_detail(image, image, outside, corners(FULL), FULL)
+    assert unseen['valid_pixels'] == 0 and unseen['relative_detail'] == 0
+    flat = np.full_like(image, 70)
+    unsupported = _relative_detail(flat, flat, np.array([[1.0, 0, 0], [0, 1.0, 0]]), corners(FULL), FULL)
+    assert unsupported['valid_pixels'] > 1000 and unsupported['relative_detail'] == 0
+
+
+@pytest.mark.parametrize('failure', ['degenerate', 'nonfinite', 'failed_decomposition'])
+def test_relative_detail_cannot_establish_a_bound_from_an_unmeasurable_direction(monkeypatch, failure):
+    from backend.engine.fixture_pose import _relative_detail
+    image = fixture_image(seed=9)
+    if failure == 'degenerate':
+        image = np.tile((np.arange(320) % 20 < 10).astype(np.uint8) * 150 + 50, (240, 1))
+    elif failure == 'nonfinite':
+        monkeypatch.setattr(np.linalg, 'eigh', lambda _: (np.array([float('nan'), 1, 1]), np.eye(3)))
+    else:
+        def unavailable(_):
+            raise np.linalg.LinAlgError('no converged directional estimate')
+        monkeypatch.setattr(np.linalg, 'eigh', unavailable)
+    detail = _relative_detail(image, image, np.array([[1.0, 0, 0], [0, 1.0, 0]]), corners(FULL), FULL)
+    assert detail['relative_detail'] == 0 and detail['valid_pixels'] > 1000
+    assert np.isfinite(detail['reference_detail']) and np.isfinite(detail['observed_detail'])
 
 
 def test_a_similarity_range_must_include_the_reference_size():

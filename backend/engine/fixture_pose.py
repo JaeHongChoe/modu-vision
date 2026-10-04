@@ -19,15 +19,20 @@ texture or a second copy), the size inside the scope, other fits that agree with
 within ``max_placement_px`` (3 px). The other fits are a perspective one (a homography) and, when the places show real
 curvature (an F test of a second-order fit over an affine one), a curved one; how far they put the region corners from
 the scope's fit is the model disagreement. The placement bound is the error to expect at the region's corners: the
-inlier residual (keypoint bias shared by all points, which scatter alone does not show), plus the larger of three
+inlier residual converted to observed pixels (keypoint bias shared by all points, which scatter alone does not show), plus the larger of three
 standard deviations of the fit over the distinct places and the model disagreement and half the smaller (both measure
 how loosely the places pin the corners, and they overlap), plus in the rigid scope how far removing the fitted scale
 moves the corners. It was calibrated on seeded sweeps of held-out parts (rigid and similarity moves, partial views,
 occlusion, blur, noise, compression, gamma, bends), and the tests keep a seeded sample. It is an estimate, not a
-guarantee: on scenes it was not calibrated on (other textures and degradations, 3,000 scenes of an independent review),
+guarantee: before the image-detail guard, on scenes it was not calibrated on (other textures and degradations, 3,000 scenes of an independent review),
 2.3 % of located poses had a true corner error above their bound and 0.6 % above 3 px (at most 4.0 px). Strong defocus on
-fine, regular textures (dot grids) is the weak case. Otherwise the pose says REVIEW with the reason, and no ROI is
-placed.
+fine, regular textures (dot grids) is the weak case. Strong blur (defocus or directional motion) is outside the calibrated scope: the observed
+image must retain at least ``min_relative_detail`` (0.1) of the reference's contrast-normalized second-derivative
+energy in every symmetric second-derivative filter (the minimum generalized ratio of Hessian Gram matrices).
+Both images are compared over the eroded, in-frame matched hull after the reference is rendered through the estimated
+pose and both are rectified, so rotation, scale, interpolation, gain and the static surround do not set an absolute
+sharpness threshold. This is a supported-region detail check, not a bound for unseen scenes; noise can obscure defocus.
+Otherwise the pose says REVIEW with the reason, and no ROI is placed.
 
 The fixture region must be a rigid part. Both the curvature test and the fits see only the matched places that agree
 with one transform: a bend confined to part of the region (a tab folded at a hinge, a curled or sagging end, an S-shaped
@@ -81,6 +86,7 @@ class FixtureLimits:
     max_ambiguity: float = 0.3          # second position's support / the pose's support
     features: int = 1500                # keypoints on the reference region; the observed frame gets as many per area
     max_observed_features: int = 12000
+    min_relative_detail: float = 0.1   # calibrated supported-region detail retention; strong blur is outside the scope
 
     def __post_init__(self):
         for name in ('min_inliers', 'min_distinct_inliers', 'features', 'max_observed_features'):
@@ -91,7 +97,8 @@ class FixtureLimits:
             raise ValueError('max_observed_features must be at least features')
         for name, low, high in (('min_inlier_ratio', 0.0, 1.0), ('max_ambiguity', 0.0, 1.0), ('max_scale_deviation', 0.0, 0.5),
                                 ('max_residual_px', 0.0, 100.0), ('max_placement_px', 0.0, 100.0),
-                                ('min_similarity_scale', 0.0, 1.0), ('max_similarity_scale', 0.0, 10.0)):
+                                ('min_similarity_scale', 0.0, 1.0), ('max_similarity_scale', 0.0, 10.0),
+                                ('min_relative_detail', 0.0, 1.0)):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not low < value <= high:
                 raise ValueError(f'{name} must be a number above {low} and at most {high}')
@@ -178,7 +185,7 @@ class FixturePose:
     observed_to_reference_transform: Optional[list[list[float]]] = None   # 2x3
     reference_to_observed_transform: Optional[list[list[float]]] = None   # 2x3
     match_quality: dict = field(default_factory=dict)  # matches, matches_on_part, inliers, distinct_inliers, inlier_ratio
-    residual: Optional[float] = None          # RMS over the inliers, px
+    residual: Optional[float] = None          # RMS over the inliers, reference px (the residual gate's units)
     placement_error_px: Optional[float] = None
     ambiguity: Optional[float] = None
     scale: Optional[float] = None             # how large the part appears in the observed image (reference = 1)
@@ -326,6 +333,63 @@ def _model_term(perspective: float, curved: float, f_statistic: float) -> float:
     return max(perspective, curved) if f_statistic > _CURVATURE_F else perspective
 
 
+def _relative_detail(reference: np.ndarray, observed: np.ndarray, to_reference: np.ndarray,
+                     hull, region: Box) -> dict:
+    """Detail retained on supported pixels, relative to the same reference after the same resampling.
+
+    The reference is rendered into the estimated observed pose; both that image and the real observation are then
+    rectified. Contrast-normalized Hessian energy distinguishes severe defocus from rotation, scale or gain; the
+    minimum generalized ratio covers all symmetric second-derivative filters, so perpendicular edges cannot hide
+    motion blur. Discrete rotation behavior is calibrated empirically, not assumed exact.
+    Only the common in-frame, eroded matched hull inside the fixture region contributes. Unmeasurable detail fails
+    closed; noise can still mask defocus, so this does not establish an absolute placement guarantee.
+    """
+    height, width = reference.shape
+    region_mask = np.zeros(reference.shape, np.uint8)
+    x1, y1, x2, y2 = region
+    region_mask[y1:y2, x1:x2] = 1
+    part = np.where(region_mask, reference, 0).astype(np.uint8)
+    rendered = cv2.warpAffine(part, cv2.invertAffineTransform(to_reference),
+                              (observed.shape[1], observed.shape[0]), flags=cv2.INTER_LINEAR)
+    expected = cv2.warpAffine(rendered, to_reference, (width, height), flags=cv2.INTER_LINEAR)
+    aligned = cv2.warpAffine(observed, to_reference, (width, height), flags=cv2.INTER_LINEAR)
+    overlap = cv2.warpAffine(np.ones(observed.shape, np.uint8), to_reference,
+                            (width, height), flags=cv2.INTER_NEAREST)
+    support = np.zeros(reference.shape, np.uint8)
+    cv2.fillConvexPoly(support, np.rint(np.asarray(hull)).astype(np.int32), 1)
+    valid = cv2.erode(overlap & support & region_mask, np.ones((5, 5), np.uint8)).astype(bool)
+    if not valid.any():
+        return {'relative_detail': 0.0, 'reference_detail': 0.0, 'observed_detail': 0.0, 'valid_pixels': 0,
+                'method': 'hessian_gram_min_retention'}
+
+    def detail(image):
+        contrast = float(np.var(image[valid].astype(np.float64)))
+        grey = image.astype(np.float64)
+        # sqrt(2) gives an isometric basis for symmetric Hessians: coordinate rotations preserve its inner product.
+        terms = [cv2.Sobel(grey, cv2.CV_64F, 2, 0, ksize=3), cv2.Sobel(grey, cv2.CV_64F, 0, 2, ksize=3),
+                 np.sqrt(2) * cv2.Sobel(grey, cv2.CV_64F, 1, 1, ksize=3)]
+        samples = np.column_stack([term[valid] for term in terms])
+        return (samples.T @ samples) / len(samples) / max(contrast, 1e-12)
+
+    expected_detail, observed_detail = detail(expected), detail(aligned)
+    retention = 0.0
+    if np.isfinite(expected_detail).all() and np.isfinite(observed_detail).all():
+        try:
+            eigenvalues, basis = np.linalg.eigh(expected_detail)
+            # Do not regularize away a missing reference direction: no directional evidence means REVIEW.
+            if np.isfinite(eigenvalues).all() and np.isfinite(basis).all() and eigenvalues.min() > 1e-12:
+                whitening = basis @ np.diag(1.0 / np.sqrt(eigenvalues)) @ basis.T
+                ratios = np.linalg.eigvalsh(whitening @ observed_detail @ whitening)
+                if np.isfinite(ratios).all():
+                    retention = max(0.0, float(ratios.min()))
+        except np.linalg.LinAlgError:
+            pass  # an unmeasurable direction cannot establish sufficient image detail
+    return {'relative_detail': retention,
+            'reference_detail': float(np.trace(expected_detail)) if np.isfinite(expected_detail).all() else 0.0,
+            'observed_detail': float(np.trace(observed_detail)) if np.isfinite(observed_detail).all() else 0.0,
+            'valid_pixels': int(valid.sum()), 'method': 'hessian_gram_min_retention'}
+
+
 def locate_fixture(reference: FixtureReference, observed: np.ndarray, *, scope: Scope = 'rigid',
                    limits: FixtureLimits = FixtureLimits(), search_region=None) -> FixturePose:
     """The pose of the reference fixture in the observed image, or REVIEW with the reason. ``search_region`` limits the
@@ -399,7 +463,7 @@ def locate_fixture(reference: FixtureReference, observed: np.ndarray, *, scope: 
     # shared by all points (the residual), and how far a perspective fit to the same places disagrees (a part not seen
     # flat-on, or features biased toward one side); in the rigid scope also the removed scale.
     spread = _PLACEMENT_SIGMAS * _placement_sigma(place_ref, place_obs, corners)
-    systematic = _SYSTEMATIC_FACTOR * residual
+    systematic = _SYSTEMATIC_FACTOR * residual * observed_scale
     perspective, curved, f_statistic = _model_disagreement(place_ref, place_obs, corners, to_observed)
     model = _model_term(perspective, curved, f_statistic)
     if model > limits.max_placement_px:
@@ -439,6 +503,11 @@ def locate_fixture(reference: FixtureReference, observed: np.ndarray, *, scope: 
     if placement > limits.max_placement_px:
         return review(f'placement uncertainty {placement:.2f} px exceeds {limits.max_placement_px} px '
                       '(the matched features do not pin down the whole fixture region)', **extra)
+    detail = _relative_detail(reference.grey, obs, matrix, quality['matched_hull'], region)
+    quality['image_detail'] = {key: round(value, 6) if isinstance(value, float) else value for key, value in detail.items()}
+    if detail['relative_detail'] < limits.min_relative_detail:
+        return review(f"insufficient image detail: {detail['relative_detail']:.3f} of the reference's normalized detail "
+                      f"(at least {limits.min_relative_detail} needed; strong blur is outside the calibrated scope)", **extra)
     placed = _apply(to_observed, corners)
     height, width = obs.shape
     valid = [int(np.clip(np.floor(placed[:, 0].min()), 0, width)), int(np.clip(np.floor(placed[:, 1].min()), 0, height)),
