@@ -7,7 +7,7 @@ export type ExecutionIdentity={job_id:string;execution_job_id?:string;model_id?:
 export function normalizeExecution(row:ExecutionIdentity):ExecutionIdentity {
  return {...row,execution_job_id:row.execution_job_id||row.job_id,job_id:row.model_id||row.job_id,
    epoch:row.current_epoch??row.epoch??0,epochs:row.total_epochs??row.epochs??0,
-   batch:row.current_step??row.batch??0,batches:row.total_steps??row.batches??0,training_provenance:row.training_provenance||{},loss:row.current_train_loss??row.loss,error:typeof row.error==='object'?row.error?.message:row.error};
+   batch:row.current_step??row.batch??0,batches:row.total_steps??row.batches??0,training_provenance:row.training_provenance||{},loss:row.current_train_loss??row.loss,error:typeof row.error==='object'?(row.error?.message||row.error?.details||row.error?.message_en):row.error};
 }
 export async function submitModelTraining<T>(task:ModelFamily,options:Record<string,any>,local:()=>Promise<T>):Promise<T> {
  const target=useComputeStore.getState();if(!target.selectedProfileId)return local();

@@ -427,11 +427,11 @@ export const TrainingController: React.FC = () => {
               <button
                 type="button"
                 onClick={handleAbort}
-                disabled={isStopRequestPending}
+                disabled={isStopRequestPending || cancelIncomplete}
                 className="flex items-center space-x-2 px-5 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] active:bg-[#991B1B] rounded-[4px] border border-[#EF4444] text-xs font-bold text-white uppercase tracking-wider cursor-pointer transition-all disabled:opacity-50"
               >
                 <Square className="w-3.5 h-3.5 fill-white" />
-                <span>{status === 'stopping'
+                <span>{cancelIncomplete ? '종료 확인 중' : status === 'stopping'
                   ? (isStopRequestPending ? '중단 중...' : '중단 상태 다시 확인')
                   : (language === 'ko' ? '학습 중단 (Abort)' : 'Abort Training')}</span>
               </button>

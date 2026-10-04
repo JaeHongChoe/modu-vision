@@ -1879,9 +1879,13 @@ def stop_training(req: TrainingStopRequest,request:Request=None):
     success = training_job_manager.abort_job(job_id)
     if success and disconnected:
         if previous.remote_profile_id:
-            training_job_manager.reconnect_remote_job(job_id)
+            reconnected = training_job_manager.reconnect_remote_job(job_id)
         else:
-            training_job_manager.reconnect_local_job(job_id)
+            reconnected = training_job_manager.reconnect_local_job(job_id)
+        if reconnected is None and previous.status == 'stopping':
+            previous.status = previous.phase = 'disconnected'
+            previous.error = {'message': 'The cancel intent was saved, but delivery and worker exit are unconfirmed: the job manager could not observe this job again.'}
+            raise HTTPException(409, previous.error['message'])
     return {
         "status": "stopping" if success else "not_running",
         "job_id": job_id,

@@ -95,3 +95,25 @@ def test_a_reconnect_the_job_manager_refuses_is_reported_not_accepted(tmp_path, 
     with pytest.raises(HTTPException) as refused:
         routes_compute.reconnect_job('job_server', types.SimpleNamespace(state=types.SimpleNamespace()))
     assert refused.value.status_code == 409 and record.status == 'disconnected'
+
+@pytest.mark.parametrize('route', ['compute','training'])
+def test_cancel_records_intent_but_refused_reconnect_is_not_reported_as_delivered(tmp_path, monkeypatch, route):
+    import types
+    from fastapi import HTTPException
+    from backend.api import routes_compute, routes_training
+    manager, record, runs = _server_job(tmp_path, monkeypatch, ['disconnected'])
+    record.remote_runner = None
+    monkeypatch.setattr(routes_compute, '_job', lambda job_id, request: (record, manager))
+    monkeypatch.setattr(routes_training, 'training_job_manager', manager)
+    request = types.SimpleNamespace(state=types.SimpleNamespace())
+    with pytest.raises(HTTPException) as refused:
+        if route == 'compute': routes_compute.cancel_job(record.job_id,request)
+        else: routes_training.stop_training(routes_training.TrainingStopRequest(job_id=record.job_id),request)
+    assert refused.value.status_code == 409
+    assert 'saved' in refused.value.detail and 'delivery' in refused.value.detail
+    assert record.status == 'disconnected' and record.preparation_cancel.is_set()
+    assert runs == ['running'], 'no second launch or observation was accepted'
+    assert any(row['job_id']==record.job_id for row in manager._leases.list())
+    observed = routes_compute.job_status(record.job_id,request)['observation']
+    assert observed['cause'] == 'cancel_unconfirmed'
+    assert observed['cancel']['reservation_released'] is False and not observed['cancel']['complete']

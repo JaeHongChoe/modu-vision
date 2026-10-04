@@ -32,10 +32,17 @@ def _owned(record,project):
 
 
 def _row(record):
+    import sqlite3
+    from backend.api.routes_training import _job_observation, training_job_manager
+    try:
+        reserved = {row['job_id'] for row in training_job_manager._leases.list()}
+    except (OSError, sqlite3.Error):
+        reserved = None
     return {'job_id':record.job_id,'execution_job_id':record.job_id,'model_id':(record.launch_spec or {}).get('local_model_id',record.job_id),'task':record.task,'operation':(record.launch_spec or {}).get('operation','train'),
             'status':record.status,'phase':record.phase,'compute_profile_id':record.remote_profile_id,
             'current_epoch':record.current_epoch,'total_epochs':record.total_epochs,'current_step':record.current_step,
             'total_steps':record.total_steps,'metrics':record.metrics,'best_metric':record.best_metric,'error':record.error,
+            'observation':_job_observation(record,reserved),
             'submitted_at':record.start_time,'dataset_path':(record.dataset_binding or {}).get('family_dataset_path') or (record.launch_spec or {}).get('family_dataset_path') or record.dataset_path,'source_dataset_path':record.source_dataset_path,'training_provenance':record.dataset_binding or {}}
 
 
@@ -257,7 +264,10 @@ def cancel_job(job_id:str,request:Request):
     if not manager.abort_job(job_id):raise HTTPException(409,'Compute job is already terminal')
     # As /api/training/stop does: a stop for a server job whose connection dropped is delivered by observing it again;
     # otherwise nothing watches the server and the job stays stopping.
-    if disconnected:manager.reconnect_remote_job(job_id)
+    if disconnected and manager.reconnect_remote_job(job_id) is None and record.status == 'stopping':
+        record.status = record.phase = 'disconnected'
+        record.error = {'message': 'The cancel intent was saved, but delivery and worker exit are unconfirmed: the job manager could not observe this job again.'}
+        raise HTTPException(409, record.error['message'])
     return _row(record)
 
 

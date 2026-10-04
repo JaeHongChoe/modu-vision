@@ -4,6 +4,13 @@ function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(n
   m.require=ref=>ref in mocks?mocks[ref]:ref.startsWith('.')?load(ref+'.ts'):require(ref);
   m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const model=()=>load('jobProgress.ts');
+test('S2-09: recorded pending cancel suppresses another cancel and permits observation',()=>{
+ const {jobProgress}=model();
+ for(const status of ['disconnected','stopping']){
+  const v=jobProgress({job_id:'x',status,compute_profile_id:'server',observation:{cause:'cancel_unconfirmed',next_action:'종료 확인이 필요합니다.',cancel:{requested_at:1,stage:'requested',complete:false}}});
+  assert.equal(v.stopping,true);assert.equal(v.canCancel,false);assert.equal(v.canReconnect,true);assert.equal(v.nextAction,'종료 확인이 필요합니다.');
+ }
+});
 test('S2-09: the shared view renders evidence steps, queue order and can omit duplicate controls',()=>{
  const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
  const useComputeStore=selector=>selector({profiles:[]});
@@ -68,7 +75,8 @@ test('S2-09: one job view renders the same states for every workbench',()=>{
 test('S2-09: reconnect asks the server job API with the execution id, and a local job is never reconnected',async()=>{
  const calls=[];const request=async(path,init)=>{calls.push([path,init?.method]);return {job_id:'exec-1',model_id:'model-1',compute_profile_id:'gpu-a',status:'running',current_epoch:3,total_epochs:5};};
  const store={getState:()=>({})};
- const {reconnectModelTraining}=load('../../services/modelExecution.ts',{'./api':{request},'../stores/useComputeStore':{useComputeStore:store},'../stores/useProjectStore':{useProjectStore:store}});
+ const {reconnectModelTraining,normalizeExecution}=load('../../services/modelExecution.ts',{'./api':{request},'../stores/useComputeStore':{useComputeStore:store},'../stores/useProjectStore':{useProjectStore:store}});
+ assert.equal(normalizeExecution({job_id:'x',status:'failed',error:{error_code:'OOM',details:'Controlled allocation failed'}}).error,'Controlled allocation failed');
  const row=await reconnectModelTraining({job_id:'model-1',execution_job_id:'exec-1',compute_profile_id:'gpu-a',status:'disconnected'});
  assert.deepEqual(calls,[['/api/compute/jobs/exec-1/reconnect','POST']]);
  assert.deepEqual([row.job_id,row.execution_job_id,row.status,row.epoch,row.epochs],['model-1','exec-1','running',3,5],'the reply keeps the model identity and its progress');

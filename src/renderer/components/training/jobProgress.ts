@@ -55,15 +55,16 @@ export function jobProgress(job: Record<string, any>): JobProgress {
   // an error kept from before a successful reconnect is not this active job's failure
   const failure = tone === 'active' || tone === 'completed' ? null : message(job.error);
   const observed = typeof job.observation?.next_action === 'string' && job.observation.next_action ? job.observation.next_action : null;
+  const cancelPending = !!job.observation?.cancel?.requested_at && job.observation.cancel.complete !== true;
   return {
     // a server job reports its transfer, result sync and reconnection as a phase while its status stays running
-    status, label: (status === 'running' && PHASES.includes(job.phase) ? JOB_STATUS_LABELS[job.phase] : JOB_STATUS_LABELS[status]) || status, tone, watch: watchJob(status), stopping: ['stopping', 'cancelling'].includes(status),
+    status, label: (status === 'running' && PHASES.includes(job.phase) ? JOB_STATUS_LABELS[job.phase] : JOB_STATUS_LABELS[status]) || status, tone, watch: watchJob(status), stopping: ['stopping', 'cancelling'].includes(status) || cancelPending,
     epoch: number(job.current_epoch, job.epoch, job.epochs_completed) ?? 0,
     totalEpochs: number(job.total_epochs, job.epochs) ?? 0,
     batch: number(job.current_step, job.batch) ?? 0, batches: number(job.total_steps, job.batches) ?? 0,
     loss: number(job.current_train_loss, job.loss),
     server, failure,
     nextAction: status === 'completed' ? null : observed ?? DEFAULT_NEXT[status] ?? null,
-    canCancel: cancellable({status, cancel_supported: job.cancel_supported}), canReconnect: status === 'disconnected' && server !== null,
+    canCancel: !cancelPending && cancellable({status, cancel_supported: job.cancel_supported}), canReconnect: ['disconnected','stopping'].includes(status) && server !== null,
   };
 }
