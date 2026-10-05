@@ -7,6 +7,7 @@ round trips without copying or modifying source images.
 from __future__ import annotations
 import json
 import math
+import re
 from pathlib import PurePosixPath
 from backend.engine.source_text import read_source_text
 
@@ -25,7 +26,10 @@ def _shape(item,width,height):
     if not isinstance(item,dict): raise ValueError('Annotation must be an object')
     label=item.get('label')
     if not isinstance(label,str) or not label.strip(): raise ValueError('Annotation needs a class label')
-    kind=item.get('type','bbox'); shape={'type':kind,'label':label,'category_id':item.get('category_id',1)}
+    kind=item.get('type','bbox'); shape={'type':kind,'label':label,'category_id':item.get('category_id')}
+    if item.get('color') is not None:
+        if not isinstance(item['color'],str) or not re.fullmatch(r'#[0-9a-fA-F]{6}',item['color']):raise ValueError('Invalid class color')
+        shape['color']=item['color']
     if kind=='bbox':
         bbox=item.get('bbox',[])
         if len(bbox)!=4: raise ValueError('Box needs four coordinates')
@@ -59,9 +63,50 @@ def _row(row):
     return {'file_name':name,'width':width,'height':height,
             'annotations':[_shape(a,width,height) for a in row.get('annotations',[])]}
 
+
+def _bind_classes(rows,metadata=None,class_names=None):
+    """One name-to-index mapping across all images; optional native IDs survive exchange."""
+    if metadata is not None and not isinstance(metadata,list):raise ValueError('Class mapping must be a list')
+    palette={}; ids={}
+    def add(entry):
+        if not isinstance(entry,dict):raise ValueError('Invalid class mapping entry')
+        label=entry.get('label'); cid=entry.get('category_id'); color=entry.get('color')
+        if not isinstance(label,str) or not label.strip():raise ValueError('Class mapping needs a label')
+        if isinstance(cid,bool) or not isinstance(cid,int) or not 0<=cid<=255:raise ValueError('Class index must be an integer from 0 to 255')
+        if color is not None and (not isinstance(color,str) or not re.fullmatch(r'#[0-9a-fA-F]{6}',color)):raise ValueError('Invalid class color')
+        value={'label':label,'category_id':cid,**({'color':color} if color is not None else {})}
+        if label in palette and palette[label]!=value:raise ValueError('Class name has conflicting index or color')
+        if cid in ids and ids[cid]!=label:raise ValueError('Class index is shared by different labels')
+        palette[label]=value;ids[cid]=label
+    for entry in metadata or []:add(entry)
+    annotations=[a for r in rows for a in r['annotations']]
+    if metadata is None:
+        colors={}
+        for a in annotations:
+            if a.get('color') is not None:
+                if a['label'] in colors and colors[a['label']]!=a['color']:raise ValueError('Class name has conflicting color')
+                colors[a['label']]=a['color']
+        for a in annotations:
+            if a.get('category_id') is not None:add({**a,**({'color':colors[a['label']]} if a['label'] in colors else {})})
+        names=class_names if class_names is not None else sorted({a['label'] for a in annotations})
+        if len(set(names))!=len(names):raise ValueError('Class vocabulary has duplicate labels')
+        for label in names:
+            if label in palette:continue
+            cid=next((n for n in range(1,256) if n not in ids),None)
+            if cid is None:raise ValueError('Class mapping exceeds 255 foreground classes')
+            add({'label':label,'category_id':cid,**({'color':colors[label]} if label in colors else {})})
+    for a in annotations:
+        if a['label'] not in palette:raise ValueError('Class mapping is missing an imported label')
+        entry=palette[a['label']]
+        if entry['category_id']==0 and a['type']!='tag':raise ValueError('Class index 0 is reserved for background or image tags')
+        a['category_id']=entry['category_id']
+        if entry.get('color') is not None:a['color']=entry['color']
+    return [palette[label] for label in sorted(palette)]
+
 def export_annotations(images,format):
     rows=[_row(row) for row in images]
     if len({row['file_name'] for row in rows})!=len(rows): raise ValueError('Duplicate image names')
+    class_mapping=_bind_classes(rows)
     classes=sorted({a['label'] for r in rows for a in r['annotations']})
     if format=='labelme':
         documents=[]
@@ -78,12 +123,12 @@ def export_annotations(images,format):
                 else: points=[]; st='tag'; flags={'studio_tag':True,'is_normal':a.get('is_normal',False)}
                 if a.get('direction_deg') is not None:flags['studio_direction_deg']=a['direction_deg']
                 shapes.append({'label':a['label'],'points':points,'shape_type':st,'group_id':None,'flags':flags})
-            documents.append({'version':'5.0.0','flags':{},'imagePath':row['file_name'],'imageData':None,
+            documents.append({'version':'5.0.0','flags':{'studio_classes':class_mapping},'imagePath':row['file_name'],'imageData':None,
                               'imageWidth':row['width'],'imageHeight':row['height'],'shapes':shapes})
         return {'format':'labelme','documents':documents}
     if format in {'coco','yolo'} and any(a.get('direction_deg') is not None for row in rows for a in row['annotations']):raise ValueError('Direction targets require LabelMe or native annotation export')
     if format=='coco':
-        result={'images':[],'categories':[{'id':i+1,'name':label} for i,label in enumerate(classes)],'annotations':[]}
+        result={'images':[],'categories':[{'id':i+1,'name':label} for i,label in enumerate(classes)],'annotations':[],'studio_classes':class_mapping}
         for image_id,row in enumerate(rows,1):
             result['images'].append({'id':image_id,**{k:row[k] for k in ['file_name','width','height']}})
             for a in row['annotations']:
@@ -109,16 +154,21 @@ def export_annotations(images,format):
             name=str(PurePosixPath(row['file_name']).with_suffix('.txt'))
             if name in labels: raise ValueError('Images share a label filename; rename one before exporting YOLO')
             labels[name]='\n'.join(lines)
-        return {'format':'yolo','classes':classes,'images':[{k:r[k] for k in ['file_name','width','height']} for r in rows],'labels':labels}
+        return {'format':'yolo','classes':classes,'images':[{k:r[k] for k in ['file_name','width','height']} for r in rows],'labels':labels,'studio_classes':class_mapping}
     raise ValueError('Choose labelme, coco or yolo')
 
 def format_float(v): return f'{v:.16g}'
 
 def import_annotations(payload,format):
-    rows=[]
+    rows=[];class_mapping=None;class_names=None
     if format=='labelme':
         documents=payload.get('documents') if isinstance(payload,dict) and 'documents' in payload else payload if isinstance(payload,list) else [payload]
         for doc in documents:
+            mapping=doc.get('flags',{}).get('studio_classes')
+            if mapping is not None:
+                if not isinstance(mapping,list):raise ValueError('Class mapping must be a list')
+                if class_mapping is None:class_mapping=[]
+                class_mapping.extend(mapping)
             row={'file_name':safe_name(doc['imagePath']),'width':doc['imageWidth'],'height':doc['imageHeight'],'annotations':[]}
             for shape in doc.get('shapes',[]):
                 points=shape.get('points',[]); kind=shape.get('shape_type','polygon'); flags=shape.get('flags',{})
@@ -133,6 +183,8 @@ def import_annotations(payload,format):
                 row['annotations'].append(a)
             rows.append(_row(row))
     elif format=='coco':
+        class_mapping=payload.get('studio_classes')
+        class_names=[c['name'] for c in payload['categories']]
         categories={c['id']:c['name'] for c in payload['categories']}; by_id={}
         for image in payload['images']:
             if image['id'] in by_id: raise ValueError('Duplicate COCO image ID')
@@ -150,7 +202,9 @@ def import_annotations(payload,format):
                 x,y,w,h=item['bbox']; by_id[item['image_id']]['annotations'].append({'label':label,'type':'bbox','bbox':[x,y,x+w,y+h]})
         rows=[_row(r) for r in rows]
     elif format=='yolo':
+        class_mapping=payload.get('studio_classes')
         classes=payload['classes']; labels=payload['labels']
+        class_names=classes
         for image in payload['images']:
             row={**image,'annotations':[]}; width,height=image['width'],image['height']
             text=labels.get(str(PurePosixPath(safe_name(image['file_name'])).with_suffix('.txt')),'')
@@ -168,12 +222,14 @@ def import_annotations(payload,format):
             rows.append(_row(row))
     else: raise ValueError('Choose labelme, coco or yolo')
     if len({r['file_name'] for r in rows})!=len(rows): raise ValueError('Duplicate imported image names')
+    _bind_classes(rows,class_mapping,class_names)
     return rows
 
 def bundle_files(payload,format):
     if format=='labelme': return {str(PurePosixPath(safe_name(d['imagePath'])).with_suffix('.json')):json.dumps(d,ensure_ascii=False,indent=2) for d in payload['documents']}
     if format=='coco': return {'annotations.json':json.dumps(payload,ensure_ascii=False,indent=2)}
-    return {**payload['labels'],'classes.txt':'\n'.join(payload['classes']), 'image_manifest.json':json.dumps(payload['images'],ensure_ascii=False,indent=2)}
+    return {**payload['labels'],'classes.txt':'\n'.join(payload['classes']), 'image_manifest.json':json.dumps(payload['images'],ensure_ascii=False,indent=2),
+            **({'studio_classes.json':json.dumps(payload['studio_classes'],ensure_ascii=False,indent=2)} if 'studio_classes' in payload else {})}
 
 
 def source_annotation_files(source,image):

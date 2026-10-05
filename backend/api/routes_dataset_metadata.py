@@ -220,7 +220,9 @@ def _directory_payload(req,source,inventory):
         target=str(Path(image['file_name']).with_suffix('.txt'))
         alternative=target.replace('images/','labels/',1)
         if target not in labels and alternative in labels: labels[target]=labels[alternative]
-    return {'classes':classes,'images':images,'labels':labels}
+    native_classes=root/'studio_classes.json'
+    return {'classes':classes,'images':images,'labels':labels,
+            **({'studio_classes':json.loads(read_source_text(native_classes))} if native_classes.exists() else {})}
 
 @format_router.post('/import')
 def import_format(req:ExchangeRequest,request:Request):

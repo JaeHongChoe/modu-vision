@@ -33,12 +33,12 @@ def main():
         torch.save({"task": "classification", "backbone": "resnet18",
                     "classes": ["OK", "NG"], "image_size": [64, 64],
                     "model_state_dict": model.state_dict()}, job / "best_model.pt")
-        (job / "model_meta.json").write_text(json.dumps({"task": "classification"}))
+        (job / "model_meta.json").write_text(json.dumps({"task": "classification"}), encoding="utf-8")
         (job / "job_receipt.json").write_text(json.dumps({
             "status": "completed", "task": "classification",
             "source_dataset_path": str(source), "dataset_fingerprint": fingerprint,
             "dataset_path": str(job / "dataset"), "test_fixture": "untrained_deterministic",
-        }))
+        }), encoding="utf-8")
     print(json.dumps({"checkpoint_kind": "untrained_deterministic", "dataset_fingerprint": fingerprint}))
 
 

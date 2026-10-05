@@ -2296,6 +2296,13 @@
      "result": "Task73 actual two-class brush/eraser, save/reload, Undo/Redo and owned lease release pass in Chrome and macOS Electron. Stored class PNG exactly matches decoded brush pixels. Renderer688 passed; readback SHA-256 e0279d4df72340cddca62bbf00c6352d29fa37cc0f0f4229b228cead7d71ca3e.",
      "scope": "Synthetic mask-content slice; not representative annotation, all formats or whole-parent acceptance.",
      "platform": "macOS native Electron and Chrome; Windows excluded."
+    },
+    {
+     "kind": "published-vector-content-functional-evidence",
+     "source_sha": "f6fced69ab9155a59341c40253583ffe794a82a5",
+     "result": "Task74 actual bbox/polygon/OBB draw, angle30 and independent direction315, keyboard nudge, delete/Undo, save/reopen in Chrome and macOS Electron. All class PNG pixels independently compared. Readback SHA-256 8adcb600aabec2f710c93244cfd06f6390f1846b6173d7cf8f21253fe38419a4.",
+     "scope": "Synthetic exact-geometry slice; whole-parent and representative content qualification remain pending.",
+     "platform": "macOS Electron and Chrome; Windows excluded."
     }
    ],
    "file_actions": {
@@ -2318,7 +2325,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
-    "Complete LabelMe/COCO/YOLO/mask class, geometry and image-mapping round trips through the app, including lossy-format warning/provenance.",
+    "Task75 completes the synthetic app LabelMe/COCO/YOLO bundle export, preview/replace, exact nested image mapping, native class IDs/colors, loss rejection and save/reopen slice; pixel-mask app exchange remains pending.",
     "OCR text, complete OBB fitting variants, model-result selection and groundtruth/prediction separation still require full native and representative content qualification.",
     "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
    ]
