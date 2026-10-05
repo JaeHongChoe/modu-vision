@@ -34,7 +34,7 @@ class TrainRequest(BaseModel):
     dataset_version_id:str|None=None
     queue:bool=True
     priority:int=Field(0,ge=-10,le=10)
-    max_runtime_s:float|None=Field(None,gt=0,le=7*24*3600)
+    max_runtime_s:float|None=Field(None,strict=True,gt=0,le=7*24*3600,allow_inf_nan=False)
 
 class EvaluateRequest(BaseModel):
     job_id:str

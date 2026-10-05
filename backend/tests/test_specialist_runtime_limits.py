@@ -95,7 +95,7 @@ def test_family_budget_is_saved_before_runner_and_cancels_without_progress(tmp_p
 
 
 @pytest.mark.parametrize('family,module,method',FAMILIES)
-@pytest.mark.parametrize('value',[0,-1,604801,'NaN'])
+@pytest.mark.parametrize('value',[0,-1,604801,'NaN',True,'1'])
 def test_invalid_family_budget_refuses_before_runner(tmp_path,monkeypatch,family,module,method,value):
     client,_,_,dataset=prepared_client(tmp_path,family);called=[]
     monkeypatch.setattr(module,method,lambda *a,**k:called.append(True))
@@ -104,6 +104,20 @@ def test_invalid_family_budget_refuses_before_runner(tmp_path,monkeypatch,family
     response=client.post(f'/api/{family}/train',json=body)
     assert response.status_code==422,response.text
     assert not called
+
+
+@pytest.mark.parametrize('value',[True,'1'])
+def test_all_training_budgets_require_json_numbers_before_admission(value):
+    from pydantic import ValidationError
+    from backend.api.routes_training import TrainingStartRequest
+    from backend.api.routes_patch_classification import TrainRequest as PatchRequest
+    models=[TrainingStartRequest,PatchRequest,routes_rotation.TrainRequest,routes_ocr.OCRTrainRequest,
+            routes_defect_gan.GANTrainRequest,routes_enhancement.Train,routes_rotated_detection.TrainRequest]
+    for model in models:
+        with pytest.raises(ValidationError,match='max_runtime_s'):
+            model(dataset_path='private-owned-fixture',max_runtime_s=value)
+        for valid in (None,1,.3):
+            assert model(dataset_path='private-owned-fixture',max_runtime_s=valid).max_runtime_s==valid
 
 
 def test_actual_cpu_rotation_budget_runs_optimizer_and_leaves_no_reservation(tmp_path):

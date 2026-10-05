@@ -1222,6 +1222,12 @@
      "platform": "Linux CPU and Windows Server 2025 source CI; native target/field/quality acceptance is separate",
      "receipt": "hosted-e376db1-final-summary",
      "receipt_sha256": "e8915b0b160ea850228ef1aaf59a403f3f0fd44c21fb6d14c40e7fceb8ccf775"
+    },
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "Task55 regenerates the six request types changed by patch scheduling and five native specialist runtime limits, after exact314e Linux CI failed three stale-type checks. Generator/runtime behavior is unchanged.",
+     "scope": "Local production --check reproduces drift; seven existing schema contracts and renderer TypeScript pass. Source/log/JUnit readback SHA-256a51e0b3da9dcc9086c988de85accbb580647565bd1a6d29bd1453ba9bd03e2d5.",
+     "platform": "macOS source verification; new composed hosted qualification and acceptance remain separate. Root review only."
     }
    ],
    "file_actions": {
@@ -1880,6 +1886,25 @@
      "result": "Task52 persists optional runtime budgets for five native specialist families and arms cooperative cancellation after compute admission. All five workbenches validate/reset minutes and retain prepared/source binding; local queue/priority is still pending. Completed publication is fenced against an expired budget.",
      "scope": "Affected backend46, renderer/main633, evidence gate105, type/build pass. Eleven browser cases and one actual macOS Electron case pass; ten controlled launch refusals plus two actual CPU rotation optimizations stop by1.2s budget without manual cancellation. Source/manifest/artifact/JUnit/terminal-journal/process readback SHA-2563828711d4fd61938297f1a34f64b73d8c790ca853d6b813fdd91d80698af8f26.",
      "platform": "Owned macOS CPU and synthetic private data; controlled server admission replies only. Root source/screenshot review only. New hosted source, queue/priority, actual server/GPU/pretrained enforcement, independent review, installed Windows and whole-parent/final acceptance remain pending."
+    },
+    {
+     "kind": "takeover-follow-up-actual-owned-cpu",
+     "result": "On314e runtime source, four additional tiny actual CPU OCR/GAN/enhancement/native rotated runs execute39/72/83/183 original optimizer steps then acknowledge their0.3s limits. Together with actual app rotation, five default native family CPU optimizers are exercised.",
+     "scope": "Four terminal journals and original source-image hashes rechecked; stopped/aborted time_limit, empty completed model lists, checkpoint/receipt absence, no leases or live watchdogs. Private readback SHA-256b951ee65f56a3fb1e419841c28bb51e05948b65797a16a87dc3d252bade80630.",
+     "platform": "Owned synthetic macOS CPU only; no new GPU/server training, pretrained/YOLO OBB adapter or representative quality acceptance. Root review only."
+    },
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "Task56 requires numeric runtime seconds at seven core/patch/native specialist HTTP request models, rejecting boolean/numeric-string coercion before job admission. Integer/fraction/null callers are retained.",
+     "scope": "Two old-model failures; composed native runtime/patch/core budget54 pass with no skips. Five actual-route malformed budget checks confirm no trainer call. Source/log/JUnit readback SHA-256dee8369fd00d1ae7c462e3b257235258ae2a72c74bc77113a553e32e039b2d9c.",
+     "platform": "Owned macOS source/CPU; no new GPU/server training, queue algorithm or acceptance promotion. Root review only."
+    },
+    {
+     "kind": "takeover-follow-up-hosted-native-slice",
+     "source_sha": "314eab8c04f0b23c6b14ccb145f5bc1f5570f1d0",
+     "result": "Exact314e Windows source CI runs five actual unpackaged Electron cases, all pass. Actual CPU rotation optimizes to epoch52/batch1 then acknowledges1.2s time_limit without manual cancellation; patch scheduling prepares source-bound input and retains controlled refusal.",
+     "scope": "Native manifests44 source/build/artifact hashes, saved terminal journal/image identities and process/port closure facts read back, SHA-2561e171710784e408657e42b4b3da0fd024cdb6bbb3168475d12efdddb66fc385d. Full Windows source workflow fails three generated-type checks; Task55 correction needs fresh source qualification.",
+     "platform": "Hosted Windows Server2025 CPU only, root source/screenshot review; installed Windows11, independent review, GPU/representative quality and whole parent remain pending."
     }
    ],
    "file_actions": {
@@ -3644,7 +3669,15 @@
     "S6-01"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "takeover-follow-up-hosted-packaged-slice",
+     "source_sha": "314eab8c04f0b23c6b14ccb145f5bc1f5570f1d0",
+     "result": "Manual37246229228 passes actual unsigned packaged Electron/frozen child CPU train/test-evaluate/infer/export and identical saved results after app restart. Both owned launches close their observed processes and remove temporary userData.",
+     "scope": "All1279 source hashes match exact Git/Windows checkout. GitHub archive and both uploaded NSIS/portable executable bytes match recorded hashes. Release/build/observer/CPU result readback SHA-25646137114565fc6a51ae3d8afbd5b7a44576e4de56a912fe7a56e9b84d6887b45. Temporary model hashes are retained CI observations, not downloaded model bytes.",
+     "platform": "Hosted Server2025 unsigned functional CPU only; no actual installer execution, Win11/SCM/signing/devices/update recovery or model-quality acceptance. Root review only; parent remains pending."
+    }
+   ],
    "file_actions": {
     "build/electron-builder.yml": "Modify",
     "build/installer.nsh": "Modify",
@@ -3882,6 +3915,12 @@
      "result": "The same flushed settings/journal temporary file receives at most four Windows EPERM/EACCES/EBUSY rename attempts, with configured delays totaling 70 ms. Persistent/unknown/non-Windows failures retain the old destination; a failed settings/journal flush prevents rename/acknowledgment. Local main-process gate 14 passed; renderer/main suite 595 passed; TypeScript and build passed. Removing the shared fsync call makes both flush-failure tests fail.",
      "scope": "Real private files with controlled sharing/flush faults, root review only. Retry count is bounded; OS syscall/scheduling duration is not a hard 70 ms wall-clock guarantee. No Windows ACL, field/install or directory-durability acceptance.",
      "platform": "macOS controlled Windows-error semantics; newer exact-source hosted run required"
+    },
+    {
+     "kind": "takeover-follow-up-local-verified",
+     "result": "Task54 derives parent implementation/status totals from actual requirement rows and refuses stale/malformed execution progress snapshots. Corrected snapshot25 verified/57 pending and19 verification_pending/25 in_progress/38 planned is the current source count, with zero full acceptance.",
+     "scope": "Four old-gate failures retained; final S6-05/S7-01 suites109 pass with no skips and production CLI returns derived counts. No requirement/acceptance/slice promotion.",
+     "platform": "Local macOS source gate; root review only. New composed hosted source remains pending."
     }
    ],
    "file_actions": {
@@ -8972,13 +9011,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 24,
-    "pending": 58
+    "verified": 25,
+    "pending": 57
    },
    "parent_status": {
-    "verification_pending": 18,
+    "verification_pending": 19,
     "in_progress": 25,
-    "planned": 39
+    "planned": 38
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

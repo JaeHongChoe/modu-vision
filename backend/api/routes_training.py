@@ -1301,7 +1301,7 @@ class TrainingStartRequest(BaseModel):
     # priority, and a runtime budget that becomes a cancel intent (never a signal) once spent.
     queue: bool = True
     priority: int = Field(0, ge=-10, le=10)
-    max_runtime_s: Optional[float] = Field(None, gt=0, le=7 * 24 * 3600)
+    max_runtime_s: Optional[float] = Field(None, strict=True, gt=0, le=7 * 24 * 3600, allow_inf_nan=False)
 
 
 class TrainingStopRequest(BaseModel):

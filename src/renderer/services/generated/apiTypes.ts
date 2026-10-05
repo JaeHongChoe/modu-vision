@@ -656,6 +656,7 @@ export type GANPrepareRequest = {
 };
 
 export type GANTrainRequest = {
+  max_runtime_s?: number | null;
   dataset_path: string;
   epochs?: number;
   batch_size?: number;
@@ -910,6 +911,7 @@ export type OCRRecipe = {
 };
 
 export type OCRTrainRequest = {
+  max_runtime_s?: number | null;
   dataset_path: string;
   epochs?: number;
   batch_size?: number;
@@ -1384,6 +1386,7 @@ export type TemplateSave = {
 };
 
 export type Train = {
+  max_runtime_s?: number | null;
   dataset_path: string;
   epochs?: number;
   batch_size?: number;
@@ -1542,6 +1545,9 @@ export type backend__api__routes_patch_classification__TrainRequest = {
   device?: string;
   warm_start_job_id?: string | null;
   dataset_version_id?: string | null;
+  queue?: boolean;
+  priority?: number;
+  max_runtime_s?: number | null;
 };
 
 export type backend__api__routes_rotated_detection__EvaluateRequest = {
@@ -1563,6 +1569,7 @@ export type backend__api__routes_rotated_detection__PrepareRequest = {
 };
 
 export type backend__api__routes_rotated_detection__TrainRequest = {
+  max_runtime_s?: number | null;
   dataset_path: string;
   epochs?: number;
   batch_size?: number;
@@ -1593,6 +1600,7 @@ export type backend__api__routes_rotation__PrepareRequest = {
 };
 
 export type backend__api__routes_rotation__TrainRequest = {
+  max_runtime_s?: number | null;
   dataset_path: string;
   epochs?: number;
   batch_size?: number;

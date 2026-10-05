@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import yaml
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("service_plan_gate", ROOT / "scripts/check_service_plan.py")
@@ -46,6 +47,30 @@ def test_green_implementation_cannot_make_native_or_quality_acceptance_green():
     claimed["coverage_summary"]["new_plan_accepted_work_packages"] = 1
     errors = gate.check_program(claimed, ROOT)["errors"]
     assert any("pending acceptance" in row for row in errors)
+
+
+@pytest.mark.parametrize('delta',[-1,1])
+def test_stale_progress_counts_fail_without_changing_requirement_rows(delta):
+    claimed=program()
+    verified=sum(row['acceptance_state']['implementation']=='verified' for row in claimed['requirements'])
+    claimed['execution']['progress']['parent_implementation']={'verified':verified+delta,'pending':len(claimed['requirements'])-verified-delta}
+    result=gate.check_program(claimed,ROOT)
+    assert not result['ok']
+    assert any('progress counts do not match' in row for row in result['errors'])
+
+
+def test_malformed_progress_counts_fail():
+    claimed=program()
+    claimed['execution']['progress']['parent_implementation']['verified']=True
+    assert any('progress counts do not match' in row for row in gate.check_program(claimed,ROOT)['errors'])
+
+
+def test_progress_status_snapshot_cannot_hide_or_invent_an_accepted_parent():
+    claimed=program()
+    claimed['execution']['progress']['parent_status']['accepted']=sum(row['status']=='accepted' for row in claimed['requirements'])+1
+    result=gate.check_program(claimed,ROOT)
+    assert not result['ok']
+    assert any('progress counts do not match' in row for row in result['errors'])
 
 
 def test_duplicate_or_lost_legacy_mapping_cannot_pass():

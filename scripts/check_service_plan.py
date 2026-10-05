@@ -4,6 +4,7 @@ import ast
 import hashlib
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 EVIDENCE_FILE = "docs/service-upgrade-evidence.json"
@@ -290,6 +291,17 @@ def check_program(program, root, evidence=None):
     coverage = program.get("coverage_summary", {})
     if coverage.get("new_work_packages") != len(rows):
         errors.append("work package count differs from approved scope")
+    implementation_counts={state:sum(row.get('acceptance_state',{}).get('implementation')==state for row in rows)
+                           for state in ('verified','pending')}
+    status_counts=dict(Counter(row.get('status') for row in rows))
+    execution=program.get('execution',{})
+    progress=execution.get('progress',{}) if isinstance(execution,dict) else {}
+    progress=progress if isinstance(progress,dict) else {}
+    for field,expected in [('parent_implementation',implementation_counts),('parent_status',status_counts)]:
+        saved=progress.get(field)
+        if (not isinstance(saved,dict) or any(type(value) is not int or value<0 for value in saved.values())
+                or saved!=expected or sum(expected.values())!=len(rows)):
+            errors.append(f'execution.progress.{field}: progress counts do not match requirement rows')
     graph = {}
     accepted = 0
     for row in rows:
@@ -367,6 +379,7 @@ def check_program(program, root, evidence=None):
         errors += check_requirement_evidence(program, evidence, root, coverage_text)
     return {"receipt": "ServicePlanSourceGate", "ok": not errors, "errors": errors,
             "work_packages": len(rows), "legacy_rows": len(legacy), "accepted_work_packages": accepted,
+            "parent_implementation": implementation_counts, "parent_status": status_counts,
             "accepted_legacy_rows": sum(1 for row in legacy if row.get("service_acceptance") == "accepted"),
             "scope": "registry, dependency and requirement-evidence integrity; retained receipt hashes/source identities and "
                      "declared Python selectors are checked, not re-executed; historic execution and human approval are separate"}
