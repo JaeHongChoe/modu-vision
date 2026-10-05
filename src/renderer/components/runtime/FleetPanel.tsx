@@ -1,7 +1,7 @@
 import type {WorkflowStep} from '../wizard/workflowReadiness';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useEffect,useRef,useState} from 'react';
-import {request} from '../../services/api';
+import {request,getProjectContextGeneration,getApiPersistenceIdentity,subscribeProjectContext} from '../../services/api';
 import {useDeliveryScope} from './useDeliveryScope';
 import {SavedPackagePicker} from './SavedPackagePicker';
 import {emergencyAcknowledged,type RollbackCapabilities,type EmergencyRollbackEvent,type EmergencyRollbackReceipt} from './emergencyRollbackPolicy';
@@ -11,7 +11,12 @@ type Deployment={deployment_id:string;created_at:number;reviewer:string;restored
 type AgentState={target:Target;runtime:{status:string;device?:string;manifest_sha256?:string;model_sha256?:Record<string,string>};active:Deployment|null;history:Deployment[];matches_active:boolean;error?:string;emergency_rollback_events?:EmergencyRollbackEvent[]};
 const control='min-w-0 rounded border border-slate-600 bg-[#0D1622] p-2 text-xs';
 export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}={}){
-  const {projectDir,scope,key}=useDeliveryScope();
+  const [epoch,setEpoch]=useState(getProjectContextGeneration);
+  const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();
+  const {projectDir,scope,key}=useDeliveryScope(JSON.stringify([epoch,generation,identity]));
+  const same=()=>getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity&&useProjectStore.getState().projectDir===projectDir;
+  const currentScope=(started:{key:string})=>same()&&scope.current===started;
+  useEffect(()=>subscribeProjectContext(()=>setEpoch(getProjectContextGeneration())),[]);
   const [targets,setTargets]=useState<Target[]>([]),[selected,setSelected]=useState(''),[state,setState]=useState<AgentState|null>(null),[name,setName]=useState(''),[url,setUrl]=useState(''),[token,setToken]=useState(''),[packagePath,setPackagePath]=useState(''),[reviewer,setReviewer]=useState(''),[device,setDevice]=useState('cpu'),[rollback,setRollback]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [capabilityRecord,setCapabilities]=useState<{key:string;value:RollbackCapabilities}|null>(null);
   const [reason,setReason]=useState(''),[emergencyStatus,setEmergencyStatus]=useState<'idle'|'submitting'|'acknowledged'|'failed'|'unverified'>('idle'),[emergencyError,setEmergencyError]=useState(''),[submittedReason,setSubmittedReason]=useState('');
@@ -24,8 +29,9 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
   const rolloutRef=useRef(rolloutId);rolloutRef.current=rolloutId;
   const capabilityRequest=useRef(0);
   const refreshCapabilities=async()=>{
+    if(!same())return;
     const started=scope.current,generation=++capabilityRequest.current;
-    const current=()=>scope.current===started&&capabilityRequest.current===generation;
+    const current=()=>currentScope(started)&&capabilityRequest.current===generation;
     setCapabilities(null);setCapabilityError('');
     try{const value=await request<RollbackCapabilities>('/api/fleet/capabilities');if(current())setCapabilities({key:started.key,value});}
     catch(cause){if(current())setCapabilityError('롤백 권한 확인 실패: '+String((cause as Error).message||cause)+' · 실제 상태 확인으로 다시 확인하세요.');}
@@ -35,15 +41,16 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
     setTargets([]);setSelected('');selectedRef.current='';setState(null);setName('');setUrl('');setToken('');setPackagePath('');setReviewer('');setRollback('');setBusy(false);setError('');setCapabilities(null);setCapabilityError('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');
     setRollouts([]);setRolloutId('');rolloutRef.current='';setRollout(null);setRolloutTargets([]);setCanary('');setBatchSize(5);setPauseReason('');
     if(projectDir){
-      request<{targets:Target[]}>('/api/fleet/targets').then(r=>{if(current&&scope.current===started)setTargets(r.targets);}).catch(e=>{if(current&&scope.current===started)setError(String(e.message||e));});
+      request<{targets:Target[]}>('/api/fleet/targets').then(r=>{if(current&&currentScope(started))setTargets(r.targets);}).catch(e=>{if(current&&currentScope(started))setError(String(e.message||e));});
       void refreshCapabilities();
-      fleetRollouts.list().then(result=>{if(current&&scope.current===started)setRollouts(result.rollouts);}).catch(cause=>{if(current&&scope.current===started)setError(String(cause.message||cause));});
+      fleetRollouts.list().then(result=>{if(current&&currentScope(started))setRollouts(result.rollouts);}).catch(cause=>{if(current&&currentScope(started))setError(String(cause.message||cause));});
     }
     return()=>{current=false;};
   },[key]);
   const read=async(identifier:string)=>{
+    if(!same())return;
     const started=scope.current;
-    const current=()=>scope.current===started&&selectedRef.current===identifier;
+    const current=()=>currentScope(started)&&selectedRef.current===identifier;
     const pending=()=>lastReceipt.current?.scope===started&&lastReceipt.current.targetId===identifier?lastReceipt.current:null;
     if(current()&&pending()){
       setEmergencyStatus(previous=>previous==='submitting'?previous:'unverified');
@@ -71,15 +78,17 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
     }
   };
   const readRollout=async(identifier:string)=>{
+    if(!same())return;
     const started=scope.current;
     const result=await fleetRollouts.read(identifier);
-    if(scope.current===started&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
+    if(currentScope(started)&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
     return result;
   };
   const createRollout=async()=>{
+    if(!same())return;
     const started=scope.current;
     const result=await fleetRollouts.create({package_path:packagePath,device,reviewer,target_ids:rolloutTargets,canary_target_ids:[canary],batch_size:batchSize});
-    if(scope.current!==started)return;
+    if(!currentScope(started))return;
     rolloutRef.current=result.plan_id;setRolloutId(result.plan_id);setRollout(result);setRollouts(previous=>[result,...previous]);
   };
   const operateRollout=async(operation:'advance'|'confirm'|'pause'|'resume'|'rollback')=>{
@@ -89,28 +98,29 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
       const result=operation==='advance'||operation==='confirm'?await fleetRollouts.advance(identifier,revision,reviewer,operation==='confirm'):
         operation==='pause'?await fleetRollouts.pause(identifier,revision,reviewer,pauseReason):
         operation==='resume'?await fleetRollouts.resume(identifier,revision,reviewer):await fleetRollouts.rollback(identifier,revision,reviewer);
-      if(scope.current===started&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
+      if(currentScope(started)&&rolloutRef.current===identifier){setRollout(result);setRollouts(previous=>[result,...previous.filter(row=>row.plan_id!==identifier)]);}
     }catch(cause){
       // A transport interruption can follow a committed target action; reload its
       // durable plan before offering another revision-bound command.
-      if(scope.current===started&&rolloutRef.current===identifier){try{await readRollout(identifier);}catch{/* Original command error remains visible. */}}
+      if(currentScope(started)&&rolloutRef.current===identifier){try{await readRollout(identifier);}catch{/* Original command error remains visible. */}}
       throw cause;
     }
   };
   const rolloutButtons=rollout?rolloutControls(rollout):null;
   const refreshActualState=async()=>{
+    if(!same())return;
     // Capability failure disables actions independently of target evidence.
     const [targetResult]=await Promise.allSettled([read(selected),refreshCapabilities()]);
     if(targetResult.status==='rejected')throw targetResult.reason;
   };
-  const action=async(fn:()=>Promise<unknown>)=>{const started=scope.current;setBusy(true);setError('');try{await fn();}catch(e){if(scope.current===started)setError(String((e as Error).message||e));}finally{if(scope.current===started)setBusy(false);}};
-  const add=async()=>{const started=scope.current;await request('/api/fleet/targets',{method:'POST',body:JSON.stringify({name,url,token})});if(scope.current!==started)return;setToken('');setName('');setUrl('');const result=await request<{targets:Target[]}>('/api/fleet/targets');if(scope.current===started)setTargets(result.targets);};
-  const deploy=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/deploy`,{method:'POST',body:JSON.stringify({package_path:packagePath,device,reviewer})});if(scope.current===started)await read(selected);};
-  const restore=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/rollback`,{method:'POST',body:JSON.stringify({deployment_id:rollback,reviewer})});if(scope.current===started)await read(selected);};
+  const action=async(fn:()=>Promise<unknown>)=>{if(!same())return;const started=scope.current;setBusy(true);setError('');try{await fn();}catch(e){if(currentScope(started))setError(String((e as Error).message||e));}finally{if(currentScope(started))setBusy(false);}};
+  const add=async()=>{const started=scope.current;await request('/api/fleet/targets',{method:'POST',body:JSON.stringify({name,url,token})});if(!currentScope(started))return;setToken('');setName('');setUrl('');const result=await request<{targets:Target[]}>('/api/fleet/targets');if(currentScope(started))setTargets(result.targets);};
+  const deploy=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/deploy`,{method:'POST',body:JSON.stringify({package_path:packagePath,device,reviewer})});if(currentScope(started))await read(selected);};
+  const restore=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/rollback`,{method:'POST',body:JSON.stringify({deployment_id:rollback,reviewer})});if(currentScope(started))await read(selected);};
   const emergencyRestore=async()=>{
-    if(busy||!capabilities?.can_emergency_rollback||!selected||!rollback||!reason.trim())return;
+    if(!same()||busy||!capabilities?.can_emergency_rollback||!selected||!rollback||!reason.trim())return;
     const started=scope.current,identifier=selected,deploymentId=rollback,incidentReason=reason.trim();
-    const current=()=>scope.current===started&&selectedRef.current===identifier;
+    const current=()=>currentScope(started)&&selectedRef.current===identifier;
     lastReceipt.current=null;setSubmittedReason('');
     setBusy(true);setEmergencyStatus('submitting');setEmergencyError('');setError('');
     try{

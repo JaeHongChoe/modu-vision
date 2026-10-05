@@ -107,16 +107,17 @@ def test_truth_changed_after_approval_blocks_new_release(bound_context, tmp_path
 
 
 class _Transport:
-    def __init__(self): self.calls = []; self.current = None
+    def __init__(self): self.calls = []; self.current = None; self.response = None
     def __enter__(self): return self
     def __exit__(self, *args): pass
     def post(self, url, **kwargs):
         self.calls.append(('POST', url))
         if url == '/agent/v1/apply': self.current = {'status':'ready', **kwargs['json']}
+        self.response = {'status':'staged','manifest_sha256':kwargs['headers']['X-Manifest-SHA256']} if url == '/agent/v1/releases' else self.current
         return self
-    def get(self, url): self.calls.append(('GET', url)); return self
+    def get(self, url): self.calls.append(('GET', url)); self.response=self.current; return self
     def raise_for_status(self): pass
-    def json(self): return dict(self.current)
+    def json(self): return dict(self.response)
 
 
 def test_central_rollback_rechecks_revocation_and_preserves_valid_history(bound_context, tmp_path, monkeypatch):

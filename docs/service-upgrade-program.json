@@ -3668,7 +3668,7 @@
     "S4-14",
     "S5-01"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -3676,6 +3676,14 @@
      "result": "Durable staged rollout and reverse rollback; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Actual device ACK/readback and field rollout/rollback.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "224dcf6a29bf88392b34835bd87e51cc965b56d4",
+     "result": "Task99: exact stage and apply ACK validation plus independent runtime readback; project/account generation refuses retained UI actions and late replies. Actual Chrome/macOS Electron each registers two authenticated owned OS agents, executes four real deterministic CPU inspections, measures inspection continuity during agent connection loss, explicitly resumes/canary-confirms and reopens/reverse-rolls-back both targets to their first exact manifests. Backend73 pass/1 Windows-only skip, renderer746, causal UI2, production/E2E TypeScript pass. Root readback SHA-256 50e34ed05effcf3889ff247ab4e4f49b554c6ddc23748f5700b0ac52453e6ed5.",
+     "scope": "Controlled synthetic approval reports, untrained models and two loopback field agents. Actual package/job/central and field SQLite bytes are verified, not inferred from mocked transport. Physical field devices, representative quality, long-duration/reboot, installed target, independent review and full acceptance pending.",
+     "platform": "Actual Chrome/macOS development Electron/main/preload/owned backend and OS agent/runtime processes; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -3685,12 +3693,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9325,12 +9333,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 40,
-    "pending": 42
+    "verified": 41,
+    "pending": 41
    },
    "parent_status": {
-    "verification_pending": 34,
-    "in_progress": 20,
+    "verification_pending": 35,
+    "in_progress": 19,
     "planned": 28
    },
    "merged_extension_slices": 16,

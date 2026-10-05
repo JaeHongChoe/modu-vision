@@ -129,7 +129,11 @@ class FleetRegistry:
             with self.client(identifier) as client:
                 response=client.post('/agent/v1/releases',content=package_archive(package),headers={'Content-Type':'application/zip','X-Manifest-SHA256':selected['manifest_sha256'],
                     'X-Release-Policy':json.dumps(policy,separators=(',',':'))});response.raise_for_status()
+                staged=response.json()
+                if not isinstance(staged,dict) or staged.get('status')!='staged' or staged.get('manifest_sha256')!=selected['manifest_sha256']:
+                    raise ValueError('Field stage acknowledgment identity mismatch')
                 response=client.post('/agent/v1/apply',json={'manifest_sha256':selected['manifest_sha256'],'device':selected['device']});response.raise_for_status()
+                DeploymentLedger._validate_ack(selected,response.json())
                 ack=client.get('/agent/v1/runtime');ack.raise_for_status();return ack.json()
         return self.ledger(identifier).apply(release,apply_remote,reviewer=reviewer,restored_from=restored_from)
     def emergency_events(self,identifier):

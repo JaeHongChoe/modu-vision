@@ -20,6 +20,7 @@ def fleet(tmp_path,monkeypatch):
         if identifier in offline:raise httpx.ConnectError('simulated offline',request=request)
         if request.method=='POST':
             writes.append((identifier,request.url.path))
+            if request.url.path=='/agent/v1/releases':return httpx.Response(200,json={'status':'staged','manifest_sha256':request.headers['X-Manifest-SHA256']})
             if request.url.path=='/agent/v1/apply':runtime[identifier]={'status':'ready',**json.loads(request.content)}
         return httpx.Response(200,json=runtime[identifier])
     monkeypatch.setattr(FleetRegistry,'client',lambda self,identifier:httpx.Client(base_url=self.target(identifier)['url'],transport=httpx.MockTransport(handler)))
@@ -36,6 +37,28 @@ def create(fleet):
     store,project,ids,release,*_=fleet
     assert hasattr(store,'create_rollout'),'Durable fleet rollout contract is missing'
     return store.create_rollout(release,target_ids=ids,canary_target_ids=[ids[0]],batch_size=2,reviewer='fixture QA',project=project)
+
+
+@pytest.mark.parametrize('step,bad',[
+    ('stage',{}),('stage',{'status':'ready','manifest_sha256':'a'*64}),
+    ('stage',{'status':'staged','manifest_sha256':'b'*64}),
+    ('apply',{}),('apply',{'status':'ready','manifest_sha256':'b'*64,'device':'cpu'}),
+    ('apply',{'status':'ready','manifest_sha256':'a'*64,'device':'cuda:0'}),
+])
+def test_release_post_ack_must_match_even_when_final_readback_is_correct(fleet,monkeypatch,step,bad):
+    store,project,ids,release,runtime,offline,writes,gates=fleet
+    def handler(request):
+        writes.append((ids[0],request.url.path))
+        if request.url.path=='/agent/v1/releases':
+            return httpx.Response(200,json=bad if step=='stage' else {'status':'staged','manifest_sha256':release['manifest_sha256']})
+        if request.url.path=='/agent/v1/apply':
+            return httpx.Response(200,json=bad if step=='apply' else {'status':'ready','manifest_sha256':release['manifest_sha256'],'device':'cpu'})
+        return httpx.Response(200,json={'status':'ready','manifest_sha256':release['manifest_sha256'],'device':'cpu'})
+    monkeypatch.setattr(store,'client',lambda identifier:httpx.Client(base_url=store.target(identifier)['url'],transport=httpx.MockTransport(handler)))
+    with pytest.raises(ValueError,match='acknowledgment'):
+        store.apply(ids[0],release,reviewer='QA',project=project)
+    assert store.ledger(ids[0]).active() is None
+    if step=='stage':assert not any(path=='/agent/v1/apply' for _,path in writes)
 
 
 def test_canary_confirmation_precedes_batches_and_plan_reopens(fleet):
