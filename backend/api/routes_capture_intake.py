@@ -107,6 +107,11 @@ def version(identifier:str,request:Request):
     return execute(lambda:capture_intake.read_version(get_current_project(request),identifier))
 
 
+@router.get('/versions/{identifier}/parent')
+def parent_source(identifier:str,request:Request):
+    return execute(lambda:capture_intake.parent_source(get_current_project(request),identifier))
+
+
 class SamplingPolicyRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     expected_revision:int=Field(ge=0)

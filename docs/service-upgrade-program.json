@@ -2583,7 +2583,7 @@
     "S3-04",
     "S5-01"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -2591,6 +2591,14 @@
      "result": "Durable review priority with source/run identity; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Representative captured jobs, human label adoption and full parent UI workflow.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "afff0d1ad08cc63db193511c4f496c8a191890e2",
+     "result": "Actual Chrome/macOS Electron flows qualify persisted service-result run/node/source identity, priority reasons, duplicate/damaged UNKNOWN routing, review/reopen, explicit owned adoption, actual label editing without automatic truth/training inclusion, fixed test preservation and verified original return. Changed parent image/labels/split/policy/labelset refuses return. Current affected backend86 and renderer714 pass. Private frozen-source/saved-byte/process readback SHA-256 022110b7bc59f084f985456118754d63a32a3545c858b17c79966adcb6062e17.",
+     "scope": "All unchanged original software clauses composed and reviewed together in Task87. Controlled service results exercise software routing and do not establish representative captured/model/human quality. Independent review remains unavailable.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend. Windows tests excluded by the project owner; no new SSH/GPU/model execution.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -2600,12 +2608,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -2613,6 +2621,10 @@
    "proposed_test_file": "backend/tests/test_service_s3_09.py",
    "scope_refinement_ids": [
     "E06"
+   ],
+   "remaining": [
+    "Controlled service results exercise software routing and do not establish representative captured/model/human quality.",
+    "Independent review and installed/operational/target acceptance remain pending. Windows tests excluded; full parent acceptance is not promoted."
    ]
   },
   {
@@ -3701,7 +3713,7 @@
     "S3-10",
     "S5-01"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -3709,6 +3721,14 @@
      "result": "Protected retention, recoverable trash and restore; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Real recovery drill, operational policy and full target qualification.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "afff0d1ad08cc63db193511c4f496c8a191890e2",
+     "result": "Actual Chrome/macOS Electron creates a consistent archive and restores into a fresh empty project, preserving original hashes, saved labels/review audit, committed SQLite rows, inert artifacts, runtime config and retention quota/pins/trash. Backup verification is separate from actual restore verification; existing target refuses overwrite. Current affected backend61 and cutover34 pass, including concurrent retention pins, linked drift references, atomic/cancel/crash recovery and stale-backup refusal after new normal writes. Private frozen-source/saved-byte/process readback SHA-256 f119761906c9cbf0123a91c51b8521be33d1b01267b74431d191170f2c5051a2.",
+     "scope": "All unchanged original software clauses composed and reviewed together in Task88. Controlled recovery of owned fixtures qualifies software behavior. Installed fleet, live worker adoption, representative operational/legal policy and real-model/field acceptance remain separate. Independent review remains unavailable.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend. Windows tests excluded by the project owner; no new SSH/GPU/model execution.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -3718,12 +3738,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -3732,6 +3752,10 @@
    "scope_refinement_ids": [
     "E06",
     "E08"
+   ],
+   "remaining": [
+    "Controlled recovery of owned fixtures qualifies software behavior. Installed fleet, live worker adoption, representative operational/legal policy and real-model/field acceptance remain separate.",
+    "Independent review and installed/operational/target acceptance remain pending. Windows tests excluded; full parent acceptance is not promoted."
    ]
   },
   {
@@ -9184,19 +9208,19 @@
    "S4-11",
    "S5-08"
   ],
-  "last_verified_on": "2026-10-04",
+  "last_verified_on": "2026-10-05",
   "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
   "verified_source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 28,
-    "pending": 54
+    "verified": 30,
+    "pending": 52
    },
    "parent_status": {
-    "verification_pending": 22,
-    "in_progress": 24,
+    "verification_pending": 24,
+    "in_progress": 22,
     "planned": 36
    },
    "merged_extension_slices": 16,

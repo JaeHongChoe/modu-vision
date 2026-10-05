@@ -472,6 +472,25 @@ def read_version(project,identifier):
     return record
 
 
+def parent_source(project, identifier):
+    """Verify the recorded parent before an explicit UI source selection.
+
+    This does not activate either source, restore files, or copy declarations.
+    Returning to a changed parent needs fresh review instead of silently reusing
+    the adoption record's original image, label, split or review-policy evidence.
+    """
+    record = read_version(project, identifier)
+    if str(Path(project.get('source_dataset_dir') or '').resolve()) != record['source_dataset_path']:
+        raise ValueError('Active intake source changed; select this version before returning to its parent')
+    parent = {**project, 'source_dataset_dir': record['parent_source_dataset_path']}
+    if _scope(parent) != record['scope']:
+        raise ValueError('Parent source/task/labelset scope changed')
+    if _source_binding(parent) != record['parent_source_binding']:
+        raise ValueError('Parent source, labels, split or review policy changed after adoption')
+    return {'version_id': identifier, 'source_dataset_path': record['parent_source_dataset_path'],
+            'parent_source_binding': record['parent_source_binding'], 'activated': False}
+
+
 def list_versions(project):
     rows=[]
     for identifier in _index(project)['versions']:

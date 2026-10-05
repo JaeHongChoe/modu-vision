@@ -133,6 +133,51 @@ def test_service_database_and_capture_symlinks_are_rejected(intake,project,tmp_p
         intake.register_service_jobs(p,job_ids=[job])
 
 
+def _reviewed_version(intake, project):
+    p, _store, job = project
+    candidate = intake.register_service_jobs(p, job_ids=[job])['candidates'][0]
+    intake.review_candidate(p, candidate['candidate_id'], expected_revision=1, actor='Reviewer', decision='adopt')
+    return intake.adopt_candidates(p, [candidate['candidate_id']], actor='Reviewer', name='Reviewed branch')
+
+
+def test_intake_parent_return_verifies_original_binding_without_switching_or_copying_truth(intake, project):
+    p, _store, _job = project
+    version = _reviewed_version(intake, project)
+    active = {**p, 'source_dataset_dir': version['source_dataset_path']}
+    returned = intake.parent_source(active, version['version_id'])
+    assert returned['source_dataset_path'] == p['source_dataset_dir']
+    assert returned['parent_source_binding'] == version['parent_source_binding']
+    assert returned['activated'] is False
+    assert active['source_dataset_dir'] == version['source_dataset_path']
+    from backend.engine.image_truth import read_truth
+    assert read_truth(p, str(Path(p['source_dataset_dir'])/'test.png'), task='segmentation', classes=['background','crack'])['verdict'] == 'UNKNOWN'
+
+
+@pytest.mark.parametrize('change', ['image', 'split', 'labels', 'policy', 'labelset'])
+def test_intake_parent_return_refuses_changed_original_or_labelset(intake, project, change):
+    p, _store, _job = project
+    version = _reviewed_version(intake, project)
+    active = {**p, 'source_dataset_dir': version['source_dataset_path']}
+    source = Path(p['source_dataset_dir'])
+    if change == 'image':
+        Image.new('RGB', (24,24), 'yellow').save(source/'test.png')
+    elif change == 'split':
+        split, record = intake._split(p)
+        record['seed'] = 99
+        split.write_text(json.dumps(record))
+    elif change == 'labels':
+        label = json.loads((source/'test.json').read_text())
+        label['shapes'] = [{'label':'crack','shape_type':'polygon','points':[[1,1],[9,1],[9,9]]}]
+        (source/'test.json').write_text(json.dumps(label))
+    elif change == 'policy':
+        with dm.metadata_transaction(p['project_dir'], source, p['annotations_dir']) as ledger:
+            ledger['team_data']['settings']['required_reviews'] = 3
+    else:
+        active['active_labelset_id'] = 'another-set'
+    with pytest.raises(ValueError, match='changed|scope'):
+        intake.parent_source(active, version['version_id'])
+
+
 def test_capture_api_keeps_session_review_identity_and_source_selection_explicit(intake,project):
     from fastapi import FastAPI
     from backend.api.routes_capture_intake import router
@@ -160,6 +205,15 @@ def test_capture_api_keeps_session_review_identity_and_source_selection_explicit
     assert adopted.json()['actor']=='Session Reviewer'
     assert adopted.json()['activated'] is False
     assert p['source_dataset_dir']!=adopted.json()['source_dataset_path']
+    original_source = p['source_dataset_dir']
+    parent_route = '/api/capture-intake/versions/' + adopted.json()['version_id'] + '/parent'
+    assert client.get(parent_route).status_code == 409
+    p['source_dataset_dir'] = adopted.json()['source_dataset_path']
+    returned = client.get(parent_route)
+    assert returned.status_code == 200, returned.text
+    assert returned.json()['source_dataset_path'] == original_source
+    assert returned.json()['activated'] is False
+    assert p['source_dataset_dir'] == adopted.json()['source_dataset_path']
 
 
 def sampling_policy(revision=1):

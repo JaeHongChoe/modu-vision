@@ -42,4 +42,5 @@ export const captureIntake={
   adopt:(candidate_ids:string[],actor:string,name:string)=>request<CaptureVersion>('/api/capture-intake/adopt',json('POST',{candidate_ids,actor,name})),
   versions:()=>request<{versions:CaptureVersion[];total:number}>('/api/capture-intake/versions'),
   version:(id:string)=>request<CaptureVersion>(`/api/capture-intake/versions/${encodeURIComponent(id)}`),
+  parentSource:(id:string)=>request<{version_id:string;source_dataset_path:string;activated:false}>(`/api/capture-intake/versions/${encodeURIComponent(id)}/parent`),
 };
