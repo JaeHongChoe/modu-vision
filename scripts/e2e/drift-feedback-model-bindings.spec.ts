@@ -1,0 +1,97 @@
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import type {Page} from '@playwright/test';
+import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const harness=require('./fixtures/harness.cjs');
+test.use({actionTimeout:10_000});
+type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
+const sha=(bytes:Buffer)=>crypto.createHash('sha256').update(bytes).digest('hex');
+
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,native:boolean,url?:string){
+ const prefix=native?'native':'browser',name='Drift feedback fixture';
+ await api('/api/project/create',{name,task:'classification'});
+ const project=await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');
+ await api('/api/dataset/import',{folder_path:workspace.dataset,task:'classification'});
+ const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/capture_intake_records.py'),workspace.root,JSON.stringify(project)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30_000}));
+ const navigate=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();await page.getByRole('button',{name:'서비스 캡처 · 데이터 개선 후보',exact:true}).click();};
+ await navigate();
+ const panel=page.getByRole('region',{name:'서비스 캡처 데이터 개선'});
+ await panel.getByLabel('캡처 서비스 작업 ID').fill(Object.values(fixture.jobs).join(','));
+ await panel.getByRole('button',{name:'실제 서비스 캡처 등록',exact:true}).click();
+ await expect(panel.getByRole('status')).toContainText('6개 작업');
+ const queue=await api('/api/capture-intake/review-queue');
+ const baseline=queue.candidates.find((r:any)=>r.origin.job_id===fixture.jobs.plain);
+ const incoming=queue.candidates.find((r:any)=>r.origin.job_id===fixture.jobs.review);
+ await panel.locator('summary',{hasText:'현장 이미지 드리프트 · 기준 버전 비교'}).click();
+ await panel.getByLabel(`${baseline.candidate_id} 드리프트 기준 선택`,{exact:true}).check();
+ await panel.getByLabel('드리프트 기준 검토자',{exact:true}).fill('fixture-reviewer');
+ await panel.getByRole('button',{name:'선택한 1개를 기준 버전으로 고정',exact:true}).click();
+ await expect(panel.getByText('1개 캡처를 변경 불가 기준으로 고정했습니다.',{exact:true})).toBeVisible();
+ const reference=(await api('/api/capture-intake/drift/references')).references[0];
+ const referenceFile=path.join(project.dataset_dir,'capture_intake','drift',reference.reference_id+'.json');
+ const frozen=fs.readFileSync(referenceFile),frozenRecord=JSON.parse(frozen.toString());
+ expect(frozenRecord.feedback_at_freeze).toHaveLength(1);
+ expect(frozenRecord.feedback_at_freeze[0].decision).toBe('pending');
+ await panel.getByRole('button',{name:'실제 캡처와 비교',exact:true}).click();
+ const feedback=panel.locator('[aria-label="드리프트 캡처 검토 변화"]');
+ await expect(feedback).toContainText('관측 검토 0개');
+ const row=(id:string)=>panel.getByRole('row').filter({has:page.getByLabel(`${id} 드리프트 기준 선택`,{exact:true})});
+ const review=async(id:string,decision:'adopt'|'reject')=>{
+  await row(id).getByRole('button',{name:'캡처 검토',exact:true}).click();
+  const detail=panel.locator('[aria-label="캡처 후보 검토"]');
+  await detail.getByLabel('캡처 검토자',{exact:true}).fill('fixture-reviewer');
+  await detail.getByLabel('캡처 검토 메모',{exact:true}).fill('Controlled adoption review only');
+  await detail.getByRole('button',{name:decision==='adopt'?'새 데이터에 채택할 후보로 검토':'후보 제외 검토',exact:true}).click();
+  await expect(row(id)).toContainText(`${decision==='adopt'?'채택 후보':'제외'} · fixture-reviewer`);
+  await expect(feedback).toHaveCount(0);
+  await detail.getByRole('button',{name:'검토 닫기',exact:true}).click();
+ };
+ await review(incoming.candidate_id,'adopt');
+ await review(baseline.candidate_id,'reject');
+ await panel.getByRole('button',{name:'실제 캡처와 비교',exact:true}).click();
+ await expect(feedback).toContainText('관측 검토 1개 · 기준 표본의 이후 검토 변경 1개');
+ await expect(feedback).toContainText('채택 후보: 0.0% → 25.0% · 변화 25.0%p');
+ await expect(feedback).toContainText('검토 대기: 100.0% → 75.0% · 변화 -25.0%p');
+ await expect(panel.getByText('REVIEW 예측 비율 변화 25.0%p',{exact:true})).toBeVisible();
+ await panel.locator('summary',{hasText:'기준·관측 모델 출처'}).click();
+ await expect(panel.getByText('기준 모델 출처',{exact:true})).toBeVisible();
+ await expect(panel.getByText('관측 모델 출처',{exact:true})).toBeVisible();
+ await expect(panel.getByText('controlled_fixture: '+'c'.repeat(64),{exact:true})).toHaveCount(2);
+ await evidence.screenshot(page,`${prefix}-frozen-feedback-current-review-model-provenance`);
+ const report=await api(`/api/capture-intake/drift/references/${reference.reference_id}/report`);
+ expect(report.reference_count).toBe(1);expect(report.observed_count).toBe(4);expect(report.excluded_count).toBe(1);
+ expect(report.reference_sha256).toBe(reference.record_sha256);
+ expect(report.human_feedback.rates.adopt).toEqual({reference:0,observed:.25,delta:.25});
+ expect(report.human_feedback.reference_updates).toHaveLength(1);
+ expect(report.human_feedback.reference_updates[0]).toMatchObject({candidate_id:baseline.candidate_id,reference_decision:'pending',current_decision:'reject'});
+ expect(report.model_bindings.reference[0]).toMatchObject({manifest_sha256:'b'.repeat(64),model_sha256:{controlled_fixture:'c'.repeat(64)}});
+ expect(report.model_bindings.observed).toEqual(report.model_bindings.reference);
+ expect(report.quality_status).toBe('unverified_without_truth');expect(report.automatic_action).toBe('none');
+ expect(report.observed_samples.every((r:any)=>r.truth==='UNKNOWN')).toBe(true);
+ expect(fs.readFileSync(referenceFile)).toEqual(frozen);
+ await navigate();
+ await panel.locator('summary',{hasText:'현장 이미지 드리프트 · 기준 버전 비교'}).click();
+ await panel.getByLabel('드리프트 기준 버전',{exact:true}).selectOption(reference.reference_id);
+ await panel.getByRole('button',{name:'실제 캡처와 비교',exact:true}).click();
+ await expect(feedback).toContainText('관측 검토 1개 · 기준 표본의 이후 검토 변경 1개');
+ const reopened=await api(`/api/capture-intake/drift/references/${reference.reference_id}/report`);
+ expect(reopened.human_feedback).toEqual(report.human_feedback);expect(reopened.model_bindings).toEqual(report.model_bindings);
+ expect(fs.readFileSync(referenceFile)).toEqual(frozen);
+ for(const original of workspace.images){expect(sha(fs.readFileSync(original.path))).toBe(original.sha256);evidence.addFile(original.path);}
+ for(const file of [referenceFile,fixture.split_path,path.join(project.dataset_dir,'capture_intake','index.json')])evidence.addFile(file);
+ evidence.note('drift_feedback_model_bindings',{project,fixture,reference,frozenRecord,referenceFile,referenceFileSha256:sha(frozen),report,reopened,originals:workspace.images,actual_ui_and_backend:true,frozen_reference_unchanged_after_reviews:true,review_invalidates_visible_report:true,reopened_feedback_and_model_bindings:true,controlled_service_results_not_model_execution:true,no_truth_quality_or_automatic_training_approval:true,parent_promoted:false});
+}
+test('drift freezes feedback and reopens review changes with exact model bindings',async({page,request,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);
+ const api:Api=async(route,body,method)=>{const r=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),`Owned drift fixture HTTP ${r.status()}`).toBe(true);return r.json();};
+ await exercise(page,workspace,evidence,api,false,renderer.url);
+});
+test('native drift preserves frozen feedback and displays current review model bindings',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const {window}=electronSession,status=await electronSession.waitForBackend();
+ const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned drift fixture HTTP ${r.status}`);return r.json();},{port:status.port,route,body,method});
+ await exercise(window,workspace,evidence,api,true);
+});

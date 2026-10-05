@@ -23,7 +23,9 @@ export type CaptureVersion={
   training_readiness:string;lineage:{parent_source_dataset_path:string;task:string;labelset_id:string;parent_model_rule:string};
 };
 export type DriftReference={reference_id:string;name:string;actor:string;created_at:string;record_sha256:string;sample_count?:number};
-export type DriftReport={reference_id:string;reference_sha256:string;report_sha256:string;state:string;reference_count:number;observed_count:number;excluded_count:number;quality_status:string;image_statistics:{mean_luminance_delta:number|null;histogram_l1_distance:number|null};prediction_rates:Record<string,{reference:number;observed:number|null;delta:number|null}>;strata:Array<{product_id:string;lot_id:string;camera:string;reference_count:number;observed_count:number;model_changed:boolean}>};
+export type DriftModelBinding={runtime_sha256:string;manifest_sha256:string|null;model_sha256:Record<string,string>};
+export type DriftReport={reference_id:string;reference_sha256:string;report_sha256:string;state:string;reference_count:number;observed_count:number;excluded_count:number;quality_status:string;image_statistics:{mean_luminance_delta:number|null;histogram_l1_distance:number|null};prediction_rates:Record<string,{reference:number;observed:number|null;delta:number|null}>;strata:Array<{product_id:string;lot_id:string;camera:string;reference_count:number;observed_count:number;model_changed:boolean}>;
+ human_feedback?:{reference_available:boolean;rates:Record<string,{reference:number|null;observed:number|null;delta:number|null}>;reference_updates:Array<{candidate_id:string;reference_decision:string;current_decision:string;current_review_revision:number|null}>;observed_review_count:number;scope:string};model_bindings?:{reference:DriftModelBinding[];observed:DriftModelBinding[]}};
 const json=(method:string,body:unknown):RequestInit=>({method,body:JSON.stringify(body)});
 export function captureRoutingLabel(value:CaptureRouting):string{return {unknown:'정답 미확인',duplicate:'중복',failed:'실패'}[value];}
 export type SamplingStatus={policy:Record<string,unknown>|null;policy_ref:string|null;held_items:number;held_bytes:number;

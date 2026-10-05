@@ -3843,6 +3843,11 @@
      "result": "Immutable reference drift reports and controls; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Representative baseline, full improvement loop and sampling integration.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "task106-drift-frozen-human-feedback-model-bindings",
+     "result": "backend31/renderer767, production/E2E types and actual Chrome/macOS development Electron2 pass33.0s; root readback d96aff23322c12ed65220273a67bdd912c154df399abe50e96c3746344745617",
+     "scope": "Immutable adoption feedback-at-freeze, observed adopt/reject/pending rates and baseline review changes; legacy feedback unrecorded/null, REVIEW prediction delta and exact known model bindings. Controlled persisted service fixtures, no learned/device execution or truth/quality/automatic-training approval. Full parent improvement loop and final acceptance remain pending."
     }
    ],
    "file_actions": {

@@ -13,6 +13,51 @@ from backend.engine.image_truth import digest
 MAX_SAMPLES = 2000
 
 
+def _feedback(row):
+    review = row.get('review')
+    return {'candidate_id': row['candidate_id'],
+            'decision': review['decision'] if review else 'pending',
+            'review_revision': review.get('candidate_revision') if review else None,
+            'actor': review.get('actor') if review else None,
+            'at': review.get('at') if review else None}
+
+
+def _feedback_report(reference, baseline_rows, observed_rows):
+    frozen = reference.get('feedback_at_freeze')
+    if frozen is not None and {r['candidate_id'] for r in frozen} != {r['candidate_id'] for r in baseline_rows}:
+        raise ValueError('Reference feedback sample binding changed')
+    current = [_feedback(r) for r in observed_rows]
+    rates = {}
+    for decision in ('adopt', 'reject', 'pending'):
+        old = sum(r['decision'] == decision for r in frozen) / len(frozen) if frozen else None
+        new = sum(r['decision'] == decision for r in current) / len(current) if current else None
+        rates[decision] = {'reference': old, 'observed': new,
+                           'delta': new - old if old is not None and new is not None else None}
+    prior = {r['candidate_id']: r for r in frozen or []}
+    updates = []
+    for row in baseline_rows:
+        now = _feedback(row); old = prior.get(row['candidate_id'])
+        if old is not None and now != old:
+            updates.append({'candidate_id': row['candidate_id'], 'reference_decision': old['decision'],
+                            'current_decision': now['decision'], 'current_review_revision': now['review_revision']})
+    return {'reference_available': frozen is not None, 'rates': rates,
+            'reference_updates': updates, 'observed_review_count': sum(r['decision'] != 'pending' for r in current),
+            'scope': 'capture adoption review only; not labels, truth or model-quality approval'}
+
+
+def _model_bindings(samples):
+    bindings = {}
+    for row in samples:
+        identity = row.get('runtime_identity')
+        if not isinstance(identity, dict):
+            continue
+        fingerprint = digest(identity)
+        bindings[fingerprint] = {'runtime_sha256': fingerprint,
+                                 'manifest_sha256': identity.get('manifest_sha256'),
+                                 'model_sha256': copy.deepcopy(identity.get('model_sha256') or {})}
+    return [bindings[key] for key in sorted(bindings)]
+
+
 def _directory(project):
     directory = ci._owned(project, ci._root(project) / 'drift')
     directory.mkdir(parents=True, exist_ok=True)
@@ -49,6 +94,7 @@ def create_reference(project, candidate_ids, *, actor, name):
         record = {'schema_version': 1, 'reference_id': 'driftref_' + uuid.uuid4().hex,
                   'scope': ci._scope(project), 'name': name.strip(), 'actor': actor.strip(), 'created_at': dm._now(),
                   'samples': [_sample(project, row) for row in rows], 'quality_status': 'unverified_without_truth',
+                  'feedback_at_freeze': [_feedback(row) for row in rows],
                   'feature_definition': 'PIL luminance 32x32, 16 equal bins; no learned embeddings'}
         record['record_sha256'] = digest(record)
         atomic_json(_directory(project) / (record['reference_id'] + '.json'), record)
@@ -100,11 +146,13 @@ def report(project, identifier):
         index = ci._index(project)
         baseline_ids = {sample['candidate_id'] for sample in reference['samples']}
         # Reopen actual images instead of trusting the frozen statistics alone.
+        baseline_rows = []
         for sample in reference['samples']:
-            actual = _sample(project, ci._candidate(project, index, sample['candidate_id']))
+            row = ci._candidate(project, index, sample['candidate_id']); baseline_rows.append(row)
+            actual = _sample(project, row)
             if digest(actual) != digest(sample):
                 raise ValueError('Reference image or run evidence changed')
-        incoming, excluded = [], []
+        incoming, observed_rows, excluded = [], [], []
         candidates = ci.list_candidates(project)['candidates']
         for row in candidates:
             if row['candidate_id'] in baseline_ids:
@@ -113,6 +161,7 @@ def report(project, identifier):
                 excluded.append({'candidate_id':row['candidate_id'],'reason':row.get('stale_reason') or row['failure'] or 'unavailable'})
             elif len(incoming) < MAX_SAMPLES:
                 incoming.append(_sample(project, row))
+                observed_rows.append(row)
             else:
                 excluded.append({'candidate_id':row['candidate_id'],'reason':'sample_limit'})
         baseline = reference['samples']
@@ -132,6 +181,8 @@ def report(project, identifier):
                   'generated_at':dm._now(),'state':'observed' if incoming else 'insufficient_samples',
                   'reference_count':len(baseline),'observed_count':len(incoming),'excluded_count':len(excluded),'excluded':excluded,
                   'observed_samples':incoming, 'image_statistics':_compare(baseline,incoming), 'prediction_rates':prediction_rates,
+                  'human_feedback': _feedback_report(reference, baseline_rows, observed_rows),
+                  'model_bindings': {'reference': _model_bindings(baseline), 'observed': _model_bindings(incoming)},
                   'strata':strata,'quality_status':'unverified_without_truth','automatic_action':'none',
                   'next_action':'Review selected captures and validated labels before considering retraining',
                   'limitations':['Image statistics and prediction-rate changes do not establish model quality',
