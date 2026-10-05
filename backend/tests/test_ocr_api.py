@@ -97,3 +97,29 @@ def test_ocr_api_rejects_duplicate_content_across_splits(tmp_path: Path):
     assert response.status_code == 422
     assert "split" in response.json()["detail"]
     assert not (root / "ocr.json").exists()
+
+
+def test_ocr_prepare_reopens_exact_human_unicode_spaces_and_source_hashes(tmp_path):
+    import json
+    client = _client(tmp_path)
+    client.post('/api/project/create', json={'name': 'Exact human truth'})
+    root = tmp_path / 'originals'
+    rows = _dataset(root)
+    truth = '  검사Ａ12\u00a0  '
+    rows = [{**row, 'text': truth} for row in rows]
+    originals = {row['image']: (root / row['image']).read_bytes() for row in rows}
+    client.put('/api/project/update', json={'source_dataset_dir': str(root)})
+    saved = client.post('/api/ocr/prepare', json={'source_dataset_path': str(root), 'samples': rows})
+    assert saved.status_code == 200, saved.text
+    prepared = Path(saved.json()['dataset_path'])
+    inspected = client.get('/api/ocr/manifest', params={'dataset_path': str(prepared)})
+    assert inspected.status_code == 200, inspected.text
+    disk = json.loads((prepared / 'ocr.json').read_text(encoding='utf-8'))
+    assert [row['text'] for row in disk['samples']] == [truth] * len(rows)
+    assert [row['text'] for row in inspected.json()['samples']] == [truth] * len(rows)
+    assert set(' Ａ\u00a0').issubset(inspected.json()['alphabet'])
+    for row in inspected.json()['samples']:
+        assert row['source_sha256'] == hashlib.sha256(originals[row['image']]).hexdigest()
+        assert (prepared / row['image']).read_bytes() == originals[row['image']]
+        assert (root / row['image']).read_bytes() == originals[row['image']]
+    assert client.get('/api/ocr/models').json()['models'] == []

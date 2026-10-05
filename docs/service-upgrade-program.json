@@ -2310,6 +2310,13 @@
      "result": "Task75 actual LabelMe/COCO/YOLO bundle downloads, preview/replace and exact source-image reopening in Chrome/macOS Electron; class IDs/colors and all class raster pixels retained. Backend132 passed; readback SHA-256 464d707f4d37e9866eb2027421806b6c451b509c02190d2151b10b28d2a9307e.",
      "scope": "Synthetic native format/content slice with controlled folder-dialog return; full annotation/model-quality acceptance remains pending.",
      "platform": "macOS Electron and Chrome; Windows excluded."
+    },
+    {
+     "kind": "published-pixel-mask-and-merge-functional-evidence",
+     "source_sha": "634523e71d3a9252955273e61991ce1263f27994",
+     "result": "Tasks76/77 actual Chrome/macOS Electron pixel-mask import/export/replace/reopen retain class palette, nested image mapping, holes and all saved class pixels. Mask and COCO conflicting merge requests preserve labels, revision, mask and backup list. Related backend79 pass. Readbacks f5a4b097e2ddcb02c5717fd10e72bd4cf756e7618c85d098a4962c9c579c4a9f and 2c00e165f6b14ac1b84804e713506948c882bc822b4c6c0546f1fc33d7a1183b; exact remote main and six inputs re-read.",
+     "scope": "Synthetic class/pixel content qualification; representative annotation and model-quality acceptance remain pending.",
+     "platform": "Chrome and macOS Electron; controlled folder-dialog return; Windows excluded."
     }
    ],
    "file_actions": {
@@ -2333,7 +2340,7 @@
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
     "Task75/76 complete synthetic app LabelMe/COCO/YOLO and pixel-mask class/geometry/image-mapping round trips, loss refusal and changed-preview refusal; representative annotation qualification remains pending.",
-    "OCR text, complete OBB fitting variants, model-result selection and groundtruth/prediction separation still require full native and representative content qualification.",
+    "Task78 qualifies exact human OCR truth and the existing center/face/irregular fitting UI with save/reopen on synthetic sources. Model-result selection, groundtruth/prediction separation and representative OCR/fitting content still require qualification.",
     "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
    ]
   },

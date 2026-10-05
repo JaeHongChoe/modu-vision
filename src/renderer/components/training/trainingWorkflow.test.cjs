@@ -53,6 +53,16 @@ test('project sample rows enforce source boundaries and preserve explicit Korean
   assert.throws(()=>projectSampleRow('/images','/images/../outside.png','text','train'));
   assert.throws(()=>projectSampleRow('/images','/images/a.png','text\tbad','train'));
 });
+test('human OCR truth retains edge spaces and Unicode without implicit normalization', () => {
+  const {projectSampleRow,parseOCRRows}=load('preparedSampleRows.ts');
+  const truth='  검사Ａ12\u00a0  ';
+  assert.equal(projectSampleRow('/images','/images/한글.png',truth,'train'),`한글.png\t${truth}\ttrain`);
+  assert.equal(typeof parseOCRRows,'function');
+  assert.deepEqual(parseOCRRows(` 한글.png\t${truth}\ttrain\r\n\nother.png\t${truth}\tval`),[
+    {image:'한글.png',text:truth,split:'train'},{image:'other.png',text:truth,split:'val'}]);
+  for(const value of ['a.png\t   \ttrain','a.png\tA\ttrain\textra','a.png\tA\u0000\ttrain','a.png\tA\tunknown',''])assert.throws(()=>parseOCRRows(value));
+  assert.throws(()=>projectSampleRow('/images','/images/a.png','A\u0000','train'));
+});
 test('project artifact tasks keep recorded scope and never invent cancellation support', () => {
   const {normalizeTask,tasksForScope} = load('taskCenterModel.ts');
   const row=normalizeTask('inspection',{job_id:'run',status:'completed',source_dataset_path:'/source',scope_kind:'project',cancel_supported:false});

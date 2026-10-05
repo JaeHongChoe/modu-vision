@@ -14,24 +14,12 @@ import {AutoDLWorkbench} from './AutoDLWorkbench';
 import {TrainingDeviceSelector,programButton} from './ProgramWorkbenchControls';
 import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
 import {ProjectImagePicker} from './ProjectImagePicker';
-import {projectSampleRow,replaceSampleRow} from './preparedSampleRows';
+import {projectSampleRow,replaceSampleRow,parseOCRRows as parseRows} from './preparedSampleRows';
 import {ocrRecipePayload,type OCRMode,type OCRNormalizer} from './modelAdapterRecipes';
 
 type OCRPrediction={text:string;confidence:number;model_sha256:string;mode:OCRMode;image_size:[number,number];
   regions:Array<{box:[number,number,number,number];text:string;confidence:number;line_index:number}>;
   text_rule_result:{passed:boolean;failed_rules:string[]};preview_data_url?:string};
-
-function parseRows(value: string): OCRLabelRow[] {
-  const rows = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (!rows.length) throw new Error('문자 이미지와 정답 문자열을 먼저 입력하세요.');
-  return rows.map((line, index) => {
-    const [image, text, split, ...extra] = line.split('\t');
-    if (!image?.trim() || !text?.trim() || !['train', 'val', 'test'].includes(split) || extra.length) {
-      throw new Error(`${index + 1}행은 이미지 상대 경로, 정답 문자열, train/val/test를 탭으로 나누세요.`);
-    }
-    return { image: image.trim(), text: text.trim(), split: split as OCRLabelRow['split'] };
-  });
-}
 
 function describeError(cause: unknown): string {
   if (cause instanceof Error) return cause.message;
