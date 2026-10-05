@@ -139,6 +139,46 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   for(const [file,sha] of Object.entries(originals))expect(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')).toBe(sha);
   evidence.note('viewer',{actual_cpu_inspection:true,actual_training:false,synthetic_checkpoint:true,run_id:run.run_id,saved_version_id:saved.version_id,
     original_server_hash_verified:true,zoom:true,keyboard_pan:true,fit:true,opacity:true,readonly:true,return_same_version:true,source_unchanged:true});
+
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();
+  await panel.getByLabel('저장된 모델 비교').selectOption(secondJob.report_id);
+  // Explicit current-label mode preserves the frozen report and its filters.
+  await panel.getByLabel('모델 비교 제품 필터').selectOption('(미지정)');
+  await panel.getByLabel('모델 비교 Lot 필터').selectOption('(미지정)');
+  const editRow=report.images[0];
+  const beforeLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
+  const beforeReportSha=crypto.createHash('sha256').update(JSON.stringify(await api(`/api/evaluation/model-comparisons/${secondJob.report_id}${query}`))).digest('hex');
+  await panel.locator('[data-comparison-image]').filter({hasText:editRow.file_name}).getByRole('button',{name:'원판정 근거 보기',exact:true}).click();
+  await expect(comparisonViewer.getByLabel('근거 이미지 종류')).toHaveValue('original');
+  await comparisonViewer.getByRole('button',{name:'현재 라벨 편집',exact:true}).click();
+  const editReturn=page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'});
+  await expect(editReturn).toContainText(editRow.image_id);
+  await expect(page.getByRole('button',{name:'Mark as Normal (OK)',exact:true})).toBeEnabled();
+  await page.getByRole('button',{name:'Mark as Normal (OK)',exact:true}).click();
+  await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeEnabled();
+  const afterLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
+  expect(afterLabels.metadata.revision).toBeGreaterThan(beforeLabels.metadata.revision);
+  expect(afterLabels.annotations.some((row:any)=>row.is_normal)).toBe(true);
+  expect(afterLabels.metadata.content_hash).toBe(editRow.image_sha256);
+  await page.reload();
+  await expect(editReturn).toContainText(editRow.image_id);
+  await editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();
+  await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
+  await editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true}).click();
+  await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
+  await expect(panel.getByLabel('모델 비교 제품 필터')).toHaveValue('(미지정)');
+  await expect(panel.getByLabel('모델 비교 Lot 필터')).toHaveValue('(미지정)');
+  await expect(panel.locator('[data-comparison-image].ring-cyan-400')).toHaveAttribute('data-comparison-image',editRow.file_path);
+  expect(crypto.createHash('sha256').update(JSON.stringify(await api(`/api/evaluation/model-comparisons/${secondJob.report_id}${query}`))).digest('hex')).toBe(beforeReportSha);
+  await evidence.screenshot(page,native?'native-evidence-label-return':'browser-evidence-label-return');
+  evidence.note('evidence_labeling',{comparison_id:secondJob.report_id,image_id:editRow.image_id,image_path:editRow.file_path,
+    captured_hash:editRow.image_sha256,labelset_id:report.labelset_id,before_revision:beforeLabels.metadata.revision,after_revision:afterLabels.metadata.revision,
+    historical_report_sha256:beforeReportSha,normal_label_saved:true,dirty_return_refused:true,reopened_current_label:true,
+    returned_exact_report_image_filters:true,no_new_comparison:true,actual_brush_eraser:false,team_lease_fixture:false});
+
 }
 
 test('CPU comparison reopens the exact completed job from Task Center and after refresh', async ({page, request, renderer, workspace, evidence}) => {

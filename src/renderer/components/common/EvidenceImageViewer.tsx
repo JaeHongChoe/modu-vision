@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {boundedZoom, canBlend, safeSnapshot, validBox, type EvidenceView} from './evidenceViewer';
 
 /** Snapshot-only viewer. Editing remains in the revision/lease-aware labeling workspace. */
-export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작업으로 돌아가기'}: {evidence: EvidenceView; onClose:()=>void; returnLabel?:string}) {
+export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작업으로 돌아가기',editAction}: {evidence: EvidenceView; onClose:()=>void; returnLabel?:string;editAction?:{onClick:()=>void;busy:boolean;error?:string}}) {
   const [layerId,setLayerId]=useState('');const [overlayId,setOverlayId]=useState('');
   const [zoom,setZoom]=useState(1);const [pan,setPan]=useState({x:0,y:0});
   const [opacity,setOpacity]=useState(.5);const [labels,setLabels]=useState(true);
@@ -31,6 +31,8 @@ export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작�
       <p className="mt-2 break-all text-slate-400">{evidence.imagePath||'저장된 중간 이미지'} · 실행 {evidence.runId||'현재 미저장 실행'} · 버전 {evidence.versionId||'기록 없음'}{evidence.graphSha256&&` · 그래프 ${evidence.graphSha256}`}{evidence.nodeId&&` · 노드 ${evidence.nodeId}`}{evidence.roiId&&` · ROI ${evidence.roiId}`}</p>
       {evidence.imageSha256&&<p className="break-all text-[10px] text-slate-400">원본 SHA-256 {evidence.imageSha256}</p>}
       {evidence.warning&&<p role="alert" className="mt-2 text-amber-300">{evidence.warning}</p>}
+      {editAction&&<div className="mt-2 flex items-center gap-3"><button type="button" disabled={editAction.busy} onClick={editAction.onClick} className="rounded border border-cyan-600 px-3 py-2 disabled:opacity-40">{editAction.busy?'현재 라벨 확인 중…':'현재 라벨 편집'}</button><span className="text-slate-400">현재 데이터·라벨 버전을 확인한 뒤 라벨 화면으로 이동합니다.</span></div>}
+      {editAction?.error&&<p role="alert" className="mt-2 text-amber-300">{editAction.error}</p>}
       <div className="my-3 flex flex-wrap items-center gap-2">
         <label>표시 이미지 <select aria-label="근거 이미지 종류" value={selected?.id||''} onChange={event=>{setLayerId(event.target.value);setOverlayId('');fit();}} className="rounded bg-slate-800 p-2">{layers.map(layer=><option key={layer.id} value={layer.id}>{layer.label}</option>)}</select></label>
         <button type="button" aria-label="근거 이미지 축소" onClick={()=>setZoom(z=>boundedZoom(z/1.25))} className="rounded border border-slate-600 p-2">−</button>

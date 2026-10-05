@@ -8,8 +8,8 @@ export function cropRectangle(a:readonly[number,number],b:readonly[number,number
 }
 interface Storage {getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void;removeItem:(key:string)=>void}
 const originKey=(scope:string,kind='evaluation')=>`modu-${kind}-return:${scope}`;
-export interface ReviewOriginContext {evaluation_id?:string;comparison_id?:string;image_id:string|null;file_path?:string}
-export function rememberReviewOrigin(storage:Storage,scope:string,id:string,imageId?:string,filePath?:string,kind:'evaluation'|'comparison'='evaluation'){storage.setItem(originKey(scope,kind),JSON.stringify({[`${kind}_id`]:id,image_id:imageId||null,...(filePath?{file_path:filePath}:{})}));}
+export interface ReviewOriginContext {evaluation_id?:string;comparison_id?:string;image_id:string|null;file_path?:string;product_filter?:string;lot_filter?:string}
+export function rememberReviewOrigin(storage:Storage,scope:string,id:string,imageId?:string,filePath?:string,kind:'evaluation'|'comparison'='evaluation',filters?:{product_filter:string;lot_filter:string}){storage.setItem(originKey(scope,kind),JSON.stringify({[`${kind}_id`]:id,image_id:imageId||null,...(filePath?{file_path:filePath}:{}),...filters}));}
 export function consumeReviewContext(storage:Storage,scope:string,ids:string[],kind:'evaluation'|'comparison'='evaluation'):ReviewOriginContext|null{
   const key=originKey(scope,kind);const raw=storage.getItem(key);if(!raw)return null;
   try{const saved=JSON.parse(raw);if(ids.includes(saved[`${kind}_id`])){storage.removeItem(key);return saved;}}catch{storage.removeItem(key);}return null;

@@ -26,6 +26,7 @@ import {DerivedImagePanel} from './DerivedImagePanel';
 import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
 import {TeamDataPanel} from './TeamDataPanel';
+import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import { FOCUS_SWITCH_NAME, focusStatus, readLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
 
@@ -67,6 +68,7 @@ export const LabelingStudio: React.FC = () => {
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
       <LabelingToolbar />
+      <EvidenceEditReturn />
       <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
         {focus && <span>{focusStatus(focus)}</span>}
         <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}

@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import type { AnnotationItem, Category, ImageMeta, TaskType, ToolType, ViewTransform } from '../types';
-import { api, getApiBaseUrl } from '../services/api';
+import { api, getApiBaseUrl, getApiPersistenceIdentity, getProjectContextGeneration } from '../services/api';
 import { datasetWorkflow, type ImageReviewMetadata } from '../services/datasetWorkflow';
 import { useDatasetStore } from './useDatasetStore';
 import { brushEditTarget, labelCategoryPalette } from '../components/labeling/foundationRequest';
@@ -497,11 +497,13 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const { currentImage } = get();
     if (!currentImage || get().isDirty) return false;
     const requestSequence = ++annotationLoadSequence;
+    const authority=[getApiPersistenceIdentity(),getProjectContextGeneration()].join('\0');
+    const sameAuthority=()=>authority===[getApiPersistenceIdentity(),getProjectContextGeneration()].join('\0');
     set({ annotationLoadStatus: 'loading', annotationLoadError: null });
 
     try {
       const data = await datasetWorkflow.annotations(currentImage.image_id, currentImage.file_path);
-      if (requestSequence !== annotationLoadSequence ||
+      if (!sameAuthority() || requestSequence !== annotationLoadSequence ||
           get().currentImage !== currentImage || get().isDirty) return false;
       if (!data || !Array.isArray(data.annotations)
           || (data.image_id && data.image_id !== currentImage.image_id)) {
@@ -533,7 +535,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       });
       return true;
     } catch (error) {
-      if (requestSequence === annotationLoadSequence && get().currentImage === currentImage) {
+      if (sameAuthority() && requestSequence === annotationLoadSequence && get().currentImage === currentImage) {
         set({ annotationLoadStatus: 'error', annotationLoadError: annotationReadErrorMessage(error) });
       }
       return false;

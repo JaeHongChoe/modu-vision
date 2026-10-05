@@ -7,8 +7,12 @@ import {consumeReviewContext,evaluationOriginScope} from '../labeling/productDat
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
 import type {EvidenceView} from '../common/evidenceViewer';
+import {datasetWorkflow} from '../../services/datasetWorkflow';
+import {teamDataApi} from '../../services/teamDataApi';
+import {useAnnotationStore} from '../../stores/useAnnotationStore';
+import {openEvidenceLabeling,rememberEvidenceEdit,evidenceEditScope} from '../labeling/evidenceLabeling';
 import {
-  api,getApiPersistenceIdentity,
+  api,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration,
   request,
   type ModelComparisonModel,
   type ModelComparisonRecord,
@@ -113,11 +117,14 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [originPath,setOriginPath]=useState('');
   const [imageEvidence,setImageEvidence]=useState<{scope:string;view:EvidenceView}|null>(null);
   const imageChoice=useRef(0);
+  const [editBusy,setEditBusy]=useState(false);
+  const [editError,setEditError]=useState('');
 
   useEffect(() => {
     let active = true;
     const choice = ++reportChoice.current;
     imageChoice.current++;setImageEvidence(null);
+    setEditBusy(false);setEditError('');
     setModels([]);
     setRecords([]);
     setIncumbentId('');
@@ -157,6 +164,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           if(saved.comparison_id!==savedId)throw new Error('비교 결과의 식별자가 선택한 기록과 일치하지 않습니다.');
           if(origin)rememberSelection('report',savedId);
           setReport(saved);setReportScope(scopeKey);setOriginPath(saved.images.some(row=>row.file_path===origin?.file_path)?origin?.file_path||'':'');
+          if(origin){
+            setProductFilter(typeof origin.product_filter==='string'&&(!origin.product_filter||saved.images.some(row=>(row.product||'(미지정)')===origin.product_filter))?origin.product_filter:'');
+            setLotFilter(typeof origin.lot_filter==='string'&&(!origin.lot_filter||saved.images.some(row=>(row.lot||'(미지정)')===origin.lot_filter))?origin.lot_filter:'');
+          }
         }}).catch(cause=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice)setError(errorMessage(cause));});
       }
       setJobs(jobHistory.jobs);
@@ -277,10 +288,33 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   };
 
   const visibleReport = reportScope === scopeKey ? report : null;
-  const closeImageEvidence=()=>{imageChoice.current++;setImageEvidence(null);};
+  const closeImageEvidence=()=>{imageChoice.current++;setImageEvidence(null);setEditBusy(false);setEditError('');};
+  const editCurrentLabels=async()=>{
+    if(!visibleReport||!imageEvidence||editBusy)return;
+    const expectedScope=scopeKey,choice=imageChoice.current,reportId=visibleReport.comparison_id;
+    const view=imageEvidence.view;
+    const row=visibleReport.images.find(item=>item.file_path===view.imagePath&&item.image_sha256===view.imageSha256);
+    if(!row||!project)return;
+    const authority=getProjectContextGeneration();
+    const same=()=>currentScope.current===expectedScope&&imageChoice.current===choice&&authority===getProjectContextGeneration();
+    setEditBusy(true);setEditError('');
+    try{
+      if(visibleReport.project_id!==project.id||visibleReport.source_dataset_path!==sourceFolder||visibleReport.task!==task
+        ||visibleReport.labelset_id!==(project.active_labelset_id||'default'))throw new Error('저장된 비교의 프로젝트·데이터·라벨 버전이 현재 선택과 다릅니다.');
+      const origin=await openEvidenceLabeling({comparison_id:reportId,project_id:project.id,source:sourceFolder,task,
+        labelset_id:visibleReport.labelset_id,image_id:row.file_name.replace(/\.[^.]+$/,''),file_path:row.file_path,
+        image_sha256:row.image_sha256,product_filter:productFilter,lot_filter:lotFilter},{sameContext:same,
+        mode:getProjectContext()?.mode||'local',actor:useAnnotationStore.getState().reviewerName,task:useProjectStore.getState().task,
+        metadata:()=>datasetWorkflow.image(row.file_path),workspace:()=>teamDataApi.workspace(),
+        open:(id,path,expected)=>useProjectStore.getState().openImageForLabeling(id,path,{...expected,isCurrent:same})});
+      if(same())rememberEvidenceEdit(localStorage,evidenceEditScope(evaluationOriginScope(project.id,sourceFolder,task,origin.labelset_id,compute),getProjectContext()?.actor_id),origin);
+    }catch(cause){if(same())setEditError(errorMessage(cause));}
+    finally{if(same())setEditBusy(false);}
+  };
   const openImageEvidence=async(row:ModelComparisonReport['images'][number])=>{
     if(!visibleReport)return;
     const choice=++imageChoice.current;const expectedScope=scopeKey;const comparisonId=visibleReport.comparison_id;
+    setEditBusy(false);setEditError('');
     const view:EvidenceView={key:`${comparisonId}:${row.file_path}:${row.image_sha256}`,title:`모델 A/B · ${row.file_name}`,
       imagePath:row.file_path,imageSha256:row.image_sha256,runId:comparisonId,layers:[],
       facts:{incumbent_job_id:visibleReport.incumbent_job_id,candidate_job_id:visibleReport.candidate_job_id,model_sha256:visibleReport.model_sha256,
@@ -325,7 +359,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   return (
     <section className="rounded-lg border border-[#344255] bg-[#182332] p-3.5 text-xs text-slate-200"
       aria-label={isKo ? '현행과 후보 모델 비교' : 'Baseline and candidate model comparison'} aria-busy={isRunning}>
-      {imageEvidence?.scope===scopeKey&&imageEvidence.view.runId===visibleReport?.comparison_id&&<EvidenceImageViewer evidence={imageEvidence.view} onClose={closeImageEvidence} returnLabel="모델 비교로 돌아가기"/>}
+      {imageEvidence?.scope===scopeKey&&imageEvidence.view.runId===visibleReport?.comparison_id&&<EvidenceImageViewer evidence={imageEvidence.view} onClose={closeImageEvidence} returnLabel="모델 비교로 돌아가기" editAction={{onClick:()=>void editCurrentLabels(),busy:editBusy,error:editError}}/>}
       <div className="flex items-start gap-2.5">
         <div className="rounded-md border border-sky-400/30 bg-sky-500/10 p-1.5 text-sky-300">
           <GitCompareArrows className="h-4 w-4" aria-hidden="true" />

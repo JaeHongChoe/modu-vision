@@ -519,6 +519,8 @@ export interface ModelComparisonOutcome {
 }
 
 export interface ModelComparisonRow {
+  product?: string;
+  lot?: string;
   image_id: string;
   file_name: string;
   file_path: string;
@@ -548,6 +550,7 @@ export interface ModelComparisonRecord {
 
 export interface ModelComparisonReport extends ModelComparisonRecord {
   schema_version: number;
+  labelset_id?: string;
   incumbent_training_dataset_fingerprint: string;
   candidate_training_dataset_fingerprint: string;
   model_sha256: { incumbent: string; candidate: string };

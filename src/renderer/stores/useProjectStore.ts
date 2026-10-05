@@ -103,7 +103,7 @@ interface ProjectState {
   projectError: string | null;
 
   setStep: (step: WizardStep) => Promise<void>;
-  openImageForLabeling: (imageId: string, filePath: string) => Promise<boolean>;
+  openImageForLabeling: (imageId: string, filePath: string, expected?:{imageSha256:string;revision:number;isCurrent?:()=>boolean}) => Promise<boolean>;
   /** Changes the project task; the outcome always names the task that is actually active. */
   updateTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
   setTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
@@ -273,18 +273,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     rememberProjectStep(viewStorage(), get().project, apiIdentity, step);
   },
 
-  openImageForLabeling: async (imageId, filePath) => {
+  openImageForLabeling: async (imageId, filePath, expected) => {
     const startedProject = get().projectDir;
+    const startedAuthority = taskChangeScope(get());
     const startedTask = get().task;
     const startedLabelset = get().project?.active_labelset_id || 'default';
     const dataset = useDatasetStore.getState();
     const startedSource = dataset.folderPath;
-    const sameContext = () => get().projectDir === startedProject && get().task === startedTask
+    const sameContext = () => taskChangeScope(get()) === startedAuthority && (!expected?.isCurrent || expected.isCurrent())
+      && get().projectDir === startedProject && get().task === startedTask
       && (get().project?.active_labelset_id || 'default') === startedLabelset
       && useDatasetStore.getState().folderPath === startedSource;
     let images = dataset.images;
     let index = images.findIndex(image => image.image_id === imageId && image.file_path === filePath);
     try {
+      if(expected){
+        if(startedSource!==get().project?.source_dataset_dir)throw new Error('현재 데이터 출처와 프로젝트의 라벨 출처가 다릅니다.');
+        const metadata=await datasetWorkflow.image(filePath);
+        if(!sameContext())return false;
+        if(metadata.file_path!==filePath||metadata.content_hash!==expected.imageSha256||metadata.revision!==expected.revision)
+          throw new Error('현재 원본·라벨 수정 버전이 편집 진입 확인 후 바뀌었습니다. 다시 확인하세요.');
+      }
       if (index < 0) {
         const metadata = await datasetWorkflow.image(filePath);
         if (!sameContext() || metadata.file_path !== filePath) return false;
@@ -302,10 +311,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const externalSelectionPath = dataset.images.some(image => image.file_path === filePath) ? null : filePath;
       const opened = await useAnnotationStore.getState().setImages(images, index, externalSelectionPath);
       if (!opened || !sameContext()) return false;
+      if(expected){
+        const state=useAnnotationStore.getState();
+        if(state.annotationLoadStatus!=='ready'||state.metadata?.file_path!==filePath
+          ||state.metadata.content_hash!==expected.imageSha256||state.metadata.revision!==expected.revision)
+          throw new Error('현재 라벨 조회가 확인한 원본·수정 버전과 다릅니다. 다시 확인하세요.');
+      }
       await get().setStep(2);
       return sameContext() && get().activeStep === 2 && useAnnotationStore.getState().currentImage?.file_path === filePath;
     } catch (error) {
-      if (sameContext()) set({ projectError: workflowError(error) });
+      if (sameContext()) {
+        set({ projectError: workflowError(error) });
+        if(expected&&useAnnotationStore.getState().currentImage?.file_path===filePath)
+          useAnnotationStore.setState({annotationLoadStatus:'error',annotationLoadError:workflowError(error)});
+      }
       return false;
     }
   },
