@@ -44,6 +44,22 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(job.status).toBe('completed'); expect(job.result_available).toBe(true);
   const report = await api(`/api/evaluation/model-comparisons/${job.report_id}${query}`);
   expect(report.images).toHaveLength(2); expect(report.summary.disagreements).toBe(2);
+  // The two untrained constant predictors produce a real CPU miss and
+  // overkill on the explicit folder truth, without certifying model quality.
+  const missed=report.images.find((row:any)=>row.ground_truth_verdict==='NG'&&row.incumbent.verdict==='OK');
+  const overkill=report.images.find((row:any)=>row.ground_truth_verdict==='OK'&&row.candidate.verdict==='NG');
+  expect(missed).toBeTruthy();expect(overkill).toBeTruthy();
+  const evidenceCases=[];
+  for(const row of [missed,overkill]){
+    await panel.locator('[data-comparison-image]').filter({hasText:row.file_name}).getByRole('button',{name:'원판정 근거 보기',exact:true}).click();
+    const exact=page.getByRole('dialog',{name:'이미지 판정 근거 보기',exact:true});
+    await expect(exact).toContainText(row.file_path);await expect(exact).toContainText(row.image_sha256);await expect(exact).toContainText(job.report_id);
+    await expect(exact.getByRole('heading')).toContainText('읽기 전용');
+    await exact.getByRole('button',{name:'모델 비교로 돌아가기',exact:true}).click();
+    await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(job.report_id);
+    evidenceCases.push({path:row.file_path,sha256:row.image_sha256,truth:row.ground_truth_verdict,base:row.incumbent.verdict,candidate:row.candidate.verdict});
+  }
+  evidence.note('miss_overkill_originals',{report_id:job.report_id,cases:evidenceCases,actual_cpu_forward:true,untrained_fixture_not_quality:true});
   const dialog = await openTaskCenter(page);
   await dialog.getByLabel('저장 작업 다시 열기').selectOption(`model_comparison:local:${jobId}`);
   await expect(dialog).toContainText('2/2장');
@@ -123,6 +139,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const viewer = page.getByRole('dialog', {name:'이미지 판정 근거 보기', exact:true});
   await expect(viewer.getByLabel('근거 이미지 종류')).toHaveValue('original');
   await expect(viewer).toContainText(run.run_id); await expect(viewer).toContainText(saved.version_id);
+  await viewer.getByLabel('근거 이미지 확대', {exact:true}).click(); await expect(viewer.getByRole('status')).toHaveText('125%');
+  await viewer.getByLabel('근거 이미지 축소', {exact:true}).click(); await expect(viewer.getByRole('status')).toHaveText('100%');
   await viewer.getByLabel('근거 이미지 확대', {exact:true}).click(); await expect(viewer.getByRole('status')).toHaveText('125%');
   await viewer.getByLabel('근거 이미지 이동 영역').focus(); await page.keyboard.press('ArrowRight');
   expect(await viewer.locator('img[alt="해시 확인된 원본"]').evaluate(el => el.parentElement!.style.transform)).toContain('translate(30px, 0px)');

@@ -1642,7 +1642,7 @@
     "S1-06",
     "S2-02"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "published-partial-functional-evidence",
@@ -1656,6 +1656,14 @@
      "result": "Task72 guarded historical comparison evidence to current classification labels, save/reopen and exact report/image/product/Lot return. Actual Chrome and macOS Electron cases; readback SHA-256 e07ab46580dad0bc3390521e41a53005faa7246169078ab454b1eb690db01ded.",
      "scope": "Current revision/source hash, role/lease and delayed-context guards; controlled functional qualification only. Historical predictions stay frozen.",
      "platform": "macOS native Electron and Chrome; no new SSH/GPU; Windows excluded."
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "a12a40f5f50b56ed17f78a3c7a314f3105adcfa4",
+     "result": "Task89 composes all unchanged original software clauses: four current real Chrome/macOS Electron cases exercise controlled CPU miss/overkill/A-B originals, immutable run/version/node rasters, ROI/mask/heatmap/compact scores, zoom/pan/fit/overlay/opacity/labels, exact queue/report/image/filter return and explicit current-label save/reopen. Backend90 and scope/role/lease/revision/readonly guards24 pass. Fourteen Task85 labeling/content UI cases and every frozen input/artifact hash remain current, covering bbox/OBB/brush/mask/eraser and separated source-bound truth/prediction/error rasters. Private disk/SQLite/content/process readback SHA-256 a322f13d9c1970c762d7b79f0e1f50a0f76b649f5db205d9c03d6080271ddd3a.",
+     "scope": "Software implementation and named functional dimensions only. Synthetic untrained/statistics checkpoints establish execution wiring, not representative model/annotation/field quality. Root review only; independent review unavailable.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows tests excluded. No new SSH/GPU or app training.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -1665,21 +1673,20 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "scripts/e2e/service-s2-06.spec.ts",
    "remaining": [
-    "Controlled current-label entry/save/reopen/return and two-class brush/eraser are verified; complete labeling/viewer coverage and representative annotation review remain pending. Historical viewers stay read-only.",
-    "Full independent/representative raster and annotation-content review; comparison report filters and review-origin cases beyond the controlled completed comparisons.",
-    "Remote target and representative model-quality acceptance; whole-parent acceptance is not inferred from synthetic functional checks."
+    "Representative model/annotation/human/operational acceptance, independent review and installed target qualification remain pending.",
+    "Different source/labelset/role/lease/revision refusals are source-qualified component/backend checks, not a new real-team deployment. Unsupported coordinate transforms remain refused. Windows tests excluded."
    ]
   },
   {
@@ -9215,12 +9222,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 30,
-    "pending": 52
+    "verified": 31,
+    "pending": 51
    },
    "parent_status": {
-    "verification_pending": 24,
-    "in_progress": 22,
+    "verification_pending": 25,
+    "in_progress": 21,
     "planned": 36
    },
    "merged_extension_slices": 16,
