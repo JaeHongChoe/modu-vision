@@ -1,7 +1,7 @@
 import type {Category} from '../../types';
 import type {BookCategory,EditLease,TeamReadiness} from '../../services/teamDataApi';
-type Scope={projectDir?:string|null;project?:{id?:string;source_dataset_dir?:string|null;active_labelset_id?:string}|null;apiTransportIdentity?:string;transportRevision?:number;selectedProfileId?:string|null};
-export function teamDataScope(state:Scope):string{return JSON.stringify([state.projectDir,state.project?.id,state.project?.source_dataset_dir,state.project?.active_labelset_id||'default',state.apiTransportIdentity||'local',state.transportRevision||0,state.selectedProfileId||'local']);}
+type Scope={projectDir?:string|null;project?:{id?:string;source_dataset_dir?:string|null;active_labelset_id?:string}|null;apiTransportIdentity?:string;transportRevision?:number;selectedProfileId?:string|null;apiNamespaceEpoch?:number};
+export function teamDataScope(state:Scope):string{return JSON.stringify([state.projectDir,state.project?.id,state.project?.source_dataset_dir,state.project?.active_labelset_id||'default',state.apiTransportIdentity||'local',state.transportRevision||0,state.selectedProfileId||'local',state.apiNamespaceEpoch||0]);}
 export function imageLeaseToken(lease:EditLease|null,imageUuid:string|undefined,now=Date.now()/1000):string|undefined{return lease&&lease.image_uuid===imageUuid&&lease.expires_at>now?lease.token:undefined;}
 export function validatedBookCategories(rows:BookCategory[]):BookCategory[]{
  if(!rows.length)throw new Error('클래스를 하나 이상 추가하세요.');

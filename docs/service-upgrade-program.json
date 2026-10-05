@@ -2301,8 +2301,17 @@
     "S1-07",
     "S3-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "dff708cb220016bdabfe33e425559869f184c464",
+     "result": "Task92: bounded offline drafts survive failed actual saves/reload; server conflicts require current comparison and explicit apply before separately leased save. Actual Chrome/macOS Electron retains foreign labels on refusal, verifies two distinct votes/disagreement/adjudication/reason, invalidates votes after guideline change and reopens assigned priority queue. Backend99, renderer731 and20 draft/scope cases pass; production/E2E TypeScript pass. Private direct persisted-source/annotation/mask/process readback SHA-256 ec04f1760b9669f6b4a9884814d37edb2d6ce68497973b3c8ba1c83578806875.",
+     "scope": "Software clauses qualified. Controlled local reviewer aliases establish wiring; backend account/membership, lease expiry and concurrent-save contracts independently qualify refusal. Cross-tab localStorage is not transactional shared server storage. Representative human/team/quality acceptance and independent review remain pending.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/annotation_transactions.py": "Modify",
     "backend/engine/annotation_storage.py": "Modify",
@@ -2310,12 +2319,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -2323,6 +2332,11 @@
    "proposed_test_file": "backend/tests/test_service_s3_04.py",
    "scope_refinement_ids": [
     "E05"
+   ],
+   "remaining": [
+    "Representative human/team deployment and label-quality acceptance; independent or installed target qualification remain pending.",
+    "A bounded local draft is separate from persisted server labels and requires explicit comparison/apply/save. Quota failure retains memory edits; cross-tab storage is not a shared transaction.",
+    "Windows tests excluded; full parent acceptance remains pending."
    ]
   },
   {

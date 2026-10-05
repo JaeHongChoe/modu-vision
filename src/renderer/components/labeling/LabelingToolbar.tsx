@@ -401,6 +401,7 @@ export const LabelingToolbar: React.FC = () => {
 
         {/* Save Button */}
         <button
+          data-testid="annotation-save-button"
           onClick={() => saveAnnotations()}
           disabled={isSaving || annotationLoadStatus !== 'ready'}
           title={annotationLoadStatus !== 'ready' ? '기존 라벨 조회가 완료되어야 저장할 수 있습니다.' : undefined}

@@ -55,14 +55,14 @@ function hooks(){let cursor=0;const slots=[],effects=[];const react={useState:in
 const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(Boolean)});
 function nodes(tree){const result=[];const visit=node=>{if(node&&typeof node==='object'){result.push(node);node.children?.flat().forEach(visit);}};visit(tree);return result;}
 function panelFixture(workspacePromise){
- const h=hooks();const project={...scope,setStep:async()=>{}};const compute={transportRevision:1,selectedProfileId:null};const image={image_uuid:'a',file_path:'/source/a.png',relative_path:'a.png',revision:1,team:{edit_lease:null,assignment:null,reviews:[],review_status:'pending'}};
+ let epoch=0;const h=hooks();h.react.useSyncExternalStore=(_subscribe,snapshot)=>snapshot();const project={...scope,setStep:async()=>{}};const compute={transportRevision:1,selectedProfileId:null};const image={image_uuid:'a',file_path:'/source/a.png',relative_path:'a.png',revision:1,team:{edit_lease:null,assignment:null,reviews:[],review_status:'pending'}};
  const annotation={reviewerName:'operator-a',metadata:image,currentImage:{file_path:image.file_path},categories:[],editLease:null,isDirty:false,isSaving:false,setMetadata:value=>annotation.metadata=value,setTeamEditingEnabled:value=>annotation.teamEditingEnabled=value,setTeamReviewEnabled:()=>{},setLabelbook:()=>{},setEditLease:value=>annotation.editLease=value};
  const workspace={scope:{project_id:'p',source:'/source',labelset_id:'default'},book:null,book_history:[],settings:{revision:1,editing_enabled:true,review_enabled:true,required_reviews:2,prevent_self_review:true,approved_only_training:true},members:[]};
  const readiness={ready:false,counts:{total:1,eligible:0,approved:0,pending:1},blockers:['승인 데이터가 없습니다.']};const calls=[];
  const api={workspace:()=>workspacePromise||Promise.resolve(workspace),image:async()=>({image:annotation.metadata}),readiness:async()=>readiness,queue:async()=>({items:[],total:0,offset:0,limit:30}),acquire:async(row,actor)=>{calls.push([row.image_uuid,actor]);return{image:{...image,revision:2,team:{...image.team,edit_lease:{owner:actor,expires_at:Date.now()/1000+120}}},lease_token:'valid-token'};}};
  const store=value=>Object.assign(()=>value,{getState:()=>value});
- const module=load('./TeamDataPanel.tsx',{'react':h.react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/useComputeStore':{useComputeStore:store(compute)},'../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../../services/api':{getApiPersistenceIdentity:()=> 'local'},'../../services/teamDataApi':{teamDataApi:api},'../../services/datasetWorkflow':{workflowError:error=>error.message||String(error)},'../common/WorkspaceDialog':{},'./LabelbookEditor':{}});
- return{h,project,annotation,calls,api,render:()=>h.render(()=>module.TeamDataPanel())};
+ const module=load('./TeamDataPanel.tsx',{'react':h.react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/useComputeStore':{useComputeStore:store(compute)},'../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},'../../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>epoch,subscribeProjectContext:()=>()=>{}},'../../services/teamDataApi':{teamDataApi:api},'../../services/datasetWorkflow':{workflowError:error=>error.message||String(error)},'../common/WorkspaceDialog':{},'./LabelbookEditor':{}});
+ return{h,project,annotation,calls,api,actorChange:()=>{epoch++;},render:()=>h.render(()=>module.TeamDataPanel())};
 }
 test('actual team panel edit-start action binds returned token to selected image',async()=>{
  const fixture=panelFixture();fixture.render();await new Promise(setImmediate);let tree=fixture.render();nodes(tree).find(node=>node.type==='button'&&node.children.some(child=>typeof child==='string'&&child.includes('팀 작업'))).props.onClick();tree=fixture.render();await nodes(tree).find(node=>node.type==='button'&&node.children.includes('편집 시작')).props.onClick();
@@ -98,4 +98,8 @@ test('a delayed lease renewal cannot replace newer saved metadata or review stat
   const expiry=Date.now()/1000+180;resolve({image:{...older,team:{...older.team,edit_lease:{owner:'operator-a',expires_at:expiry}}},lease_token:'valid-token'});await new Promise(setImmediate);
   assert.equal(fixture.annotation.metadata.revision,3);assert.equal(fixture.annotation.metadata.team.review_status,'approved');assert.equal(fixture.annotation.editLease.expires_at,expiry);
  }finally{fixture.h.unmount();globalThis.setInterval=oldInterval;globalThis.clearInterval=oldClear;}
+});
+
+test('a delayed same-project team response cannot enable editing after the account namespace changes',async()=>{
+ let resolve;const pending=new Promise(done=>resolve=done),f=panelFixture(pending);f.render();f.actorChange();resolve({book:null,book_history:[],settings:{editing_enabled:true},members:[]});await new Promise(setImmediate);assert.equal(f.annotation.teamEditingEnabled,false);assert.equal(f.annotation.editLease,null);f.h.unmount();
 });

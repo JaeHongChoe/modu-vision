@@ -1,9 +1,9 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {BookOpen,Users,ShieldCheck,RefreshCw} from 'lucide-react';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
-import {getApiPersistenceIdentity} from '../../services/api';
+import {getApiPersistenceIdentity,getProjectContextGeneration,subscribeProjectContext} from '../../services/api';
 import {teamDataApi,type TeamQueue,type TeamReadiness,type TeamWorkspace} from '../../services/teamDataApi';
 import {workflowError,type ImageReviewMetadata} from '../../services/datasetWorkflow';
 import {WorkspaceDialog} from '../common/WorkspaceDialog';
@@ -15,14 +15,15 @@ const button='rounded border border-slate-600 px-3 py-2 text-sm disabled:opacity
 const statusNames={pending:'검수 대기',approved:'승인',rejected:'반려',disputed:'의견 불일치'};
 export function TeamDataPanel({compact=false}:{compact?:boolean}={}){
  const project=useProjectStore();const compute=useComputeStore();const annotation=useAnnotationStore();
- const scope=teamDataScope({...project,...compute,apiTransportIdentity:getApiPersistenceIdentity()});const scopeRef=useRef(scope);scopeRef.current=scope;
+ const apiNamespaceEpoch=useSyncExternalStore(subscribeProjectContext,getProjectContextGeneration,getProjectContextGeneration);
+ const scope=teamDataScope({...project,...compute,apiTransportIdentity:getApiPersistenceIdentity(),apiNamespaceEpoch});const scopeRef=useRef(scope);scopeRef.current=scope;
  const [workspace,setWorkspace]=useState<{scope:string;value:TeamWorkspace}|null>(null);const [ready,setReady]=useState<TeamReadiness|null>(null);const [queue,setQueue]=useState<TeamQueue|null>(null);
  const [open,setOpen]=useState(false);const [tab,setTab]=useState<'work'|'book'|'settings'|'quality'>('work');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
  const [assignee,setAssignee]=useState('');const [priority,setPriority]=useState(50);const [filterActor,setFilterActor]=useState('');const [filterState,setFilterState]=useState('');const [offset,setOffset]=useState(0);const [reason,setReason]=useState('');const [now,setNow]=useState(Date.now()/1000);
  const value=workspace?.scope===scope?workspace.value:null;const actor=value?.actor?.name||annotation.reviewerName.trim();const role=value?.actor?.role;const canManage=!value?.actor||['owner','reviewer'].includes(role||'');const metadata=annotation.metadata;
  const token=imageLeaseToken(annotation.editLease,metadata?.image_uuid,now);const ownLease=!!token;
  const team=metadata?.team;const reviewResolved=!!team&&(['approved','disputed'].includes(team.review_status)||(team.review_status==='rejected'&&team.reviews.length>=(value?.settings.required_reviews||1)));
- const same=()=>scopeRef.current===scope&&teamDataScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===scope;
+ const same=()=>scopeRef.current===scope&&teamDataScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity(),apiNamespaceEpoch:getProjectContextGeneration()})===scope;
  const applyImage=(image:ImageReviewMetadata)=>{const current=useAnnotationStore.getState();if(same()&&current.metadata?.image_uuid===image.image_uuid&&image.revision>=current.metadata.revision)current.setMetadata(image);};
  const reload=async()=>{const id=useAnnotationStore.getState().metadata?.image_uuid;const [next,readiness,work,image]=await Promise.all([teamDataApi.workspace(),teamDataApi.readiness(),teamDataApi.queue({assignee:filterActor,state:filterState,offset,limit:30}),id?teamDataApi.image(id):Promise.resolve(null)]);if(!same())return;setWorkspace({scope,value:next});setReady(readiness);setQueue(work);if(image)applyImage(image.image);useAnnotationStore.getState().setTeamEditingEnabled(next.settings.editing_enabled);useAnnotationStore.getState().setTeamReviewEnabled(next.settings.review_enabled);useAnnotationStore.getState().setLabelbook(next.book?.version||null,next.book?.categories);};
  const run=async(action:()=>Promise<void>)=>{if(busy)return;setBusy(true);setError('');setNotice('');try{await action();}catch(cause){if(same())setError(workflowError(cause));}finally{if(same())setBusy(false);}};

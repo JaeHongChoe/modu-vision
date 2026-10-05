@@ -26,6 +26,7 @@ import {DerivedImagePanel} from './DerivedImagePanel';
 import {SavedReviewQueuePanel} from './SavedReviewQueuePanel';
 import { DicomPanel } from './DicomPanel';
 import {TeamDataPanel} from './TeamDataPanel';
+import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import { FOCUS_SWITCH_NAME, focusStatus, readLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
@@ -77,6 +78,7 @@ export const LabelingStudio: React.FC = () => {
       <LabelSetBar compact={focus} />
       {/* The team row stays: it loads the team settings and the label book and holds the shared editing lock. */}
       <TeamDataPanel compact={focus} />
+      <AnnotationDraftRecovery />
       {folded('이미지 검토', '파생 이미지', '저장된 검토 대기열', '워크플로 영향')}
       <DicomPanel />
 
