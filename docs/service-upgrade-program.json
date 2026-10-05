@@ -2845,8 +2845,15 @@
     "S1-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "takeover-parent-software-closure-root-verified",
+     "result": "Task112: actual official-weight DINO dense head training, paired image/mask augmentation, heldout pixel metrics, original-resolution overlap tiling, Blob recipe save/reopen and fresh offline candidate package parity. Two actual Chrome/macOS Electron cases pass1.2min;89 dense/mask/flow/legacy and77 terminal-publication/provenance/recovery cases pass.",
+     "scope": "Original clauses/dependencies unchanged; implementation/contract/gui/persist/reopen/failure verified. Six unique controlled synthetic originals and two CPU epochs per app are software evidence, not representative defect quality. All frozen official encoder tensors remain exact. Actual UNet/DeepLab reconstruction retains logits/class order with downloads forbidden. Completion readers now wait for durable provenance; identical binding preserves checkpoint bytes. Root readback1de37c674852f8802553c387c9d097ad2340e2393abbf34dbc5bdf4ef46ef727 binds1426 source inputs/664 artifacts.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; GPU, representative quality, installed/physical target, independent handoff and final acceptance pending. Windows excluded."
+    }
+   ],
    "file_actions": {
     "backend/engine/model_backbones.py": "Modify",
     "backend/engine/grouped_dataset_views.py": "Modify",
@@ -2855,12 +2862,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9440,13 +9447,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 51,
-    "pending": 31
+    "verified": 52,
+    "pending": 30
    },
    "parent_status": {
-    "verification_pending": 45,
+    "verification_pending": 46,
     "in_progress": 15,
-    "planned": 22
+    "planned": 21
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

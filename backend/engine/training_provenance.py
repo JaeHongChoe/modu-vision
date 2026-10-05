@@ -76,17 +76,19 @@ def persist_model_binding(output,binding,*,checkpoint=True):
         import torch
         payload=torch.load(model,map_location='cpu',weights_only=True)
         if not isinstance(payload,dict):raise ValueError('Training checkpoint cannot accept verified provenance')
-        payload['training_provenance']=binding
-        with tempfile.NamedTemporaryFile(dir=output,prefix='bound-checkpoint-',suffix='.pt',delete=False) as writer:temporary=Path(writer.name)
-        try:torch.save(payload,temporary);os.replace(temporary,model)
-        finally:temporary.unlink(missing_ok=True)
+        if payload.get('training_provenance')!=binding:
+            payload['training_provenance']=binding
+            with tempfile.NamedTemporaryFile(dir=output,prefix='bound-checkpoint-',suffix='.pt',delete=False) as writer:temporary=Path(writer.name)
+            try:torch.save(payload,temporary);os.replace(temporary,model)
+            finally:temporary.unlink(missing_ok=True)
     metadata=output/'model_meta.json'
     if metadata.is_file() and not metadata.is_symlink():
-        payload=json.loads(metadata.read_text(encoding='utf-8'));payload['training_provenance']=binding
+        original=json.loads(metadata.read_text(encoding='utf-8'));payload=dict(original);payload['training_provenance']=binding
         if model.is_file() and not model.is_symlink():
             from backend.api.routes_dataset_versions import _file_hash
             payload['checkpoint_sha256']=_file_hash(model)
-        temporary=metadata.with_suffix('.tmp');temporary.write_text(json.dumps(payload),encoding='utf-8');os.replace(temporary,metadata)
+        if payload!=original:
+            temporary=metadata.with_suffix('.tmp');temporary.write_text(json.dumps(payload),encoding='utf-8');os.replace(temporary,metadata)
 
 
 def validate_training_binding(binding):

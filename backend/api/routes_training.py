@@ -493,30 +493,41 @@ class TrainingJobManager:
                         record.ledger.heartbeat(leases.lease_seconds)
                     self._enforce_budget(record)
             threading.Thread(target=heartbeat, daemon=True, name=f'Lease-{record.job_id}').start()
+            result, failure = None, None
             try:
-                record.result = runner(WebSocketTelemetryCallback(job_id=record.job_id, max_hz=30.0))
-                record.status = record.result['status']
-                record.phase = record.status
-                if record.result.get('error'):
-                    record.error = {'message': record.result['error']}
+                result = runner(WebSocketTelemetryCallback(job_id=record.job_id, max_hz=30.0))
             except Exception as exc:
-                from backend.engine.local_training_worker import LocalWorkerUncertain
-                record.status = record.phase = 'disconnected' if isinstance(exc, LocalWorkerUncertain) else 'failed'
-                record.error = {'message': str(exc)}
+                failure = exc
             finally:
                 stop.set()
+                with self._lock:
+                    if failure is not None:
+                        from backend.engine.local_training_worker import LocalWorkerUncertain
+                        record.status = record.phase = 'disconnected' if isinstance(failure, LocalWorkerUncertain) else 'failed'
+                        record.error = {'message': str(failure)}
+                    else:
+                        record.result = result
+                        record.status = record.phase = result['status']
+                        if result.get('error'):
+                            record.error = {'message': result['error']}
+                    if record.status != 'disconnected':
+                        try:
+                            _write_job_receipt(record)
+                        except Exception as exc:
+                            logger.exception('Could not persist recovered local receipt for %s', record.job_id)
+                            record.status = record.phase = 'failed'
+                            record.error = {'message': f'Training provenance persistence failed: {exc}'}
+                            try:
+                                _write_job_receipt(record)
+                            except OSError:
+                                logger.exception('Could not persist failed recovered receipt for %s', record.job_id)
+                    self._refresh_active_id()
                 if record.status == 'disconnected':
                     leases.mark_uncertain(record.job_id)
                 else:
-                    try:
-                        _write_job_receipt(record)
-                    except OSError:
-                        logger.exception('Could not persist recovered local receipt for %s', record.job_id)
                     _release_reservation(leases, record.job_id, record.status, record.ledger)
                 if record.ledger is not None:
                     record.ledger.finished(record.status, record.error)
-                with self._lock:
-                    self._refresh_active_id()
         record.thread = threading.Thread(target=monitor, daemon=True, name=f'LocalReconnect-{record.job_id}')
         record.thread.start()
 
@@ -707,17 +718,20 @@ class TrainingJobManager:
                             if self._active_job_id == job_id and record.status != 'disconnected':
                                 self._active_job_id = None
                             self._refresh_active_id()
-                        try:
-                            if record.status != 'disconnected':
-                                _write_job_receipt(record)
-                        except Exception as persistence_error:
-                            logger.exception("Could not persist terminal receipt for job %s", job_id)
-                            record.status = "failed"
-                            record.error = {"message": f"Training provenance persistence failed: {persistence_error}"}
                             try:
-                                _write_job_receipt(record)
-                            except OSError:
-                                logger.exception("Terminal training state could not be saved after a persistence failure")
+                                if record.status != 'disconnected':
+                                    # Readers use this same lock. A terminal state
+                                    # must not escape while provenance rewrites
+                                    # the checkpoint and its final receipt.
+                                    _write_job_receipt(record)
+                            except Exception as persistence_error:
+                                logger.exception("Could not persist terminal receipt for job %s", job_id)
+                                record.status = "failed"
+                                record.error = {"message": f"Training provenance persistence failed: {persistence_error}"}
+                                try:
+                                    _write_job_receipt(record)
+                                except OSError:
+                                    logger.exception("Terminal training state could not be saved after a persistence failure")
                     heartbeat.set()
                     if record.status == 'disconnected':
                         self._leases.mark_uncertain(job_id)
