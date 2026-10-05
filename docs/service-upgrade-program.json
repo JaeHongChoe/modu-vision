@@ -1649,6 +1649,13 @@
      "result": "e4be66659b478cd3d1fdafe7aac11514a74c03eb: shared read-only image viewer, hash-bound inspection and comparison originals, exact comparison reopening and scoped cancellation inventory. Private functional source/run readback SHA-256 0741b880226098848541bfec53e907434d926326e238b4ee6a37fe66a0cb46b7; publication readback SHA-256 002771d70fcdba0093e0b56583b91e66e6959a6819a8d76638787fa6ca8188a2.",
      "scope": "Tasks60–66: controlled CPU comparison/inspection, zoom/pan/fit/overlay/opacity and exact return. Partial software implementation only; annotation-mode, complete raster content and independent/whole-parent acceptance remain open.",
      "platform": "macOS native Electron and Chrome browser with owned backend; Windows excluded and no new remote/GPU run."
+    },
+    {
+     "kind": "published-current-label-functional-evidence",
+     "source_sha": "a8adf384b7f0a26acc20e5ef8f515086a59047e9",
+     "result": "Task72 guarded historical comparison evidence to current classification labels, save/reopen and exact report/image/product/Lot return. Actual Chrome and macOS Electron cases; readback SHA-256 e07ab46580dad0bc3390521e41a53005faa7246169078ab454b1eb690db01ded.",
+     "scope": "Current revision/source hash, role/lease and delayed-context guards; controlled functional qualification only. Historical predictions stay frozen.",
+     "platform": "macOS native Electron and Chrome; no new SSH/GPU; Windows excluded."
     }
    ],
    "file_actions": {
@@ -1670,7 +1677,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s2-06.spec.ts",
    "remaining": [
-    "Shared labeling-mode integration with lease/revision guards, drawing and erasure; historical viewers remain read-only.",
+    "Controlled current-label entry/save/reopen/return and two-class brush/eraser are verified; complete labeling/viewer coverage and representative annotation review remain pending. Historical viewers stay read-only.",
     "Full independent/representative raster and annotation-content review; comparison report filters and review-origin cases beyond the controlled completed comparisons.",
     "Remote target and representative model-quality acceptance; whole-parent acceptance is not inferred from synthetic functional checks."
    ]
@@ -1923,6 +1930,13 @@
      "result": "Task57 remote workbench queue/priority/runtime fields now cross compute API and persisted coordinator/worker contract; see remaining integration evidence.",
      "scope": "177 affected and118 source contracts, renderer633, actual bounded CPU rotation loopback; source readback28c4c0479a16f96b7d3933e6b01fc812ec75bd4d421d49d8e3bcf9b6528bc019. Partial slice only; parent states unchanged.",
      "platform": "macOS CPU, in-process loopback; no new SSH/GPU execution. New hosted-source qualification and independent/installed/representative acceptance pending."
+    },
+    {
+     "kind": "published-specialist-local-admission-evidence",
+     "source_sha": "d699cefa7897320603a77860e0cd9e9ff27ef7d3",
+     "result": "Task58 five specialist queue/reject-busy/priority/budget controls, durable admission/cancellation and CPU completion;167 backend,634 renderer, twelve app cases. Readback SHA-256 615ef94b935254cfd650159db0cf5438963b4a53edbb0e1cb36f65ff6a1ac4b1.",
+     "scope": "Frozen published local specialist cohort slice; no global cross-executor priority, new GPU, independent review or whole-parent acceptance. All20 published input hashes rechecked. Current6dcbf27 queue contract rerun passes28, including five actual synthetic CPU completions; later cancellation-observation changes remain distinct.",
+     "platform": "macOS CPU and native Electron; Windows testing deferred."
     }
    ],
    "file_actions": {
@@ -1948,8 +1962,8 @@
    ],
    "remaining": [
     "Four core families now use the shared status/next-action/cancellation evidence view with polling and recovery; all ten-family native and real-target consistency still needs qualification.",
-    "ModelRecipeEditor: core and patch scheduling plus five specialist runtime controls are locally exercised; five specialist local queue/priority and real-target/native consistency remain pending. Recorded parent metric/date context and incumbent evaluation selection need target qualification; remaining typed IDs (flow manual job ID and pretrained weight paths), dataset_version_id.",
-    "TaskHandoff: opening results the same way for every family; core project-local queue position/wait reason are implemented, while every specialized family still needs consistent queue and failure-observation propagation.",
+    "Core, patch and all five specialist local queue/priority/runtime controls are implemented and locally exercised (Task58); global priority across executor families, actual remote/target consistency and broader native qualification remain pending. Recorded parent metric/date context and incumbent evaluation selection need target qualification; remaining typed IDs (flow manual job ID and pretrained weight paths), dataset_version_id.",
+    "TaskHandoff exact comparison reopening and scoped inventory are locally exercised; consistent queue/failure observation and handoff across all specialist execution targets still require qualification.",
     "review P3 remaining: Local patch reconnection is locally exercised; actual native/target qualification remains pending. M16/M17 untested; the task-center family alias, shared label and rotated epochs need broader qualification. Refused cancellation observation and duplicate-cancel presentation are now locally exercised, with actual remote/installed Windows qualification pending.",
     "S2-09 server fixture uses a POSIX target identity after the existing follow-up; the file is now added to both hosted CPU lists and its new hosted execution is pending.",
     "Windows native and hosted evidence"
@@ -2275,6 +2289,13 @@
      "result": "Label focus layout, shared edit locks and save/reopen persistence; independently reviewed and merged in PR #4.",
      "scope": "NQA4 scope only; full data/tool/format and target acceptance remains pending.",
      "platform": "Actual macOS Electron interaction plus source-qualified Linux browser and Windows Server gates"
+    },
+    {
+     "kind": "published-mask-content-functional-evidence",
+     "source_sha": "6dcbf279f5449b1b0b12db3a4681ed75604a49ea",
+     "result": "Task73 actual two-class brush/eraser, save/reload, Undo/Redo and owned lease release pass in Chrome and macOS Electron. Stored class PNG exactly matches decoded brush pixels. Renderer688 passed; readback SHA-256 e0279d4df72340cddca62bbf00c6352d29fa37cc0f0f4229b228cead7d71ca3e.",
+     "scope": "Synthetic mask-content slice; not representative annotation, all formats or whole-parent acceptance.",
+     "platform": "macOS native Electron and Chrome; Windows excluded."
     }
    ],
    "file_actions": {
@@ -2295,7 +2316,12 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s3_05.py"
+   "proposed_test_file": "backend/tests/test_service_s3_05.py",
+   "remaining": [
+    "Complete LabelMe/COCO/YOLO/mask class, geometry and image-mapping round trips through the app, including lossy-format warning/provenance.",
+    "OCR text, complete OBB fitting variants, model-result selection and groundtruth/prediction separation still require full native and representative content qualification.",
+    "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
+   ]
   },
   {
    "id": "S3-06",

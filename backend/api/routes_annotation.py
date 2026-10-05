@@ -242,8 +242,8 @@ def _save_annotations_locked(req: AnnotationSaveRequest, target_dir: Path, file_
 
         sanitized_items.append(item_dict)
 
-    # A mixed mask/vector label set must train all its accepted regions.
-    if brush_masks:
+    # A mixed raster/vector label set must retain its accepted boxes too.
+    if brush_masks or polygons_for_mask:
         for item in sanitized_items:
             if item.get("type") == "bbox" and item.get("bbox"):
                 x1,y1,x2,y2=item["bbox"]
