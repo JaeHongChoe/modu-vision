@@ -45,7 +45,13 @@ def stop(request:Request):
     service,_=manager(request);return execute(service.stop)
 @router.put('/adapters')
 def adapters(payload:FieldAdapterConfig,request:Request):
-    service,_=manager(request);return execute(lambda:service.configure_adapters(payload.model_dump()))
+    service,project=manager(request)
+    def action():
+        if payload.modbus and payload.modbus.trigger_image_path:
+            from backend.api.routes_product_delivery import source_image
+            payload.modbus.trigger_image_path=str(source_image(project,payload.modbus.trigger_image_path))
+        return service.configure_adapters(payload.model_dump())
+    return execute(action)
 @router.post('/install')
 def install(request:Request):
     service,_=manager(request);return execute(service.install_files)

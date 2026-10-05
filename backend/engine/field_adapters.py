@@ -5,9 +5,19 @@ import socket
 import struct
 import time
 import uuid
+import re
 from pathlib import Path
+from typing import Literal,Protocol
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+class ResultDeliveryAdapter(Protocol):
+    """An optional field adapter must return an explicit same-input receipt.
+
+    OPC UA integrations implement this boundary only after their SDK, identity,
+    mapping and actual target contract are validated; no OPC UA provider is bundled.
+    """
+    def deliver(self,payload:dict)->dict: ...
 
 
 class ModbusConfig(BaseModel):
@@ -22,6 +32,7 @@ class ModbusConfig(BaseModel):
     trigger_image_path:str|None=None
     timeout:float=Field(default=2,gt=0,le=30)
     ack_timeout:float=Field(default=5,gt=0,le=60)
+    byte_order:Literal['big','little']='big'
     verdict_values:dict[str,int]=Field(default_factory=lambda:{'OK':1,'NG':2,'REVIEW':3})
 
     @model_validator(mode='after')
@@ -67,14 +78,18 @@ class ModbusTCPAdapter:
     def write_register(self,address,value):
         response=self._request(6,address,value)
         if response!=struct.pack('>BHH',6,address,value): raise ValueError('Modbus write was not echoed')
+    def payload_word(self,value):
+        # Modbus framing is always network byte order. This option describes
+        # the receiver's unsigned 16-bit verdict/sequence payload layout.
+        return value if self.config.byte_order=='big' else ((value&255)<<8)|(value>>8)
     def deliver(self,payload):
         verdict=payload.get('model_verdict')
         if verdict not in self.config.verdict_values: raise ValueError('Invalid verdict for Modbus delivery')
-        value=self.config.verdict_values[verdict]
+        value=self.payload_word(self.config.verdict_values[verdict])
         expected=value
         if self.config.sequence_register is not None:
             import hashlib
-            expected=int(hashlib.sha256(payload['job_id'].encode()).hexdigest()[:4],16) or 1
+            expected=self.payload_word(int(hashlib.sha256(payload['job_id'].encode()).hexdigest()[:4],16) or 1)
             # Clear prior ack before writing the result so stale registers cannot approve a new job.
             self.write_register(self.config.ack_register,0)
             self.write_register(self.config.result_register,value)
@@ -99,6 +114,12 @@ class HTTPMESConfig(BaseModel):
     ack_value:bool|str|int=True
     ack_job_field:str|None='job_id'
 
+    @model_validator(mode='after')
+    def explicit_receipt(self):
+        if not self.ack_field or not self.ack_field.strip() or not self.ack_job_field or not self.ack_job_field.strip():
+            raise ValueError('MES ACK must include an explicit acceptance field and same-job identity')
+        return self
+
 
 class HTTPMESAdapter:
     def __init__(self,config:HTTPMESConfig):
@@ -112,13 +133,18 @@ class HTTPMESAdapter:
             value=value[component]
         return value
     def deliver(self,payload):
+        identifier=payload.get('job_id')
+        if not isinstance(identifier,str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}',identifier):raise ValueError('MES delivery requires a bounded job identity')
         mapped={field:self.lookup(payload,path) for field,path in self.config.field_mapping.items()}
-        response=httpx.post(self.config.url,json=mapped,headers={'Authorization':f'Bearer {self.config.token}'} if self.config.token else {},timeout=self.config.timeout)
+        headers={'Idempotency-Key':identifier}
+        if self.config.token:headers['Authorization']=f'Bearer {self.config.token}'
+        response=httpx.post(self.config.url,json=mapped,headers=headers,timeout=self.config.timeout)
         response.raise_for_status()
         if self.config.ack_field or self.config.ack_job_field:
             acknowledgment=response.json()
-            if self.config.ack_field and self.lookup(acknowledgment,self.config.ack_field)!=self.config.ack_value:
-                raise ValueError('MES result was not acknowledged')
+            if self.config.ack_field:
+                accepted=self.lookup(acknowledgment,self.config.ack_field)
+                if type(accepted) is not type(self.config.ack_value) or accepted!=self.config.ack_value:raise ValueError('MES result was not acknowledged')
             if self.config.ack_job_field and self.lookup(acknowledgment,self.config.ack_job_field)!=payload['job_id']:
                 raise ValueError('MES acknowledgment belongs to another job')
         return {'acknowledged':True,'http_status':response.status_code}

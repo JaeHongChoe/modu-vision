@@ -3542,8 +3542,17 @@
     "S5-01",
     "S5-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "cc8c7cbfbdba39bb099a6af22f66351e9e54ace9",
+     "result": "Task96: explicit unsigned16-bit Modbus payload order, source-confined trigger image, preserved advanced mapping, required typed positive/same-job HTTP ACK and exact Idempotency-Key. Real loopback TCP/HTTP success/refusal/timeout tests and actual Chrome/macOS Electron save/reopen mappings, one actual deterministic CPU inspection, MES refusal retained as REVIEW with original model result, explicit same-job ACK retry and two durable delivery attempts without a second inference. Backend67, renderer742, causal stale-control3 and production/E2E TypeScript pass. Private source/database/receiver/process readback SHA-256 0b2edddf7535a4a3536d8c13ebfa4ddc982815513846b18a5ac5d89417fcd897.",
+     "scope": "Generic Modbus TCP/HTTP software contracts. Receiver deduplication remains required; no exactly-once/multi-adapter transaction guarantee. OPC UA contract only, no provider. Private local configuration is not an OS secret store. Physical PLC/MES, representative model quality, independent and full acceptance remain pending.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned CPU service; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/plc_adapters.py": "Create",
     "backend/engine/mes_adapters.py": "Create",
@@ -3551,12 +3560,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9300,13 +9309,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 37,
-    "pending": 45
+    "verified": 38,
+    "pending": 44
    },
    "parent_status": {
-    "verification_pending": 31,
+    "verification_pending": 32,
     "in_progress": 20,
-    "planned": 31
+    "planned": 30
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
