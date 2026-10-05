@@ -429,6 +429,25 @@ def training_binding(project, source):
             'scope': {'project_id': project['id'], 'source': str(source), 'labelset_id': project.get('active_labelset_id', 'default')}}
 
 
+def review_trace(project, source, image_path):
+    """One locked read of current review eligibility, separate from frozen job receipts."""
+    root, source, annotations = _context(project, source)
+    with dm.metadata_transaction(root, source, annotations) as ledger:
+        result = _training_state(ledger, project, source, root, annotations)
+        row = dm._ensure(ledger, root, source, image_path, annotations)
+        return {
+            'scope': {'project_id': project['id'], 'source': str(source),
+                      'labelset_id': project.get('active_labelset_id', 'default')},
+            'book_version': result['book_version'], 'book_sha256': result['book_sha256'],
+            'policy_revision': result['settings']['revision'], 'policy_sha256': result['policy_sha256'],
+            'approved_only_training': result['settings']['approved_only_training'],
+            'review_revision': row['revision'], 'review_state': row['workflow_state'],
+            'image_eligible': row['image_uuid'] in result['eligible_image_uuids'],
+            'eligible_count': result['counts']['eligible'], 'eligibility_sha256': result['eligibility_sha256'],
+            'ready': result['ready'], 'blockers': result['blockers'],
+        }
+
+
 def training_excluded_paths(project, source, annotations=None):
     """Read the current policy through the same source/labelset metadata lock."""
     project = dict(project)

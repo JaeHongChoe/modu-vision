@@ -2194,8 +2194,17 @@
     "S1-06",
     "S1-08"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "2f5e21ae7ae4e159056d789ad938db419ee77506",
+     "result": "Task91: actual Chrome/macOS Electron links image/label/saved split/frozen version/model/saved flow/historical inspection identities; review revocation leaves label bytes and snapshots unchanged, moves eligibility1 to0 and shows stale training input. Source mutation is detected separately; restore/reload preserves historical hashes. Backend99 and renderer723 pass; production/E2E TypeScript pass. Private exact-source/saved-bytes/SQLite/process readback SHA-256 343d19dfc9f318b01e43c6284bcc048d0cee57947d867ea4eb7ce5aff96f6ed1.",
+     "scope": "Software clauses qualified; inert weights and controlled persisted historical result do not imply new model execution or representative quality. Tiny split tests identity only. Root review; independent reviewer unavailable.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/dataset_fingerprint.py": "Modify",
     "backend/api/routes_dataset_versions.py": "Modify",
@@ -2203,17 +2212,22 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s3_02.py"
+   "proposed_test_file": "backend/tests/test_service_s3_02.py",
+   "remaining": [
+    "Representative annotation/model/human/field acceptance and independent or installed target qualification remain pending.",
+    "Current eligibility is separate from the frozen job policy/cohort receipt. Legacy or manual snapshots without that receipt remain explicitly unbound.",
+    "Windows tests excluded; full parent acceptance remains pending."
+   ]
   },
   {
    "id": "S3-03",
