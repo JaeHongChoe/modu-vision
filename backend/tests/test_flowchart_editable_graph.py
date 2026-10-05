@@ -82,6 +82,7 @@ def test_branches_execute_both_models_and_only_selected_output(monkeypatch):
     assert result["routed_output_node_id"] == "ng"
     assert [step["status"] for step in result["execution_steps"][-3:]] == ["skipped", "flagged_ng", "skipped"]
     assert result["defective_roi_count"] == 1
+    assert {crop["source_node_id"] for crop in result["crops"]} == {"inspect_a", "inspect_b"}
 
 
 @pytest.mark.parametrize("mutation, reason", [
@@ -106,6 +107,7 @@ def test_existing_linear_graph_still_executes(monkeypatch):
 
     result = engine.execute(pipeline=pipeline, image=np.zeros((32, 40, 3), dtype=np.uint8))
     assert result["final_verdict"] == "OK"
+    assert result["crops"][0]["source_node_id"] == "node_inspect"
     from backend.engine.flow_provenance import pipeline_sha256
     assert result["graph_sha256"] == pipeline_sha256(pipeline)
     previous = result["graph_sha256"]

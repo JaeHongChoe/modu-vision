@@ -2943,8 +2943,18 @@
     "S1-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "parent-software-closure",
+     "source_base": "eed5d18e38527691374accdfcdbfe6866e691475",
+     "root_readback_sha256": "5c848dea6bd68591bf9c620314d848f5b3bc701a03d1b370307f215c79ce4db8",
+     "source_files": 1436,
+     "artifacts": 1036,
+     "scope": "Authentic cached YOLO26n two actual CPU epochs, disjoint empty/multiple/small boxes, validation-loss selection, heldout object error/mAP evidence, actual dense ROI followup, save/reopen and fresh offline full candidate parity in Chrome and macOS development Electron. Existing FasterRCNN actual offline evaluation/flow/export compatibility; no representative quality/GPU/Windows/physical/handoff/final acceptance.",
+     "evidence_document": "docs/verification/2026-10-04-remaining-integration-evidence.md#task114--s4-04-authentic-yolo-parent-software-closure"
+    }
+   ],
    "file_actions": {
     "backend/engine/model_backbones.py": "Modify",
     "backend/engine/dataset_loaders.py": "Modify",
@@ -2953,12 +2963,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9453,13 +9463,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 52,
-    "pending": 30
+    "verified": 53,
+    "pending": 29
    },
    "parent_status": {
-    "verification_pending": 46,
+    "verification_pending": 47,
     "in_progress": 15,
-    "planned": 21
+    "planned": 20
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

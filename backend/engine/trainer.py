@@ -836,6 +836,11 @@ class UnifiedAutoMLTrainer:
             })
         elif self.task == "detection":
             meta["detector_preset"] = self.preset_key
+            # Detection early stopping selects minimum validation loss. Heldout
+            # mAP is produced later by evaluation and is not this selection key.
+            meta["checkpoint_selection"] = {
+                "metric": "val_loss", "direction": "min", "split": "val", "epoch": epoch,
+            }
             selected = str(self.overrides.get('backbone', self.config.backbone_detection))
             if selected != 'fasterrcnn':
                 meta['backbone'] = selected

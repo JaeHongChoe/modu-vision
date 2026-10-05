@@ -6,7 +6,7 @@ read-only repository token and supplies no GPU, deployment, signing or private
 model credentials. The existing Windows native workflow excludes the same model
 tag; workflow source review is not proof of a Windows execution.
 
-The DINO classification, patch-recipe and dense-segmentation qualifications are
+The DINO classification, patch-recipe, dense-segmentation and YOLO detection qualifications are
 tagged `@owned-model` in both browser and development Electron modes. They train
 with an explicitly supplied, existing authentic checkpoint and compare saved
 evaluation, whole-flow and offline candidate results. They are not replaced by a
@@ -19,6 +19,7 @@ existing checkpoint and Python interpreter:
 export MV_E2E_PYTHON=/absolute/path/to/python
 export MV_E2E_DINO_WEIGHTS=/absolute/path/to/model.safetensors
 export MV_E2E_DINO_CHECKPOINT="$MV_E2E_DINO_WEIGHTS"
+export MV_E2E_YOLO_WEIGHTS=/absolute/path/to/yolo26n.pt
 npx playwright test --grep @owned-model
 ```
 

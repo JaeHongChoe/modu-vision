@@ -2375,7 +2375,8 @@ class FlowchartEngine:
                         for roi in detected
                     ]
                     node_evidence[node.id] = (
-                        self._detected_defect_crops(img_rgb, detected)
+                        [crop.model_copy(update={"source_node_id": node.id})
+                         for crop in self._detected_defect_crops(img_rgb, detected)]
                         if node.id in detector_only_ids else []
                     )
                     branch_verdict: Literal["OK", "NG", "REVIEW"] = (
@@ -2392,6 +2393,7 @@ class FlowchartEngine:
                         evidence, latency, status = [], (time.time() - started) * 1000.0, "skipped"
                         incomplete_reasons.append(str(exc))
                         step_reason = str(exc)
+                    evidence = [crop.model_copy(update={"source_node_id": node.id}) for crop in evidence]
                     if node.data.task == "rotated_detection":
                         from backend.engine.rotated_detection import box_from_polygon
                         node_rois[node.id] = [{**(crop._region or {'id':crop.roi_id,'bbox':crop.bbox,'rotated_box':box_from_polygon(crop.polygon),'crop_padding':0}),'polygon':crop.polygon,'label':crop.label,'confidence':crop.confidence} for crop in evidence if crop.polygon]

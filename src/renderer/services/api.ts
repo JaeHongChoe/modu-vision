@@ -685,6 +685,12 @@ export function getApiPersistenceIdentity():string {
   catch {throw new Error('공유 서버 주소를 확인하세요.');}
 }
 
+function browserLaunchPort(): number | null {
+  if (typeof window === 'undefined') return null;
+  const value = Number(new URLSearchParams(window.location?.search || '').get('port'));
+  return Number.isInteger(value) && value > 0 && value <= 65535 ? value : null;
+}
+
 export async function getBackendPort(): Promise<number> {
   if (cachedPort) return cachedPort;
   if (typeof window !== 'undefined' && window.api?.getBackendPort) {
@@ -698,13 +704,10 @@ export async function getBackendPort(): Promise<number> {
       // fallback
     }
   }
-  if (typeof window !== 'undefined') {
-    const urlParams = new URLSearchParams(window.location.search);
-    const portParam = urlParams.get('port');
-    if (portParam && !isNaN(Number(portParam))) {
-      cachedPort = Number(portParam);
-      return cachedPort;
-    }
+  const launchedPort = browserLaunchPort();
+  if (launchedPort) {
+    cachedPort = launchedPort;
+    return cachedPort;
   }
   return 8000;
 }
@@ -724,9 +727,14 @@ export function resolveApiUrl(path: string, port?: number): string {
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
     return path;
   }
-  const effectivePort = port || cachedPort || 8000;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   if(sharedBase)return `${sharedBase}${cleanPath}`;
+  // Persisted images can render before the first async backend request on reload.
+  // Use the browser's launch port immediately; a pending desktop bridge must not
+  // expose an image path to an unrelated backend at the default port.
+  const knownPort = port || cachedPort || browserLaunchPort();
+  if (!knownPort && typeof window !== 'undefined' && window.api?.getBackendPort) return '';
+  const effectivePort = knownPort || 8000;
   return `http://127.0.0.1:${effectivePort}${cleanPath}`;
 }
 

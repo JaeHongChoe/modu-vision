@@ -33,7 +33,7 @@ def test_public_collection_excludes_existing_authentic_weight_qualifications():
             yield from suite.get('specs', [])
             yield from specs(suite.get('suites', []))
     public_rows, owned_rows = list(specs(public['suites'])), list(specs(owned['suites']))
-    assert len(owned_rows) == 3
+    assert len(owned_rows) == 4
     assert all('owned-model' in [tag.lstrip('@') for tag in row['tags']] for row in owned_rows)
     assert not any('owned-model' in [tag.lstrip('@') for tag in row.get('tags', [])] for row in public_rows)
     assert not {row['id'] for row in public_rows} & {row['id'] for row in owned_rows}

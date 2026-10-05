@@ -596,6 +596,10 @@ def import_dataset(req: DatasetImportRequest):
             detail=format_error_response("ERR_NO_DATA", details=str(e)),
         )
 
+    # Nested LabelMe inventory comes from the same folder paths the manifest
+    # loader reads, so the recursive image validation covers its whole cohort.
+    listed_inventory = listed_inventory and not summary.folder_scanned
+
     # Convert split_counts to { train: int, val: int }
     split_counts = summary.split_counts
     train_count = split_counts.get("train", 0)

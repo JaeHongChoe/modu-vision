@@ -5,6 +5,7 @@ evaluates a real model on the CPU of a fresh checkout; the security guidance kee
 public reports; and the documents name the model families the engine really has.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -69,13 +70,15 @@ def test_the_guide_names_the_model_families_the_engine_has():
     assert f'모델군은 {len(TASKS)}개' in guide
 
 
-def test_the_cpu_demo_trains_and_evaluates_a_real_model_on_the_cpu(tmp_path, monkeypatch):
-    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / '사용자 데이터'))
-    monkeypatch.setenv('VISION_RESOURCE_LEASE_DB', str(tmp_path / 'leases' / 'resource_leases.sqlite3'))
-    monkeypatch.setenv('PYTHONIOENCODING', 'utf-8')  # the summary names a Korean folder; this test reads it as UTF-8
+def test_the_cpu_demo_trains_and_evaluates_a_real_model_on_the_cpu(tmp_path):
+    # Only the child receives these paths. Changing the parent process's environment also redirects unrelated
+    # job-ledger heartbeat threads from earlier tests, which can create this folder while the demo is running.
+    environment = dict(os.environ, VISION_AI_STUDIO_USER_DATA_DIR=str(tmp_path / '사용자 데이터'),
+                       VISION_RESOURCE_LEASE_DB=str(tmp_path / 'leases' / 'resource_leases.sqlite3'),
+                       PYTHONIOENCODING='utf-8')
     workdir = tmp_path / '데모 작업'
     completed = subprocess.run([sys.executable, str(ROOT / 'scripts' / 'cpu_demo.py'), '--workdir', str(workdir)],
-                               cwd=ROOT, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=600)
+                               cwd=ROOT, env=environment, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=600)
     assert completed.returncode == 0, completed.stdout[-2000:] + completed.stderr[-2000:]
     result = json.loads(completed.stdout[completed.stdout.index('{'):])
     assert result['cpu_demo'] == 'completed' and result['test_images'] == 16

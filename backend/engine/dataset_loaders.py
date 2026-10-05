@@ -181,6 +181,7 @@ class DatasetSummary:
     classes: Dict[str, int]
     split_counts: Dict[str, int]
     sample_size: Optional[Tuple[int, int]] = None
+    folder_scanned: bool = False
 
 
 # ============================================================================
@@ -1360,6 +1361,27 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             )
 
     elif task_clean == "detection":
+        # Manifest training reads original nested LabelMe paths. Import must
+        # count that same cohort before a split exists, including empty normal
+        # labels, rather than feeding this layout to the COCO-only constructor.
+        from backend.engine.grouped_dataset_views import source_image_paths, _annotations
+        coco_named = any((base / name).is_file() for base in (root, root / "annotations")
+                         for name in ("annotations.json", "annotations_train.json", "annotations_val.json"))
+        images = [] if coco_named else source_image_paths(root, "detection")
+        if any(image.parent != root.resolve() and image.with_suffix('.json').is_file() for image in images):
+            counts = {}
+            for image in images:
+                annotations, _ = _annotations(root, image)
+                if annotations is None:
+                    raise ValueError(f"Missing detection labels: {image}")
+                for annotation in annotations:
+                    if annotation.get('type') == 'tag':
+                        if not annotation.get('is_normal') and annotation.get('label', '').casefold() not in {'ok', 'normal', 'good', 'pass'}:
+                            raise ValueError('Detection tag has no region')
+                        continue
+                    name = annotation['label']; counts[name] = counts.get(name, 0) + 1
+            return DatasetSummary(task='detection', total_images=len(images), classes=counts,
+                                  split_counts={'train': 0, 'val': 0, 'test': 0}, folder_scanned=True)
         train_json = root / "annotations_train.json" if (root / "annotations_train.json").exists() else (
             (root / "annotations" / "annotations_train.json") if (root / "annotations" / "annotations_train.json").exists() else None
         )

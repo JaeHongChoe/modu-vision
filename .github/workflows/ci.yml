@@ -151,6 +151,11 @@ jobs:
           backend/tests/test_runtime_budget_publication.py
           backend/tests/test_source_ci_model_lanes.py
           backend/tests/test_service_s4_02_legacy.py
+          backend/tests/test_service_s4_04_selection.py
+          backend/tests/test_service_s4_04_legacy.py
+          backend/tests/test_nested_detection_import.py
+          backend/tests/test_flowchart_editable_graph.py::test_branches_execute_both_models_and_only_selected_output
+          backend/tests/test_flowchart_editable_graph.py::test_existing_linear_graph_still_executes
           backend/tests/test_service_s4_01_legacy.py
           backend/tests/test_service_s4_01_provenance.py
           backend/tests/test_service_s5_07.py
