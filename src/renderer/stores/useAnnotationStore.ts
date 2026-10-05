@@ -43,6 +43,13 @@ function annotationReadErrorMessage(error: unknown): string {
   return '알 수 없는 오류';
 }
 
+function annotationContext(task: TaskType): string {
+  return JSON.stringify([
+    getApiPersistenceIdentity(), getProjectContextGeneration(),
+    useDatasetStore.getState().folderPath, task,
+  ]);
+}
+
 interface AnnotationState {
   // Current Task & Images
   task: TaskType;
@@ -93,6 +100,7 @@ interface AnnotationState {
   saveMessage: string | null;
   annotationLoadStatus: 'ready' | 'loading' | 'error';
   annotationLoadError: string | null;
+  loadedAnnotationContext: string | null;
   autoSelectError: string | null;
   history: AnnotationItem[][];
   future: AnnotationItem[][];
@@ -187,6 +195,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   saveMessage: null,
   annotationLoadStatus: 'ready',
   annotationLoadError: null,
+  loadedAnnotationContext: null,
   autoSelectError: null,
   history: [],
   future: [],
@@ -205,6 +214,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       ...(!images.length?{teamEditingEnabled:false,teamReviewEnabled:false,editLease:null,labelbookVersion:null,categories:DEFAULT_CATEGORIES}:{}),
       externalSelectionPath: current?.file_path === externalSelectionPath ? externalSelectionPath : null,
       metadata: null,
+      loadedAnnotationContext: null,
       currentImageIndex: idx,
       currentImage: current,
       activeImage: current,
@@ -224,11 +234,20 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   syncDatasetImages: async (images) => {
-    const { currentImage } = get();
+    const { currentImage, task, annotationLoadStatus, loadedAnnotationContext } = get();
     const preservedIndex = currentImage
       ? images.findIndex((image) =>
           image.image_id === currentImage.image_id && image.file_path === currentImage.file_path)
       : -1;
+    const refreshed = images[preservedIndex];
+    if (currentImage && refreshed && annotationLoadStatus === 'ready'
+        && loadedAnnotationContext === annotationContext(task)
+        && refreshed.width === currentImage.width && refreshed.height === currentImage.height) {
+      // A post-save gallery refresh updates counts; it must not replace the editing
+      // image, discard a newer draft, or erase the user's undo/redo history.
+      set({ images, currentImageIndex: preservedIndex });
+      return true;
+    }
     return get().setImages(images, preservedIndex >= 0 ? preservedIndex : 0);
   },
 
@@ -240,6 +259,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (!activeImage) {
       set({
         currentImage: null,
+        loadedAnnotationContext: null,
         activeImage: null,
         currentImageIndex: -1,
         annotations: [],
@@ -254,6 +274,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       img.image_id === activeImage.image_id && img.file_path === activeImage.file_path);
     set({
       currentImage: activeImage,
+      loadedAnnotationContext: null,
       metadata: null,
       externalSelectionPath: null,
       activeImage,
@@ -285,6 +306,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       metadata: null,
       externalSelectionPath: null,
       currentImage: current,
+      loadedAnnotationContext: null,
       activeImage: current,
       annotations: [],
       maskUrl: null,
@@ -497,9 +519,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     const { currentImage } = get();
     if (!currentImage || get().isDirty) return false;
     const requestSequence = ++annotationLoadSequence;
-    const authority=[getApiPersistenceIdentity(),getProjectContextGeneration()].join('\0');
-    const sameAuthority=()=>authority===[getApiPersistenceIdentity(),getProjectContextGeneration()].join('\0');
-    set({ annotationLoadStatus: 'loading', annotationLoadError: null });
+    const authority = annotationContext(get().task);
+    const sameAuthority = () => authority === annotationContext(get().task);
+    set({ annotationLoadStatus: 'loading', annotationLoadError: null, loadedAnnotationContext: null });
 
     try {
       const data = await datasetWorkflow.annotations(currentImage.image_id, currentImage.file_path);
@@ -530,6 +552,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
         maskUrl: data.mask_file ? annotationMaskUrl(currentImage) : null,
         isDirty: false,
         annotationLoadStatus: 'ready',
+        loadedAnnotationContext: authority,
         annotationLoadError: null,
         saveMessage: null,
       });

@@ -19,7 +19,7 @@ test('annotation read changed after entry check remains blocked and does not nav
 test('actual annotation store ignores a delayed old-account image read even with the same image object',async()=>{
  let release,epoch=1;const pending=new Promise(resolve=>release=resolve);
  const m=load('./useAnnotationStore.ts',{'../services/api':{api:{},getApiBaseUrl:()=>'',getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>epoch},
-  '../services/datasetWorkflow':{datasetWorkflow:{annotations:()=>pending}},'./useDatasetStore':{},
+  '../services/datasetWorkflow':{datasetWorkflow:{annotations:()=>pending}},'./useDatasetStore':{useDatasetStore:value({folderPath:'/source'})},
   '../components/labeling/foundationRequest':{labelCategoryPalette:()=>[]},'../components/labeling/convertedAnnotation':{},'../components/labeling/teamDataWorkflow':{}});
  const store=m.useAnnotationStore;store.setState({currentImage:{image_id:'part',file_path:'/source/part.png'},isDirty:false});
  const reading=store.getState().loadAnnotationsForCurrent();epoch++;release({image_id:'part',annotations:[{id:'old-actor'}],metadata:{revision:7}});
