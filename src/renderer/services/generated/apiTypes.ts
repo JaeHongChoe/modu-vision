@@ -749,6 +749,11 @@ export type IndustrialImportOptions = {
   max_dim?: number | null;
 };
 
+export type InspectionReplay = {
+  reason: string;
+  operator: string;
+};
+
 export type KnownLengthCalibrationRequest = {
   camera_id: string;
   acquisition_config: { [key: string]: unknown };
@@ -856,6 +861,7 @@ export type ModbusConfig = {
   trigger_image_path?: string | null;
   timeout?: number;
   ack_timeout?: number;
+  byte_order?: "big" | "little";
   verdict_values?: {
     [key: string]: number;
   };
@@ -941,6 +947,13 @@ export type OidcStart = {
   provider: string;
 };
 
+export type OperationsNotificationPolicy = {
+  enabled: boolean;
+  expected_revision: number;
+  actor: string;
+  reason: string;
+};
+
 export type OperationsPolicy = {
   task?: "classification" | "patch_classification" | "detection" | "segmentation" | "anomaly" | "ocr" | "rotated_detection" | "rotation" | "enhancement" | "defect_gan";
   parent_job_id: string;
@@ -978,6 +991,17 @@ export type OperatorInputs = {
   mode: "manual" | "folder" | "camera";
   folder?: string | null;
   camera?: string | null;
+  camera_id?: string | null;
+};
+
+export type OperatorInspection = {
+  image_path: string;
+  device?: string;
+  image_id?: string | null;
+  product_id?: string | null;
+  lot_id?: string | null;
+  operator?: string | null;
+  reinspection_of?: string | null;
 };
 
 export type OperatorReview = {
@@ -1814,8 +1838,10 @@ export interface ApiRequestBody {
   "POST /api/patch-classification/prepare": backend__api__routes_patch_classification__PrepareRequest;
   "POST /api/patch-classification/train": backend__api__routes_patch_classification__TrainRequest;
   "POST /api/product-delivery/diagnostics": DiagnosticsOptions;
+  "PUT /api/product-delivery/operations/notification-policy": OperationsNotificationPolicy;
   "PUT /api/product-delivery/operator/inputs": OperatorInputs;
-  "POST /api/product-delivery/operator/inspect": ImageInput;
+  "POST /api/product-delivery/operator/inspect": OperatorInspection;
+  "POST /api/product-delivery/operator/queue/{identifier}/replay": InspectionReplay;
   "POST /api/product-delivery/operator/results/{identifier}/review": OperatorReview;
   "POST /api/product-delivery/packages/{identifier}/verify": ImageInput;
   "POST /api/product-delivery/protocol-test": ProtocolTest;

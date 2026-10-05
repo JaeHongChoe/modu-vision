@@ -112,7 +112,9 @@ class ManagedService:
         if value.get('mode')=='camera':
             camera=value.get('camera')
             if not isinstance(camera,str) or not (camera.isdecimal() or camera.startswith(('rtsp://','rtsps://'))):raise ValueError('Invalid configured camera source')
-            return ['--camera-source',camera]
+            from backend.engine.camera_admission import camera_identity
+            camera_id=camera_identity(camera,value.get('camera_id'))
+            return ['--camera-source',camera,'--camera-id',camera_id]
         return []
     @staticmethod
     def validate_accepted_device(package,device,*,expected_receipt_sha256=None):

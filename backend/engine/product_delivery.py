@@ -323,10 +323,14 @@ def read_operator_inputs(project):
     if not path.exists():return {'mode':'manual','folder':None,'camera':None,'scope':_scope(project)}
     value=json.loads(path.read_text(encoding='utf-8'))
     if value.get('scope')!=_scope(project):return {'mode':'manual','folder':None,'camera':None,'scope':_scope(project),'needs_reconfiguration':True}
-    return value
+    if value.get('mode')=='camera':
+        from backend.engine.camera_admission import camera_identity
+        try:return {**value,'camera_id':camera_identity(value.get('camera'),value.get('camera_id'))}
+        except ValueError:return {**value,'camera_id':None,'needs_reconfiguration':True}
+    return {**value,'camera_id':None}
 
 
-def configure_operator_inputs(project,mode,folder=None,camera=None):
+def configure_operator_inputs(project,mode,folder=None,camera=None,camera_id=None):
     from backend.engine.managed_service import ManagedService
     if mode not in ('manual','folder','camera'):raise ValueError('Select manual, folder or camera input')
     if mode=='folder':
@@ -336,9 +340,11 @@ def configure_operator_inputs(project,mode,folder=None,camera=None):
     else:folder=None
     if mode=='camera':
         if not camera or not (camera.isdecimal() or camera.startswith(('rtsp://','rtsps://'))):raise ValueError('Camera input needs a device index or RTSP address')
-    else:camera=None
+        from backend.engine.camera_admission import camera_identity
+        camera_id=camera_identity(camera,camera_id)
+    else:camera=None;camera_id=None
     service=ManagedService(project['project_dir']);path=service.root/'inputs.json'
     if path.is_symlink():raise ValueError('Input configuration cannot follow links')
-    value={'mode':mode,'folder':folder,'camera':camera,'scope':_scope(project)}
+    value={'mode':mode,'folder':folder,'camera':camera,'camera_id':camera_id,'scope':_scope(project)}
     atomic_private_json(path,value)
     return {'saved':True,'restart_required':service.owned_process() is not None,'config':value}

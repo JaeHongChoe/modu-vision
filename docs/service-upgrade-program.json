@@ -3493,13 +3493,21 @@
     "S5-01",
     "S1-05"
    ],
-   "status": "planned",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "takeover-follow-up-local-verified",
      "result": "Task53 separates normal and expired-during-inference timelines in the actual HTTP/SQLite two-view join test using the existing injectable join clocks. Deadline and production behavior remain unchanged; both cases retain duplicate identity and reopen verdict/state.",
      "scope": "Original1000ms wall-time fixture fails with controlled1.2s inference and durable EXPIRED/REVIEW/late result. Corrected focused13 and affected85 pass with no skips; readback SHA-2562d95370349878e0bc0e38c06fae021429fb00ad5694a27e15d11744013ec1a64.",
      "platform": "Owned macOS synthetic HTTP/store fixture. Root review only. New composed full hosted source, physical camera and whole-parent/final acceptance pending."
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "816db5f09baa1f648fc4c5b9441fe782461e3627",
+     "result": "Task97: opaque RTSP camera identity bound through API, operator form, saved/reopened configuration and exact managed-worker arguments; legacy USB defaults and manual clear persist; legacy network input without identity refuses activation. Actual owned OpenCV two-frame video decode executes real deterministic CPU inspection twice with durable same-session sequences, capture timestamp basis and EOF failure counters. Backend94, renderer742, actual Chrome/macOS Electron two cases, production/E2E TypeScript and generated API schema checks pass. Private readback SHA-256 b73c5851f0f82a15f42249e9d2f7f6db64ef7ee8811010693ce9efb7e56ea2ea.",
+     "scope": "Generic capture and simulator/SDK software contracts. Actual video decode uses untrained deterministic CPU weights. Form validation never opens configured USB/RTSP camera. Host-read timestamp is not sensor time; unseen transport loss is not inferred. Physical camera/industrial SDK, quality, installed target, independent and full acceptance remain pending.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -3509,12 +3517,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9309,13 +9317,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 38,
-    "pending": 44
+    "verified": 39,
+    "pending": 43
    },
    "parent_status": {
-    "verification_pending": 32,
+    "verification_pending": 33,
     "in_progress": 20,
-    "planned": 30
+    "planned": 29
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

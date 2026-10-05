@@ -144,6 +144,7 @@ class OperatorInputs(BaseModel):
     mode:Literal['manual','folder','camera']
     folder:str|None=None
     camera:str|None=None
+    camera_id:str|None=Field(default=None,min_length=1,max_length=100)
 
 
 class OperatorInspection(ImageInput):
@@ -157,7 +158,7 @@ class OperatorInspection(ImageInput):
 @router.put('/operator/inputs')
 def operator_inputs(body:OperatorInputs,request:Request):
     role(request,{'owner','reviewer'})
-    return execute(lambda:delivery.configure_operator_inputs(project(request),body.mode,body.folder,body.camera))
+    return execute(lambda:delivery.configure_operator_inputs(project(request),body.mode,body.folder,body.camera,body.camera_id))
 
 
 @router.post('/operator/inspect',status_code=202)
