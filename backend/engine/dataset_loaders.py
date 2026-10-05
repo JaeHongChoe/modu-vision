@@ -1321,27 +1321,18 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 task="classification", total_images=len(all_dataset),
                 classes=counts, split_counts=split_counts,
             )
-        if (root / "train").is_dir():
-            split_counts: Dict[str, int] = {}
+        if any((root / name).is_dir() for name in ("train", "val", "test")):
+            split_counts: Dict[str, int] = {name: 0 for name in ("train", "val", "test")}
             counts: Dict[str, int] = {}
             for split_name in ["train", "val", "test"]:
                 s_dir = root / split_name
                 if s_dir.is_dir():
-                    split_total = 0
-                    for cdir in sorted(s_dir.iterdir()):
-                        if cdir.is_dir() and not cdir.name.startswith("."):
-                            cname = cdir.name
-                            c_count = sum(
-                                1 for p in cdir.glob("*") if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-                            )
-                            counts[cname] = counts.get(cname, 0) + c_count
-                            split_total += c_count
-                    split_counts[split_name] = split_total
+                    samples, classes, _ = ClassificationDataset._load_from_folder(s_dir, inventory_eligible=True)
+                    for _, label_idx in samples:
+                        cname = classes[label_idx]
+                        counts[cname] = counts.get(cname, 0) + 1
+                    split_counts[split_name] = len(samples)
             total = sum(split_counts.values())
-            if "train" not in split_counts:
-                split_counts["train"] = total
-            if "val" not in split_counts:
-                split_counts["val"] = 0
             return DatasetSummary(
                 task="classification",
                 total_images=total,
@@ -1355,12 +1346,17 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 cname = ds.classes[lbl]
                 counts[cname] = counts.get(cname, 0) + 1
             total = len(ds)
-            train_count = int(total * 0.8)
+            # Split the already discovered cohort with the loader's per-class
+            # policy; a global 80/20 estimate invents held-out singleton images.
+            split_counts = {
+                name: len(ds._split_samples(ds.samples, name, ds.val_split, ds.seed))
+                for name in ("train", "val")
+            }
             return DatasetSummary(
                 task="classification",
                 total_images=total,
                 classes=counts,
-                split_counts={"train": train_count, "val": total - train_count},
+                split_counts=split_counts,
             )
 
     elif task_clean == "detection":
