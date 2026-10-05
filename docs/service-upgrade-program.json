@@ -2343,6 +2343,19 @@
      "result": "Task80 captures image SHA and native geometry around actual segmentation loading, refuses changed loading bytes, and adds guarded immutable-history source previews. Chrome/macOS Electron qualify36 exact non-square overlays, opacity/zoom/pan/return focus, missing provenance/changed source refusal and stale response selection fences. Renderer695/backend50 and four combined real app cases pass.",
      "scope": "Controlled saved display reports plus bounded CPU forward regression; full-image resize display only. Standalone masks remain available without mapping. No representative model-quality or whole-parent acceptance claim.",
      "platform": "Chrome/macOS Electron; Windows excluded; root review only."
+    },
+    {
+     "kind": "published-source-bound-segmentation-overlay",
+     "source_sha": "b3553a4bc932e064ae86d01652ccabe3580c09f0",
+     "result": "Task80 exact remote main and13 frozen source blobs verified; readback7e7bdd338e48c0589b2cc806f545ee89f7195d9712b1756656b750b2ac5e3b82.",
+     "scope": "Direct-source full-image resize display only; no representative model/parent acceptance.",
+     "platform": "Chrome/macOS Electron; Windows excluded."
+    },
+    {
+     "kind": "exact-saved-evaluation-selection-slice",
+     "result": "Task81 preserves family/labelset/exact record/group and open state across refresh/reload; missing records/labelsets refuse fallback, explicit review return supersedes manual selection, old responses and queued toggles cannot overwrite newer choices. Renderer708 and six actual Chrome/macOS Electron cases pass, retaining72 exact mask/overlay rasters.",
+     "scope": "Controlled immutable saved reports qualify selection/display; no new evaluation/training or whole-parent/model-quality acceptance.",
+     "platform": "Chrome/macOS Electron; Windows excluded; root review only."
     }
    ],
    "file_actions": {
@@ -2366,7 +2379,7 @@
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
     "Task75/76 complete synthetic app LabelMe/COCO/YOLO and pixel-mask class/geometry/image-mapping round trips, loss refusal and changed-preview refusal; representative annotation qualification remains pending.",
-    "Tasks78/79/80 qualify exact OCR truth, fitting, saved per-labelset selection and separate class masks. Task80 additionally qualifies hash-bound direct-source SEG truth/prediction/error overlays on a non-square source, with declared full-image resize mapping. Representative model results, prepared-source transformations without an explicit matching map, other task overlays and annotation quality remain pending.",
+    "Tasks78–81 qualify exact OCR truth, fitting, scoped exact saved-history selection, separate class masks and hash-bound direct-source SEG overlays using declared full-image resize. Representative model results, prepared-source transformations without an explicit matching map, other task overlays and annotation quality remain pending.",
     "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
    ]
   },
@@ -3172,6 +3185,19 @@
      "kind": "source-bound-segmentation-overlay-functional-slice",
      "result": "Task80 captures image SHA and native geometry around actual segmentation loading, refuses changed loading bytes, and adds guarded immutable-history source previews. Chrome/macOS Electron qualify36 exact non-square overlays, opacity/zoom/pan/return focus, missing provenance/changed source refusal and stale response selection fences. Renderer695/backend50 and four combined real app cases pass.",
      "scope": "Controlled saved display reports plus bounded CPU forward regression; full-image resize display only. Standalone masks remain available without mapping. No representative model-quality or whole-parent acceptance claim.",
+     "platform": "Chrome/macOS Electron; Windows excluded; root review only."
+    },
+    {
+     "kind": "published-source-bound-segmentation-overlay",
+     "source_sha": "b3553a4bc932e064ae86d01652ccabe3580c09f0",
+     "result": "Task80 exact remote main and13 frozen source blobs verified; readback7e7bdd338e48c0589b2cc806f545ee89f7195d9712b1756656b750b2ac5e3b82.",
+     "scope": "Direct-source full-image resize display only; no representative model/parent acceptance.",
+     "platform": "Chrome/macOS Electron; Windows excluded."
+    },
+    {
+     "kind": "exact-saved-evaluation-selection-slice",
+     "result": "Task81 preserves family/labelset/exact record/group and open state across refresh/reload; missing records/labelsets refuse fallback, explicit review return supersedes manual selection, old responses and queued toggles cannot overwrite newer choices. Renderer708 and six actual Chrome/macOS Electron cases pass, retaining72 exact mask/overlay rasters.",
+     "scope": "Controlled immutable saved reports qualify selection/display; no new evaluation/training or whole-parent/model-quality acceptance.",
      "platform": "Chrome/macOS Electron; Windows excluded; root review only."
     }
    ],
