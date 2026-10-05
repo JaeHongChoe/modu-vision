@@ -1,3 +1,5 @@
+import type { Language } from '../types';
+import { JARGON_ENGLISH } from './jargonEnglish';
 /**
  * src/renderer/data/jargonDictionary.ts
  * Manufacturing & Shop-Floor Plain-Korean Terminology Dictionary.
@@ -188,11 +190,17 @@ export interface StepGuidance {
   purposeKo: string;
   conditionKo: string;
   tipKo: string;
+  purposeEn: string;
+  conditionEn: string;
+  tipEn: string;
 }
 
 export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
   1: {
     stepNum: 1,
+    purposeEn: "Import inspection images and split labeled images into training, validation and test sets.",
+    conditionEn: "Open an image folder to label it in step 2. Training also requires valid labels and training/validation splits.",
+    tipEn: "Unlabeled images are excluded from training splits. Both OK and NG samples are needed to evaluate misses and overkill.",
     titleKo: '데이터 관리',
     titleEn: 'Dataset Studio',
     purposeKo: '검사 이미지 폴더를 불러오고, 라벨이 있는 이미지를 학습·검증·시험 세트로 분할합니다.',
@@ -201,6 +209,9 @@ export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
   },
   2: {
     stepNum: 2,
+    purposeEn: "Mark the actual defect locations with boxes or masks to provide training annotations.",
+    conditionEn: "Save labeled defect images or explicitly tagged normal images for anomaly detection. Check dataset readiness before training.",
+    tipEn: "Auto selector follows local color and edges. Review its output and correct it with manual tools.",
     titleKo: '라벨링 & AI 오토라벨러',
     titleEn: 'Labeling Studio',
     purposeKo: '이미지 속 실제 결함 위치(스크래치, 이물, 찍힘 등)를 박스나 마스크로 지정하여 AI에게 정답을 가르쳐주는 단계입니다.',
@@ -209,14 +220,20 @@ export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
   },
   3: {
     stepNum: 3,
+    purposeEn: "Select a compatible recipe and start a training job for the current dataset.",
+    conditionEn: "Training must be completed before its model can be evaluated in step 4. The evaluation screen can be opened in advance.",
+    tipEn: "Use a prototype to check execution. Training completion alone does not establish model quality or production readiness.",
     titleKo: '오토딥러닝 학습',
     titleEn: 'AutoML Trainer',
-    purposeKo: '복잡한 딥러닝 코딩이나 하이퍼파라미터 튜닝 없이, 원클릭으로 내 공정에 최적화된 비전 인공지능 모델을 자동 학습시킵니다.',
+    purposeKo: '현재 데이터에 호환되는 학습 레시피를 선택하고 학습 작업을 시작합니다.',
     conditionKo: '4단계에서 평가 결과를 보려면 학습이 "completed" 상태여야 합니다. 모델이 없어도 4단계 화면은 미리 볼 수 있습니다.',
     tipKo: '빠른 프로토타입은 연결 상태를 확인하는 데 사용하세요. 학습 완료만으로 모델 품질이나 양산 적합성이 확인되지는 않습니다.',
   },
   4: {
     stepNum: 4,
+    purposeEn: "Review validation predictions and analyze misses and overkill when both NG and OK samples are available.",
+    conditionEn: "Evaluate a completed model and review its errors. Threshold candidates require both classes.",
+    tipEn: "Zero observed misses in validation does not guarantee field performance. Use independent tests and process review.",
     titleKo: '품질 평가 & 과검/미검 분석',
     titleEn: 'Evaluation & Overkill',
     purposeKo: '학습된 모델의 검증 예측을 확인하고, NG와 OK 샘플이 모두 있을 때 과검·미검을 분석합니다.',
@@ -225,6 +242,9 @@ export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
   },
   5: {
     stepNum: 5,
+    purposeEn: "Connect completed models, edit inspection order, branches and verdict rules, and check the flow on actual images.",
+    conditionEn: "Save a flow using models validated against the current data. Step 6 uses that active version for batch inspection and full-flow export.",
+    tipEn: "Verify equipment integration and operational verdict use separately after reviewing the flow results.",
     titleKo: '플로우차트 다중 모델 스튜디오',
     titleEn: 'Flowchart Studio',
     purposeKo: '완료된 모델을 노드에 연결하고 검사 순서·조건 분기·판정 규칙을 편집한 뒤 실제 이미지로 확인합니다.',
@@ -233,6 +253,9 @@ export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
   },
   6: {
     stepNum: 6,
+    purposeEn: "Inspect images with the saved flow, retain verdict and operator review history, and export the whole flow.",
+    conditionEn: "Save the current-data flow in step 5. Compare inspection history with package execution on actual images.",
+    tipEn: "Local timing does not establish equipment-PC or PLC response times. Field integration tests are still needed.",
     titleKo: '인퍼런스 센터 & 모델 내보내기',
     titleEn: 'Inference & Export',
     purposeKo: '저장된 검사 플로우로 실제 이미지를 일괄 검사하고, 판정·작업자 재검 이력을 보관하며 전체 플로우를 내보냅니다.',
@@ -240,3 +263,11 @@ export const STEP_GUIDANCE_DATA: Record<number, StepGuidance> = {
     tipKo: '로컬 속도 측정은 설비 PC나 PLC의 응답 시간을 대변하지 않습니다. 현장 통합 시험이 필요합니다.',
   },
 };
+
+/** Selected-language display copy; retain the original dictionary contract for existing consumers. */
+export function getJargonEntry(key: string, language: Language): JargonEntry | undefined {
+ const entry=JARGON_DICTIONARY[key],english=JARGON_ENGLISH[key];
+ if(!entry||language==='ko')return entry;
+ if(!english)return undefined;
+ return {...entry,termKo:entry.term,categoryLabelKo:entry.category,definitionKo:english.definition,shopFloorMeaningKo:english.meaning,recommendedValueKo:english.guidance,tag:entry.category};
+}

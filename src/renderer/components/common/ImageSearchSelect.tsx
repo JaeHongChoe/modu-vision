@@ -18,6 +18,7 @@ interface Props {
   /** Only used without an accepted revision: the older listing of the first images of this folder. */
   folder?: string | null;
   task?: VisionTask;
+  language?: 'ko' | 'en';
 }
 
 const PAGE = 20;
@@ -26,7 +27,8 @@ const PAGE = 20;
  * One image of the project's validated revision, found by searching its name on the server instead of scrolling the
  * first 64 entries. Without an accepted revision it shows the older list of the first images and says so.
  */
-export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, onIdentityChange, onLegacyChange, disabled, autoSelectFirst, folder, task }) => {
+export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, onIdentityChange, onLegacyChange, disabled, autoSelectFirst, folder, task, language = 'ko' }) => {
+  const textFor = (ko: string, en: string) => language === 'ko' ? ko : en;
   const epoch = useSyncExternalStore(subscribeProjectContext, getProjectContextGeneration, getProjectContextGeneration);
   const listedEpoch = useRef<number | null>(null);
   const [text, setText] = useState('');
@@ -86,19 +88,19 @@ export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, onI
     return (
       <div className="space-y-1">
         <select aria-label={label} disabled={disabled || !ready} value={value} onChange={(event) => { if (ready && epoch === getProjectContextGeneration()) (onLegacyChange || onChange)(event.target.value); }} className="w-full rounded bg-slate-800 p-2">
-          <option value="">원본 이미지 선택</option>
-          {value && !legacy.some((item) => item.file_path === value) && <option value={value}>{value.split(/[\\/]/).pop()} (현재 선택 · 목록에 없음)</option>}
+          <option value="">{textFor('원본 이미지 선택', 'Select original image')}</option>
+          {value && !legacy.some((item) => item.file_path === value) && <option value={value}>{value.split(/[\\/]/).pop()} {textFor('(현재 선택 · 목록에 없음)', '(Current selection · outside the list)')}</option>}
           {legacy.map((item) => <option key={item.file_path} value={item.file_path}>{item.file_name}</option>)}
         </select>
-        <p className="text-[11px] text-slate-500">검증된 데이터 버전이 없어 처음 64장만 보입니다. 전체 검증 후 채택하면 이름으로 찾을 수 있습니다.</p>
+        <p className="text-[11px] text-slate-500">{textFor('검증된 데이터 버전이 없어 처음 64장만 보입니다. 전체 검증 후 채택하면 이름으로 찾을 수 있습니다.', 'Without a validated data version, only the first 64 images are listed. Validate and adopt the full version to search by name.')}</p>
       </div>
     );
   }
   const chosen = items.find((item) => item.file_path === value);
   return (
     <div className="space-y-1">
-      <input type="search" aria-label={`${label} 검색`} disabled={disabled} value={text} onChange={(event) => setText(event.target.value)}
-        placeholder="파일 이름이나 폴더로 검색" className="w-full rounded bg-slate-800 p-2" />
+      <input type="search" aria-label={`${label} ${textFor('검색', 'search')}`} disabled={disabled} value={text} onChange={(event) => setText(event.target.value)}
+        placeholder={textFor('파일 이름이나 폴더로 검색', 'Search by file name or folder')} className="w-full rounded bg-slate-800 p-2" />
       <select aria-label={label} disabled={disabled || !ready} value={value} onChange={(event) => {
         if (!ready || epoch !== getProjectContextGeneration()) return;
         if (!onIdentityChange) { onChange(event.target.value); return; }
@@ -107,12 +109,12 @@ export const ImageSearchSelect: React.FC<Props> = ({ label, value, onChange, onI
         if (image) onIdentityChange(image);
       }} size={Math.min(6, Math.max(2, items.length + 1))}
         className="w-full rounded bg-slate-800 p-1">
-        <option value="">{items.length ? '이미지 선택' : '조건에 맞는 이미지가 없습니다'}</option>
-        {value && !chosen && <option value={value}>{value.split(/[\\/]/).pop()} (현재 선택)</option>}
+        <option value="">{items.length ? textFor('이미지 선택', 'Select image') : textFor('조건에 맞는 이미지가 없습니다', 'No images match this search')}</option>
+        {value && !chosen && <option value={value}>{value.split(/[\\/]/).pop()} {textFor('(현재 선택)', '(Current selection)')}</option>}
         {items.map((item) => <option key={item.image_uuid} value={item.file_path} disabled={Boolean(onIdentityChange && (!item.valid || !item.sha256))}>{item.relative_path}{item.valid ? '' : ` · ${item.error_code}`}</option>)}
       </select>
       {onIdentityChange && chosen?.valid && chosen.sha256 && /^[a-f0-9]{64}$/.test(chosen.sha256) && <button type="button" disabled={disabled || !ready}
-        onClick={() => { if (ready && epoch === getProjectContextGeneration()) onIdentityChange(chosen); }} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">현재 이미지 다시 선택</button>}
+        onClick={() => { if (ready && epoch === getProjectContextGeneration()) onIdentityChange(chosen); }} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">{textFor('현재 이미지 다시 선택', 'Reselect current image')}</button>}
       {error && <p role="alert" className="text-[11px] text-red-300">{error}</p>}
     </div>
   );

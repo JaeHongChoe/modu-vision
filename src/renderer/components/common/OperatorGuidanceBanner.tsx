@@ -10,6 +10,7 @@
  */
 
 import React, { useState } from 'react';
+import { useProjectStore } from '../../stores/useProjectStore';
 import {
   ChevronDown,
   ChevronUp,
@@ -31,6 +32,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
   step,
   className = '',
 }) => {
+  const isKo = useProjectStore(s=>s.language)==='ko';
   const [isExpanded, setIsExpanded] = useState(()=>{try{return localStorage.getItem('vision-step-guidance')==='expanded';}catch{return false;}});
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const guidance = STEP_GUIDANCE_DATA[step];
@@ -47,9 +49,9 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
           <div className="flex items-center space-x-2.5">
             <LedAnnunciator state="running" size="sm" />
             <span className="font-bold text-slate-100 font-mono text-xs uppercase tracking-wide">
-              STEP {step}: {guidance.titleKo}
+              STEP {step}: {isKo ? guidance.titleKo : guidance.titleEn}
             </span>
-            <span className="text-slate-500 font-mono text-[11px]">[{guidance.titleEn}]</span>
+            <span className="text-slate-500 font-mono text-[11px]">[{isKo ? guidance.titleEn : guidance.titleKo}]</span>
           </div>
 
           <div className="flex items-center space-x-2.5">
@@ -58,10 +60,10 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
               type="button"
               onClick={() => setIsGlossaryOpen(true)}
               className="flex items-center space-x-1.5 px-2.5 py-1 bg-[#1A212E] hover:bg-[#2B3547] text-slate-300 hover:text-white border border-[#2B3547] rounded text-[11px] font-medium transition-colors cursor-pointer"
-              title="제조 인공지능 기술 용어 사전 열기"
+              title={isKo ? '제조 인공지능 기술 용어 사전 열기' : 'Open the manufacturing vision AI glossary'}
             >
               <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-              <span>용어 사전</span>
+              <span>{isKo ? '용어 사전' : 'Glossary'}</span>
             </button>
 
             {/* Toggle Expand / Collapse */}
@@ -70,7 +72,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
               aria-expanded={isExpanded} onClick={() => {setIsExpanded(!isExpanded);try{localStorage.setItem('vision-step-guidance',isExpanded?'collapsed':'expanded');}catch{}}}
               className="flex items-center space-x-1 px-2 py-1 rounded text-slate-400 hover:text-slate-200 hover:bg-[#1A212E] border border-transparent hover:border-[#2B3547] transition-colors cursor-pointer text-[11px]"
             >
-              <span>{isExpanded ? '가이드 접기' : '가이드 펼치기'}</span>
+              <span>{isKo ? (isExpanded ? '가이드 접기' : '가이드 펼치기') : (isExpanded ? 'Collapse guidance' : 'Expand guidance')}</span>
               {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
           </div>
@@ -84,10 +86,10 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
               <div>
                 <div className="flex items-center space-x-1.5 font-bold text-slate-200 mb-1.5 text-[11px] uppercase tracking-wide">
                   <Target className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span>현재 단계의 목적</span>
+                  <span>{isKo ? '현재 단계의 목적' : 'Purpose of this step'}</span>
                 </div>
                 <p className="text-slate-300 leading-relaxed text-[11px] font-sans">
-                  {guidance.purposeKo}
+                  {isKo ? guidance.purposeKo : guidance.purposeEn}
                 </p>
               </div>
             </div>
@@ -97,10 +99,10 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
               <div>
                 <div className="flex items-center space-x-1.5 font-bold text-slate-200 mb-1.5 text-[11px] uppercase tracking-wide">
                   <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span>다음 단계 진행 조건</span>
+                  <span>{isKo ? '다음 단계 진행 조건' : 'Before continuing'}</span>
                 </div>
                 <p className="text-slate-300 leading-relaxed text-[11px] font-sans">
-                  {guidance.conditionKo}
+                  {isKo ? guidance.conditionKo : guidance.conditionEn}
                 </p>
               </div>
             </div>
@@ -110,10 +112,10 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
               <div>
                 <div className="flex items-center space-x-1.5 font-bold text-amber-400 mb-1.5 text-[11px] uppercase tracking-wide">
                   <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>비전문가를 위한 실무 팁</span>
+                  <span>{isKo ? '비전문가를 위한 실무 팁' : 'Practical tip'}</span>
                 </div>
                 <p className="text-slate-300 leading-relaxed text-[11px] font-sans">
-                  {guidance.tipKo}
+                  {isKo ? guidance.tipKo : guidance.tipEn}
                 </p>
               </div>
             </div>

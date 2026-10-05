@@ -35,3 +35,14 @@ test('a stage chosen while the first sync is in flight is kept and remembered, n
  values.clear();const plain=load('./useProjectStore.ts',{...mocks,'../services/api':{...mocks['../services/api'],api:{project:{...mocks['../services/api'].api.project,getCurrent:async()=>project}}}}).useProjectStore;
  await plain.getState().syncCurrentProject();assert.equal(plain.getState().activeStep,1);
 });
+
+test('language selection survives a fresh store and rejects corrupt preferences',()=>{
+ const values=new Map();globalThis.localStorage={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
+ const store=value=>({getState:()=>value,setState:update=>Object.assign(value,update)});
+ const mocks={'../services/api':{api:{},getApiPersistenceIdentity:()=> 'local'},'./useAnnotationStore':{useAnnotationStore:store({})},'../services/datasetWorkflow':{},'./useDatasetStore':{useDatasetStore:store({})},'./useFlowchartStore':{useFlowchartStore:store({})},'./useTrainingStore':{useTrainingStore:store({})},'./useInspectionRunStore':{useInspectionRunStore:store({})},'./useModelAssistRunStore':{useModelAssistRunStore:store({})}};
+ const app=load('./useProjectStore.ts',mocks).useProjectStore;app.getState().setLanguage('en');
+ assert.equal(load('./useProjectStore.ts',mocks).useProjectStore.getState().language,'en');
+ assert.equal(values.size,1);values.set([...values.keys()][0],'invalid');assert.equal(load('./useProjectStore.ts',mocks).useProjectStore.getState().language,'ko');
+ globalThis.localStorage={getItem(){throw Error('unavailable');},setItem(){throw Error('unavailable');}};
+ const unavailable=load('./useProjectStore.ts',mocks).useProjectStore;assert.equal(unavailable.getState().language,'ko');assert.doesNotThrow(()=>unavailable.getState().setLanguage('en'));assert.equal(unavailable.getState().language,'en');
+});

@@ -10,7 +10,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { HelpCircle, Lightbulb, Factory, Info, X } from 'lucide-react';
-import { JARGON_DICTIONARY } from '../../data/jargonDictionary';
+import { useProjectStore } from '../../stores/useProjectStore';
+import { getJargonEntry } from '../../data/jargonDictionary';
 
 export interface JargonTooltipProps {
   termKey: string;
@@ -27,9 +28,10 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
   align = 'center',
   side = 'bottom',
 }) => {
+  const language=useProjectStore(s=>s.language),isKo=language==='ko';
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const entry = JARGON_DICTIONARY[termKey];
+  const entry = getJargonEntry(termKey,language);
 
   // Close on outside click or Escape key
   useEffect(() => {
@@ -88,7 +90,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
             e.stopPropagation();
             setIsOpen((prev) => !prev);
           }}
-          aria-label={`용어 설명: ${entry.termKo}`}
+          aria-label={`${isKo?'용어 설명':'Term explanation'}: ${entry.termKo}`}
           className="p-0.5 rounded text-slate-400 hover:text-slate-200 hover:bg-[#1A212E] transition-colors cursor-help inline-flex items-center justify-center border border-transparent hover:border-[#2B3547]"
         >
           <HelpCircle className="w-3.5 h-3.5" />
@@ -116,7 +118,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
               </div>
               <div className="flex items-center space-x-2 mt-1">
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider font-mono">
-                  분류: {entry.categoryLabelKo}
+                  {isKo?'분류':'Category'}: {entry.categoryLabelKo}
                 </span>
                 <span className="text-slate-400 font-bold">•</span>
                 <span className="text-[10px] text-emerald-400 font-mono">
@@ -140,7 +142,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
             <div className="space-y-1">
               <div className="flex items-center space-x-1.5 font-bold text-blue-400 text-[11px] uppercase tracking-wide">
                 <Info className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span>이게 무엇인가요?</span>
+                <span>{isKo?'이게 무엇인가요?':'What is it?'}</span>
               </div>
               <p className="text-slate-300 text-[11px] pl-5 font-sans leading-relaxed">
                 {entry.definitionKo}
@@ -151,7 +153,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
             <div className="space-y-1">
               <div className="flex items-center space-x-1.5 font-bold text-amber-400 text-[11px] uppercase tracking-wide">
                 <Factory className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>제조 현장 실무 관점에서의 의미</span>
+                <span>{isKo?'제조 현장 실무 관점에서의 의미':'Process implications'}</span>
               </div>
               <p className="text-slate-300 text-[11px] pl-5 font-sans leading-relaxed">
                 {entry.shopFloorMeaningKo}
@@ -162,7 +164,7 @@ export const JargonTooltip: React.FC<JargonTooltipProps> = ({
             <div className="p-2.5 bg-[#0E2018] rounded border border-[#10B981]/50 space-y-1">
               <div className="flex items-center space-x-1.5 font-bold text-[#10B981] text-[11px] uppercase tracking-wide">
                 <Lightbulb className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                <span>권장 기준 & 조치 가이드</span>
+                <span>{isKo?'권장 기준 & 조치 가이드':'Checks and guidance'}</span>
               </div>
               <p className="text-emerald-100 text-[11px] pl-5 font-medium leading-relaxed font-sans">
                 {entry.recommendedValueKo}

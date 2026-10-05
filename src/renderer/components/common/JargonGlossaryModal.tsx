@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Search, X, Factory, Lightbulb, Info } from 'lucide-react';
-import { JARGON_DICTIONARY } from '../../data/jargonDictionary';
+import { useProjectStore } from '../../stores/useProjectStore';
+import { JARGON_DICTIONARY, getJargonEntry } from '../../data/jargonDictionary';
 
 export interface JargonGlossaryModalProps {
   isOpen: boolean;
@@ -13,10 +14,11 @@ export interface JargonGlossaryModalProps {
 }
 
 export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen, onClose }) => {
+  const language=useProjectStore(s=>s.language),isKo=language==='ko';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const entries = useMemo(() => Object.values(JARGON_DICTIONARY), []);
+  const entries = useMemo(() => Object.keys(JARGON_DICTIONARY).map(key=>getJargonEntry(key,language)!), [language]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,6 +54,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
       onClick={onClose}
     >
       <div
+        role="dialog" aria-modal="true" aria-label={isKo?'제조 비전 AI 용어 사전':'Manufacturing vision AI glossary'}
         className="bg-[#131822] border border-[#2B3547] rounded w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -63,13 +66,13 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
             </div>
             <div>
               <h2 className="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono flex items-center space-x-2">
-                <span>제조 현장 비전 AI 기술 실무 용어 사전</span>
+                <span>{isKo?'제조 현장 비전 AI 기술 실무 용어 사전':'Manufacturing vision AI glossary'}</span>
                 <span className="text-[11px] px-2 py-0.2 rounded bg-[#1A212E] text-slate-300 font-mono tabular-nums border border-[#2B3547]">
                   {entries.length} TERMS
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                복잡한 머신러닝 전문 파라미터를 제조 현장(수율, 결함 유출, 설비 택트타임)의 실무 계측 규격으로 해설합니다.
+                {isKo?'복잡한 머신러닝 전문 파라미터를 제조 현장(수율, 결함 유출, 설비 택트타임)의 실무 계측 규격으로 해설합니다.':'Definitions, process implications and checks for vision AI parameters.'}
               </p>
             </div>
           </div>
@@ -78,7 +81,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
             type="button"
             onClick={onClose}
             className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-[#1A212E] border border-transparent hover:border-[#2B3547] transition-colors cursor-pointer"
-            title="닫기 (Esc)"
+            title={isKo?'닫기 (Esc)':'Close (Esc)'}
           >
             <X className="w-4 h-4" />
           </button>
@@ -92,18 +95,18 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="용어 검색 (예: Focal Loss, AUROC, 미검, P95, 패딩...)"
+              aria-label={isKo?'용어 검색':'Search glossary'} placeholder={isKo?'용어 검색 (예: Focal Loss, AUROC, 미검, P95, 패딩...)':'Search terms: Focal Loss, AUROC, escape, P95, padding…'}
               className="w-full bg-[#1A212E] border border-[#2B3547] rounded pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:border-slate-400"
             />
           </div>
 
           <div className="flex space-x-1 text-xs font-semibold overflow-x-auto pb-1 sm:pb-0">
             {[
-              { id: 'all', label: '전체' },
-              { id: 'training', label: '학습' },
-              { id: 'evaluation', label: '평가/수율' },
-              { id: 'flowchart', label: '플로우차트' },
-              { id: 'inference', label: '인라인속도' },
+              { id: 'all', label: isKo?'전체':'All' },
+              { id: 'training', label: isKo?'학습':'Training' },
+              { id: 'evaluation', label: isKo?'평가/수율':'Evaluation' },
+              { id: 'flowchart', label: isKo?'플로우차트':'Flowchart' },
+              { id: 'inference', label: isKo?'인라인속도':'Inference' },
             ].map((tab) => {
               const isActive = selectedCategory === tab.id;
               return (
@@ -128,7 +131,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
         <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#131822]">
           {filtered.length === 0 ? (
             <div className="text-center py-12 text-slate-500 text-xs italic font-mono">
-              검색 조건에 일치하는 기술 용어가 없습니다.
+              {isKo?'검색 조건에 일치하는 기술 용어가 없습니다.':'No terms match this search.'}
             </div>
           ) : (
             filtered.map((item) => (
@@ -152,7 +155,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1.5 font-bold text-slate-300 text-[11px] uppercase tracking-wide">
                       <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span>원리 및 기능 정의</span>
+                      <span>{isKo?'원리 및 기능 정의':'Definition'}</span>
                     </div>
                     <p className="text-slate-300 text-[11px] leading-relaxed pl-5 font-sans">
                       {item.definitionKo}
@@ -162,7 +165,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1.5 font-bold text-amber-400 text-[11px] uppercase tracking-wide">
                       <Factory className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span>제조 현장 실무 관점에서의 의미</span>
+                      <span>{isKo?'제조 현장 실무 관점에서의 의미':'Process implications'}</span>
                     </div>
                     <p className="text-slate-300 text-[11px] leading-relaxed pl-5 font-sans">
                       {item.shopFloorMeaningKo}
@@ -173,7 +176,7 @@ export const JargonGlossaryModal: React.FC<JargonGlossaryModalProps> = ({ isOpen
                 <div className="p-2 bg-[#131822] rounded border border-[#2B3547] flex items-center space-x-2 text-[11px]">
                   <Lightbulb className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
                   <span className="font-bold text-[#10B981] shrink-0 font-mono text-[10px] uppercase">
-                    [권장 기준]:
+                    {isKo?'[권장 기준]:':'[Checks]:'}
                   </span>
                   <span className="text-slate-200 font-mono text-[11px]">{item.recommendedValueKo}</span>
                 </div>

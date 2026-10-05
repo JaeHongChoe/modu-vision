@@ -247,7 +247,7 @@ export const WizardHeader: React.FC = () => {
             </span>
           </div>
 
-          <button type="button" onClick={() => setShowProvenance(true)} className="rounded border border-[#364357] px-2.5 py-1 text-slate-200 hover:bg-[#263246]">데이터·판정 이력</button>
+          <button type="button" onClick={() => setShowProvenance(true)} className="rounded border border-[#364357] px-2.5 py-1 text-slate-200 hover:bg-[#263246]">{language==='ko'?'데이터·판정 이력':'Data and verdict history'}</button>
           {/* Industrial Bilingual Switcher */}
           <button
             type="button"

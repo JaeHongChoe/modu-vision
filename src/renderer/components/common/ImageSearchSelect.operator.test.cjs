@@ -1,5 +1,17 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),test=require('node:test');
 const settle=()=>new Promise(setImmediate);
+test('shared image choice follows live language without replacing selection or fetching again',async()=>{
+ for(const fallback of [false,true]){
+  const f=fixture({fallback,identity:true,value:'/s/a.png'});
+  try{f.render();await f.run();f.props.language='en';const tree=f.render();
+   const select=f.nodes(tree).find(n=>n.type==='select');assert.equal(select.props.value,'/s/a.png');
+   assert.equal(f.nodes(tree).find(n=>n.type==='option'&&n.props.value==='').props.children,fallback?'Select original image':'Select image');
+   if(fallback)assert.match(f.nodes(tree).find(n=>n.type==='p').props.children,/first 64/);
+   else assert.equal(f.nodes(tree).find(n=>n.type==='input').props.placeholder,'Search by file name or folder');
+   assert.equal(f.calls(),1);assert.deepEqual(f.identities,[]);
+  }finally{f.close();}
+ }
+});
 function fixture({fallback=false,identity=false,value='',respond}={}){
  let cursor=0,epoch=0,calls=0;const slots=[],effects=[],timers=[],paths=[],identities=[],legacyChoices=[];
  const react={useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=initial;return [slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef:initial=>{const i=cursor++;return slots[i]??(slots[i]={current:initial});},useEffect:(fn,deps)=>{const i=cursor++;if(!slots[i]||deps.some((v,j)=>v!==slots[i].deps[j])){slots[i]?.cleanup?.();slots[i]={deps};effects.push(()=>slots[i].cleanup=fn());}}};

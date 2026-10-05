@@ -37,7 +37,7 @@ const catchUpJobEvents = createCatchUp(jobEventStream, () => useTrainingStore.ge
   () => useTrainingStore.getState().refreshCurrentJob());
 
 export default function App() {
-  const { activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
+  const { language, activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject } = useProjectStore();
   const { updateFromTelemetry } = useTrainingStore();
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
   const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
@@ -125,13 +125,13 @@ export default function App() {
       {/* Precision Industrial Header Frame */}
       <WizardHeader />
 
-      <nav aria-label="프로젝트 작업 공간" className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
-        <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>모델·플로우 작업</button>
-        <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>운영자 검사</button>
+      <nav aria-label={language==='ko'?'프로젝트 작업 공간':'Project workspace'} className="flex shrink-0 items-center gap-2 border-b border-slate-700 bg-[#101722] px-4 py-1.5 text-xs">
+        <button className={`rounded px-3 py-1.5 ${workspace==='studio'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='studio'} onClick={()=>setWorkspace('studio')}>{language==='ko'?'모델·플로우 작업':'Models and flows'}</button>
+        <button className={`rounded px-3 py-1.5 ${workspace==='operator'?'bg-sky-950 text-sky-200':'text-slate-300'}`} aria-pressed={workspace==='operator'} onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사':'Operator inspection'}</button>
         <span className="flex-1"/>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'}</button>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>작업 센터</button>
-        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>패키지·장치·진단</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started')}</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터':'Task center'}</button>
+        <button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setUtility('delivery')}>{language==='ko'?'패키지·장치·진단':'Packages, devices and diagnostics'}</button>
       </nav>
       {exampleProject&&<p role="note" aria-label="예제 프로젝트" className="shrink-0 border-b border-amber-700/60 bg-amber-950/30 px-4 py-1.5 text-xs text-amber-200">예제 프로젝트 · {EXAMPLE_NOTICE}</p>}
       {/* Primary Inspection Studio Workspace with 1px Hairline Grid Containment */}
@@ -146,7 +146,7 @@ export default function App() {
       </main>
 
       {/* Docked Telemetry & Navigation Footer */}
-      <WizardFooter />
+      {workspace==='studio'&&<WizardFooter />}
 
       {/* Global Industrial Fault Diagnostic Dialog */}
       <ErrorDiagnosticsModal />

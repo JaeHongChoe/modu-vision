@@ -88,6 +88,17 @@ function viewStorage(): Storage | undefined {
   catch { return undefined; }
 }
 
+// Language is a device preference, not a project mutation or permission grant.
+const LANGUAGE_KEY = 'modu:user-language:v1';
+function readUserLanguage(storage?: Pick<Storage, 'getItem'>): Language {
+  try { return storage?.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'ko'; }
+  catch { return 'ko'; }
+}
+function rememberUserLanguage(storage: Pick<Storage, 'setItem'> | undefined, language: Language): void {
+  try { storage?.setItem(LANGUAGE_KEY, language); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+
 interface ProjectState {
   activeStep: WizardStep;
   task: VisionTask;
@@ -248,7 +259,7 @@ async function applyProject(project: ProjectConfig, previous: ProjectConfig | nu
 export const useProjectStore = create<ProjectState>((set, get) => ({
   activeStep: 1,
   task: 'classification',
-  language: 'ko',
+  language: readUserLanguage(viewStorage()),
   backendPort: null,
   backendStatus: { port: null, healthy: false, pid: null },
   activeError: null,
@@ -393,7 +404,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
   setTask: (task) => get().updateTask(task),
 
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) => { rememberUserLanguage(viewStorage(), language); set({ language }); },
   setBackendStatus: (status) => {
     setCachedPort(status.port);
     set({ backendStatus: status, backendPort: status.port });
