@@ -1,4 +1,18 @@
 import type { FlowEdge, FlowNode, FlowNodeData, FlowchartPipeline } from '../../types';
+export type PatchRecipe={version:1;mode:'max'|'vote'|'ng_count';threshold:number;vote_fraction:number;minimum_ng_count:number;threshold_comparison:'greater_than_or_equal'};
+export const defaultPatchRecipe:PatchRecipe={version:1,mode:'max',threshold:.5,vote_fraction:.5,minimum_ng_count:1,threshold_comparison:'greater_than_or_equal'};
+export function readPatchRecipe(value:unknown):PatchRecipe{
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('패치 판정 설정을 확인하세요.');
+ const selected=value as Record<string,unknown>;
+ if(Object.keys(selected).some(key=>!Object.keys(defaultPatchRecipe).includes(key)))throw Error('지원하지 않는 패치 판정 설정입니다.');
+ const r={...defaultPatchRecipe,...selected} as PatchRecipe;
+ if(r.version!==1||!['max','vote','ng_count'].includes(r.mode)||r.threshold_comparison!=='greater_than_or_equal'||
+    typeof r.threshold!=='number'||!Number.isFinite(r.threshold)||r.threshold<0||r.threshold>1||
+    typeof r.vote_fraction!=='number'||!Number.isFinite(r.vote_fraction)||r.vote_fraction<=0||r.vote_fraction>1||
+    !Number.isInteger(r.minimum_ng_count)||r.minimum_ng_count<1||r.minimum_ng_count>100000)throw Error('패치 임계치·투표 비율·NG 개수를 확인하세요.');
+ return r;
+}
+
 
 type FlowNodeType = FlowNode['data']['node_type'];
 type Branch = NonNullable<FlowEdge['isBranch']>;
@@ -502,8 +516,13 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
       return '판정 노드에 모델, Blob 또는 집계 결과 연결선이 필요합니다.';
     }
     const rule = decision.data.rule || 'any_defect_is_ng';
-    if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed', 'aggregate_verdict'].includes(rule)) {
+    if (!['any_defect_is_ng', 'score_gt_threshold', 'max_flaws_allowed', 'aggregate_verdict', 'patch_recipe'].includes(rule)) {
       return '지원하지 않는 판정 룰입니다.';
+    }
+    if(rule==='patch_recipe'){
+      if(evidence.length!==1)return '패치 판정에는 패치 검사 결과 하나가 필요합니다.';
+      const source=nodes.get(evidence[0].source);const recipe=readPatchRecipe(decision.data.params?.patch_recipe);
+      if(source?.data.node_type!=='inspection'||source.data.task!=='patch_classification'||source.data.threshold!==recipe.threshold||JSON.stringify(readPatchRecipe(source.data.params?.patch_recipe))!==JSON.stringify(recipe))return '패치 검사와 판정 노드의 설정이 일치해야 합니다.';
     }
     if (rule === 'aggregate_verdict' && (evidence.length !== 1 || nodes.get(evidence[0].source)?.data.node_type !== 'aggregate')) {
       return '집계 판정 룰에는 집계 결과 연결선 하나가 필요합니다.';

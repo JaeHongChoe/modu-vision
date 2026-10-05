@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
@@ -234,6 +235,70 @@ def _grid_positions(length: int, patch_size: int, stride: int) -> list[int]:
     return list(grid_positions(length, patch_size, stride))
 
 
+def patch_recipe(value=None):
+    """Versioned image decision; NG votes include equality at the threshold."""
+    value = {} if value is None else value
+    allowed = {'version','mode','threshold','vote_fraction','minimum_ng_count','threshold_comparison'}
+    if not isinstance(value, dict) or set(value)-allowed:
+        raise ValueError('Patch recipe has unknown fields')
+    result = {'version':1,'mode':'max','threshold':.5,'vote_fraction':.5,
+              'minimum_ng_count':1,'threshold_comparison':'greater_than_or_equal',**value}
+    if (type(result['version']) is not int or result['version'] != 1
+            or result['mode'] not in {'max','vote','ng_count'}
+            or result['threshold_comparison'] != 'greater_than_or_equal'):
+        raise ValueError('Patch recipe version, mode or comparison is unsupported')
+    for key in ('threshold','vote_fraction'):
+        number=result[key]
+        if type(number) not in (int,float) or not math.isfinite(number) or not 0<=number<=1 or (key=='vote_fraction' and number==0):
+            raise ValueError('Patch recipe threshold/fraction is invalid')
+    if type(result['minimum_ng_count']) is not int or not 1<=result['minimum_ng_count']<=DEFAULT_MAX_PATCH_COUNT:
+        raise ValueError('Patch recipe minimum NG count is invalid')
+    return result
+
+
+def aggregate_patch_scores(scores, recipe=None):
+    recipe=patch_recipe(recipe);scores=list(scores)
+    if not scores or any(type(s) not in (int,float) or not math.isfinite(s) or not 0<=s<=1 for s in scores):
+        raise ValueError('Patch recipe requires finite measured probabilities')
+    ng=sum(s>=recipe['threshold'] for s in scores);maximum=max(scores);fraction=ng/len(scores)
+    failed={'max':maximum>=recipe['threshold'],'vote':fraction>=recipe['vote_fraction'],
+            'ng_count':ng>=recipe['minimum_ng_count']}[recipe['mode']]
+    return {'recipe':recipe,'decision':'FAIL' if failed else 'PASS','ng_count':ng,
+            'patch_count':len(scores),'ng_fraction':fraction,'max_defect_score':maximum}
+
+
+def apply_patch_recipe(pipeline, recipe):
+    recipe=patch_recipe(recipe)
+    inspections=[n for n in pipeline.nodes if n.data.node_type=='inspection' and n.data.task=='patch_classification']
+    decisions=[n for n in pipeline.nodes if n.data.node_type=='decision']
+    if len(inspections)!=1 or len(decisions)!=1:raise ValueError('Patch recipe needs one patch inspector and decision')
+    inspections[0].data.threshold=recipe['threshold']
+    inspections[0].data.params={**inspections[0].data.params,'patch_recipe':recipe}
+    decisions[0].data.rule='patch_recipe';decisions[0].data.params={'patch_recipe':recipe}
+    from backend.engine.flowchart_engine import ordered_linear_nodes
+    ordered_linear_nodes(pipeline)
+    return pipeline
+
+
+def patch_score_preview(rgb, patches):
+    """Bounded visualization: maximum overlapping defect score, never a mask."""
+    h,w=rgb.shape[:2];scale=min(1,768/max(h,w));pw,ph=max(1,round(w*scale)),max(1,round(h*scale))
+    scores=np.zeros((ph,pw),np.float32)
+    for row in patches:
+        x1,y1,x2,y2=row['box'];left,top=math.floor(x1*pw/w),math.floor(y1*ph/h)
+        right,bottom=math.ceil(x2*pw/w),math.ceil(y2*ph/h)
+        np.maximum(scores[top:bottom,left:right],row['defect_score'],out=scores[top:bottom,left:right])
+    colors=cv2.cvtColor(cv2.applyColorMap(np.round(scores*255).astype(np.uint8),cv2.COLORMAP_TURBO),cv2.COLOR_BGR2RGB)
+    def encode(array):
+        stream=io.BytesIO();Image.fromarray(array).save(stream,format='PNG')
+        import base64
+        return base64.b64encode(stream.getvalue()).decode()
+    return {'original_base64':encode(cv2.resize(rgb,(pw,ph),interpolation=cv2.INTER_AREA)),
+            'score_map_base64':encode(colors),'source_size':[w,h],'preview_size':[pw,ph],
+            'score_map_definition':'maximum overlapping defect probability; display only, not segmentation truth',
+            'preview_only':True}
+
+
 def predict_patch_classification(
     checkpoint: str | Path,
     image: str | Path | Image.Image | np.ndarray,
@@ -247,6 +312,7 @@ def predict_patch_classification(
     max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS,
     max_patch_count: int = DEFAULT_MAX_PATCH_COUNT,
     max_batch_bytes: int = DEFAULT_MAX_BATCH_BYTES,
+    recipe: Optional[dict] = None,
 ) -> dict[str, Any]:
     """Run a trained patch model on explicit ROIs or a deterministic grid.
 
@@ -270,8 +336,8 @@ def predict_patch_classification(
     size = meta.get("image_size")
     if not isinstance(size, list) or len(size) != 2 or any(type(value) is not int or value < 1 for value in size):
         raise ValueError("Patch checkpoint has invalid image_size")
-    if not 0.0 <= threshold <= 1.0:
-        raise ValueError("Patch threshold must be between 0 and 1")
+    selected_recipe=patch_recipe({'threshold':threshold} if recipe is None else recipe)
+    threshold=selected_recipe['threshold']
     batch_size = bounded_batch_size(size, batch_size, max_batch_bytes)
 
     if isinstance(image, (str, Path)):
@@ -345,10 +411,11 @@ def predict_patch_classification(
                     "defect_score": defect_score,
                     "decision": "FAIL" if defect_score >= threshold else "PASS",
                 })
-    maximum = max(record["defect_score"] for record in results)
+    aggregate=aggregate_patch_scores([row['defect_score'] for row in results],selected_recipe)
+    maximum=aggregate['max_defect_score']
     return {
         "task": "patch_classification",
-        "decision": "FAIL" if maximum >= threshold else "PASS",
+        **aggregate,
         "confidence_score": maximum,
         "max_defect_score": maximum,
         "threshold": threshold,

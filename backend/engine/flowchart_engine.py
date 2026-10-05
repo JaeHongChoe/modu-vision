@@ -770,8 +770,18 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
         raise ValueError("Decision needs incoming model results.")
     decision = decisions[0]
     rule = decision.data.rule or "any_defect_is_ng"
-    if rule not in ("any_defect_is_ng", "score_gt_threshold", "max_flaws_allowed", "aggregate_verdict"):
+    if rule not in ("any_defect_is_ng", "score_gt_threshold", "max_flaws_allowed", "aggregate_verdict", "patch_recipe"):
         raise ValueError(f"Decision rule {rule} is unsupported.")
+    if rule == 'patch_recipe':
+        from backend.engine.patch_classification import patch_recipe
+        recipe=patch_recipe(decision.data.params.get('patch_recipe'))
+        if len(decision_inputs)!=1:
+            raise ValueError('Patch recipe requires exactly one patch result input')
+        source=nodes[decision_inputs[0].source]
+        if (source.data.node_type!='inspection' or source.data.task!='patch_classification'
+                or source.data.threshold!=recipe['threshold']
+                or patch_recipe(source.data.params.get('patch_recipe'))!=recipe):
+            raise ValueError('Patch recipe inspector and decision must use identical settings')
     if rule == "aggregate_verdict" and (
         len(decision_inputs) != 1 or nodes[decision_inputs[0].source].data.node_type != "aggregate"
     ):
@@ -1316,7 +1326,7 @@ class FlowchartEngine:
                     results.append(CropInspectionResult(
                         roi_id=f"{roi['id']}:patch_{index + 1}", label=patch["predicted_class"],
                         bbox=[bounds[0] + px1, bounds[1] + py1, bounds[0] + px2, bounds[1] + py2],
-                        defect_score=round(score, 4), verdict="NG" if is_ng else "OK",
+                        defect_score=score, verdict="NG" if is_ng else "OK",
                         crop_thumbnail=f"data:image/png;base64,{base64.b64encode(encoded.tobytes()).decode('utf-8')}",
                         flaw_type="패치 분류 결함 기준 초과" if is_ng else "설정 기준 이내",
                         confidence=float(patch["confidence"]),
@@ -1812,6 +1822,11 @@ class FlowchartEngine:
             final_verdict: Literal["OK", "NG", "REVIEW"] = "REVIEW"
             is_ok = False
             rejection_reason = no_inspection_reason or "No inspection region was found; the image was not inspected. Review required."
+        elif rule == 'patch_recipe':
+            from backend.engine.patch_classification import aggregate_patch_scores
+            aggregate=aggregate_patch_scores([crop.defect_score for crop in crops],params.get('patch_recipe'))
+            final_verdict='NG' if aggregate['decision']=='FAIL' else 'OK';is_ok=final_verdict=='OK'
+            rejection_reason=f"Patch {aggregate['recipe']['mode']}: {aggregate['ng_count']}/{aggregate['patch_count']} at threshold {aggregate['recipe']['threshold']}."
         elif rule == "score_gt_threshold":
             from backend.engine.score_contract import validate_score_rule
             try:
@@ -2388,6 +2403,10 @@ class FlowchartEngine:
                         "NG" if any(crop.verdict == "NG" for crop in evidence) else
                         "OK" if evidence or node.data.task == "rotated_detection" else "REVIEW"
                     )
+                    if status=='passed' and evidence and node.data.task=='patch_classification' and 'patch_recipe' in node.data.params:
+                        from backend.engine.patch_classification import aggregate_patch_scores
+                        aggregated=aggregate_patch_scores([crop.defect_score for crop in evidence],node.data.params['patch_recipe'])
+                        branch_verdict='NG' if aggregated['decision']=='FAIL' else 'OK'
                     output_count = len(evidence)
 
                 # Detector ROIs are predictions; inspection ROIs are inherited inputs.

@@ -2868,25 +2868,36 @@
     "S1-05",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "source-qualified-parent-software-closure",
+     "source_base": "8b4c35ba672aa38dba172186878f78cabe401d9a",
+     "result": "Task108 adds owned original-coordinate patch truth/sample and probability previews; inclusive versioned max/vote/NG-count recipes bind inspector and decision with identical rule/threshold.45 backend cases and767 renderer cases pass; production/E2E/generated types pass. Actual Chrome and macOS development Electron each prepare36 patches from6 disjoint original groups, train authentic timm DINOv3 small16 head-only2 CPU epochs, evaluate held-out patches, preview all three recipes, execute local whole flow and fresh offline candidate package with matching geometry/results, reopen recipe and save a flow version. Root reopens trusted receipts/checkpoint and proves every frozen encoder tensor equals the original official safetensors. Source and external weight hashes remain unchanged. Native preview screenshots inspected.",
+     "scope": "Root readback SHA-2563d8a792bafcb20bb0fbf39fffdc50e52c932fcc29887e39be8d0ffdb5b9fb372 binds1411 source inputs/1806 artifacts. Synthetic reviewed-region fixture, no representative quality or release approval. Independent human/target/GPU/packaged/physical acceptance remain pending; actual Windows excluded."
+    }
+   ],
    "file_actions": {
     "backend/engine/patch_classification.py": "Modify",
     "src/renderer/components/training/PatchClassificationWorkbench.tsx": "Modify"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s4_03.py"
+   "proposed_test_file": "backend/tests/test_service_s4_03.py",
+   "remaining": [
+    "Independent human quality/contract review on representative normal/defect patch truth",
+    "Installed/target/GPU/physical acceptance and package release qualification remain pending; Windows excluded"
+   ]
   },
   {
    "id": "S4-04",
@@ -9407,13 +9418,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 47,
-    "pending": 35
+    "verified": 48,
+    "pending": 34
    },
    "parent_status": {
-    "verification_pending": 41,
+    "verification_pending": 42,
     "in_progress": 17,
-    "planned": 24
+    "planned": 23
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

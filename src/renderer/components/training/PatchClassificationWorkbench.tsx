@@ -11,6 +11,7 @@ import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {defaultTrainingScheduling,trainingSchedulingOptions,TrainingSchedulingSettings} from './TrainingSchedulingSettings';
 import type {TrainingSchedulingOptions} from '../../stores/useTrainingStore';
+import {PatchRecipePreview} from './PatchRecipePreview';
 
 export function PatchClassificationWorkbench() {
   const state = useProgramWorkbench('patch');
@@ -84,6 +85,7 @@ export function PatchClassificationWorkbench() {
     </div>
     {evaluation && <div className="mt-3 rounded border border-[#344255] p-3"><p className="font-semibold text-cyan-200">저장된 패치 시험 평가</p><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap text-slate-400">{JSON.stringify({metrics:evaluation.metrics,confusion_matrix:evaluation.confusion_matrix,evaluation_id:evaluation.evaluation_id,dataset_provenance:evaluation.dataset_provenance}, null, 2)}</pre></div>}
     {state.busy && <p role="status" className="mt-3 text-cyan-300">{state.busy}…</p>}{state.notice && <p role="status" className="mt-3 break-words text-emerald-300">{state.notice}</p>}{state.error && <p role="alert" className="mt-3 rounded bg-rose-950/40 p-3 text-rose-200">{state.error}</p>}
+    <PatchRecipePreview scope={state.scope} source={state.source} datasetPath={state.dataset?.dataset_path||''} patchCount={state.dataset?.patch_count||0} modelId={state.modelId} device={device} disabled={disabled} isCurrent={state.isCurrent} action={state.action} setNotice={state.setNotice} setError={state.setError}/>
     <div className="mt-5"><AutoDLWorkbench task="patch_classification" familyDatasetPath={state.dataset?.dataset_path} onComplete={()=>void state.refreshModels().catch(cause=>{if(state.isCurrent())state.setError(String(cause));})} /></div>
   </section>;
 }

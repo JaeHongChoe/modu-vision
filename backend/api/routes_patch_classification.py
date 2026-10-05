@@ -1,9 +1,13 @@
 """Owned patch preparation and the standard completed-checkpoint lifecycle."""
 from pathlib import Path
+from typing import Literal
+import base64
+import hashlib
+import io
 import logging
 import uuid
 
-from fastapi import APIRouter,HTTPException,Request
+from fastapi import APIRouter,HTTPException,Request,Query
 from pydantic import BaseModel,Field,ConfigDict
 
 from backend.api.routes_project import get_current_project
@@ -41,6 +45,43 @@ class EvaluateRequest(BaseModel):
     force_recompute:bool=False
 
 
+class PatchRecipe(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    version:Literal[1]=1
+    mode:Literal['max','vote','ng_count']='max'
+    threshold:float=Field(.5,ge=0,le=1,strict=True,allow_inf_nan=False)
+    vote_fraction:float=Field(.5,gt=0,le=1,strict=True,allow_inf_nan=False)
+    minimum_ng_count:int=Field(1,ge=1,le=100000,strict=True)
+    threshold_comparison:Literal['greater_than_or_equal']='greater_than_or_equal'
+
+class PredictRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    job_id:str
+    image_path:str
+    device:Literal['cpu','mps','cuda']='cpu'
+    recipe:PatchRecipe=Field(default_factory=PatchRecipe)
+
+class RecipeFlowRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    job_id:str
+    recipe:PatchRecipe=Field(default_factory=PatchRecipe)
+
+
+def _completed_patch(project,job_id):
+    from backend.api.routes_evaluation import _resolve_job_artifacts
+    out,checkpoint,meta,task,job,dataset=_resolve_job_artifacts(job_id,source_dataset_path=project.get('source_dataset_dir'),source_task='patch_classification')
+    if task!='patch_classification' or not out.resolve().is_relative_to(Path(project['models_dir']).resolve()):
+        raise ValueError('Choose a completed patch candidate in the active project')
+    _owned(project,str(dataset))
+    return checkpoint
+
+
+def _thumbnail(image):
+    from PIL import Image
+    image.thumbnail((768,768),Image.Resampling.LANCZOS)
+    stream=io.BytesIO();image.save(stream,format='PNG')
+    return base64.b64encode(stream.getvalue()).decode()
+
 def _owned(project,supplied):
     requested=Path(supplied).expanduser();path=requested.resolve()
     root=Path(project['dataset_dir'])
@@ -69,6 +110,56 @@ def manifest(dataset_path:str,request:Request):
         return {'dataset_path':str(value.root),'classes':value.classes,'normal_class':value.normal_class,
                 'patch_size':value.patch_size,'stride':value.stride,'patch_count':len(value.patches),'provenance':value.provenance}
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/sample')
+def sample(dataset_path:str,request:Request,sample_index:int=Query(0,ge=0,le=100000)):
+    try:
+        data=_owned(get_current_project(request),dataset_path)
+        if sample_index>=len(data.patches):raise ValueError('Patch sample index is outside the manifest')
+        row=data.patches[sample_index];raw=row.image_path.read_bytes()
+        if hashlib.sha256(raw).hexdigest()!=row.source_sha256:raise ValueError('Patch sample bytes changed')
+        from PIL import Image
+        with Image.open(io.BytesIO(raw)) as opened:image=opened.convert('RGB')
+        source=data.provenance.get('source_map',{}).get(row.image,{})
+        return {'sample_index':sample_index,'sample_count':len(data.patches),'image':row.image,
+                'source_relative_path':source.get('source_relative_path'),'source_sha256':row.source_sha256,
+                'box':list(row.box),'label':row.label,'split':row.split,'source_size':list(image.size),
+                'patch_size':data.patch_size,'stride':data.stride,'preview_only':True,
+                'original_base64':_thumbnail(image.copy()),'patch_base64':_thumbnail(image.crop(row.box))}
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.post('/predict')
+def predict(body:PredictRequest,request:Request):
+    try:
+        project=get_current_project(request);checkpoint=_completed_patch(project,body.job_id)
+        supplied=Path(body.image_path).expanduser();source=Path(project['source_dataset_dir']).resolve();path=supplied.resolve()
+        if supplied.is_symlink() or not path.is_file() or not path.is_relative_to(source):raise ValueError('Patch prediction input must belong to the active source')
+        raw=path.read_bytes()
+        from PIL import Image
+        import numpy as np
+        from backend.engine.patch_classification import predict_patch_classification,patch_score_preview
+        from backend.engine.native_patches import validate_image_size,DEFAULT_MAX_IMAGE_PIXELS
+        with Image.open(io.BytesIO(raw)) as opened:
+            validate_image_size(*opened.size,DEFAULT_MAX_IMAGE_PIXELS);rgb=np.asarray(opened.convert('RGB'))
+        result=predict_patch_classification(checkpoint,rgb,device=body.device,source_id=str(path),recipe=body.recipe.model_dump())
+        result['source_sha256']=hashlib.sha256(raw).hexdigest()
+        for row in result['patches']:row['source_sha256']=result['source_sha256']
+        return {**result,**patch_score_preview(rgb,result['patches'])}
+    except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.post('/recipe-flow')
+def recipe_flow(body:RecipeFlowRequest,request:Request):
+    try:
+        _completed_patch(get_current_project(request),body.job_id)
+        from backend.engine.flowchart_engine import get_single_segmentation_flowchart
+        from backend.engine.patch_classification import apply_patch_recipe
+        flow=get_single_segmentation_flowchart(job_id=body.job_id);flow.name='원본 패치 분류 판정'
+        inspect=next(n for n in flow.nodes if n.data.node_type=='inspection');inspect.data.task='patch_classification';inspect.data.label='원본 패치 분류';inspect.data.crop_padding=0
+        return apply_patch_recipe(flow,body.recipe.model_dump()).model_dump()
+    except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
 
 @router.get('/datasets')
 def datasets(request:Request):

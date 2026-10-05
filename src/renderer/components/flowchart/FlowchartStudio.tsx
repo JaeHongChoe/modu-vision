@@ -1622,7 +1622,9 @@ export const FlowchartStudio: React.FC = () => {
                       <option value="score_gt_threshold">최고 점수 임계치</option>
                       <option value="max_flaws_allowed">허용 NG 검사 영역 수</option>
                       <option value="aggregate_verdict">집계 결과 판정</option>
+                      {selectedNode.data.params?.patch_recipe&&<option value="patch_recipe">저장된 패치 판정 설정</option>}
                     </select>
+                    {selectedNode.data.rule==='patch_recipe'&&<p className="mt-2 text-slate-400">패치 작업대에서 저장한 설정으로 전체 판정합니다. 변경하려면 작업대에서 임계치와 집계 방식을 다시 지정하세요.<br />{JSON.stringify(selectedNode.data.params?.patch_recipe)}</p>}
                     {selectedNode.data.rule === 'max_flaws_allowed' && (
                       <div className="mt-2">
                         <label className="text-[#94A3B8] block mb-1">허용 NG 검사 영역 수</label>

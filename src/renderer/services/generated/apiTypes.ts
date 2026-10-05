@@ -1059,6 +1059,15 @@ export type ParityImageRequest = {
   image_id?: string | null;
 };
 
+export type PatchRecipe = {
+  version?: 1;
+  mode?: "max" | "vote" | "ng_count";
+  threshold?: number;
+  vote_fraction?: number;
+  minimum_ng_count?: number;
+  threshold_comparison?: "greater_than_or_equal";
+};
+
 export type PinRequest = {
   artifact_ref: ArtifactRef;
   name: string;
@@ -1204,6 +1213,11 @@ export type ReadinessRequest = {
   config_overrides?: { [key: string]: unknown };
   family_dataset_path?: string | null;
   warm_start_job_id?: string | null;
+};
+
+export type RecipeFlowRequest = {
+  job_id: string;
+  recipe?: PatchRecipe;
 };
 
 export type ReevaluateRequest = {
@@ -1588,6 +1602,13 @@ export type backend__api__routes_patch_classification__EvaluateRequest = {
   force_recompute?: boolean;
 };
 
+export type backend__api__routes_patch_classification__PredictRequest = {
+  job_id: string;
+  image_path: string;
+  device?: "cpu" | "mps" | "cuda";
+  recipe?: PatchRecipe;
+};
+
 export type backend__api__routes_patch_classification__PrepareRequest = {
   patch_size?: number;
   stride?: number;
@@ -1867,7 +1888,9 @@ export interface ApiRequestBody {
   "POST /api/ocr/train": OCRTrainRequest;
   "POST /api/onboarding/dismiss": DismissRequest;
   "POST /api/patch-classification/evaluate": backend__api__routes_patch_classification__EvaluateRequest;
+  "POST /api/patch-classification/predict": backend__api__routes_patch_classification__PredictRequest;
   "POST /api/patch-classification/prepare": backend__api__routes_patch_classification__PrepareRequest;
+  "POST /api/patch-classification/recipe-flow": RecipeFlowRequest;
   "POST /api/patch-classification/train": backend__api__routes_patch_classification__TrainRequest;
   "POST /api/product-delivery/diagnostics": DiagnosticsOptions;
   "PUT /api/product-delivery/operations/notification-policy": OperationsNotificationPolicy;

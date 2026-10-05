@@ -2,6 +2,8 @@ import type {ParentCandidate} from '../types/parentCandidate';
 import { request, type JobObservation } from './api';
 import {submitModelTraining} from './modelExecution';
 import type {TrainingSchedulingOptions} from '../stores/useTrainingStore';
+import type {PatchRecipe} from '../components/flowchart/flowchartGraph';
+import type {FlowchartPipeline} from '../types';
 
 export type ModelFamily = 'classification' | 'segmentation' | 'detection' | 'anomaly' |
   'patch_classification' | 'ocr' | 'rotated_detection' | 'rotation' | 'defect_gan' | 'enhancement';
@@ -9,6 +11,8 @@ export type LocalTrainingDevice = 'cpu' | 'mps' | 'cuda';
 export type PreparedDataset = {dataset_path: string; sample_count?: number; patch_count?: number;
   patch_size?: number; stride?: number; classes?: string[]; normal_class?: string;
   provenance: {split_counts?: Record<string, number>; source_dataset_path?: string; dataset_sha256?: string}};
+export type PatchSample={sample_index:number;sample_count:number;source_relative_path:string;source_sha256:string;box:number[];label:string;split:string;source_size:number[];patch_size:number;stride:number;preview_only:true;original_base64:string;patch_base64:string};
+export type PatchPrediction={decision:'FAIL'|'PASS';recipe:PatchRecipe;ng_count:number;patch_count:number;ng_fraction:number;max_defect_score:number;source_sha256:string;model_sha256:string;source_size:number[];original_base64:string;score_map_base64:string;score_map_definition:string;patches:Array<{box:number[];defect_score:number;decision:string;predicted_class:string}>};
 export type FamilyModel = {job_id: string; checkpoint_path?: string; metadata: Record<string, unknown> & {dataset_path?: string; source_dataset_path?: string;training_provenance?:{family_dataset_path?:string}}};
 export type ProgramJob = {execution_job_id?:string;model_id?:string;compute_profile_id?:string;job_id: string; status: string; task?: string; dataset_path?: string; source_dataset_path?: string;
   observation?: JobObservation;
@@ -38,6 +42,9 @@ export const modelTrainingProgram = {
     datasets: () => request<{datasets: PreparedDataset[]}>('/api/patch-classification/datasets'),
     prepare: (options: {patch_size: number; stride: number; normal_class: string; minimum_overlap: number}) => post<PreparedDataset>('/api/patch-classification/prepare', options),
     manifest: (dataset_path: string) => request<PreparedDataset>(`/api/patch-classification/manifest?${query({dataset_path})}`),
+    sample: (dataset_path:string,sample_index:number) => request<PatchSample>(`/api/patch-classification/sample?${query({dataset_path,sample_index})}`),
+    predict: (job_id:string,image_path:string,device:LocalTrainingDevice,recipe:PatchRecipe) => post<PatchPrediction>('/api/patch-classification/predict',{job_id,image_path,device,recipe}),
+    recipeFlow: (job_id:string,recipe:PatchRecipe) => post<FlowchartPipeline>('/api/patch-classification/recipe-flow',{job_id,recipe}),
     train: (options: {dataset_path: string; backbone: string; epochs: number; batch_size: number; image_size: number;
       learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string} & TrainingSchedulingOptions) => submitModelTraining('patch_classification',options,()=>post<ProgramJob>('/api/patch-classification/train', options)),
     status: (job_id: string) => request<ProgramJob>(`/api/training/status?${query({job_id})}`),
