@@ -36,7 +36,7 @@ function harness(kind, outcome) {
     '../../stores/useProjectStore':{useProjectStore:store(project)},
     '../../stores/useComputeStore':{useComputeStore:store(compute)},
     '../../stores/useTrainingStore':{useTrainingStore:store({})},
-    '../../services/api':{getApiPersistenceIdentity:()=>transport,request:async()=>{}},
+    '../../services/api':{getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{},getApiPersistenceIdentity:()=>transport,request:async()=>{}},
     './taskCenterModel':{taskSnapshotForScope:(saved,current,rows)=>saved===current?rows:[],
       taskLifecycle:()=>({cancellation:'none',termination:'confirmed',resource:'released'}),
       terminalTask:()=>true,taskSelection:()=>'',tasksForScope:rows=>rows,normalizeTask:(_,row)=>row,observationSummary:()=>null,releasableReservation:()=>null},

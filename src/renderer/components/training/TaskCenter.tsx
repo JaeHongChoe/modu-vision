@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {onJobEventChanges} from '../../services/jobEventFeed';
 import {RefreshCw,Square,ListChecks} from 'lucide-react';
-import {request,getApiPersistenceIdentity} from '../../services/api';
+import {request,getApiPersistenceIdentity,getProjectContextGeneration,subscribeProjectContext} from '../../services/api';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {normalizeTask,tasksForScope,taskLifecycle,taskSelection,terminalTask,taskSnapshotForScope,observationSummary,releasableReservation,type TaskRow,type Reservation} from './taskCenterModel';
@@ -15,8 +15,12 @@ const resourceLabels:Record<string,string>={released:'예약 반환 확인',rese
 export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;onNavigate?:(step:TaskStep)=>void|Promise<void>}={}) {
   const {project,projectDir,setStep,isProjectBusy}=useProjectStore();const transport=useComputeStore(state=>state.transportRevision);const profiles=useComputeStore(state=>state.profiles);const selectedTarget=useComputeStore(state=>state.selectedProfileId);
   const source=project?.source_dataset_dir || '';const labelset=project?.active_labelset_id || 'default';
+  const [contextEpoch,setContextEpoch]=useState(getProjectContextGeneration);
+  const authorityGeneration=getProjectContextGeneration(),identity=getApiPersistenceIdentity();
   const stableScope=taskHandoffScope({projectDir,project,selectedProfileId:selectedTarget,apiTransportIdentity:getApiPersistenceIdentity()});
-  const scope=JSON.stringify([stableScope,transport]);const current=useRef(scope);current.current=scope;
+  const scope=JSON.stringify([stableScope,transport,contextEpoch,authorityGeneration]);const current=useRef(scope);current.current=scope;
+  const same=()=>current.current===scope&&getProjectContextGeneration()===authorityGeneration&&getApiPersistenceIdentity()===identity&&taskHandoffContextScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===taskHandoffContextScope({projectDir,project,transportRevision:transport,selectedProfileId:selectedTarget,apiTransportIdentity:identity});
+  useEffect(()=>subscribeProjectContext(()=>setContextEpoch(getProjectContextGeneration())),[]);
   const [familyFilter,setFamilyFilter]=useState('all');const [restoreTarget,setRestoreTarget]=useState('');
   const [opened,setOpened]=useState(initialOpen);
   const generation=useRef(0);const reading=useRef(false);const followUp=useRef(false);const observing=useRef(false);
@@ -28,19 +32,19 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   const [releaseNotice,setReleaseNotice]=useState('');
   useEffect(()=>{setReleaseReason(null);setReleaseNotice('');},[selected,scope]);
   const refresh=async(queueIfReading=true)=>{
-    if(!observing.current)return;
+    if(!observing.current||!same())return;
     // Poll ticks skip an active read; explicit actions/events coalesce one reread.
     if(reading.current){if(queueIfReading)followUp.current=true;return;}
     reading.current=true;
     const sequence=generation.current;
     try {
       const result=await request<{tasks:Record<string,any>[];reservations:Reservation[]|null;errors:Array<{kind:string;message:string}>;source_dataset_path:string;labelset_id:string}>('/api/training-workspace/tasks');
-      if(!observing.current||current.current!==scope||generation.current!==sequence)return;
+      if(!observing.current||!same()||generation.current!==sequence)return;
       if(result.source_dataset_path!==source||result.labelset_id!==labelset)throw new Error('현재 프로젝트 작업 응답과 출처가 다릅니다. 다시 확인하세요.');
       const own=tasksForScope(result.tasks.map(raw=>normalizeTask(raw.kind,raw)),source,labelset);
       setRows(own);setSnapshotScope(scope);setLeases(result.reservations);setChecked(Date.now());setError(result.errors.map(row=>`${row.kind}: ${row.message}`).join(' · '));
       setSelected(old=>own.some(row=>row.key===old)?old:own.find(row=>!terminalTask(row.status))?.key || own[0]?.key || '');
-    }catch(cause){if(observing.current&&current.current===scope&&generation.current===sequence){setError(cause instanceof Error?cause.message:String(cause));setLeases(null);}}
+    }catch(cause){if(observing.current&&same()&&generation.current===sequence){setError(cause instanceof Error?cause.message:String(cause));setLeases(null);}}
     finally{
       reading.current=false;
       const again=followUp.current;followUp.current=false;
@@ -61,7 +65,7 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
   const filteredRows=familyFilter==='all'?visibleRows:visibleRows.filter(row=>(row.kind==='model_comparison'?row.task:taskDestination(row).family)===familyFilter);
   const job=filteredRows.find(row=>row.key===selected);const lifecycle=job?taskLifecycle(job,leases):null;
   const contextScope=taskHandoffContextScope({projectDir,project,transportRevision:transport,selectedProfileId:selectedTarget,apiTransportIdentity:getApiPersistenceIdentity()});
-  const navigationIsCurrent=()=>taskHandoffContextScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===contextScope;
+  const navigationIsCurrent=()=>same()&&taskHandoffContextScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})===contextScope;
   const navigate=async()=>{
     if(!job||busy||useProjectStore.getState().isProjectBusy||!navigationIsCurrent())return;setBusy(true);setError('');
     try{
@@ -75,20 +79,20 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
     }
       if(current.current!==scope||!navigationIsCurrent()||useProjectStore.getState().isProjectBusy)throw new Error('프로젝트 범위가 바뀌었거나 변경 중입니다. 작업 센터에서 다시 확인하세요.');
       saveTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()},job);await setStep(target.step);if(navigationIsCurrent())await onNavigate?.(target.step);
-    }catch(cause){if(current.current===scope)setError(cause instanceof Error?cause.message:String(cause));}finally{if(current.current===scope)setBusy(false);}
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}finally{if(same())setBusy(false);}
   };
   const releaseReservation=async(lease:Reservation)=>{
-    if(!job||busy||releaseReason===null)return;const started=scope;setBusy(true);setError('');
+    if(!job||busy||releaseReason===null||!same())return;setBusy(true);setError('');
     try {
       // the fence the operator saw: a reservation re-taken meanwhile is refused, never released
       const answer=await request<{outcome_recorded?:boolean}>('/api/training/reservations/confirm-release',{method:'POST',body:JSON.stringify({job_id:job.id,confirm:true,reason:releaseReason.trim(),fence:lease.fence??null})});
-      if(current.current!==started)return;setReleaseReason(null);await refresh();
-      if(current.current===started)setReleaseNotice(answer?.outcome_recorded===false?'예약은 해제했지만 해제 결과를 작업 기록에 남기지 못했습니다. 해제 확인 기록은 남아 있습니다.':'');
-    }catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(current.current===started)setBusy(false);}
+      if(!same())return;setReleaseReason(null);await refresh();
+      if(same())setReleaseNotice(answer?.outcome_recorded===false?'예약은 해제했지만 해제 결과를 작업 기록에 남기지 못했습니다. 해제 확인 기록은 남아 있습니다.':'');
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(same())setBusy(false);}
   };
   const control=async(action:'cancel'|'reconnect')=>{
-    if(!job||busy)return;setBusy(true);setError('');
+    if(!job||busy||!same())return;setBusy(true);setError('');
     try {
       const id=encodeURIComponent(job.id);let path:string;let body:Record<string,string>={};
       if(job.kind==='training'){path=`/api/training/${action==='cancel'?'stop':'reconnect'}`;body={job_id:job.id};}
@@ -100,43 +104,43 @@ export function TaskCenter({initialOpen=false,onNavigate}:{initialOpen?:boolean;
       else if(job.kind==='labeling-feature'){path=`/api/label-suggestions/feature-train/${id}/cancel`;}
       else if(job.kind==='optimization'){path=`/api/export/flow/optimization-jobs/${id}/cancel`;}
       else {if(action==='reconnect')throw new Error('이 작업은 저장된 기록을 다시 읽어 확인하세요.');path=job.kind==='automated'?`/api/automated-training/jobs/${id}/cancel`:`/api/${job.kind}/jobs/${id}/cancel`;}
-      await request(path,{method:'POST',body:JSON.stringify(body)});if(current.current===scope)await refresh();
-    }catch(cause){if(current.current===scope)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(current.current===scope)setBusy(false);}
+      await request(path,{method:'POST',body:JSON.stringify(body)});if(same())await refresh();
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(same())setBusy(false);}
   };
   const dataAction=async(action:'resume'|'download')=>{
-    if(!job||busy)return;setBusy(true);setError('');const started=scope;
+    if(!job||busy||!same())return;setBusy(true);setError('');
     try {
       const base=job.kind==='dataset_import'?`/api/dataset/imports/${encodeURIComponent(job.id)}`:`/api/dataset/operations/${job.kind==='project_restore'?'restores':'backups'}/${encodeURIComponent(job.id)}`;
       if(action==='resume')await request(`${base}/resume`,{method:'POST'});
       else {
         const blob=await request<Blob>(`${base}/download`,{responseType:'blob'});
-        if(current.current!==started)return;
+        if(!same())return;
         const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`backup-${job.id}.mvision.zip`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
       }
-      if(current.current===started)await refresh();
-    }catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(current.current===started)setBusy(false);}
+      if(same())await refresh();
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(same())setBusy(false);}
   };
   const startRestore=async()=>{
-    if(!job||job.kind!=='project_backup'||busy||!restoreTarget.trim()||!job.raw.capabilities?.restore)return;
-    const started=scope;setBusy(true);setError('');
+    if(!job||job.kind!=='project_backup'||busy||!restoreTarget.trim()||!job.raw.capabilities?.restore||!same())return;
+    setBusy(true);setError('');
     const sha=job.raw.data_operation?.result_ref?.sha256;
     const key=`vision-restore-request:${stableScope}:${job.id}:${restoreTarget.trim()}:${sha}`;
     const id=localStorage.getItem(key)||crypto.randomUUID();localStorage.setItem(key,id);
     try{
       await request(`/api/dataset/operations/backups/${encodeURIComponent(job.id)}/restore`,{method:'POST',headers:{'Idempotency-Key':id},body:JSON.stringify({target_dir:restoreTarget.trim(),expected_archive_sha256:sha})});
-      localStorage.removeItem(key);if(current.current===started)await refresh();
-    }catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(current.current===started)setBusy(false);}
+      localStorage.removeItem(key);if(same())await refresh();
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(same())setBusy(false);}
   };
   const startBackup=async()=>{
-    if(busy)return;setBusy(true);setError('');const started=scope;
+    if(busy||!same())return;setBusy(true);setError('');
     const key=`vision-backup-request:${stableScope}`;
     const id=localStorage.getItem(key)||crypto.randomUUID();localStorage.setItem(key,id);
-    try{await request('/api/dataset/operations/backups',{method:'POST',headers:{'Idempotency-Key':id}});localStorage.removeItem(key);if(current.current===started)await refresh();}
-    catch(cause){if(current.current===started)setError(cause instanceof Error?cause.message:String(cause));}
-    finally{if(current.current===started)setBusy(false);}
+    try{await request('/api/dataset/operations/backups',{method:'POST',headers:{'Idempotency-Key':id}});localStorage.removeItem(key);if(same())await refresh();}
+    catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}
+    finally{if(same())setBusy(false);}
   };
   if(!projectDir)return null;
   return <details open={opened} onToggle={event=>setOpened(event.currentTarget.open)} className="rounded-xl border border-slate-600 bg-[#101A28] p-4 text-sm text-slate-200"><summary className="cursor-pointer font-semibold"><ListChecks className="mr-2 inline h-4 w-4 text-cyan-300" />작업 센터 · 현재 프로젝트 {visibleRows.length}개</summary><div className="mt-4 space-y-3">

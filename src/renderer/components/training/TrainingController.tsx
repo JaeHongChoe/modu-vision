@@ -49,6 +49,7 @@ import {trainingPresetBatchSize} from '../common/errorActions';
 import { trainingLogLines } from './trainingLog';
 import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingSchedulingSettings} from './TrainingSchedulingSettings';
 import {JobProgressView} from './JobProgressView';
+import {useSelectedCoreJob} from './useSelectedCoreJob';
 import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
 
 export const TrainingController: React.FC = () => {
@@ -117,6 +118,7 @@ export const TrainingController: React.FC = () => {
     hardware,
     nextBatchSize,nextDevice,setNextSettings,remediationNotice,
   } = useTrainingStore();
+  const selectedSavedJob=useSelectedCoreJob(jobId);
   const {
     profiles, selectedProfileId,transportRevision, isLoaded: isComputeLoaded, isLoading: isComputeLoading,
     loadError: computeLoadError, error: computeError, probeResults, probePendingId, probeProfile,
@@ -487,6 +489,11 @@ export const TrainingController: React.FC = () => {
 
         <TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} />
         <OperationsObservabilityPanel canConfigure={true} initialJobId={jobId||''} />
+        {selectedSavedJob.error&&<p role="alert" className="text-amber-200">{selectedSavedJob.error}</p>}
+        {selectedSavedJob.job&&<section aria-label="선택한 저장 학습 작업">
+          <h3 className="text-sm text-slate-300">선택한 저장 작업 · {selectedSavedJob.job.job_id}</h3>
+          <JobProgressView job={selectedSavedJob.job} busy={false} onCancel={()=>{}} showActions={false}/>
+        </section>}
         <JobProgressView job={jobId ? {job_id: jobId, status, phase: jobPhase, compute_profile_id: jobComputeProfileId,
           current_epoch: currentEpoch, total_epochs: totalEpochs, current_step: currentStep, total_steps: totalSteps,
           current_train_loss: trainLoss, error: startError, observation: jobObservation,

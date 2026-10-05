@@ -133,7 +133,12 @@ def tasks(request:Request):
     rows=[];errors=[]
     try:reserved={row['job_id'] for row in routes_training.training_job_manager._leases.list()}
     except (OSError,sqlite3.Error):reserved=None  # release is then never claimed
-    for record in routes_training.training_job_manager.list_jobs():
+    records=routes_training.training_job_manager.list_jobs()
+    known={record.job_id for record in records}
+    # A restarted backend can have only the durable ledger for an interrupted
+    # or failed preparation. Keep the same scoped ID; reading never relaunches it.
+    records+= [record for record in routes_training._ledger_readback(request) if record.job_id not in known]
+    for record in records:
         binding=record.dataset_binding or {}
         if not Path(record.output_dir).resolve().is_relative_to(models.resolve()) or record.source_dataset_path!=source or binding.get('labelset_id','default')!=labelset:continue
         rows.append({**task_record(record),'observation':routes_training._job_observation(record,reserved)})  # S1-04

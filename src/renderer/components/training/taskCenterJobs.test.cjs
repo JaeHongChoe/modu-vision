@@ -27,7 +27,7 @@ async function renderCenter(){
   const jsx=(type,props)=>({type,props:props||{},children:[props?.children].flat().filter(child=>child!==undefined&&child!==null&&child!==false)});
   const m=load('TaskCenter.tsx',{react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},
     '../../services/jobEventFeed':{onJobEventChanges:listener=>{jobEventListeners.push(listener);return()=>{jobEventListeners.splice(jobEventListeners.indexOf(listener),1);};}},
-    '../../services/api':{getApiPersistenceIdentity:()=>'local',request:async(path,options)=>{requests.push(path);requestCalls.push({path,options});taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
+    '../../services/api':{getProjectContextGeneration:()=>0,subscribeProjectContext:()=>()=>{},getApiPersistenceIdentity:()=>'local',request:async(path,options)=>{requests.push(path);requestCalls.push({path,options});taskReads+=1;return {tasks:rows,reservations:[],errors:[],source_dataset_path:'/source',labelset_id:'default'};}},
     '../../stores/useProjectStore':{useProjectStore},'../../stores/useComputeStore':{useComputeStore:Object.assign(sel=>sel({transportRevision:0,profiles:[],selectedProfileId:null}),{getState:()=>({transportRevision:0,selectedProfileId:null})})},
     './ProgramWorkbenchControls':{programInput:'',programButton:''}});
   const render=()=>{cursor=0;const tree=m.TaskCenter({initialOpen:true});effects.splice(0).forEach(fn=>fn());return tree;};

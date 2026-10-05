@@ -43,12 +43,15 @@ export function useProgramWorkbench(family: 'patch' | 'rotation') {
     void Promise.all([modelTrainingProgram[family].datasets(), family === 'patch' ? modelTrainingProgram.patch.jobs() : modelTrainingProgram.rotation.jobs()])
       .then(([prepared, jobs]) => {
         if (!active || !isCurrent()) return;
-        setDatasets(prepared.datasets);const requested=handoff?.datasetPath?prepared.datasets.find(row=>row.dataset_path===handoff.datasetPath):prepared.datasets.at(-1);if(handoff&&!requested)throw new Error('선택 작업이 사용한 준비 데이터 버전을 찾지 못했습니다.');setDataset(requested||null);
+        setDatasets(prepared.datasets);const requested=handoff?.datasetPath?prepared.datasets.find(row=>row.dataset_path===handoff.datasetPath):prepared.datasets.at(-1);setDataset(requested||null);
         const own = jobs.jobs.filter(row => family === 'patch'
           ? row.task === 'patch_classification' && !!row.output_dir && row.output_dir.startsWith(`${project?.models_dir}/`)
           : row.source_dataset_path === source && row.training_provenance?.labelset_id === (project?.active_labelset_id || 'default'));
         const restored = handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row => watchJob(row.status,row.observation)) || own.at(-1);
         if (restored) setJob(restored);
+        // Preparation may have failed before a dataset was saved. Keep the exact
+        // job's cause visible while refusing a new start without prepared data.
+        if(handoff&&!requested)setError('선택 작업이 사용한 준비 데이터 버전을 찾지 못했습니다. 준비 실패 원인을 확인하고 데이터를 다시 준비하세요.');
         if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<ProgramJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&isCurrent())setJob(row);}).catch(cause=>{if(active&&isCurrent())setError(programError(cause));});}
       }).catch(cause => {if (active && isCurrent()) setError(programError(cause));});
     void refreshModels().catch(cause => {if (active && isCurrent()) setError(programError(cause));});

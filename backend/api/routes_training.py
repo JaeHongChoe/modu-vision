@@ -1226,6 +1226,7 @@ def _ledger_job_record(row: Dict[str, Any], status: str, message: str) -> JobRec
         phase=status, error={"message": message},
         source_dataset_path=spec.get("dataset_path"), dataset_fingerprint=spec.get("dataset_fingerprint"),
         remote_profile_id=spec.get("compute_profile_id"),
+        dataset_binding={"labelset_id":spec.get("labelset_id","default")},
     )
 
 
@@ -1453,8 +1454,10 @@ def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: P
     project_key = request.app.state.context_registry.project_key(context)
     # The key identifies the client's request; server-derived values (data fingerprint, imported
     # weights, resolved devices) may change between a request and its retry.
-    spec = {**req.model_dump(), "dataset_path": str(d_path), "output_dir": str(out_dir.resolve())}
     from backend.api.routes_project import get_current_project
+    project=get_current_project(request)
+    spec = {**req.model_dump(), "dataset_path": str(d_path), "output_dir": str(out_dir.resolve()),
+            "labelset_id":project.get("active_labelset_id","default")}
     store = job_ledger()
     job_id = f"job_{int(time.time())}_{str(uuid.uuid4())[:6]}"
     try:
@@ -1462,7 +1465,7 @@ def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: P
         ref = store.submit(context, project_key, "training", spec, key, job_id=job_id, output_dir=str(out_dir / job_id),
                            parent_id=req.warm_start_job_id,
                            registry_root=str(request.app.state.context_registry.root),
-                           project_dir=str(Path(get_current_project(request)["project_dir"]).resolve()))
+                           project_dir=str(Path(project["project_dir"]).resolve()))
     except JobConflict as exc:
         raise HTTPException(409, str(exc)) from exc
     if ref.created:
