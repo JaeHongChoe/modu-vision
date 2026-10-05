@@ -60,7 +60,10 @@ def read_job(root,identifier):
             record.update(status='interrupted',error='Application stopped before training completed')
             record.setdefault('events',[]).append({'at':time.time(),'status':'interrupted','epoch':record.get('epoch',0),'batch':record.get('batch',0)})
             _write(path,record)
-        return record
+            from backend.engine.specialist_training_queue import interrupt_unlaunched
+            interrupt_unlaunched(directory)
+        from backend.engine.specialist_training_queue import queue_status
+        return {**record, **queue_status(directory)}
 
 
 def list_jobs(root):
@@ -73,13 +76,15 @@ def cancel_job(root,identifier):
         record=read_job(root,identifier);directory=Path(root)/identifier
         event=_EVENTS.get(str(directory.resolve()))
         if record['status'] in {'queued','running'} and event is not None:
+            from backend.engine.specialist_training_queue import cancel_owned
+            cancel_owned(directory)
             event.set();record['status']='stopping'
             record.setdefault('events',[]).append({'at':time.time(),'status':'stopping','epoch':record.get('epoch',0),'batch':record.get('batch',0)})
             _write(directory/'job.json',record)
         return record
 
 
-def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None,family_dataset=None):
+def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None,family_dataset=None,request=None):
     from backend.engine.training_provenance import bind_family_training,validate_training_binding,persist_model_binding
     from backend.engine.runtime_device import resolve_runtime_device
     source=require_training_source(project,source);output=Path(output).resolve();root=output.parent
@@ -89,6 +94,11 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
     binding=bind_family_training(project,dataset,task)
     binding.update(family_dataset_path=str(dataset),family_dataset_sha256=current_digest,label_kind=task)
     event=threading.Event();key=str(output)
+    admission=None
+    if request is not None:
+        from backend.engine.specialist_training_queue import reserve
+        admission,replay=reserve(request,project,task,output,options,event)
+        if replay is not None:return replay
     record={'job_id':output.name,'task':task,'status':'queued','epoch':0,'batch':0,'batches':0,
         'epochs':options.epochs,'dataset_path':str(dataset),'source_dataset_path':str(source),
         'device':device,'owner_instance':PROCESS_INSTANCE,'created_at':time.time(),'error':None,
@@ -105,10 +115,16 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             record['events']=[*record['events'][-1999:],{'at':time.time(),'status':record['status'],'epoch':record['epoch'],'batch':record['batch']}]
             _write(output/'job.json',record)
     with _LOCK:
-        if any(row['status'] in ACTIVE for row in list_jobs(root)):raise ValueError('Another family training job is active in this project')
-        _EVENTS[key]=event;persist()
+        if admission is None and any(row['status'] in ACTIVE for row in list_jobs(root)):raise ValueError('Another family training job is active in this project')
+        try:
+            _EVENTS[key]=event;persist()
+        except BaseException as exc:
+            _EVENTS.pop(key,None)
+            if admission is not None:admission.abandon(exc)
+            raise
     from backend.engine.runtime_budget import RuntimeBudget
     def expired():
+        if admission is not None:admission.request_cancel('runtime budget exceeded')
         with _LOCK:
             if record['status'] in ACTIVE:
                 persist(status='stopping',stop_reason='time_limit')
@@ -119,12 +135,13 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
         try:
             if event.is_set():raise InterruptedError('Training cancelled')
             from backend.engine.shared_scheduler import compute_lease_scope
-            lease=lease_stack.enter_context(compute_lease_scope(output.name,device))
+            lease=lease_stack.enter_context(admission.scope() if admission is not None else compute_lease_scope(output.name,device))
             lease_stack.enter_context(budget)
             persist(status='running');validate_training_binding(binding)
             def progress(values):
                 budget.check()
-                if lease is not None:lease.heartbeat(output.name)
+                if admission is not None:admission.check()
+                elif lease is not None:lease.heartbeat(output.name)
                 persist(**values)
             result=runner(event,progress,device)
             budget.check()
@@ -132,7 +149,7 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             if family_digest()!=current_digest:raise ValueError('Family training labels or source changed during training')
             persist_model_binding(output,binding)
             if event.is_set():raise InterruptedError('Training cancelled during finalization')
-            configuration=options.model_dump(exclude={'dataset_path','background','warm_start_job_id'}) if hasattr(options,'model_dump') else {}
+            configuration=options.model_dump(exclude={'dataset_path','background','warm_start_job_id','queue','priority'}) if hasattr(options,'model_dump') else {}
             persist_training_configuration(output,configuration)
             checkpoint=output/'best_model.pt';digest=hashlib.sha256(checkpoint.read_bytes()).hexdigest()
             metadata=output/'model_meta.json'
@@ -152,14 +169,18 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             with _LOCK:
                 budget.seal()
                 if event.is_set():raise InterruptedError('Training cancelled during finalization')
-                _write(output/'job_receipt.json',receipt)
-                persist(status='completed',model_sha256=digest,result=result)
+                def publish():
+                    _write(output/'job_receipt.json',receipt)
+                    persist(status='completed',model_sha256=digest,result=result)
+                if admission is not None:admission.complete(publish)
+                else:publish()
             return response
         except (InterruptedError,ValueError,OSError,RuntimeError) as exc:
             for name in ('best_model.pt','model_meta.json','job_receipt.json'):(output/name).unlink(missing_ok=True)
             persist(status='stopped' if isinstance(exc,InterruptedError) else 'failed',
                 error='Training runtime limit exceeded' if budget.spent and isinstance(exc,InterruptedError) else str(exc),
                 **({'stop_reason':'time_limit'} if budget.spent else {}))
+            if admission is not None:admission.finish_error(exc)
             if not options.background:raise
         finally:
             try:
@@ -167,6 +188,14 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             finally:
                 with _LOCK:_EVENTS.pop(key,None)
     if options.background:
-        context=copy_context();threading.Thread(target=lambda:context.run(execute),daemon=True,name=f'{task}-{output.name[:8]}').start()
-        with _LOCK:return copy.deepcopy(record)
+        context=copy_context()
+        try:threading.Thread(target=lambda:context.run(execute),daemon=True,name=f'{task}-{output.name[:8]}').start()
+        except BaseException as exc:
+            with _LOCK:
+                _EVENTS.pop(key,None);persist(status='failed',error=str(exc))
+            if admission is not None:admission.abandon(exc)
+            raise
+        with _LOCK:
+            from backend.engine.specialist_training_queue import queue_status
+            return {**copy.deepcopy(record),**(queue_status(output) if admission is not None else {})}
     return execute()

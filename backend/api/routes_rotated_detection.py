@@ -46,7 +46,7 @@ class _LiveJob:
     source_dataset_path: str = ''
     device: str = 'cpu'
     training_provenance: dict[str, Any] = field(default_factory=dict)
-    status: str = "running"
+    status: str = "queued"
     epochs_completed: int = 0
     result: dict[str, Any] | None = None
     error: str | None = None
@@ -57,9 +57,12 @@ class _LiveJob:
     budget: dict[str, Any] = field(default_factory=dict)
     runtime_started_at: float | None = None
     stop_reason: str | None = None
+    admission: Any = field(default=None, repr=False)
 
     def summary(self) -> dict[str, Any]:
+        from backend.engine.specialist_training_queue import queue_status
         return {"job_id": self.job_id, "status": self.status,
+                **(queue_status(self.output_dir) if self.admission is not None else {}),
                 "epochs_completed": self.epochs_completed, "total_epochs": self.total_epochs,
                 "started_at": self.started_at, "result": self.result, "error": self.error,
                 "budget": self.budget, "runtime_started_at": self.runtime_started_at, "stop_reason": self.stop_reason,
@@ -160,6 +163,8 @@ def fit_box(req:FitBoxRequest,request:Request):
 
 class TrainRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    queue: bool = Field(default=True, strict=True)
+    priority: int = Field(default=0, strict=True, ge=-10, le=10)
     max_runtime_s: float | None = Field(default=None, strict=True, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str = Field(min_length=1)
     epochs: int = Field(default=10, ge=1, le=200)
@@ -275,6 +280,7 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
             job.runtime_started_at=value
             _write_state(job)
     def expired():
+        if job.admission is not None:job.admission.request_cancel('runtime budget exceeded')
         with _LOCK:
             if job.status in {'running','stopping'}:
                 job.stop_reason='time_limit'
@@ -285,7 +291,9 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
         validate_training_binding(job.training_provenance)
         original_digest=load_rotated_manifest(job.dataset_path).provenance['dataset_sha256']
         from backend.engine.shared_scheduler import compute_lease_scope
-        with compute_lease_scope(job.job_id,options.device), budget:
+        with (job.admission.scope() if job.admission is not None else compute_lease_scope(job.job_id,options.device)), budget:
+            budget.check()
+            _set_job(job, 'running')
             result = train_rotated_detector(
                 job.dataset_path, job.output_dir, epochs=options.epochs,
                 batch_size=options.batch_size, image_size=options.image_size,
@@ -300,15 +308,15 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                 if job.cancel.is_set():
                     for name in ("best_model.pt", "model_meta.json", "job_receipt.json"):
                         (job.output_dir / name).unlink(missing_ok=True)
-                    _set_job(job, "aborted")
+                    raise InterruptedError('Training cancelled')
                 else:
                     persist_model_binding(job.output_dir,job.training_provenance)
                     from backend.engine.specialized_training_jobs import persist_training_configuration
-                    persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
+                    persist_training_configuration(job.output_dir,options.model_dump(exclude={'dataset_path','warm_start_job_id','queue','priority'}))
                     checksum=hashlib.sha256((job.output_dir/'best_model.pt').read_bytes()).hexdigest()
                     meta_path=job.output_dir/'model_meta.json';meta=json.loads(meta_path.read_text(encoding='utf-8'))
                     meta.update(checkpoint_sha256=checksum,source_dataset_path=job.source_dataset_path,dataset_path=str(job.dataset_path),
-                                training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id'}))
+                                training_config=options.model_dump(exclude={'dataset_path','warm_start_job_id','queue','priority'}))
                     meta_path.write_text(json.dumps(meta),encoding='utf-8')
                     receipt={'job_id':job.job_id,'task':'rotated_detection','status':'completed',
                         'source_dataset_path':job.source_dataset_path,'dataset_path':str(job.dataset_path),
@@ -317,9 +325,12 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                     if job.warm_start:
                         receipt['warm_start'] = job.warm_start.lineage()
                     budget.seal()
-                    (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
                     result.update(checkpoint_sha256=checksum,model_sha256=checksum)
-                    _set_job(job, "completed", result=result)
+                    def publish():
+                        (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
+                        _set_job(job, "completed", result=result)
+                    if job.admission is not None:job.admission.complete(publish)
+                    else:publish()
     except (RotatedTrainingCancelled, InterruptedError):
         for name in ('best_model.pt','model_meta.json','job_receipt.json'):(job.output_dir/name).unlink(missing_ok=True)
         _set_job(job, "aborted", error="Training runtime limit exceeded" if budget.spent else None)
@@ -415,19 +426,26 @@ def start_training(req: TrainRequest, request: Request):
     binding.update(family_dataset_path=str(source),family_dataset_sha256=load_rotated_manifest(source).provenance['dataset_sha256'],label_kind='rotated_detection')
     root = _models_root(request)
     with _LOCK:
-        for existing in _JOBS.values():
-            if existing.status in ("running", "stopping"):
-                raise HTTPException(status_code=409, detail="Another rotated training job is already running")
         job_id = uuid.uuid4().hex
+        from backend.engine.specialist_training_queue import reserve
+        event=threading.Event()
+        admission,replay=reserve(request,project,'rotated_detection',root/job_id,req,event)
+        if replay is not None:return replay
         job = _LiveJob(Path(project["project_dir"]).resolve(), job_id,
                        source, root / job_id, req.epochs,source_dataset_path=project['source_dataset_dir'],device=req.device,training_provenance=binding, warm_start=parent,
-                       budget={'max_runtime_s':req.max_runtime_s} if req.max_runtime_s is not None else {})
+                       budget={'max_runtime_s':req.max_runtime_s} if req.max_runtime_s is not None else {},cancel=event,admission=admission)
         _JOBS[_key(job)] = job
-        _write_state(job)
+        try:_write_state(job)
+        except BaseException as exc:
+            _JOBS.pop(_key(job),None);admission.abandon(exc)
+            raise
         context=copy_context()
         job.thread = threading.Thread(target=lambda:context.run(_run_job,job,req),
                                       name=f"rotated-{job.job_id[:8]}", daemon=True)
-        job.thread.start()
+        try:job.thread.start()
+        except BaseException as exc:
+            _JOBS.pop(_key(job),None);_set_job(job,'failed',error=str(exc));admission.abandon(exc)
+            raise
         return job.summary()
 
 
@@ -469,11 +487,14 @@ def get_job(job_id: str, request: Request):
         raise HTTPException(status_code=422, detail="Rotated job state is invalid") from exc
     if not isinstance(state, dict) or state.get("job_id") != job_id:
         raise HTTPException(status_code=422, detail="Rotated job state identity is invalid")
-    if state.get("status") in ("running", "stopping"):
+    if state.get("status") in ("queued", "running", "stopping"):
         # No process of this app owns the job any more (the app restarted). As for every other family it is interrupted,
         # not failed: no candidate was registered and the same settings can run again.
         state = {**state, "status": "interrupted", "error": "Application stopped before training completed"}
-    return state
+        from backend.engine.specialist_training_queue import interrupt_unlaunched
+        interrupt_unlaunched(directory)
+    from backend.engine.specialist_training_queue import queue_status
+    return {**state,**queue_status(directory)}
 
 
 @router.post("/jobs/{job_id}/cancel")
@@ -484,7 +505,8 @@ def cancel_job(job_id: str, request: Request):
         job = _JOBS.get((str(Path(project["project_dir"]).resolve()), job_id))
         if job is None:
             return get_job(job_id, request)
-        if job.status == "running":
+        if job.status in {"queued", "running"}:
+            if job.admission is not None:job.admission.request_cancel()
             job.cancel.set()
             job.status = "stopping"
             _write_state(job)

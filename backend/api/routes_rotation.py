@@ -37,6 +37,8 @@ class PrepareRequest(BaseModel):
 
 
 class TrainRequest(BaseModel):
+    queue: bool = Field(default=True, strict=True)
+    priority: int = Field(default=0, strict=True, ge=-10, le=10)
     max_runtime_s: float | None = Field(default=None, strict=True, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str
     epochs: int = Field(default=20,ge=1,le=500)
@@ -124,7 +126,7 @@ def train(req: TrainRequest, request: Request):
         from backend.engine.specialized_warm_start import resolve_family_parent
         parent = resolve_family_parent(project['models_dir'], req.warm_start_job_id, 'rotation', source, loaded.root, req.model_dump()) if req.warm_start_job_id else None
         output = _root(request) / uuid.uuid4().hex
-        result = start_job(project=project,task='rotation',source=source,family_dataset=loaded.root,output=output,options=req,warm_start=parent,
+        result = start_job(request=request,project=project,task='rotation',source=source,family_dataset=loaded.root,output=output,options=req,warm_start=parent,
             family_digest=lambda:load_rotation_manifest(loaded.root).provenance['dataset_sha256'],
             runner=lambda event,progress,device:train_rotation(loaded.root,output,epochs=req.epochs,batch_size=req.batch_size,image_size=req.image_size,
                 width=req.width,learning_rate=req.learning_rate,seed=req.seed,device=device,cancel_event=event,on_progress=progress,warm_start=parent))

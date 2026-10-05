@@ -17,7 +17,7 @@ from backend.api import routes_ocr, routes_defect_gan
 def test_background_job_cancel_reopen_and_project_isolation(tmp_path,monkeypatch,task,route,module,method,labels):
     entered=threading.Event()
     def controlled(dataset,output,*,cancel_event,on_progress,**kwargs):
-        entered.set();on_progress({'epoch':1,'batch':1,'batches':2,'loss':.25})
+        on_progress({'epoch':1,'batch':1,'batches':2,'loss':.25});entered.set()
         assert cancel_event.wait(5),'Cancellation must reach the running trainer'
         raise InterruptedError('Training cancelled')
     monkeypatch.setattr(module,method,controlled)

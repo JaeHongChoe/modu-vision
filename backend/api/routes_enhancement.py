@@ -38,6 +38,8 @@ class Prepare(BaseModel):
 
 class Train(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    queue: bool = Field(default=True, strict=True)
+    priority: int = Field(default=0, strict=True, ge=-10, le=10)
     max_runtime_s: float | None = Field(default=None, strict=True, gt=0, le=604800, allow_inf_nan=False)
     dataset_path: str
     epochs: int = Field(default=1, ge=1, le=500)
@@ -145,6 +147,9 @@ def train(req: Train, request: Request):
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
     event = threading.Event()
+    from backend.engine.specialist_training_queue import reserve, queue_status
+    admission,replay=reserve(request,project,'enhancement',folder,req,event)
+    if replay is not None:return JSONResponse(replay,status_code=202) if req.background else replay
     key = str(folder.resolve())
     record = {"job_id": folder.name, "status": "queued", "epoch": 0, "epochs": req.epochs,
               "dataset_path": req.dataset_path, "source_dataset_path": manifest["provenance"]["source_dataset_path"],
@@ -163,6 +168,7 @@ def train(req: Train, request: Request):
             _atomic(folder / "job.json", json.dumps(record, ensure_ascii=False).encode())
     from backend.engine.runtime_budget import RuntimeBudget
     def expired():
+        admission.request_cancel('runtime budget exceeded')
         with _JOB_LOCK:
             if record['status'] in {'queued','running','stopping'}:
                 persist(status='stopping',stop_reason='time_limit')
@@ -170,34 +176,36 @@ def train(req: Train, request: Request):
     def execute():
         try:
             if event.is_set(): raise InterruptedError("Enhancement training cancelled")
-            from backend.engine.shared_scheduler import compute_lease_scope
-            with compute_lease_scope(folder.name, req.device), budget:
+            with admission.scope(), budget:
                 persist(status="running")
                 validate_training_binding(binding)
                 def progress(epoch, epochs, loss):
                     budget.check()
+                    admission.check()
                     persist(epoch=epoch, epochs=epochs, loss=loss)
                 result = train_enhancement(req.dataset_path, folder, epochs=req.epochs, batch_size=req.batch_size,
-                                           learning_rate=req.learning_rate, device=req.device, cancel_event=event, on_progress=progress, warm_start=parent)
+                                           learning_rate=req.learning_rate, device=req.device, cancel_event=event, on_progress=progress, warm_start=parent,candidate_lock=_JOB_LOCK)
                 budget.check()
                 validate_training_binding(binding)
                 if event.is_set(): raise InterruptedError('Enhancement training cancelled')
                 persist_model_binding(folder, binding)
                 from backend.engine.specialized_training_jobs import persist_training_configuration
-                persist_training_configuration(folder,req.model_dump(exclude={'dataset_path','warm_start_job_id','background'}))
+                persist_training_configuration(folder,req.model_dump(exclude={'dataset_path','warm_start_job_id','background','queue','priority'}))
                 path = folder / "best_model.pt"
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 with _JOB_LOCK:
                     budget.seal()
                     if event.is_set(): raise InterruptedError('Enhancement training cancelled')
-                    _atomic(folder / 'job_receipt.json', json.dumps({
+                    def publish():
+                        _atomic(folder / 'job_receipt.json', json.dumps({
                         'job_id': folder.name, 'task': 'enhancement', 'status': 'completed',
                         'source_dataset_path': manifest['provenance']['source_dataset_path'],
                         'dataset_path': req.dataset_path, 'training_provenance': binding,
                         'checkpoint_sha256': digest,
                         **({'warm_start': parent.lineage()} if parent else {}),
-                    }, ensure_ascii=False).encode())
-                    persist(status="completed", model_sha256=digest, result=result)
+                        }, ensure_ascii=False).encode())
+                        persist(status="completed", model_sha256=digest, result=result)
+                    admission.complete(publish)
                 return {"job_id": folder.name, "model_sha256": record["model_sha256"], "result": result}
         except InterruptedError as exc:
             for name in ('best_model.pt', 'model_meta.json', 'metadata.json', 'job_receipt.json'):
@@ -213,12 +221,22 @@ def train(req: Train, request: Request):
         finally:
             with _JOB_LOCK: _CANCEL_EVENTS.pop(key, None)
     # Write the journal separately; train_enhancement requires a new model directory.
-    with _JOB_LOCK: _CANCEL_EVENTS[key] = event
+    with _JOB_LOCK:
+        try:
+            _CANCEL_EVENTS[key] = event
+            persist()
+        except BaseException as exc:
+            _CANCEL_EVENTS.pop(key,None);admission.abandon(exc)
+            raise
     if req.background:
-        persist()
         context=copy_context()
-        threading.Thread(target=lambda:context.run(execute), daemon=True, name=f"enhancement-{folder.name}").start()
-        return JSONResponse({**record}, status_code=202)
+        try:threading.Thread(target=lambda:context.run(execute), daemon=True, name=f"enhancement-{folder.name}").start()
+        except BaseException as exc:
+            with _JOB_LOCK:
+                _CANCEL_EVENTS.pop(key,None);persist(status='failed',error=str(exc))
+            admission.abandon(exc)
+            raise
+        return JSONResponse({**record,**queue_status(folder)}, status_code=202)
     return execute()
 
 
@@ -249,7 +267,10 @@ def _job(request: Request, job_id: str) -> tuple[Path, dict]:
         if record["status"] in {"queued", "running", "stopping"} and record["owner_instance"] != _PROCESS_INSTANCE:
             record.update(status="interrupted", error="Application stopped before training completed")
             _atomic(path, json.dumps(record, ensure_ascii=False).encode())
-    return folder, record
+            from backend.engine.specialist_training_queue import interrupt_unlaunched
+            interrupt_unlaunched(folder)
+    from backend.engine.specialist_training_queue import queue_status
+    return folder, {**record,**queue_status(folder)}
 
 
 @router.get("/jobs")
@@ -271,6 +292,8 @@ def cancel(job_id: str, request: Request):
         if record["status"] in {"queued", "running"}:
             event = _CANCEL_EVENTS.get(str(folder.resolve()))
             if event is not None:
+                from backend.engine.specialist_training_queue import cancel_owned
+                cancel_owned(folder)
                 event.set(); record["status"] = "stopping"
                 _atomic(folder / "job.json", json.dumps(record, ensure_ascii=False).encode())
     return record

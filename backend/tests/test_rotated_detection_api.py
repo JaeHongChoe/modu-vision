@@ -93,7 +93,7 @@ def test_rotated_api_trains_evaluates_predicts_and_scopes_project(tmp_path: Path
     })
     assert started.status_code == 200, started.text
     job_id = started.json()["job_id"]
-    assert started.json()["status"] in ("running", "completed")
+    assert started.json()["status"] in ("queued", "running", "completed")
     terminal = _await_terminal(client, job_id)
     assert terminal["status"] == "completed", terminal
     assert terminal["training_provenance"]["dataset_version_id"]

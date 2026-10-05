@@ -43,12 +43,15 @@ for(const entry of families)for(const mode of ['local','remote'] as const)test(`
  const settings=page.locator('summary',{hasText:'학습 시간 제한'});await expect(settings).toBeVisible({timeout:3000});await settings.click();
  const minutes=page.getByLabel('학습 시간 제한 (분)',{exact:true});const start=page.getByRole('button',{name:entry.button,exact:true});
  await minutes.fill('-1');await expect(start).toBeDisabled();expect(submissions).toEqual([]);
+ await page.getByLabel('학습 대기열 우선순위',{exact:true}).fill('8');
+ await page.getByLabel('장치가 사용 중이면 대기열에 넣기',{exact:true}).uncheck();
  await minutes.fill('1.5');await expect(start).toBeEnabled();await start.click();await expect.poll(()=>submissions.length).toBe(1);
  const body=submissions[0].body;expect(body.max_runtime_s).toBe(90);
  expect(submissions[0].path).toBe(mode==='remote'?'/api/compute/jobs':`/api/${entry.family}/train`);
  if(mode==='remote'){expect(body.family_dataset_path).toBe(prepared.dataset_path);expect(body.dataset_path).toBe(source);expect(body.config_overrides).not.toHaveProperty('max_runtime_s');}
  else expect(body.dataset_path).toBe(prepared.dataset_path);
- expect(body).not.toHaveProperty('queue');expect(body).not.toHaveProperty('priority');
+ expect(body.queue).toBe(false);expect(body.priority).toBe(8);
+ if(mode==='remote'){expect(body.config_overrides).not.toHaveProperty('queue');expect(body.config_overrides).not.toHaveProperty('priority');}
  await expect(page.getByRole('alert').filter({hasText:'Controlled runtime admission refusal'})).toBeVisible();await expect(start).toBeEnabled();
  expect(hashes()).toEqual(before);await settings.scrollIntoViewIfNeeded();await evidence.screenshot(page,`runtime-${entry.family}-${mode}`);
  evidence.note('scope',{actual_renderer:true,actual_owned_backend:true,actual_preparation:true,training:'controlled refusal only',server:false,submissions,source_unchanged:true,source_images:Object.entries(before).map(([path,sha256])=>({path,sha256}))});

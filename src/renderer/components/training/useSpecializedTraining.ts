@@ -50,9 +50,11 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     }).catch(cause=>{if(active&&current()){setError(String(cause.message ?? cause));setReadFailures(count=>count+1);}});},isActiveSpecializedJob(job)&&!readFailures?600:3000);  // after a failed read, retry slowly
     return()=>{active=false;clearTimeout(timer);};
   },[family,job,projectDir,source,labelset,readFailures]);
-  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu',options?:{recipe?:Record<string,unknown>;max_runtime_s?:number})=>{
-    const config={dataset_path:path,epochs,device,...(warmStartJobId?{warm_start_job_id:warmStartJobId}:{}),...(options?.recipe?{recipe:options.recipe}:{}),...(options?.max_runtime_s!==undefined?{max_runtime_s:options.max_runtime_s}:{})};
-    setError('');const record=await submitModelTraining<SpecializedTrainingJob>(family==='defect-gan'?'defect_gan':family,config,()=>options?.recipe||options?.max_runtime_s!==undefined?request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({...config,background:true})}):specializedApi.startTraining(family,path,epochs,warmStartJobId,device));
+  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu',options?:{recipe?:Record<string,unknown>;max_runtime_s?:number;queue?:boolean;priority?:number})=>{
+    const config={dataset_path:path,epochs,device,...(warmStartJobId?{warm_start_job_id:warmStartJobId}:{}),...(options?.recipe?{recipe:options.recipe}:{}),
+      ...(options?.max_runtime_s!==undefined?{max_runtime_s:options.max_runtime_s}:{}),
+      ...(options?.queue!==undefined?{queue:options.queue}:{}),...(options?.priority!==undefined?{priority:options.priority}:{})};
+    setError('');const record=await submitModelTraining<SpecializedTrainingJob>(family==='defect-gan'?'defect_gan':family,config,()=>options?request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({...config,background:true})}):specializedApi.startTraining(family,path,epochs,warmStartJobId,device));
     if(current()){setJob(record);setJobs(rows=>[record,...rows.filter(item=>item.job_id!==record.job_id)]);}
   };
   const cancel=async()=>{

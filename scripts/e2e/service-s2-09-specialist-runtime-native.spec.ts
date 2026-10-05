@@ -15,9 +15,12 @@ test('native rotation runs CPU optimization then acknowledges its runtime budget
  await window.reload();await expect(window.getByTitle('프로젝트 관리',{exact:true})).toContainText('Native specialist runtime');
  await window.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();await window.getByRole('region',{name:'모델 학습 허브'}).getByRole('button',{name:/^정방향 보정/}).click();
  await window.getByLabel('Epoch',{exact:true}).fill('500');await window.getByLabel('배치 크기',{exact:true}).fill('1');await window.getByLabel('모델 입력 크기',{exact:true}).fill('128');await window.getByLabel(/CNN 채널 폭/).selectOption('32');
- await window.locator('summary',{hasText:'학습 시간 제한'}).click();await window.getByLabel('학습 시간 제한 (분)',{exact:true}).fill('0.02');await window.getByRole('button',{name:'정방향 모델 후보 학습',exact:true}).click();await expect.poll(()=>jobId).not.toBe('');
+ await window.locator('summary',{hasText:'학습 시간 제한'}).click();await window.getByLabel('학습 시간 제한 (분)',{exact:true}).fill('0.02');
+ await window.getByLabel('학습 대기열 우선순위',{exact:true}).fill('8');
+ await window.getByRole('button',{name:'정방향 모델 후보 학습',exact:true}).click();await expect.poll(()=>jobId).not.toBe('');
  await expect(window.getByRole('status',{name:'학습 작업 상태'})).toContainText('Training runtime limit exceeded',{timeout:15000});await expect(window.getByRole('button',{name:'정방향 모델 후보 학습',exact:true})).toBeEnabled();
- const terminal=await api(`/api/rotation/jobs/${jobId}`);expect(terminal.status).toBe('stopped');expect(terminal.stop_reason).toBe('time_limit');expect(terminal.batch).toBeGreaterThan(0);expect(posted).toMatchObject({dataset_path:prepared.dataset_path,max_runtime_s:1.2,device:'cpu'});
+ const terminal=await api(`/api/rotation/jobs/${jobId}`);expect(terminal.status).toBe('stopped');expect(terminal.stop_reason).toBe('time_limit');expect(terminal.batch).toBeGreaterThan(0);expect(terminal.ledger_state).toBe('aborted');expect(terminal.priority).toBe(8);
+ expect(posted).toMatchObject({dataset_path:prepared.dataset_path,max_runtime_s:1.2,device:'cpu',queue:true,priority:8});
  for(const name of ['best_model.pt','job_receipt.json'])expect(fs.existsSync(path.join(project.models_dir,'rotation',jobId,name))).toBe(false);expect((await api('/api/rotation/models')).models).toEqual([]);
  for(const [file,sha]of Object.entries(originals))expect(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')).toBe(sha);
  await evidence.screenshot(window,'native-specialist-runtime-stopped');evidence.note('scope',{actual_electron_main_preload:true,actual_owned_backend:true,actual_cpu_training:true,server:false,manual_cancellation:false,posted,terminal,source_unchanged:true,source_images:Object.entries(originals).map(([path,sha256])=>({path,sha256}))});

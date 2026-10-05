@@ -1,9 +1,7 @@
 name: Windows unpackaged CPU checks
 
 "on":
-  push:
-    branches: [main]
-  pull_request:
+  # Windows verification is deferred by the project owner; run explicitly.
   workflow_dispatch:
 
 permissions:

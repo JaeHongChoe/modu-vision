@@ -11,6 +11,7 @@ import json
 import math
 import os
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -206,7 +207,7 @@ def _evaluate(model: RGBDenoiser, dataset: _Pairs, device: torch.device) -> dict
 
 def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epochs: int = 1, batch_size: int = 4,
                       learning_rate: float = 1e-3, device: str = "cpu", seed: int = 0,
-                      cancel_event=None, on_progress=None, warm_start=None) -> dict:
+                      cancel_event=None, on_progress=None, warm_start=None, candidate_lock=None) -> dict:
     target_device = _device(device)
     if not 1 <= epochs <= 500 or not 1 <= batch_size <= 256 or not 0 < learning_rate <= 1:
         raise ValueError("Invalid enhancement training settings")
@@ -223,13 +224,17 @@ def train_enhancement(dataset_path: str | Path, output_dir: str | Path, *, epoch
     loader = DataLoader(_Pairs(manifest, "train"), batch_size=batch_size, shuffle=True,
                         generator=torch.Generator().manual_seed(seed))
     output = Path(output_dir).expanduser().resolve()
-    if output.exists() and any(p.name not in ("job.json","job_receipt.json") for p in output.iterdir()):
-        raise ValueError("Enhancement output must be a new candidate directory")
-    receipt=output/'job_receipt.json'
-    if receipt.exists():
-        reserved=json.loads(receipt.read_text(encoding='utf-8'))
-        if receipt.is_symlink() or reserved.get('task')!='enhancement' or reserved.get('job_id')!=output.name or reserved.get('status') not in ('queued','running'):
-            raise ValueError('Enhancement candidate reservation differs from this run')
+    # Native journal/cancel writes use atomic temporary files in this directory.
+    # Inspect under their lock so a transient journal is not mistaken for a model.
+    with candidate_lock if candidate_lock is not None else nullcontext():
+        if cancel_event is not None and cancel_event.is_set():raise InterruptedError('Enhancement training cancelled')
+        if output.exists() and any(p.name not in ("job.json","job_receipt.json") for p in output.iterdir()):
+            raise ValueError("Enhancement output must be a new candidate directory")
+        receipt=output/'job_receipt.json'
+        if receipt.exists():
+            reserved=json.loads(receipt.read_text(encoding='utf-8'))
+            if receipt.is_symlink() or reserved.get('task')!='enhancement' or reserved.get('job_id')!=output.name or reserved.get('status') not in ('queued','running'):
+                raise ValueError('Enhancement candidate reservation differs from this run')
     output.mkdir(parents=True, exist_ok=True)
     best_loss, history, best_epoch = float("inf"), [], 0
     for epoch in range(epochs):
