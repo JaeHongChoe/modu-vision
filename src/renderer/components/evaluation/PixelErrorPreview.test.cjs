@@ -4,11 +4,11 @@ function fixture(images={}){
  let width=8,height=8,pixels=new Uint8ClampedArray(8*8*4).fill(99),cleanup;const errors=[];
  const canvas={get width(){return width;},set width(value){width=value;pixels=new Uint8ClampedArray(width*height*4);},get height(){return height;},set height(value){height=value;pixels=new Uint8ClampedArray(width*height*4);},getContext(){return ctx;}};
  const ctx={drawImage(img){for(let y=0;y<Math.min(height,img.height);y++)for(let x=0;x<Math.min(width,img.width);x++)pixels.set(img.data.slice((y*img.width+x)*4,(y*img.width+x+1)*4),(y*width+x)*4);},getImageData(){return {width,height,data:pixels.slice()};},createImageData(w,h){return{width:w,height:h,data:new Uint8ClampedArray(w*h*4)};},putImageData(data){pixels=data.data.slice();}};
- const react={useRef:()=>({current:canvas}),useState:value=>[value,next=>errors.push(next)],useEffect(fn){cleanup?.();cleanup=fn();},useMemo:fn=>fn()};
+ const react={useRef:value=>({current:value===null?canvas:value}),useState:value=>[value,next=>errors.push(next)],useEffect(fn){cleanup?.();cleanup=fn();},useMemo:fn=>fn()};
  class Image {set src(value){const data=images[value];if(!data){queueMicrotask(()=>this.onerror?.());return;}Object.assign(this,data);queueMicrotask(()=>this.onload?.());}}
  const prior=global.Image;global.Image=Image;
  const file=path.join(__dirname,'EvaluationEvidencePanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
- m.require=name=>name==='react'?react:name.endsWith('/services/api')?{resolveApiUrl:x=>x}:name.endsWith('/services/evaluationEvidence')?{}:name==='./pixelEvidencePreview'?helper():req(name);
+ m.require=name=>name==='react'?react:name.endsWith('/services/api')?{resolveApiUrl:x=>x}:name.endsWith('/services/evaluationEvidence')||name==='./evaluationSourceOverlay'||name==='../common/EvidenceImageViewer'?{}:name==='./pixelEvidencePreview'?helper():req(name);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8').replace('function PixelErrorPreview(', 'export function PixelErrorPreview('),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  return {canvas,errors,pixels:()=>pixels,async render(evidence,className='all'){m.exports.PixelErrorPreview({row:{pixel_evidence:evidence},className});await new Promise(setImmediate);},restore(){cleanup?.();global.Image=prior;}};
 }

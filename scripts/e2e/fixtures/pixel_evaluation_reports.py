@@ -24,7 +24,7 @@ def image(mask, path):
     return 'data:image/png;base64,' + base64.b64encode(output.getvalue()).decode()
 
 
-def seed(root, project, source, second_set):
+def seed(root, project, source, second_set, include_source_binding=False):
     root, project, source = (Path(value).resolve() for value in (root, project, source))
     if not project.is_relative_to(root) or not source.is_relative_to(root):
         raise ValueError('Report fixtures require an isolated test workspace')
@@ -51,7 +51,13 @@ def seed(root, project, source, second_set):
                             'fn': int((actual & ~guess).sum()), 'truth_area_px': int(actual.sum()), 'predicted_area_px': int(guess.sum())}
         sample = {'file_path': str(source / 'part.png'), 'file_name': 'part.png', 'pixel_evidence':
                   {**maps, 'per_class': counts, 'shape': [64, 64], 'coordinate_space': 'model_input_px'}}
-        for variant in (('valid',) if index == 0 else ('valid', 'missing_truth', 'unequal_size', 'wrong_shape')):
+        if include_source_binding:
+            sample['image_sha256'] = sha(source / 'part.png')
+            with Image.open(source / 'part.png') as original:
+                sample['pixel_evidence']['mapping'] = {'kind': 'full_image_resize', 'source_size': list(original.size)}
+        variants = ('valid',) if index == 0 else ('valid', 'missing_truth', 'unequal_size', 'wrong_shape')
+        if include_source_binding and index: variants += ('missing_source_hash', 'unsupported_mapping')
+        for variant in variants:
             row = json.loads(json.dumps(sample))
             if variant == 'missing_truth':
                 row['pixel_evidence'].pop('truth_mask')
@@ -59,6 +65,10 @@ def seed(root, project, source, second_set):
                 row['pixel_evidence']['truth_mask'] = image(truth[:32, :32], inputs / 'unequal-truth.png')
             elif variant == 'wrong_shape':
                 row['pixel_evidence']['shape'] = [32, 32]
+            elif variant == 'missing_source_hash':
+                row.pop('image_sha256')
+            elif variant == 'unsupported_mapping':
+                row['pixel_evidence']['mapping']['kind'] = 'unspecified_crop'
             record = history.append({'job_id': f'controlled-display-{index}-{variant}', 'task': 'segmentation',
                                      'fixture_kind': 'controlled_display_only_no_model_inference', 'test_predictions': [row]},
                                     {'source_dataset_path': str(source), 'task': 'segmentation', 'labelset_id': labelset,

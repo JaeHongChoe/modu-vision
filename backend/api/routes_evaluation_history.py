@@ -142,3 +142,20 @@ def read_history(evaluation_id:str,request:Request,source_dataset_path:str,task:
     except ValueError as exc:raise HTTPException(409,str(exc))
     if row['binding']['source_dataset_path']!=str(source) or row['result']['task']!=task:raise HTTPException(404,'Evaluation belongs to another source/task')
     return row
+
+
+@router.get('/history/{evaluation_id}/evidence-image')
+def evaluation_image(evaluation_id:str, request:Request, source_dataset_path:str, task:HistoryTask, image_path:str):
+    record = read_history(evaluation_id, request, source_dataset_path, task)
+    rows = [row for row in record['result'].get('test_predictions', []) if row.get('file_path') == image_path]
+    if len(rows) != 1:
+        raise HTTPException(404, 'Image does not identify exactly one saved evaluation sample')
+    expected = rows[0].get('image_sha256')
+    if not isinstance(expected, str) or not re.fullmatch('[0-9a-f]{64}', expected):
+        raise HTTPException(409, 'This saved evaluation has no captured source image hash')
+    from backend.engine.evidence_image import verified_preview
+    try:
+        preview = verified_preview(image_path, Path(record['binding']['source_dataset_path']), expected)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {'evaluation_id': evaluation_id, **preview}

@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react';
 import {boundedZoom, canBlend, safeSnapshot, validBox, type EvidenceView} from './evidenceViewer';
 
 /** Snapshot-only viewer. Editing remains in the revision/lease-aware labeling workspace. */
-export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작업으로 돌아가기',editAction}: {evidence: EvidenceView; onClose:()=>void; returnLabel?:string;editAction?:{onClick:()=>void;busy:boolean;error?:string}}) {
+export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작업으로 돌아가기',editAction,returnFocus}: {evidence: EvidenceView; onClose:()=>void; returnLabel?:string;editAction?:{onClick:()=>void;busy:boolean;error?:string};returnFocus?:()=>void}) {
   const [layerId,setLayerId]=useState('');const [overlayId,setOverlayId]=useState('');
   const [zoom,setZoom]=useState(1);const [pan,setPan]=useState({x:0,y:0});
   const [opacity,setOpacity]=useState(.5);const [labels,setLabels]=useState(true);
@@ -13,7 +13,7 @@ export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작�
   const overlay=overlays.find(layer=>layer.id===overlayId);
   const fit=()=>{setZoom(1);setPan({x:0,y:0});};
   useEffect(()=>{setLayerId('');setOverlayId('');setOpacity(.5);setLabels(true);fit();},[evidence.key]);
-  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;root.current?.querySelector<HTMLButtonElement>('button')?.focus();return()=>{if(previous?.isConnected)previous.focus();};},[]);
+  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;root.current?.querySelector<HTMLButtonElement>('button')?.focus();return()=>{if(returnFocus)returnFocus();else if(previous?.isConnected)previous.focus();};},[]);
   const boxes=selected?evidence.boxes?.filter(row=>row.space===selected.space&&validBox(row.box,selected.size))||[]:[];
   return <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 p-5" onPointerDown={event=>{if(event.target===event.currentTarget)onClose();}}>
     <div ref={root} role="dialog" aria-modal="true" aria-label="이미지 판정 근거 보기" className="flex max-h-[95vh] w-[min(1150px,95vw)] flex-col rounded-xl border border-slate-500 bg-[#111B28] p-4 text-xs text-slate-200" onKeyDown={event=>{

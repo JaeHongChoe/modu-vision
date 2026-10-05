@@ -830,12 +830,24 @@ def _evaluate_segmentation(
         for idx in range(len(val_ds)):
             if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             img_p, _ = val_ds.samples[idx]
+            from backend.engine.evaluation_sources import _sha256
+            image_sha256 = _sha256(img_p)
+            source_size = None
+            try:
+                with Image.open(img_p) as original:
+                    if original.getexif().get(274, 1) == 1:
+                        source_size = list(original.size)
+            except (OSError, ValueError):
+                # Non-PIL inputs retain standalone masks without claiming a raw-image mapping.
+                pass
             img_t, target_mask = val_ds[idx]
 
             img_dev = img_t.to(device).unsqueeze(0)
             logits = model(img_dev)
             pred_mask = torch.argmax(logits, dim=1)[0].cpu().numpy().astype(np.uint8)
             gt_mask = target_mask.cpu().numpy().astype(np.uint8)
+            if _sha256(img_p) != image_sha256:
+                raise HTTPException(409, 'Evaluation source image changed while producing pixel evidence')
 
             all_preds.append(pred_mask)
             all_targets.append(gt_mask)
@@ -860,6 +872,7 @@ def _evaluate_segmentation(
                 "image_id": img_p.stem,
                 "file_name": img_p.name,
                 "file_path": str(img_p.resolve()),
+                "image_sha256": image_sha256,
                 "ground_truth": gt_label,
                 "predicted_class": pred_label,
                 "confidence": round(conf, 4),
@@ -875,6 +888,8 @@ def _evaluate_segmentation(
                 buffer=BytesIO();Image.fromarray(mask.astype(np.uint8)).save(buffer,format='PNG')
                 return 'data:image/png;base64,'+base64.b64encode(buffer.getvalue()).decode('ascii')
             test_predictions[-1]['pixel_evidence'].update(prediction_mask=index_mask_png(pred_mask),truth_mask=index_mask_png(gt_mask))
+            if source_size and getattr(val_ds, 'transform', None) is None:
+                test_predictions[-1]['pixel_evidence']['mapping'] = {'kind': 'full_image_resize', 'source_size': source_size}
             test_predictions[-1]['class_scores']={name:float(probs[i].max().item()) for i,name in enumerate(classes)}
             test_predictions[-1]['ground_truth_classes']=[name for i,name in enumerate(classes) if np.any(gt_mask==i)]
 
