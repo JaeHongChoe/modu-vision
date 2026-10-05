@@ -40,13 +40,27 @@ def model_readiness(task,model,device='cpu',checkpoint=None):
     except (ValueError,RuntimeError,ImportError) as exc:runtime['reason']=str(exc)
     required=model.startswith(('dinov3_','yolo')) or model in ('resnet18','convnext_tiny','efficientnet_b0','padim','patchcore','fasterrcnn')
     path=Path(checkpoint).expanduser() if checkpoint else _cached_weights(model) if required else None
-    exists=path is not None and path.is_file() and path.stat().st_size>0
+    exists=False;digest=None;unreadable=False
+    if path is not None:
+        try:
+            before=path.stat()
+            exists=path.is_file() and before.st_size>0
+            if exists:
+                from backend.engine.model_backbones import checkpoint_sha256
+                digest=checkpoint_sha256(path)
+                after=path.stat()
+                if (before.st_ino,before.st_size,before.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):
+                    unreadable=True;digest=None;exists=False
+        except FileNotFoundError:pass
+        except OSError:unreadable=True;digest=None;exists=False
     weights={'required':required,'state':'file_available' if exists else 'missing' if required else 'not_required',
-             'filename':path.name if exists else None,'content_verified':False}
-    return {'task':task,'model':model,'ready':not missing and runtime['available'] and (not required or exists),
+             'filename':path.name if exists else None,'content_verified':False,'sha256':digest,
+             'origin':'explicit_file' if checkpoint else 'cached_file' if path is not None else None}
+    if unreadable:weights['state']='unreadable'
+    return {'task':task,'model':model,'ready':not missing and runtime['available'] and not unreadable and (not required or exists),
             'dependencies':{'required':dependencies,'missing':missing},'runtime':runtime,'weights':weights,
             'execution_verified':False,'quality_approved':False,
-            'next_actions':(['install_dependencies'] if missing else [])+(['choose_device'] if not runtime['available'] else [])+(['import_official_weights'] if required and not exists else [])}
+            'next_actions':(['install_dependencies'] if missing else [])+(['choose_device'] if not runtime['available'] else [])+(['import_official_weights'] if (required and not exists) or unreadable else [])}
 
 
 def persisted_task_rows(models,source,labelset):

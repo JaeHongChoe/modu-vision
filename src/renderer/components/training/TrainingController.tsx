@@ -33,7 +33,7 @@ import { EnhancementWorkbench } from './EnhancementWorkbench';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { api,request,getApiPersistenceIdentity } from '../../services/api';
 import { ModelFamilyCatalog } from './ModelFamilyCatalog';
-import { dinoSyntheticDefaults, modelChoices, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
+import { dinoSyntheticDefaults, modelChoices, manualTrainingRecipe, trainingModelOverrides, type DinoSyntheticTrainingOptions } from './modelTrainingOptions';
 import { DinoSyntheticOptions } from './DinoSyntheticOptions';
 import { trainingComputeReadiness } from '../../utils/trainingComputeReadiness';
 import { PatchClassificationWorkbench } from './PatchClassificationWorkbench';
@@ -66,6 +66,8 @@ export const TrainingController: React.FC = () => {
   const [pretrainedCheckpoint, setPretrainedCheckpoint] = useState('');
   const [trainMode,setTrainMode]=useState<'head_only'|'partial'|'full'>('head_only');
   const [partialBlocks,setPartialBlocks]=useState(2);
+  const [manualEpochs,setManualEpochs]=useState('');
+  const [manualImageSize,setManualImageSize]=useState('');
   const [resumeState,setResumeState]=useState<{checkpoint_path:string;recipe:Record<string,unknown>;device:string;next_epoch:number;global_step:number}|null>(null);
   const [resumeStates,setResumeStates]=useState<Array<NonNullable<typeof resumeState>>>([]);
   const [resumeError,setResumeError]=useState('');
@@ -77,7 +79,8 @@ export const TrainingController: React.FC = () => {
   let modelOptions: Record<string, unknown> = {};
   let modelOptionsError: string | null = null;
   try { modelOptions = resumeState ? {...resumeState.recipe,resume_checkpoint:resumeState.checkpoint_path} : trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose,
-    selectedBackbone.startsWith('dinov3')?{train_mode:trainMode,partial_blocks:partialBlocks}:undefined); }
+    selectedBackbone.startsWith('dinov3')?{train_mode:trainMode,partial_blocks:partialBlocks}:undefined);
+    if (!resumeState && task !== 'anomaly') Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, manualImageSize)); }
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
@@ -377,6 +380,8 @@ export const TrainingController: React.FC = () => {
             </select>
           </label>
           {selectedBackbone.startsWith('dinov3') && <><p className="mt-2 text-slate-300">DINOv3 사전학습 가중치에서 선택한 범위를 학습합니다. 사전학습 가중치가 없으면 준비 오류를 안내합니다.</p><label className="mt-2 block">DINO 학습 범위<select aria-label="DINO 학습 범위" value={trainMode} disabled={isTraining||!!resumeState} onChange={event=>setTrainMode(event.target.value as typeof trainMode)} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="head_only">헤드만 · 기본</option><option value="partial">헤드와 마지막 인코더 블록</option><option value="full">전체 인코더와 헤드</option></select></label>{trainMode==='partial'&&<label className="mt-2 block">마지막 학습 블록 수<input aria-label="마지막 학습 블록 수" type="number" min={1} max={12} value={partialBlocks} disabled={isTraining||!!resumeState} onChange={event=>setPartialBlocks(Number(event.target.value))} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}</>}
+          {selectedBackbone.startsWith('dinov3')&&<p className="mt-2 text-slate-400">헤드만 학습하면 인코더 가중치를 고정합니다. 부분 학습은 마지막 블록과 최종 정규화 계층을, 전체 학습은 인코더 전체를 갱신합니다. 학습 범위가 넓을수록 gradient·optimizer 저장과 메모리 사용이 늘어납니다. 필요한 메모리는 입력 크기·배치·장치에 따라 달라집니다.</p>}
+          {task!=='anomaly'&&<div className="mt-3 grid gap-2 sm:grid-cols-2"><label>학습 횟수 (선택)<input aria-label="수동 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining||!!resumeState} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>입력 크기 (선택)<input aria-label="수동 학습 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining||!!resumeState} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><p className="sm:col-span-2 text-slate-400">비워두면 선택 프리셋을 사용합니다. 입력 크기는 16의 배수여야 합니다. 이어가기는 저장된 설정을 그대로 사용하며, 완료 모델의 초기 가중치 사용은 새 학습입니다.</p></div>}
           {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
           {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region">이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 출력은 패치 점수 맵이며 픽셀 정답 마스크와 구분합니다.'}</p></div>}
           {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}

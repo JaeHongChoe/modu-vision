@@ -2789,7 +2789,7 @@
     "S1-05",
     "S3-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -2797,6 +2797,12 @@
      "result": "DINOv3 head/partial/full training controls; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Authentic pretrained and representative evaluation plus full native model workflow.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "takeover-parent-software-closure-root-verified",
+     "result": "Task110: bounded manual Epoch/input controls, stable explicit/cached weight SHA display and unreadable refusal; authentic head/partial/full CPU optimizer updates and offline reconstruction; actual three-class Chrome/macOS Electron button training, heldout confusion, reopen, explicit model selection/save and fresh whole-flow candidate package parity. Readiness refuses unavailable local CUDA. Legacy ResNet18/ConvNeXt-Tiny/EfficientNet-B0 offline logits preserve class order without downloads.",
+     "scope": "Original acceptance clauses/dependencies unchanged. Software implementation/contract/gui/persist/reopen/failure verified. Synthetic 12-image workflow is not representative quality approval; local CUDA/remote/installed/physical-device/independent handoff and final acceptance pending. Runtime root readback 9468946d4e8fccd4decad56abfb610fd74f7348333bf070d4ecc1f4c80efe6e9; legacy fixture separately bound after runtime freeze.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; CPU official cached DINOv3, no downloads. Windows excluded."
     }
    ],
    "file_actions": {
@@ -2806,12 +2812,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9428,12 +9434,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 49,
-    "pending": 33
+    "verified": 50,
+    "pending": 32
    },
    "parent_status": {
-    "verification_pending": 43,
-    "in_progress": 16,
+    "verification_pending": 44,
+    "in_progress": 15,
     "planned": 23
    },
    "merged_extension_slices": 16,

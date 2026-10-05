@@ -22,6 +22,21 @@ export const dinoSyntheticDefaults: DinoSyntheticTrainingOptions = {
 
 export type DinoFineTuneOptions = {train_mode: 'head_only' | 'partial' | 'full'; partial_blocks?: number};
 
+export function manualTrainingRecipe(epochs: string, imageSize: string): Record<string, number> {
+  const recipe: Record<string, number> = {};
+  if (epochs.trim()) {
+    const value = Number(epochs);
+    if (!Number.isInteger(value) || value < 1 || value > 500) throw new Error('학습 횟수는 1~500의 정수여야 합니다.');
+    recipe.epochs = value;
+  }
+  if (imageSize.trim()) {
+    const value = Number(imageSize);
+    if (!Number.isInteger(value) || value < 64 || value > 1024 || value % 16) throw new Error('입력 크기는 64~1024 범위의 16 배수여야 합니다.');
+    recipe.image_size = value;
+  }
+  return recipe;
+}
+
 export function trainingModelOverrides(task: VisionTask, model: string, checkpoint = '',
   syntheticOptions: Partial<DinoSyntheticTrainingOptions> = {}, purpose: 'image' | 'region' = 'image', fineTune?: DinoFineTuneOptions): Record<string, unknown> {
   if (!modelChoices[task].some(choice => choice.value === model)) throw new Error('현재 검사 종류와 맞는 모델을 선택하세요.');
