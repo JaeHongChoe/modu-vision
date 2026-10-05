@@ -1,5 +1,6 @@
 import type { LibraryImage, LibraryResolution, LibrarySelection } from '../../services/api';
 import type { SelectedInspectionImage } from '../../types';
+import { getApiPersistenceIdentity, getProjectContext } from '../../services/api';
 
 /** The inspection image a library row stands for, with the identity that later resolves it. */
 export function selectionFromImage(item: LibraryImage): SelectedInspectionImage {
@@ -16,9 +17,13 @@ export function identityOf(selected: SelectedInspectionImage | null | undefined)
   return { image_uuid: selected.imageUuid, sha256: selected.sha256 ?? null, relative_path: selected.relativePath };
 }
 
-const storageKey = (projectId: string) => `modu.inspectionImage.${projectId}`;
+const storageKey = (projectId: string) => {
+  const context = getProjectContext();
+  return `modu.inspectionImage.v2:${JSON.stringify([getApiPersistenceIdentity(), context?.workspace_id ?? 'local', context?.actor_id ?? 'local', projectId])}`;
+};
 
-/** The last confirmed choice for this project, kept in this viewer's browser (a convenience: resolved before use). */
+/** The last confirmed choice in this server/workspace/actor/project. Old unscoped entries remain untouched;
+ * they cannot establish their owner's identity and are not restored into another account. */
 export function rememberSelection(projectId: string, selected: SelectedInspectionImage): void {
   if (!identityOf(selected)) return;
   try { window.localStorage.setItem(storageKey(projectId), JSON.stringify(selected)); } catch { /* storage may be unavailable */ }

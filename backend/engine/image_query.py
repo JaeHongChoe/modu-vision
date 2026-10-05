@@ -24,6 +24,7 @@ import unicodedata
 
 LEDGER_FILTERS = ('tag', 'product', 'lot', 'workflow_state', 'usage_state')
 STATES = ('valid', 'invalid')
+ERRORS = ('any', 'image', 'annotation')
 _MAX_LIMIT = 200
 _MAX_CURSOR = 8192
 _COLUMNS = ('relative_path', 'image_uuid', 'sha256', 'size', 'width', 'height', 'label', 'split', 'valid', 'error_code',
@@ -107,11 +108,13 @@ def query_images(index_file: Path | str, project_key: str, revision_id: str, *, 
                  limit: int = 100, scan_limit: int = 5000) -> dict:
     """One page of a revision's images in relative-path order; the cursor is bound to the revision, query and filters."""
     filters = {name: value for name, value in (filters or {}).items() if value not in (None, '')}
-    unknown = set(filters) - {'label', 'split', 'state', 'annotation_label', *LEDGER_FILTERS}
+    unknown = set(filters) - {'label', 'split', 'state', 'error', 'annotation_label', *LEDGER_FILTERS}
     if unknown:
         raise ValueError(f'Unknown filters: {sorted(unknown)}')
     if filters.get('state') not in (None, *STATES):
         raise ValueError(f'state must be one of {STATES}')
+    if filters.get('error') not in (None, *ERRORS):
+        raise ValueError(f'error must be one of {ERRORS}')
     limit = max(1, min(int(limit), _MAX_LIMIT))
     query = (query or '').strip()
     binding = hashlib.sha256(json.dumps([project_key, revision_id, query, filters], sort_keys=True,
@@ -134,6 +137,10 @@ def query_images(index_file: Path | str, project_key: str, revision_id: str, *, 
     if 'state' in filters:
         clauses.append('i.valid=?')
         params.append(int(filters['state'] == 'valid'))
+    if 'error' in filters:
+        error_clause = {'any': '(i.error_code IS NOT NULL OR a.error IS NOT NULL)',
+                        'image': 'i.error_code IS NOT NULL', 'annotation': 'a.error IS NOT NULL'}
+        clauses.append(error_clause[filters['error']])
     if 'annotation_label' in filters:
         clauses.append('EXISTS (SELECT 1 FROM json_each(a.labels) WHERE json_each.value=?)')
         params.append(filters['annotation_label'])

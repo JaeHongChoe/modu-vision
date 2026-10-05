@@ -219,3 +219,24 @@ def test_an_image_unread_in_this_build_is_kept_as_unreadable_and_lookups_are_bat
     assert len(resolved) == len(many) > 500 and [row['image_uuid'] for row in resolved] == [row['image_uuid'] for row in many]
     with sqlite3.connect(index.path) as db:
         assert db.execute("SELECT 1 FROM sqlite_master WHERE type='index' AND name='dataset_index_identity'").fetchone()
+
+
+def test_error_filters_distinguish_annotation_errors_from_image_errors_and_bind_cursor(built):
+    import sqlite3
+    index, _source, receipt, _tmp = built
+    relative = 'test/ng/검사_test_ng_0.png'
+    with sqlite3.connect(index.path) as db:
+        db.execute('INSERT OR REPLACE INTO dataset_index_annotations(revision_id,relative_path,format,labels,files,error) VALUES(?,?,?,?,?,?)',
+                   (receipt.revision_id, relative, 'labelme', '[]', '[]', 'Malformed source annotation'))
+    images = _query(built, filters={'error': 'image'})['items']
+    annotations = _query(built, filters={'error': 'annotation'})['items']
+    assert [row['relative_path'] for row in images] == ['train/ng/100%_odd_name.png']
+    assert [row['relative_path'] for row in annotations] == [relative]
+    assert annotations[0]['valid'], 'bad labels must not be presented as damaged image bytes'
+    assert len(_query(built, filters={'error': 'any'})['items']) == 2
+    assert len(_query(built, filters={'state': 'valid', 'error': 'any'})['items']) == 1
+    page = _query(built, filters={'error': 'any'}, limit=1)
+    with pytest.raises(ValueError, match='another revision'):
+        _query(built, filters={'error': 'annotation'}, cursor=page['next_cursor'])
+    with pytest.raises(ValueError, match='error must'):
+        _query(built, filters={'error': 'unsupported'})

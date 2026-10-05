@@ -1700,7 +1700,7 @@
     "S1-06",
     "S3-01"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "slice-reviewed-published",
@@ -1749,6 +1749,13 @@
      "result": "Explicit manual retry now recovers a failed validated image page at its current query/cursor, the legacy picker page and the legacy fixed-test listing without resetting selected UUIDs or saved paths. Validated library cleanup invalidates late responses, including a late 409 parent callback. The flexible viewport keeps the recovery button inside the small flow panel; legacy listing errors are separate from template/action errors and unconfirmed entries are not compared or marked missing.",
      "scope": "Four causal component failures; 28 focused component cases and 599 complete renderer/main cases pass. Six actual full-renderer Chrome/owned-backend scenarios pass: validated 120+12 cursor recovery, legacy test-path recovery, legacy picker recovery, damaged-image refusal, moved-image handling and removed saved identity. Original image hashes stay unchanged and all owned backends exit with their ports closed. TypeScript projects, E2E typecheck and build pass. Private source/artifact readback SHA-256 4ec5efd6dda216a7ef665d8b03d437f8afc25b9185d456e289fea81065319d84.",
      "platform": "macOS CPU full application browser with desktop host shim and bounded HTTP fault injection; not native Windows/GPU/model quality. Root review only; parent acceptance stays pending."
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "result": "Task84 adds independent source/annotation error filters, backend/workspace/actor/project-scoped UUID/SHA preference restoration and live namespace response fences. Current backend47 and complete renderer714 pass. Five full-renderer cases pass, including actual Chrome/macOS Electron combined tag/product/Lot and annotation-error selection of image244 outside the first200, virtualized bounded pages, saved exact identity after reload, damaged source, moved identity and removed saved image refusal. Existing state/class/split/review-status and cursor tests retain coverage. Private frozen-source/content/process readback SHA-256 72e60decfb9cdfaaa7c31e1ae08f4d0826e215b10d23c1c6d624e3f529173cfd.",
+     "scope": "The original software clauses are composed and reviewed together. Only software implementation and the named functional dimensions are promoted. Representative human/model/operational/target acceptance and independent review remain separate.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; controlled owned fixtures. Windows tests excluded by the project owner.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -1758,24 +1765,21 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "scripts/e2e/service-s2-07.spec.ts",
    "remaining": [
-    "tag, Lot and product filters need image metadata the validated index does not hold yet; error filter is the invalid state only",
-    "batch inspection still pages the whole listing in the renderer and run creation lists up to 50000 images (routes_inspections.py; inspection service work, S5-02)",
-    "Manual retry and the validated browser unmount fence are now verified in controlled tests and actual browser recovery. Legacy panel/modal late answers across every project/transport namespace and installed Windows still need qualification; older panel stubs do not prove full lifecycle cleanup.",
-    "the flowchart header keeps the previous path until the picker is confirmed",
-    "Windows native and hosted evidence for these commits pending",
-    "Operator selection synchronization across browser instances and native Windows acceptance remain pending; legacy path-only choices cannot detect changed image bytes."
+    "Representative very-large metadata-ledger throughput and sustained target operation remain separate; the cached JSON metadata ledger is not an indexed metadata-storage migration.",
+    "Legacy unbound paths require explicit reselection, and accepted-revision resolution is not continuous live-source rehashing. Independent review and installed-package/field qualification remain pending.",
+    "Windows tests are excluded by the owner. Full parent acceptance is not promoted."
    ]
   },
   {
@@ -2209,8 +2213,16 @@
     "S0-03",
     "S3-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "result": "Task86 qualifies actual metadata/review audit, empty-annotation UNKNOWN truth, separate named labelsets, per-set flags, image tag colors and class/split statistics to actual image filtering in Chrome/macOS Electron. A reproduced loading race that erased early preference input is fixed; its component regression fails before and passes after. Current backend68 and renderer714 pass. Existing explicit OK/NG/UNKNOWN truth routes, class-role binding, label/source invalidation and evaluation impact are checked in current backend suites, with retained Task72 exact evaluation-to-current-label return and current supplemental controlled evaluation UI stale-truth checks. Private frozen-source/content/process readback SHA-256 25093050ee1e4035d51efe320d4e1970c5af14d1a3fbf28932b12dae1c002d3c.",
+     "scope": "The original software clauses are composed and reviewed together. Only software implementation and the named functional dimensions are promoted. Representative human/model/operational/target acceptance and independent review remain separate.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; controlled owned fixtures. Windows tests excluded by the project owner.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/api/routes_dataset_metadata.py": "Modify",
     "backend/api/routes_image_truth.py": "Modify",
@@ -2218,17 +2230,22 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
+    "implementation": "verified",
+    "contract": "verified",
     "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s3_03.py"
+   "proposed_test_file": "backend/tests/test_service_s3_03.py",
+   "remaining": [
+    "Synthetic review actions do not approve representative annotations, model quality or operations. Independent review, installed-package and target qualification remain pending.",
+    "The supplemental evaluation UI uses controlled historical responses; actual truth/evaluation binding and stale invalidation are covered separately by real backend tests. No new GPU/model training is inferred.",
+    "Windows tests are excluded; full parent acceptance remains pending."
+   ]
   },
   {
    "id": "S3-04",
@@ -2293,7 +2310,7 @@
     "S3-01",
     "S3-04"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-native-qa-slice",
@@ -2368,6 +2385,13 @@
      "result": "Task81 preserves family/labelset/exact record/group and open state across refresh/reload; missing records/labelsets refuse fallback, explicit review return supersedes manual selection, old responses and queued toggles cannot overwrite newer choices. Renderer708 and six actual Chrome/macOS Electron cases pass, retaining72 exact mask/overlay rasters.",
      "scope": "Controlled immutable saved reports qualify selection/display; no new evaluation/training or whole-parent/model-quality acceptance.",
      "platform": "Chrome/macOS Electron; Windows excluded; root review only."
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "result": "Task85 requalifies the composed labeling implementation against all three original software clauses: actual bbox/polygon/two-class brush/eraser/mask, zoom/pan/Undo/Redo, OBB with independent direction, exact OCR text and all three fitting modes; LabelMe/COCO/YOLO/pixel-mask class/geometry/source mapping roundtrip with refusal and provenance; exact per-labelset saved model-result selection and separate source-bound truth/prediction/error displays. Fourteen actual Chrome/macOS Electron cases and56 focused backend cases pass. Independent saved JSON/class-PNG/ZIP/Unicode/manifests and every captured overlay pixel match. Private frozen-source/content/process readback SHA-256 e0c3aded98aa92b0ad076636d87d981851ffd4a09cd681ba023a336449358788.",
+     "scope": "The original software clauses are composed and reviewed together. Only software implementation and the named functional dimensions are promoted. Representative human/model/operational/target acceptance and independent review remain separate.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; controlled owned fixtures. Windows tests excluded by the project owner.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -2378,21 +2402,21 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
-    "Task75/76 complete synthetic app LabelMe/COCO/YOLO and pixel-mask class/geometry/image-mapping round trips, loss refusal and changed-preview refusal; representative annotation qualification remains pending.",
-    "Tasks78–81 qualify exact OCR truth, fitting, scoped exact saved-history selection, separate class masks and hash-bound direct-source SEG overlays using declared full-image resize. Representative model results, prepared-source transformations without an explicit matching map, other task overlays and annotation quality remain pending.",
-    "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
+    "Representative annotation content, trained model quality, target/operational acceptance and independent review remain pending.",
+    "Only provenance-bound direct-source full-image resize overlays are qualified. Prepared transforms without a declared matching map and other task overlays remain refused or separately unqualified.",
+    "Import folder-dialog return is controlled; the renderer/backend/download/save/reopen are real. Installed-package qualification is separate; Windows tests are excluded."
    ]
   },
   {
@@ -9167,13 +9191,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 25,
-    "pending": 57
+    "verified": 28,
+    "pending": 54
    },
    "parent_status": {
-    "verification_pending": 19,
-    "in_progress": 26,
-    "planned": 37
+    "verification_pending": 22,
+    "in_progress": 24,
+    "planned": 36
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

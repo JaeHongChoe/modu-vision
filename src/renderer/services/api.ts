@@ -231,6 +231,7 @@ export interface LibraryImage {
 export interface LibraryQuery {
   q?: string; label?: string; split?: 'train' | 'val' | 'test'; state?: 'valid' | 'invalid'; annotation_label?: string; tag?: string;
   product?: string; lot?: string; workflow_state?: 'unworked' | 'needs_review' | 'approved'; usage_state?: 'active' | 'not_used';
+  error?: 'any' | 'image' | 'annotation';
   cursor?: string | null; limit?: number; revision_id?: string;
 }
 /** A saved image choice: kept by identity and content digest, never by path alone. */

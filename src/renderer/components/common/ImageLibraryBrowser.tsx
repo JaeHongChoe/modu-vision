@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AlertTriangle, Check, Search } from 'lucide-react';
-import { api, resolveApiUrl, type LibraryImage, type LibraryQuery } from '../../services/api';
+import { api, getProjectContextGeneration, subscribeProjectContext, resolveApiUrl, type LibraryImage, type LibraryQuery } from '../../services/api';
 import { columnsFor, nearEnd, visibleRows } from '../../utils/virtualWindow';
 
 interface Props {
@@ -17,7 +17,7 @@ const ROW_HEIGHT = 176;
 const MIN_TILE = 150;
 const GAP = 10;
 const PAGE = 120;
-type Filters = Pick<LibraryQuery, 'split' | 'state' | 'workflow_state' | 'tag' | 'product' | 'lot'>;
+type Filters = Pick<LibraryQuery, 'split' | 'state' | 'error' | 'workflow_state' | 'tag' | 'product' | 'lot'>;
 const metadataLabels = { tag: '태그', product: '제품', lot: 'Lot' } as const;
 
 /**
@@ -25,10 +25,12 @@ const metadataLabels = { tag: '태그', product: '제품', lot: 'Lot' } as const
  * rendered, so a hundred thousand images cost the same as a hundred; the next page loads as the end comes into view.
  */
 export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUnavailable, initialFilters }) => {
+  const epoch = useSyncExternalStore(subscribeProjectContext, getProjectContextGeneration, getProjectContextGeneration);
+  const pageEpoch = useRef<number | null>(null);
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Filters>(initialFilters ?? {});
-  const queryIdentity = JSON.stringify([query, filters]);
+  const queryIdentity = JSON.stringify([query, filters, epoch]);
   const cursorIdentity = useRef<string | null>(null);
   const [items, setItems] = useState<LibraryImage[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -65,23 +67,24 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
     setError(null);
     try {
       const page = await api.library.images({ q: query || undefined, ...filters, cursor: from, limit: PAGE });
-      if (sequence !== request.current) return;  // a newer search answered meanwhile
+      if (sequence !== request.current || epoch !== getProjectContextGeneration()) return;
+      pageEpoch.current = epoch;
       setItems((current) => (from ? [...current, ...page.items] : page.items));
       cursorIdentity.current = queryIdentity;
       setCursor(page.next_cursor);
       setFinished(page.next_cursor === null);
       setScannedTo(page.complete_page ? null : page.scanned_to);
     } catch (caught) {
-      if (sequence !== request.current) return;
+      if (sequence !== request.current || epoch !== getProjectContextGeneration()) return;
       const status = (caught as { status?: number }).status;
       const reason = caught instanceof Error ? caught.message : String(caught);
       if (status === 409) unavailable.current?.(reason);
       setError(reason);
       setFinished(true);
     } finally {
-      if (sequence === request.current) setLoading(false);
+      if (sequence === request.current && epoch === getProjectContextGeneration()) setLoading(false);
     }
-  }, [query, filters, queryIdentity]);
+  }, [query, filters, queryIdentity, epoch]);
 
   useEffect(() => {
     setItems([]);
@@ -135,6 +138,10 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
           className="rounded border border-[#2B3547] bg-[#0D1117] px-2 py-1.5 text-xs text-slate-300">
           <option value="">모든 검토 상태</option><option value="unworked">미작업</option><option value="needs_review">검토 필요</option><option value="approved">승인</option>
         </select>
+        <select aria-label="오류 종류" value={filters.error || ''} onChange={(event) => choose('error', event.target.value)}
+          className="rounded border border-[#2B3547] bg-[#0D1117] px-2 py-1.5 text-xs text-slate-300">
+          <option value="">오류 필터 없음</option><option value="any">모든 오류</option><option value="image">이미지 오류</option><option value="annotation">라벨 오류</option>
+        </select>
       </div>
       <div ref={viewport} onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)} role="list" aria-label="데이터 버전 이미지"
         className="relative min-h-0 flex-1 overflow-y-auto rounded border border-[#2B3547] bg-[#0D1117]">
@@ -145,7 +152,8 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
               {row.map((item) => {
                 const selected = selectedIds.has(item.image_uuid);
                 return (
-                  <button key={item.image_uuid} type="button" role="listitem" aria-pressed={selected} onClick={() => onPick(item)}
+                  <button key={item.image_uuid} type="button" role="listitem" aria-pressed={selected} disabled={pageEpoch.current !== epoch}
+                    onClick={() => { if (pageEpoch.current === getProjectContextGeneration()) onPick(item); }}
                     title={item.relative_path}
                     className={`relative flex flex-col overflow-hidden rounded border text-left ${selected ? 'border-sky-400 ring-1 ring-sky-400' : 'border-[#2B3547] hover:border-[#4A5A70]'}`}>
                     <img src={resolveApiUrl(`/api/dataset/thumbnail/${encodeURIComponent(item.file_name)}?file_path=${encodeURIComponent(item.file_path)}`)}
@@ -153,6 +161,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
                     <span className="truncate px-1.5 pt-1 font-mono text-[11px] text-slate-200">{item.file_name}</span>
                     <span className="truncate px-1.5 text-[10px] text-slate-500">{[item.label, item.split, ...item.tags].filter(Boolean).join(' · ') || item.relative_path}</span>
                     {!item.valid && <span className="absolute left-1 top-1 flex items-center gap-1 rounded bg-red-950/90 px-1 text-[10px] text-red-200"><AlertTriangle className="h-3 w-3" aria-hidden />{item.error_code}</span>}
+                    {item.annotation_error && <span title={item.annotation_error} className="absolute bottom-1 right-1 rounded bg-amber-950/90 px-1 text-[10px] text-amber-200">라벨 오류</span>}
                     {selected && <span className="absolute right-1 top-1 rounded-full bg-sky-500 p-0.5"><Check className="h-3 w-3 text-white" aria-hidden /></span>}
                   </button>
                 );

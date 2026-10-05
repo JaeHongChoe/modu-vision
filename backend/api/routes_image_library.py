@@ -55,6 +55,7 @@ def _with_paths(items: list, source_root: str) -> list:
 def library_images(request: Request, revision_id: Optional[str] = Query(None, pattern=r"^[0-9a-f]{32}$"),
                    q: Optional[str] = Query(None, max_length=256), label: Optional[str] = Query(None, max_length=512),
                    split: Optional[Literal["train", "val", "test"]] = None, state: Optional[Literal["valid", "invalid"]] = None,
+                   error: Optional[Literal["any", "image", "annotation"]] = None,
                    annotation_label: Optional[str] = Query(None, max_length=512), tag: Optional[str] = Query(None, max_length=256),
                    product: Optional[str] = Query(None, max_length=256), lot: Optional[str] = Query(None, max_length=256),
                    workflow_state: Optional[Literal["unworked", "needs_review", "approved"]] = None,
@@ -64,7 +65,7 @@ def library_images(request: Request, revision_id: Optional[str] = Query(None, pa
     page and return a cursor that continues the scan."""
     from backend.engine.dataset_metadata import ledger_path
     index, project_key, project, revision = _revision(request, revision_id)
-    filters = {"label": label, "split": split, "state": state, "annotation_label": annotation_label, "tag": tag,
+    filters = {"label": label, "split": split, "state": state, "error": error, "annotation_label": annotation_label, "tag": tag,
                "product": product, "lot": lot, "workflow_state": workflow_state, "usage_state": usage_state}
     # rows show tags, product, lot and review state, so the ledger is read for every page (cached while unchanged)
     ledger = load_ledger_rows(ledger_path(project["project_dir"], revision["source_root"], project.get("annotations_dir")))

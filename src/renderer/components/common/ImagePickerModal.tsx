@@ -3,7 +3,7 @@
  * Steel Instrument Inspection Image Selection Dialog.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Check,
   Database,
@@ -15,7 +15,7 @@ import {
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useProjectStore } from '../../stores/useProjectStore';
-import { api, resolveApiUrl, type LibraryResolution } from '../../services/api';
+import { api, getProjectContextGeneration, subscribeProjectContext, resolveApiUrl, type LibraryResolution } from '../../services/api';
 import { host } from '../../services/hostAdapter';
 import type { ImageMeta, SelectedInspectionImage } from '../../types';
 import { ImageLibraryBrowser } from './ImageLibraryBrowser';
@@ -30,6 +30,10 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   const folderPath = useDatasetStore((state) => state.folderPath);
   const task = useProjectStore((state) => state.task);
   const projectId = useProjectStore((state) => state.project?.id ?? null);
+  const labelset = useProjectStore((state) => state.project?.active_labelset_id ?? 'default');
+  const epoch = useSyncExternalStore(subscribeProjectContext, getProjectContextGeneration, getProjectContextGeneration);
+  const scope = JSON.stringify([epoch, projectId, folderPath, task, labelset]);
+  const openedScope = useRef<string | null>(null);
   const { selectedImage, setSelectedImage } = useFlowchartStore();
   // The validated revision is browsed by identity; without an accepted revision the older path listing is shown.
   const [library, setLibrary] = useState<'available' | 'unavailable'>('available');
@@ -56,8 +60,15 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
 
   useEffect(() => {
     if (!isOpen) return;
-    setTempSelected(selectedImage);
-    setLocalPathInput(selectedImage?.source === 'file' ? selectedImage.imagePath : '');
+    const sameScope = openedScope.current === scope;
+    openedScope.current = scope;
+    // Global flow state can outlive this modal or its former project. An identity
+    // restores only from this account's scoped preference; a path-only choice is
+    // reused only after this modal has already opened in the same live scope.
+    const remembered = projectId ? recallSelection(projectId) : null;
+    const initial = identityOf(selectedImage) ? remembered : sameScope ? selectedImage : null;
+    setTempSelected(initial);
+    setLocalPathInput(initial?.source === 'file' ? initial.imagePath : '');
     setDatasetPage(1);
     setDatasetSplit('all');
     setLibrary('available');
@@ -65,25 +76,25 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     setSavedCheck(null);
     // A saved choice is checked against the current revision before it is offered again: a moved, replaced or missing
     // image is reported and never silently swapped for whatever now sits at its path.
-    const saved = identityOf(selectedImage) ? selectedImage : projectId ? recallSelection(projectId) : null;
+    const saved = identityOf(initial) ? initial : remembered;
     const identity = identityOf(saved);
     userPicked.current = false;
     setResolveError(null);
     if (!saved || !identity) return;
     let cancelled = false;
     api.library.resolve([identity]).then(({ results }) => {
-      if (cancelled) return;
+      if (cancelled || epoch !== getProjectContextGeneration()) return;
       const [result] = results;
       setSavedCheck(result);
       // a choice the user made while the check ran is theirs; the answer only explains the saved one
       if (!userPicked.current) setTempSelected(result.status === 'found' && result.current ? { ...saved, imagePath: result.current.file_path } : null);
     }).catch((caught) => {
-      if (cancelled || (caught as { status?: number }).status === 409) return;  // no accepted revision: said below
+      if (cancelled || epoch !== getProjectContextGeneration() || (caught as { status?: number }).status === 409) return;
       setResolveError(`저장된 선택을 확인하지 못했습니다(${caught instanceof Error ? caught.message : String(caught)}). 확인되지 않은 경로는 쓰지 않으니 다시 선택하세요.`);
       if (!userPicked.current) setTempSelected(null);
     });
     return () => { cancelled = true; };
-  }, [isOpen]);
+  }, [isOpen, scope]);
 
   useEffect(() => {
     setDatasetPage(1);
@@ -101,19 +112,19 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       offset: (datasetPage - 1) * pageSize,
       split: datasetSplit === 'all' ? undefined : datasetSplit,
     }).then((response) => {
-      if (cancelled) return;
+      if (cancelled || epoch !== getProjectContextGeneration()) return;
       setDatasetImages(response.items || []);
       setDatasetTotal(response.total || 0);
     }).catch((error) => {
-      if (cancelled) return;
+      if (cancelled || epoch !== getProjectContextGeneration()) return;
       setDatasetImages([]);
       setDatasetTotal(0);
       setDatasetError(error instanceof Error ? error.message : '이미지 목록을 불러오지 못했습니다.');
     }).finally(() => {
-      if (!cancelled) setDatasetLoading(false);
+      if (!cancelled && epoch === getProjectContextGeneration()) setDatasetLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit, library, datasetRetry]);
+  }, [isOpen, activeTab, folderPath, task, datasetPage, datasetSplit, library, datasetRetry, scope]);
 
   if (!isOpen) return null;
 
@@ -133,7 +144,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
         title: '검사 대상 이미지 파일 선택',
         filters: [{ name: '이미지 파일', extensions: ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'tif', 'tiff'] }],
       });
-      if (file) {
+      if (file && epoch === getProjectContextGeneration()) {
         setLocalPathInput(file);
         pick({
           source: 'file',
@@ -146,6 +157,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   };
 
   const handleConfirm = () => {
+    if (epoch !== getProjectContextGeneration() || openedScope.current !== scope) return;
     if (tempSelected) {
       setSelectedImage(tempSelected);
       if (projectId) rememberSelection(projectId, tempSelected);
