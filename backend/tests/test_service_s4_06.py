@@ -88,3 +88,31 @@ def test_recipe_charset_fails_preflight_before_a_background_job_is_accepted(tmp_
     result=client.post('/api/ocr/train',json={'dataset_path':prepared.json()['dataset_path'],'epochs':1,'background':True,'recipe':{'charset':'A'}})
     assert result.status_code==422,result.text
     assert 'charset' in result.json()['detail']
+
+
+# Additional whole-flow recipe evidence must not be omitted from parity.
+import copy
+import pytest
+from backend.engine.ocr_recipe import OCRRecipe
+from backend.engine.flow_package_runtime import compare_flow_results
+
+@pytest.mark.parametrize('field,value',[
+ ('ocr_regions',[{'box':[1,2,8,9],'polygon':[[1,2],[8,2],[8,9],[1,9]],'line_index':0,'text':'가1'}]),
+ ('ocr_recipe',{'mode':'crop','text_rules':{'min_length':3}}),
+ ('ocr_rule_result',{'passed':True,'failed_rules':[]}),
+])
+def test_package_parity_cannot_ignore_ocr_evidence(field,value):
+    reference={'crops':[{'defect_score':0.,'ocr_regions':[],'ocr_recipe':{},'ocr_rule_result':{'passed':False,'failed_rules':['regex']}}]}
+    packaged=copy.deepcopy(reference);packaged['crops'][0][field]=value
+    result=compare_flow_results(reference,packaged)
+    assert result['status']=='mismatch'
+    assert f'crops[0].{field}' in result['mismatched_fields']
+
+def test_korean_digit_multiline_blank_and_vertical_scope():
+    recipe=OCRRecipe.from_value({'mode':'detect_recognize','charset':'가나12','text_rules':{'regex':'[가나12\\n]+','min_length':1,'max_length':10,'allowed_values':['가1','나2']}})
+    recipe.validate_alphabet('12가나')
+    assert recipe.check_text('가1')['passed']
+    assert recipe.check_text('가1\n나2')['failed_rules']==['allowed_values']
+    assert recipe.check_text('')['failed_rules']==['regex','min_length','allowed_values']
+    with pytest.raises(ValueError,match='outside'):recipe.validate_alphabet('다9')
+    with pytest.raises(ValueError,match='vertical'):OCRRecipe.from_value({'orientation':'vertical'})

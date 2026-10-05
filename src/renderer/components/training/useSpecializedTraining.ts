@@ -50,8 +50,9 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     }).catch(cause=>{if(active&&current()){setError(String(cause.message ?? cause));setReadFailures(count=>count+1);}});},isActiveSpecializedJob(job)&&!readFailures?600:3000);  // after a failed read, retry slowly
     return()=>{active=false;clearTimeout(timer);};
   },[family,job,projectDir,source,labelset,readFailures]);
-  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu',options?:{recipe?:Record<string,unknown>;max_runtime_s?:number;queue?:boolean;priority?:number})=>{
+  const start=async(path:string,epochs:number,warmStartJobId?:string,device:'cpu'|'cuda'|'mps'='cpu',options?:{recipe?:Record<string,unknown>;max_runtime_s?:number;queue?:boolean;priority?:number;batch_size?:number;image_width?:number;learning_rate?:number})=>{
     const config={dataset_path:path,epochs,device,...(warmStartJobId?{warm_start_job_id:warmStartJobId}:{}),...(options?.recipe?{recipe:options.recipe}:{}),
+      ...(family==='ocr'?{...(options?.batch_size!==undefined?{batch_size:options.batch_size}:{}),...(options?.image_width!==undefined?{image_width:options.image_width}:{}),...(options?.learning_rate!==undefined?{learning_rate:options.learning_rate}:{})}:{}),
       ...(options?.max_runtime_s!==undefined?{max_runtime_s:options.max_runtime_s}:{}),
       ...(options?.queue!==undefined?{queue:options.queue}:{}),...(options?.priority!==undefined?{priority:options.priority}:{})};
     setError('');const record=await submitModelTraining<SpecializedTrainingJob>(family==='defect-gan'?'defect_gan':family,config,()=>options?request<SpecializedTrainingJob>(`/api/${family}/train`,{method:'POST',body:JSON.stringify({...config,background:true})}):specializedApi.startTraining(family,path,epochs,warmStartJobId,device));

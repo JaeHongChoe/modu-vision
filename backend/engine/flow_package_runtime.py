@@ -331,6 +331,7 @@ def compare_flow_results(reference: dict[str, Any], packaged: dict[str, Any]) ->
                 "flaw_type", "defect_area_px", "blob_count",
                 "largest_blob_area_px", "tiles_processed", "recognized_text", "predicted_class", "polygon", "anomaly_map", "anomaly_values", "map_semantics", "mask", "source_transform",
                 "segmentation_classes", "blob_measurements", "original_text", "corrected_text", "correction_applied", "rule_violations", "measurements", "execution_resources",
+                "ocr_regions", "ocr_recipe", "ocr_rule_result",
             ):
                 if not _semantic_equal(left.get(field),right.get(field)):
                     mismatches.append(f"crops[{index}].{field}")

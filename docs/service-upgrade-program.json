@@ -2962,7 +2962,7 @@
     "S3-05",
     "S3-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -2970,6 +2970,14 @@
      "result": "OCR horizontal-region recognition, multiline ordering and rules; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Learned/vertical detector, representative Korean scene quality and native model workflow.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "d27f8c364460c033b6a63891fac6467756f1eb6f",
+     "result": "Task102: actual Chrome/macOS development Electron reject unknown Korean validation labels before admission, prepare12 single-line glyph crops8/2/2, run120 actual CPU epochs with saved batch2/input-width32/learning-rate0.003 and60-second budget, save measured CER/WER0 and read actual Korean/digit multiline text. Original SVG boxes, blank results and rule failures, exact model/recipe/settings reopen, flow-node binding, actual CPU flow and a fresh candidate-only whole-flow package retain text/coordinates/rules. Missing OCR rates display unmeasured; length/allowed-value rules and optimizer/input options reach the training request. Package comparison now refuses changed OCR spatial/recipe/rule evidence. Root readback SHA-2569ba3ece77547b9455553bf99943b4ca5c65a9e6148870ec205c0dcbc37ae5073.",
+     "scope": "Backend71, renderer767 and production/E2E TypeScript pass; new parity and recipe/option failures are retained before fixes.1200 frozen source inputs and568 artifacts, two final actual app cases, completed SQLite records/one attempt each, original/prepared hashes, model/completion/evaluation and package identities and closed processes/ports are rechecked. Synthetic glyph and setting debugging are not representative model-quality acceptance. Earlier20-epoch CER/WER100% remains recorded; initial selectors and default MPS versus explicit CPU fixture requests were repaired without weakening production gates.",
+     "platform": "Owned macOS CPU, actual Chrome/development Electron/main/preload/backend and private candidate package process; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -2979,12 +2987,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9353,12 +9361,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 43,
-    "pending": 39
+    "verified": 44,
+    "pending": 38
    },
    "parent_status": {
-    "verification_pending": 37,
-    "in_progress": 18,
+    "verification_pending": 38,
+    "in_progress": 17,
     "planned": 27
    },
    "merged_extension_slices": 16,
