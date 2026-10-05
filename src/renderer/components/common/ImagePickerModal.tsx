@@ -3,7 +3,7 @@
  * Steel Instrument Inspection Image Selection Dialog.
  */
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Check,
   Database,
@@ -27,6 +27,13 @@ export interface ImagePickerModalProps {
 }
 
 export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+  }, [isOpen]);
   const folderPath = useDatasetStore((state) => state.folderPath);
   const task = useProjectStore((state) => state.task);
   const projectId = useProjectStore((state) => state.project?.id ?? null);
@@ -174,7 +181,16 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-6 select-none animate-in fade-in duration-100">
-      <div role="dialog" aria-modal="true" aria-label="검사 대상 이미지 선택" className="bg-[#131822] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="검사 대상 이미지 선택" className="bg-[#131822] border border-[#2B3547] rounded w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden"
+        onKeyDown={event => {
+          if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); return; }
+          if (event.key !== 'Tab') return;
+          const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])') || [])
+            .filter(control => !control.hidden && control.getClientRects().length > 0 && getComputedStyle(control).visibility !== 'hidden');
+          const first = controls[0], last = controls.at(-1);
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }}>
         {/* Modal Header */}
         <div className="h-12 px-5 bg-[#0B0E14] border-b border-[#2B3547] flex items-center justify-between">
           <div className="flex items-center space-x-2">

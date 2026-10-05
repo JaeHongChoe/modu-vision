@@ -36,6 +36,8 @@ interface CustomNodeProps {
   latencyMs?: number;
   isDetectorOnly?: boolean;
   onSelect: () => void;
+  onRemove?: () => void;
+  editingDisabled?: boolean;
   /** Called with the payloads of the output port the connection starts from. */
   onConnectStart?: (payloads: FlowPortPayload[]) => void;
   onConnectFinish?: () => void;
@@ -55,12 +57,15 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
   latencyMs,
   isDetectorOnly = false,
   onSelect,
+  onRemove,
+  editingDisabled = false,
   onConnectStart,
   onConnectFinish,
   isConnectionSource = false,
   issues = [],
 }) => {
   const nodeType = node.data.node_type;
+  const nodeLabel = node.data.label || node.id;
 
   // Port colour by the payload it carries (several payloads: the first one's colour).
   const getPortColor = (payloads: FlowPortPayload[]): string => {
@@ -132,11 +137,24 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
 
   return (
     <div
+      role="group"
+      aria-roledescription="플로우 노드"
+      aria-label={`${nodeLabel} 노드 · ${isSelected ? '선택됨' : '선택 안됨'}`}
+      tabIndex={0}
+      data-flow-node-focus
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault(); onSelect();
+        } else if (event.key === 'Delete' && !editingDisabled && onRemove) {
+          event.preventDefault(); onRemove();
+        }
+      }}
       onClick={onSelect}
       style={{
         width: FLOW_NODE_WIDTH,
       }}
-      className={`relative select-none rounded-[4px] border transition-colors cursor-pointer bg-[#1A212E] ${
+      className={`focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-300 relative select-none rounded-[4px] border transition-colors cursor-pointer bg-[#1A212E] ${
         isConnectionSource
           ? 'border-cyan-300 ring-2 ring-cyan-400 z-20'
           : isSelected
@@ -269,8 +287,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
             <div key={port.id} className="flex items-center space-x-1.5">
               <button
                 type="button"
+                disabled={editingDisabled}
                 data-flow-port={`${node.id}:in:${index}`}
-                aria-label={`Connect to ${node.data.label} ${port.label}`}
+                aria-label={`Connect to ${nodeLabel} ${port.label}`}
                 title={`이 노드의 입력에 연결 (${port.label})`}
                 onClick={(event) => { event.stopPropagation(); onConnectFinish?.(); }}
                 style={{ borderColor: getPortColor(port.payloads) }}
@@ -293,8 +312,9 @@ export const CustomNode: React.FC<CustomNodeProps> = ({
               <span className="text-slate-300 font-bold uppercase truncate">{outputLabel(port.label)}</span>
               <button
                 type="button"
+                disabled={editingDisabled}
                 data-flow-port={`${node.id}:out:${index}`}
-                aria-label={`Start connection from ${node.data.label} ${outputLabel(port.label)}`}
+                aria-label={`Start connection from ${nodeLabel} ${outputLabel(port.label)}`}
                 title={`여기서 연결 시작 (${outputLabel(port.label)})`}
                 onClick={(event) => { event.stopPropagation(); onConnectStart?.(port.payloads); }}
                 style={{ borderColor: getPortColor(port.payloads) }}

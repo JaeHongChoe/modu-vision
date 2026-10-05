@@ -1333,12 +1333,18 @@
     "노드 추가/선택/연결/삭제/undo를 키보드로 수행하고 dialog 종료 후 focus를 복원한다. DPI 변화 후 canvas 및 ROI drag 좌표가 원본 좌표와 일치한다."
    ],
    "depends_on": [],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "design-foundation",
      "result": "4 browser and 4 Node cases passed; independent spec/code review passed; 11 source hashes matched",
      "scope": "common form/status/async/dialog and impact report section; 1366x768/1920x1080, focus and stale response handling; canvas keyboard/ROI coordinates/native Windows DPI pending"
+    },
+    {
+     "kind": "source-qualified-parent-software-closure",
+     "source_base": "dc662f7444344857f376d46ae404a75b5d50e1bf",
+     "result": "Task109 gives flow nodes visible keyboard focus, direct-target Enter/Space selection and guarded Delete with neighbor focus. Port buttons and additions honor graph editing state. Image selection receives initial focus, visible Tab boundaries, Escape close and connected opener focus restoration. Node dragging freezes the actual rendered transform including display zoom.769 renderer cases, production/E2E types, actual Chrome5 and development Electron1 cases pass;8 size/scale combinations per canvas case preserve original ROI and node movement, explicit draft content/hash survives reload. Existing shared controls and stale-response refusal rerun.",
+     "scope": "Root readback SHA-2567a3948e294217b3ea85b714bcff331f6b0c301668a617d1e1a804c5b282d38b6 binds1414 source inputs/58 artifacts. Synthetic coordinate fixture, actual macOS/Chrome CSS scale100/125/150/200 percent at1366x768/1920x1080. This is not actual Windows OS DPI, which the user excluded. Independent handoff, target and final acceptance remain pending."
     }
    ],
    "file_actions": {
@@ -1348,17 +1354,21 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s2-02.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s2-02.spec.ts",
+   "remaining": [
+    "Actual Windows OS DPI/installation execution excluded by the user; CSS scale evidence is separately qualified",
+    "Independent human handoff/target and full acceptance remain pending"
+   ]
   },
   {
    "id": "S2-03",
@@ -9418,12 +9428,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 48,
-    "pending": 34
+    "verified": 49,
+    "pending": 33
    },
    "parent_status": {
-    "verification_pending": 42,
-    "in_progress": 17,
+    "verification_pending": 43,
+    "in_progress": 16,
     "planned": 23
    },
    "merged_extension_slices": 16,

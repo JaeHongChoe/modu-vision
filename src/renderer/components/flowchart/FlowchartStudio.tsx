@@ -53,7 +53,7 @@ import { FlowChangeHistory } from './FlowChangeHistory';
 import { FlowPreflightPanel } from './FlowPreflightPanel';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
-import { computeFlowchartViewport, readableFlowScale } from './flowchartViewport';
+import { computeFlowchartViewport, readableFlowScale, FLOW_NODE_WIDTH } from './flowchartViewport';
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
@@ -649,8 +649,13 @@ export const FlowchartStudio: React.FC = () => {
     updateNodeData(selectedNode.id, { params: { ...selectedNode.data.params, roi_bbox: rectangle } });
   };
 
+  const focusFlowNode = (id: string) => requestAnimationFrame(() => {
+    canvasRef.current?.querySelector<HTMLElement>(`[data-flow-node-id="${CSS.escape(id)}"] [data-flow-node-focus]`)?.focus();
+  });
+  const graphEditingDisabled = isLoading || isSaving || isRunning || isVerifyingAction || flowOpening;
+
   const addEditableNode = (nodeType: 'patch_split' | 'preprocess' | 'fixed_roi' | 'detection_crop' | 'inspection' | 'blob_measure' | 'measurement' | 'aggregate' | 'output') => {
-    if (!pipeline || isRunning || isSaving) return;
+    if (!pipeline || graphEditingDisabled) return;
     if (nodeType === 'output' && pipeline.nodes.filter((node) => node.data.node_type === 'output').length >= 3) {
       setEditorError('출력 분기는 최대 세 개입니다.'); return;
     }
@@ -709,11 +714,13 @@ export const FlowchartStudio: React.FC = () => {
     }) : pipeline.nodes;
     replacePipeline({ ...pipeline, nodes: [...existingNodes, node] });
     selectNode(id);
+    focusFlowNode(id);
     setSelectedEdgeId(null);
     setEditorError(null);
   };
 
   const startConnection = (nodeId: string, payloads?: FlowPortPayload[]) => {
+    if (graphEditingDisabled) return;
     setConnectionSourceId(nodeId);
     setConnectionPayloads(payloads);
     setSelectedEdgeId(null);
@@ -722,6 +729,7 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const finishConnection = (targetId: string) => {
+    if (graphEditingDisabled) return;
     if (!pipeline || !connectionSourceId) {
       setEditorError('먼저 출발 노드의 출력 포트를 클릭하세요.'); return;
     }
@@ -735,17 +743,23 @@ export const FlowchartStudio: React.FC = () => {
     }
   };
 
-  const deleteSelectedNode = () => {
-    if (!pipeline || !selectedNode) return;
+  const deleteEditableNode = (id: string | undefined) => {
+    if (!pipeline || !id || graphEditingDisabled) return;
     try {
-      replacePipeline(removeFlowNode(pipeline, selectedNode.id));
-      selectNode(null);
+      const next = removeFlowNode(pipeline, id);
+      const index = pipeline.nodes.findIndex(node => node.id === id);
+      const focus = next.nodes[Math.min(Math.max(0, index), next.nodes.length - 1)];
+      replacePipeline(next);
+      selectNode(focus?.id || null);
+      setSelectedEdgeId(null);
       setEditorError(null);
-      if (connectionSourceId === selectedNode.id) setConnectionSourceId(null);
+      if (connectionSourceId === id) setConnectionSourceId(null);
+      if (focus) focusFlowNode(focus.id);
     } catch (error) {
       setEditorError(error instanceof Error ? error.message : '노드를 삭제할 수 없습니다.');
     }
   };
+  const deleteSelectedNode = () => deleteEditableNode(selectedNode?.id);
 
   const deleteSelectedEdge = () => {
     if (!pipeline || !selectedEdgeId) return;
@@ -837,10 +851,14 @@ export const FlowchartStudio: React.FC = () => {
   }, [pipeline?.id]);
 
   const beginNodeDrag = (event: React.PointerEvent<HTMLDivElement>, node: FlowNode) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest('button, input, select')) return;
+    if (graphEditingDisabled || event.button !== 0 || (event.target as HTMLElement).closest('button, input, select')) return;
+    // Pointer coordinates include display zoom as well as the graph transform.
+    // Freeze the rendered scale for this drag, just like its graph viewport.
+    const renderedScale = event.currentTarget.getBoundingClientRect().width / FLOW_NODE_WIDTH;
     dragRef.current = {
       nodeId: node.id, startX: event.clientX, startY: event.clientY,
-      x: node.position.x, y: node.position.y, scale: displayViewport.scale,
+      x: node.position.x, y: node.position.y,
+      scale: Number.isFinite(renderedScale) && renderedScale > 0 ? renderedScale : displayViewport.scale,
     };
     setDragViewport(displayViewport);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -933,8 +951,8 @@ export const FlowchartStudio: React.FC = () => {
 
       <div className="min-h-10 bg-[#101722] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
         <span className="mr-1 text-xs font-bold tracking-wider text-slate-400">노드 추가</span>
-        <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
-        <button onClick={() => addEditableNode('preprocess')} disabled={!pipeline || isRunning} className="rounded border border-slate-600 px-2 py-1 text-xs">영상 전처리 추가</button>
+        <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || graphEditingDisabled} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
+        <button onClick={() => addEditableNode('preprocess')} disabled={!pipeline || graphEditingDisabled} className="rounded border border-slate-600 px-2 py-1 text-xs">영상 전처리 추가</button>
         <button onClick={() => addEditableNode('fixed_roi')} disabled={!pipeline || isLoading || isSaving || isRunning}
           className="px-2 py-1 border border-sky-700 rounded text-sky-200 hover:bg-sky-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 고정 ROI
@@ -1311,6 +1329,8 @@ export const FlowchartStudio: React.FC = () => {
                       isDetectorOnly={pipeline?.edges.some((edge) => edge.source === node.id &&
                         pipeline.nodes.some((item) => item.id === edge.target && item.data.node_type === 'decision'))}
                       isConnectionSource={connectionSourceId === node.id}
+                      editingDisabled={graphEditingDisabled}
+                      onRemove={node.data.node_type !== 'input' && node.data.node_type !== 'decision' ? () => deleteEditableNode(node.id) : undefined}
                       onSelect={() => { selectNode(node.id); setSelectedEdgeId(null); }}
                       onConnectStart={(payloads) => startConnection(node.id, payloads)}
                       onConnectFinish={() => finishConnection(node.id)}
@@ -1666,7 +1686,7 @@ export const FlowchartStudio: React.FC = () => {
                   <div>COORD: <span className="text-slate-300 tabular-nums">({selectedNode.position?.x ?? 0}, {selectedNode.position?.y ?? 0})</span></div>
                 </div>
                 {selectedNode.data.node_type !== 'input' && selectedNode.data.node_type !== 'decision' && (
-                  <button onClick={deleteSelectedNode} disabled={isRunning || isSaving}
+                  <button onClick={deleteSelectedNode} disabled={graphEditingDisabled}
                     className="w-full px-3 py-2 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 disabled:opacity-50 flex justify-center items-center gap-2">
                     <Trash2 className="w-3.5 h-3.5" /> 노드 삭제
                   </button>

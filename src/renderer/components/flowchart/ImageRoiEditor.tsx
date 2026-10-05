@@ -15,7 +15,7 @@ export function ImageRoiEditor({imagePath,preview,sourceSize,roi,onChange,onEdit
   const point=(e:React.PointerEvent<SVGSVGElement>)=>{const p=e.currentTarget.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const matrix=e.currentTarget.getScreenCTM();if(!matrix)return [0,0];const v=p.matrixTransform(matrix.inverse());return [v.x,v.y];};
   return <div className="space-y-2">
     <p className="text-xs text-slate-300">원본 {w}×{h} · 끌어서 ROI 지정 · 방향키로 이동 · Shift+방향키로 크기 조절</p>
-    <svg role="application" aria-label="원본 이미지 ROI 편집" tabIndex={disabled?-1:0} viewBox={`0 0 ${w} ${h}`} style={{aspectRatio:`${w}/${h}`,maxHeight:240,width:'100%',touchAction:'none'}} className="rounded bg-slate-950 outline-none cursor-crosshair"
+    <svg role="application" aria-label="원본 이미지 ROI 편집" tabIndex={disabled?-1:0} viewBox={`0 0 ${w} ${h}`} style={{aspectRatio:`${w}/${h}`,maxHeight:240,width:'100%',touchAction:'none'}} className="rounded bg-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 cursor-crosshair"
       onPointerDown={e=>{if(disabled)return;start.current=point(e);onEditingChange?.(true);e.currentTarget.setPointerCapture(e.pointerId);}}
       onPointerMove={e=>{if(start.current)setDraft(roiFromDrag(start.current,point(e),size));}}
       onPointerUp={e=>{if(!start.current)return;const box=roiFromDrag(start.current,point(e),size);start.current=null;setDraft(box);onChange(box);onEditingChange?.(false);}}
