@@ -81,7 +81,8 @@ def cancel_job(root,identifier):
             event.set();record['status']='stopping'
             record.setdefault('events',[]).append({'at':time.time(),'status':'stopping','epoch':record.get('epoch',0),'batch':record.get('batch',0)})
             _write(directory/'job.json',record)
-        return record
+        from backend.engine.specialist_training_queue import queue_status
+        return {**record, **queue_status(directory)}
 
 
 def start_job(*,project,task,source,output,options,runner,family_digest,warm_start=None,family_dataset=None,request=None):

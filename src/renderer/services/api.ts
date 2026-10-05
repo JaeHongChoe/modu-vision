@@ -348,10 +348,19 @@ export interface RotatedModelSummary {
   validation: { mean_oriented_iou: number; mean_angle_error_deg: number; sample_count: number };
 }
 
+export interface JobObservation {
+  pending_finalization?: boolean;
+  state?: string; cause?: string | null; next_action?: string | null;
+  worker_recorded?: boolean | null; execution_started?: boolean | null;
+  cancel?: {requested_at?: number | null; acknowledged_at?: number | null; signals?: string[];
+    exit_confirmed?: boolean; reservation_released?: boolean | null; complete?: boolean; stage?: string};
+}
+
 export interface RotatedJob {
+  observation?: JobObservation;
   execution_job_id?:string;compute_profile_id?:string;
   job_id: string;
-  status: 'running' | 'stopping' | 'completed' | 'aborted' | 'failed' | 'interrupted';
+  status: 'queued' | 'running' | 'stopping' | 'completed' | 'aborted' | 'failed' | 'interrupted';
   epochs_completed: number;
   total_epochs: number;
   result: { checkpoint_sha256: string; dataset_sha256: string } | null;

@@ -296,7 +296,8 @@ def cancel(job_id: str, request: Request):
                 cancel_owned(folder)
                 event.set(); record["status"] = "stopping"
                 _atomic(folder / "job.json", json.dumps(record, ensure_ascii=False).encode())
-    return record
+    from backend.engine.specialist_training_queue import queue_status
+    return {**record, **queue_status(folder)}
 
 
 @router.get("/models")

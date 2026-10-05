@@ -117,3 +117,13 @@ test('S2-09: patch local reconnect posts the original owned job id to the core e
  const row=await modelTrainingProgram.patch.reconnect('patch-owned');assert.equal(row.job_id,'patch-owned');assert.equal(row.optimizer_resume,false);
  assert.deepEqual(calls,[{path:'/api/training/reconnect',method:'POST',body:{job_id:'patch-owned'}}]);
 });
+
+test('native terminal rows keep observing until their final resource facts settle',()=>{
+ const {watchJob,jobProgress}=model();
+ for(const status of ['completed','failed','stopped','aborted','interrupted']){
+  assert.equal(watchJob(status,{pending_finalization:true}),true,status);
+  assert.equal(jobProgress({status,observation:{pending_finalization:true}}).watch,true,status);
+  assert.equal(watchJob(status,{pending_finalization:false}),false,status);
+  assert.equal(watchJob(status),false,'legacy terminal records keep their previous contract');
+ }
+});

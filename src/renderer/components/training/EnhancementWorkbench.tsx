@@ -4,7 +4,7 @@ import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '.
 import {JobProgressView} from './JobProgressView';
 import {activeJob,watchJob,JOB_STATUS_LABELS} from './jobProgress';
 import {useComputeStore} from '../../stores/useComputeStore';
-import {getApiPersistenceIdentity} from '../../services/api';
+import {getApiPersistenceIdentity,type JobObservation} from '../../services/api';
 import {openModelFlow} from './ProgramWorkbenchControls';
 import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Loader2, RefreshCw } from 'lucide-react';
@@ -19,7 +19,7 @@ import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrai
 
 interface EnhancementModel { job_id: string; metadata: { best_epoch: number; dataset_path: string; source_dataset_path: string } }
 interface EnhancementMetrics { sample_count: number; input_psnr: number; output_psnr: number; improved: boolean }
-interface EnhancementJob { execution_job_id?:string;compute_profile_id?:string; job_id: string; status: string; epoch: number; epochs: number; dataset_path: string; source_dataset_path: string; error: string | null }
+interface EnhancementJob { observation?:JobObservation;execution_job_id?:string;compute_profile_id?:string; job_id: string; status: string; epoch: number; epochs: number; dataset_path: string; source_dataset_path: string; error: string | null }
 const activeStatus = activeJob;
 
 export function EnhancementWorkbench() {
@@ -62,7 +62,7 @@ export function EnhancementWorkbench() {
       if(!current||currentScope.current!==scope)return;setDatasets(prepared.datasets);
       const items=result.models.filter(model=>model.metadata.source_dataset_path===source);setModels(items);
       const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(items,handoff);setJobId(selected?.job_id||'');
-      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>watchJob(row.status));setJob(restored||null);
+      const own=journal.jobs.filter(row=>row.source_dataset_path===source);setJobs(own);const restored=handoff?(handoff.transport&&handoff.transport!=='local'?own.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?own.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(own,handoff)):own.find(row=>watchJob(row.status,row.observation));setJob(restored||null);
       if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<EnhancementJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(current&&currentScope.current===scope)setJob(row);}).catch(cause=>{if(current&&currentScope.current===scope)setError(String(cause));});}
       const path=handoff?.datasetPath||selected?.metadata.dataset_path||restored?.dataset_path;const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
       if(handoff&&!dataset)throw new Error('선택 작업이 사용한 이미지 개선 정답 쌍을 찾지 못했습니다.');
@@ -72,7 +72,7 @@ export function EnhancementWorkbench() {
   }, [scope,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
-    if (!job || !watchJob(job.status)) return;
+    if (!job || !watchJob(job.status,job.observation)) return;
     let current = true;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
@@ -84,7 +84,7 @@ export function EnhancementWorkbench() {
           setJobId(row.job_id); setNotice('후보 모델을 저장했습니다. 시험 평가 후 5단계에서 연결할 수 있습니다.');
           void refresh();
         }  // a failure and its next action are shown by the job's progress view
-        if (watchJob(row.status)) timer = setTimeout(() => void poll(), activeStatus(row.status) ? 800 : 3000);
+        if (watchJob(row.status,row.observation)) timer = setTimeout(() => void poll(), activeStatus(row.status) ? 800 : 3000);
       } catch (e) {
         if (current) { setError(e instanceof Error ? e.message : '진행 상황을 읽지 못했습니다.'); timer = setTimeout(() => void poll(), 2000); }
       }

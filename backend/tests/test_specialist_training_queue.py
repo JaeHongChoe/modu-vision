@@ -146,6 +146,9 @@ def test_actual_cpu_completion_is_fenced_in_common_ledger(tmp_path,family,module
     receipt=json.loads((root/'job_receipt.json').read_text())
     assert receipt['checkpoint_sha256']==hashlib.sha256((root/'best_model.pt').read_bytes()).hexdigest()
     assert originals=={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in source.glob('*.png')}
+    observed=client.get(f'/api/{family}/jobs/{identifier}').json()['observation']
+    assert observed['execution_started'] is True and observed['cancel']['exit_confirmed'] is True
+    assert observed['cancel']['reservation_released'] is True and observed['pending_finalization'] is False
 
 
 def test_scheduling_controls_require_json_types_and_bounded_priority():

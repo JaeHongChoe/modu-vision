@@ -33,7 +33,7 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
     if(projectDir)void specializedApi.trainingJobs(family).then(result=>{
       if(!active||!current())return;
       const rows=result.jobs.filter(item=>item.source_dataset_path===source && item.training_provenance.labelset_id===labelset);
-      setJobs(rows);setJob(handoff?(handoff.transport&&handoff.transport!=='local'?rows.find(row=>row.job_id===handoff.jobId)||null:handoff.kind==='automated'?rows.find(row=>row.job_id===handoff.jobId)||null:selectHandoffRecord(rows,handoff)||null):rows.find(item=>watchJob(item.status)) ?? rows[0] ?? null);
+      setJobs(rows);setJob(handoff?(handoff.transport&&handoff.transport!=='local'?rows.find(row=>row.job_id===handoff.jobId)||null:handoff.kind==='automated'?rows.find(row=>row.job_id===handoff.jobId)||null:selectHandoffRecord(rows,handoff)||null):rows.find(item=>watchJob(item.status,item.observation)) ?? rows[0] ?? null);
 
       if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<SpecializedTrainingJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&current()){setJob(row);setJobs(rows=>[row,...rows.filter(item=>item.job_id!==row.job_id)]);}}).catch(cause=>{if(active&&current())setError(String(cause));});}
     }).catch(cause=>{if(active&&current())setError(String(cause.message ?? cause));});
@@ -42,7 +42,7 @@ export function useSpecializedTraining(family:SpecializedTrainingFamily,onComple
   useEffect(()=>{
     if(!job)return;
     if(job.status==='completed'&&!completed.current.has(job.job_id)){completed.current.add(job.job_id);complete.current(job);}
-    if(!watchJob(job.status))return;  // an active job, or one whose state may still change (a dropped connection)
+    if(!watchJob(job.status,job.observation))return;  // an active job, or one whose state may still change (a dropped connection)
     let active=true;
     const timer=setTimeout(()=>{void controlModelTraining<SpecializedTrainingJob>(job,'status',()=>specializedApi.trainingJob(family,job.job_id)).then(record=>{
       if(!active||!current())return;

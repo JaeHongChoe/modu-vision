@@ -6,11 +6,14 @@ Python closures cannot be replayed after a backend exit: saved jobs remain
 observable, and are interrupted rather than silently starting a new training.
 """
 from contextlib import contextmanager
+from dataclasses import asdict, replace
 import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import threading
+import time
 import uuid
 
 import psutil
@@ -35,6 +38,7 @@ class NativeAdmission:
         self.job_id, self.output, self.actor, self.event = identifier, Path(output), actor, event
         self.key = (str(store.path), identifier)
         self.lease = None
+        self._entered = False
         self._heartbeat_error = None
         self._ownership_lock = threading.RLock()
         self.identity = {'native_worker': True, 'owner_pid': os.getpid(),
@@ -66,16 +70,23 @@ class NativeAdmission:
             if self.event.is_set() or self.store.cancel_intent(self.job_id):
                 raise InterruptedError('Training cancelled before publication')
             publish()
-        self.scheduler.publish_result(self.lease, 'completed', publish=guarded_publish)
+        self.scheduler.publish_result(self.lease, 'completed', self._exit_proof(), publish=guarded_publish)
+
+    def _exit_proof(self):
+        """Written only when the owned execution has returned or never entered."""
+        intent = self.store.cancel_intent(self.job_id)
+        return {'native_observation_schema': 1, 'execution_started': self._entered,
+                'execution_exit_confirmed': True,
+                'cancel_acknowledged_at': time.time() if intent else None}
 
     def abandon(self, error):
         with _LOCK:
             try:
                 if self.store.get(self.job_id).state in ACTIVE:
                     if self.lease is not None:
-                        self.scheduler.publish_result(self.lease, 'failed', {'reason': str(error)})
+                        self.scheduler.publish_result(self.lease, 'failed', {'reason': str(error), **self._exit_proof()})
                     else:
-                        self.store.finish(self.job_id, 'fail', {'reason': str(error)})
+                        self.store.finish(self.job_id, 'fail', {'reason': str(error), **self._exit_proof()})
             finally:
                 _READY.pop(self.key, None)
 
@@ -84,14 +95,18 @@ class NativeAdmission:
             return self._finish_error(error)
 
     def _finish_error(self,error):
-        if self.store.get(self.job_id).state not in ACTIVE: return
-        outcome = 'aborted' if isinstance(error, InterruptedError) or type(error).__name__ == 'RotatedTrainingCancelled' else 'failed'
-        if self.event.is_set() and not self.store.cancel_intent(self.job_id):
-            self.store.request_cancel(self.job_id, self.actor, str(error))
-        if self.lease is not None:
-            self.scheduler.publish_result(self.lease, outcome, {'reason': str(error)})
-        else:
-            self.store.finish(self.job_id, 'abort' if outcome == 'aborted' else 'fail', {'reason': str(error)})
+        # Dispatch may assign this queued adapter a lease. Choose the fenced or
+        # unclaimed finish while holding the same lock as that assignment.
+        with _LOCK:
+            if self.store.get(self.job_id).state not in ACTIVE: return
+            outcome = 'aborted' if isinstance(error, InterruptedError) or type(error).__name__ == 'RotatedTrainingCancelled' else 'failed'
+            if self.event.is_set() and not self.store.cancel_intent(self.job_id):
+                self.store.request_cancel(self.job_id, self.actor, str(error))
+            payload = {'reason': str(error), **self._exit_proof()}
+            if self.lease is not None:
+                self.scheduler.publish_result(self.lease, outcome, payload)
+            else:
+                self.store.finish(self.job_id, 'abort' if outcome == 'aborted' else 'fail', payload)
 
     @contextmanager
     def scope(self):
@@ -120,6 +135,9 @@ class NativeAdmission:
                         return
             heartbeat = threading.Thread(target=refresh, daemon=True, name=f'native-lease-{self.job_id[:8]}')
             heartbeat.start()
+            self._entered = True
+            self.identity['native_execution_started'] = True
+            self.check()
             yield self
             if self.store.get(self.job_id).state in ACTIVE:
                 self.finish_error(RuntimeError('Native worker left without publishing a completion'))
@@ -139,8 +157,25 @@ def _dispatch(admission):
     candidates = [value for key, value in _READY.items()
                   if key[0] == str(admission.store.path) and value.lease is None and not value.event.is_set()]
     if not candidates: return
+    allowed = {value.job_id for value in candidates}
+    ordered = admission.scheduler._ordered(row for row in admission.store.queued() if row['id'] in allowed)
+    counts, _ = admission.store.holding_counts()
+    reasons, selected = {}, None
+    for row in ordered:
+        quota = admission.store.quota(row['project_key'])
+        if quota is not None and counts.get(row['project_key'], 0) >= quota:
+            reasons[row['id']] = 'project_quota'
+        elif selected is None:
+            selected = row['id']
+        else:
+            reasons[row['id']] = 'priority'
+    admission.store.set_wait_reasons(reasons)
+    if selected is None: return
+    # All native adapters need the same local reservation. If capacity changes
+    # after the highest eligible row sees busy, retry that row next time; never
+    # let a lower row acquire the newly freed device in the same scan.
     lease = admission.scheduler.claim_job(f'native:{os.getpid()}:{_INSTANCE}',
-        {'hosts': ['local-compute'], 'job_ids': [value.job_id for value in candidates]})
+        {'hosts': ['local-compute'], 'job_ids': [selected]})
     if lease is not None:
         _READY[(str(admission.store.path), lease.job_id)].lease = lease
 
@@ -201,7 +236,41 @@ def queue_status(output):
     view=next(({'position':position,'wait_reason':item['wait_reason'] or 'priority'}
                for position,item in enumerate(queued,1) if item['id']==output.name),{})
     return {'priority': row['priority'], 'queue_position': view.get('position'),
-            'wait_reason': view.get('wait_reason'), 'ledger_state': row['state']}
+            'wait_reason': view.get('wait_reason'), 'ledger_state': row['state'],
+            'observation': _observation(store, row)}
+
+
+def _observation(store, row):
+    """Execution exit and reservation return are independently observed facts.
+
+    The native execution is a thread in a shared backend, not an exited backend
+    process. Old terminal statuses alone supply no native execution exit proof.
+    """
+    from backend.engine.job_observation import cancellation_evidence, classify_observation
+    terminal = row['state'] not in ACTIVE
+    end = next((event for event in reversed(store.events(row['id']))
+                if event['to_state'] == row['state'] and event['event'] in {'complete','fail','abort','interrupt'}), {})
+    payload = end.get('payload') if isinstance(end.get('payload'), dict) else {}
+    schema = payload.get('native_observation_schema')
+    proven = terminal and type(schema) is int and schema == 1
+    started = payload.get('execution_started') if proven else None
+    execution_started = started if type(started) is bool else None
+    intent = store.cancel_intent(row['id'])
+    journal = {'worker_exit_confirmed': proven and payload.get('execution_exit_confirmed') is True,
+               'cancel_acknowledged_at': payload.get('cancel_acknowledged_at') if proven else None}
+    try:
+        present = any(item['job_id'] == row['id'] for item in shared_leases().list())
+    except (OSError, sqlite3.Error):
+        present = None
+    cancel = cancellation_evidence(journal, intent, present)
+    observed = classify_observation(row['state'], error=payload.get('reason'), remote=False,
+        cancel=cancel, cancel_reason=(intent or {}).get('reason'))
+    if terminal and intent and not cancel.complete:
+        observed = replace(observed, state='uncertain', cause='cancel_unconfirmed', retryable=False,
+            next_action='취소 요청은 저장됐습니다. 같은 작업의 실행 종료와 장치 예약 반환을 다시 확인하세요.')
+    return {**asdict(observed), 'cancel': asdict(cancel), 'execution_started': execution_started,
+            'worker_recorded': execution_started,
+            'pending_finalization': not terminal or (proven and cancel.reservation_released is not True)}
 
 
 def cancel_owned(output):
@@ -228,7 +297,8 @@ def interrupt_unlaunched(output):
     except UnknownJob:return
     if (row['kind']=='specialist_training' and Path(row['output_dir']).resolve()==Path(output).resolve()
             and row['state'] in {'accepted','queued'} and not store.attempts(row['id'])):
-        store.finish(row['id'],'interrupt',{'reason':'Native adapter stopped before launch; explicit new submission required'})
+        store.finish(row['id'],'interrupt',{'reason':'Native adapter stopped before launch; explicit new submission required',
+            'native_observation_schema':1,'execution_started':False,'execution_exit_confirmed':True})
     elif row['kind']=='specialist_training' and Path(row['output_dir']).resolve()==Path(output).resolve() and row['state'] in ACTIVE:
         identity=store.checkpoint_value(row['id'])
         if identity.get('native_worker') is not True or not identity.get('owner_pid') or not identity.get('owner_created_at'):return
@@ -242,4 +312,6 @@ def interrupt_unlaunched(output):
         last=attempts[-1]
         lease=AttemptLease(row['id'],last['number'],last['fencing_token'],0,last['worker_id'],json.loads(row['resources_json']))
         JobScheduler(store,shared_leases()).publish_result(lease,'aborted' if store.cancel_intent(row['id']) else 'interrupted',
-            {'reason':'Native process identity proves owner exit; no automatic training replay'})
+            {'reason':'Native process identity proves owner exit; no automatic training replay',
+             'native_observation_schema':1,'execution_exit_confirmed':True,
+             'execution_started':identity.get('native_execution_started')})

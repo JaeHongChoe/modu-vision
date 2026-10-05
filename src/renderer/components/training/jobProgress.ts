@@ -35,7 +35,9 @@ export type JobProgress = {
 
 /** Still working: a new start waits for it. */
 export const activeJob = (status: string) => ACTIVE.includes(status);
-export const watchJob = (status: string) => ACTIVE.includes(status) || status === 'disconnected' || status === 'unverified';
+export const watchJob = (status: string, observation?: {pending_finalization?: boolean}) =>
+  ACTIVE.includes(status) || status === 'disconnected' || status === 'unverified' ||
+  ([...TERMINAL,'interrupted'].includes(status) && observation?.pending_finalization === true);
 /** The task center and every workbench offer cancel by this one rule. */
 export const cancellable = (job: {status: string; cancel_supported?: boolean}) =>
   job.cancel_supported !== false && !TERMINAL.includes(job.status) && !['interrupted', 'stopping', 'cancelling'].includes(job.status);
@@ -58,7 +60,7 @@ export function jobProgress(job: Record<string, any>): JobProgress {
   const cancelPending = !!job.observation?.cancel?.requested_at && job.observation.cancel.complete !== true;
   return {
     // a server job reports its transfer, result sync and reconnection as a phase while its status stays running
-    status, label: (status === 'running' && PHASES.includes(job.phase) ? JOB_STATUS_LABELS[job.phase] : JOB_STATUS_LABELS[status]) || status, tone, watch: watchJob(status), stopping: ['stopping', 'cancelling'].includes(status) || cancelPending,
+    status, label: (status === 'running' && PHASES.includes(job.phase) ? JOB_STATUS_LABELS[job.phase] : JOB_STATUS_LABELS[status]) || status, tone, watch: watchJob(status,job.observation), stopping: ['stopping', 'cancelling'].includes(status) || cancelPending,
     epoch: number(job.current_epoch, job.epoch, job.epochs_completed) ?? 0,
     totalEpochs: number(job.total_epochs, job.epochs) ?? 0,
     batch: number(job.current_step, job.batch) ?? 0, batches: number(job.total_steps, job.batches) ?? 0,

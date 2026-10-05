@@ -1,5 +1,5 @@
 import type {ParentCandidate} from '../types/parentCandidate';
-import { request } from './api';
+import { request, type JobObservation } from './api';
 import {submitModelTraining} from './modelExecution';
 import type {TrainingSchedulingOptions} from '../stores/useTrainingStore';
 
@@ -11,6 +11,7 @@ export type PreparedDataset = {dataset_path: string; sample_count?: number; patc
   provenance: {split_counts?: Record<string, number>; source_dataset_path?: string; dataset_sha256?: string}};
 export type FamilyModel = {job_id: string; checkpoint_path?: string; metadata: Record<string, unknown> & {dataset_path?: string; source_dataset_path?: string;training_provenance?:{family_dataset_path?:string}}};
 export type ProgramJob = {execution_job_id?:string;model_id?:string;compute_profile_id?:string;job_id: string; status: string; task?: string; dataset_path?: string; source_dataset_path?: string;
+  observation?: JobObservation;
   epoch?: number; epochs?: number; current_epoch?: number; total_epochs?: number; loss?: number;
   current_train_loss?: number; output_dir?: string; error?: string | {message?: string};
   training_provenance?: {labelset_id?: string}; result?: Record<string, unknown>};

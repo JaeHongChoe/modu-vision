@@ -72,7 +72,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     void Promise.all([request<{datasets:PreparedDataset[]}>('/api/rotated-detection/datasets'),request<{jobs:RotatedJob[]}>('/api/rotated-detection/jobs'),specializedApi.rotated.models()]).then(([prepared,journal,result])=>{
       if(!active||!sameProject())return;setDatasets(prepared.datasets);setModels(result.models);
       const selected=handoff&&handoff.status!=='completed'?undefined:selectHandoffRecord(result.models,handoff);setModelId(selected?.job_id||'');
-      const restored=handoff?(handoff.transport&&handoff.transport!=='local'?journal.jobs.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>watchJob(row.status));setJob(restored||null);
+      const restored=handoff?(handoff.transport&&handoff.transport!=='local'?journal.jobs.find(row=>row.job_id===handoff.jobId):handoff.kind==='automated'?journal.jobs.find(row=>row.job_id===handoff.jobId):selectHandoffRecord(journal.jobs,handoff)):journal.jobs.find(row=>watchJob(row.status,row.observation));setJob(restored||null);
       if(handoff?.transport&&handoff.transport!=='local'&&handoff.executionJobId){void controlModelTraining<RotatedJob>({job_id:handoff.jobId,execution_job_id:handoff.executionJobId,compute_profile_id:handoff.transport,status:handoff.status},'status',()=>Promise.reject(new Error('서버 작업 식별자가 필요합니다.'))).then(row=>{if(active&&sameProject())setJob(row);}).catch(cause=>{if(active&&sameProject())setError(String(cause));});}
       const path=handoff?.datasetPath||(selected as {dataset_path?:string}|undefined)?.dataset_path;
       const dataset=path?prepared.datasets.find(row=>row.dataset_path===path):prepared.datasets.at(-1);
@@ -83,7 +83,7 @@ export const RotatedDetectionPanel: React.FC = () => {
   }, [projectDir,projectSource,labelsetId,compute.selectedProfileId,compute.transportRevision,apiIdentity,handoff?.jobId,handoff?.selectionId]);
 
   useEffect(() => {
-    if (!job || !watchJob(job.status) || !projectDir) return;
+    if (!job || !watchJob(job.status,job.observation) || !projectDir) return;
     let active = true;
     const check = async () => {
       try {
