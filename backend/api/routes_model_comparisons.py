@@ -816,6 +816,57 @@ def list_comparison_jobs(request: Request, source_dataset_path: str, task: Task)
     return {'jobs': rows, 'total': len(rows)}
 
 
+def task_center_comparisons(request: Request, project: dict, warnings: list | None = None):
+    """Read existing actor-owned durable jobs, without starting or retargeting them.
+
+    Legacy journals have no actor/labelset binding and remain in their original
+    comparison screen. A project task change does not discard durable history.
+    """
+    from backend.engine.comparison_jobs import KIND
+    from backend.engine.job_state import TERMINAL
+    from backend.engine.job_observation import cancellation_evidence
+    from dataclasses import asdict
+    context, key, _, jobs = _durable_scope(request)
+    source = str(Path(project['source_dataset_dir']).expanduser().resolve()) if project.get('source_dataset_dir') else ''
+    labelset = project.get('active_labelset_id', 'default')
+    decision = getattr(request.state, 'permission_decision', None)
+    may_control = decision is None or decision.role in ('owner', 'trainer', 'reviewer')
+    rows = []
+    for record in jobs.store.active(KIND) + jobs.store.ended(KIND, key, TERMINAL):
+        try:
+            jobs.scoped(record['id'], context, key)
+        except KeyError:
+            continue
+        try:
+            spec = json.loads(record['spec_json'])
+            if not isinstance(spec,dict) or not isinstance(spec.get('request'),dict) or not isinstance(spec.get('binding'),dict):
+                raise ValueError('Invalid comparison specification')
+            payload, binding = spec['request'], spec['binding']
+            if payload['source_dataset_path'] != source or binding.get('labelset_id', 'default') != labelset:
+                continue
+            if not isinstance(payload.get('task'),str) or not payload['task']:
+                raise ValueError('Missing recorded comparison task')
+            row = _job_view(jobs, record['id'], request)
+        except (ValueError,TypeError,KeyError):
+            if warnings is not None:
+                warnings.append({'kind':KIND,'message':f"저장된 비교 {record['id']}의 기록을 읽을 수 없습니다. 다른 작업은 계속 표시합니다."})
+            continue
+        # Ledger completion verifies report publication, not execution return or
+        # release of a selected worker. Unknown steps stay unknown here.
+        cancel = cancellation_evidence({}, jobs.store.cancel_intent(record['id']), None)
+        rows.append({**row, 'kind': KIND, 'execution_job_id': row['job_id'],
+                     'task': payload['task'], 'source_dataset_path': source,
+                     'training_provenance': {'labelset_id': labelset},
+                     'compute_profile_id': payload.get('compute_profile_id'),
+                     'cancel_supported': may_control and row['state'] not in TERMINAL and not row['cancel_requested'],
+                     'observation': {'cancel': asdict(cancel), 'worker_recorded': bool(row['attempts']),
+                         'next_action': ('비교 요청은 중단됐습니다. 자동 재개는 지원하지 않습니다. 입력을 확인하고 새 비교를 요청하세요.'
+                                         if row['status']=='interrupted' else
+                                         '취소 요청을 저장했습니다. 같은 비교의 실행 종료와 자원 반환을 다시 확인하세요.'
+                                         if row['cancel_requested'] else None)}})
+    return sorted(rows, key=lambda row: row['created_at'], reverse=True)
+
+
 @router.get("/jobs/{job_id}")
 def comparison_job(job_id: str, request: Request, source_dataset_path: str, task: Task):
     project, source = _scope(request, source_dataset_path, task)
@@ -859,6 +910,23 @@ def get_comparison(comparison_id: str, request: Request, source_dataset_path: st
     if report.get("comparison_id") != comparison_id or not _report_available(report, request):
         raise HTTPException(409, "Durable comparison report is not verified/available in this actor scope")
     return report
+
+
+@router.get('/{comparison_id}/evidence-image')
+def comparison_image(comparison_id: str, request: Request, source_dataset_path: str, task: Task, image_path: str):
+    report = get_comparison(comparison_id, request, source_dataset_path, task)
+    row = next((row for row in report.get('images', []) if row.get('file_path') == image_path), None)
+    if row is None:
+        raise HTTPException(404, 'Image does not belong to this comparison.')
+    expected = row.get('image_sha256')
+    if not expected:
+        raise HTTPException(409, 'This comparison has no captured source image hash.')
+    from backend.engine.evidence_image import verified_preview
+    try:
+        preview = verified_preview(image_path, Path(report['source_dataset_path']), expected)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {'comparison_id': comparison_id, **preview}
 
 
 @router.get('/{comparison_id}/export')

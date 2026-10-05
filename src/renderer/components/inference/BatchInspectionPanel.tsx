@@ -13,6 +13,8 @@ import { SavedFlowIdentityCard } from '../flowchart/SavedFlowIdentityCard';
 import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {openSelectedInspectionRun} from './inspectionHistorySelection';
+import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
+import type {EvidenceView} from '../common/evidenceViewer';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -76,6 +78,8 @@ export const BatchInspectionPanel: React.FC = () => {
   const [reviewReason, setReviewReason] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewQueueRevision, setReviewQueueRevision] = useState(0);
+  const [evidenceView,setEvidenceView]=useState<{scope:string;view:EvidenceView}|null>(null);
+  const evidenceRequest=useRef(0);
   const stopReasonRef = useRef<BatchStopReason>(null);
   const exitGuardRef = useRef<ReturnType<typeof createInspectionRunExitGuard> | null>(null);
   const ownedOperationRef = useRef<number | null>(null);
@@ -145,6 +149,7 @@ export const BatchInspectionPanel: React.FC = () => {
 
   useEffect(() => {
     historyRequestRef.current += 1;
+    evidenceRequest.current++;setEvidenceView(null);
     reviewRequestRef.current += 1;
     stopReasonRef.current = 'source_changed';
     setStopRequested(false);
@@ -312,6 +317,26 @@ export const BatchInspectionPanel: React.FC = () => {
   const summary = summarizeBatch(rows);
   const visibleRows = filterBatchRows(rows, filter);
   const selected = visibleRows.find((row) => row.image.file_path === selectedPath) ?? visibleRows[0] ?? null;
+  const closeEvidence=()=>{evidenceRequest.current++;setEvidenceView(null);};
+  const openEvidence=async()=>{
+    if(!selected||!report)return;
+    const choice=++evidenceRequest.current;const started=historyContext;
+    const view:EvidenceView={key:`${report.run_id||'current'}:${selected.image.file_path}:${selected.image_sha256||''}`,
+      title:selected.image.file_name,imagePath:selected.image.file_path,imageSha256:selected.image_sha256||undefined,
+      runId:report.run_id,versionId:report.saved_version_id||undefined,
+      layers:selected.result?.annotated_image?[{id:'overlay',label:'저장된 판정 overlay',image:selected.result.annotated_image,space:'source',
+        size:selected.result.inspected_image_size?.length===2?selected.result.inspected_image_size as [number,number]:undefined}]:[],
+      facts:{state:selected.state,rejection_reason:selected.result?.rejection_reason,pipeline_hash:report.pipeline_hash,model_sha256:report.model_sha256},
+      warning:'원본 해시를 확인하고 있습니다. 저장된 판정은 읽기 전용입니다.'};
+    setEvidenceView({scope:resetKey,view});
+    if(!report.run_id||!selected.image_sha256){setEvidenceView({scope:resetKey,view:{...view,warning:'이 실행에는 원본 해시가 없습니다. 저장된 판정 이미지만 표시합니다.'}});return;}
+    try{
+      const original=await api.inspections.evidenceImage(report.run_id,selected.image.file_path);
+      if(choice!==evidenceRequest.current||!isInspectionHistoryContextCurrent(currentHistoryContext(),started))return;
+      if(original.run_id!==report.run_id||original.saved_version_id!==(report.saved_version_id||null)||original.image_path!==selected.image.file_path||original.image_sha256!==selected.image_sha256||original.read_only!==true)throw new Error('원본 응답이 선택한 실행·버전·이미지 해시와 일치하지 않습니다.');
+      setEvidenceView({scope:resetKey,view:{...view,warning:undefined,layers:[{id:'original',label:'해시 확인된 원본',image:original.image,space:'source',size:original.original_size},...view.layers]}});
+    }catch(cause){if(choice===evidenceRequest.current&&isInspectionHistoryContextCurrent(currentHistoryContext(),started))setEvidenceView({scope:resetKey,view:{...view,warning:cause instanceof Error?cause.message:String(cause)}});}
+  };
   const selectFilter = (next: BatchFilter) => {
     setFilter(next);
     setSelectedPath(filterBatchRows(rows, next)[0]?.image.file_path ?? null);
@@ -562,6 +587,8 @@ export const BatchInspectionPanel: React.FC = () => {
                     <span className={`${stateColors[selected.state]}`}>{stateNames[selected.state]}</span>
                   </div>
                   <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>
+                  <button type="button" onClick={()=>void openEvidence()} className="rounded border border-sky-700 px-3 py-2 text-xs text-sky-200">원본·판정 근거 보기</button>
+                  {evidenceView?.scope===resetKey&&<EvidenceImageViewer evidence={evidenceView.view} onClose={closeEvidence} returnLabel="검사 결과로 돌아가기"/>}
                   <button type="button" disabled={isRunning} onClick={() => {
                     void useProjectStore.getState().openImageForLabeling(selected.image.image_id, selected.image.file_path).then((opened) => {
                       if (!opened) setError('선택한 이미지의 라벨 화면을 열지 못했습니다. 검사 데이터 출처와 저장 상태를 확인하세요.');

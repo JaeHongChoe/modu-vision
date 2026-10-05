@@ -682,6 +682,29 @@ def get_run(run_id: str, request: Request):
         return _read_run(conn, run_id)
 
 
+@router.get("/runs/{run_id}/evidence-image")
+def evidence_image(run_id: str, request: Request, image_path: str = Query(...)):
+    """Display source bytes only when they match this run's captured identity."""
+    with _store(request, run_id) as conn:
+        run = _run_row(conn, run_id)
+        row = conn.execute("SELECT image_sha256 FROM rows WHERE run_id=? AND image_path=?",
+                           (run_id, image_path)).fetchone()
+        if row is None:
+            raise HTTPException(404, "Image does not belong to this inspection run.")
+        expected = row["image_sha256"]
+        source = Path(run["source_folder"]).expanduser().resolve()
+        version = run["saved_version_id"]
+    if not expected:
+        raise HTTPException(409, "This run has no captured source image hash; historical original is unavailable.")
+    from backend.engine.evidence_image import verified_preview
+    try:
+        preview = verified_preview(image_path, source, expected)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {"run_id": run_id, "saved_version_id": version, **preview}
+
+
+
 @router.post("/runs/{run_id}/execute")
 def execute_row(run_id: str, payload: ExecuteRow, request: Request):
     """Run the saved graph in this server and persist its result without trusting renderer JSON."""

@@ -4,13 +4,14 @@ import type {TaskRow} from './taskCenterModel';
 export const modelFamilies:ModelFamily[]=['classification','segmentation','detection','anomaly','patch_classification','ocr','rotated_detection','rotation','defect_gan','enhancement'];
 const basic=new Set(['classification','segmentation','detection','anomaly']);
 export type HandoffScope={projectDir:string|null;transportRevision?:number;selectedProfileId?:string|null;apiTransportIdentity?:string;project?:{id?:string;source_dataset_dir?:string|null;active_labelset_id?:string}|null};
-export interface TaskHandoff {scope:string;jobId:string;executionJobId?:string;family:ModelFamily|null;kind:string;status:string;step:TaskStep;datasetPath:string;transport:string;taskKey:string;searchId?:string;selectionId?:string}
+export interface TaskHandoff {scope:string;jobId:string;executionJobId?:string;family:ModelFamily|null;kind:string;status:string;step:TaskStep;datasetPath:string;transport:string;taskKey:string;searchId?:string;selectionId?:string;comparisonTask?:string}
 export const taskHandoffScope=(state:HandoffScope)=>JSON.stringify([state.projectDir,state.project?.id,state.project?.source_dataset_dir,state.project?.active_labelset_id||'default',state.apiTransportIdentity||'local',state.selectedProfileId||'local']);
 export const taskHandoffContextScope=(state:HandoffScope)=>JSON.stringify([taskHandoffScope(state),state.transportRevision||0]);
 let selectionSequence=0;
 export function taskDestination(row:Pick<TaskRow,'task'|'kind'|'status'>):{step:TaskStep;family:ModelFamily|null}{
  const alias:Record<string,string>={'rotated-detection':'rotated_detection','defect-gan':'defect_gan',patch:'patch_classification'};const family=alias[row.task]||row.task;
  if(['dataset_import','project_backup','project_restore'].includes(row.kind))return {step:2,family:null};
+ if(row.kind==='model_comparison')return {step:4,family:null};
  if(['inspection','optimization','export'].includes(row.kind))return {step:6,family:null};
  if(row.task==='labeling'||row.kind.startsWith('labeling-'))return {step:2,family:null};
  if(!modelFamilies.includes(family as ModelFamily))return {step:3,family:null};
@@ -27,7 +28,7 @@ export function saveTaskHandoff(storage:HandoffStorage,state:HandoffScope,row:Ta
  const winnerPath=typeof winner?.checkpoint_path==='string'?winner.checkpoint_path.split(/[\\/]/):[];
  const child=winner?.job_id||winner?.trial_id||winnerPath.at(-2);
  if(row.kind==='automated'&&row.status==='completed'&&!child)throw new Error('완료 탐색의 후보 모델 ID를 찾지 못했습니다. 탐색 근거를 확인하세요.');
- const handoff:TaskHandoff={scope,selectionId:`${Date.now()}:${++selectionSequence}`,jobId:child||row.raw.model_id||row.id,executionJobId:row.raw.execution_job_id||row.id,...target,kind:row.kind,status:row.status,datasetPath:row.raw.family_dataset_path||row.raw.dataset_path||'',transport:row.transport,taskKey:row.key,...(row.kind==='automated'?{searchId:row.id}:{})};
+ const handoff:TaskHandoff={scope,selectionId:`${Date.now()}:${++selectionSequence}`,jobId:child||row.raw.model_id||row.id,executionJobId:row.raw.execution_job_id||row.id,...target,kind:row.kind,status:row.status,datasetPath:row.raw.family_dataset_path||row.raw.dataset_path||'',transport:row.transport,taskKey:row.key,...(row.kind==='automated'?{searchId:row.id}:{}),...(row.kind==='model_comparison'?{comparisonTask:row.task}:{})};
  storage.setItem(key(scope),JSON.stringify(handoff));if(typeof window!=='undefined')window.dispatchEvent(new Event('vision-task-handoff'));return handoff;
 }
 export function readTaskHandoff(storage:HandoffStorage,state:HandoffScope,family?:string):TaskHandoff|null{

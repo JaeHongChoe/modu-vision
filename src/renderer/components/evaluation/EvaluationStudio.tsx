@@ -44,6 +44,11 @@ import { ModelDeploymentPanel } from './ModelDeploymentPanel';
 import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
 import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
 
+const comparisonTasks = new Set<string>([
+  'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
+  'ocr', 'rotated_detection', 'enhancement', 'rotation',
+] satisfies FlowModelTask[]);
+
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
 }) => {
@@ -206,7 +211,10 @@ export const EvaluationStudio: React.FC = () => {
     loadOverkillUnderkill().catch(() => {});
   }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task,handoff?.jobId,handoff?.selectionId]);
 
-  useEffect(() => { setComparisonTask(task); }, [task]);
+  useEffect(() => {
+    const requested = handoff?.kind === 'model_comparison' ? handoff.comparisonTask : undefined;
+    setComparisonTask(requested && comparisonTasks.has(requested) ? requested as FlowModelTask : task);
+  }, [task, handoff?.kind, handoff?.comparisonTask, handoff?.selectionId]);
 
   const handleExportHtml = async () => {
     setReportError(null);

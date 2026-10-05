@@ -8,7 +8,7 @@ export function releasableReservation(row:TaskRow,reservations:Reservation[]|nul
   const lease=reservations?.find(item=>item.job_id===row.id);
   return lease&&lease.uncertain?lease:null;
 }
-export const terminalTask = (status:string) => ['completed','aborted','cancelled','stopped','failed'].includes(status);
+export const terminalTask = (status:string) => ['completed','completed_with_errors','aborted','cancelled','stopped','failed'].includes(status);
 export function normalizeTask(kind:string, raw:Record<string,any>):TaskRow {
   const id=String(raw.search_id || raw.job_id);const transport=String(raw.compute_profile_id || 'local');
   return {key:`${kind}:${transport}:${id}`,id,kind,task:raw.task || kind,status:raw.status,phase:raw.phase || raw.status,

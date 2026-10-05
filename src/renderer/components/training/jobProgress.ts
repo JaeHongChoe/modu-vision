@@ -7,12 +7,13 @@ export const JOB_STATUS_LABELS: Record<string, string> = {
   stopping: '취소 요청 · 종료 확인 중', cancelling: '취소 요청 · 종료 확인 중', unverified: '저장 기록 · 검증 필요',
   syncing: '결과 동기화 중', reconnecting: '재연결 중', disconnected: '연결 끊김 · 상태 미확인', completed: '완료 후보', aborted: '중단 확인',
   cancelled: '취소 확인', failed: '실패', stopped: '중단 확인', interrupted: '실행 주체 없음 · 재개 확인 필요',
+  completed_with_errors: '완료 · 일부 이미지 오류',
 };
 const ACTIVE = ['queued', 'preparing', 'transferring', 'running', 'stopping', 'cancelling', 'syncing'];
 const UNCERTAIN = ['disconnected', 'unverified', 'interrupted'];
 const STOPPED = ['aborted', 'cancelled', 'stopped'];
 const PHASES = ['preparing', 'transferring', 'syncing', 'reconnecting'];
-const TERMINAL = ['completed', 'failed', ...STOPPED];
+const TERMINAL = ['completed', 'completed_with_errors', 'failed', ...STOPPED];
 // What a family job without the backend's own observation should say; the disconnected text is the backend's
 // network_lost next action, so the two never disagree.
 const DEFAULT_NEXT: Record<string, string> = {
@@ -51,7 +52,7 @@ const message = (error: unknown): string | null => {
 
 export function jobProgress(job: Record<string, any>): JobProgress {
   const status = String(job.status || '');
-  const tone = status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : STOPPED.includes(status) ? 'stopped'
+  const tone = ['completed','completed_with_errors'].includes(status) ? 'completed' : status === 'failed' ? 'failed' : STOPPED.includes(status) ? 'stopped'
     : UNCERTAIN.includes(status) ? 'uncertain' : 'active';
   const server = typeof job.compute_profile_id === 'string' && job.compute_profile_id ? job.compute_profile_id : null;
   // an error kept from before a successful reconnect is not this active job's failure

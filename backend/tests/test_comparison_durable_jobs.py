@@ -37,6 +37,62 @@ def test_http_same_key_reserves_one_dispatch(tmp_path,monkeypatch):
     assert len(pending)==1
 
 
+def test_task_center_reads_same_durable_comparison_and_cancelled_receipt(tmp_path,monkeypatch):
+    client,project,source,payload,pending=setup(tmp_path,monkeypatch)
+    first=client.post('/api/evaluation/model-comparisons/jobs',json=payload).json()
+    listed=client.get('/api/training-workspace/tasks')
+    assert listed.status_code==200,listed.text
+    rows=[row for row in listed.json()['tasks'] if row['kind']=='model_comparison']
+    assert len(rows)==1
+    row=rows[0]
+    assert row['job_id']==row['execution_job_id']==first['job_id']
+    assert row['task']=='classification' and row['status']=='queued'
+    assert row['source_dataset_path']==str(source)
+    assert row['training_provenance']['labelset_id']=='default'
+    assert row['completed_images']==row['total_images']==0
+    assert row['cancel_supported'] and not row['result_available']
+    cancelled=client.post('/api/evaluation/model-comparisons/jobs/'+first['job_id']+'/cancel',params={'source_dataset_path':str(source),'task':'classification'})
+    assert cancelled.status_code==200,cancelled.text
+    ended=next(row for row in client.get('/api/training-workspace/tasks').json()['tasks'] if row['job_id']==first['job_id'])
+    assert ended['status']=='cancelled' and not ended['cancel_supported']
+    assert not ended['resumable'] and not ended['report_id']
+    assert len(pending)==1, 'listing and cancellation never dispatch another comparison'
+
+
+def test_task_center_hides_other_labelset_comparison(tmp_path,monkeypatch):
+    import json
+    from backend.contracts.context import ProjectContext
+    from backend.engine.comparison_jobs import ComparisonJobs
+    from backend.engine.job_store import ledger
+    client,project,source,payload,pending=setup(tmp_path,monkeypatch)
+    first=client.post('/api/evaluation/model-comparisons/jobs',json=payload).json()
+    record=ledger().record(first['job_id']);spec=json.loads(record['spec_json'])
+    context=ProjectContext(workspace_id=record['workspace_id'],project_id=project['id'],actor_id=record['actor_id'],mode='local')
+    other,_=ComparisonJobs(ledger()).submit(context,record['project_key'],project,payload,{**spec['binding'],'labelset_id':'other'},'other-labelset')
+    rows=client.get('/api/training-workspace/tasks').json()['tasks']
+    assert any(row['job_id']==first['job_id'] for row in rows)
+    assert not any(row['job_id']==other for row in rows)
+
+
+def test_task_center_preserves_recorded_compute_without_contact(tmp_path,monkeypatch):
+    from backend.engine.job_store import ledger
+    from backend.engine.comparison_jobs import ComparisonJobs
+    from backend.contracts.context import ProjectContext
+    import json
+    client,project,source,payload,pending=setup(tmp_path,monkeypatch)
+    first=client.post('/api/evaluation/model-comparisons/jobs',json=payload).json()
+    record=ledger().record(first['job_id'])
+    context=ProjectContext(workspace_id=record['workspace_id'],project_id=project['id'],actor_id=record['actor_id'],mode='local')
+    spec=json.loads(record['spec_json'])
+    second,_=ComparisonJobs(ledger()).submit(context,record['project_key'],project,{**payload,'execution_target':'selected_compute','compute_profile_id':'recorded-server','device':'cuda'},spec['binding'],'saved-server')
+    matches=[row for row in client.get('/api/training-workspace/tasks').json()['tasks'] if row['job_id']==second]
+    assert len(matches)==1
+    row=matches[0]
+    assert row['compute_profile_id']=='recorded-server'
+    assert row['payload']['device']=='cuda'
+    assert len(pending)==1,'observing a stored target never contacts it or starts another worker'
+
+
 def test_cancel_after_evaluator_last_check_cannot_complete(tmp_path,monkeypatch):
     client,project,source,payload,pending=setup(tmp_path,monkeypatch)
     job=client.post('/api/evaluation/model-comparisons/jobs',json=payload).json()
@@ -391,12 +447,17 @@ def test_shared_actor_history_and_viewer_readback_cannot_recover_owned_job(tmp_p
     identifier=response.json()['job_id'];params={'source_dataset_path':str(source),'task':'classification'}
     assert admin.get('/api/evaluation/model-comparisons/jobs/'+identifier,params=params).status_code==404
     assert admin.get('/api/evaluation/model-comparisons/jobs',params=params).json()['total']==0
+    assert not any(row['job_id']==identifier for row in admin.get('/api/training-workspace/tasks').json()['tasks'])
     release_dispatch(ComparisonJobs(ledger()),identifier)
     assert admin.put('/api/accounts/projects/'+project['id']+'/members',json={'user_id':member['id'],'role':'viewer'}).status_code==200
     row=trainer.get('/api/evaluation/model-comparisons/jobs/'+identifier,params=params)
     assert row.status_code==200,row.text
     assert row.json()['status']=='queued',row.text
     assert ledger().get(identifier).state=='accepted'
+    listed=trainer.get('/api/training-workspace/tasks')
+    assert listed.status_code==200,listed.text
+    assert any(row['job_id']==identifier and row['status']=='queued' for row in listed.json()['tasks'])
+    assert ledger().get(identifier).state=='accepted','task center viewer reads never recover the former owner'
     assert trainer.post('/api/evaluation/model-comparisons/jobs/'+identifier+'/cancel',params=params).status_code==403
 
 
@@ -466,3 +527,20 @@ def test_dispatch_failure_returns_same_durable_interrupted_receipt(tmp_path,monk
     replay=client.post('/api/evaluation/model-comparisons/jobs',json=payload,headers={'Idempotency-Key':'dispatch'})
     assert replay.json()['job_id']==first.json()['job_id']
     assert replay.json()['status']=='interrupted' and not replay.json()['attempts']
+
+
+def test_one_malformed_comparison_does_not_hide_other_task_center_jobs(tmp_path,monkeypatch):
+    from backend.engine.job_store import ledger
+    import sqlite3
+    client,project,source,payload,pending=setup(tmp_path,monkeypatch)
+    bad=client.post('/api/evaluation/model-comparisons/jobs',json=payload,headers={'Idempotency-Key':'damaged'}).json()['job_id']
+    good=client.post('/api/evaluation/model-comparisons/jobs',json=payload,headers={'Idempotency-Key':'readable'}).json()['job_id']
+    with sqlite3.connect(ledger().path) as db:
+        db.execute('UPDATE jobs SET spec_json=? WHERE id=?',('null',bad))
+    result=client.get('/api/training-workspace/tasks')
+    assert result.status_code==200,result.text
+    rows=result.json()['tasks']
+    assert any(row.get('job_id')==good for row in rows)
+    assert not any(row.get('job_id')==bad for row in rows)
+    assert any(row['kind']=='model_comparison' and bad in row['message'] for row in result.json()['errors'])
+    assert len(pending)==2

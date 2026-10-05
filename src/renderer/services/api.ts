@@ -1428,6 +1428,10 @@ export const api = {
     },
     getRun: (runId: string) =>
       request<InspectionHistoryRun>(`/api/inspections/runs/${encodeURIComponent(runId)}`),
+    evidenceImage: (runId: string, imagePath: string) => request<{
+      run_id: string; saved_version_id: string | null; image_path: string; image_sha256: string;
+      original_size: [number,number]; read_only: true; image: string;
+    }>(`/api/inspections/runs/${encodeURIComponent(runId)}/evidence-image?image_path=${encodeURIComponent(imagePath)}`),
     reviewRow: (runId: string, data: {
       image_path: string; final_verdict: 'OK' | 'NG' | 'REVIEW'; reason: string; reviewer: string;
     }) => request<{ review_id: string }>(`/api/inspections/runs/${encodeURIComponent(runId)}/reviews`, {

@@ -163,6 +163,11 @@ def tasks(request:Request):
         for row in routes_automated_training.jobs(request)['jobs']:
             if row.get('source_dataset_path')==source and (row.get('training_provenance') or {}).get('labelset_id','default')==labelset:rows.append({**row,'kind':'automated'})
     except (HTTPException,ValueError,OSError,KeyError) as exc:errors.append({'kind':'automated','message':str(exc)})
+    try:
+        from backend.api.routes_model_comparisons import task_center_comparisons
+        rows.extend(task_center_comparisons(request, project, errors))
+    except (HTTPException,ValueError,OSError,KeyError,sqlite3.Error) as exc:
+        errors.append({'kind':'model_comparison','message':str(exc)})
     from backend.engine.labeling_tasks import list_jobs as labeling_jobs
     for row in labeling_jobs(project):
         if row.get('labelset_id','default')!=labelset:continue

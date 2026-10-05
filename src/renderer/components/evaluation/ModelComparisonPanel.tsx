@@ -4,6 +4,9 @@ import type { FlowModelTask, Language } from '../../types';
 import {useComputeStore} from '../../stores/useComputeStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {consumeReviewContext,evaluationOriginScope} from '../labeling/productDataWorkflow';
+import {useTaskHandoff} from '../training/useTaskHandoff';
+import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
+import type {EvidenceView} from '../common/evidenceViewer';
 import {
   api,getApiPersistenceIdentity,
   request,
@@ -25,7 +28,8 @@ interface Props {
 interface ComparisonJob {
   job_id: string; status: string; total_images: number; completed_images: number;
   cancel_requested: number; report_id: string | null; error: string | null;
-  payload?: {execution_target?: 'local_cpu'|'selected_compute';compute_profile_id?:string|null;device?:string};
+  result_available?: boolean;
+  payload?: {execution_target?: 'local_cpu'|'selected_compute';compute_profile_id?:string|null;device?:string;source_dataset_path?:string;task?:string};
 }
 
 function errorMessage(error: unknown): string {
@@ -50,7 +54,11 @@ function Verdict({ outcome }: { outcome: ModelComparisonOutcome }) {
 }
 
 export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, language }) => {
+  const handoff=useTaskHandoff();
   const compute={...useComputeStore(),apiTransportIdentity:getApiPersistenceIdentity()};
+  const project=useProjectStore(state=>state.project);
+  const selectionKey='vision-comparison-job:'+JSON.stringify([projectDir,project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute.apiTransportIdentity,compute.selectedProfileId||'local']);
+  const handedId=handoff?.kind==='model_comparison'&&handoff.comparisonTask===task?(handoff.executionJobId||handoff.jobId):null;
   const isKo = language === 'ko';
   const [crossTasks,setCrossTasks]=useState(false);
   const [incumbentThreshold,setIncumbentThreshold]=useState(.5);
@@ -59,9 +67,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [comparisonDevice,setComparisonDevice]=useState('cuda');
   const selectedProfile=compute.profiles.find(profile=>profile.id===compute.selectedProfileId);
   const missingProfile=!!compute.selectedProfileId&&!selectedProfile;
-  const scopeKey = `${projectDir || ''}\0${sourceFolder}\0${task}\0${crossTasks}\0${compute.transportRevision}\0${compute.selectedProfileId||'local'}\0${JSON.stringify(selectedProfile)}\0${comparisonDevice}\0${compute.apiTransportIdentity}`;
+  const scopeKey = `${projectDir || ''}\0${project?.id||''}\0${project?.active_labelset_id||'default'}\0${sourceFolder}\0${task}\0${crossTasks}\0${compute.transportRevision}\0${compute.selectedProfileId||'local'}\0${JSON.stringify(selectedProfile)}\0${comparisonDevice}\0${compute.apiTransportIdentity}`;
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
+  const reportChoice = useRef(0);
   const [models, setModels] = useState<ModelComparisonModel[]>([]);
   const [records, setRecords] = useState<ModelComparisonRecord[]>([]);
   const [incumbentId, setIncumbentId] = useState('');
@@ -83,9 +92,13 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const [lotFilter, setLotFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [originPath,setOriginPath]=useState('');
+  const [imageEvidence,setImageEvidence]=useState<{scope:string;view:EvidenceView}|null>(null);
+  const imageChoice=useRef(0);
 
   useEffect(() => {
     let active = true;
+    const choice = ++reportChoice.current;
+    imageChoice.current++;setImageEvidence(null);
     setModels([]);
     setRecords([]);
     setIncumbentId('');
@@ -109,17 +122,19 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (!active || currentScope.current !== scopeKey) return;
       setModels(catalog.models);
       setRecords(history.comparisons);
-      const project=useProjectStore.getState().project;
-      const origin=consumeReviewContext(localStorage,evaluationOriginScope(project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute),history.comparisons.map(row=>row.comparison_id),'comparison');
+      const requestedId=handedId||localStorage.getItem(selectionKey);
+      const origin=requestedId?null:consumeReviewContext(localStorage,evaluationOriginScope(project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute),history.comparisons.map(row=>row.comparison_id),'comparison');
       if(origin?.comparison_id){
-        void api.evaluation.getComparison(origin.comparison_id,sourceFolder,task).then(saved=>{if(active&&currentScope.current===scopeKey){setReport(saved);setReportScope(scopeKey);setOriginPath(origin.file_path||'');}}).catch(cause=>{if(active&&currentScope.current===scopeKey)setError(errorMessage(cause));});
+        void api.evaluation.getComparison(origin.comparison_id,sourceFolder,task).then(saved=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice){setReport(saved);setReportScope(scopeKey);setOriginPath(origin.file_path||'');}}).catch(cause=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice)setError(errorMessage(cause));});
       }
       setJobs(jobHistory.jobs);
       const running = jobHistory.jobs.find((j) => (j.status === 'queued' || j.status === 'running')
         && (j.payload?.execution_target||'local_cpu')===(compute.selectedProfileId?'selected_compute':'local_cpu')
         && (j.payload?.compute_profile_id||null)===compute.selectedProfileId
         && (j.payload?.device||'cpu')===(compute.selectedProfileId?comparisonDevice:'cpu'));
-      if (running) { setComparisonJob(running); setIsRunning(true); }
+      const selected=requestedId?jobHistory.jobs.find(j=>j.job_id===requestedId):running;
+      if(requestedId&&!selected)setError(`선택한 비교 작업 ${requestedId}을 현재 출처·작업·정답 버전에서 찾지 못했습니다. 작업 센터에서 다시 확인하세요.`);
+      if(selected){setComparisonJob(selected);setIsRunning(['queued','running'].includes(selected.status));localStorage.setItem(selectionKey,selected.job_id);}
       const candidate = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id || '';
       const parent = catalog.models.find((model) => model.job_id === preferredParentJobId)?.job_id || '';
       const initial = parent && candidate && parent !== candidate ? parent : candidate || catalog.models[0]?.job_id || '';
@@ -132,24 +147,26 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (active && currentScope.current === scopeKey) setIsLoading(false);
     });
     return () => { active = false; };
-  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId,crossTasks]);
+  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId,crossTasks,handedId,handoff?.selectionId]);
 
   useEffect(() => {
-    if (!comparisonJob || !['queued', 'running'].includes(comparisonJob.status)) return;
+    if (!comparisonJob) return;
     let active = true;
     let timer: number | undefined;
     const poll = async () => {
       try {
         const job = await request<ComparisonJob>(`/api/evaluation/model-comparisons/jobs/${comparisonJob.job_id}?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`);
         if (!active || currentScope.current !== scopeKey) return;
+        if(job.job_id!==comparisonJob.job_id||(job.payload?.source_dataset_path!==undefined&&job.payload.source_dataset_path!==sourceFolder)||(job.payload?.task!==undefined&&job.payload.task!==task))throw new Error('비교 응답의 작업·출처가 선택한 기록과 일치하지 않습니다. 같은 작업을 다시 확인하세요.');
         setComparisonJob(job);
         setJobs((current) => current.map((row) => row.job_id === job.job_id ? job : row));
         if (['queued', 'running'].includes(job.status)) { timer = window.setTimeout(poll, 800); return; }
         setIsRunning(false);
         if (job.error) setError(job.error);
-        if (job.report_id) {
+        if (job.report_id && job.result_available!==false) {
           const saved = await api.evaluation.getComparison(job.report_id, sourceFolder, task);
           if (!active || currentScope.current !== scopeKey) return;
+          if(saved.comparison_id!==job.report_id)throw new Error('비교 결과의 식별자가 저장 기록과 일치하지 않습니다.');
           setReport(saved); setReportScope(scopeKey);
         }
         const history = await api.evaluation.listComparisons(sourceFolder, task);
@@ -165,18 +182,23 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const openReport = async (comparisonId: string) => {
     if (!comparisonId || !sourceFolder) return;
     const requestedScope = scopeKey;
+    const choice = ++reportChoice.current;
+    setComparisonJob(null);
+    setReport(null);
+    setReportScope('');
     setIsLoading(true);
     setError(null);
     try {
       const saved = await api.evaluation.getComparison(comparisonId, sourceFolder, task);
-      if (currentScope.current === requestedScope) {
+      if (currentScope.current === requestedScope && reportChoice.current === choice) {
+        if (saved.comparison_id !== comparisonId) throw new Error('비교 결과의 식별자가 선택한 기록과 일치하지 않습니다.');
         setReport(saved);
         setReportScope(requestedScope);
       }
     } catch (cause) {
-      if (currentScope.current === requestedScope) { setError(errorMessage(cause)); setIsRunning(false); }
+      if (currentScope.current === requestedScope && reportChoice.current === choice) { setError(errorMessage(cause)); setIsRunning(false); }
     } finally {
-      if (currentScope.current === requestedScope) setIsLoading(false);
+      if (currentScope.current === requestedScope && reportChoice.current === choice) setIsLoading(false);
     }
   };
 
@@ -202,7 +224,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
         candidate_params:{threshold:candidateThreshold,...(candidateSpec?{score_spec:{...candidateSpec,threshold:candidateThreshold}}:{}),...(models.find(m=>m.job_id===candidateId)?.task==='ocr'?{expected_text:expectedText}:{})},
       }) });
       if (currentScope.current !== requestedScope) return;
-      setComparisonJob(created); setJobs((current) => [created, ...current]);
+      setComparisonJob(created); setJobs((current) => [created, ...current]);localStorage.setItem(selectionKey,created.job_id);
       try {
         const history = await api.evaluation.listComparisons(sourceFolder, task);
         if (currentScope.current === requestedScope) setRecords(history.comparisons);
@@ -218,6 +240,22 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   };
 
   const visibleReport = reportScope === scopeKey ? report : null;
+  const closeImageEvidence=()=>{imageChoice.current++;setImageEvidence(null);};
+  const openImageEvidence=async(row:ModelComparisonReport['images'][number])=>{
+    if(!visibleReport)return;
+    const choice=++imageChoice.current;const expectedScope=scopeKey;const comparisonId=visibleReport.comparison_id;
+    const view:EvidenceView={key:`${comparisonId}:${row.file_path}:${row.image_sha256}`,title:`모델 A/B · ${row.file_name}`,
+      imagePath:row.file_path,imageSha256:row.image_sha256,runId:comparisonId,layers:[],
+      facts:{incumbent_job_id:visibleReport.incumbent_job_id,candidate_job_id:visibleReport.candidate_job_id,model_sha256:visibleReport.model_sha256,
+        incumbent:row.incumbent,candidate:row.candidate,ground_truth:row.ground_truth_verdict,disagrees:row.disagrees},warning:'비교에 사용한 원본 해시를 확인하고 있습니다.'};
+    setImageEvidence({scope:expectedScope,view});
+    try{
+      const original=await request<{comparison_id:string;image_path:string;image_sha256:string;original_size:[number,number];read_only:true;image:string}>(`/api/evaluation/model-comparisons/${comparisonId}/evidence-image?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}&image_path=${encodeURIComponent(row.file_path)}`);
+      if(choice!==imageChoice.current||currentScope.current!==expectedScope)return;
+      if(original.comparison_id!==comparisonId||original.image_path!==row.file_path||original.image_sha256!==row.image_sha256||original.read_only!==true)throw new Error('원본 응답이 선택한 비교·이미지 해시와 일치하지 않습니다.');
+      setImageEvidence({scope:expectedScope,view:{...view,warning:undefined,layers:[{id:'original',label:'해시 확인된 원본',image:original.image,space:'source',size:original.original_size}]}});
+    }catch(cause){if(choice===imageChoice.current&&currentScope.current===expectedScope)setImageEvidence({scope:expectedScope,view:{...view,warning:errorMessage(cause)}});}
+  };
   const exportReport = async () => {
     if (!visibleReport || isLoading || isRunning || isExporting) return;
     const expectedScope = scopeKey;
@@ -250,6 +288,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   return (
     <section className="rounded-lg border border-[#344255] bg-[#182332] p-3.5 text-xs text-slate-200"
       aria-label={isKo ? '현행과 후보 모델 비교' : 'Baseline and candidate model comparison'} aria-busy={isRunning}>
+      {imageEvidence?.scope===scopeKey&&imageEvidence.view.runId===visibleReport?.comparison_id&&<EvidenceImageViewer evidence={imageEvidence.view} onClose={closeImageEvidence} returnLabel="모델 비교로 돌아가기"/>}
       <div className="flex items-start gap-2.5">
         <div className="rounded-md border border-sky-400/30 bg-sky-500/10 p-1.5 text-sky-300">
           <GitCompareArrows className="h-4 w-4" aria-hidden="true" />
@@ -324,10 +363,9 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             }} className="rounded border border-amber-600 px-3 py-2 text-amber-200 disabled:opacity-40">{comparisonJob.cancel_requested ? '중단 요청됨' : '비교 중단'}</button>}
           </div>
           {comparisonJob && <p role="status" className="mt-2 text-slate-200">비교 {comparisonJob.completed_images}/{comparisonJob.total_images || '?'}장 · {comparisonJob.cancel_requested && comparisonJob.status === 'running' ? '현재 이미지 완료 후 중단' : comparisonJob.status}</p>}
-          {jobs.length > 0 && <label className="mt-2 block text-slate-300">비교 작업 다시 열기<select value={comparisonJob?.job_id || ''} onChange={(e) => {
+          {jobs.length > 0 && <label className="mt-2 block text-slate-300">비교 작업 다시 열기<select aria-label="비교 작업 다시 열기" value={comparisonJob?.job_id || ''} onChange={(e) => {
             const job = jobs.find((j) => j.job_id === e.target.value); if (!job) return;
-            setComparisonJob(job); setIsRunning(['queued', 'running'].includes(job.status));
-            if (job.report_id) void openReport(job.report_id);
+            reportChoice.current++;setReport(null);setReportScope('');setError(null);setComparisonJob(job); setIsRunning(['queued', 'running'].includes(job.status));localStorage.setItem(selectionKey,job.job_id);
           }} className="mt-1 block w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5"><option value="">작업 선택</option>{jobs.map((j) => <option value={j.job_id} key={j.job_id}>{j.job_id.slice(-12)} · {j.status} · {j.completed_images}/{j.total_images}</option>)}</select></label>}
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
             {isKo
@@ -471,6 +509,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
                   {row.disagrees && <span className="shrink-0 rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold text-amber-200">{isKo ? '불일치' : 'Changed'}</span>}
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <button type="button" onClick={()=>void openImageEvidence(row)} className="rounded border border-sky-800 px-2 py-1 text-sky-200">원판정 근거 보기</button>
                   <span className="text-[10px] text-slate-400">{isKo ? '기준' : 'Base'}</span><Verdict outcome={row.incumbent} />
                   <ArrowRight className="h-3 w-3 text-slate-500" aria-hidden="true" />
                   <span className="text-[10px] text-slate-400">{isKo ? '후보' : 'Candidate'}</span><Verdict outcome={row.candidate} />

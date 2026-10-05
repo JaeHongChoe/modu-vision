@@ -7,6 +7,8 @@ function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(n
 const memory=()=>{const values=new Map();return{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};};
 const requests=[];const requestCalls=[];
 const rows=[
+  {kind:'model_comparison',job_id:'compare-owned',execution_job_id:'compare-owned',task:'classification',status:'running',completed_images:2,total_images:8,cancel_supported:true,source_dataset_path:'/source',training_provenance:{labelset_id:'default'},payload:{execution_target:'local_cpu',device:'cpu'}},
+  {kind:'model_comparison',job_id:'compare-errors',task:'classification',status:'completed_with_errors',completed_images:8,total_images:8,cancel_supported:false,source_dataset_path:'/source',training_provenance:{labelset_id:'default'},result_available:true,report_id:'comparison_saved',payload:{execution_target:'local_cpu',device:'cpu'}},
   {kind:'dataset_import',job_id:'import',task:'dataset_import',status:'interrupted',resumable:true,scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'image',attempt:1}},
   {kind:'project_restore',job_id:'restored',task:'project_restore',status:'interrupted',resumable:true,target_dir:'/new-owned',autoactivated:false,scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'file',attempt:1,result_ref:{count:4,sha256:'def'}}},
   {kind:'project_backup',job_id:'verified',task:'project_backup',status:'completed',downloadable:true,capabilities:{restore:true},scope_kind:'project',source_dataset_path:'/source',data_operation:{progress_unit:'archive',result_ref:{count:4,sha256:'a'.repeat(64)}}},
@@ -32,7 +34,8 @@ async function renderCenter(){
   const nodesOf=tree=>{const nodes=[];const walk=n=>{if(n&&typeof n==='object'){nodes.push(n);n.children?.flat().forEach(walk);}};walk(tree);return nodes;};
   const text=tree=>{const parts=[];const walk=n=>{if(typeof n==='string'||typeof n==='number')parts.push(String(n));else if(n&&typeof n==='object')n.children?.flat().forEach(walk);};walk(tree);return parts.join('');};
   render();await new Promise(setImmediate);
-  const open=key=>{nodesOf(render()).find(n=>n.props['aria-label']==='저장 작업 다시 열기').props.onChange({target:{value:key}});const tree=render();return {text:text(tree),nodes:nodesOf(tree)};};
+  const open=key=>{nodesOf(render()).find(n=>n.props['aria-label']==='저장 작업 다시 열기').props.onChange({target:{value:key}});const tree=render();return {text:text(tree),statusText:text(nodesOf(tree).find(n=>n.props.role==='status')),nodes:nodesOf(tree)};};
+  open.current=()=>{const tree=render();return{text:text(tree),nodes:nodesOf(tree)};};
   return open;
 }
 
@@ -58,6 +61,24 @@ test('S2-09: a stopping job that says it cannot be cancelled shows no pending-st
     const stuck=open('ocr:local:ocr-stuck');
     assert.match(stuck.text,/취소 요청 · 종료 확인 중/);
     assert.equal(stuck.nodes.filter(n=>n.type==='button'&&n.children.flat().some(c=>typeof c==='string'&&c.includes('취소 요청'))).length,0);
+  }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+
+test('S2-09: comparison uses image progress, its exact scoped cancel URL and evaluation handoff',async()=>{
+  const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+  try{
+    const open=await renderCenter();let current=open('model_comparison:local:compare-owned');
+    assert.match(current.statusText,/모델 비교/);assert.match(current.statusText,/2\/8장/);assert.doesNotMatch(current.statusText,/Epoch/);
+    current.nodes.find(n=>n.type==='button'&&n.children.includes('취소 요청')).props.onClick();await new Promise(setImmediate);
+    assert.ok(requests.includes('/api/evaluation/model-comparisons/jobs/compare-owned/cancel?source_dataset_path=%2Fsource&task=classification'));
+    current=open('model_comparison:local:compare-owned');
+    current.nodes.find(n=>n.type==='button'&&n.children.includes('비교 작업·결과 열기')).props.onClick();await new Promise(setImmediate);
+    const keys=[...['vision-task-handoff:'+JSON.stringify(['/project','p','/source','default','local','local'])]];
+    const handed=JSON.parse(localStorage.getItem(keys[0]));
+    assert.equal(handed.jobId,'compare-owned');assert.equal(handed.kind,'model_comparison');assert.equal(handed.step,4);
+    const ended=open('model_comparison:local:compare-errors');
+    assert.match(ended.text,/일부 이미지 오류/);assert.match(ended.text,/8\/8장/);
+    assert(!ended.nodes.some(n=>n.type==='button'&&n.children.includes('취소 요청')));
   }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });
 test('S1-10 slice 4: an open task center reads its list again as soon as a reconnection catch-up reports changed jobs',async()=>{
@@ -101,4 +122,13 @@ test('S1-10 slice 4: an open task center reads its list again as soon as a recon
     restored.nodes.find(n=>n.type==='button'&&n.children.includes('같은 작업 재개')).props.onClick();await new Promise(setImmediate);
     assert.ok(requests.includes('/api/dataset/operations/restores/restored/resume'));
   }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
+});
+
+test('comparison family filtering selects the matching existing comparison row',async()=>{
+ const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=memory();global.setInterval=()=>0;
+ try {
+  const open=await renderCenter();const current=open('ocr:local:ocr-lost');
+  current.nodes.find(n=>n.props['aria-label']==='작업 모델 종류').props.onChange({target:{value:'classification'}});
+  const filtered=open.current();assert.equal(filtered.nodes.find(n=>n.props['aria-label']==='저장 작업 다시 열기').props.value,'model_comparison:local:compare-owned');
+ }finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });

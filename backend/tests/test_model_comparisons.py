@@ -289,6 +289,14 @@ def test_real_test_image_comparison_persists_hashes_disagreements_and_project_sc
     for row in report["images"]:
         assert row["disagrees"] is True
         assert row["image_sha256"] == hashlib.sha256(Path(row["file_path"]).read_bytes()).hexdigest()
+    preview_path = f"/api/evaluation/model-comparisons/{report['comparison_id']}/evidence-image"
+    for row in report['images']:
+        preview = client.get(preview_path, params={**params, 'image_path': row['file_path']})
+        assert preview.status_code == 200, preview.text
+        assert preview.json()['comparison_id'] == report['comparison_id']
+        assert preview.json()['image_sha256'] == row['image_sha256']
+        assert preview.json()['original_size'] == [64,64] and preview.json()['read_only'] is True
+    assert client.get(preview_path, params={**params, 'image_path': str(source/'train'/'other.png')}).status_code == 404
     report_file = Path(project["reports_dir"]) / "model_comparisons" / f"{report['comparison_id']}.json"
     assert report_file.is_file()
     assert client.get(f"/api/evaluation/model-comparisons/{report['comparison_id']}", params=params).json() == report

@@ -698,3 +698,33 @@ def test_review_queue_tracks_unresolved_reviews_and_diagnostic_errors(monkeypatc
     assert second.status_code == 200
     assert client.put("/api/project/update", json={"source_dataset_dir": str(source)}).status_code == 200
     assert client.get("/api/inspections/review-queue", params=params).json()["total"] == 0
+
+
+def test_evidence_image_reads_only_the_exact_hashed_run_source(monkeypatch, tmp_path):
+    import base64
+    client, project, source, image, checkpoint, first_id, second_id, payload = configured_flow(monkeypatch, tmp_path)
+    run_id = client.post('/api/inspections/runs', json=payload).json()['run_id']
+    params = {'image_path': str(image)}
+    endpoint = f'/api/inspections/runs/{run_id}/evidence-image'
+    # A pending/legacy row without a captured hash cannot claim historical identity.
+    assert client.get(endpoint, params=params).status_code == 409
+    expected = hashlib.sha256(image.read_bytes()).hexdigest()
+    with sqlite3.connect(Path(project['project_dir']) / 'inspection_history.sqlite3') as conn:
+        conn.execute('UPDATE rows SET image_sha256=? WHERE run_id=?', (expected, run_id))
+    result = client.get(endpoint, params=params)
+    assert result.status_code == 200, result.text
+    actual = result.json()
+    assert actual['run_id'] == run_id and actual['saved_version_id'] == second_id
+    assert actual['image_path'] == str(image) and actual['image_sha256'] == expected
+    assert actual['original_size'] == [12, 10] and actual['read_only'] is True
+    decoded = Image.open(io.BytesIO(base64.b64decode(actual['image'].split(',', 1)[1])))
+    assert decoded.getpixel((0, 0)) == (20, 30, 40)
+    outside = tmp_path / 'outside.png'; Image.new('RGB', (12,10)).save(outside)
+    assert client.get(endpoint, params={'image_path': str(outside)}).status_code == 404
+    Image.new('RGB', (12,10), (90,80,70)).save(image)
+    assert client.get(endpoint, params=params).status_code == 409
+    image.unlink();image.symlink_to(outside)
+    assert client.get(endpoint, params=params).status_code == 409
+    # Viewing never writes a result, decision, saved source hash or image.
+    row = client.get(f'/api/inspections/runs/{run_id}').json()['rows'][0]
+    assert row['image_sha256'] == expected and row['state'] == 'pending' and row['result'] is None
