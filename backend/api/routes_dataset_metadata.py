@@ -15,7 +15,7 @@ from backend.api.routes_project import get_current_project
 from backend.api.routes_dataset_versions import _source_path,_snapshot,_VERSION_LOCK
 from backend.api import routes_annotation,routes_dataset
 from backend.engine import dataset_metadata as dm
-from backend.engine.annotation_formats import import_annotations,export_annotations,bundle_files,safe_name
+from backend.engine.annotation_formats import import_annotations,export_annotations,bundle_files,safe_name,merge_class_mapping
 from backend.engine.annotation_storage import dataset_annotation_dir,set_request_annotation_root,reset_request_annotation_root,set_request_project_root,reset_request_project_root
 from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root
 from backend.engine.source_text import read_source_text
@@ -254,6 +254,10 @@ def import_format(req:ExchangeRequest,request:Request):
                 meta=inventory[row['file_name']]
                 current=dm._ensure(ledger,Path(project['project_dir']),source,meta['file_path'],Path(project['annotations_dir']))
                 if current['revision']!=row['revision']: raise HTTPException(409,detail=f"Image changed while importing: {row['file_name']}")
+                if req.conflict_policy=='merge':
+                    saved=routes_annotation.get_annotations(Path(row['file_name']).stem,file_path=meta['file_path'])
+                    try:merge_class_mapping(saved.get('annotations',[]),row['annotations'],saved.get('mask_classes'))
+                    except ValueError as exc:raise _errors(exc) from exc
             backup=_snapshot(project,source,f'{req.format.upper()} 라벨 가져오기 전',req.actor,'auto_backup')
             previous={}
             for row in preview:

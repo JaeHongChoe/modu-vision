@@ -103,6 +103,24 @@ def _bind_classes(rows,metadata=None,class_names=None):
         if entry.get('color') is not None:a['color']=entry['color']
     return [palette[label] for label in sorted(palette)]
 
+
+def merge_class_mapping(existing,incoming,existing_classes=None,incoming_classes=None):
+    """Validate a merge's bijection and retain palette entries without foreground pixels."""
+    records=[{'category_id':c['id'],'label':c['name'],'color':c.get('color'),'palette':True}
+             for c in [*(existing_classes or []),*(incoming_classes or [])]]
+    records.extend(a for a in [*existing,*incoming] if a['type']!='tag')
+    by_id={};by_name={}
+    for item in records:
+        cid=item.get('category_id');cid=1 if cid is None else cid
+        label=item['label'];color=item.get('color')
+        if isinstance(cid,bool) or not isinstance(cid,int) or not 0<=cid<=255 or (cid==0 and not item.get('palette')):raise ValueError('Merge class IDs must use valid foreground indices')
+        if cid in by_id and by_id[cid]['name']!=label:raise ValueError('Merge class ID conflicts with an existing class name')
+        if label in by_name and by_name[label]!=cid:raise ValueError('Merge class name conflicts with an existing class ID')
+        previous=by_id.get(cid)
+        if previous and previous.get('color') and color and previous['color']!=color:raise ValueError('Merge class palette colors conflict')
+        by_name[label]=cid;by_id[cid]={'id':cid,'name':label,'color':color or (previous or {}).get('color')}
+    return [{**by_id[cid],'color':by_id[cid]['color'] or '#22d3ee'} for cid in sorted(by_id)]
+
 def export_annotations(images,format):
     rows=[_row(row) for row in images]
     if len({row['file_name'] for row in rows})!=len(rows): raise ValueError('Duplicate image names')

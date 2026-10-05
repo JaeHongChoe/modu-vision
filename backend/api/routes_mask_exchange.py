@@ -13,6 +13,7 @@ from backend.api import routes_dataset_metadata as exchange,routes_annotation
 from backend.api.routes_dataset_versions import _VERSION_LOCK,_snapshot
 from backend.engine import dataset_metadata as dm
 from backend.engine.mask_exchange import load_mask_bundle,build_mask_bundle
+from backend.engine.annotation_formats import merge_class_mapping
 from backend.engine.annotation_storage import dataset_annotation_dir,set_request_annotation_root,reset_request_annotation_root,set_request_project_root,reset_request_project_root
 
 router=APIRouter(prefix='/api/dataset/masks',tags=['mask-exchange'])
@@ -49,9 +50,13 @@ def import_masks(req:MaskImportRequest,request:Request):
         for row in preview:
             if req.expected_revisions.get(row['image_uuid'])!=row['revision']:raise HTTPException(409,detail='Preview revision is missing or stale')
         with _VERSION_LOCK,dm.metadata_transaction(Path(project['project_dir']),source,Path(project['annotations_dir'])) as ledger:
-            for row in preview:
+            merged_classes={}
+            for row,receipt in zip(rows,preview):
                 meta=inventory[row['file_name']];current=dm._ensure(ledger,Path(project['project_dir']),source,meta['file_path'],Path(project['annotations_dir']))
-                if current['revision']!=row['revision']:raise HTTPException(409,detail='Image revision changed during mask import')
+                if current['revision']!=receipt['revision']:raise HTTPException(409,detail='Image revision changed during mask import')
+                if req.conflict_policy=='merge':
+                    saved=routes_annotation.get_annotations(Path(row['file_name']).stem,file_path=meta['file_path'])
+                    merged_classes[row['file_name']]=merge_class_mapping(saved.get('annotations',[]),row['annotations'],saved.get('mask_classes'),row['classes'])
             backup=_snapshot(project,source,'외부 mask 라벨 가져오기 전',req.actor,'auto_backup');previous={}
             for row in rows:
                 meta=inventory[row['file_name']];studio=dataset_annotation_dir(Path(meta['file_path']).parent,Path(project['annotations_dir']),use_scope=False)
@@ -59,11 +64,8 @@ def import_masks(req:MaskImportRequest,request:Request):
             try:
                 for row,receipt in zip(rows,preview):
                     meta=inventory[row['file_name']];existing=routes_annotation.get_annotations(Path(row['file_name']).stem,file_path=meta['file_path']).get('annotations',[])
-                    if req.conflict_policy=='merge':
-                        mapping={ann.get('category_id') or 1:ann['label'] for ann in existing if ann['type']!='tag'}
-                        if any(ann['category_id'] in mapping and mapping[ann['category_id']]!=ann['label'] for ann in row['annotations']):raise ValueError('Merge mask class IDs conflict with existing class names')
                     annotations=[*existing,*row['annotations']] if req.conflict_policy=='merge' else row['annotations']
-                    routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=Path(row['file_name']).stem,image_path=meta['file_path'],annotations=annotations,image_width=meta['width'],image_height=meta['height'],expected_revision=receipt['revision'],actor=req.actor,mask_classes=row['classes']),request)
+                    routes_annotation.save_annotations(routes_annotation.AnnotationSaveRequest(image_id=Path(row['file_name']).stem,image_path=meta['file_path'],annotations=annotations,image_width=meta['width'],image_height=meta['height'],expected_revision=receipt['revision'],actor=req.actor,mask_classes=merged_classes.get(row['file_name'],row['classes'])),request)
             except Exception:
                 for path,value in previous.items():
                     if value is None:path.unlink(missing_ok=True)

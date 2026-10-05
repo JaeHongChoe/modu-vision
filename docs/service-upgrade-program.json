@@ -2303,6 +2303,13 @@
      "result": "Task74 actual bbox/polygon/OBB draw, angle30 and independent direction315, keyboard nudge, delete/Undo, save/reopen in Chrome and macOS Electron. All class PNG pixels independently compared. Readback SHA-256 8adcb600aabec2f710c93244cfd06f6390f1846b6173d7cf8f21253fe38419a4.",
      "scope": "Synthetic exact-geometry slice; whole-parent and representative content qualification remain pending.",
      "platform": "macOS Electron and Chrome; Windows excluded."
+    },
+    {
+     "kind": "published-format-class-roundtrip-functional-evidence",
+     "source_sha": "d4c226b1cfe9e43f1b9e26b88ed0a709342113f3",
+     "result": "Task75 actual LabelMe/COCO/YOLO bundle downloads, preview/replace and exact source-image reopening in Chrome/macOS Electron; class IDs/colors and all class raster pixels retained. Backend132 passed; readback SHA-256 464d707f4d37e9866eb2027421806b6c451b509c02190d2151b10b28d2a9307e.",
+     "scope": "Synthetic native format/content slice with controlled folder-dialog return; full annotation/model-quality acceptance remains pending.",
+     "platform": "macOS Electron and Chrome; Windows excluded."
     }
    ],
    "file_actions": {
@@ -2325,7 +2332,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
-    "Task75 completes the synthetic app LabelMe/COCO/YOLO bundle export, preview/replace, exact nested image mapping, native class IDs/colors, loss rejection and save/reopen slice; pixel-mask app exchange remains pending.",
+    "Task75/76 complete synthetic app LabelMe/COCO/YOLO and pixel-mask class/geometry/image-mapping round trips, loss refusal and changed-preview refusal; representative annotation qualification remains pending.",
     "OCR text, complete OBB fitting variants, model-result selection and groundtruth/prediction separation still require full native and representative content qualification.",
     "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
    ]
