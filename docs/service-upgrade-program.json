@@ -4351,6 +4351,12 @@
      "result": "Task54 derives parent implementation/status totals from actual requirement rows and refuses stale/malformed execution progress snapshots. Corrected snapshot25 verified/57 pending and19 verification_pending/25 in_progress/38 planned is the current source count, with zero full acceptance.",
      "scope": "Four old-gate failures retained; final S6-05/S7-01 suites109 pass with no skips and production CLI returns derived counts. No requirement/acceptance/slice promotion.",
      "platform": "Local macOS source gate; root review only. New composed hosted source remains pending."
+    },
+    {
+     "kind": "takeover-source-ci-follow-up-local-verified",
+     "result": "Task113 repairs the exact hosted262b469 cancellation-publication race and the observability store WAL-helper bypass.47 core and79 related CPU cases pass; actual Chrome/macOS Electron observation/reopen cases pass3.3min. Actual collection separates152 public browser tests from3 authentic-weight browser and3 native model qualifications.",
+     "scope": "A controlled delayed/journal-failed/stalled expiration cannot escape as an acknowledged terminal result; failed persistence remains failed and no artifacts publish. Shared bounded WAL retry is reused. Public Linux and existing native workflow source exclude owned-model weights; the source receipt records exact selected/excluded source/report hashes and failed/skipped/missing browser outcomes.1429-source/28-artifact root readback2fc61ec173c02e4f9f48cd6cbc4839721ef2c5aa1bd23dc6753511d58a0c497b. No parent promotion or new hosted success until the composed source run completes.",
+     "platform": "Local macOS CPU plus actual Chrome/macOS development Electron; Windows workflow source only, actual Windows excluded. Public hosted composed run pending; no GPU/signing/deployment credentials."
     }
    ],
    "file_actions": {

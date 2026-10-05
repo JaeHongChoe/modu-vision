@@ -24,6 +24,7 @@ class RuntimeBudget:
         self._lock = threading.Lock()
         self._deadline = None
         self._thread = None
+        self._expiry_finished = threading.Event()
         self.spent = False
         self._error = None
 
@@ -55,10 +56,18 @@ class RuntimeBudget:
         except (ValueError, OSError, RuntimeError) as exc:
             # Cancellation still reaches the trainer if its journal is unavailable.
             self._error = exc
+        finally:
+            self._expiry_finished.set()
 
     def check(self):
         if self._deadline is not None and time.monotonic() >= self._deadline:
             self._expire()
+        # The watchdog sets cancel before its journal callback finishes so the
+        # owned trainer can stop promptly. Publish its outcome only after that
+        # callback succeeds/fails; otherwise a copy of terminal status can omit
+        # its acknowledgement or conceal a journal failure.
+        if self.spent and not self._expiry_finished.wait(1):
+            raise OSError('Training runtime cancellation journal did not finish')
         if self._error is not None:
             raise OSError('Training runtime cancellation journal failed') from self._error
         if self.spent:

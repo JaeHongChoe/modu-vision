@@ -140,7 +140,7 @@ jobs:
         shell: pwsh
         run: |
           $env:MV_E2E_PYTHON = (Get-Command python).Source
-          npm run test:e2e:electron
+          npm run test:e2e:electron -- --grep-invert @owned-model
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify bounded runner behavior
         run: python -m unittest discover -s scripts/tests -p test_run_ci_pytest.py -v

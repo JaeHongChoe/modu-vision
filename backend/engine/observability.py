@@ -10,6 +10,7 @@ import subprocess
 import time
 
 from backend.engine.product_delivery import _root,redact_diagnostics
+from backend.engine.sqlite_wal import use_wal
 
 STATES={'accepted','queued','running','completed','failed','aborted','interrupted','error','delivery_pending','delivery_error','ready','stopped','unavailable','version_mismatch','changed'}
 FAILURES={'failed','interrupted','error','delivery_error'}
@@ -57,7 +58,7 @@ class ObservabilityStore:
         if self.path.is_symlink():raise ValueError('Observability database cannot follow links')
         db=sqlite3.connect(self.path,timeout=10);db.row_factory=sqlite3.Row
         try:
-            db.execute('PRAGMA journal_mode=WAL')
+            use_wal(db)
             with db:yield db
         finally:db.close()
 

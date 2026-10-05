@@ -147,6 +147,13 @@ jobs:
           backend/tests/test_fixture_pose_json_parity.py
           backend/tests/test_service_s1_08.py
           backend/tests/test_anomaly_folder_case.py
+          backend/tests/test_training_completion_publication.py
+          backend/tests/test_runtime_budget_publication.py
+          backend/tests/test_source_ci_model_lanes.py
+          backend/tests/test_service_s4_02_legacy.py
+          backend/tests/test_service_s4_01_legacy.py
+          backend/tests/test_service_s4_01_provenance.py
+          backend/tests/test_service_s5_07.py
       - name: Core defect baseline evidence
         run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
       - name: Install test browser
@@ -154,11 +161,14 @@ jobs:
       - name: Browser transport and flow checks
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
-        run: npm run test:e2e:browser
+        run: |
+          npx playwright test --project=browser --grep-invert @owned-model --list --reporter=json > ci-browser-selection.json
+          npx playwright test --project=browser --grep @owned-model --list --reporter=json > ci-owned-model-selection.json
+          npm run test:e2e:browser -- --grep-invert @owned-model
       - name: Record source, toolchain, and license inventory
         if: always()
         run: |
-          python scripts/write_ci_receipt.py --output ci-receipt.json --junit ci-pytest.xml
+          python scripts/write_ci_receipt.py --output ci-receipt.json --junit ci-pytest.xml --public-selection ci-browser-selection.json --owned-selection ci-owned-model-selection.json --e2e-root ${{ runner.temp }}/modu-e2e
           python scripts/license_inventory.py --output ci-license-inventory.json
       - name: Preserve evidence
         if: always()
@@ -170,6 +180,8 @@ jobs:
             ci-baseline-evidence.json
             ci-license-inventory.json
             ci-pytest.xml
+            ci-browser-selection.json
+            ci-owned-model-selection.json
             ${{ runner.temp }}/modu-e2e
           retention-days: 14
           if-no-files-found: error
