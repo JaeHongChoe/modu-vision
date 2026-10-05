@@ -2317,6 +2317,19 @@
      "result": "Tasks76/77 actual Chrome/macOS Electron pixel-mask import/export/replace/reopen retain class palette, nested image mapping, holes and all saved class pixels. Mask and COCO conflicting merge requests preserve labels, revision, mask and backup list. Related backend79 pass. Readbacks f5a4b097e2ddcb02c5717fd10e72bd4cf756e7618c85d098a4962c9c579c4a9f and 2c00e165f6b14ac1b84804e713506948c882bc822b4c6c0546f1fc33d7a1183b; exact remote main and six inputs re-read.",
      "scope": "Synthetic class/pixel content qualification; representative annotation and model-quality acceptance remain pending.",
      "platform": "Chrome and macOS Electron; controlled folder-dialog return; Windows excluded."
+    },
+    {
+     "kind": "published-exact-human-truth-fitting-slice",
+     "source_sha": "996b0d3c2ae9aed47f3e50370d3de6129634584e",
+     "result": "Task78 exact OCR text with Unicode/edge spaces and three native fitting modes save/reopen in Chrome and macOS Electron. Renderer689/backend27 passed; readback f4948ef6dfa43f1209bbf622abc4faf302437cd89eb63df96bbd1d6c3e5330bf; remote main and six source hashes verified.",
+     "scope": "Synthetic text/fitting qualification; representative content and model-quality acceptance remain pending.",
+     "platform": "Chrome/macOS Electron; Windows excluded."
+    },
+    {
+     "kind": "saved-evaluation-pixel-layer-functional-slice",
+     "result": "Task79 causal stale/mismatched-mask regressions fixed; two actual Chrome/macOS Electron cases compare all pixels of36 captured views across two labelsets, two sparse classes and truth/prediction/error views. Six malformed-report refusals clear the canvas; immutable reports and source hashes stay unchanged. Renderer693/backend22 pass.",
+     "scope": "Explicit controlled display-only saved reports, not model inference or model-quality approval; original-image overlay qualification remains open.",
+     "platform": "Chrome/macOS Electron; Windows excluded; root review only."
     }
    ],
    "file_actions": {
@@ -2340,7 +2353,7 @@
    "proposed_test_file": "backend/tests/test_service_s3_05.py",
    "remaining": [
     "Task75/76 complete synthetic app LabelMe/COCO/YOLO and pixel-mask class/geometry/image-mapping round trips, loss refusal and changed-preview refusal; representative annotation qualification remains pending.",
-    "Task78 qualifies exact human OCR truth and the existing center/face/irregular fitting UI with save/reopen on synthetic sources. Model-result selection, groundtruth/prediction separation and representative OCR/fitting content still require qualification.",
+    "Tasks78/79 qualify exact OCR truth, three fitting modes and saved per-labelset evaluation selection with separate truth/prediction/error class masks. Task79 uses controlled display-only reports in model-input coordinates; representative model results and original-image overlay mapping still require qualification.",
     "Synthetic brush/vector functional slices do not promote whole-parent implementation or acceptance. Windows tests are excluded by the project owner."
    ]
   },
@@ -3135,7 +3148,14 @@
     "S4-11"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "saved-evaluation-labelset-readback-slice",
+     "result": "Task79 immutable saved-report selection is filtered by labelset and exposes separate exact truth/prediction/error masks; missing truth and mismatched shape refuse stale display. Renderer693/backend22 and two actual app cases pass.",
+     "scope": "Controlled saved-report display qualification only; common-cohort model/flow quality and whole-parent acceptance remain pending.",
+     "platform": "Chrome/macOS Electron; Windows excluded; root review only."
+    }
+   ],
    "file_actions": {
     "backend/api/routes_model_comparisons.py": "Modify",
     "backend/engine/flow_evaluation.py": "Modify",

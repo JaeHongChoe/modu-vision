@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {resolveApiUrl} from '../../services/api';
 import {areaHistograms,thresholdEvidence,evidenceClasses,filterEvidence,rocEvidence,sampleCounts,scoreHistogram,type EvidenceSample,type EvidenceBox} from '../../services/evaluationEvidence';
+import {pixelEvidencePixels,type PixelEvidenceView} from './pixelEvidencePreview';
 
 const control='rounded border border-slate-600 bg-[#0E1722] p-2 text-xs';
 function boxPolygon(b:EvidenceBox['box']):string{
@@ -8,18 +9,23 @@ function boxPolygon(b:EvidenceBox['box']):string{
   const angle=b.angle_deg*Math.PI/180;return [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y])=>`${b.cx+x*b.width/2*Math.cos(angle)-y*b.height/2*Math.sin(angle)},${b.cy+x*b.width/2*Math.sin(angle)+y*b.height/2*Math.cos(angle)}`).join(' ');
 }
 function PixelErrorPreview({row,className}:{row:EvidenceSample;className:string}){
-  const canvas=useRef<HTMLCanvasElement>(null);const [error,setError]=useState('');
-  useEffect(()=>{let current=true;setError('');const evidence=row.pixel_evidence;
-    if(!evidence?.prediction_mask||!evidence.truth_mask)return;
+  const canvas=useRef<HTMLCanvasElement>(null);const [error,setError]=useState('');const [view,setView]=useState<PixelEvidenceView>('error');const [busy,setBusy]=useState(false);
+  useEffect(()=>{let current=true;setError('');setBusy(false);const evidence=row.pixel_evidence;
+    const clear=()=>{if(canvas.current){canvas.current.width=0;canvas.current.height=0;}};clear();
+    if(!evidence?.prediction_mask||!evidence.truth_mask){setError('정답과 예측 마스크가 모두 있어야 표시할 수 있습니다.');return;}
+    setBusy(true);
     const load=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('마스크를 읽지 못했습니다.'));img.src=src;});
     void Promise.all([load(evidence.prediction_mask),load(evidence.truth_mask)]).then(([pred,truth])=>{if(!current||!canvas.current)return;
-      const target=canvas.current;target.width=pred.width;target.height=pred.height;const ctx=target.getContext('2d');if(!ctx)return;
+      if(pred.width!==truth.width||pred.height!==truth.height)throw new Error('정답과 예측 마스크 크기가 다릅니다.');
+      const target=canvas.current;target.width=pred.width;target.height=pred.height;const ctx=target.getContext('2d');if(!ctx)throw new Error('마스크 표시 공간을 만들지 못했습니다.');
       ctx.drawImage(pred,0,0);const p=ctx.getImageData(0,0,pred.width,pred.height);ctx.drawImage(truth,0,0);const t=ctx.getImageData(0,0,pred.width,pred.height);const output=ctx.createImageData(pred.width,pred.height);
-      const id=className==='all'?null:evidence.per_class?.[className]?.class_id;
-      for(let i=0;i<p.data.length;i+=4){const a=t.data[i],b=p.data[i];const fn=(id===null?a>0:a===id)&&a!==b,fp=(id===null?b>0:b===id)&&a!==b;output.data[i]=fn?244:35;output.data[i+1]=fp?180:35;output.data[i+2]=fp?255:35;output.data[i+3]=255;}ctx.putImageData(output,0,0);
-    }).catch(cause=>{if(current)setError(String(cause));});return()=>{current=false;};
-  },[row,className]);
-  return <div><canvas ref={canvas} aria-label="클래스별 미검·과검 픽셀" className="max-h-64 w-full object-contain bg-slate-950"/><p className="mt-1 text-xs text-slate-400">빨강: 미검 · 파랑: 과검 · {row.pixel_evidence?.coordinate_space} 좌표. {error}</p></div>;
+      output.data.set(pixelEvidencePixels(p,t,evidence,className,view));ctx.putImageData(output,0,0);
+    }).catch(cause=>{if(current){clear();setError(cause instanceof Error?cause.message:String(cause));}}).finally(()=>{if(current)setBusy(false);});return()=>{current=false;};
+  },[row,className,view]);
+  return <div><label>마스크 <select aria-label="평가 마스크 보기" className={control} value={view} onChange={event=>setView(event.target.value as PixelEvidenceView)}><option value="error">미검·과검</option><option value="truth">정답</option><option value="prediction">예측</option></select></label>
+    {busy&&<p role="status">저장된 마스크 확인 중…</p>}{error&&<p role="alert" className="text-rose-200">{error}</p>}
+    <canvas ref={canvas} aria-label={view==='truth'?'클래스별 정답 픽셀':view==='prediction'?'클래스별 예측 픽셀':'클래스별 미검·과검 픽셀'} className="max-h-64 w-full object-contain bg-slate-950"/>
+    <p className="mt-1 text-xs text-slate-400">{view==='truth'?'초록: 저장된 정답':view==='prediction'?'청록: 저장된 예측':'빨강: 미검 · 파랑: 과검 · 보라: 클래스 불일치'} · {row.pixel_evidence?.coordinate_space} 좌표.</p></div>;
 }
 
 export function EvaluationEvidencePanel({samples,onSelect,initialPath,initialImageId}:{samples:EvidenceSample[];onSelect?:(path:string)=>void;initialPath?:string;initialImageId?:string}){
@@ -40,7 +46,7 @@ export function EvaluationEvidencePanel({samples,onSelect,initialPath,initialIma
     <div className="grid gap-3 lg:grid-cols-[230px_1fr]"><div className="max-h-80 overflow-auto rounded border border-slate-700">{rows.map((r,i)=><button key={`${r.file_path}:${i}`} className={`block w-full border-b border-slate-700 p-2 text-left ${r===row?'bg-cyan-950':''}`} onClick={()=>{setSelected(r.file_path||'');if(r.file_path)onSelect?.(r.file_path);}}>{r.file_name||r.image||r.file_path?.split('/').pop()} · FN {sampleCounts(r,className).fn} / FP {sampleCounts(r,className).fp}</button>)}{!rows.length&&<p className="p-2">선택 조건에 해당하는 결과가 없습니다.</p>}</div>
     {row&&<div className="space-y-2">{object?<svg aria-label="정답과 예측 객체 위치" viewBox={`0 0 ${svgSize[0]} ${svgSize[1]}`} className="max-h-80 w-full bg-slate-950"><image href={resolveApiUrl(`/api/dataset/raw/${encodeURIComponent(row.file_name||row.file_path?.split('/').pop()||'image')}?file_path=${encodeURIComponent(row.file_path||'')}`)} width={svgSize[0]} height={svgSize[1]}/>{object.truth.map((b,i)=><polygon key={`t${i}`} points={boxPolygon(b.box)} stroke="#4ade80" fill="none" strokeWidth={Math.max(...svgSize)/200}/>)}{object.predicted.map((b,i)=><polygon key={`p${i}`} points={boxPolygon(b.box)} stroke={object.extra_prediction_indices.includes(i)?'#f87171':'#22d3ee'} fill="none" strokeWidth={Math.max(...svgSize)/200}/>)}</svg>:row.file_path&&<img alt="평가 원본" src={resolveApiUrl(`/api/dataset/raw/${encodeURIComponent(row.file_name||row.file_path.split('/').pop()||'image')}?file_path=${encodeURIComponent(row.file_path)}`)} className="max-h-56 w-full object-contain"/>}
     {object&&<><p>초록: 정답 · 청록: 정합 예측 · 빨강: 추가 예측</p><svg aria-label="회전 객체 IoU·각도 오류 산점도" viewBox="0 0 220 110" className="h-28 w-full bg-slate-950"><path d="M10 0V100H210" stroke="#64748b" fill="none"/>{samples.flatMap(s=>s.object_evidence?.matches||[]).filter(m=>m.angle_error_deg!==undefined).map((m,i)=><circle key={i} cx={10+m.iou*200} cy={100-(m.angle_error_deg||0)/90*100} r="3" fill="#22d3ee"><title>IoU {m.iou.toFixed(3)}, 각도 오류 {m.angle_error_deg?.toFixed(2)}°</title></circle>)}</svg><p>가로: IoU 0–1 · 세로: 각도 오류 0–90°. 정합 객체 기준.</p></>}
-    {row.pixel_evidence?.prediction_mask&&<PixelErrorPreview row={row} className={className}/>}
+    {row.pixel_evidence&&<PixelErrorPreview row={row} className={className}/>}
     {row.character_evidence&&<><p>정답: {row.ground_truth} · 예측: {row.predicted_class} · 편집거리 {row.character_evidence.edit_distance}</p><div className="flex flex-wrap gap-1">{row.character_evidence.alignment.map((a,i)=><span key={i} className={`rounded border p-1 ${a.operation==='correct'?'border-green-700':'border-rose-600 text-rose-200'}`}>{a.reference??'∅'} → {a.predicted??'∅'} ({a.operation})</span>)}</div></>}
     </div>}</div>
   </div></details>;
