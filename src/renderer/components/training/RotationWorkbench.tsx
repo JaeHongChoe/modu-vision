@@ -57,6 +57,10 @@ export function RotationWorkbench() {
     <TrainingPreparationPanel family="rotation" model="small_cnn_angle_v1" device={device} datasetPath={state.dataset?.dataset_path} warmStartJobId={parent||undefined} config={{epochs,batch_size:batch,image_size:size,width,learning_rate:rate}} />
     <h2 className="flex items-center gap-2 text-base font-semibold"><RotateCw className="h-5 w-5 text-cyan-300" />학습형 정방향 보정</h2>
     <p className="mt-2 leading-5 text-slate-400">각 이미지가 정방향이 되는 반시계 보정각을 정답으로 학습합니다. 360° 방향을 예측하고 원본 해상도를 보존한 정렬 이미지와 좌표 변환을 반환합니다.</p>
+    <section aria-label="정렬 지원 범위" className="mt-3 rounded border border-[#344255] p-3 leading-5 text-slate-300">
+      <p>방향(direction)은 360°를 구분하므로 0°와 180°는 서로 다른 정답입니다. 축(axial)은 180° 주기이므로 회전 상자만으로 앞뒤 정방향을 정할 수 없습니다.</p>
+      <p className="mt-1">플로우의 기하 정렬은 지정 각도 또는 회전 검출 상자를 사용합니다. 기준 템플릿 정합은 지원하지 않습니다. 학습 정렬은 이 후보 모델을 사용하고 원본↔정렬 좌표와 bilinear 보간을 패키지에 보존합니다.</p>
+    </section>
     <div className="mt-4 grid items-end gap-3 sm:grid-cols-4"><div className="sm:col-span-2"><ProjectImagePicker value={sampleImage} disabled={disabled} onSelect={row=>{setSampleImage(row.file_path);if(['train','val','test'].includes(row.split))setSplit(row.split as RotationRow['split']);}} /></div>
       <ProgramField label="정방향 반시계 보정각 · °"><input type="number" min={-180} max={180} value={angle} onChange={e => setAngle(Number(e.target.value))} className={programInput} /></ProgramField>
       <ProgramField label="이미지 분할"><select value={split} onChange={e => setSplit(e.target.value as RotationRow['split'])} className={programInput}><option value="train">train · 학습</option><option value="val">val · 선택</option><option value="test">test · 시험</option></select></ProgramField></div>

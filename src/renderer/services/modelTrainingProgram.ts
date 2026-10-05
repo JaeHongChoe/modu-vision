@@ -17,7 +17,7 @@ export type ProgramJob = {execution_job_id?:string;model_id?:string;compute_prof
   training_provenance?: {labelset_id?: string}; result?: Record<string, unknown>};
 export type RotationRow = {image: string; correction_deg: number; split: 'train' | 'val' | 'test'; source_sha256?: string};
 export type RotationEvaluation = {angular_mae_deg: number; within_10_deg: number; sample_count: number; evaluation_id?: string};
-export type RotationPrediction = {correction_deg: number; output_size: number[]; transform: number[][]; aligned_image_base64?: string};
+export type RotationPrediction = {correction_deg: number; output_size: number[]; transform: number[][]; inverse_transform: number[][]; alignment_recipe: {method: 'learned_direction'; angle_semantics: string; interpolation: 'bilinear'; coordinate_map: {source_to_aligned: string; aligned_to_source: string}}; aligned_image_base64?: string};
 export type TrialCapability = {architectures: string[]; metric_key: string; direction: 'min' | 'max';
   search_defaults: Record<string, Array<string | number>>; prepared_input: boolean; architecture_key?: string};
 export type MeasuredTrial = {trial_id: string; config: Record<string, unknown>; status: string; metrics: Record<string, number>;

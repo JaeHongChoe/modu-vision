@@ -191,7 +191,9 @@ def predict(req: PredictRequest, request: Request):
         raw=path.read_bytes()
         with Image.open(BytesIO(raw)) as opened: rgb=np.asarray(opened.convert('RGB'))
         result=predict_rotation_array(checkpoint,rgb,device=req.device)
-        image=result.pop('aligned_image'); result['transform']=result['transform'].tolist();result['source_sha256']=sha256(raw).hexdigest()
+        image=result.pop('aligned_image')
+        for key in ('transform','inverse_transform'): result[key]=result[key].tolist()
+        result['source_sha256']=sha256(raw).hexdigest()
         if req.include_aligned:
             stream=BytesIO();Image.fromarray(image).save(stream,format='PNG');result['aligned_image_base64']=base64.b64encode(stream.getvalue()).decode()
         return result

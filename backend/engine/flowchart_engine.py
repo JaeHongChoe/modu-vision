@@ -54,7 +54,7 @@ from backend.engine.device import get_device
 from backend.engine.industrial_adapters import read_image_safely_rgb, sanitize_file_stem
 from backend.engine.patch_classification import predict_patch_classification
 from backend.engine.segmentation.model import build_segmentation_model
-from backend.engine.flow_operators import apply_operator, validate_operator, region_artifacts, local_image, source_bbox, image_uri
+from backend.engine.flow_operators import apply_operator, validate_operator, region_artifacts, local_image, source_bbox, source_boundary_points, image_uri
 from backend.engine.segmentation_evidence import class_evidence, remap_class_evidence, decoded_array, validate_segmentation_params
 from backend.engine.rule_evaluation import validate_blob_rules, measure_blob_rules, validate_ocr_rules, evaluate_ocr_rules
 from backend.engine.geometry_measurement import measure_geometry, validate_measurement_params
@@ -1364,12 +1364,9 @@ class FlowchartEngine:
                     crop.bbox = source_bbox(mapped, x2-x1, y2-y1)
                     crop.bbox=[max(0,crop.bbox[0]),max(0,crop.bbox[1]),min(img_rgb.shape[1],crop.bbox[2]),min(img_rgb.shape[0],crop.bbox[3])]
                     if crop.polygon:
-                        points=np.asarray(crop.polygon)
-                        crop.polygon=(transform@np.vstack([points.T,np.ones(len(points))]))[:2].T.tolist()
+                        crop.polygon=source_boundary_points(transform,crop.polygon).tolist()
                     for region in crop.ocr_regions:
-                        points=np.asarray(region['polygon'],dtype=float)
-                        mapped_points=(transform@np.vstack([points.T,np.ones(len(points))]))
-                        points=(mapped_points[:2]/mapped_points[2]).T
+                        points=source_boundary_points(transform,region['polygon'])
                         region['polygon']=points.tolist()
                         region['box']=[max(0,int(np.floor(points[:,0].min()))),max(0,int(np.floor(points[:,1].min()))),min(img_rgb.shape[1],int(np.ceil(points[:,0].max()))),min(img_rgb.shape[0],int(np.ceil(points[:,1].max())))]
                     crop.source_transform = transform.tolist()
@@ -1379,8 +1376,7 @@ class FlowchartEngine:
                         from backend.engine.rotated_detection import box_from_polygon
                         local_points = np.asarray(crop.polygon)
                         # Restore local geometry from already mapped source polygon.
-                        source_points = np.vstack([local_points.T,np.ones(len(local_points))])
-                        local_points = (np.linalg.inv(transform)@source_points)[:2].T
+                        local_points = source_boundary_points(np.linalg.inv(transform),local_points)
                         crop._region['rotated_box'] = box_from_polygon(local_points.tolist())
                     if crop._defect_mask is not None:
                         mask = cv2.resize(crop._defect_mask, (w, h), interpolation=cv2.INTER_NEAREST)

@@ -166,6 +166,7 @@ def _metrics(model, dataset, device, batch_size=16, cancel_event=None):
         for images, truth in DataLoader(dataset, batch_size=batch_size):
             _cancel(cancel_event); outputs = model(images.to(device)).cpu()
             if not torch.isfinite(outputs).all(): raise ValueError('Rotation prediction is not finite')
+            if (outputs.norm(dim=1) < 1e-8).any(): raise ValueError('Rotation angle direction is undefined')
             losses.extend(((outputs - truth) ** 2).mean(1).tolist())
             angles = torch.rad2deg(torch.atan2(outputs[:, 1], outputs[:, 0]))
             expected = torch.rad2deg(torch.atan2(truth[:, 1], truth[:, 0]))
@@ -268,6 +269,10 @@ def _predict(model, image_size, rgb, device):
     angle = float(torch.rad2deg(torch.atan2(vector[1], vector[0])))
     aligned, transform = _aligned(rgb, angle)
     return {'correction_deg': angle, 'aligned_image': aligned, 'transform': transform, 'source_size': [rgb.shape[1], rgb.shape[0]],
+            'inverse_transform': np.linalg.inv(transform),
+            'alignment_recipe': {'method': 'learned_direction', 'angle_range_deg': [-180, 180],
+                'angle_semantics': 'counterclockwise_upright_correction_degrees_360', 'interpolation': 'bilinear',
+                'coordinate_map': {'source_to_aligned': 'transform', 'aligned_to_source': 'inverse_transform'}},
             'output_size': [aligned.shape[1], aligned.shape[0]], 'angle_semantics': 'counterclockwise_upright_correction_degrees_360'}
 
 
@@ -286,7 +291,7 @@ def export_rotation_package(checkpoint, output_dir):
     shutil.copyfile(__file__, target / 'rotation.py')
     for path in (output / 'backend' / '__init__.py', target / '__init__.py'): path.write_text('',encoding='utf-8')
     (output / 'requirements.txt').write_text('numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\n',encoding='utf-8')
-    (output / 'infer.py').write_text("import argparse, json\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom backend.engine.rotation import run_rotation_package\np=argparse.ArgumentParser();p.add_argument('--image',required=True);p.add_argument('--output',required=True);a=p.parse_args()\nr=run_rotation_package(Path(__file__).parent,np.asarray(Image.open(a.image).convert('RGB')))\nImage.fromarray(r.pop('aligned_image')).save(a.output)\nr['transform']=r['transform'].tolist();print(json.dumps(r))\n", encoding='utf-8')
+    (output / 'infer.py').write_text("import argparse, json\nfrom pathlib import Path\nimport numpy as np\nfrom PIL import Image\nfrom backend.engine.rotation import run_rotation_package\np=argparse.ArgumentParser();p.add_argument('--image',required=True);p.add_argument('--output',required=True);a=p.parse_args()\nr=run_rotation_package(Path(__file__).parent,np.asarray(Image.open(a.image).convert('RGB')))\nImage.fromarray(r.pop('aligned_image')).save(a.output)\nfor key in ('transform','inverse_transform'):r[key]=r[key].tolist()\nprint(json.dumps(r))\n", encoding='utf-8')
     _atomic(output / 'manifest.json', {'version': 1, 'files': [{'path': p.relative_to(output).as_posix(), 'sha256': _hash(p)} for p in sorted(output.rglob('*')) if p.is_file()]})
     return output
 

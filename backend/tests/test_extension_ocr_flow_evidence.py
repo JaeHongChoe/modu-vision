@@ -30,5 +30,5 @@ def test_saved_recipe_rule_failure_overrides_matching_node_text(monkeypatch):
 def test_transformed_text_regions_map_to_original_source(monkeypatch):
     row=inspect(monkeypatch,{'id':'r','label':'text','bbox':[10,20,30,35],
         'image':np.zeros((10,15,3),np.uint8),'source_transform':[[2,0,10],[0,2,15],[0,0,1]]})
-    assert row['ocr_regions'][0]['box']==[12,19,18,27]
-    assert row['ocr_regions'][0]['polygon']==[[12,19],[18,19],[18,27],[12,27]]
+    assert row['ocr_regions'][0]['box']==[11,18,18,27]
+    assert row['ocr_regions'][0]['polygon']==[[11.5,18.5],[17.5,18.5],[17.5,26.5],[11.5,26.5]]

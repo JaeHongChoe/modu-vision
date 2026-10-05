@@ -3058,8 +3058,17 @@
     "S1-05",
     "S3-05"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "129b3e20f5aed3e1c865064c1d0e401477aa903e",
+     "result": "Task101: actual Chrome/macOS Electron screens enter16 direction labels, prepare8/4/4 train/val/test, perform20 actual CPU epochs, save candidate/checkpoint and heldout evaluation, align an original, export and run a fresh package-only Python process with identical pixels/maps, reopen and bind the exact candidate to a flow. Undefined angle evaluations fail; 0/180 direction and axial/geometric/template support are explicit. Pixel-center raster transforms and half-open ROI/box/OCR boundaries are distinct, fixing a90-degree one-pixel offset. Inverse maps and masks round-trip; actual OCR/OBB controlled-checkpoint whole-flow packages and compiled native learned-alignment/segmentation/measurement parity pass. Root readback SHA-256346b1d0bd9b72ceb67559f97a482cb66b03cb79a5c3c42ac56fd07b01b32ef9d.",
+     "scope": "Backend72 and affected109 pass; one existing optional real-image QA is not selected. Renderer763 and production/E2E TypeScript pass.1197 source inputs,130 artifacts, two actual app cases, completed SQLite records/one attempt each, original/prepared hashes, checkpoint/completion receipt/evaluation/package identities and closed owned processes/ports are rechecked. Controlled geometry networks do not prove trained detection/OCR quality. Synthetic directional toy MAE9.9344 degrees is not representative quality approval.",
+     "platform": "Owned macOS CPU, actual Chrome/development Electron/main/preload/backend and package process; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/rotation.py": "Modify",
     "backend/api/routes_rotation.py": "Modify",
@@ -3067,12 +3076,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -3080,6 +3089,11 @@
    "proposed_test_file": "backend/tests/test_service_s4_08.py",
    "scope_refinement_ids": [
     "E02"
+   ],
+   "remaining": [
+    "Representative heldout direction/symmetry quality, independent review and final acceptance.",
+    "Actual target GPU/installed/physical execution qualification; Windows tests excluded by user.",
+    "Reference-template registration is explicitly unsupported; scope distinction is verified, not a claim that template registration was implemented."
    ]
   },
   {
@@ -9339,13 +9353,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 42,
-    "pending": 40
+    "verified": 43,
+    "pending": 39
    },
    "parent_status": {
-    "verification_pending": 36,
+    "verification_pending": 37,
     "in_progress": 18,
-    "planned": 28
+    "planned": 27
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

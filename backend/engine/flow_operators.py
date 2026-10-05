@@ -36,9 +36,25 @@ def local_image(image, roi):
     return image[y1:y2,x1:x2].copy(),np.array([[1,0,x1],[0,1,y1],[0,0,1]],dtype=float)
 
 
+def source_boundary_points(transform, points):
+    """Map half-open ROI/box/polygon edges through an image pixel-center map.
+
+    OpenCV warp matrices address pixel centers (0..width-1). Region boundaries
+    address edges (0..width); direct multiplication shifts 90/180 degree boxes
+    by one pixel. Convert edge -> center -> source center -> source edge.
+    Raster masks keep the original center matrix for nearest-neighbor warps.
+    """
+    points = np.asarray(points, dtype=float)
+    mapped = np.asarray(transform, dtype=float) @ np.vstack([(points - .5).T, np.ones(len(points))])
+    result = (mapped[:2] / mapped[2]).T + .5
+    # Exact right angles can differ by floating roundoff before floor/ceil.
+    rounded = np.rint(result)
+    return np.where(np.abs(result - rounded) < 1e-8, rounded, result)
+
+
 def source_bbox(transform, width, height):
-    points=(transform@np.array([[0,width,width,0],[0,0,height,height],[1,1,1,1]],dtype=float))[:2]
-    return [int(np.floor(points[0].min())),int(np.floor(points[1].min())),int(np.ceil(points[0].max())),int(np.ceil(points[1].max()))]
+    points=source_boundary_points(transform, [[0,0],[width,0],[width,height],[0,height]])
+    return [int(np.floor(points[:,0].min())),int(np.floor(points[:,1].min())),int(np.ceil(points[:,0].max())),int(np.ceil(points[:,1].max()))]
 
 
 def _starts(length, size, overlap):
@@ -105,7 +121,7 @@ def apply_operator(image, regions, kind, params, node_id, enhancement=None, rota
             if not isinstance(output, np.ndarray) or output.dtype != np.uint8 or output.ndim != 3 or output.shape[2] != 3:
                 raise ValueError('Learned rotation returned invalid native RGB pixels')
             transform = transform @ np.linalg.inv(matrix)
-            metadata = {'rotation': {key: value for key, value in prediction.items() if key not in ('aligned_image', 'transform')}}
+            metadata = {'rotation': {key: value for key, value in prediction.items() if key not in ('aligned_image', 'transform', 'inverse_transform')}}
         elif operation in ('rotate','align'):
             angle=float(params.get('angle_deg',0))
             if operation=='align':
