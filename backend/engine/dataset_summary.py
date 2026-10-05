@@ -11,7 +11,8 @@ from backend.engine.dataset_inventory import folder_label_split
 
 
 def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
-                    usage:dict[str,str]|None=None,metadata:dict[str,dict]|None=None)->dict[str,Any]:
+                    usage:dict[str,str]|None=None,metadata:dict[str,dict]|None=None,
+                    tolerate_schema_errors:bool=False)->dict[str,Any]:
     source=Path(source).expanduser().resolve()
     assignments=assignments or {}
     usage=usage or {}
@@ -22,7 +23,10 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
     state_counts=Counter({'labeled':0,'unlabeled':0})
     for image in source_image_paths(source,task,include_unused=True):
         relative=image.relative_to(source).as_posix()
-        annotations,mask=_annotations(source,image)
+        try:annotations,mask=_annotations(source,image)
+        except (ValueError,KeyError,TypeError):
+            if not tolerate_schema_errors:raise
+            annotations,mask=None,None
         labels=list(dict.fromkeys(a['label'] for a in annotations or []
              if isinstance(a.get('label'),str) and a['label']))
         overlay=dataset_annotation_dir(image.parent)/f'{image.stem}.json'

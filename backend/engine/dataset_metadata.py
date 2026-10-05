@@ -347,7 +347,14 @@ def preview_split(rows,group_by,train_ratio=.7,val_ratio=.2,test_ratio=.1,seed=4
     for i,row in enumerate(rows):
         identity=tuple(row[k] for k in group_by)
         if not all(identity): raise ValueError(f"Missing grouping metadata: {row['relative_path']}")
-        for key in [('group',identity),('hash',row['content_hash'])]:
+        if not isinstance(row.get('content_hash'),str) or not row['content_hash']:
+            raise ValueError(f"Missing content identity: {row['relative_path']}")
+        keys=[('group',identity),('hash',row['content_hash'])]
+        # Declared common-original families remain indivisible even when the
+        # selected grouping is product/Lot. A blank family is unknown, not one
+        # giant shared origin; external crops must declare their source group.
+        if row.get('group'):keys.append(('origin',row['group']))
+        for key in keys:
             if key in seen: parents[find(i)]=find(seen[key])
             else: seen[key]=i
     groups={}

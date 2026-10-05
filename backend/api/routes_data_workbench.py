@@ -91,7 +91,16 @@ def diagnose(req:DiagnosticRequest,request:Request):
         rows=_rows(project,source);assignments=_split_assignments(project,source,rows)
         report=dw.diagnose(rows,assignments,**req.model_dump())
         from backend.engine.dataset_summary import dataset_summary
-        with _annotations(project):summary=dataset_summary(source,project['task'],assignments={r['file_path']:assignments[r['relative_path']] for r in rows},metadata={r['file_path']:r for r in rows})
+        from backend.engine.dataset_readiness import task_schema
+        with _annotations(project):
+            summary=dataset_summary(source,project['task'],assignments={r['file_path']:assignments[r['relative_path']] for r in rows},metadata={r['file_path']:r for r in rows},tolerate_schema_errors=True)
+            schema=task_schema(source,project['task'],rows)
+        report['task_schema']=schema
+        report['issue_counts']['label_schema']=schema['invalid_count']
+        errors={r['relative_path']:r['error'] for r in schema['items'] if not r['valid']}
+        for item in report['items']:
+            if item['relative_path'] in errors:item['issues'].append('label_schema');item['schema_error']=errors[item['relative_path']]
+        if errors:report['decision']='needs_review'
         report.update(summary=summary,split_assignments=assignments,scope={'source':str(source),'task':project['task'],'labelset_id':project.get('active_labelset_id','default')})
         dw._write(dw._storage(project['project_dir'],source)/f"diagnostics_{project.get('active_labelset_id','default')}.json",report)
         return report

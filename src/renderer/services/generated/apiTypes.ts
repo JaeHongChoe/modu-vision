@@ -1369,6 +1369,7 @@ export type SplitRequest = {
   seed?: number;
   apply?: boolean;
   actor?: string;
+  expected_qualification_sha256?: string | null;
 };
 
 export type StartRequest = {

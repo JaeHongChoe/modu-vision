@@ -2531,13 +2531,21 @@
     "S3-02",
     "S3-03"
    ],
-   "status": "planned",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "classification-import-default-cohort-slice",
      "result": "Task82 metadata-only classification import counts reuse the existing eligible loader discovery and per-class default split, including singleton classes and val/test-only folders. Backend51 and two actual Chrome/macOS Electron cases pass; four owned layouts per case are imported with the UI button and reopened with unchanged source hashes.",
      "scope": "Default classification folder cohort and summary only; explicit saved assignments retain their prior exact-set hidden-path contract. Path eligibility is not full decode validation, representative model quality or whole-parent acceptance.",
      "platform": "Chrome/macOS Electron; folder dialog answer controlled; Windows excluded; root review only."
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "f89e18605c72fc19c578d9e04bae869b2056a10a",
+     "result": "Task98: declared common-original groups and exact content remain indivisible under product/Lot selection; frozen seed/ratio/source/metadata qualification reopens and stale previews refuse apply. Read-only task geometry/mask errors and class coverage are visible. Actual primary classification loader decodes only approved train/val sources and persists its immutable eligibility receipt; affected specialist/prepared/stale policy contracts compose. Backend90, renderer744, two causal UI guards, actual Chrome/macOS Electron two cases and production/E2E TypeScript pass. Private readback SHA-256 518a53e2e0000c44c68584f00784c5766473b0947a8e192612a81342d83d79b8.",
+     "scope": "Owned synthetic images and current-schema software wiring. External crop/derived/synthetic lineage requires an explicit common-original group; blank provenance is not guessed. Similarity/schema diagnostics do not approve label truth or representative quality. Independent review, human/target and full acceptance pending; no training job submitted.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -2547,12 +2555,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9317,13 +9325,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 39,
-    "pending": 43
+    "verified": 40,
+    "pending": 42
    },
    "parent_status": {
-    "verification_pending": 33,
+    "verification_pending": 34,
     "in_progress": 20,
-    "planned": 29
+    "planned": 28
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

@@ -36,6 +36,7 @@ class SplitRequest(BaseModel):
     seed:int=42
     apply:bool=False
     actor:str='operator'
+    expected_qualification_sha256:Optional[str]=Field(None,pattern=r'^[0-9a-f]{64}$')
 
 class ExchangeRequest(BaseModel):
     format:Literal['labelme','coco','yolo']
@@ -133,6 +134,47 @@ def duplicates(request:Request):
 @router.post('/split')
 def grouped_split(req:SplitRequest,request:Request):
     project,source=_context(request)
+    from backend.engine.dataset_readiness import split_qualification,split_staleness
+    from backend.api.shared_authorization import request_actor
+    req=req.model_copy(update={'actor':request_actor(request,req.actor)})
+    rows,flat=_split_rows(project,source)
+    qualification=split_qualification(rows,req.group_by,req.seed,project,[req.train_ratio,req.val_ratio,req.test_ratio])
+    if req.expected_qualification_sha256 and qualification['sha256']!=req.expected_qualification_sha256:
+        raise HTTPException(409,detail='Split source or metadata changed; preview the current cohort again')
+    try: preview=dm.preview_split(rows,req.group_by,req.train_ratio,req.val_ratio,req.test_ratio,req.seed)
+    except ValueError as exc:raise HTTPException(422,detail={'message':str(exc),'availability':'unavailable'}) from exc
+    preview.update(applied=False,apply_supported=True,apply_unavailable_reason=None,qualification=qualification,availability='available')
+    if req.apply:
+        from backend.api.routes_training import training_job_manager
+        if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='학습이 끝난 뒤 분할을 적용하세요.')
+        token=set_request_split_root(Path(project['dataset_dir'])/'splits')
+        try:
+            with _VERSION_LOCK:
+                current,_=_split_rows(project,source)
+                if split_staleness(qualification,current,project):raise HTTPException(409,detail='Split cohort changed before save')
+                backup=_snapshot(project,source,'그룹 분할 전 자동 백업',f'{req.actor}: {req.group_by}','auto_backup')
+                path=routes_dataset._split_manifest_file(source)
+                previous=path.read_bytes() if path.is_file() else None
+                try:
+                    routes_dataset._write_split_manifest(source,preview['assignments'],req.seed,qualification,preview['group_count'])
+                    from backend.engine.grouped_dataset_views import load_manifest_dataset
+                    if project['task'] != 'classification' and not flat:
+                        for partition,count in preview['split'].items():
+                            if count:
+                                dataset=load_manifest_dataset(project['task'],source,partition)
+                                if dataset is None or len(dataset)!=count: raise ValueError('Saved split does not match actual task inputs')
+                    current,_=_split_rows(project,source)
+                    if split_staleness(qualification,current,project):raise ValueError('Split cohort changed while saving')
+                except Exception as exc:
+                    if previous is None:path.unlink(missing_ok=True)
+                    else:path.write_bytes(previous)
+                    if isinstance(exc,ValueError):raise HTTPException(422,detail=str(exc)) from exc
+                    raise
+            preview.update(applied=True,backup_version_id=backup['id'])
+        finally: reset_request_split_root(token)
+    return preview
+
+def _split_rows(project,source):
     rows=[r for r in _rows(project,source) if r.get('usage_state','active')!='not_used']
     # Use only trainable image inventory for LabelMe; do not mark unlabeled files trainable.
     flat=routes_dataset._has_flat_labelme_annotations(source)
@@ -142,37 +184,21 @@ def grouped_split(req:SplitRequest,request:Request):
     if project['task'] in {'anomaly','anomaly_detection'}:
         from backend.engine.grouped_dataset_views import is_anomaly_normal
         rows=[{**r,'train_eligible':is_anomaly_normal(r['file_path'],source)} for r in rows]
-    try: preview=dm.preview_split(rows,req.group_by,req.train_ratio,req.val_ratio,req.test_ratio,req.seed)
-    except ValueError as exc: raise _errors(exc) from exc
-    preview['applied']=False
-    supported,reason=True,None
-    preview.update(apply_supported=supported,apply_unavailable_reason=reason)
-    if req.apply:
-        if not supported: raise HTTPException(422,detail=reason)
-        from backend.api.routes_training import training_job_manager
-        if training_job_manager.get_active_job() is not None: raise HTTPException(409,detail='학습이 끝난 뒤 분할을 적용하세요.')
-        token=set_request_split_root(Path(project['dataset_dir'])/'splits')
-        try:
-            with _VERSION_LOCK:
-                backup=_snapshot(project,source,'그룹 분할 전 자동 백업',f'{req.actor}: {req.group_by}','auto_backup')
-                path=routes_dataset._split_manifest_file(source)
-                previous=path.read_bytes() if path.is_file() else None
-                try:
-                    routes_dataset._write_split_manifest(source,preview['assignments'],req.seed)
-                    from backend.engine.grouped_dataset_views import load_manifest_dataset
-                    if project['task'] != 'classification' and not flat:
-                        for partition,count in preview['split'].items():
-                            if count:
-                                dataset=load_manifest_dataset(project['task'],source,partition)
-                                if dataset is None or len(dataset)!=count: raise ValueError('Saved split does not match actual task inputs')
-                except Exception as exc:
-                    if previous is None:path.unlink(missing_ok=True)
-                    else:path.write_bytes(previous)
-                    if isinstance(exc,ValueError):raise HTTPException(422,detail=str(exc)) from exc
-                    raise
-            preview.update(applied=True,backup_version_id=backup['id'])
-        finally: reset_request_split_root(token)
-    return preview
+    return rows,flat
+
+@router.get('/split')
+def saved_grouped_split(request:Request):
+    project,source=_context(request)
+    path=Path(project['dataset_dir'])/'splits'/f'{hashlib.sha256(str(source).encode()).hexdigest()}.json'
+    if not path.is_file():return {'availability':'unavailable','reason':'No saved grouped split'}
+    try:
+        if path.is_symlink():raise ValueError('Split receipt cannot be a symbolic link')
+        value=json.loads(path.read_text());qualification=value.get('qualification')
+        if value.get('folder_path')!=str(source) or not qualification:return {'availability':'unavailable','reason':'Legacy split has no grouping qualification'}
+        from backend.engine.dataset_readiness import split_staleness
+        rows,_=_split_rows(project,source);assignments=value['assignments']
+        return {'availability':'available','assignments':assignments,'split':{part:sum(v==part for v in assignments.values()) for part in ('train','val','test')},'qualification':qualification,'stale':split_staleness(qualification,rows,project),'applied':True,'apply_supported':False,'duplicates':dm.duplicate_leakage(rows,assignments),'group_count':value['group_count']}
+    except (ValueError,OSError,KeyError) as exc:raise _errors(exc) from exc
 
 
 def _directory_payload(req,source,inventory):

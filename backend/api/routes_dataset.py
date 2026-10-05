@@ -176,10 +176,12 @@ def _read_split_manifest(folder: Path) -> Dict[str, str]:
         return {}
 
 
-def _write_split_manifest(folder: Path, assignments: Dict[str, str], seed: int) -> None:
+def _write_split_manifest(folder: Path, assignments: Dict[str, str], seed: int, qualification: Optional[dict] = None, group_count: Optional[int] = None) -> None:
     path = _split_manifest_file(folder)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"folder_path": str(folder.resolve()), "seed": seed, "assignments": assignments}
+    if qualification is not None:payload['qualification']=qualification
+    if group_count is not None:payload['group_count']=group_count
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as handle:
         json.dump(payload, handle, ensure_ascii=False, indent=2)
         temporary = Path(handle.name)

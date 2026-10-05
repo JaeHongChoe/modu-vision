@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {datasetWorkflow,workflowError,type ImageReviewMetadata,type GroupSplit,type ImportPreview,type DuplicateGroup} from '../../services/datasetWorkflow';
-import {resolveApiUrl} from '../../services/api';
+import {resolveApiUrl,getProjectContextGeneration,getApiPersistenceIdentity,subscribeProjectContext} from '../../services/api';
 import {host} from '../../services/hostAdapter';
 import {useDatasetStore} from '../../stores/useDatasetStore';
 import {useProjectStore} from '../../stores/useProjectStore';
@@ -10,6 +10,8 @@ import {ExternalMaskExchangePanel} from './ExternalMaskExchangePanel';
 import {projectPreferences} from '../../services/projectPreferences';
 export const DatasetWorkflowPanel:React.FC=()=>{
   const {folderPath,hasSelectedFolder,annotationsChanged,loadImages}=useDatasetStore();const {projectDir,openImageForLabeling}=useProjectStore();
+  const [epoch,setEpoch]=useState(getProjectContextGeneration);const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();const same=()=>getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity&&useDatasetStore.getState().folderPath===folderPath&&useProjectStore.getState().projectDir===projectDir;
+  useEffect(()=>subscribeProjectContext(()=>setEpoch(getProjectContextGeneration())),[]);
   const {reviewerName,setReviewerName}=useAnnotationStore();
   const [open,setOpen]=useState(false);const [rows,setRows]=useState<ImageReviewMetadata[]>([]);const [total,setTotal]=useState(0);const [state,setState]=useState('');const [product,setProduct]=useState('');const [lot,setLot]=useState('');const [group,setGroup]=useState('');const [tag,setTag]=useState('');
   const [groupBy,setGroupBy]=useState('lot');const [ratios,setRatios]=useState([70,20,10]);const [split,setSplit]=useState<GroupSplit|null>(null);const [duplicates,setDuplicates]=useState<DuplicateGroup[]>([]);
@@ -18,14 +20,14 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   const [bulkUsage,setBulkUsage]=useState('');const [palette,setPalette]=useState<Record<string,string>>({});
   useEffect(()=>{let active=true;const load=()=>projectPreferences.read().then(p=>{if(active)setPalette(p.tag_colors);}).catch(()=>undefined);if(projectDir)void load();window.addEventListener('project-preferences-changed',load);return()=>{active=false;window.removeEventListener('project-preferences-changed',load);};},[projectDir]);
   const [format,setFormat]=useState('labelme');const [importDir,setImportDir]=useState('');const [policy,setPolicy]=useState('reject');const [preview,setPreview]=useState<ImportPreview[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const refresh=async()=>{const result=await datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000});setRows(result.items);setTotal(result.total);};
-  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setError('');setNotice('');},[projectDir,folderPath]);
-  useEffect(()=>{if(!open||!hasSelectedFolder||!projectDir)return;let current=true;setBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates()]).then(([r,d])=>{if(current){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);}}).catch(e=>{if(current)setError(workflowError(e));}).finally(()=>{if(current)setBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder]);
-  const run=async(action:()=>Promise<void>)=>{setBusy(true);setError('');setNotice('');try{await action();}catch(e){setError(workflowError(e));}finally{setBusy(false);}};
+  const refresh=async()=>{if(!same())return;const result=await datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000});if(same()){setRows(result.items);setTotal(result.total);}};
+  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setError('');setNotice('');},[projectDir,folderPath,epoch,identity]);
+  useEffect(()=>{if(!open||!hasSelectedFolder||!projectDir)return;let current=true;setBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates(),datasetWorkflow.savedSplit()]).then(([r,d,s])=>{if(current&&same()){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);if(s.availability==='available')setSplit(s);}}).catch(e=>{if(current&&same())setError(workflowError(e));}).finally(()=>{if(current&&same())setBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder,generation]);
+  const run=async(action:()=>Promise<void>)=>{if(!same())return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){if(same())setError(workflowError(e));}finally{if(same())setBusy(false);}};
   const importLabels=async(apply:boolean)=>{
     if(apply&&!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');
     const revisions=Object.fromEntries(preview.map(r=>[r.image_uuid,r.revision]));const result=await datasetWorkflow.import(format,importDir,apply?'apply':'preview',policy,reviewerName||'operator',revisions);
-    setPreview(result.preview);if(result.applied){setNotice(`라벨 ${result.preview.length}개 이미지에 적용 · 이전 버전 ${result.backup_version_id}`);await annotationsChanged();await refresh();setPreview([]);}
+    if(!same())return;setPreview(result.preview);if(result.applied){setNotice(`라벨 ${result.preview.length}개 이미지에 적용 · 이전 버전 ${result.backup_version_id}`);await annotationsChanged();await refresh();if(same())setPreview([]);}
   };
   const bulkEdit=async()=>{
     if(!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');
@@ -34,12 +36,14 @@ export const DatasetWorkflowPanel:React.FC=()=>{
     if(bulkUsage)changes.usage_state=bulkUsage;
     if(!Object.keys(changes).length)throw new Error('일괄 적용할 제품·로트·그룹·태그 중 하나를 입력하세요.');
     const result=await datasetWorkflow.bulkEdit(rows.filter(r=>selected.has(r.image_uuid)),reviewerName,changes);
+    if(!same())return;
     setNotice(`${result.updated}개 이미지 정보 저장 · 라벨 승인은 이미지별로 진행하세요.`);setSelected(new Set());if(bulkUsage)await annotationsChanged();await refresh();setSplit(null);window.dispatchEvent(new Event('dataset-statistics-changed'));
   };
   const splitData=async(apply:boolean)=>{
     if(apply&&!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');
-    const result=await datasetWorkflow.split(groupBy.split(','),ratios.map(n=>n/100),apply,reviewerName||'operator');setSplit(result);
-    if(result.applied){setNotice(`그룹 분할 적용 · 이전 버전 ${result.backup_version_id}`);await annotationsChanged();await loadImages(1);}
+    if(!same())return;
+    const result=await datasetWorkflow.split(groupBy.split(','),ratios.map(n=>n/100),apply,reviewerName||'operator',apply?split?.qualification?.sha256:undefined);if(!same())return;setSplit(result);
+    if(result.applied){setNotice(`그룹 분할 적용 · 이전 버전 ${result.backup_version_id}`);await annotationsChanged();if(same())await loadImages(1);}
   };
   return <div className="relative z-[75] shrink-0 border-b border-slate-700 bg-[#101722] px-4 py-2 text-xs">
     <div className="flex items-center justify-between gap-2"><button type="button" onClick={()=>setOpen(!open)} disabled={!hasSelectedFolder||!projectDir} aria-expanded={open} className="rounded border border-cyan-800 px-3 py-1.5 font-semibold text-cyan-200 disabled:opacity-40">이미지 검토·그룹 분할·라벨 교환</button><ProjectPreferencePanel/></div>
@@ -59,13 +63,14 @@ export const DatasetWorkflowPanel:React.FC=()=>{
         <button disabled={busy} onClick={()=>void run(()=>splitData(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">분할 미리보기</button>
         <button disabled={busy||!split||!split.apply_supported} onClick={()=>void run(()=>splitData(true))} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">분할 적용</button>
       </div>{split&&<p className="mt-2 text-cyan-200">독립 그룹 {split.group_count}개 · 학습 {split.split.train} / 검증 {split.split.val} / 시험 {split.split.test}{!split.apply_supported&&<span className="block text-amber-200">{split.apply_unavailable_reason}</span>}</p>}
-      <p className="mt-2 text-slate-400">선택한 그룹과 동일 내용의 이미지는 같은 분할에 유지됩니다. 모든 이미지에 그룹 정보가 필요합니다.</p>
+      {split?.qualification&&<p aria-label="저장된 분할 근거" className={split.stale?'text-amber-200':'text-slate-400'}>저장 기준 {split.qualification.group_by.join(' + ')} · seed {split.qualification.seed} · {split.stale?'원본·메타데이터 변경: 다시 미리보기 필요':'원본·메타데이터 근거 고정'}</p>}
+      <p className="mt-2 text-slate-400">선택한 제품·로트 기준과 무관하게 같은 원본 그룹과 동일 내용은 같은 분할에 유지됩니다. crop·파생·synthetic 이미지는 원본과 같은 그룹을 지정하세요. 빈 그룹이나 시각 유사도만으로 원본 유래를 추정하지 않습니다.</p>
       {duplicates.length>0&&<ul className="mt-2 max-h-24 overflow-auto">{duplicates.map(d=><li key={d.content_hash} className={d.cross_split?'text-red-300':'text-amber-200'}>{d.cross_split?'분할 간 동일 이미지: ':'동일 내용: '}{d.images.join(', ')} · {d.splits.join(', ')}</li>)}</ul>}{!duplicates.length&&<p className="mt-2 text-emerald-300">현재 동일 내용 중복 없음</p>}</details>
       <details><summary className="cursor-pointer font-semibold">LabelMe · COCO · YOLO 라벨 가져오기/내보내기</summary><div className="mt-2 flex flex-wrap items-center gap-2"><select aria-label="라벨 교환 형식" value={format} onChange={e=>{setFormat(e.target.value);setPreview([]);}} className="rounded border border-slate-600 bg-slate-900 p-2">{['labelme','coco','yolo'].map(f=><option key={f} value={f}>{f.toUpperCase()}</option>)}</select>
-        <button disabled={busy} onClick={()=>void run(async()=>{const dir=await host.selectFolder({title:'가져올 라벨 폴더 선택'});if(dir){setImportDir(dir);setPreview([]);}})} className="rounded border border-slate-600 px-3 py-2">라벨 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={importDir}>{importDir||'폴더를 선택하세요'}</span>
+        <button disabled={busy} onClick={()=>void run(async()=>{const dir=await host.selectFolder({title:'가져올 라벨 폴더 선택'});if(dir&&same()){setImportDir(dir);setPreview([]);}})} className="rounded border border-slate-600 px-3 py-2">라벨 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={importDir}>{importDir||'폴더를 선택하세요'}</span>
         <select aria-label="기존 라벨 충돌 처리" value={policy} onChange={e=>setPolicy(e.target.value)} className="rounded border border-slate-600 bg-slate-900 p-2"><option value="reject">기존 라벨 충돌 시 중지</option><option value="merge">기존 라벨에 추가</option><option value="replace">기존 라벨 교체</option></select>
         <button disabled={busy||!importDir} onClick={()=>void run(()=>importLabels(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">가져오기 미리보기</button><button disabled={busy||!preview.length} onClick={()=>void run(()=>importLabels(true))} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">검토한 라벨 적용</button>
-        <button disabled={busy} onClick={()=>void run(async()=>{const result=await datasetWorkflow.export(format);const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);})} className="rounded border border-cyan-700 px-3 py-2">라벨 내보내기</button></div>
+        <button disabled={busy} onClick={()=>void run(async()=>{const result=await datasetWorkflow.export(format);if(!same())return;const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);})} className="rounded border border-cyan-700 px-3 py-2">라벨 내보내기</button></div>
         {preview.length>0&&<ul className="mt-2 max-h-32 overflow-auto">{preview.map(r=><li key={r.image_uuid} className={r.conflict?'text-amber-300':'text-slate-300'}>{r.file_name} · 기존 {r.existing_count} / 가져올 {r.incoming_count}{r.conflict?' · 충돌 있음':''}</li>)}</ul>}
         <p className="mt-2 text-slate-400">원본 좌표를 유지하며 이미지 파일은 복사하지 않습니다. COCO·YOLO는 박스/다각형만 지원합니다. 브러시 마스크·COCO RLE는 명시적으로 중지합니다. YOLO는 classes.txt와 이미지 크기 정보가 필요합니다.</p>
       </details>
