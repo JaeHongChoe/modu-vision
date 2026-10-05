@@ -82,6 +82,9 @@ def verify_evidence_binding(project, source, report):
     rows = report.get('images', [])
     if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
         raise ValueError('Comparison truth image evidence is malformed')
+    if report.get('intake_lineage') is not None:
+        _verify_ancestor_evidence(project, source, report, rows)
+        return
     if binding is not None:
         if (not isinstance(binding, dict) or not isinstance(binding.get('images'), list)
                 or any(not isinstance(row, dict) for row in binding['images'])):
@@ -129,3 +132,42 @@ def verify_evidence_binding(project, source, report):
                                         task=report['task'], classes=names)
         if current['declaration'] is not None or current.get('has_prior_scoped_declarations'):
             raise ValueError('Legacy comparison has no binding for current reviewed truth; re-evaluate')
+
+
+def _verify_ancestor_evidence(project, source, report, rows):
+    """Reopen original frozen truth without declaring truth on copied inputs."""
+    from backend.api.routes_model_comparisons import _model
+    from backend.engine.intake_lineage import verify_current_model
+    source=Path(source).resolve();task=report.get('task');saved=report['intake_lineage']
+    if (not isinstance(saved,dict) or report.get('truth_binding') is not None
+            or report.get('project_id')!=project['id']
+            or report.get('source_dataset_path')!=str(source)
+            or report.get('labelset_id')!=project.get('active_labelset_id','default')):
+        raise ValueError('Ancestor truth evidence scope is malformed or changed')
+    models=[]
+    for key in ('incumbent','candidate'):
+        if report.get(key+'_task',task)!=task:raise ValueError('Ancestor truth evidence requires one model task')
+        model=_model(project,source,task,report.get(key+'_job_id'))
+        if model is None or dm._hash(Path(model['checkpoint_path']))!=report.get('model_sha256',{}).get(key):
+            raise ValueError('Ancestor truth evidence model or checkpoint changed')
+        models.append(model)
+    ancestors=[model['intake_lineage'] for model in models if model.get('intake_lineage')]
+    if not ancestors or {key:value for key,value in ancestors[0].items() if key!='images'}!=saved:
+        raise ValueError('Ancestor frozen cohort or truth evidence changed')
+    verified=ancestors[0]
+    for model in models:
+        current=model.get('intake_lineage')
+        if current:
+            if any(current.get(key)!=verified.get(key) for key in ('cohort_sha256','input_sha256','truth_sha256','classes','class_roles','images')):
+                raise ValueError('Ancestor models no longer share the exact frozen truth evidence')
+        else:verify_current_model(project,source,model['checkpoint_path'],task,verified)
+    images=verified.get('images')
+    if (not isinstance(images,list) or not rows or report.get('total_test_images')!=len(images)
+            or report.get('selected_image_count')!=len(rows)
+            or len(rows)>len(images) or (report.get('full_test') is True and len(rows)!=len(images))):
+        raise ValueError('Ancestor frozen truth image selection changed')
+    keys=('file_path','image_sha256','ground_truth_label','ground_truth_verdict','truth_sha256',
+          'truth_scope','evaluation_file_path','ancestor_image_path')
+    for actual,expected in zip(rows,images):
+        if any(actual.get(key)!=expected.get(key) for key in keys):
+            raise ValueError('Ancestor comparison truth row differs from frozen cohort evidence')

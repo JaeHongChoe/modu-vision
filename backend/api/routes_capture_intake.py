@@ -99,7 +99,11 @@ def adopt(body:AdoptRequest,request:Request):
 
 @router.get('/versions')
 def versions(request:Request):
-    return execute(lambda:capture_intake.list_versions(get_current_project(request)))
+    def action():
+        result=capture_intake.list_versions(get_current_project(request))
+        result['versions']=[row for row in result['versions'] if row.get('kind')!='derived-edits'];result['total']=len(result['versions'])
+        return result
+    return execute(action)
 
 
 @router.get('/versions/{identifier}')

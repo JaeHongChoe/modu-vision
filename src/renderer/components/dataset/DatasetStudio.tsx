@@ -26,6 +26,7 @@ import { DatasetImportPanel } from './DatasetImportPanel';
 import { validationStatus } from './datasetImportView';
 import { DatasetWorkflowPanel } from './DatasetWorkflowPanel';
 import {CaptureIntakePanel} from './CaptureIntakePanel';
+import {DerivedDatasetPanel} from './DerivedDatasetPanel';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {DataReadinessPanel} from './DataReadinessPanel';
@@ -219,6 +220,7 @@ export const DatasetStudio: React.FC = () => {
       <OperatorGuidanceBanner step={1} />
       <DatasetWorkflowPanel />
       <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+      <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
       <WorkflowImpactPanel />
       <DatasetStatisticsPanel />
       <DataReadinessPanel />

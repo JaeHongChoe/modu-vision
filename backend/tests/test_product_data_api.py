@@ -15,6 +15,10 @@ def client_workspace(tmp_path,monkeypatch):
         def compatible(self,*args,app=None,**kwargs):return original(self,*args,**kwargs)
         monkeypatch.setattr(httpx.Client,'__init__',compatible)
     source=tmp_path/'source';source.mkdir();Image.new('RGB',(64,48),'gray').save(source/'part.png')
+    # A valid empty detection label is distinct from an unlabeled image. The
+    # current schema diagnostic must not be suppressed for missing labels.
+    import json
+    (source/'part.json').write_text(json.dumps({'version':'5.0','imagePath':'part.png','imageWidth':64,'imageHeight':48,'shapes':[],'flags':{}}))
     app=FastAPI();app.state.project_dir=tmp_path/'projects';app.include_router(routes_project.router)
     if importlib.util.find_spec('backend.api.routes_data_workbench') is not None:
         from backend.api import routes_data_workbench

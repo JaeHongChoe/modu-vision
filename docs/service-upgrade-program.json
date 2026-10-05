@@ -2595,7 +2595,7 @@
     "S3-05",
     "S3-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -2603,6 +2603,12 @@
      "result": "Immutable derived brightness versions and provenance; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Full edit/review/retrain/comparison/reapproval workflow and other-OS qualification.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "original-parent-software-derived-workflow-closure",
+     "source_sha": "e14d36f5245e07f6e912b4e8d8f6bc2f10df3ea6",
+     "result": "Immutable align/crop/rotate/brightness and coordinate transforms preserve text, directed headings and brush masks; unknown shapes and changed source/version/label/review bindings refuse. Explicit edit review creates a train-only branch preserving fixed test pixels and original explicit truth ancestry; separate normal label approval/inclusion, new snapshot, actual CPU baseline/candidate warm-start training, fixed16-test comparison, existing reapproval assessment and verified original return pass in actual Chrome/macOS development Electron. Baseline configured6 epochs (actual6 browser/5 native early stop); candidate1. Human representative attestation stays unchecked; no model quality approval issued. Corrected OBB/mask rotation capture, preserved optional bounded annotation text, and strict ancestor-cohort reapproval binding. Backend affected107, annotation130 and reapproval42 pass; renderer767 and production/E2E typechecks pass. Root readback SHA-2563ca6cd58f9409c394d9654b37f636ecd2e04faeda1acba7fe27abc5e305ba1a8 binds1397 frozen inputs/412 artifacts/two actual app cases.",
+     "scope": "Owned synthetic local execution proves the software workflow. Independent/human review, representative calibration/quality, GPU, installed/physical target acceptance remain pending. Windows excluded. Warm-start is weight initialization, not exact optimizer resume."
     }
    ],
    "file_actions": {
@@ -2612,12 +2618,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -2625,6 +2631,10 @@
    "proposed_test_file": "backend/tests/test_service_s3_08.py",
    "scope_refinement_ids": [
     "E03"
+   ],
+   "remaining": [
+    "Independent review/handoff and representative human/calibration/model-quality acceptance remain pending. Windows tests excluded; GPU/installed/physical target acceptance is separate.",
+    "Derived review is not original truth or model approval; a candidate must separately pass normal labels, inclusion, a new frozen training version, original heldout truth comparison, and existing explicit human approval gates."
    ]
   },
   {
@@ -9372,12 +9382,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 45,
-    "pending": 37
+    "verified": 46,
+    "pending": 36
    },
    "parent_status": {
-    "verification_pending": 39,
-    "in_progress": 17,
+    "verification_pending": 40,
+    "in_progress": 16,
     "planned": 26
    },
    "merged_extension_slices": 16,

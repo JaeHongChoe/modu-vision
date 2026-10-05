@@ -169,6 +169,18 @@ def test_real_comparison_executes_both_models_on_same_frozen_bytes_and_preserves
     assert all(Path(path).is_relative_to(Path(p['project_dir'])/'flow_evaluations'/'cohorts'/cohort['cohort_id']) for _,path in calls)
     assert all(row['evaluation_file_path'] != row['file_path'] and row['truth_sha256'] for row in report['images'])
     assert not any(adopted['adopted'][0]['relative_path'] in path for _,path in calls)
+    from backend.engine.comparison_truth import verify_evidence_binding
+    verify_evidence_binding(p, Path(p['source_dataset_dir']), report)
+    import copy
+    for field, value in [('ground_truth_verdict','NG'),('truth_sha256','f'*64),('evaluation_file_path',str(parent)),('ancestor_image_path',str(parent))]:
+        forged=copy.deepcopy(report)
+        known_ok=next(row for row in forged['images'] if row['ground_truth_verdict']=='OK')
+        known_ok[field]=value
+        with pytest.raises(ValueError,match='truth|cohort|evidence'):
+            verify_evidence_binding(p,Path(p['source_dataset_dir']),forged)
+    changed=copy.deepcopy(report);changed['intake_lineage']['truth_sha256']='f'*64
+    with pytest.raises(ValueError,match='truth|cohort|evidence'):
+        verify_evidence_binding(p,Path(p['source_dataset_dir']),changed)
     reopened=client.get('/api/evaluation/model-comparisons/'+report['comparison_id'],params={'source_dataset_path':p['source_dataset_dir'],'task':'segmentation'})
     assert reopened.json()==report
 

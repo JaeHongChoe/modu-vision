@@ -47,6 +47,21 @@ class QueueRequest(BaseModel):
         if bool(self.evaluation_id)==bool(self.comparison_id):raise ValueError('Choose exactly one saved evaluation or comparison')
         return self
 
+
+class DerivedReviewRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    expected_revision:int=Field(ge=0)
+    actor:str=Field(min_length=1,max_length=100)
+    decision:Literal['approve','reject']
+    note:str=Field(min_length=1,max_length=2000)
+
+
+class DerivedAdoptionRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    version_ids:list[str]=Field(min_length=1,max_length=1000)
+    actor:str=Field(min_length=1,max_length=100)
+    name:str=Field(min_length=1,max_length=200)
+
 class AdvanceRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     expected_revision:int=Field(ge=1)
@@ -160,6 +175,56 @@ def derived_image(identifier:str,request:Request):
     project,source=_context(request)
     try:row=dw.read_derived(project['project_dir'],source,identifier,_derived_scope(project));return FileResponse(row['file_path'],media_type='image/png')
     except (ValueError,OSError) as exc:raise _error(exc) from exc
+
+
+@router.post('/derived/{identifier}/review')
+def derived_review(identifier:str,req:DerivedReviewRequest,request:Request):
+    from backend.api.routes_image_truth import require_role
+    from backend.api.shared_authorization import request_actor
+    from backend.engine import derived_adoption
+    project,_=_context(request);require_role(request,project,{'owner','reviewer'})
+    try:return _version_response(derived_adoption.review(project,identifier,**{**req.model_dump(),'actor':request_actor(request,req.actor)}))
+    except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
+
+
+@router.post('/derived-adoptions')
+def derived_adopt(req:DerivedAdoptionRequest,request:Request):
+    from backend.api.routes_image_truth import require_role
+    from backend.api.shared_authorization import request_actor
+    from backend.engine import derived_adoption
+    project,_=_context(request);require_role(request,project,{'owner','reviewer'})
+    try:return derived_adoption.adopt(project,req.version_ids,actor=request_actor(request,req.actor),name=req.name)
+    except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
+
+
+@router.get('/derived-adoptions')
+def derived_adoptions(request:Request):
+    from backend.engine import capture_intake
+    project,_=_context(request)
+    try:return {'versions':[row for row in capture_intake.list_versions(project)['versions'] if row.get('kind')=='derived-edits' and row['scope']['task']==project['task'] and row['scope']['labelset_id']==project.get('active_labelset_id','default')]}
+    except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
+
+
+@router.get('/derived-adoptions/{identifier}')
+def derived_adoption_version(identifier:str,request:Request):
+    from backend.engine import capture_intake
+    project,_=_context(request)
+    try:
+        row=capture_intake.read_version(project,identifier)
+        if row.get('kind')!='derived-edits' or row['scope']['task']!=project['task'] or row['scope']['labelset_id']!=project.get('active_labelset_id','default'):
+            raise ValueError('Derived branch task or labelset scope changed')
+        return row
+    except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
+
+
+@router.get('/derived-adoptions/{identifier}/parent')
+def derived_parent(identifier:str,request:Request):
+    from backend.engine import capture_intake
+    project,_=_context(request)
+    try:
+        if capture_intake.read_version(project,identifier).get('kind')!='derived-edits':raise ValueError('Not a derived edit dataset branch')
+        return capture_intake.parent_source(project,identifier)
+    except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
 
 
 def _evaluations(project,source):

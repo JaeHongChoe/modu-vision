@@ -121,7 +121,7 @@ def _clip_polygon(points,rect):
 
 
 def edit_image_and_annotations(image,annotations,operation):
-    """Pixel-edge coordinates; rotations are clockwise quarter turns only."""
+    """Pixel-edge coordinates; explicit rigid alignment expands the whole image."""
     width,height=image.size;kind=operation.get('kind');rect=None
     if kind=='crop':
         rect=_numbers(operation.get('rect'),4,'crop');x1,y1,x2,y2=rect
@@ -135,6 +135,15 @@ def edit_image_and_annotations(image,annotations,operation):
         elif degrees==180:transform=lambda p:[width-p[0],height-p[1]];transpose=Image.Transpose.ROTATE_180
         else:transform=lambda p:[p[1],width-p[0]];transpose=Image.Transpose.ROTATE_90
         result=image.transpose(transpose);mask_edit=lambda im:im.transpose(transpose);angle=lambda v,rotation=degrees:(v+rotation)%360
+    elif kind=='align':
+        degrees=operation.get('degrees')
+        if isinstance(degrees,bool) or not isinstance(degrees,(int,float)) or not math.isfinite(degrees) or not -180<=degrees<=180:
+            raise ValueError('Alignment angle must be finite clockwise degrees from -180 to 180')
+        result=image.rotate(-degrees,resample=Image.Resampling.BICUBIC,expand=True)
+        co,si=math.cos(math.radians(degrees)),math.sin(math.radians(degrees))
+        transform=lambda p:[co*(p[0]-width/2)-si*(p[1]-height/2)+result.width/2,si*(p[0]-width/2)+co*(p[1]-height/2)+result.height/2]
+        angle=lambda v,rotation=degrees:(v+rotation)%360
+        mask_edit=lambda im,rotation=degrees:im.rotate(-rotation,resample=Image.Resampling.NEAREST,expand=True)
     elif kind=='flip':
         axis=operation.get('axis')
         if axis=='horizontal':transform=lambda p:[width-p[0],p[1]];transpose=Image.Transpose.FLIP_LEFT_RIGHT;angle=lambda v:(180-v)%360
@@ -147,7 +156,7 @@ def edit_image_and_annotations(image,annotations,operation):
             raise ValueError('Brightness factor must be a finite number from 0 to 4')
         result=ImageEnhance.Brightness(image).enhance(factor)
         transform=lambda p:list(p);angle=lambda v:v;mask_edit=lambda im:im.copy()
-    else:raise ValueError('Choose crop, rotate, flip or brightness')
+    else:raise ValueError('Choose crop, rotate, align, flip or brightness')
     transformed=[];omitted=[]
     for annotation in annotations:
         row=copy.deepcopy(annotation);shape=row.get('type')
@@ -199,7 +208,9 @@ def edit_image_and_annotations(image,annotations,operation):
         if points is not None:
             if len(points)<3:omitted.append(row.get('id'));continue
             points=[transform(p) for p in points]
-            if shape=='bbox':row['bbox']=[min(p[0] for p in points),min(p[1] for p in points),max(p[0] for p in points),max(p[1] for p in points)]
+            if shape=='bbox':
+                row['bbox']=[min(p[0] for p in points),min(p[1] for p in points),max(p[0] for p in points),max(p[1] for p in points)]
+                if kind=='align':row.update(type='polygon',polygon=points,points=points)
             else:
                 row['polygon']=points;row['points']=points
                 row['bbox']=[min(p[0] for p in points),min(p[1] for p in points),max(p[0] for p in points),max(p[1] for p in points)]
@@ -217,8 +228,16 @@ def read_derived(project,source,identifier,scope=None):
     if scope is not None and record.get('scope')!=scope:raise ValueError('Derived version task or labelset scope changed')
     image=directory/'images'/'derived.png'
     if image.is_symlink() or not image.is_file() or sha256(image)!=record['derived_sha256']:raise ValueError('Derived image changed')
+    annotation_files=record.get('annotation_files_sha256',{})
+    if annotation_files and set(annotation_files)!={'annotations.json','images/derived.json','masks/derived.png'}:raise ValueError('Derived annotation inventory changed')
+    for name,digest in annotation_files.items():
+        path=directory/name
+        if path.is_symlink() or not path.is_file() or sha256(path)!=digest:raise ValueError('Derived annotation bytes changed')
     original=_source_image(source,record['source_path'])
     if sha256(original)!=record['source_sha256']:raise ValueError('Original source changed; saved derived version is stale')
+    from backend.engine.derived_adoption import read_review
+    review=read_review(directory,record)
+    record['review_revision']=review['revision'];record['review']=review['review']
     return record
 
 
@@ -274,6 +293,7 @@ def derive(project,source,image_path,annotations,operation,actor,expected_sha256
             cv2.fillPoly(mask,[contour],int(cid))
         _write(staging/'images'/'derived.json',{'version':'5.0','imagePath':'derived.png','imageWidth':result.width,'imageHeight':result.height,'shapes':shapes,'flags':{},'derived_version_id':identifier})
         (staging/'masks').mkdir();Image.fromarray(mask).save(staging/'masks'/'derived.png')
+        record['annotation_files_sha256']={name:sha256(staging/name) for name in ('annotations.json','images/derived.json','masks/derived.png')}
         record['evidence_sha256']=hashlib.sha256(canonical(record)).hexdigest();_write(staging/'version.json',record)
         if sha256(original)!=digest:raise ValueError('Source changed during editing')
         os.rename(staging,directory)

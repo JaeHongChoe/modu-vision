@@ -91,6 +91,7 @@ class AnnotationItem(BaseModel):
     mask_rle: Optional[str] = None
     is_normal: Optional[bool] = None
     color: Optional[str] = None
+    text: Optional[str] = Field(None, max_length=2000)
     direction_deg: Optional[float] = Field(None,ge=0,lt=360,allow_inf_nan=False)
 
     @field_validator("bbox")

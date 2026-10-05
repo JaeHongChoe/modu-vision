@@ -90,6 +90,7 @@ export interface AnnotationItem {
   mask_rle?: string;
   is_normal?: boolean;
   color?: string;
+  text?: string; // Preserve transcription attached to a transformed region.
 }
 
 export interface AnnotationSavePayload {
