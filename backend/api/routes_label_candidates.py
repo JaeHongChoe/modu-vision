@@ -52,6 +52,7 @@ class CandidateRequest(BaseModel):
     negative_examples:list[ExampleRequest]=Field(default_factory=list,max_length=100)
     points:list[PointRequest]=Field(default_factory=list,max_length=1000)
     boxes:list[list[float]]=Field(default_factory=list,max_length=1000)
+    exclude_regions:list[list[float]]=Field(default_factory=list,max_length=100)
     device:str='cpu'
     min_area:float=Field(0,ge=0)
     max_area:Optional[float]=Field(None,ge=0)
@@ -134,6 +135,8 @@ def generate_candidates(req:CandidateRequest,request:Request):
     return _generate_candidates(req,get_current_project(request))
 
 def _generate_candidates(req,project,cancel=None,batch_id=None):
+    if req.exclude_regions and req.backend != 'foundation':
+        raise HTTPException(422,detail='Excluded regions require the foundation mask provider; other providers do not support pixel exclusions')
     if project['task'] not in {'detection','segmentation'}: raise HTTPException(422,detail='Text/exemplar region proposals require detection or segmentation labeling')
     image=suggestions._image_path(project,req.image_path)
     source=_source_path(project)
@@ -175,8 +178,11 @@ def _generate_candidates(req,project,cancel=None,batch_id=None):
                 boxes=req.boxes,device=req.device,threshold=req.threshold,text_threshold=req.text_threshold,
                 min_area=req.min_area,max_area=req.max_area,min_width=req.min_width,max_width=req.max_width,
                 min_height=req.min_height,max_height=req.max_height,max_candidates=req.max_candidates,
-                output_geometry=req.output_geometry,cancel=cancel,suggestion_model=suggestion_model,**examples)
+                output_geometry=req.output_geometry,cancel=cancel,suggestion_model=suggestion_model,
+                exclude_regions=req.exclude_regions,**examples)
             details={'foundation_setup':setup,'prompt':req.prompt,'device':req.device,'output_geometry':req.output_geometry,
+                     'exclude_regions':req.exclude_regions,
+                     'prompt_spec':{'points':[p.model_dump() for p in req.points],'boxes':req.boxes,'exclude_regions':req.exclude_regions},
                      'positive_examples':examples['positive_examples'],'negative_examples':examples['negative_examples'],
                      'suggestion_model_id':req.suggestion_model_id,
                      'suggestion_checkpoint_sha256':suggestion_model['checkpoint_sha256'] if suggestion_model else None,

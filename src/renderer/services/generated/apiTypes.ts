@@ -37,6 +37,7 @@ export type AnnotationItem = {
   mask_rle?: string | null;
   is_normal?: boolean | null;
   color?: string | null;
+  text?: string | null;
   direction_deg?: number | null;
 };
 
@@ -181,6 +182,7 @@ export type CandidateBatchRequest = {
   negative_examples?: Array<ExampleRequest>;
   points?: Array<PointRequest>;
   boxes?: Array<Array<number>>;
+  exclude_regions?: Array<Array<number>>;
   device?: string;
   min_area?: number;
   max_area?: number | null;
@@ -212,6 +214,7 @@ export type CandidateRequest = {
   negative_examples?: Array<ExampleRequest>;
   points?: Array<PointRequest>;
   boxes?: Array<Array<number>>;
+  exclude_regions?: Array<Array<number>>;
   device?: string;
   min_area?: number;
   max_area?: number | null;
@@ -366,6 +369,12 @@ export type DeployRequest = {
   reviewer: string;
 };
 
+export type DerivedAdoptionRequest = {
+  version_ids: Array<string>;
+  actor: string;
+  name: string;
+};
+
 export type DerivedRequest = {
   image_path: string;
   expected_sha256: string;
@@ -373,6 +382,13 @@ export type DerivedRequest = {
   operation: { [key: string]: unknown };
   actor: string;
   parent_id?: string | null;
+};
+
+export type DerivedReviewRequest = {
+  expected_revision: number;
+  actor: string;
+  decision: "approve" | "reject";
+  note: string;
 };
 
 export type DiagnosticRequest = {
@@ -1122,6 +1138,7 @@ export type ProjectCreateRequest = {
   project_dir?: string | null;
   description?: string;
   active_preset?: "fast" | "precision";
+  template?: { [key: string]: unknown } | null;
 };
 
 export type ProjectOpenRequest = {
@@ -1738,6 +1755,8 @@ export interface ApiRequestBody {
   "PUT /api/compute/selection": SelectionInput;
   "POST /api/context/artifacts": ArtifactRegistration;
   "POST /api/data-workbench/derived": DerivedRequest;
+  "POST /api/data-workbench/derived-adoptions": DerivedAdoptionRequest;
+  "POST /api/data-workbench/derived/{identifier}/review": DerivedReviewRequest;
   "POST /api/data-workbench/diagnostics": DiagnosticRequest;
   "POST /api/data-workbench/review-queues": QueueRequest;
   "POST /api/data-workbench/review-queues/{identifier}/advance": AdvanceRequest;

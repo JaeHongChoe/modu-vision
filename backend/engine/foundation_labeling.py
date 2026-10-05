@@ -242,7 +242,7 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
                           positive_examples=None, negative_examples=None, device='cpu', threshold=.5,
                           text_threshold=.25, min_area=0, max_area=None, min_width=0, max_width=None,
                           min_height=0, max_height=None, max_candidates=20, output_geometry='polygon',
-                          cancel=None, suggestion_model=None):
+                          cancel=None, suggestion_model=None, exclude_regions=None):
     check_cancel(cancel)
     device = resolve_device(device)
     rgb = read_rgb(image_path)
@@ -252,6 +252,12 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
                 or not 0 <= point['x'] < rgb.width or not 0 <= point['y'] < rgb.height):
             raise ValueError('Prompt point is outside the source image or has an invalid label')
     box_prompts = [_box(box, rgb.width, rgb.height) for box in boxes or []]
+    if len(exclude_regions or []) > 100:
+        raise ValueError('At most 100 excluded regions are supported')
+    exclusions = [_box(box, rgb.width, rgb.height) for box in exclude_regions or []]
+    if any(p['label'] == 1 and x1 <= p['x'] < x2 and y1 <= p['y'] < y2
+           for p in points for x1, y1, x2, y2 in exclusions):
+        raise ValueError('A positive point lies inside an excluded region; adjust the prompts')
     if output_geometry not in ('polygon', 'mask', 'bbox'):
         raise ValueError('Unknown output geometry')
     examples = []
@@ -290,12 +296,20 @@ def foundation_candidates(image_path, setup, *, prompt='', label='defect', point
         candidates = []; masks = []
         bit_counts=np.array([int(i).bit_count() for i in range(256)],dtype=np.uint8)
         provenance = {**model.provenance, 'device': device, 'prompt': prompt,'grounding':grounding_receipt,
-                      'examples': [e[2] for e in examples], 'score_kind': 'predicted_mask_iou'}
+                      'examples': [e[2] for e in examples], 'score_kind': 'predicted_mask_iou',
+                      'exclude_regions': exclusions,
+                      'exclusion_semantics': 'remove_intersecting_mask_pixels_before_geometry'}
         for index, (mask_points, box) in enumerate(prompts):
             check_cancel(cancel)
             mask, score = model.predict(rgb, mask_points, box, cancel)
             if box is not None and tuple(box) in grounding_scores: score=min(score,grounding_scores[tuple(box)])
             if mask.shape != (rgb.height, rgb.width): raise ValueError('SAM2 mask dimensions do not match source image')
+            # Image-edge rectangles conservatively remove every intersecting
+            # source pixel. Copy first: cached provider output is immutable.
+            if exclusions:
+                mask = np.asarray(mask, dtype=bool).copy()
+                for x1, y1, x2, y2 in exclusions:
+                    mask[math.floor(y1):math.ceil(y2), math.floor(x1):math.ceil(x2)] = False
             if score < threshold: continue
             candidate = mask_candidate(mask, score, label, output_geometry, provenance)
             if candidate is None: continue

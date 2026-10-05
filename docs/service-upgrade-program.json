@@ -2495,8 +2495,15 @@
     "S3-04",
     "S3-05"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "source-qualified-exclusion-slice",
+     "source_sha": "23068080798fb467225eca25bfc53a6c57c25451",
+     "result": "Image-specific excluded rectangles now validate before model loading and remove intersecting original mask pixels before geometry/dedup/size filtering, retaining exact prompt and exclusion provenance. Unsupported providers refuse the option. Existing explicit candidate review, optional models, long text, size, examples, cancellation and reopen remain separate. Backend30 and renderer767 pass; TypeScript passes. Two actual Chrome/macOS development Electron input add/remove/invalid/image-switch/reload cases preserve originals and refuse unavailable learned provider execution. Root readback SHA-256a320dcfb415175bfb06d129fb9dca9d97fec96c99b14d5a95f59cfeedb4f83dd binds1399 inputs/32 artifacts. Generated API request types synchronized for current project template, annotation text, derived review/adoption and exclusion schema.",
+     "scope": "Controlled mask adapter contracts and actual unavailable-provider UI; authentic SAM2/Grounding model weights and optional dependencies absent. No learned inference, representative quality, human acceptance or whole parent promoted. Windows excluded."
+    }
+   ],
    "file_actions": {
     "backend/engine/label_candidate_providers.py": "Modify",
     "backend/engine/foundation_labeling.py": "Modify",
@@ -9387,8 +9394,8 @@
    },
    "parent_status": {
     "verification_pending": 40,
-    "in_progress": 16,
-    "planned": 26
+    "in_progress": 17,
+    "planned": 25
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

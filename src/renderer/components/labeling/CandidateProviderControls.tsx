@@ -20,6 +20,9 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const [setup,setSetup]=useState<FoundationSetup|null>(null);const [prompt,setPrompt]=useState('');const [label,setLabel]=useState('defect');
   const [positive,setPositive]=useState<RegionExample[]>([]);const [negative,setNegative]=useState<RegionExample[]>([]);
   const [examplePath,setExamplePath]=useState('');const [exampleRoi,setExampleRoi]=useState('');
+  const [exclusions,setExclusions]=useState<{imagePath:string;regions:number[][]}>({imagePath:'',regions:[]});
+  const [excludeRoi,setExcludeRoi]=useState('');
+  const excludeRegions=exclusions.imagePath===currentImage?.file_path?exclusions.regions:[];
   const [device,setDevice]=useState('cpu');const [geometry,setGeometry]=useState<'mask'|'polygon'|'bbox'>('mask');const [threshold,setThreshold]=useState(.5);const [textThreshold,setTextThreshold]=useState(.25);const [maxCandidates,setMaxCandidates]=useState(20);
   const [sizes,setSizes]=useState<SizeControls>({min_area:0,min_width:0,min_height:0});
   const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
@@ -31,7 +34,8 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const activeBatch=visibleBatches.find(b=>labelingJobActive(b.status));const batch=visibleBatches.find(b=>b.id===batchId);
   const running=(currentScope&&labelingJobActive(featureJob?.status))||!!activeBatch;
   const sameProject=()=>labelingScope(useProjectStore.getState())===scope;
-  useEffect(()=>{bind(currentImage?.file_path||'');},[bind,currentImage?.file_path]);
+  useEffect(()=>{bind(currentImage?.file_path||'');setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[bind,currentImage?.file_path]);
+  useEffect(()=>{setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[scope]);
   useEffect(()=>{setLabel(activeCategory.name);},[activeCategory.name]);
   useEffect(()=>{
     let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setError('');setNotice('');clear();
@@ -50,7 +54,16 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   },[running,activeBatch?.id,featureJob?.id,scope]);
   const run=async(action:()=>Promise<void>)=>{if(!currentScope||!sameProject())return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){if(sameProject())setError(workflowError(e));}finally{if(sameProject())setBusy(false);}};
   const options=():FoundationOptions=>({label,prompt,device,threshold,text_threshold:textThreshold,max_candidates:maxCandidates,output_geometry:geometry,
-    positive_examples:positive,negative_examples:negative,points,boxes,...sizes,class_ids:Object.fromEntries(categories.filter(c=>c.id>0&&c.id<=255).map(c=>[c.name,c.id])),...(modelId?{suggestion_model_id:modelId}:{})});
+    positive_examples:positive,negative_examples:negative,points,boxes,exclude_regions:excludeRegions,...sizes,class_ids:Object.fromEntries(categories.filter(c=>c.id>0&&c.id<=255).map(c=>[c.name,c.id])),...(modelId?{suggestion_model_id:modelId}:{})});
+  const addExclusion=(selected=false)=>{
+    if(!currentImage||!currentScope||!sameProject())return;
+    try{
+      const roi=selected?regionExample(currentImage.file_path,annotations.find(a=>a.id===selectedAnnotationId))?.roi:excludeRoi.split(',').map(v=>v.trim()===''?NaN:Number(v));
+      if(!roi||roi.length!==4||roi.some(v=>!Number.isFinite(v))||roi[0]<0||roi[1]<0||roi[2]<=roi[0]||roi[3]<=roi[1])throw new Error('제외 영역의 원본 좌표 x1, y1, x2, y2 또는 박스·다각형 라벨을 선택하세요.');
+      if(excludeRegions.length>=100)throw new Error('제외 영역은 이미지당 최대 100개입니다.');
+      setExclusions({imagePath:currentImage.file_path,regions:[...excludeRegions,[...roi]]});setError('');
+    }catch(e){setError(workflowError(e));}
+  };
   const generate=()=>run(async()=>{if(!currentImage||!setup)return;const imagePath=currentImage.file_path;
     useModelAssistRunStore.getState().begin();try{const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.generate(buildFoundationRequest(imagePath,options(),current));if(sameProject()&&useAnnotationStore.getState().currentImage?.file_path===imagePath)onCreated(next);}finally{useModelAssistRunStore.getState().end();}});
   const chooseModel=(field:'mask_model_dir'|'model_dir')=>run(async()=>{const path=await host.selectFolder({title:field==='mask_model_dir'?'로컬 SAM2 모델 폴더':'로컬 Grounding DINO 모델 폴더'});if(path&&sameProject()){const next=await provider.configure({[field]:path});if(sameProject())setSetup(next);}});
@@ -73,7 +86,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   });
   const startBatch=()=>run(async()=>{if(!setup||!batchPaths.size)return;
     // Point/box coordinates are image-specific; a keyword/example batch shares only semantic prompts.
-    const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.startBatch({...buildFoundationRequest('',{...options(),points:[],boxes:[]},current),image_paths:[...batchPaths]});
+    const current=await provider.setup();if(!sameProject())return;setSetup(current);const next=await provider.startBatch({...buildFoundationRequest('',{...options(),points:[],boxes:[],exclude_regions:[]},current),image_paths:[...batchPaths]});
     if(sameProject()){setBatches(old=>[next,...old]);setBatchId(next.id);}
   });
   const noInference=!currentScope||disabled||busy||running||!currentImage||!foundationAllowed(setup,prompt);
@@ -91,6 +104,12 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
     <div className="flex flex-wrap gap-2"><button disabled={!currentImage} onClick={()=>setActiveTool('foundation_point')} className="rounded border border-cyan-700 px-2 py-1">캔버스 점 prompt</button><button disabled={!currentImage} onClick={()=>setActiveTool('foundation_box')} className="rounded border border-cyan-700 px-2 py-1">캔버스 박스 prompt</button>
       <select aria-label="SAM2 점 positive negative" value={pointLabel} onChange={e=>setPointLabel(Number(e.target.value) as 0|1)} className={inputClass}><option value={1}>positive 점</option><option value={0}>negative 점</option></select><button onClick={clear} className="rounded border border-slate-600 px-2 py-1">점·박스 지우기</button></div>
     <p className="text-[10px] text-slate-400">현재 원본 좌표 · 점 {points.length} / 박스 {boxes.length}. 후보를 검토하고 채택하면 브러시 mask 또는 다각형으로 편집할 수 있습니다.</p>
+    <details><summary className="cursor-pointer text-cyan-200">현재 이미지 제외 영역 · {excludeRegions.length}개</summary><div className="mt-2 space-y-2">
+      <input aria-label="제외할 원본 영역" value={excludeRoi} onChange={e=>setExcludeRoi(e.target.value)} placeholder="x1, y1, x2, y2 (원본 px)" className={`w-full ${inputClass}`}/>
+      <button disabled={!currentScope||disabled||!currentImage||busy||running} onClick={()=>addExclusion()} className="rounded border border-slate-600 px-2 py-1">제외 영역 추가</button><button disabled={!currentScope||disabled||!currentImage||busy||running} onClick={()=>addExclusion(true)} className="ml-2 rounded border border-slate-600 px-2 py-1">선택 라벨의 박스 영역 제외</button>
+      <ul>{excludeRegions.map((box,i)=><li key={i} className="flex justify-between text-[10px]"><span>제외 {i+1}: [{box.join(', ')}]</span><button disabled={busy||running} aria-label={`제외 영역 ${i+1} 제거`} onClick={()=>setExclusions({imagePath:currentImage?.file_path||'',regions:excludeRegions.filter((_,j)=>i!==j)})}>제거</button></li>)}</ul>
+      <p className="text-[10px] text-slate-400">제외 사각형과 겹치는 원본 픽셀을 mask에서 제거한 뒤 크기를 검사합니다. 다각형 라벨은 둘러싼 박스로 제외합니다. 내부 구멍은 pixel mask에서 보존됩니다. 이미지 변경 시 초기화되며 일괄 후보에는 적용되지 않습니다.</p>
+    </div></details>
     <label className="block">대상 설명 (선택)<textarea aria-label="텍스트 검출 프롬프트" value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} placeholder="scratch. crack. ceramic part." className={`mt-1 w-full ${inputClass}`}/></label>
     <p className="text-[10px] text-slate-400">{prompt.length.toLocaleString()}자 · 긴 원문과 모델별 분할 입력을 보존합니다. 영문 Grounding DINO 구문을 사용하세요. 텍스트를 입력하면 SAM2와 텍스트 모델이 모두 준비되어야 합니다.</p>
     <label className="block">후보 클래스<input aria-label="SAM2 후보 클래스" value={label} onChange={e=>setLabel(e.target.value)} className={`ml-2 ${inputClass}`}/></label>
@@ -111,7 +130,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
       <button disabled={disabled||busy||running} onClick={()=>void train(false)} className="rounded border border-indigo-600 px-2 py-1 disabled:opacity-40">새 분류기 학습</button><button disabled={disabled||busy||running||!modelId} onClick={()=>void train(true)} className="ml-2 rounded border border-indigo-600 px-2 py-1 disabled:opacity-40">선택 모델 refine</button>
       {currentScope&&featureJob&&<p role="status" className="break-all text-[11px]">{featureJob.id} · {statusNames[featureJob.status]} · 영역 {featureJob.training_regions??'—'} · loss {featureJob.loss??'—'} {labelingJobActive(featureJob.status)&&<button disabled={busy} onClick={()=>void run(async()=>{const j=await provider.cancelTraining(featureJob.id);if(sameProject())setFeatureJob(j);})} className="ml-2 text-amber-300">학습 취소</button>} {featureJob.error&&<span className="block text-red-300">{featureJob.error}</span>}</p>}
     </div></details>
-    <details><summary className="cursor-pointer text-cyan-200">키워드·예시 이미지 일괄 후보와 저장 기록</summary><div className="mt-2 space-y-2"><p className="text-[10px] text-slate-400">배치는 공통 텍스트·positive/negative 예시를 사용합니다. 현재 이미지 점·박스는 각 이미지에서 개별 실행하세요.</p>
+    <details><summary className="cursor-pointer text-cyan-200">키워드·예시 이미지 일괄 후보와 저장 기록</summary><div className="mt-2 space-y-2"><p className="text-[10px] text-slate-400">배치는 공통 텍스트·positive/negative 예시를 사용합니다. 현재 이미지 점·박스·제외 영역은 각 이미지에서 개별 실행하세요.</p>
       <button disabled={busy||running} onClick={()=>void loadAll()} className="rounded border border-slate-600 px-2 py-1">가져온 이미지 전체 선택</button><button onClick={()=>setBatchPaths(new Set())} className="ml-2 rounded border border-slate-600 px-2 py-1">선택 해제</button><span className="ml-2">{batchPaths.size}개</span>
       <div className="max-h-28 overflow-auto">{images.map(i=><label key={i.file_path} className="block truncate"><input type="checkbox" checked={batchPaths.has(i.file_path)} onChange={e=>setBatchPaths(old=>{const next=new Set(old);if(e.target.checked)next.add(i.file_path);else next.delete(i.file_path);return next;})} className="mr-2"/>{i.file_name}</label>)}</div>
       <button disabled={disabled||busy||running||!batchPaths.size||!foundationAllowed(setup,prompt)} onClick={()=>void startBatch()} className="rounded bg-indigo-700 px-3 py-2 disabled:opacity-40">비동기 일괄 후보 시작</button>{activeBatch&&<button disabled={busy||activeBatch.status==='cancelling'} onClick={()=>void run(async()=>{const next=await provider.cancelBatch(activeBatch.id);if(sameProject())setBatches(old=>old.map(b=>b.id===next.id?next:b));})} className="ml-2 rounded border border-amber-600 px-3 py-2 text-amber-200">배치 취소</button>}
