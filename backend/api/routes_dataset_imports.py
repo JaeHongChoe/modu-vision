@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import re
 import threading
-import uuid
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -106,13 +105,11 @@ def submit_archive_import(payload: ArchiveImportRequest, request: Request):
     extracted once, and an existing folder is reused only while it still holds exactly the files of its extraction
     receipt (otherwise the archive is extracted again into a new folder). The job records which artifact it read.
 
-    Extraction runs inside this request (bounded by the archive limits); very large archives belong in the job thread,
-    which is not implemented yet. Reusing a folder reads every extracted byte again to verify it."""
+    The request reserves the immutable reference; verified object IO, extraction/reuse and the extracted-source
+    snapshot run inside the fenced job. Invalid archive contents are recorded job failures. No version is activated."""
     from backend.api.routes_artifacts import authorize_artifact, get_artifact_store
     from backend.contracts.context import ArtifactRef
     from backend.engine.artifact_store import ArtifactError
-    from backend.engine.dataset_archive_input import (ArchiveNoSpace, ArchiveRefused, extract_dataset_archive,
-                                                      verify_extraction)
     context, project_key, project = _scope(request)
     key = request.headers.get("Idempotency-Key")
     if key is not None and not _IDEMPOTENCY_KEY.fullmatch(key):
@@ -129,6 +126,7 @@ def submit_archive_import(payload: ArchiveImportRequest, request: Request):
         raise HTTPException(getattr(exc, "status", 409), str(exc)) from exc
     artifact = {"id": ref.id, "revision": ref.revision, "sha256": ref.sha256}
     jobs = _jobs(request)
+    _configure_archive_jobs(jobs, request, store)
     if key is not None:  # a retried request is answered before anything is extracted or verified again
         reserved = jobs.store.reserved(context, project_key, IMPORT_KIND, key)
         if reserved is not None:
@@ -139,36 +137,33 @@ def submit_archive_import(payload: ArchiveImportRequest, request: Request):
             recorded = {name: spec_json.get(name) for name in intended}  # every field but the extracted folder
             if recorded != intended:
                 raise HTTPException(409, "This idempotency key was already used for a different request.")
-            return {**_view(jobs, reserved["id"], project_key, context.actor_id), "idempotent_replay": True, "source_root": spec_json["source_root"]}
-    imports = Path(project["project_dir"]) / "dataset_imports"
-    target = imports / ref.sha256
-    if target.exists() and not verify_extraction(target, ref.sha256):
-        # The first folder was changed (files added, moved or edited): keep it as it is, reuse an earlier verified
-        # copy of this archive, or extract a new one.
-        copies = sorted(path for path in imports.glob(f"{ref.sha256}.*") if path.is_dir())
-        target = next((path for path in copies if verify_extraction(path, ref.sha256)),
-                      imports / f"{ref.sha256}.{uuid.uuid4().hex[:12]}")
-    if not target.exists():
-        try:
-            with store.open(context, ref) as handle:
-                extract_dataset_archive(handle, target, archive_sha256=ref.sha256)
-        except ArtifactError as exc:
-            raise HTTPException(getattr(exc, "status", 409), str(exc)) from exc
-        except ArchiveNoSpace as exc:
-            raise HTTPException(507, str(exc)) from exc
-        except ArchiveRefused as exc:
-            raise HTTPException(422, str(exc)) from exc
+            view = _view(jobs, reserved["id"], project_key, context.actor_id)
+            return {**view, "idempotent_replay": True, "source_root": view['source']['root']}
+    target = Path(project["project_dir"]) / "dataset_imports" / ref.sha256
     spec = ImportSpec(project_root=project["project_dir"], source_root=str(target), task=payload.task,
                       invalid_policy=payload.invalid_policy, verify=payload.verify, follow_links=False, artifact=artifact,
-                      annotation_root=project.get("annotations_dir"))
+                      annotation_root=project.get("annotations_dir"), archive_pending=True)
     try:
         submitted = jobs.submit(context, project_key, spec, key)
     except JobConflict as exc:
         raise HTTPException(409, str(exc)) from exc
     if submitted.created:
         jobs.start(submitted.id)
-    return {**_view(jobs, submitted.id, project_key, context.actor_id), "idempotent_replay": not submitted.created,
-            "source_root": str(target)}
+    view = _view(jobs, submitted.id, project_key, context.actor_id)
+    return {**view, "idempotent_replay": not submitted.created, "source_root": view['source']['root']}
+
+
+def _configure_archive_jobs(jobs, request, store=None):
+    from backend.api.routes_artifacts import get_artifact_store
+    jobs.artifact_store = store or get_artifact_store(request)
+    accounts = getattr(request.app.state, 'accounts', None)
+    def authorize(context):
+        # Match the existing label.write import policy at worker time, including disabled actors/membership changes.
+        if accounts is not None and not accounts.authorize(context.actor_id, 'label.write', context.project_id).allowed:
+            raise ImportNotAcceptable('Archive project permission changed')
+        if accounts is None and context.mode != 'local':
+            raise ImportNotAcceptable('Archive team authority is unavailable')
+    jobs.authorize_archive = authorize
 
 
 @router.get("/imports/{job_id}")
@@ -189,6 +184,11 @@ def cancel_import(job_id: str, request: Request):
 def resume_import(job_id: str, request: Request):
     context, project_key, _project = _scope(request)
     jobs = _jobs(request)
+    _view(jobs, job_id, project_key, context.actor_id)
+    if json.loads(jobs.store.record(job_id)['spec_json']).get('archive_pending'):
+        from backend.api.routes_artifacts import authorize_artifact
+        authorize_artifact(request)
+        _configure_archive_jobs(jobs, request)
     try:
         ref = jobs.resume(job_id, project_key, context.actor_id)
     except KeyError:

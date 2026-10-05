@@ -190,7 +190,7 @@ export interface DatasetRevisionReceipt {
 }
 export interface DatasetImportView {
   job_id: string; state: string; revision: number; attempts: number; cancel_requested: boolean;
-  progress: { phase?: string; processed?: number; total?: number | null; total_known?: boolean } | null;
+  progress: { phase?: string; processed?: number; total?: number | null; total_known?: boolean; unit?: 'byte' | 'image' } | null;
   result: { revision?: DatasetRevisionReceipt; reason?: string; error?: { message: string } } | null;
   resumable?: boolean;
   operation?: { source_snapshot?: string; attempt: number; progress_unit: string; expires_at: number | null; result_ref?: { count: number; sha256: string } | null };

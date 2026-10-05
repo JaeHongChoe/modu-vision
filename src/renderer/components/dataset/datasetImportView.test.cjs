@@ -3,6 +3,14 @@ function load(file){const name=path.join(__dirname,file),m=new Module(name,modul
 const view=()=>load('datasetImportView.ts');
 const job=(state,extra={})=>({job_id:'j',state,revision:3,attempts:1,cancel_requested:false,progress:null,result:null,...extra});
 const receipt=(extra={})=>({revision_id:'r1',state:'prepared',manifest_sha256:'m',image_count:6,valid_count:6,error_count:0,invalid_policy:'exclude',skipped_links:0,unreadable_folders:0,reused_entries:0,verified_all:true,...extra});
+test('archive phases report byte progress separately from indexed image progress',()=>{const v=view();
+ assert.equal(v.importStatusText(job('running',{progress:{phase:'extracting',unit:'byte'}})),'ZIP 처리 중');
+ assert.equal(v.importStatusText(job('running',{cancel_requested:true,progress:{phase:'extracting',unit:'byte'}})),'중지 요청됨 · 현재 읽기 구간 이후 멈춥니다');
+ assert.deepEqual(v.importProgress(job('running',{progress:{phase:'archive_verifying',unit:'byte',total_known:false}})),{text:'ZIP 원본과 기존 해제 결과 확인 중',percent:null});
+ assert.deepEqual(v.importProgress(job('running',{progress:{phase:'extracting',unit:'byte',processed:25,total:100,total_known:true}})),{text:'ZIP 압축 해제 · 25 / 100바이트',percent:25});
+ assert.deepEqual(v.importProgress(job('running',{progress:{phase:'source_snapshot',unit:'byte',total_known:false}})),{text:'압축 해제 결과와 라벨 변경 확인 중',percent:null});
+ assert.deepEqual(v.importProgress(job('aborted',{progress:{phase:'aborted',unit:'byte',processed:25,total:100,total_known:true}})),{text:'중지됨 · 버전 없음',percent:null});
+});
 test('progress shows no percentage until the server knows the total',()=>{const v=view();
  assert.deepEqual(v.importProgress(job('running',{progress:{phase:'listing',processed:0,total:null,total_known:false}})),{text:'이미지 목록 확인 중',percent:null});
  assert.deepEqual(v.importProgress(job('running',{progress:{phase:'reading',processed:3,total:12,total_known:true}})),{text:'3 / 12장 확인',percent:25});

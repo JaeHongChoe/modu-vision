@@ -2113,6 +2113,12 @@
      "result": "Task82 metadata-only classification import counts reuse the existing eligible loader discovery and per-class default split, including singleton classes and val/test-only folders. Backend51 and two actual Chrome/macOS Electron cases pass; four owned layouts per case are imported with the UI button and reopened with unchanged source hashes.",
      "scope": "Default classification folder cohort and summary only; explicit saved assignments retain their prior exact-set hidden-path contract. Path eligibility is not full decode validation, representative model quality or whole-parent acceptance.",
      "platform": "Chrome/macOS Electron; folder dialog answer controlled; Windows excluded; root review only."
+    },
+    {
+     "kind": "durable-archive-worker-slice",
+     "result": "Task83 moves verified ZIP copy, reuse/extraction and extracted-source snapshot into the fenced import worker. Chunk/entry checks, byte progress and promotion guards preserve cancellation and stale-attempt refusal. Same-ID explicit recovery binds artifact, annotations, extracted bytes and expected active revision. Changed folders stay intact; completed versions still require explicit adoption. Backend140, renderer709 and three actual Chrome/macOS Electron cases pass.",
+     "scope": "Immutable artifact reference and annotation-only bytes are still bound at submission; an explicit resume validates saved source bytes before queuing. Unsafe/space failures are recorded job failures. Old source and extracted-archive spec digests are retained. Crash-left staging sweep and abandoned artifact quota remain separate.",
+     "platform": "Owned synthetic Chrome/macOS Electron runs; root review only; independent review unavailable; Windows excluded; no new SSH/GPU/training."
     }
    ],
    "file_actions": {
@@ -2137,7 +2143,7 @@
     "E08"
    ],
    "remaining": [
-    "archive extraction runs inside the HTTP request (job-thread extraction pending); an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
+    "an unreachable cancel or quitting mid-upload leaves the reservation until it expires (since 1e23881 a transient completion failure is retried, and an upload stopped or a panel closed during server verification starts no import)",
     "stale .partial staging sweep (nested COCO documents resolve relative to themselves since c481021); palette/color source masks require the existing explicit mask exchange path",
     "Unsaved classification loader path eligibility is covered by test_training_inventory_parity.py; Task82 brings its import count/partition summary into parity. Saved assignment exact-set behavior is retained; full validated-revision trainer/other-task inventory parity remains separate.",
     "an archive abandoned during server verification stays a referenced artifact counting against the project quota with no removal in the panel",

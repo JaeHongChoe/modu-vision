@@ -345,15 +345,40 @@ class ArtifactStore:
         return meta
 
     @contextmanager
-    def open(self, context, ref):
+    def open(self, context, ref, *, check=None):
         self._context(context)
+        failures = []
+        class CheckedStream:
+            def __init__(self, stream):
+                self.stream = stream
+            def __getattr__(self, name):
+                return getattr(self.stream, name)
+            def checked(self):
+                try:
+                    check()
+                except BaseException as exc:
+                    failures.append(exc)
+                    raise
+            def read(self, *args):
+                self.checked()
+                return self.stream.read(*args)
+            def write(self, *args):
+                self.checked()
+                return self.stream.write(*args)
         # Keep a metadata transaction during verified copy so GC cannot remove it.
-        with tempfile.TemporaryFile() as handle:
+        with tempfile.TemporaryFile() as raw:
+            handle = CheckedStream(raw) if check is not None else raw
             with self.registry.transaction() as db:
                 meta = self.registry.managed_reference(self._context(context), ref, db=db)
                 if meta is None:
                     raise ArtifactError('Use the context API for legacy file references', 409)
-                self._backend('read_into', meta['storage_key'], handle); handle.seek(0)
+                try:
+                    self._backend('read_into', meta['storage_key'], handle)
+                except ArtifactError:
+                    if failures:
+                        raise failures[-1]  # a job cancel/fence is not an object-store outage
+                    raise
+                handle.seek(0)
                 if _hash(handle) != (ref.sha256, meta['size_bytes']):
                     raise ArtifactError('Stored artifact hash verification failed')
                 handle.seek(0)

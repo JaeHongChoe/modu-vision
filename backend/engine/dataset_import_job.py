@@ -16,7 +16,7 @@ Live progress is held in memory by the process that runs the job; the ledger rec
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import json
 import hashlib
 import logging
@@ -47,6 +47,7 @@ class ImportSpec:
     follow_links: bool = False
     artifact: Optional[dict] = None  # the uploaded archive (id, revision, sha256) an extracted source came from
     annotation_root: Optional[str] = None  # the project's active annotation folder (Studio overlays label images there)
+    archive_pending: bool = False  # new jobs extract their immutable artifact inside the fenced attempt
 
 
 class ImportNotAcceptable(Exception):
@@ -58,8 +59,10 @@ class _AttemptLost(Exception):
 
 
 class DatasetImportJobs:
-    def __init__(self, store: JobStore, index: DatasetIndex, *, lease_seconds: float = 30.0):
+    def __init__(self, store: JobStore, index: DatasetIndex, *, lease_seconds: float = 30.0,
+                 artifact_store=None, authorize_archive=None):
         self.store, self.index, self.lease_seconds = store, index, lease_seconds
+        self.artifact_store, self.authorize_archive = artifact_store, authorize_archive
         self._lock = threading.Lock()
         self._progress: dict[str, dict] = {}
 
@@ -70,11 +73,13 @@ class DatasetImportJobs:
         for optional in ('artifact', 'annotation_root'):
             if payload[optional] is None:
                 del payload[optional]  # a request keeps the digest it had before these fields existed
+        if not payload['archive_pending']:
+            del payload['archive_pending']
         ref = self.store.submit(context, project_key, KIND, payload, idempotency_key, parent_id=parent_id,
                                  project_dir=str(Path(spec.project_root).resolve()))
         if ref.created:
             try:
-                snapshot = self._snapshot(spec)
+                snapshot = self._archive_identity(spec) if spec.archive_pending else self._snapshot(spec)
             except (OSError, ImportNotAcceptable):
                 snapshot = None  # legacy submission still records a failed run; unsafe resume is refused
             self.store.checkpoint(ref.id, {'source_snapshot': snapshot,
@@ -83,7 +88,7 @@ class DatasetImportJobs:
         return ref
 
     @staticmethod
-    def _snapshot(spec: ImportSpec) -> str:
+    def _snapshot(spec: ImportSpec, *, check=lambda: None) -> str:
         digest = hashlib.sha256()
         for label, root in (('source', spec.source_root), ('annotations', spec.annotation_root)):
             if root is None:
@@ -92,10 +97,12 @@ class DatasetImportJobs:
             if not folder.is_dir():
                 raise ImportNotAcceptable('source folder is unavailable')
             for directory, folders, files in os.walk(folder, followlinks=spec.follow_links):
+                check()
                 folders.sort()
                 if spec.follow_links and any((Path(directory) / name).is_symlink() for name in folders):
                     raise ImportNotAcceptable('Durable resume does not support linked source directories')
                 for name in sorted(files):
+                    check()
                     path = Path(directory) / name
                     if path.is_symlink() and not spec.follow_links:
                         digest.update((label + str(path.relative_to(folder)) + ':link').encode())
@@ -103,9 +110,33 @@ class DatasetImportJobs:
                     content = hashlib.sha256()
                     with path.open('rb') as handle:
                         for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                            check()
                             content.update(chunk)
                     digest.update(json.dumps([label, str(path.relative_to(folder)), content.hexdigest()], ensure_ascii=False).encode('utf-8'))
         return digest.hexdigest()
+
+    def _archive_identity(self, spec: ImportSpec, *, check=lambda: None) -> str:
+        """No ZIP/extracted-source IO at submission; bind the artifact and the captured annotation bytes."""
+        annotations = self._snapshot(ImportSpec(spec.project_root, spec.annotation_root, spec.task), check=check) if spec.annotation_root else None
+        return 'archive-input:' + hashlib.sha256(json.dumps([spec.artifact, spec.annotation_root, annotations],
+                                                          sort_keys=True).encode()).hexdigest()
+
+    def _archive_context(self, record):
+        from backend.contracts.context import ProjectContext, ArtifactRef
+        if self.artifact_store is None:
+            raise ImportNotAcceptable('Archive artifact storage is unavailable')
+        context = ProjectContext(**{name: record[name] for name in ('workspace_id', 'project_id', 'actor_id', 'mode')})
+        if self.artifact_store.registry.project_key(context) != record['project_key']:
+            raise ImportNotAcceptable('Archive project scope changed')
+        if context.mode == 'local' and context.actor_id != self.artifact_store.registry.local_actor_id:
+            raise ImportNotAcceptable('Archive actor scope changed')
+        if self.authorize_archive is not None:
+            self.authorize_archive(context)
+        elif context.mode != 'local':
+            raise ImportNotAcceptable('Archive team authority is unavailable')
+        ref = ArtifactRef(**json.loads(record['spec_json'])['artifact'])
+        self.artifact_store.reference(context, ref)
+        return context, ref
 
     def resume(self, job_id: str, project_key: str, actor_id: str) -> JobRef:
         self.view(job_id, project_key)
@@ -120,7 +151,19 @@ class DatasetImportJobs:
         operation = self.store.checkpoint_value(job_id) or {}
         if not operation.get('source_snapshot'):
             raise ImportNotAcceptable('Legacy import has no immutable source snapshot; submit a new import')
-        if operation['source_snapshot'] != self._snapshot(ImportSpec(**json.loads(record['spec_json']))):
+        spec = ImportSpec(**json.loads(record['spec_json']))
+        if spec.archive_pending:
+            try:
+                self._archive_context(record)
+            except Exception as exc:
+                raise ImportNotAcceptable('Archive artifact or project authority is unavailable') from exc
+            snapshot = self._archive_identity(spec)
+            extracted = operation.get('archive_source_snapshot')
+            if extracted and extracted != self._snapshot(replace(spec, source_root=operation['extracted_source_root'])):
+                raise ImportNotAcceptable('The extracted source changed since verification')
+        else:
+            snapshot = self._snapshot(spec)
+        if operation['source_snapshot'] != snapshot:
             raise ImportNotAcceptable('The source changed since submission')
         if operation['expected_target_revision'] != self.index.active(project_key):
             raise ImportNotAcceptable('The target revision changed since submission')
@@ -196,10 +239,9 @@ class DatasetImportJobs:
         if self.store.cancel_intent(job_id) is not None:  # a stop that landed while the attempt was starting
             raise InterruptedError('cancelled before reading started')
         clock = {'beat': time.monotonic(), 'cancel': time.monotonic(), 'cancelled': False}
-        self._set_progress(job_id, {'phase': 'listing', 'processed': 0, 'total': None, 'total_known': False})
 
         def progress(done: int, total: int) -> None:
-            self._set_progress(job_id, {'phase': 'reading', 'processed': done, 'total': total, 'total_known': True}, fence)
+            self._set_progress(job_id, {'phase': 'reading', 'processed': done, 'total': total, 'total_known': True, 'unit': 'image'}, fence)
             if time.monotonic() - clock['beat'] >= _HEARTBEAT_SECONDS:
                 owns()
                 clock['beat'] = time.monotonic()
@@ -210,12 +252,38 @@ class DatasetImportJobs:
                 clock['cancelled'] = self.store.cancel_intent(job_id) is not None
             return clock['cancelled']
 
+        def check() -> None:
+            if time.monotonic() - clock['beat'] >= _HEARTBEAT_SECONDS:
+                owns()
+                clock['beat'] = time.monotonic()
+            if cancelled():
+                raise InterruptedError('cancelled during archive processing')
+
+        def promotion_guard() -> None:
+            owns()
+            if self.store.cancel_intent(job_id) is not None:
+                raise InterruptedError('cancelled before archive promotion')
+
+        archive_spec = spec
+        if spec.archive_pending:
+            spec = self._extract_archive(job_id, fence, record, spec, check, promotion_guard)
+        self._set_progress(job_id, {'phase': 'listing', 'processed': 0, 'total': None, 'total_known': False, 'unit': 'image'}, fence)
+
         def verify_before_seal() -> None:
             owns()
             if self.store.cancel_intent(job_id) is not None:
                 raise InterruptedError('cancelled before verification')
             operation = self.store.checkpoint_value(job_id)
-            if operation.get('source_snapshot') and operation['source_snapshot'] != self._snapshot(spec):
+            if archive_spec.archive_pending:
+                self._archive_context(record)
+                if operation['source_snapshot'] != self._archive_identity(archive_spec, check=check):
+                    raise ImportNotAcceptable('The archive annotations changed during verification')
+                actual = self._snapshot(spec, check=check)
+                expected = operation.get('archive_source_snapshot')
+            else:
+                expected = operation.get('source_snapshot')
+                actual = self._snapshot(spec) if expected else None
+            if expected and expected != actual:
                 raise ImportNotAcceptable('The source changed during verification')
             if 'expected_target_revision' in operation and operation['expected_target_revision'] != self.index.active(record['project_key']):
                 raise ImportNotAcceptable('The target revision changed during verification')
@@ -231,6 +299,53 @@ class DatasetImportJobs:
                                             publication_key=job_id, progress=progress, cancelled=cancelled, before_seal=verify_before_seal,
                                             overlay_root=spec.annotation_root)
         return self._finish(job_id, fence, 'complete', {'revision': asdict(receipt)})
+
+    def _extract_archive(self, job_id, fence, record, spec, check, promotion_guard):
+        from backend.engine.dataset_archive_input import extract_dataset_archive, verify_extraction
+        operation = self.store.checkpoint_value(job_id) or {}
+        context, ref = self._archive_context(record)
+        promotion_guard()
+        self._set_progress(job_id, {'phase': 'archive_verifying', 'processed': 0, 'total': None, 'total_known': False, 'unit': 'byte'}, fence)
+        if operation.get('source_snapshot') != self._archive_identity(spec, check=check):
+            raise ImportNotAcceptable('The archive annotations changed since submission')
+        imports = Path(spec.project_root) / 'dataset_imports'
+        if imports.is_symlink() or not imports.resolve().is_relative_to(Path(spec.project_root).resolve()):
+            raise ImportNotAcceptable('Archive output is outside its project')
+        target = imports / ref.sha256
+        if Path(spec.source_root) != target:
+            raise ImportNotAcceptable('Archive destination does not match its immutable reference')
+        selected = operation.get('extracted_source_root')
+        if selected:
+            target = Path(selected)
+            if target.parent != imports or target.is_symlink() or not target.name.startswith(ref.sha256):
+                raise ImportNotAcceptable('Archive checkpoint destination is outside its project')
+        if operation.get('archive_source_snapshot'):
+            if not verify_extraction(target, ref.sha256, check=check) or operation['archive_source_snapshot'] != self._snapshot(replace(spec, source_root=str(target)), check=check):
+                raise ImportNotAcceptable('The extracted source changed since verification')
+        elif target.exists() and not verify_extraction(target, ref.sha256, check=check):
+            import uuid
+            copies = sorted(p for p in imports.glob(f'{ref.sha256}.*') if p.is_dir() and not p.is_symlink())
+            target = next((p for p in copies if verify_extraction(p, ref.sha256, check=check)), imports / f'{ref.sha256}.{uuid.uuid4().hex[:12]}')
+        if not target.exists():
+            with self.artifact_store.open(context, ref, check=check) as handle:
+                promotion_guard()
+                def progress(done, total):
+                    self._set_progress(job_id, {'phase': 'extracting', 'processed': done, 'total': total, 'total_known': True, 'unit': 'byte'}, fence)
+                extract_dataset_archive(handle, target, archive_sha256=ref.sha256, check=check, progress=progress, before_publish=promotion_guard)
+        promotion_guard()
+        spec = replace(spec, source_root=str(target))
+        operation = self.store.checkpoint_value(job_id) or {}
+        operation['extracted_source_root'] = str(target)
+        self.store.checkpoint(job_id, operation, fence)
+        self._set_progress(job_id, {'phase': 'source_snapshot', 'processed': 0, 'total': None, 'total_known': False, 'unit': 'byte'}, fence)
+        operation = self.store.checkpoint_value(job_id) or {}
+        snapshot = self._snapshot(spec, check=check)
+        if operation.get('archive_source_snapshot') and operation['archive_source_snapshot'] != snapshot:
+            raise ImportNotAcceptable('The extracted source changed during verification')
+        operation['archive_source_snapshot'] = snapshot
+        promotion_guard()
+        self.store.checkpoint(job_id, operation, fence)
+        return spec
 
     def _finish(self, job_id: str, fence: int, event: str, payload: dict) -> JobRef:
         persisted = True
@@ -292,7 +407,7 @@ class DatasetImportJobs:
                 'progress': live or (self.store.checkpoint_value(job_id) or {}).get('progress'), 'result': ended['payload'] if ended else None,
                 'operation': self._operation(job_id, ended), 'resumable': record['state'] == 'interrupted' and bool((self.store.checkpoint_value(job_id) or {}).get('source_snapshot')),
                 # what the import read: the registered source, or an uploaded archive extracted into the project
-                'source': {'root': spec['source_root'], 'artifact': spec.get('artifact')}}
+                'source': {'root': (self.store.checkpoint_value(job_id) or {}).get('extracted_source_root', spec['source_root']), 'artifact': spec.get('artifact')}}
 
     def cancel(self, job_id: str, project_key: str, actor_id: str) -> dict:
         """Record the durable intent; the running attempt stops between files and ends the job aborted."""
@@ -344,6 +459,8 @@ class DatasetImportJobs:
     def _set_progress(self, job_id: str, value: dict, fence: Optional[int] = None, *, persist: bool = True) -> None:
         operation = self.store.checkpoint_value(job_id) or {}
         operation['progress'] = {**operation.get('progress', {}), **value}
+        if value.get('unit'):
+            operation['progress_unit'] = value['unit']
         try:
             if persist:
                 self.store.checkpoint(job_id, operation, fence)

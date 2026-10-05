@@ -169,13 +169,16 @@ def test_an_uploaded_zip_is_extracted_into_the_project_and_imported(tmp_path, mo
                               headers={'Idempotency-Key': 'zip-1'})
         assert started.status_code == 200, started.text
         target = Path(project['project_dir']) / 'dataset_imports' / digest
-        assert started.json()['source_root'] == str(target) and (target / '양품' / 'sample 1.png').is_file()
+        assert started.json()['source_root'] == str(target)
         view = _finished(client, started.json()['job_id'])
+        assert (target / '양품' / 'sample 1.png').is_file()
         receipt = view['result']['revision']
         assert (view['state'], receipt['image_count'], receipt['error_count']) == ('completed', 3, 1)
         before = (target / '양품' / 'sample 1.png').stat().st_mtime_ns
         again = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification', 'verify': True})
-        assert again.status_code == 200 and (target / '양품' / 'sample 1.png').stat().st_mtime_ns == before, 'extracted once, reused'
+        assert again.status_code == 200
+        assert _finished(client, again.json()['job_id'])['state'] == 'completed'
+        assert (target / '양품' / 'sample 1.png').stat().st_mtime_ns == before, 'extracted once, reused'
         bad = client.post('/api/dataset/imports/archive', json={'artifact': {**ref, 'sha256': '0' * 64}, 'task': 'classification'})
         assert bad.status_code in (403, 404, 409), bad.text
 
@@ -235,14 +238,18 @@ def test_a_reused_extraction_is_verified_and_the_job_records_its_artifact(tmp_pa
         again = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification'},
                             headers={'Idempotency-Key': 'zip-b'})
         assert again.status_code == 200, again.text
-        fresh = Path(again.json()['source_root'])
+        again_view = _finished(client, again.json()['job_id'])
+        fresh = Path(again_view['source']['root'])
         assert fresh != target and fresh.name.startswith(ref['sha256'] + '.') and verify_extraction(fresh, ref['sha256'])
         assert (target / '양품' / 'added.png').is_file(), 'the changed folder is kept as it is'
-        assert _finished(client, again.json()['job_id'])['result']['revision']['image_count'] == 2
+        assert again_view['result']['revision']['image_count'] == 2
 
         clash = _uploaded(client, _zip_bytes([('x/a.png', _png_bytes()), ('x/a.png/b.png', _png_bytes())]))
         refused = client.post('/api/dataset/imports/archive', json={'artifact': clash, 'task': 'classification'})
-        assert refused.status_code == 422 and 'both a file and a folder' in refused.text, refused.text
+        assert refused.status_code == 200, refused.text
+        failure = _finished(client, refused.json()['job_id'])
+        assert failure['state'] == 'failed' and 'both a file and a folder' in failure['result']['error']['message']
+        assert not (Path(project['project_dir']) / 'dataset_imports' / clash['sha256']).exists()
 
 
 def test_a_source_import_keeps_the_request_digest_it_had_before_archives(api):
@@ -283,19 +290,21 @@ def test_a_changed_folder_is_extracted_again_once_and_a_retry_never_extracts(tmp
         ref = _uploaded(client, data)
         imports = Path(project['project_dir']) / 'dataset_imports'
         first = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification'})
-        _finished(client, first.json()['job_id'])
+        first_view = _finished(client, first.json()['job_id'])
         (imports / ref['sha256'] / '양품' / 'added.png').write_bytes(_png_bytes('gray'))  # a real change
         (imports / ref['sha256'] / '.DS_Store').write_bytes(b'browser metadata')
         second = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification'},
                              headers={'Idempotency-Key': 'zip-copy'})
-        _finished(client, second.json()['job_id'])
+        second_view = _finished(client, second.json()['job_id'])
         copies = sorted(path.name for path in imports.iterdir() if path.is_dir() and not path.name.startswith('.'))
-        assert len(copies) == 2 and second.json()['source_root'] != first.json()['source_root']
+        assert len(copies) == 2 and second_view['source']['root'] != first_view['source']['root']
         third = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification', 'verify': True})
-        assert third.json()['source_root'] == second.json()['source_root'], 'the verified copy is reused, not a third one'
+        third_view = _finished(client, third.json()['job_id'])
+        assert third_view['source']['root'] == second_view['source']['root'], 'the verified copy is reused, not a third one'
         retry = client.post('/api/dataset/imports/archive', json={'artifact': ref, 'task': 'classification'},
                             headers={'Idempotency-Key': 'zip-copy'})
         assert retry.status_code == 200 and retry.json()['idempotent_replay'] is True and retry.json()['job_id'] == second.json()['job_id']
+        assert retry.json()['source_root'] == second_view['source']['root']
         assert sorted(path.name for path in imports.iterdir() if path.is_dir() and not path.name.startswith('.')) == copies
         other = _uploaded(client, _zip_bytes([('양품/c.png', _png_bytes('blue'))]))
         conflict = client.post('/api/dataset/imports/archive', json={'artifact': other, 'task': 'classification'},

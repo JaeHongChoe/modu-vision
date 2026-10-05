@@ -12,6 +12,14 @@ export const importEnded = (view: DatasetImportView | null) => Boolean(view && E
 export function importProgress(view: DatasetImportView | null): { text: string; percent: number | null } {
   const progress = view?.progress;
   if (!view) return { text: '', percent: null };
+  if (progress?.unit === 'byte' && importEnded(view)) return {text: STATE_TEXT[view.state] || view.state, percent: null};
+  if (progress?.phase === 'archive_verifying') return {text: 'ZIP 원본과 기존 해제 결과 확인 중', percent: null};
+  if (progress?.phase === 'source_snapshot') return {text: '압축 해제 결과와 라벨 변경 확인 중', percent: null};
+  if (progress?.phase === 'extracting') {
+    if (!progress.total_known || !progress.total) return {text: 'ZIP 압축 해제 중', percent: null};
+    const processed = Math.min(progress.processed || 0, progress.total);
+    return {text: `ZIP 압축 해제 · ${processed.toLocaleString()} / ${progress.total.toLocaleString()}바이트`, percent: Math.floor(processed / progress.total * 100)};
+  }
   if (view.state === 'running' && progress?.phase === 'recording') {
     return { text: '검증 완료 · 결과 기록 대기 (다음 시작 때 자동으로 완료됩니다)', percent: null };
   }
@@ -28,8 +36,10 @@ export function importProgress(view: DatasetImportView | null): { text: string; 
 export function importStatusText(view: DatasetImportView | null): string {
   if (!view) return '';
   if (view.state === 'failed') return `실패: ${view.result?.error?.message || '원인 미기록'}`;
-  if (view.cancel_requested && !importEnded(view)) return '중지 요청됨 · 현재 파일 이후 멈춥니다';
+  if (view.cancel_requested && !importEnded(view)) return view.progress?.unit === 'byte'
+    ? '중지 요청됨 · 현재 읽기 구간 이후 멈춥니다' : '중지 요청됨 · 현재 파일 이후 멈춥니다';
   if (view.cancel_requested && view.state === 'completed') return '중지 요청 전에 검증이 끝났습니다 · 채택 여부를 직접 정하세요';
+  if (view.state === 'running' && view.progress?.unit === 'byte') return 'ZIP 처리 중';
   return STATE_TEXT[view.state] || view.state;
 }
 

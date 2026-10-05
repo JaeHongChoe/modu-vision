@@ -104,13 +104,14 @@ def _safe_parts(name: str) -> tuple:
     return parts
 
 
-def plan_entries(archive: zipfile.ZipFile) -> list:
+def plan_entries(archive: zipfile.ZipFile, *, check=lambda: None) -> list:
     """[(info, relative path)] for the files to extract; raises ArchiveRefused before anything is written."""
     infos = archive.infolist()
     if len(infos) > MAX_ENTRIES:
         raise ArchiveRefused(f'The archive has more than {MAX_ENTRIES} entries')
     planned, seen, folders, total = [], {}, {}, 0
     for info in infos:
+        check()
         name = entry_name(info)
         if info.is_dir():
             _safe_parts(name)
@@ -166,29 +167,42 @@ def _ignored(relative: str) -> bool:
     return name in _IGNORED or (name.startswith('._') and relative != RECEIPT)
 
 
-def verify_extraction(folder: Path | str, archive_sha256: str) -> bool:
+def verify_extraction(folder: Path | str, archive_sha256: str, *, check=lambda: None) -> bool:
     """Whether ``folder`` still holds exactly the files its receipt lists for this archive (every byte is read).
     Metadata files a file browser adds (.DS_Store, ._*, Thumbs.db, desktop.ini) are ignored; anything else is a change."""
     folder = Path(folder)
     try:
+        check()
+        if folder.is_symlink():
+            return False
         receipt = read_receipt(folder)
         if receipt.get('archive_sha256') != archive_sha256:
             return False
         expected = {row['relative_path']: (row['size'], row['sha256']) for row in receipt['files']}
-        present = {path.relative_to(folder).as_posix() for path in folder.rglob('*') if path.is_file() or path.is_symlink()}
+        present = set()
+        for path in folder.rglob('*'):
+            check()
+            if path.is_symlink():
+                return False
+            if path.is_file():
+                present.add(path.relative_to(folder).as_posix())
         if {path for path in present if not _ignored(path)} != {*expected, RECEIPT}:
             return False
         for relative, (size, digest) in expected.items():
+            check()
             path = folder.joinpath(*relative.split('/'))
             if path.is_symlink() or path.stat().st_size != size:
                 return False
             hasher = hashlib.sha256()
             with path.open('rb') as handle:
                 while chunk := handle.read(_CHUNK):
+                    check()
                     hasher.update(chunk)
             if hasher.hexdigest() != digest:
                 return False
         return True
+    except InterruptedError:
+        raise
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
@@ -203,13 +217,15 @@ def _fsync_folder(path: Path) -> None:
         os.close(descriptor)
 
 
-def extract_dataset_archive(archive_path, destination: Path | str, *, archive_sha256: str | None = None) -> list:
+def extract_dataset_archive(archive_path, destination: Path | str, *, archive_sha256: str | None = None,
+                            check=lambda: None, progress=lambda done, total: None, before_publish=lambda: None) -> list:
     """Extract a ZIP (a path or a readable file object) into ``destination``, which must not exist yet, and return
     the receipt rows. When another extraction of the same archive put the folder in place first, its verified content
     is reused (a retried request)."""
     destination = Path(destination)
+    check()
     if destination.exists():
-        if archive_sha256 is not None and verify_extraction(destination, archive_sha256):
+        if archive_sha256 is not None and verify_extraction(destination, archive_sha256, check=check):
             return [ExtractedFile(**row) for row in read_receipt(destination)['files']]  # a retry raced the first request
         raise ArchiveRefused(f'{destination} already exists; an archive is extracted into a new folder')
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -217,23 +233,29 @@ def extract_dataset_archive(archive_path, destination: Path | str, *, archive_sh
     staging.mkdir()
     try:
         with zipfile.ZipFile(archive_path) as archive:
-            planned = plan_entries(archive)
+            planned = plan_entries(archive, check=check)
+            total, processed = sum(info.file_size for info, _ in planned), 0
+            progress(0, total)
             needed = sum(info.file_size for info, _ in planned) + _FREE_MARGIN
             free = shutil.disk_usage(staging).free
             if free < needed:
                 raise ArchiveNoSpace(f'The project volume has {free} bytes free; extracting needs about {needed}')
             receipt = []
             for info, relative in planned:
+                check()
                 target = staging.joinpath(*relative.split('/'))
                 target.parent.mkdir(parents=True, exist_ok=True)
                 digest, written = hashlib.sha256(), 0
                 with archive.open(info) as source, open(target, 'xb') as handle:
                     while chunk := source.read(_CHUNK):
+                        check()
                         written += len(chunk)
                         if written > info.file_size:  # the header understated the size
                             raise ArchiveRefused(f'{relative!r} is larger than its archive header says')
                         digest.update(chunk)
                         handle.write(chunk)
+                        processed += len(chunk)
+                        progress(processed, total)
                     handle.flush()
                     os.fsync(handle.fileno())
                 receipt.append(ExtractedFile(relative, written, digest.hexdigest()))
@@ -244,15 +266,17 @@ def extract_dataset_archive(archive_path, destination: Path | str, *, archive_sh
             handle.flush()
             os.fsync(handle.fileno())
         _fsync_folder(staging)
+        check()
+        before_publish()
         try:
             os.replace(staging, destination)
         except OSError:
-            if destination.is_dir() and archive_sha256 is not None and verify_extraction(destination, archive_sha256):
+            if destination.is_dir() and archive_sha256 is not None and verify_extraction(destination, archive_sha256, check=check):
                 return receipt  # a concurrent extraction of the same archive finished first
             raise
         _fsync_folder(destination.parent)
         return receipt
-    except ArchiveRefused:
+    except (ArchiveRefused, InterruptedError):
         raise
     except OSError as exc:
         if exc.errno in (errno.ENOSPC, getattr(errno, 'EDQUOT', errno.ENOSPC)):
