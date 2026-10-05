@@ -4564,13 +4564,19 @@
     "S6-01",
     "S6-07"
    ],
-   "status": "planned",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "implementation slice published; root review, independent review pending",
      "result": "a6a842c supplies bounded read-only publication audit, exact finding review reasons, no credential overrides/no source overwrite, support bundle URL/API-key/private-address sanitization, Windows quickstart and troubleshooting.56 actual focused cases pass with zero skips.",
      "scope": "Exact candidate source/static findings and causal failures are bound in docs/verification/2026-10-04-remaining-integration-evidence.md; synthetic fixtures/icons remain findings, not an assertion of secret-free release.",
      "platform": "macOS controlled source/CLI/API; hosted composed gates running at7cf7dfc"
+    },
+    {
+     "kind": "takeover-parent-software-closure-root-verified",
+     "result": "Task111: bounded exact Git/tree/commit/artifact audit and existing redacted support API/docs now qualified with actual Chrome/macOS Electron selected-section downloads, empty selection refusal, controlled failure sanitization, persisted response/file parity and reopen. 37 publication/delivery regressions pass; actual two UI download cases pass34.5s.",
+     "scope": "Original clauses/dependencies unchanged; implementation/contract/gui/persist/reopen/failure verified. Audit remains heuristic and reports retained synthetic fixtures/assets for review; no secret-free/license/signing/public-release assertion. A controlled failed journal is fixture data, not actual inspection. Independent handoff/target/final acceptance remain pending. Root readback96bcc7b2211f4dd2501af42a927dfec9fef543edd8c1cff45ec5a14afc0dd43d binds1422runtime source inputs/29artifacts.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend, private local downloads only; Windows excluded."
     }
    ],
    "file_actions": {
@@ -4581,12 +4587,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9434,13 +9440,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 50,
-    "pending": 32
+    "verified": 51,
+    "pending": 31
    },
    "parent_status": {
-    "verification_pending": 44,
+    "verification_pending": 45,
     "in_progress": 15,
-    "planned": 23
+    "planned": 22
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
