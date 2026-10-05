@@ -3691,8 +3691,17 @@
     "S1-02",
     "S5-01"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "0c0b8fbda62c18e05e5ebe484289fd508501e32e",
+     "result": "Task95: durable redacted per-project inspection/job observations with exact paginated/filter totals, node/input/release trace identity, actual owned readiness/queue/disk and explicitly unavailable local NVIDIA. Authenticated revision-CAS local failure notifications default off and preserve actor/reason history; repeated observations do not duplicate notifications. Epoch/lifecycle callbacks persist without a WebSocket. Actual Chrome/macOS Electron verify 60 controlled epoch callbacks,65 retained training records, one actual CPU inspection, explicit policy opt-in and one deduplicated failure, UI reload and owned cleanup. Backend85, renderer739, causal scope3 and production/E2E TypeScript pass. Private persisted-source/log/policy/process readback SHA-256 59ee05e273f190694f7a2505c0f52cc57f237ffde47eb390be304549d4426bbe.",
+     "scope": "Structured lifecycle/epoch and terminal inspection/node records; high-frequency live samples are not a full-frequency archive. Controlled callback/CPU fixtures do not prove representative training, remote GPU, physical devices, independent or full acceptance. No external telemetry sink.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned CPU service; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/observability.py": "Create",
     "backend/engine/inspection_service.py": "Modify",
@@ -3701,12 +3710,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9284,20 +9293,20 @@
    "S4-11",
    "S5-08"
   ],
-  "last_verified_on": "2026-10-05",
+  "last_verified_on": "2026-10-06",
   "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
   "verified_source_sha": "92f98d810eacb9f7f335db8c54f351cfcf5d6ef5",
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 36,
-    "pending": 46
+    "verified": 37,
+    "pending": 45
    },
    "parent_status": {
-    "verification_pending": 30,
+    "verification_pending": 31,
     "in_progress": 20,
-    "planned": 32
+    "planned": 31
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

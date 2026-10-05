@@ -189,6 +189,46 @@ def review(identifier:str,body:OperatorReview,request:Request):
     return execute(lambda:delivery.review_operator_result(project(request),identifier,body.verdict,reviewer,body.reason))
 
 
+class OperationsNotificationPolicy(BaseModel):
+    model_config=ConfigDict(extra='forbid',strict=True)
+    enabled:bool
+    expected_revision:int=Field(ge=1)
+    actor:str=Field(min_length=1,max_length=100)
+    reason:str=Field(min_length=1,max_length=1000)
+
+
+@router.get('/operations/observability')
+def operations_observability(request:Request,limit:int=Query(50,ge=1,le=500),offset:int=Query(0,ge=0,le=10**9),
+                              job_id:str|None=Query(None,max_length=128),state:str|None=Query(None,max_length=32)):
+    def action():
+        from backend.engine.observability import ObservabilityStore
+        p=project(request);service=ManagedService(p['project_dir']);actual=service.state()
+        if actual['runtime'].get('status')=='ready':
+            try:
+                with service.client() as client:
+                    response=client.get('/v1/readiness');response.raise_for_status();actual['readiness']=response.json()
+            except (httpx.HTTPError,ValueError):actual['readiness']={'status':'response_unavailable'}
+        training=None;context=getattr(request.state,'project_context',None)
+        if context is not None and hasattr(request.app.state,'context_registry'):
+            from backend.api.routes_training import job_ledger
+            training=(job_ledger(),context,request.app.state.context_registry.project_key(context))
+        store=ObservabilityStore(p);snapshot=store.collect(actual,training=training)
+        account=getattr(request.state,'account_user',None)
+        can_configure=not account or request.app.state.accounts.project_role(account['id'],p['id']) in {'owner','reviewer'}
+        return {**snapshot,'logs':store.logs(limit=limit,offset=offset,job_id=job_id,state=state),'notifications':store.notifications(),
+                'can_configure':can_configure}
+    return execute(action)
+
+
+@router.put('/operations/notification-policy')
+def operations_notification_policy(body:OperationsNotificationPolicy,request:Request):
+    role(request,{'owner','reviewer'})
+    from backend.engine.observability import ObservabilityStore
+    account=getattr(request.state,'account_user',None)
+    actor=account['id'] if account else body.actor
+    return execute(lambda:ObservabilityStore(project(request)).configure(body.enabled,expected_revision=body.expected_revision,actor=actor,reason=body.reason))
+
+
 @router.post('/operator/results/{identifier}/retry-delivery',status_code=202)
 def retry_delivery(identifier:str,request:Request):
     role(request,{'owner','reviewer'})

@@ -49,6 +49,7 @@ import {trainingPresetBatchSize} from '../common/errorActions';
 import { trainingLogLines } from './trainingLog';
 import {defaultTrainingScheduling, trainingSchedulingOptions, TrainingSchedulingSettings} from './TrainingSchedulingSettings';
 import {JobProgressView} from './JobProgressView';
+import {OperationsObservabilityPanel} from '../runtime/OperationsObservabilityPanel';
 
 export const TrainingController: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
@@ -485,6 +486,7 @@ export const TrainingController: React.FC = () => {
         )}
 
         <TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} />
+        <OperationsObservabilityPanel canConfigure={true} initialJobId={jobId||''} />
         <JobProgressView job={jobId ? {job_id: jobId, status, phase: jobPhase, compute_profile_id: jobComputeProfileId,
           current_epoch: currentEpoch, total_epochs: totalEpochs, current_step: currentStep, total_steps: totalSteps,
           current_train_loss: trainLoss, error: startError, observation: jobObservation,

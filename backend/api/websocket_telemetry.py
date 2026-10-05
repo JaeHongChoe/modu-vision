@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import sqlite3
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -22,6 +23,8 @@ from backend.engine.device import get_device, get_host_telemetry
 from backend.engine.trainer import TrainingCallback
 from backend.utils.error_catalog import classify_exception
 from backend.contracts.context import current_project_context, originating_context
+from backend.engine.job_store import ledger as observation_ledger
+from backend.engine.product_delivery import redact_diagnostics
 
 logger = logging.getLogger("vision_ai_studio.telemetry")
 
@@ -327,6 +330,18 @@ class WebSocketTelemetryCallback(TrainingCallback):
         self.epoch_durations: List[float] = []
 
     def _broadcast(self, event_type: str, data: Dict[str, Any]) -> None:
+        # Retain lifecycle/epoch evidence even with no connected WebSocket.
+        # High-frequency step/hardware samples remain live measurements.
+        if event_type in {'training_started', 'epoch_progress', 'training_completed', 'training_aborted', 'training_error'} and self._project_context is not None:
+            try:
+                store = observation_ledger()
+                owner = store.record(self.job_id)
+                identity = self._project_context.model_dump()
+                if all(owner[field] == value for field, value in identity.items()) and data.get('job_id') == self.job_id:
+                    store.record_event(self.job_id, event_type, redact_diagnostics(data))
+            except (KeyError, OSError, sqlite3.Error, ValueError):
+                # A log failure must not cancel training or print private payloads.
+                logger.warning('Persistent training observation unavailable for the originating job')
         token = current_project_context.set(self._project_context)
         try:
             broadcaster.broadcast_sync(event_type, data)
