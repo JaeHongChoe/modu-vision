@@ -353,11 +353,11 @@ def _operation_artifact_manifest(run_dir: Path, spec: dict[str, Any], operation:
 
 
 class _SentinelCancel:
-    def __init__(self, path: Path):
-        self.path = path
+    def __init__(self, path: Path, event: threading.Event | None = None):
+        self.path, self.event = path, event
 
     def is_set(self) -> bool:
-        return self.path.exists()
+        return self.path.exists() or (self.event is not None and self.event.is_set())
 
 
 class _FamilyTrainer:
@@ -419,8 +419,21 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
     cancel_path = run_dir / "cancel"
     stop_watcher = threading.Event()
     watcher: threading.Thread | None = None
+    budget = None
+    trainer = None
     try:
         spec = _read_train_spec(spec_path, run_dir)
+        from backend.engine.runtime_budget import RuntimeBudget
+        def budget_expired():
+            # Always reach the owned trainer even if recording the stop fails.
+            if trainer is not None: trainer.abort()
+            status.update(cancel_requested_at=time.time())
+            status.acknowledge_cancel()
+            status.update(stop_reason='time_limit',error='Training runtime limit exceeded')
+        budget = RuntimeBudget(spec.get('max_runtime_s'),threading.Event(),
+            lambda started:status.update(runtime_started_at=started,
+                budget={'max_runtime_s':spec['max_runtime_s']} if spec.get('max_runtime_s') is not None else {}),
+            budget_expired)
         if not spec.get('distributed'):apply_memory_budget(spec)
         if spec.get('local_model_id') is not None:
             model_id=spec['local_model_id']
@@ -449,12 +462,16 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         if spec.get('distributed'):
             from backend.remote.distributed import launch_distributed
             status.update(status='running')
-            result=launch_distributed(spec_path,cancel_event=_SentinelCancel(cancel_path),status_writer=status)
+            budget.__enter__()
+            result=launch_distributed(spec_path,cancel_event=_SentinelCancel(cancel_path,budget.cancel),status_writer=status)
+            budget.check()
             if result.get('status')=='aborted':return status.update(status='aborted')
             if result.get('status')!='completed':raise RuntimeError('Distributed training did not complete')
             from backend.engine.training_provenance import persist_model_binding
             persist_model_binding(output_dir,spec.get('dataset_binding'))
-            _atomic_json(run_dir/'artifacts.json',_artifact_manifest(run_dir,spec))
+            manifest = _artifact_manifest(run_dir,spec)
+            budget.seal()
+            _atomic_json(run_dir/'artifacts.json',manifest)
             return status.update(status='completed',best_metric=result.get('best_metric'),distributed=result.get('distributed'))
         if trainer_factory is None and (spec.get('measured_candidate') or spec['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan'}):
             trainer_factory=_FamilyTrainer
@@ -487,8 +504,10 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         watcher = threading.Thread(target=watch_cancel, name=f"Cancel-{spec['job_id']}", daemon=True)
         watcher.start()
         status.update(status="running")
+        budget.__enter__()
         from backend.engine.source_aliases import source_alias_scope
         with source_alias_scope(aliases):result = trainer.train(job_id=spec["job_id"])
+        budget.check()
         stop_watcher.set()
         watcher.join(timeout=1)
         if cancel_path.exists() or not isinstance(result, dict) or result.get("status") == "aborted":
@@ -510,15 +529,18 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         manifest = _artifact_manifest(run_dir, spec)
         if cancel_path.exists():
             return status.update(status="aborted")
+        budget.seal()
         _atomic_json(run_dir / "artifacts.json", manifest)
         return status.update(status="completed", best_metric=result.get("best_metric"))
     except SnapshotCancelled:
         return status.update(status="aborted")
     except InterruptedError:
-        return status.update(status='aborted')
+        return status.update(status='aborted',**({'stop_reason':'time_limit','error':'Training runtime limit exceeded'}
+            if budget is not None and budget.spent else {}))
     except Exception as exc:
         return _failed_status(status, exc, run_dir)
     finally:
+        if budget is not None: budget.__exit__()
         stop_watcher.set()
         if watcher is not None and watcher.is_alive():
             watcher.join(timeout=1)

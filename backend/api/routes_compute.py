@@ -38,11 +38,21 @@ def _row(record):
         reserved = {row['job_id'] for row in training_job_manager._leases.list()}
     except (OSError, sqlite3.Error):
         reserved = None
+    launch=record.launch_spec or {}
+    waiting=sorted((row for row in training_job_manager.list_jobs()
+        if row.status=='queued' and row.remote_profile_id and (
+            (launch.get('project_id') is not None and (row.launch_spec or {}).get('project_id')==launch['project_id'])
+            or (launch.get('project_id') is None and Path(row.output_dir).parent==Path(record.output_dir).parent))),
+        key=lambda row:(-(row.launch_spec or {}).get('priority',0),row.start_time,row.job_id))
+    position=next((i for i,row in enumerate(waiting,1) if row.job_id==record.job_id),None)
     return {'job_id':record.job_id,'execution_job_id':record.job_id,'model_id':(record.launch_spec or {}).get('local_model_id',record.job_id),'task':record.task,'operation':(record.launch_spec or {}).get('operation','train'),
             'status':record.status,'phase':record.phase,'compute_profile_id':record.remote_profile_id,
             'current_epoch':record.current_epoch,'total_epochs':record.total_epochs,'current_step':record.current_step,
             'total_steps':record.total_steps,'metrics':record.metrics,'best_metric':record.best_metric,'error':record.error,
             'observation':_job_observation(record,reserved),
+            'priority':launch.get('priority',0),'budget':{'max_runtime_s':launch['max_runtime_s']} if launch.get('max_runtime_s') is not None else {},
+            'queue_position':position,'wait_reason':('device_reserved' if record.phase=='resource_reserved' else 'priority') if record.status=='queued' else None,
+            'stop_reason':(record.result or {}).get('stop_reason'),
             'submitted_at':record.start_time,'dataset_path':(record.dataset_binding or {}).get('family_dataset_path') or (record.launch_spec or {}).get('family_dataset_path') or record.dataset_path,'source_dataset_path':record.source_dataset_path,'training_provenance':record.dataset_binding or {}}
 
 
@@ -171,6 +181,9 @@ class ComputeJobInput(BaseModel):
     labeling:dict=Field(default_factory=dict)
     dataset_version_id:str|None=None
     warm_start_job_id:str|None=None
+    queue:bool=Field(default=True,strict=True)
+    priority:int=Field(default=0,strict=True,ge=-10,le=10)
+    max_runtime_s:float|None=Field(default=None,strict=True,gt=0,le=604800,allow_inf_nan=False)
 
 
 @router.post('/jobs',status_code=202)
@@ -187,6 +200,7 @@ def submit_job(body:ComputeJobInput,request:Request):
     if body.operation=='label' and body.task!='labeling' or body.operation=='train' and body.task=='labeling':raise HTTPException(422,'Labeling operation and task must be selected together')
     if body.operation=='label' and body.labeling.get('setup'):raise HTTPException(422,'Configure foundation model paths on the worker deployment')
     if body.operation=='label' and profile.distributed_processes>1:raise HTTPException(422,'Labeling uses independent allocated workers; distributed training is a separate mode')
+    if body.operation!='train' and body.max_runtime_s is not None:raise HTTPException(422,'Runtime limits currently apply to training jobs')
     dataset=Path(body.family_dataset_path).expanduser().resolve() if body.family_dataset_path else source
     try:
         from backend.engine.training_provenance import bind_training_version,bind_family_training
@@ -220,12 +234,14 @@ def submit_job(body:ComputeJobInput,request:Request):
         output=Path(project['models_dir'])/(body.task if native_family else '')/(native_id if native_family else identifier)
         launch={'preparation':'none','operation':body.operation,'config_overrides':body.config_overrides,'device':body.device,
                 'dataset_binding':binding,'family_dataset_path':str(dataset),'project_id':project['id'],'account_id':account['id'] if account else None,'labeling':label_baseline['worker_options'] if label_baseline else body.labeling}
+        launch.update(priority=body.priority,max_runtime_s=body.max_runtime_s)
         if parent:launch['warm_start']={**vars(parent),'checkpoint_path':str(parent.checkpoint_path),'classes':list(parent.classes)}
         if native_family:launch['local_model_id']=native_id
         if label_baseline:launch.update(label_baseline=label_baseline,label_images=[row['relative_path'] for row in label_baseline['images']])
         record=training_job_manager.start_remote_job(job_id=identifier,task=body.task,dataset_path=str(dataset),output_dir=str(output),
             remote_profile_id=profile.id,profile=profile,remote_runner=make_remote_runner(profile,launch),preset=body.preset,
-            source_dataset_path=str(source),dataset_fingerprint=fingerprint_dataset(source),launch_spec=launch,dataset_binding=binding,warm_start=parent)
+            source_dataset_path=str(source),dataset_fingerprint=fingerprint_dataset(source),launch_spec=launch,dataset_binding=binding,warm_start=parent,
+            queue_when_busy=body.queue)
         return _row(record)
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
 

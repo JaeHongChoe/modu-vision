@@ -482,6 +482,14 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
             record.loss_history = status["loss_history"][-500:]
         if isinstance(status.get("metrics"), dict):
             record.metrics = status["metrics"]
+        expected_limit=(journal.get('launch_spec') or getattr(record,'launch_spec',None) or {}).get('max_runtime_s')
+        if state in ('completed','aborted') and expected_limit is not None:
+            if status.get('budget')!={'max_runtime_s':expected_limit}:
+                raise ValueError('Remote worker did not acknowledge the requested runtime budget')
+            for key in ('budget','runtime_started_at','cancel_requested_at','cancel_acknowledged_at','stop_reason'):
+                if key in status:journal[key]=status[key]
+            if status.get('stop_reason')=='time_limit':
+                journal['cancel_reason']='runtime budget exceeded'
         if state == "completed":
             try:
                 _copy_artifacts(transport, profile, journal, output)
@@ -497,6 +505,8 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
         if state in ("aborted", "failed"):
             persisted = _terminal_journal(journal, state, worker_exit_confirmed=True)
             result = {"status": state, "error": status.get("error"), "worker_exit_confirmed": True}
+            if status.get('stop_reason')=='time_limit':
+                result.update(stop_reason='time_limit',budget=status.get('budget'),runtime_started_at=status.get('runtime_started_at'))
             if not persisted: result["journal_persisted"] = False
             return result
         time.sleep(POLL_INTERVAL_SECONDS)
@@ -645,6 +655,8 @@ def run_remote_training(
             }
             if getattr(record, "dataset_binding", None): spec["dataset_binding"] = record.dataset_binding
             launch = getattr(record, 'launch_spec', None) or {}
+            if launch.get('max_runtime_s') is not None:
+                spec['max_runtime_s'] = launch['max_runtime_s']
             if launch.get('measured_candidate'):
                 spec['measured_candidate'] = True
                 spec['automated_training'] = launch.get('automated_training')
@@ -807,7 +819,9 @@ def recover_remote_jobs(manager: Any) -> None:
         enqueued_at = item[1].get("enqueued_at")
         if not isinstance(enqueued_at, (int, float)):
             enqueued_at = 0
-        return (item[1].get("state") == "queued", enqueued_at, str(item[0]))
+        priority=(item[1].get('launch_spec') or {}).get('priority',0)
+        if type(priority) is not int or not -10 <= priority <= 10:priority=0
+        return (item[1].get("state") == "queued", -priority, enqueued_at, str(item[0]))
 
     journals.sort(key=recovery_order)
     for path, journal in journals:

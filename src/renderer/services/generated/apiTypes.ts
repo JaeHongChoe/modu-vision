@@ -293,6 +293,9 @@ export type ComputeJobInput = {
   labeling?: { [key: string]: unknown };
   dataset_version_id?: string | null;
   warm_start_job_id?: string | null;
+  queue?: boolean;
+  priority?: number;
+  max_runtime_s?: number | null;
 };
 
 export type ComputePredictionInput = {

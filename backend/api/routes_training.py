@@ -817,6 +817,7 @@ class TrainingJobManager:
         warm_start: Optional[WarmStartParent] = None,
         dataset_binding: Optional[Dict[str, Any]] = None,
         ledger: Optional[TrainingLedgerLink] = None,
+        queue_when_busy: bool = True,
     ) -> JobRecord:
         """Track one detached remote run through the existing training contract.
 
@@ -825,6 +826,9 @@ class TrainingJobManager:
         ``disconnected`` so the run remains reserved for later reconciliation.
         """
         with self._lock:
+            priority = (launch_spec or {}).get('priority', 0)
+            if type(priority) is not int or not -10 <= priority <= 10:
+                raise ValueError('Remote queue priority must be an integer between -10 and 10')
             if job_id in self._jobs:
                 raise HTTPException(status_code=409, detail=f"Training job {job_id} already exists")
             if profile is None:
@@ -840,6 +844,8 @@ class TrainingJobManager:
                 # A run resumed at startup keeps its ledger history (first attempt or reattach).
                 ledger = _existing_ledger_link(job_id)
             queued = profile is not None and recovery_state not in ("transferring", "launching", "launched", "artifacts_verified", "completed") and self._remote_slot_busy(profile)
+            if queued and not queue_when_busy:
+                raise HTTPException(409, 'Selected compute resource is busy; enable queueing to wait')
             record = JobRecord(
                 job_id=job_id, task=task, preset=preset, dataset_path=dataset_path,
                 output_dir=output_dir, status="queued" if queued else "running", remote_profile_id=remote_profile_id,
@@ -860,10 +866,10 @@ class TrainingJobManager:
             else:
                 if self._active_job_id is None:
                     self._active_job_id = job_id
-                self._launch_remote_worker_locked(record)
+                self._launch_remote_worker_locked(record, queue_when_busy=queue_when_busy)
             return record
 
-    def _launch_remote_worker_locked(self, record: JobRecord) -> None:
+    def _launch_remote_worker_locked(self, record: JobRecord, *, queue_when_busy: bool = True) -> None:
         job_id = record.job_id
         if record.remote_profile is not None:
             self._leases.adopt(job_id)
@@ -871,6 +877,13 @@ class TrainingJobManager:
             if not self._leases.acquire(job_id, self._lease_host(profile), profile.gpu_selector or "all", remote=True,
                     memory_budget_mb=profile.memory_budget_mb or 0,allow_sharing=profile.allow_sharing,task=record.task,
                     project_id=launch.get('project_id'),account_id=launch.get('account_id')):
+                if not queue_when_busy:
+                    from backend.remote.coordinator import mark_remote_journal_terminal
+                    record.status = record.phase = 'failed'
+                    mark_remote_journal_terminal(Path(record.output_dir), job_id, 'failed')
+                    self._jobs.pop(job_id, None)
+                    self._refresh_active_id()
+                    raise HTTPException(409, 'Selected compute resource became busy; no worker was launched')
                 record.status = "queued"; record.phase = "resource_reserved"
                 if job_id not in self._remote_queue: self._remote_queue.append(job_id)
                 self._watch_queue()
@@ -891,7 +904,7 @@ class TrainingJobManager:
                     record.phase = state
                     record.result = result
                     record.best_metric = result.get("best_metric")
-                    if state == "failed" and result.get("error"):
+                    if state in ("failed","aborted") and result.get("error"):
                         record.error = {"message": str(result["error"])}
             except Exception as exc:
                 logger.exception("Remote training job %s failed: %s", job_id, exc)
@@ -920,6 +933,9 @@ class TrainingJobManager:
         thread.start()
 
     def _start_waiting_remote_jobs_locked(self) -> None:
+        self._remote_queue.sort(key=lambda identifier: (
+            -(self._jobs[identifier].launch_spec or {}).get('priority', 0),
+            self._jobs[identifier].start_time, identifier) if identifier in self._jobs else (0,0,identifier))
         for job_id in list(self._remote_queue):
             record = self._jobs.get(job_id)
             if record is None:
@@ -967,7 +983,7 @@ class TrainingJobManager:
                     record.phase = state
                     record.result = result
                     record.best_metric = result.get("best_metric")
-                    if state == "failed" and result.get("error"):
+                    if state in ("failed","aborted") and result.get("error"):
                         record.error = {"message": str(result["error"])}
             except Exception as exc:
                 logger.exception("Could not reconnect remote job %s", job_id)
@@ -2226,7 +2242,7 @@ def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, 
     observed = classify_observation(
         record.status, exit_code=journal.get("worker_exit_code"), error=error, error_code=payload.get("error_code"),
         connection_lost=record.status == "disconnected", remote=getattr(record, "remote_profile_id", None) is not None,
-        app_restarted="restart" in (error or ""), cancel=evidence, cancel_reason=(intent or {}).get("reason"))
+        app_restarted="restart" in (error or ""), cancel=evidence, cancel_reason=(intent or {}).get("reason") or journal.get('cancel_reason'))
     # Without any run journal no worker of this job was ever recorded (it failed while preparing, or its folder is gone),
     # so there is no process exit to confirm; a journal that exists but cannot be read leaves that unknown (None).
     worker_recorded = True if journal else None if unreadable else False

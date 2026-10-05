@@ -1905,6 +1905,12 @@
      "result": "Exact314e Windows source CI runs five actual unpackaged Electron cases, all pass. Actual CPU rotation optimizes to epoch52/batch1 then acknowledges1.2s time_limit without manual cancellation; patch scheduling prepares source-bound input and retains controlled refusal.",
      "scope": "Native manifests44 source/build/artifact hashes, saved terminal journal/image identities and process/port closure facts read back, SHA-2561e171710784e408657e42b4b3da0fd024cdb6bbb3168475d12efdddb66fc385d. Full Windows source workflow fails three generated-type checks; Task55 correction needs fresh source qualification.",
      "platform": "Hosted Windows Server2025 CPU only, root source/screenshot review; installed Windows11, independent review, GPU/representative quality and whole parent remain pending."
+    },
+    {
+     "kind": "partial-remote-training-controls",
+     "result": "Task57 remote workbench queue/priority/runtime fields now cross compute API and persisted coordinator/worker contract; see remaining integration evidence.",
+     "scope": "177 affected and118 source contracts, renderer633, actual bounded CPU rotation loopback; source readback28c4c0479a16f96b7d3933e6b01fc812ec75bd4d421d49d8e3bcf9b6528bc019. Partial slice only; parent states unchanged.",
+     "platform": "macOS CPU, in-process loopback; no new SSH/GPU execution. New hosted-source qualification and independent/installed/representative acceptance pending."
     }
    ],
    "file_actions": {
@@ -2965,7 +2971,14 @@
     "S1-05"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "partial-remote-training-controls",
+     "result": "Task57 remote workbench queue/priority/runtime fields now cross compute API and persisted coordinator/worker contract; see remaining integration evidence.",
+     "scope": "177 affected and118 source contracts, renderer633, actual bounded CPU rotation loopback; source readback28c4c0479a16f96b7d3933e6b01fc812ec75bd4d421d49d8e3bcf9b6528bc019. Partial slice only; parent states unchanged.",
+     "platform": "macOS CPU, in-process loopback; no new SSH/GPU execution. New hosted-source qualification and independent/installed/representative acceptance pending."
+    }
+   ],
    "file_actions": {
     "backend/engine/model_execution.py": "Modify",
     "backend/engine/specialized_training_jobs.py": "Modify",

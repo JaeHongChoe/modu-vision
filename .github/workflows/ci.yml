@@ -69,6 +69,7 @@ jobs:
           backend/tests/test_training_runtime_budget.py
           backend/tests/test_patch_training_scheduling.py
           backend/tests/test_specialist_runtime_limits.py
+          backend/tests/test_remote_training_controls.py
           backend/tests/test_training_status_observation.py
           backend/tests/test_parent_selector_summary.py
           backend/tests/test_service_s2_09.py
