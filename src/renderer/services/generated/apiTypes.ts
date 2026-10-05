@@ -745,6 +745,11 @@ export type ImageReference = {
   [key: string]: unknown;
 };
 
+export type ImportPairs = {
+  target_folder: string;
+  records: Array<PairMapping>;
+};
+
 export type ImportRequest = {
   task: "classification" | "detection" | "segmentation" | "anomaly" | "patch_classification";
   invalid_policy?: "reject" | "exclude";
@@ -1041,6 +1046,12 @@ export type OwnedLeaseRequest = {
   expected_revision: number;
   ttl_seconds?: number;
   lease_token: string;
+};
+
+export type PairMapping = {
+  input: string;
+  target: string;
+  split: "train" | "val" | "test";
 };
 
 export type ParityImageRequest = {
@@ -1792,6 +1803,7 @@ export interface ApiRequestBody {
   "POST /api/engine/prepare": backend__api__routes_training_engine__PrepareRequest;
   "POST /api/engine/train": backend__api__routes_training_engine__TrainRequest;
   "POST /api/enhancement/evaluate": Evaluate;
+  "POST /api/enhancement/pairs/import": ImportPairs;
   "POST /api/enhancement/predict": Predict;
   "POST /api/enhancement/prepare": Prepare;
   "POST /api/enhancement/train": Train;

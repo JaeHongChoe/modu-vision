@@ -10,6 +10,7 @@ import io
 import json
 import math
 import os
+import shutil
 import tempfile
 from contextlib import nullcontext
 from datetime import datetime, timezone
@@ -149,12 +150,65 @@ def load_enhancement_manifest(dataset_path: str | Path) -> dict:
         raise ValueError("Enhancement requires nonempty train, val and test splits")
     # Location is not data identity: archives rebase source paths, while pixels,
     # pair geometry, origin hashes and split assignments must remain identical.
-    portable = {key: value for key, value in raw.items() if key not in {"source_dataset_path", "dataset_path", "provenance"}}
+    portable = {key: value for key, value in raw.items() if key not in {"source_dataset_path", "target_source_path", "dataset_path", "provenance"}}
     digest = hashlib.sha256(json.dumps(portable, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
     raw["dataset_path"] = str(root)
     raw["provenance"] = {"dataset_sha256": digest, "sample_count": len(raw["records"]),
                          "source_dataset_path": raw.get("source_dataset_path", str(root))}
     return raw
+
+
+def import_enhancement_pairs(source_path, target_path, records, destination):
+    """Copy explicitly mapped, aligned pairs into new owned storage atomically."""
+    source_arg,target_arg=Path(source_path).expanduser(),Path(target_path).expanduser()
+    if source_arg.is_symlink() or target_arg.is_symlink():
+        raise ValueError('Pair roots cannot be symbolic links')
+    source,targets=source_arg.resolve(),target_arg.resolve();output=Path(destination).expanduser().resolve()
+    if not source.is_dir() or not targets.is_dir() or output.exists() or output.is_relative_to(source) or output.is_relative_to(targets):
+        raise ValueError('Use a new separate owned pair destination and existing input/target roots')
+    if not isinstance(records,list) or not 3<=len(records)<=10000:
+        raise ValueError('Map 3–10000 explicit pairs with train/val/test splits')
+    prepared=[];seen_inputs=set();seen_targets=set();splits=set()
+    for row in records:
+        if not isinstance(row,dict) or set(row)!={'input','target','split'} or row['split'] not in ('train','val','test'):
+            raise ValueError('Pairs require only input, target and train/val/test split')
+        if not isinstance(row['input'],str) or not isinstance(row['target'],str):
+            raise ValueError('Pair paths must be relative strings')
+        original,target=_path(source,row['input']),_path(targets,row['target'])
+        with Image.open(original) as a,Image.open(target) as b:
+            if a.size!=b.size:raise ValueError('Enhancement input/target dimensions differ; align pairs before import')
+            input_pixels=np.asarray(a.convert('RGB'));target_pixels=np.asarray(b.convert('RGB'))
+            input_identity=hashlib.sha256(input_pixels.tobytes()).hexdigest()
+            target_identity=hashlib.sha256(target_pixels.tobytes()).hexdigest()
+        if input_identity in seen_inputs or target_identity in seen_targets:
+            raise ValueError('Duplicate input or target pixels; one source group must not cross splits')
+        seen_inputs.add(input_identity);seen_targets.add(target_identity);splits.add(row['split'])
+        prepared.append((row,original,target,_sha(original),_sha(target)))
+    if splits!={'train','val','test'}:raise ValueError('Explicit pairs require nonempty train, val and test splits')
+    output.parent.mkdir(parents=True,exist_ok=True)
+    stage=Path(tempfile.mkdtemp(prefix='.pairs-',dir=output.parent))
+    try:
+        copied=[]
+        for i,(row,original,target,input_sha,target_sha) in enumerate(prepared):
+            names={'input':f'inputs/{i:06d}{original.suffix.lower()}','target':f'targets/{i:06d}{target.suffix.lower()}'}
+            for kind,file,expected in [('input',original,input_sha),('target',target,target_sha)]:
+                data=file.read_bytes()
+                if hashlib.sha256(data).hexdigest()!=expected:raise ValueError('Pair source changed during copy')
+                _atomic(stage/names[kind],data)
+            copied.append({**names,'split':row['split'],'source_relative_path':row['input'],'source_sha256':input_sha,
+                           'input_sha256':input_sha,'target_sha256':target_sha,'target_source_relative_path':row['target']})
+        for _,original,target,input_sha,target_sha in prepared:
+            if _sha(original)!=input_sha or _sha(target)!=target_sha:raise ValueError('Pair source changed during copy')
+        _atomic(stage/'pairs.json',json.dumps({'version':1,'task':'enhancement','mode':'explicit_pairs',
+                'source_dataset_path':str(source),'target_source_path':str(targets),
+                'alignment':'exact pixel dimensions; operator-supplied registration, not automatic alignment',
+                'records':copied},ensure_ascii=False,indent=2).encode())
+        load_enhancement_manifest(stage)
+        if output.exists():raise ValueError('Pair destination appeared during import')
+        os.rename(stage,output)
+        return load_enhancement_manifest(output)
+    finally:
+        if stage.exists():shutil.rmtree(stage)
 
 
 class RGBDenoiser(nn.Module):
@@ -324,6 +378,30 @@ def _pixel_mse(pixels: np.ndarray, target: np.ndarray) -> float:
     return squared_error / pixels.size / (255 ** 2)
 
 
+def _ssim_window(shape):
+    size=min(7,*shape[:2]);return size if size%2 else size-1
+
+
+def _pixel_ssim(pixels: np.ndarray, target: np.ndarray) -> float:
+    """RGB mean of uniform valid-window SSIM with population covariance."""
+    if pixels.shape!=target.shape or pixels.ndim!=3 or pixels.shape[2]!=3 or not pixels.size:
+        raise ValueError('SSIM requires aligned nonempty RGB images')
+    window=_ssim_window(pixels.shape);height,width=pixels.shape[:2]
+    total=0.;count=0;c1=(.01*255)**2;c2=(.03*255)**2
+    def mean(values):
+        summed=np.pad(values.cumsum(0).cumsum(1),((1,0),(1,0),(0,0)))
+        return (summed[window:,window:]-summed[:-window,window:]-summed[window:,:-window]+summed[:-window,:-window])/(window*window)
+    for y in range(0,height-window+1,256):
+        for x in range(0,width-window+1,256):
+            h=min(256,height-window+1-y);w=min(256,width-window+1-x)
+            a=pixels[y:y+h+window-1,x:x+w+window-1].astype(np.float64)
+            b=target[y:y+h+window-1,x:x+w+window-1].astype(np.float64)
+            ma,mb=mean(a),mean(b);va=np.maximum(0,mean(a*a)-ma*ma);vb=np.maximum(0,mean(b*b)-mb*mb);cov=mean(a*b)-ma*mb
+            similarity=((2*ma*mb+c1)*(2*cov+c2))/((ma*ma+mb*mb+c1)*(va+vb+c2))
+            total+=float(np.clip(similarity,-1,1).sum());count+=similarity.size
+    return total/count
+
+
 def evaluate_enhancement(checkpoint_path: str | Path, dataset_path: str | Path, *, split: str = "test", device: str = "cpu",
                          allow_dataset_revision: bool = False) -> dict:
     if split not in {"train", "val", "test"}:
@@ -380,6 +458,8 @@ def evaluate_enhancement(checkpoint_path: str | Path, dataset_path: str | Path, 
                         "input_mse": input_mse, "output_mse": output_mse,
                         "input_psnr": -10 * math.log10(max(input_mse, 1e-10)),
                         "output_psnr": -10 * math.log10(max(output_mse, 1e-10)),
+                        "input_ssim": _pixel_ssim(image,reference), "output_ssim": _pixel_ssim(output,reference),
+                        "ssim_window_size": _ssim_window(image.shape),
                         "improved": output_mse < input_mse})
     if not samples:
         raise ValueError("Enhancement evaluation split is empty")
@@ -388,6 +468,12 @@ def evaluate_enhancement(checkpoint_path: str | Path, dataset_path: str | Path, 
     metrics = {"sample_count": len(samples), "input_mse": input_mean, "output_mse": output_mean,
                "input_psnr": -10 * math.log10(max(input_mean, 1e-10)),
                "output_psnr": -10 * math.log10(max(output_mean, 1e-10)), "improved": output_mean < input_mean,
+               "input_ssim": float(np.mean([row['input_ssim'] for row in samples])),
+               "output_ssim": float(np.mean([row['output_ssim'] for row in samples])),
+               "ssim_definition": {'window_size':7,'small_image_window':'largest fitting odd window',
+                   'window':'uniform valid windows','covariance':'population','channels':'mean RGB',
+                   'aggregation':'mean per image','data_range':255,'k1':.01,'k2':.03},
+               "defect_preservation_status": "unreviewed",
                "evaluation_geometry": dict(_EVALUATION_GEOMETRY), "samples": samples,
                "metric_aggregation": "mean_per_image_mse_then_psnr", "metric_data_range": 255,
                "mse_normalization": "squared_rgb_difference_divided_by_255_squared", "psnr_mse_floor": 1e-10}

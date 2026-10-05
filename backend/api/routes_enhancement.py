@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api.routes_project import get_current_project
-from backend.engine.enhancement import prepare_enhancement, load_enhancement_manifest, train_enhancement, evaluate_enhancement, predict_enhancement, _atomic
+from backend.engine.enhancement import prepare_enhancement, import_enhancement_pairs, load_enhancement_manifest, train_enhancement, evaluate_enhancement, predict_enhancement, _atomic
 
 router = APIRouter(prefix="/api/enhancement", tags=["enhancement"])
 _PROCESS_INSTANCE = uuid.uuid4().hex
@@ -48,6 +48,19 @@ class Train(BaseModel):
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     background: bool = False
     warm_start_job_id: str | None = Field(default=None, pattern=r'^[0-9a-f]{32}$')
+
+
+class PairMapping(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    input: str=Field(min_length=1,max_length=4096)
+    target: str=Field(min_length=1,max_length=4096)
+    split: Literal['train','val','test']
+
+
+class ImportPairs(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    target_folder: str=Field(min_length=1,max_length=4096)
+    records: list[PairMapping]=Field(min_length=3,max_length=10000)
 
 
 class Evaluate(BaseModel):
@@ -104,11 +117,46 @@ def prepare(req: Prepare, request: Request):
 
 @router.get("/manifest")
 def manifest(dataset_path: str, request: Request):
-    get_current_project(request)
+    project=get_current_project(request)
     try:
+        from backend.engine.training_provenance import bind_family_training
+        bind_family_training(project,dataset_path,'enhancement')
         return load_enhancement_manifest(dataset_path)
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/pairs/import')
+def import_pairs(req:ImportPairs,request:Request):
+    project=get_current_project(request)
+    source=project.get('source_dataset_dir')
+    if not source:raise HTTPException(409,'Select an active project input source')
+    root=Path(project['dataset_dir'])
+    if root.is_symlink() or (root/'enhancement').is_symlink():raise HTTPException(422,'Invalid owned pair storage')
+    try:
+        return import_enhancement_pairs(source,req.target_folder,[r.model_dump() for r in req.records],root/'enhancement'/uuid.uuid4().hex)
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
+
+
+@router.get('/pairs/preview')
+def pair_preview(dataset_path:str,sample_index:int,request:Request):
+    project=get_current_project(request)
+    from backend.engine.training_provenance import bind_family_training
+    try:
+        bind_family_training(project,dataset_path,'enhancement')
+        manifest=load_enhancement_manifest(dataset_path)
+        if not 0<=sample_index<len(manifest['records']):raise ValueError('Choose an existing pair sample')
+        row=manifest['records'][sample_index];previews={}
+        import base64
+        for kind in ('input','target'):
+            with Image.open(Path(dataset_path)/row[kind]) as image:
+                size=image.size;preview=image.convert('RGB');preview.thumbnail((768,768))
+                stream=io.BytesIO();preview.save(stream,format='PNG')
+                previews[kind]={'image_base64':base64.b64encode(stream.getvalue()).decode(),'source_width':size[0],
+                                'source_height':size[1],'preview_width':preview.width,'preview_height':preview.height}
+        return {'record':row,'mode':manifest.get('mode','explicit_pairs'),'previews':previews,
+                'dataset_sha256':manifest['provenance']['dataset_sha256'],'preview_only':True}
+    except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
 
 
 @router.get('/datasets')
