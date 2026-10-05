@@ -405,7 +405,13 @@ def _track_restore_connections(monkeypatch):
         # test thread to inspect and clean up these real retained handles.
         kwargs['check_same_thread'] = False
         connection = connect(database, *args, **kwargs)
-        connections.append((Path(database), connection))
+        # Credential preflight opens snapshots read-only through file: URIs.
+        # Track their real paths too so the publication guard sees every handle.
+        from urllib.parse import urlsplit
+        from urllib.request import url2pathname
+        value = str(database)
+        resolved = Path(url2pathname(urlsplit(value).path)) if value.startswith('file:') else Path(value)
+        connections.append((resolved, connection))
         return connection
 
     monkeypatch.setattr(project_archive.sqlite3, 'connect', tracked)
@@ -465,11 +471,10 @@ def test_restore_closes_sqlite_handles_before_publication_and_return(tmp_path: P
     try:
         restored = client.post('/api/project/restore', json={'archive_path': str(archive), 'target_dir': str(target)})
         assert restored.status_code == 200, restored.text
-        assert publications == [7]  # All rebind/fingerprint/retention connections now close before rename.
+        assert publications == [13]  # Seven rebind/retention and six read-only credential checks.
         restored_handles = [connection for path, connection in connections
                             if path.is_relative_to(target) or any('.restore-' in parent.name for parent in path.parents)]
-        # Five archive rebind handles plus the restored retention schema/receipt.
-        assert len(restored_handles) == 7
+        assert len(restored_handles) == 13
         assert all(_connection_closed(connection) for connection in restored_handles)
         assert restored.json()['id'] == project['id']
         assert (target / 'models' / job_id / 'best_model.pt').read_bytes() == model_bytes

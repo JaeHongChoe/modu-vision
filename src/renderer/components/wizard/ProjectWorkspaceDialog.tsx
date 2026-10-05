@@ -4,8 +4,9 @@ import type { VisionTask } from '../../types';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { host } from '../../services/hostAdapter';
 import { ArtifactRetentionPanel } from './ArtifactRetentionPanel';
+import { api } from '../../services/api';
 
-type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore' | 'retention';
+type Tab = 'recent' | 'create' | 'open' | 'backup' | 'restore' | 'retention' | 'template';
 
 const taskLabels: Record<VisionTask, string> = {
   classification: '분류',
@@ -33,6 +34,29 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
   const [backupFolder, setBackupFolder] = useState('');
   const [archivePath, setArchivePath] = useState('');
   const [restorePath, setRestorePath] = useState('');
+  const [templateText, setTemplateText] = useState('');
+  const [templateBusy, setTemplateBusy] = useState(false);
+  const [templateError, setTemplateError] = useState('');
+  const templateGeneration = useRef(0);
+  useEffect(() => () => { ++templateGeneration.current; }, []);
+  const loadTemplate = async () => {
+    const generation = ++templateGeneration.current;
+    setTemplateBusy(true); setTemplateError('');
+    try {
+      const setup = await api.project.template();
+      if (generation === templateGeneration.current) setTemplateText(JSON.stringify(setup, null, 2));
+    } catch (error) {
+      if (generation === templateGeneration.current) setTemplateError(error instanceof Error ? error.message : String(error));
+    } finally { if (generation === templateGeneration.current) setTemplateBusy(false); }
+  };
+  const createFromTemplate = async (event: React.FormEvent) => {
+    event.preventDefault(); setTemplateError('');
+    try {
+      const template = JSON.parse(templateText) as Record<string, unknown>;
+      if (!template || typeof template !== 'object' || Array.isArray(template)) throw Error('템플릿 JSON 객체를 입력하세요.');
+      if (await createProject({ name: name.trim(), task, project_dir: createPath.trim() || undefined, template })) onClose();
+    } catch (error) { setTemplateError(error instanceof Error ? error.message : String(error)); }
+  };
   const [backupMessage, setBackupMessage] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +152,7 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
               ['backup', Archive, '프로젝트 백업'],
               ['restore', ArchiveRestore, '백업에서 복원'],
               ['retention', HardDrive, '보존기한·복구 보관함'],
+              ['template', Layers3, '프로젝트 설정 템플릿'],
             ] as const).map(([id, Icon, label]) => (
               <button key={id} type="button" onClick={() => switchTab(id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs font-medium transition-colors ${tab === id ? 'bg-[#263D58] text-cyan-200' : 'text-slate-400 hover:bg-[#1C293A] hover:text-slate-200'}`}>
                 <Icon className="h-4 w-4" />{label}
@@ -154,6 +179,20 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
                   })}
                 </div>
               </section>
+            )}
+
+            {tab === 'template' && (
+              <form onSubmit={createFromTemplate} className="space-y-4">
+                <h3 className="text-sm font-semibold text-slate-100">프로젝트 설정 템플릿</h3>
+                <p className="text-xs leading-5 text-slate-400">검사 유형·학습 프리셋·태그 색상·보존 정책을 새 프로젝트에서 재사용합니다. 원본·모델·검사 기록·권한은 포함되지 않습니다. 전체 작업을 이동하려면 프로젝트 백업을 사용하세요.</p>
+                <button type="button" disabled={templateBusy || isProjectBusy} onClick={() => void loadTemplate()} className="rounded border border-slate-600 px-3 py-2 text-xs text-slate-200 disabled:opacity-40">현재 설정을 템플릿으로 읽기</button>
+                <label className="block text-xs text-slate-300">템플릿 JSON<textarea aria-label="프로젝트 설정 템플릿 JSON" value={templateText} onChange={(event) => { ++templateGeneration.current; setTemplateBusy(false); setTemplateText(event.target.value); }} rows={10} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 font-mono text-xs text-white" /></label>
+                <p className="text-xs text-slate-500">JSON을 복사해 다른 환경에서 붙여 넣을 수 있습니다. 서버에서 형식과 내용 해시를 검증합니다.</p>
+                <label className="block text-xs text-slate-300">새 프로젝트 이름<input aria-label="템플릿 새 프로젝트 이름" value={name} maxLength={100} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 text-white" /></label>
+                <label className="block text-xs text-slate-300">새 프로젝트 폴더 · 비우면 기본 위치<input aria-label="템플릿 새 프로젝트 폴더" value={createPath} onChange={(event) => setCreatePath(event.target.value)} className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 text-white" /></label>
+                <button type="submit" disabled={!name.trim() || !templateText.trim() || templateBusy || isProjectBusy} className="rounded bg-cyan-600 px-4 py-2 text-sm text-white disabled:opacity-40">템플릿으로 새 프로젝트 만들기</button>
+                {templateError && <p role="alert" className="text-xs text-red-300">{templateError}</p>}
+              </form>
             )}
 
             {tab === 'create' && (

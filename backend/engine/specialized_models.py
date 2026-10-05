@@ -151,10 +151,10 @@ def resolve_specialized_checkpoint(project_models_dir,job_id,task,source_dataset
                 raise ValueError('Specialized original source image inventory changed')
             if task=='ocr':
                 from backend.engine.ocr import load_ocr_manifest
-                if not set(load_ocr_manifest(source_dataset_path).alphabet).issubset(payload['alphabet']):
+                if not set(load_ocr_manifest(dataset).alphabet).issubset(payload['alphabet']):
                     raise ValueError('Specialized OCR alphabet is incompatible with checkpoint')
             elif task=='rotated_detection':
                 from backend.engine.rotated_detection import load_rotated_manifest
-                if not set(load_rotated_manifest(source_dataset_path).class_names).issubset(metadata.get('class_names',[metadata.get('class_name')])):
+                if not set(load_rotated_manifest(dataset).class_names).issubset(metadata.get('class_names',[metadata.get('class_name')])):
                     raise ValueError('Specialized rotated classes are incompatible with checkpoint')
     return checkpoint,metadata

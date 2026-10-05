@@ -125,7 +125,7 @@ interface ProjectState {
   clearProjectError: () => void;
   syncCurrentProject: () => Promise<void>;
   loadRecentProjects: () => Promise<void>;
-  createProject: (data: { name: string; task: VisionTask; project_dir?: string; description?: string }) => Promise<boolean>;
+  createProject: (data: { name: string; task: VisionTask; project_dir?: string; description?: string; template?: Record<string, unknown> }) => Promise<boolean>;
   openProject: (projectDir: string) => Promise<boolean>;
   activateLabelset: (id: string) => Promise<boolean>;
   createAndActivateLabelset: (name: string) => Promise<boolean>;

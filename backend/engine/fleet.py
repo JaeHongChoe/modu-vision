@@ -65,6 +65,7 @@ class FleetRegistry:
     def secret(self,identifier):
         with self.connect() as conn:row=conn.execute('SELECT token FROM targets WHERE target_id=?',(identifier,)).fetchone()
         if not row:raise KeyError(identifier)
+        if not row[0]:raise ValueError('Agent credentials are unavailable; configure this target before connecting')
         return row[0]
     def target(self,identifier):
         row=next((r for r in self.targets() if r['target_id']==identifier),None)

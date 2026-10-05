@@ -2708,8 +2708,15 @@
     "S1-08",
     "S3-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "original-parent-software-lifecycle-closure",
+     "source_sha": "3796ac704961b84c2b13e51e0557265480121d45",
+     "result": "Allowlisted task/preset/tag-palette/retention setup template creates a fresh identity with no source, model, result, pins or authority. Actual Chrome/macOS development Electron template/create/reopen and archive/fresh-restore preserve original hashes, prepared OCR labels/checkpoint, frozen dataset/flow versions, completed inspection results and controlled review history. Relocated OCR/OBB compatibility checks read prepared family labels, with unchanged checkpoint/frozen-source checks. Artifact recoverable trash, protected holds, policy/quota and committed SQLite backup/restore reverified. Known credential check refuses filenames/JSON/SQLite keys/private-key markers/credential URLs without echoing values; exact host service/fleet snapshots strip tokens and install data, restored service inactive and fleet connection refuses until credentials are configured. Original host credentials remain unchanged. Backend51 passed/one Windows test unselected; renderer767 passed; four actual app cases; typechecks passed. Root readback SHA-2564bc65aff7b3ed2c3211b95b9a088c53885765520bf7432f19cd6e47d35fa3441 binds1391 frozen inputs/370 artifacts.",
+     "scope": "Artifact soft delete/trash only. One-epoch synthetic CPU model proves stored-byte and execution parity, not quality; credential check is bounded known-format inspection, not general DLP. Independent/human review, actual remote relocation, representative quality, installed/physical/target acceptance pending; Windows excluded."
+    }
+   ],
    "file_actions": {
     "backend/engine/project_archive.py": "Modify",
     "backend/engine/project_migration.py": "Modify",
@@ -2717,12 +2724,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -2730,6 +2737,10 @@
    "proposed_test_file": "backend/tests/test_service_s3_10.py",
    "scope_refinement_ids": [
     "E08"
+   ],
+   "remaining": [
+    "Independent review/handoff and actual remote/installed/physical target acceptance remain pending. Windows tests excluded; full parent acceptance is not promoted.",
+    "Supported soft delete applies to managed artifacts. Setup templates have no model/flow/execution/approval/data bindings. Known credential checks do not certify arbitrary binary or encoded secrets as absent."
    ]
   },
   {
@@ -9361,13 +9372,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 44,
-    "pending": 38
+    "verified": 45,
+    "pending": 37
    },
    "parent_status": {
-    "verification_pending": 38,
+    "verification_pending": 39,
     "in_progress": 17,
-    "planned": 27
+    "planned": 26
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
@@ -9520,7 +9531,7 @@
    ],
    "gpu_execution": "Existing private Docker target read-only SSH/CUDA readiness verified through corrected app transport. DINOv3/YOLO optional runtime dependencies absent; no new GPU job."
   },
-  "latest_slice_source_sha": "5b2955749dd9a5dc6a621dd24a2b28441050f9ed",
+  "latest_slice_source_sha": "3796ac704961b84c2b13e51e0557265480121d45",
   "latest_fixture_source_sha": "7722537435121e2fcc3b1a7fe8bed93ecf8047aa"
  },
  "scope_refinements": [

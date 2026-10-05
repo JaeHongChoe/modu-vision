@@ -216,6 +216,7 @@ class ProjectCreateRequest(BaseModel):
     project_dir: Optional[str] = None
     description: str = ""
     active_preset: Literal["fast", "precision"] = "fast"
+    template: dict[str, Any] | None = None
 
 
 class ProjectOpenRequest(BaseModel):
@@ -342,12 +343,21 @@ def _compatibility_scope(directory,request,write=False):
 @router.post("/create", response_model=ProjectConfigResponse)
 def create_project(req: ProjectCreateRequest, request: Request):
     """Create a new workspace; never replace an existing project.json."""
+    from backend.engine.project_templates import validate_template, apply_template
+    template = None
+    if req.template is not None:
+        try:
+            template = validate_template(req.template)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, detail=str(exc)) from exc
     if req.project_dir:
         path = Path(req.project_dir).expanduser().resolve()
     else:
         slug = re.sub(r"[^\w-]+", "_", req.name.strip().lower(), flags=re.UNICODE).strip("_")
         path = (_project_root(request) / (slug or f"project_{uuid.uuid4().hex[:8]}")).resolve()
     manifest = path / "project.json"
+    if template is not None and path.exists():
+        raise HTTPException(409, detail='A template requires a fresh project location')
     if manifest.exists():
         raise HTTPException(status_code=409, detail=f"Project already exists at {path}. Open it instead.")
     if path.exists() and not path.is_dir():
@@ -359,14 +369,16 @@ def create_project(req: ProjectCreateRequest, request: Request):
 
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     project = ProjectConfigResponse(
-        id=uuid.uuid4().hex[:8], name=req.name.strip(), task=req.task,
+        id=uuid.uuid4().hex[:8], name=req.name.strip(), task=template['task'] if template else req.task,
         project_dir=str(path), dataset_dir=str(path / "dataset"),
         models_dir=str(path / "models"), reports_dir=str(path / "reports"),
         annotations_dir=str(path / "annotations"), description=req.description,
-        active_preset=req.active_preset, created_at=now, updated_at=now,
+        active_preset=template['active_preset'] if template else req.active_preset, created_at=now, updated_at=now,
     ).model_dump()
     load_labelsets(path)
     _write_json(manifest, project)
+    if template is not None:
+        apply_template(path, template)
     return _activate_project(request, project)
 
 
@@ -492,6 +504,15 @@ def backup_project(req: ProjectBackupRequest, request: Request):
         return create_archive(project, Path(req.destination_dir))
     except ArchiveError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get('/template')
+def project_setup_template(request: Request):
+    from backend.engine.project_templates import export_template
+    try:
+        return export_template(get_current_project(request))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
 
 
 def _retention_action(request, action):

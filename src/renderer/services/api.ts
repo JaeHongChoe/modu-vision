@@ -823,7 +823,7 @@ export const api = {
     acceptContext: acceptProjectContext,
     getCurrent: () => request<ProjectConfig>('/api/project/current'),
     list: () => request<{ projects: RecentProject[] }>('/api/project/list'),
-    create: (data: { name: string; task: VisionTask; project_dir?: string; description?: string }) =>
+    create: (data: { name: string; task: VisionTask; project_dir?: string; description?: string; template?: Record<string, unknown> }) =>
       request<ProjectConfig>('/api/project/create', { method: 'POST', body: JSON.stringify(data) }),
     open: (projectDir: string) =>
       request<ProjectConfig>('/api/project/open', { method: 'POST', body: JSON.stringify({ project_dir: projectDir }) }),
@@ -839,6 +839,7 @@ export const api = {
     backup: (destinationDir: string) => request<ProjectBackupResult>('/api/project/backup', {
       method: 'POST', body: JSON.stringify({ destination_dir: destinationDir }),
     }),
+    template: () => request<Record<string, unknown>>('/api/project/template'),
     restore: (archivePath: string, targetDir: string) => request<ProjectConfig>('/api/project/restore', {
       method: 'POST', body: JSON.stringify({ archive_path: archivePath, target_dir: targetDir }),
     }),

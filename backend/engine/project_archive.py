@@ -153,6 +153,7 @@ def create_archive(project: dict[str, Any], destination_dir: Path) -> dict[str, 
 
 
 def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention_manifest=None) -> dict[str, Any]:
+    from backend.engine.archive_credentials import check_credentials, portable_service, sanitize_fleet_database
     project_dir = Path(project["project_dir"]).resolve()
     source_text = project.get("source_dataset_dir")
     source_dir = Path(source_text).resolve() if source_text else None
@@ -187,6 +188,18 @@ def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention
             # files, and the SQLite snapshot handling, remain unchanged.
             if prefix == 'project' and relative in _PROJECT_COORDINATION_FILES:
                 continue
+            if prefix == 'project' and relative.startswith('runtime_service/install/'):
+                continue  # Host registration can embed secrets; never portable archive data.
+            if prefix == 'project' and relative == 'runtime_service/service.json':
+                try:
+                    portable_service(path)
+                except (ValueError, OSError) as exc:
+                    raise ArchiveError('Host service record cannot be made portable') from exc
+            elif not (prefix == 'project' and relative == 'fleet/agents.sqlite3' and _sqlite_file(path)):
+                try:
+                    check_credentials(path, f'{prefix}/{relative}')
+                except ValueError as exc:
+                    raise ArchiveError(str(exc)) from exc
             size = path.stat().st_size
             total_bytes += size
             if prefix == "source":
@@ -205,14 +218,25 @@ def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention
     try:
         with ZipFile(temporary, "w", compression=ZIP_STORED, allowZip64=True) as output:
             for member, path, size in inventory:
+                if member == 'project/runtime_service/service.json':
+                    sanitized = sqlite_staging / 'portable-service.json'
+                    sanitized.write_bytes(portable_service(path))
+                    total_bytes += sanitized.stat().st_size - size
+                    path, size = sanitized, sanitized.stat().st_size
                 if member.startswith("project/") and _sqlite_file(path):
                     path = _sqlite_snapshot(path, sqlite_staging)
+                    if member == 'project/fleet/agents.sqlite3':
+                        sanitize_fleet_database(path)
                     snapshot_size = path.stat().st_size
                     total_bytes += snapshot_size - size
                     size = snapshot_size
                     if total_bytes > MAX_TOTAL_BYTES:
                         raise ArchiveError("Backup exceeds the total size limit", 413)
                 before = path.stat()
+                try:
+                    check_credentials(path, member)
+                except ValueError as exc:
+                    raise ArchiveError(str(exc)) from exc
                 output.write(path, member)
                 after = path.stat()
                 if before.st_size != size or before.st_mtime_ns != after.st_mtime_ns:
@@ -232,6 +256,9 @@ def _create_archive(project: dict[str, Any], destination_dir: Path, *, retention
                 "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "files": rows,
                 "retention":retention_manifest,
+                "portability": {'credential_check': 'known-files-json-keys-private-key-and-credential-url-v1',
+                                'host_service_credentials_removed': any(member == 'project/runtime_service/service.json' for member, _, _ in inventory),
+                                'excluded_host_install': (project_dir / 'runtime_service/install').is_dir()},
                 "db_revision":{row['member']:row['sha256'] for row in rows if row['member'].endswith(('.sqlite3','.sqlite','.db'))},
             }
             if (source_dir is not None and _labelset_dataset_fingerprints(project_dir, source_dir)
@@ -882,6 +909,23 @@ def _restore_archive(archive_path: Path, target_dir: Path, *, staging_dir: Path 
             project_path = staging / "project.json"
             if not project_path.is_file():
                 raise ArchiveError("Backup project.json is missing")
+            # Legacy v1 archives can contain host service capabilities: sanitize
+            # that exact record and remove native install data before activation.
+            from backend.engine.archive_credentials import check_credentials, portable_service, sanitize_fleet_database
+            service = staging / 'runtime_service/service.json'
+            if service.is_file():
+                service.write_bytes(portable_service(service))
+            install = staging / 'runtime_service/install'
+            if install.is_dir():
+                shutil.rmtree(install)
+            fleet = staging / 'fleet/agents.sqlite3'
+            if _sqlite_file(fleet):
+                sanitize_fleet_database(fleet)
+            for file in _files(staging):
+                try:
+                    check_credentials(file, file.relative_to(staging).as_posix())
+                except ValueError as exc:
+                    raise ArchiveError(str(exc)) from exc
             project = json.loads(project_path.read_text(encoding="utf-8"))
             if 'schema_version' in project and (type(project['schema_version']) is not int or project['schema_version']!=1):
                 raise ArchiveError('Backup project schema is unsupported')
