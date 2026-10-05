@@ -106,6 +106,13 @@ def test_existing_linear_graph_still_executes(monkeypatch):
 
     result = engine.execute(pipeline=pipeline, image=np.zeros((32, 40, 3), dtype=np.uint8))
     assert result["final_verdict"] == "OK"
+    from backend.engine.flow_provenance import pipeline_sha256
+    assert result["graph_sha256"] == pipeline_sha256(pipeline)
+    previous = result["graph_sha256"]
+    next(node for node in pipeline.nodes if node.id == "node_inspect").data.threshold = .8
+    changed = engine.execute(pipeline=pipeline, image=np.zeros((32, 40, 3), dtype=np.uint8))
+    assert changed["graph_sha256"] == pipeline_sha256(pipeline)
+    assert changed["graph_sha256"] != previous
     assert result["routed_output_node_id"] == "node_output"
 
 

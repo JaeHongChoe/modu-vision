@@ -1487,7 +1487,7 @@ export const FlowchartStudio: React.FC = () => {
                 {selectedNode.data.node_type==='inspection' && selectedNode.data.task==='anomaly' && <label className="block">이상 검사 방식<select value={selectedNode.data.params?.anomaly_mode || 'classification'} onChange={(e) => updateNodeData(selectedNode.id,{params:{...selectedNode.data.params,anomaly_mode:e.target.value}})} className="ml-2 rounded bg-slate-800 p-1"><option value="classification">이미지 점수 분류</option><option value="segmentation">결함 영역 검사·마스크</option></select></label>}
                 {pipeline && (executionResult && !resultIsCurrent
                   ? <section role="status" aria-label="이전 버전 노드 근거" className="rounded border border-amber-700 bg-amber-950/30 p-3 text-xs text-amber-100">마지막 실행은 이전 버전의 검사 규칙으로 계산되어 현재 노드 설정과 함께 표시하지 않습니다. 검사 결과 탭에서 이전 결과를 보거나 다시 실행하세요.</section>
-                  : <FlowNodeDebugger node={selectedNode} pipeline={pipeline} result={canvasResult} />)}
+                  : <FlowNodeDebugger node={selectedNode} pipeline={pipeline} result={canvasResult} versionId={lastRunSource?.kind==='saved'?lastRunSource.versionId:null} />)}
 
                 {selectedNode.data.node_type === 'fixed_roi' && (() => {
                   const [x1, y1, x2, y2] = (selectedNode.data.params?.roi_bbox as number[] | undefined) || [0, 0, 512, 512];

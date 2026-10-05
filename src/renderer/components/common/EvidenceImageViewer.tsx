@@ -28,7 +28,7 @@ export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작�
       else if(event.key==='0'){event.preventDefault();fit();}
     }}>
       <header className="flex items-center justify-between gap-3"><h3 className="font-semibold">{evidence.title} · 읽기 전용</h3><button type="button" onClick={onClose} className="rounded border border-slate-500 px-3 py-2">{returnLabel}</button></header>
-      <p className="mt-2 break-all text-slate-400">{evidence.imagePath||'저장된 중간 이미지'} · 실행 {evidence.runId||'현재 미저장 실행'} · 버전 {evidence.versionId||'기록 없음'}{evidence.nodeId&&` · 노드 ${evidence.nodeId}`}{evidence.roiId&&` · ROI ${evidence.roiId}`}</p>
+      <p className="mt-2 break-all text-slate-400">{evidence.imagePath||'저장된 중간 이미지'} · 실행 {evidence.runId||'현재 미저장 실행'} · 버전 {evidence.versionId||'기록 없음'}{evidence.graphSha256&&` · 그래프 ${evidence.graphSha256}`}{evidence.nodeId&&` · 노드 ${evidence.nodeId}`}{evidence.roiId&&` · ROI ${evidence.roiId}`}</p>
       {evidence.imageSha256&&<p className="break-all text-[10px] text-slate-400">원본 SHA-256 {evidence.imageSha256}</p>}
       {evidence.warning&&<p role="alert" className="mt-2 text-amber-300">{evidence.warning}</p>}
       <div className="my-3 flex flex-wrap items-center gap-2">
@@ -51,7 +51,7 @@ export function EvidenceImageViewer({evidence, onClose, returnLabel='원래 작�
         </div>:<p className="p-4 text-amber-200">검증된 저장 이미지가 없습니다. 외부 이미지 주소는 불러오지 않습니다.</p>}
       </div>
       <p className="mt-2 text-slate-400">드래그·방향키로 이동, +/− 확대·축소, 0 전체 맞춤, Esc 복귀. 다른 좌표계의 이미지는 개별 표시합니다. 저장된 판정과 라벨은 수정하지 않습니다.</p>
-      {evidence.facts&&<details className="mt-2"><summary className="cursor-pointer">측정·판정 근거</summary><pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(evidence.facts,null,2)}</pre></details>}
+      {(evidence.facts||selected?.facts)&&<details className="mt-2"><summary className="cursor-pointer">측정·판정 근거</summary><pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify({...evidence.facts,selected_raster:selected?.facts},null,2)}</pre></details>}
     </div>
   </div>;
 }

@@ -69,6 +69,43 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     posted, job_id: jobId, report_id: job.report_id, tested_images: report.images.length, disagreement_count: report.summary.disagreements,
     handoff_same_id: true, refresh_same_id: true, source_unchanged: true, job, report});
 
+  // A later manual saved-report selection must beat the same persistent
+  // handoff on refresh. A fresh task-center selection then takes priority.
+  const secondCreated=await api('/api/evaluation/model-comparisons/jobs',{source_dataset_path:source,task:'classification',
+    incumbent_job_id:'job_fixture_incumbent',candidate_job_id:'job_fixture_candidate',max_images:2,full_test:true,execution_target:'local_cpu',device:'cpu'});
+  let secondJob=secondCreated;
+  await expect.poll(async()=>{secondJob=await api(`/api/evaluation/model-comparisons/jobs/${secondCreated.job_id}${query}`);return secondJob.status;},{timeout:60_000}).toBe('completed');
+  expect(secondJob.report_id).not.toBe(job.report_id);
+  await page.reload();await expect(panel.getByLabel('비교 작업 다시 열기')).toHaveValue(job.job_id);
+  await panel.getByLabel('저장된 모델 비교').selectOption(secondJob.report_id);
+  await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
+  const postsBeforeReopen=posted;
+  await page.reload();await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
+  await expect(panel.getByLabel('비교 작업 다시 열기')).toHaveValue('');expect(posted).toBe(postsBeforeReopen);
+  await evidence.screenshot(page,native?'native-manual-report-reopened':'browser-manual-report-reopened');
+  const newHandoff=await openTaskCenter(page);await newHandoff.getByLabel('저장 작업 다시 열기').selectOption(`model_comparison:local:${job.job_id}`);
+  await newHandoff.getByRole('button',{name:'비교 작업·결과 열기',exact:true}).click();
+  await expect(panel.getByLabel('비교 작업 다시 열기')).toHaveValue(job.job_id);await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(job.report_id);
+  evidence.note('manual_report_reopen',{report_id:secondJob.report_id,job_id:secondJob.job_id,same_persistent_handoff_superseded:true,
+    no_new_submission_on_refresh:true,fresh_handoff_restores_original_job:true,actual_cpu_comparisons:2});
+
+  const queue=await api('/api/data-workbench/review-queues',{comparison_id:secondJob.report_id,threshold:.5,margin:.05});
+  expect(queue.items.length).toBeGreaterThan(0);
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
+  await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();
+  const reviewQueue=page.getByRole('region',{name:'저장된 검토 큐'});
+  await reviewQueue.getByLabel('저장 검토 큐 선택').selectOption(queue.id);await reviewQueue.getByRole('button',{name:'현재 항목 열기',exact:true}).click();
+  await expect(reviewQueue.getByRole('button',{name:'검토 완료 · 다음',exact:true})).toBeEnabled();
+  await reviewQueue.getByRole('button',{name:'원래 평가·비교로 돌아가기',exact:true}).click();
+  await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
+  await expect(panel.getByLabel('비교 작업 다시 열기')).toHaveValue('');
+  const focused=panel.locator('[data-comparison-image].ring-cyan-400');
+  await expect(focused).toHaveCount(1);await expect(focused).toHaveAttribute('data-comparison-image',queue.items[queue.cursor].file_path);
+  await evidence.screenshot(page,native?'native-review-return':'browser-review-return');
+  const beforeQueueReopen=posted;await page.reload();await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);expect(posted).toBe(beforeQueueReopen);
+  evidence.note('queue_return',{queue_id:queue.id,comparison_id:secondJob.report_id,image_path:queue.items[queue.cursor].file_path,
+    old_handoff_superseded:true,exact_image_highlight:true,refresh_same_report:true,labels_edited:false,no_new_submission:true});
+
   // A real saved classification flow uses the same controlled weights. The
   // source hash comes from server execution, never a client-supplied verdict.
   await api('/api/flowchart/models/verify', {source_dataset_path: source, models:[{job_id:'job_fixture_incumbent', task:'classification'}]});

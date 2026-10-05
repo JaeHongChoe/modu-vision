@@ -1642,8 +1642,15 @@
     "S1-06",
     "S2-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "published-partial-functional-evidence",
+     "result": "e4be66659b478cd3d1fdafe7aac11514a74c03eb: shared read-only image viewer, hash-bound inspection and comparison originals, exact comparison reopening and scoped cancellation inventory. Private functional source/run readback SHA-256 0741b880226098848541bfec53e907434d926326e238b4ee6a37fe66a0cb46b7; publication readback SHA-256 002771d70fcdba0093e0b56583b91e66e6959a6819a8d76638787fa6ca8188a2.",
+     "scope": "Tasks60–66: controlled CPU comparison/inspection, zoom/pan/fit/overlay/opacity and exact return. Partial software implementation only; annotation-mode, complete raster content and independent/whole-parent acceptance remain open.",
+     "platform": "macOS native Electron and Chrome browser with owned backend; Windows excluded and no new remote/GPU run."
+    }
+   ],
    "file_actions": {
     "src/renderer/components/common/EvidenceImageViewer.tsx": "Create",
     "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "Modify",
@@ -1661,7 +1668,12 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s2-06.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s2-06.spec.ts",
+   "remaining": [
+    "Shared labeling-mode integration with lease/revision guards, drawing and erasure; historical viewers remain read-only.",
+    "Full independent/representative raster and annotation-content review; comparison report filters and review-origin cases beyond the controlled completed comparisons.",
+    "Remote target and representative model-quality acceptance; whole-parent acceptance is not inferred from synthetic functional checks."
+   ]
   },
   {
    "id": "S2-07",
@@ -9029,8 +9041,8 @@
    },
    "parent_status": {
     "verification_pending": 19,
-    "in_progress": 25,
-    "planned": 38
+    "in_progress": 26,
+    "planned": 37
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

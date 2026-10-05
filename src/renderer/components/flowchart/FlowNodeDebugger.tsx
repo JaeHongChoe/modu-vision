@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import type {FlowNode,FlowchartPipeline,FlowchartExecutionResult,FlowchartExecutionStep} from '../../types';
 import {nodeEvidenceText,activeInputArtifacts,artifactPage,roiTrace} from './flowWorkspace';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
-import type {EvidenceView} from '../common/evidenceViewer';
+import {compactEvidence, storedRasterLayers, type EvidenceView} from '../common/evidenceViewer';
 
 type Artifact=NonNullable<FlowchartExecutionStep['artifacts']>[number];
 function ArtifactBrowser({title,rows,onSelect,onOpen}:{title:string;rows:Artifact[];onSelect:(id:string)=>void;onOpen:(row:Artifact,title:string)=>void}) {
@@ -27,7 +27,7 @@ function ArtifactBrowser({title,rows,onSelect,onOpen}:{title:string;rows:Artifac
   </section>;
 }
 
-export function FlowNodeDebugger({node,pipeline,result}:{node:FlowNode;pipeline:FlowchartPipeline;result:FlowchartExecutionResult|null}) {
+export function FlowNodeDebugger({node,pipeline,result,versionId}:{node:FlowNode;pipeline:FlowchartPipeline;result:FlowchartExecutionResult|null;versionId?:string|null}) {
   const [roi,setRoi]=useState('');
   const [view,setView]=useState<EvidenceView|null>(null);
   useEffect(()=>{setRoi('');setView(null);},[node.id,result]);
@@ -36,10 +36,9 @@ export function FlowNodeDebugger({node,pipeline,result}:{node:FlowNode;pipeline:
   const inputs=result?activeInputArtifacts(node.id,pipeline,result):[];
   const trace=result&&roi?roiTrace(roi,pipeline,result):[];
   const open=(row:Artifact,title:string)=>setView({key:`${node.id}:${row.roi_id}:${title}:${result?.graph_sha256||''}`,title:`${title} · ${node.data.label}`,
-    imagePath:result?.image_path,nodeId:node.id,roiId:row.roi_id,versionId:result?.graph_sha256?`graph:${result.graph_sha256}`:undefined,
-    layers:[{id:'intermediate',label:`${title} 중간 이미지`,image:row.image,space:row.roi_id,size:row.image_size?.length===2?row.image_size as [number,number]:undefined},
-      ...(row.mask?[{id:'mask',label:'검사 마스크',image:row.mask,space:`${row.roi_id}:mask`}]:[])],
-    facts:{...row.evidence,source_bbox:row.bbox,source_transform:row.source_transform,final_verdict:result?.final_verdict},warning:'이 노드 실행에 저장된 이미지입니다. 원본 좌표와 ROI 좌표를 혼합하지 않습니다.'});
+    imagePath:result?.image_path,nodeId:node.id,roiId:row.roi_id,versionId:versionId||undefined,graphSha256:result?.graph_sha256||undefined,
+    layers:storedRasterLayers(`node:${node.id}:${row.roi_id}`,`${title} 중간 이미지`,row.roi_id,row.image,{...row.evidence,mask:row.mask||row.evidence?.mask}),
+    facts:compactEvidence({...row.evidence,source_bbox:row.bbox,source_transform:row.source_transform,final_verdict:result?.final_verdict}),warning:'이 노드 실행에 저장된 이미지입니다. 원본 좌표와 ROI 좌표를 혼합하지 않습니다.'});
   return <section aria-label="선택 노드 실행 근거" className="rounded border border-slate-700 bg-slate-950/30 p-3 space-y-3 text-xs">
     <h4 className="font-bold text-sky-200">실행 근거 · {node.data.label}</h4>
     <p className="text-slate-400">{result?.execution_target||'local'} · {result?.execution_device||'—'} · 최종 {result?.final_verdict}</p>

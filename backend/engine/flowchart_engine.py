@@ -2579,7 +2579,7 @@ class FlowchartEngine:
             image_id=str(image_id) if image_id else None,
             routed_output_node_id=selected_edge.target if selected_edge and not stop_node_id else None,
             stop_node_id=stop_node_id,
-            graph_sha256=pipeline_sha256(pipe) if stop_node_id else None,
+            graph_sha256=pipeline_sha256(pipe),
         )
 
         return result.model_dump()

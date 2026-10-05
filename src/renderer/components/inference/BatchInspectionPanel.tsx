@@ -14,7 +14,7 @@ import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {openSelectedInspectionRun} from './inspectionHistorySelection';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
-import type {EvidenceView} from '../common/evidenceViewer';
+import {inspectionEvidence, type EvidenceView} from '../common/evidenceViewer';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -321,13 +321,11 @@ export const BatchInspectionPanel: React.FC = () => {
   const openEvidence=async()=>{
     if(!selected||!report)return;
     const choice=++evidenceRequest.current;const started=historyContext;
-    const view:EvidenceView={key:`${report.run_id||'current'}:${selected.image.file_path}:${selected.image_sha256||''}`,
+    const view=inspectionEvidence(selected.result,{key:`${report.run_id||'current'}:${selected.image.file_path}:${selected.image_sha256||''}`,
       title:selected.image.file_name,imagePath:selected.image.file_path,imageSha256:selected.image_sha256||undefined,
       runId:report.run_id,versionId:report.saved_version_id||undefined,
-      layers:selected.result?.annotated_image?[{id:'overlay',label:'저장된 판정 overlay',image:selected.result.annotated_image,space:'source',
-        size:selected.result.inspected_image_size?.length===2?selected.result.inspected_image_size as [number,number]:undefined}]:[],
       facts:{state:selected.state,rejection_reason:selected.result?.rejection_reason,pipeline_hash:report.pipeline_hash,model_sha256:report.model_sha256},
-      warning:'원본 해시를 확인하고 있습니다. 저장된 판정은 읽기 전용입니다.'};
+      warning:'원본 해시를 확인하고 있습니다. 저장된 판정은 읽기 전용입니다.'});
     setEvidenceView({scope:resetKey,view});
     if(!report.run_id||!selected.image_sha256){setEvidenceView({scope:resetKey,view:{...view,warning:'이 실행에는 원본 해시가 없습니다. 저장된 판정 이미지만 표시합니다.'}});return;}
     try{
