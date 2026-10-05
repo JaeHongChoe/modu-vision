@@ -25,11 +25,11 @@ import uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Literal
 
 import cv2
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Query
 from fastapi.responses import Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
@@ -547,6 +547,10 @@ class InspectionStore:
             row = conn.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
         if row is None:
             return None
+        return self._decode_job(row)
+
+    @staticmethod
+    def _decode_job(row) -> dict[str, Any]:
         item = dict(row)
         result_json = item.pop("result_json")
         item["result"] = json.loads(result_json) if result_json else None
@@ -555,6 +559,22 @@ class InspectionStore:
         capture_json=item.pop('capture_json',None);item['capture']=json.loads(capture_json) if capture_json else None
         acquisition_json=item.pop('acquisition_json',None);item['acquisition']=json.loads(acquisition_json) if acquisition_json else None
         return item
+
+    def page(self, *, limit=50, offset=0, state=None):
+        """One read transaction binds displayed records, counts and queue capacity."""
+        states={'queued','running','completed','error','delivery_pending','delivery_error'}
+        if not 1<=limit<=50000 or offset<0 or (state is not None and state not in states):
+            raise ValueError('Invalid inspection queue page')
+        where=' WHERE state=?' if state else ''
+        args=(state,) if state else ()
+        with self._connection() as conn:
+            conn.execute('BEGIN')
+            total=conn.execute('SELECT COUNT(*) FROM jobs'+where,args).fetchone()[0]
+            outstanding=conn.execute("SELECT COUNT(*) FROM jobs WHERE state IN ('queued','running','delivery_pending')").fetchone()[0]
+            rows=conn.execute('SELECT * FROM jobs'+where+' ORDER BY created_at DESC,rowid DESC LIMIT ? OFFSET ?',(*args,limit,offset)).fetchall()
+        return {'jobs':[self._decode_job(row) for row in rows], 'total':total,'limit':limit,'offset':offset,
+                'has_more':offset+len(rows)<total,'outstanding':outstanding,'capacity':self.max_outstanding,
+                'max_attempts':self.max_attempts,'max_queue_age_seconds':self.max_queue_age_seconds}
 
     def list(self, limit: int = 100) -> list[dict[str, Any]]:
         with self._connection() as conn:
@@ -1055,6 +1075,11 @@ def create_service_app(
     def list_jobs(limit: int = 100):
         return {"jobs": store.list(max(1, min(limit, 500)))}
 
+    @app.get('/v1/queue',dependencies=[Depends(authorized)])
+    def queue_page(limit:int=Query(50,ge=1,le=500),offset:int=Query(0,ge=0),
+                   state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None):
+        return store.page(limit=limit,offset=offset,state=state)
+
     @app.get("/v1/jobs/{job_id}", dependencies=[Depends(authorized)])
     def get_job(job_id: str):
         item = store.get(job_id)
@@ -1085,8 +1110,9 @@ def create_service_app(
 
     @app.get('/v1/results/export',dependencies=[Depends(authorized)])
     def export_results(format: str = 'json', limit: int = 500):
-        jobs = store.list(max(1,min(limit,50000)))
-        if format == 'json': return {'jobs':jobs}
+        snapshot=store.page(limit=max(1,min(limit,50000)))
+        jobs=snapshot['jobs']
+        if format == 'json': return {'jobs':jobs,'count':len(jobs),'total':snapshot['total'],'limit':snapshot['limit'],'truncated':snapshot['has_more']}
         if format != 'csv': raise HTTPException(422,'Export format must be csv or json')
         output = io.StringIO(newline='')
         columns = ['job_id','image_id','image_sha256','state','verdict','model_verdict','binding_provenance','runtime_binding_sha256','runtime_binding','dead_letter_reason','replay_of','replay_reason','error']
@@ -1095,7 +1121,8 @@ def create_service_app(
         for job in jobs:
             values = {key:_canonical(job[key]) if isinstance(job.get(key),(dict,list)) else job.get(key) for key in columns}
             writer.writerow({key:"'"+value if isinstance(value,str) and value.lstrip().startswith(('=','+','-','@')) else value for key,value in values.items()})
-        return Response(output.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="inspection-results.csv"'})
+        return Response(output.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="inspection-results.csv"',
+            'X-Result-Count':str(len(jobs)),'X-Total-Results':str(snapshot['total']),'X-Export-Limit':str(snapshot['limit'])})
 
     @app.post('/v1/runtime/shutdown',dependencies=[Depends(authorized)])
     def shutdown():

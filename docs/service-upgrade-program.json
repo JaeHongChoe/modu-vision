@@ -3433,7 +3433,7 @@
    "depends_on": [
     "S5-01"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -3441,6 +3441,14 @@
      "result": "Recipe-bound durable admission and bounded backpressure; independently reviewed and merged in PR #3.",
      "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Deployed continuous input, crash/recovery and throughput qualification.",
      "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+    },
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "92f98d810eacb9f7f335db8c54f351cfcf5d6ef5",
+     "result": "Task93: project-scoped durable queue pagination, authenticated retry/replay actor and real HTTP status/backpressure; explicit recipe-preserving replay, history and bounded JSON/CSV exports. Chrome/macOS Electron each ingest57 actual folder inputs, execute56 controlled CPU inspections, retain58 jobs including failure/replay lineage, persist across reload and stop owned services. Input/delivery58, lifecycle21, renderer734 and3 causal scope cases pass; production/E2E TypeScript pass. Private direct persisted-source/job/event/export/process readback SHA-256 cba91c83fae567bad20074e34526ca90d4577e6ceb72e30f2b60d729c19f3cb2.",
+     "scope": "Software clauses composed with existing settlement/idempotency/backpressure/deadline/replay and A-admission/B-switch/A-execution/receiver identity contracts. Controlled weights and review setup do not establish representative quality, physical PLC/MES or long-duration production qualification.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend/CPU service; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
     }
    ],
    "file_actions": {
@@ -3450,17 +3458,22 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s5_02.py"
+   "proposed_test_file": "backend/tests/test_service_s5_02.py",
+   "remaining": [
+    "Long-duration deployed throughput/crash qualification, representative model quality, physical receiver/installed target and independent review remain pending.",
+    "UI exports explicitly show record counts and truncation at the latest5000 records; standalone API allows an explicit bounded larger export.",
+    "Windows tests excluded; full parent acceptance remains pending."
+   ]
   },
   {
    "id": "S5-03",
@@ -9260,17 +9273,17 @@
   "last_verified_on": "2026-10-05",
   "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
-  "verified_source_sha": "e376db11e586a1866658349da6888c8eaf783d1b",
+  "verified_source_sha": "92f98d810eacb9f7f335db8c54f351cfcf5d6ef5",
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 32,
-    "pending": 50
+    "verified": 35,
+    "pending": 47
    },
    "parent_status": {
-    "verification_pending": 26,
-    "in_progress": 21,
-    "planned": 35
+    "verification_pending": 29,
+    "in_progress": 20,
+    "planned": 33
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

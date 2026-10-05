@@ -2,8 +2,9 @@
 from pathlib import Path
 import json
 import time
+import re
 import httpx
-from fastapi import APIRouter,HTTPException,Request
+from fastapi import APIRouter,HTTPException,Request,Query
 from pydantic import BaseModel,ConfigDict,Field
 from typing import Literal
 from backend.api.routes_project import get_current_project
@@ -186,3 +187,69 @@ def retry_delivery(identifier:str,request:Request):
         with service.client() as client:
             response=client.post('/v1/jobs/'+identifier+'/retry-delivery');response.raise_for_status();return response.json()
     return execute(action)
+
+
+def inspection_request(request,method,path,*,payload=None,mutation=False,params=None):
+    """Connect only to the service owned by this request's scoped project."""
+    service=ManagedService(project(request)['project_dir']);state=service.state()
+    runtime=state['runtime'];expected=(state.get('active') or {}).get('release',{}).get('manifest_sha256')
+    if runtime.get('status')!='ready':raise HTTPException(409,'Start the project inspection service to access its queue')
+    if mutation and (not expected or runtime.get('manifest_sha256')!=expected):
+        raise HTTPException(409,'The running inspection service does not match the active release')
+    try:
+        with service.client() as client:response=client.request(method,path,json=payload,params=params)
+    except httpx.HTTPError as exc:raise HTTPException(503,'The project inspection service did not respond') from exc
+    if response.is_error:
+        try:detail=response.json().get('detail','Inspection service refused the request')
+        except (ValueError,AttributeError):detail='Inspection service refused the request'
+        retry=response.headers.get('Retry-After')
+        headers={'Retry-After':retry} if retry and retry.isdigit() else None
+        raise HTTPException(response.status_code,detail,headers=headers)
+    return response
+
+
+def inspection_identifier(identifier):
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',identifier):raise HTTPException(422,'Invalid inspection identifier')
+    return identifier
+
+
+@router.get('/operator/queue')
+def inspection_queue(request:Request,limit:int=Query(50,ge=1,le=500),offset:int=Query(0,ge=0),
+                     state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None):
+    return inspection_request(request,'GET','/v1/queue',params={'limit':limit,'offset':offset,**({'state':state} if state else {})}).json()
+
+
+@router.get('/operator/queue/{identifier}/events')
+def inspection_events(identifier:str,request:Request):
+    return inspection_request(request,'GET','/v1/jobs/'+inspection_identifier(identifier)+'/events').json()
+
+
+@router.post('/operator/queue/{identifier}/retry',status_code=202)
+def retry_inspection(identifier:str,request:Request):
+    role(request,{'owner','reviewer'})
+    return inspection_request(request,'POST','/v1/jobs/'+inspection_identifier(identifier)+'/retry',mutation=True).json()
+
+
+class InspectionReplay(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    reason:str=Field(min_length=3,max_length=1000)
+    operator:str=Field(min_length=1,max_length=100)
+
+
+@router.post('/operator/queue/{identifier}/replay',status_code=202)
+def replay_inspection(identifier:str,body:InspectionReplay,request:Request):
+    role(request,{'owner','reviewer'})
+    account=getattr(request.state,'account_user',None)
+    actor=(account.get('username') or account['id']) if account else body.operator.strip()
+    if not body.reason.strip() or not actor:raise HTTPException(422,'Replay requires an operator and reason')
+    return inspection_request(request,'POST','/v1/jobs/'+inspection_identifier(identifier)+'/replay',
+        payload={'reason':body.reason.strip(),'operator':actor},mutation=True).json()
+
+
+@router.get('/operator/queue-export')
+def inspection_export(request:Request,format:Literal['json','csv']='json',limit:int=Query(5000,ge=1,le=50000)):
+    response=inspection_request(request,'GET','/v1/results/export',params={'format':format,'limit':limit})
+    if format=='json':
+        body=response.json();count=body['count'];total=body['total'];content=json.dumps(body,ensure_ascii=False,indent=2)
+    else:count=int(response.headers['X-Result-Count']);total=int(response.headers['X-Total-Results']);content=response.text
+    return {'filename':'inspection-results.'+format,'format':format,'content':content,'count':count,'total':total,'limit':limit,'truncated':count<total}

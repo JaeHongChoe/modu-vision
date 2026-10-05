@@ -18,7 +18,7 @@ from backend.engine.inspection_service import _verify_release_policy
 from backend.engine.runtime_deployment import DeploymentLedger
 from backend.engine.runtime_device import resolve_package_device as resolve_runtime_device
 from backend.engine.runtime_process_control import (atomic_private_json,
-    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle,session_isolation)
+    owned_inspection_process,process_identity,runtime_state_lock,serialized_lifecycle,session_isolation,wait_for_owned_exit)
 
 
 class ManagedService:
@@ -240,8 +240,10 @@ class ManagedService:
             from backend.engine.native_autostart import NativeAutostart
             return {**NativeAutostart(self).stop(),'status':'stopped'}
         if process:
-            process.terminate()
-            try:process.wait(timeout=12)
+            try:
+                if process.status()!=psutil.STATUS_ZOMBIE:process.terminate()
+                wait_for_owned_exit(process,timeout=12)
+            except psutil.NoSuchProcess:pass
             except psutil.TimeoutExpired:raise RuntimeError('Service is stopping; jobs remain recoverable')
         self.config.update(pid=None,process_created_at=None,process_command_sha256=None);self.save(self.config)
         return {'status':'stopped'}

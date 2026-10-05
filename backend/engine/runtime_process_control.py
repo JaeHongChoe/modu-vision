@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 import threading
+import time
 import psutil
 
 from backend.remote.file_replace import replace_file  # Windows: waits out a reader of the file
@@ -98,6 +99,20 @@ def owned_inspection_process(config,state):
                 and command_sha256(arguments)==config.get('process_command_sha256')):return owner
     except (psutil.Error,TypeError,ValueError):pass
     return None
+
+
+def wait_for_owned_exit(process,timeout=12):
+    """Non-child zombies have exited even while their parent retains wait status."""
+    deadline=time.monotonic()+timeout
+    while True:
+        try:
+            if process.status()==psutil.STATUS_ZOMBIE:return
+            remaining=deadline-time.monotonic()
+            if remaining<=0:raise psutil.TimeoutExpired(timeout)
+            try:process.wait(timeout=min(.25,remaining));return
+            except psutil.TimeoutExpired:
+                if time.monotonic()>=deadline:raise
+        except psutil.NoSuchProcess:return
 
 
 def serialized_lifecycle(function):
