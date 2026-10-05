@@ -234,12 +234,15 @@ def installation_readiness(project):
                   'compatibility_check_performed':True}}
 
 
-def operator_records(project):
+def operator_records(project,*,identifier=None):
     database=_root(project)/'runtime_service'/'state'/'inspection_service.sqlite3'
     if database.is_symlink():raise ValueError('Operator records cannot follow links')
     if not database.is_file():return []
     with sqlite3.connect(database.as_uri()+'?mode=ro',uri=True) as conn:
-        conn.row_factory=sqlite3.Row;rows=[dict(row) for row in conn.execute('SELECT job_id,image_path,image_id,image_sha256,source,state,verdict,model_verdict,error,created_at FROM jobs ORDER BY created_at DESC,rowid DESC LIMIT 100')]
+        conn.row_factory=sqlite3.Row
+        query='SELECT job_id,image_path,image_id,image_sha256,source,state,verdict,model_verdict,error,created_at FROM jobs'
+        query+= ' WHERE job_id=?' if identifier is not None else ' ORDER BY created_at DESC,rowid DESC LIMIT 100'
+        rows=[dict(row) for row in conn.execute(query,(identifier,) if identifier is not None else ())]
     reviews=_storage(project)/'operator_reviews.sqlite3'
     if reviews.exists():
         with sqlite3.connect(reviews) as conn:
@@ -252,7 +255,7 @@ def operator_records(project):
 
 def review_operator_result(project,identifier,verdict,reviewer,reason):
     if verdict not in ('OK','NG','REVIEW') or not reviewer.strip() or len(reason.strip())<3:raise ValueError('Select a verdict and enter reviewer/reason')
-    row=next((r for r in operator_records(project) if r['job_id']==identifier),None)
+    row=next(iter(operator_records(project,identifier=identifier)),None)
     if row is None:raise ValueError('Inspection job not found in this project')
     if row['state'] in ('queued','running'):raise ValueError('Wait for the inspection result before review')
     with sqlite3.connect(_storage(project)/'operator_reviews.sqlite3') as conn:

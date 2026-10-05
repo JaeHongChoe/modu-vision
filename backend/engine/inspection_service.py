@@ -122,6 +122,8 @@ class FileJob(BaseModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=160)
     product_id: str | None = Field(default=None, max_length=160)
     lot_id: str | None = Field(default=None, max_length=160)
+    operator: str | None = Field(default=None,min_length=1,max_length=100)
+    reinspection_of: str | None = Field(default=None,min_length=1,max_length=128,pattern=r'^[A-Za-z0-9_-]+$')
 
 
 class ReplayJob(BaseModel):
@@ -212,6 +214,7 @@ class InspectionStore:
                 "replay_root": "TEXT",
                 "replay_count": "INTEGER NOT NULL DEFAULT 0", "replay_reason": "TEXT",
                 "replay_operator": "TEXT", "retry_count": "INTEGER NOT NULL DEFAULT 0",
+                "input_operator": "TEXT", "reinspection_of": "TEXT",
             })
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS jobs_input_key ON jobs(idempotency_key) WHERE idempotency_key IS NOT NULL")
 
@@ -302,7 +305,8 @@ class InspectionStore:
                 self._event(conn, row["job_id"], "delivery_pending", "Result delivery resumed after restart")
 
     def enqueue(self, image_path: Path, source: str, image_id: str | None = None, *,
-                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None, capture=None, acquisition=None, capture_policy=None) -> str:
+                idempotency_key: str | None = None, binding=None, product_id=None, lot_id=None, capture=None, acquisition=None, capture_policy=None,
+                operator=None,reinspection_of=None) -> str:
         if acquisition is not None:
             from backend.engine.camera_admission import validate_acquisition
             acquisition = validate_acquisition(acquisition)
@@ -311,9 +315,14 @@ class InspectionStore:
         digest = _sha256(image_path)
         job_id = uuid.uuid4().hex
         timestamp = _now()
-        payload = _canonical({'image_sha256': digest, 'image_id': image_id, 'source': source,
+        identity={'image_sha256': digest, 'image_id': image_id, 'source': source,
                               'path': None if source == 'http' else str(image_path.resolve()),
-                              'product_id': product_id, 'lot_id': lot_id})
+                              'product_id': product_id, 'lot_id': lot_id}
+        if operator is not None:
+            if not isinstance(operator,str) or not 1<=len(operator.strip())<=100:raise ValueError('Operator identity must contain1 to100 characters')
+            operator=operator.strip();identity['operator']=operator
+        if reinspection_of is not None:identity['reinspection_of']=reinspection_of
+        payload = _canonical(identity)
         payload_sha = hashlib.sha256(payload.encode()).hexdigest()
         if acquisition is not None:
             payload_sha = hashlib.sha256(_canonical({'payload': payload, 'acquisition': acquisition}).encode()).hexdigest()
@@ -331,6 +340,8 @@ class InspectionStore:
                 'recipe_sha256':(json.loads(encoded) if encoded else {}).get('manifest_sha256')}).encode()).hexdigest()
             if acquisition is not None:
                 payload_sha = hashlib.sha256(_canonical({'payload_sha256': payload_sha, 'acquisition': acquisition}).encode()).hexdigest()
+            if operator is not None or reinspection_of is not None:
+                payload_sha=hashlib.sha256(_canonical({'payload_sha256':payload_sha,'operator':operator,'reinspection_of':reinspection_of}).encode()).hexdigest()
             if capture_policy is not None:
                 payload_sha = hashlib.sha256(_canonical({'payload_sha256': payload_sha, 'observed_capture_policy': capture_policy}).encode()).hexdigest()
             if capture and not idempotency_key:
@@ -343,6 +354,12 @@ class InspectionStore:
                     if duplicate['payload_sha256'] != payload_sha:
                         raise InputConflict('Input key already belongs to a different payload')
                     return duplicate['job_id']
+            if reinspection_of is not None:
+                prior=conn.execute('SELECT image_id,state FROM jobs WHERE job_id=?',(reinspection_of,)).fetchone()
+                if prior is None or not image_id or prior['image_id']!=image_id:
+                    raise ValueError('Previous inspection must belong to this same explicit part identity')
+                if prior['state'] not in {'completed','error','delivery_error'}:
+                    raise ValueError('Wait for the previous inspection to finish before reinspection')
             if source == "inbox":
                 existing = conn.execute(
                     "SELECT job_id FROM inbox_items WHERE image_path=? AND image_sha256=?",
@@ -362,6 +379,8 @@ class InspectionStore:
                 (job_id, str(image_path.resolve()), image_id, digest, source, "queued", timestamp, timestamp,
                  encoded, binding_sha, provenance, idempotency_key, payload_sha, time.time() + self.max_queue_age_seconds),
             )
+            if operator is not None or reinspection_of is not None:
+                conn.execute('UPDATE jobs SET input_operator=?,reinspection_of=? WHERE job_id=?',(operator,reinspection_of,job_id))
             if source == "inbox":
                 conn.execute(
                     "INSERT INTO inbox_items(image_path,image_sha256,job_id) VALUES(?,?,?)",
@@ -560,13 +579,16 @@ class InspectionStore:
         acquisition_json=item.pop('acquisition_json',None);item['acquisition']=json.loads(acquisition_json) if acquisition_json else None
         return item
 
-    def page(self, *, limit=50, offset=0, state=None):
+    def page(self, *, limit=50, offset=0, state=None,part_id=None):
         """One read transaction binds displayed records, counts and queue capacity."""
         states={'queued','running','completed','error','delivery_pending','delivery_error'}
         if not 1<=limit<=50000 or offset<0 or (state is not None and state not in states):
             raise ValueError('Invalid inspection queue page')
-        where=' WHERE state=?' if state else ''
-        args=(state,) if state else ()
+        if part_id is not None and (not isinstance(part_id,str) or not 1<=len(part_id)<=160):raise ValueError('Invalid part identity filter')
+        clauses=[];args=[]
+        if state:clauses.append('state=?');args.append(state)
+        if part_id:clauses.append('image_id=?');args.append(part_id)
+        where=' WHERE '+' AND '.join(clauses) if clauses else ''
         with self._connection() as conn:
             conn.execute('BEGIN')
             total=conn.execute('SELECT COUNT(*) FROM jobs'+where,args).fetchone()[0]
@@ -635,6 +657,7 @@ class InspectionStore:
                  job_id,row['replay_count']+1,reason,operator,replay_root))
             if row['acquisition_json']:
                 conn.execute('UPDATE jobs SET acquisition_json=? WHERE job_id=?', (row['acquisition_json'], identifier))
+            conn.execute('UPDATE jobs SET input_operator=?,reinspection_of=? WHERE job_id=?',(row['input_operator'],row['reinspection_of'],identifier))
             self._event(conn, identifier, 'queued', _canonical({'replay_of':job_id,'operator':operator,'reason':reason}))
             return identifier
 
@@ -1011,7 +1034,8 @@ def create_service_app(
             raise HTTPException(status_code=403, detail="Image is outside the allowed input root")
         try:
             key = payload.idempotency_key or request.headers.get('idempotency-key')
-            job_id = store.enqueue(path, "file", payload.image_id,idempotency_key=key,product_id=payload.product_id,lot_id=payload.lot_id,capture=payload.capture)
+            job_id = store.enqueue(path, "file", payload.image_id,idempotency_key=key,product_id=payload.product_id,lot_id=payload.lot_id,capture=payload.capture,
+                                   operator=payload.operator,reinspection_of=payload.reinspection_of)
         except InboxFull as exc: raise HTTPException(429,str(exc),headers={'Retry-After':'1'}) from exc
         except InputConflict as exc: raise HTTPException(409,str(exc)) from exc
         except (OSError, ValueError) as exc:
@@ -1077,8 +1101,9 @@ def create_service_app(
 
     @app.get('/v1/queue',dependencies=[Depends(authorized)])
     def queue_page(limit:int=Query(50,ge=1,le=500),offset:int=Query(0,ge=0),
-                   state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None):
-        return store.page(limit=limit,offset=offset,state=state)
+                   state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None,
+                   part_id:str|None=Query(None,min_length=1,max_length=160)):
+        return store.page(limit=limit,offset=offset,state=state,part_id=part_id)
 
     @app.get("/v1/jobs/{job_id}", dependencies=[Depends(authorized)])
     def get_job(job_id: str):
@@ -1109,13 +1134,13 @@ def create_service_app(
         return {'job_id':identifier,'state':'queued','replay_of':job_id}
 
     @app.get('/v1/results/export',dependencies=[Depends(authorized)])
-    def export_results(format: str = 'json', limit: int = 500):
-        snapshot=store.page(limit=max(1,min(limit,50000)))
+    def export_results(format: str = 'json', limit: int = 500,part_id:str|None=Query(None,min_length=1,max_length=160)):
+        snapshot=store.page(limit=max(1,min(limit,50000)),part_id=part_id)
         jobs=snapshot['jobs']
         if format == 'json': return {'jobs':jobs,'count':len(jobs),'total':snapshot['total'],'limit':snapshot['limit'],'truncated':snapshot['has_more']}
         if format != 'csv': raise HTTPException(422,'Export format must be csv or json')
         output = io.StringIO(newline='')
-        columns = ['job_id','image_id','image_sha256','state','verdict','model_verdict','binding_provenance','runtime_binding_sha256','runtime_binding','dead_letter_reason','replay_of','replay_reason','error']
+        columns = ['job_id','image_id','source','capture','acquisition','image_sha256','state','verdict','model_verdict','binding_provenance','runtime_binding_sha256','runtime_binding','dead_letter_reason','replay_of','replay_reason','input_operator','reinspection_of','created_at','result','error']
         writer = csv.DictWriter(output,fieldnames=columns)
         writer.writeheader()
         for job in jobs:

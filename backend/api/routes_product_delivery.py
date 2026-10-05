@@ -146,6 +146,14 @@ class OperatorInputs(BaseModel):
     camera:str|None=None
 
 
+class OperatorInspection(ImageInput):
+    image_id:str|None=Field(default=None,min_length=1,max_length=160)
+    product_id:str|None=Field(default=None,min_length=1,max_length=160)
+    lot_id:str|None=Field(default=None,min_length=1,max_length=160)
+    operator:str|None=Field(default=None,min_length=1,max_length=100)
+    reinspection_of:str|None=Field(default=None,min_length=1,max_length=128,pattern=r'^[A-Za-z0-9_-]+$')
+
+
 @router.put('/operator/inputs')
 def operator_inputs(body:OperatorInputs,request:Request):
     role(request,{'owner','reviewer'})
@@ -153,14 +161,16 @@ def operator_inputs(body:OperatorInputs,request:Request):
 
 
 @router.post('/operator/inspect',status_code=202)
-def inspect(body:ImageInput,request:Request):
+def inspect(body:OperatorInspection,request:Request):
     role(request,{'owner','reviewer','trainer','labeler'})
     def action():
         p=project(request);image=source_image(p,body.image_path);service=ManagedService(p['project_dir']);state=service.state()
         expected=(state.get('active') or {}).get('release',{}).get('manifest_sha256')
         if state['runtime'].get('status')!='ready' or not expected or state['runtime'].get('manifest_sha256')!=expected:raise ValueError('Start the verified active inspection service before submitting input')
-        with service.client() as client:
-            response=client.post('/v1/jobs/file',json={'image_path':str(image)});response.raise_for_status();return response.json()
+        payload={k:v for k,v in body.model_dump().items() if v is not None and k!='device'};payload['image_path']=str(image)
+        account=getattr(request.state,'account_user',None)
+        if account:payload['operator']=account.get('username') or account['id']
+        return inspection_request(request,'POST','/v1/jobs/file',payload=payload,mutation=True).json()
     return execute(action)
 
 
@@ -174,7 +184,9 @@ class OperatorReview(BaseModel):
 @router.post('/operator/results/{identifier}/review')
 def review(identifier:str,body:OperatorReview,request:Request):
     role(request,{'owner','reviewer'})
-    return execute(lambda:delivery.review_operator_result(project(request),identifier,body.verdict,body.reviewer,body.reason))
+    account=getattr(request.state,'account_user',None)
+    reviewer=(account.get('username') or account['id']) if account else body.reviewer
+    return execute(lambda:delivery.review_operator_result(project(request),identifier,body.verdict,reviewer,body.reason))
 
 
 @router.post('/operator/results/{identifier}/retry-delivery',status_code=202)
@@ -215,8 +227,9 @@ def inspection_identifier(identifier):
 
 @router.get('/operator/queue')
 def inspection_queue(request:Request,limit:int=Query(50,ge=1,le=500),offset:int=Query(0,ge=0),
-                     state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None):
-    return inspection_request(request,'GET','/v1/queue',params={'limit':limit,'offset':offset,**({'state':state} if state else {})}).json()
+                     state:Literal['queued','running','completed','error','delivery_pending','delivery_error']|None=None,
+                     part_id:str|None=Query(None,min_length=1,max_length=160)):
+    return inspection_request(request,'GET','/v1/queue',params={'limit':limit,'offset':offset,**({'state':state} if state else {}),**({'part_id':part_id} if part_id else {})}).json()
 
 
 @router.get('/operator/queue/{identifier}/events')
@@ -247,8 +260,8 @@ def replay_inspection(identifier:str,body:InspectionReplay,request:Request):
 
 
 @router.get('/operator/queue-export')
-def inspection_export(request:Request,format:Literal['json','csv']='json',limit:int=Query(5000,ge=1,le=50000)):
-    response=inspection_request(request,'GET','/v1/results/export',params={'format':format,'limit':limit})
+def inspection_export(request:Request,format:Literal['json','csv']='json',limit:int=Query(5000,ge=1,le=50000),part_id:str|None=Query(None,min_length=1,max_length=160)):
+    response=inspection_request(request,'GET','/v1/results/export',params={'format':format,'limit':limit,**({'part_id':part_id} if part_id else {})})
     if format=='json':
         body=response.json();count=body['count'];total=body['total'];content=json.dumps(body,ensure_ascii=False,indent=2)
     else:count=int(response.headers['X-Result-Count']);total=int(response.headers['X-Total-Results']);content=response.text

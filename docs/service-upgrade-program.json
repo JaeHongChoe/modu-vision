@@ -3583,8 +3583,17 @@
     "S3-03",
     "S2-10"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-implementation-criteria-closure",
+     "base_source_sha": "a676f162202d15abe5ea8db0e0de27c1a2f32384",
+     "result": "Task94: durable part/barcode, product/Lot and input actor identity; validated same-part terminal reinspection links, immutable original predictions, separate authenticated shared review, exact paged part history and filtered JSON/CSV including camera/equipment acquisition. Actual Chrome/macOS Electron each execute3 owned CPU inspections, link the same part, preserve a separate review, download exact two-record exports and reload history. Composition127 pass/2 skipped; final trace/export37 and renderer736 pass; production/E2E TypeScript pass. Private root persisted-source/result/review/export/process readback SHA-256 279fa54d557d442e9592dc4354d52f7496ed2c72cd3a5dc137b4661951910611.",
+     "scope": "Software clauses composed with existing recipe ACK/admission snapshots, controlled sequential/parallel execution and actual delivered batch/deadline CPU subprocesses. Physical scanner/PLC/MES, representative quality and installed/full acceptance are pending.",
+     "platform": "Actual Chrome and macOS development Electron/main/preload/owned CPU service; Windows excluded.",
+     "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    }
+   ],
    "file_actions": {
     "backend/engine/service_runtime.py": "Modify",
     "backend/engine/flow_provenance.py": "Modify",
@@ -3592,12 +3601,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -3607,6 +3616,11 @@
     "E01",
     "E03",
     "E07"
+   ],
+   "remaining": [
+    "Independent review, representative model/label quality, physical barcode/correlation device and field recipe/receiver acceptance remain pending.",
+    "Controlled CPU weights and synthetic approval/report/review identities qualify software wiring only.",
+    "Installed/target execution and full acceptance remain pending; Windows tests excluded."
    ]
   },
   {
@@ -9277,13 +9291,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 35,
-    "pending": 47
+    "verified": 36,
+    "pending": 46
    },
    "parent_status": {
-    "verification_pending": 29,
+    "verification_pending": 30,
     "in_progress": 20,
-    "planned": 33
+    "planned": 32
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
