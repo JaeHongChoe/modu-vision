@@ -12,6 +12,7 @@ import {useComputeStore} from '../../stores/useComputeStore';
 import {defaultTrainingScheduling,trainingSchedulingOptions,TrainingSchedulingSettings} from './TrainingSchedulingSettings';
 import type {TrainingSchedulingOptions} from '../../stores/useTrainingStore';
 import {PatchRecipePreview} from './PatchRecipePreview';
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 
 export function PatchClassificationWorkbench() {
   const state = useProgramWorkbench('patch');
@@ -79,11 +80,12 @@ export function PatchClassificationWorkbench() {
     <div className="my-4"><button type="button" onClick={() => void train()} disabled={!state.dataset || disabled || !!schedulingError || epochs < 1 || batch < 1 || learningRate <= 0} className={programPrimary}>패치 분류 후보 학습</button></div>
     <JobProgressView job={state.job} busy={!!state.busy} onCancel={() => void state.cancel()} onReconnect={() => void state.reconnect()} />
     <div className="mt-4 flex flex-wrap items-end gap-3"><div className="min-w-64 flex-1"><ProgramField label="완료 패치 분류 후보"><select value={state.modelId} onChange={e => {state.setModelId(e.target.value); setEvaluation(null);}} className={programInput}><option value="">완료 모델 선택</option>{state.models.map((row, index) => <option key={row.job_id} value={row.job_id}>후보 {index + 1} · {row.job_id.slice(-6)}</option>)}</select></ProgramField></div>
-      <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('시험 평가', async () => {const result = await modelTrainingProgram.patch.evaluate(state.modelId); if (state.isCurrent()) setEvaluation(result);})}>시험 평가</button>
+      <button type="button" disabled={!state.modelId || !state.dataset?.dataset_path || disabled} className={programButton} onClick={() => void state.action('시험 평가', async () => {const result = await modelTrainingProgram.patch.evaluate(state.modelId,state.dataset!.dataset_path,device); if (state.isCurrent()) setEvaluation(result);})}>시험 평가</button>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void openModelFlow('patch_classification',state.modelId,state.dataset?.dataset_path)}>플로우에 연결</button>
       <button type="button" disabled={!state.modelId || disabled} className={programButton} onClick={() => void state.action('모델 내보내기', async () => {const result = await modelTrainingProgram.patch.export(state.modelId); if (state.isCurrent()) state.setNotice(`독립 실행 패키지: ${result.package_path || result.package_dir || JSON.stringify(result)}`);})}>TorchScript 내보내기</button>
     </div>
     {evaluation && <div className="mt-3 rounded border border-[#344255] p-3"><p className="font-semibold text-cyan-200">저장된 패치 시험 평가</p><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap text-slate-400">{JSON.stringify({metrics:evaluation.metrics,confusion_matrix:evaluation.confusion_matrix,evaluation_id:evaluation.evaluation_id,dataset_provenance:evaluation.dataset_provenance}, null, 2)}</pre></div>}
+    <ModelExecutionEvidence task="patch_classification" jobId={state.modelId}/>
     {state.busy && <p role="status" className="mt-3 text-cyan-300">{state.busy}…</p>}{state.notice && <p role="status" className="mt-3 break-words text-emerald-300">{state.notice}</p>}{state.error && <p role="alert" className="mt-3 rounded bg-rose-950/40 p-3 text-rose-200">{state.error}</p>}
     <PatchRecipePreview scope={state.scope} source={state.source} datasetPath={state.dataset?.dataset_path||''} patchCount={state.dataset?.patch_count||0} modelId={state.modelId} device={device} disabled={disabled} isCurrent={state.isCurrent} action={state.action} setNotice={state.setNotice} setError={state.setError}/>
     <div className="mt-5"><AutoDLWorkbench task="patch_classification" familyDatasetPath={state.dataset?.dataset_path} onComplete={()=>void state.refreshModels().catch(cause=>{if(state.isCurrent())state.setError(String(cause));})} /></div>

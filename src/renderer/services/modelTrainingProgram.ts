@@ -53,7 +53,7 @@ export const modelTrainingProgram = {
     reconnect: (job_id: string) => post<ProgramJob>('/api/training/reconnect', {job_id}),
     parents: (dataset_path: string, backbone: string) => request<{parents: ParentCandidate[]}>(`/api/training/warm-start-parents?${query({dataset_path, task: 'patch_classification', preset: 'fast', backbone})}`),
     models: (source_dataset_path: string) => request<{models: FamilyModel[]}>(`/api/evaluation/model-comparisons/models?${query({source_dataset_path, task: 'patch_classification'})}`),
-    evaluate: (job_id: string) => post<Record<string, unknown>>('/api/patch-classification/evaluate', {job_id, force_recompute: true}),
+    evaluate: (job_id: string,dataset_path:string,device:LocalTrainingDevice) => executeModelRecipe<Record<string,unknown>>('patch_classification','evaluate',{job_id,dataset_path,device,split:'test'}),
     export: (job_id: string) => post<{package_path?: string; package_dir?: string}>('/api/export/runtime', {job_id, export_format: 'torchscript', package_name: 'patch_classifier'}),
   },
   rotation: {

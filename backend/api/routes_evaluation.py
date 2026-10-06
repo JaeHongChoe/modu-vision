@@ -561,10 +561,13 @@ def _evaluate_patch_classification(
     dataset_dir: Path,
     device: torch.device,
     allow_source_revision: bool = False,
+    selected_split: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Evaluate only held-out annotated patches, retaining original pixel boxes."""
     manifest = load_patch_manifest(dataset_dir) if allow_source_revision else _patch_manifest_for_checkpoint(dataset_dir, meta)
-    selected_split = "test" if manifest.provenance["split_counts"]["test"] else "val"
+    selected_split = selected_split or ("test" if manifest.provenance["split_counts"]["test"] else "val")
+    if selected_split not in ('val','test') or not manifest.provenance['split_counts'][selected_split]:
+        raise HTTPException(status_code=422,detail='Patch evaluation requires a nonempty explicit val or test partition')
     samples = [item for item in manifest.patches if item.split == selected_split]
     classes = manifest.classes
     if meta.get("classes") != classes or meta.get("normal_class") != manifest.normal_class:

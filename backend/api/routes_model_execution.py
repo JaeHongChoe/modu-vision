@@ -76,10 +76,19 @@ def _binding(request,project,req):
     if dataset:
         from backend.engine.model_execution import resolve_training_input
         dataset=resolve_training_input(project,req.task,dataset);dataset_ref='inputs/dataset'
+        allowed_manifest={'patch_classification':'patches.json','rotation':'rotation.json','ocr':'ocr.json','rotated_detection':'rotated_boxes.json','enhancement':'pairs.json','defect_gan':'defect_gan.json'}[req.task]
+        allowed_json={allowed_manifest}
+        if req.task=='patch_classification' and (dataset/'source_manifest.json').exists():
+            from backend.engine.patch_classification import load_patch_manifest
+            mapping=load_patch_manifest(dataset).provenance['source_map']
+            expected=[{'image':str(dataset/name),'source_image':str(source/row['source_relative_path']),'source_sha256':row['source_sha256']} for name,row in mapping.items()]
+            sidecar=json.loads(_regular(dataset/'source_manifest.json',dataset).read_text())
+            if not isinstance(sidecar,list) or sorted(canonical(row) for row in sidecar)!=sorted(canonical(row) for row in expected):
+                raise ValueError('Patch source sidecar differs from its exact original provenance')
+            allowed_json.add('source_manifest.json')
         for p in dataset.rglob('*'):
             if p.is_file():
-                allowed_manifest={'rotation':'rotation.json','ocr':'ocr.json','rotated_detection':'rotated_boxes.json','enhancement':'pairs.json','defect_gan':'defect_gan.json'}[req.task]
-                if p.suffix.lower()=='.json' and p.relative_to(dataset).as_posix()!=allowed_manifest:
+                if p.suffix.lower()=='.json' and p.relative_to(dataset).as_posix() not in allowed_json:
                     raise ValueError('Recipe accepts only its task manifest and pixel files')
                 files[dataset_ref+'/'+p.relative_to(dataset).as_posix()]=_regular(p,dataset)
         # Frozen original aliases keep the unchanged manifest/checkpoint lineage
@@ -179,7 +188,13 @@ def execute(req:RecipeRequest,request:Request):
             (review/'review_manifest.json').write_text(json.dumps(result,ensure_ascii=False,indent=2));result['review_dir']=str(review)
         if req.stage=='evaluate':
             from backend.engine.evaluation_history import archive_specialized_evaluation
-            result=archive_specialized_evaluation(project,checkpoint,project['source_dataset_dir'],result,task=req.task,dataset_path=binding['params']['dataset_path'])
+            if req.task=='patch_classification':
+                from backend.engine.patch_evaluation_evidence import archive_patch_evaluation
+                result=archive_patch_evaluation(project,checkpoint,binding['params']['dataset_path'],result,
+                    execution={'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,'compute_profile_name':profile.name if profile else None,
+                        'execution_profile_sha256':hashlib.sha256(canonical(profile.model_dump())).hexdigest() if profile else None,
+                        'device':device,'runtime':runtime,'input_binding_sha256':hashlib.sha256(canonical(binding)).hexdigest()})
+            else:result=archive_specialized_evaluation(project,checkpoint,project['source_dataset_dir'],result,task=req.task,dataset_path=binding['params']['dataset_path'])
         saved=_save(project,{'task':req.task,'stage':req.stage,'job_id':binding['params']['job_id'],'result':result,
             'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,'compute_profile_name':profile.name if profile else None,
             'execution_profile_sha256':hashlib.sha256(canonical(profile.model_dump())).hexdigest() if profile else None,

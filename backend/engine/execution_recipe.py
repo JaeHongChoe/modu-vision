@@ -6,11 +6,19 @@ import json
 from pathlib import Path
 import numpy as np
 from PIL import Image
+from pydantic import BaseModel,ConfigDict
+from typing import Literal
 from backend.engine.runtime_device import resolve_runtime_device
 
 FAMILIES=('classification','segmentation','detection','anomaly','patch_classification',
           'rotation','ocr','rotated_detection','enhancement','defect_gan')
 SPECIALISTS=FAMILIES[5:]
+
+class PatchEvaluationRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    job_id:str
+    dataset_path:str
+    split:Literal['val','test']='test'
 
 
 def support_matrix():
@@ -20,11 +28,12 @@ def support_matrix():
                   'generation_only':task=='defect_gan',
                   'benchmark':task in FAMILIES[:4],
                   'benchmark_scope':'features or DINO export forward; never pipeline timing' if task=='anomaly' else 'model_forward_only' if task in FAMILIES[:4] else 'unsupported; use saved flow timing',
-                  'native_recipe_stages':(['predict','benchmark'] if task in FAMILIES[:4] else ['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS else ['predict'] if task=='patch_classification' else []),
+                  'native_recipe_stages':(['predict','benchmark'] if task in FAMILIES[:4] else ['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS or task=='patch_classification' else []),
                   'target_acceptance':'pending; CPU control execution is not physical GPU qualification'} for task in FAMILIES}
 
 
 def request_model(task,stage):
+    if task=='patch_classification' and stage=='evaluate':return PatchEvaluationRequest
     if task in FAMILIES[:4]:
         from backend.engine.core_model_trials import CorePredictRequest,CoreBenchmarkRequest
         if stage in ('predict','benchmark'):return CorePredictRequest if stage=='predict' else CoreBenchmarkRequest
@@ -56,7 +65,16 @@ def run_recipe(task,stage,checkpoint,inputs,options,output,device):
     elif stage=='evaluate':
         dataset=inputs['dataset'];split=options.get('split','test')
         if split not in ('val','test'):raise ValueError('Recipe evaluation requires heldout val or test')
-        if task=='rotation':
+        if task=='patch_classification':
+            from backend.api.routes_evaluation import _evaluate_patch_classification
+            metadata=json.loads(checkpoint.with_name('model_meta.json').read_text())
+            result=_evaluate_patch_classification(checkpoint,metadata,Path(dataset),target,selected_split=split)
+            for row in result['test_predictions']:
+                row['image']=Path(row['file_path']).relative_to(dataset).as_posix()
+                row['file_path']='@prepared/'+row['image'];row.pop('thumbnail_url',None)
+            result['confusion_matrix']['cell_samples']={}
+            result.update(task=task,dataset_sha256=result['dataset_provenance']['dataset_sha256'],quality_approved=False)
+        elif task=='rotation':
             from backend.engine.rotation import evaluate_rotation_checkpoint
             result=evaluate_rotation_checkpoint(checkpoint,dataset,split=split,device=target)
         elif task=='ocr':
