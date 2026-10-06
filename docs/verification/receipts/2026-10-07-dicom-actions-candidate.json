@@ -1,0 +1,116 @@
+{
+  "schema": "modu-vision.dicom-actions-candidate/v1",
+  "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+  "source_scope": "Committed implementation and exact subsequent evidence metadata; no final release acceptance",
+  "parent_accounting": {
+    "software_verified": 66,
+    "pending": 16,
+    "windows_waived": 1,
+    "actionable": 15,
+    "finally_accepted": 0
+  },
+  "checks": {
+    "runtime_and_related_backend": {
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0,
+      "junit_sha256": "cebdd102b3b42980432bef34e565fdf68b131d1156f87e0a9569baebbba45a70"
+    },
+    "action_gui_plan_ci": {
+      "passed": 144,
+      "failed": 0,
+      "skipped": 0,
+      "junit_sha256": "8ed305ba715eedd9b77d6e5c463e18fac6196645386b0b57efb1ce90b3a2c06a"
+    },
+    "renderer": {
+      "passed": 849,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "1046c7a11ac3087fcec062971ec35556ed543c23ddcc2d978545498c4a9ca41f"
+    },
+    "types": {
+      "log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+    },
+    "clean_gui": {
+      "passed": 2,
+      "retries": 0,
+      "screenshots": 6,
+      "receipts": [
+        "2026-10-07-clean-dicom-browser.json",
+        "2026-10-07-clean-dicom-electron.json"
+      ]
+    }
+  },
+  "action_coverage": {
+    "feature_ids": 156,
+    "curated_actions": 19,
+    "verified_scenarios": 32,
+    "pending_curated_scenarios": 101,
+    "accepted_features": 0,
+    "declared_ui_sources": 58,
+    "declared_actions": 795,
+    "declaration_sha256": "fceee771f064abd0925fd95401c97c66f7fa479befd4e335d6965beb9d489fac",
+    "declaration_execution_inferred": false
+  },
+  "release": {
+    "disposition": "hold",
+    "release_ready": false,
+    "distribution_allowed": false,
+    "scopes": {
+      "installer": {
+        "allowed": false,
+        "unresolved_count": 26,
+        "reasons_sha256": "7bb24cac153667ff66de1307ab499008ce42eb623b2ba80e18d7fba3e85211ad"
+      },
+      "optional_pack": {
+        "allowed": false,
+        "unresolved_count": 4,
+        "reasons_sha256": "66125423a39ec9f88428a52e54c510759a27be7360a27c4e7a23755e6ea0cf54"
+      },
+      "remote_worker_image": {
+        "allowed": false,
+        "unresolved_count": 11,
+        "reasons_sha256": "4bfa528b0954de4d0007e642458a8d15b4d232ec57183033e7bf613184a5a123"
+      },
+      "runtime_download": {
+        "allowed": false,
+        "unresolved_count": 13,
+        "reasons_sha256": "9aeef6d903cbf45886d319f7931ea8a44ffe9e03d8ce3e37b019f34552351b7d"
+      },
+      "source": {
+        "allowed": false,
+        "unresolved_count": 14,
+        "reasons_sha256": "273fc5d3d1d868b1b156374a3035bd0f54772d2959816fbcf9e1c15347e6da72"
+      },
+      "trained_export": {
+        "allowed": false,
+        "unresolved_count": 4,
+        "reasons_sha256": "da59432fc6be08aea8854ca81d3db308f50a24f768217dfbb10301707c189a1f"
+      }
+    },
+    "inventory_scope": "Development interpreter only; shipped frozen SBOM/notices require the actual locked build",
+    "components": 590,
+    "unresolved": 53,
+    "inventory_sha256": "94a6a9d7ba858a7bec4e5f4bdc4bf2a086813de1231174f678f57ba070422bcf",
+    "distribution_gate_sha256": "ab940f7947b13f210605e729b064d68a042999a7765925cd389af84a23707a90",
+    "remaining": [
+      "Complete action/feature evidence",
+      "Final shipped source/SBOM/notices and artifact-scope authority",
+      "Final-byte publisher identity",
+      "Approved representative truth and industrial devices",
+      "Unassisted human pilot and operation owner"
+    ]
+  },
+  "endurance": {
+    "status": "running",
+    "elapsed_seconds": 23705.41996804101,
+    "cycles": 395,
+    "completed": 395,
+    "receipt_sha256": "4b88ca88d00fec5aa81b089183670ab1a891fe0e546001154dd5e14fb6829573",
+    "owned_processes_match": true,
+    "soak_72h_complete": false,
+    "independent_frozen_run": true
+  },
+  "quality_approved": false,
+  "independent_review_accepted": false
+}

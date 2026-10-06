@@ -31,17 +31,17 @@
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
-| S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
+| S6-03 | 선택형 GPU와 runtime pack | 실제 pydicom3.0.2 배포 wheel·라이선스·해시 inventory·비활성 설치/재설치 확인. macOS arm64 CPU 및 깨끗한90f6c7c browser/Electron 영상 읽기·Window·오류·재열기 통과. 다른 provider/압축 decoder·가속기·frozen 배포/서명 조합 검증 필요. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
 | S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 후속 최신 소스 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 깨끗한 4062173 소스의 Electron 개선 전체 흐름 1건과 1352bff 소스의 템플릿·팀 재연결 browser/Electron 4건에 엄격한 GUI 기록 확보. 156개 기능의 action별 성공/오류/취소/재열기/이관 근거 원장 보완 필요. 일부 흐름의 완주는 전체 수용 완료가 아님. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 4개 기능의 버튼19개에32개 실제 시나리오 근거,101개 미실행 시나리오 명시. native GUI/persist/reopen/failure15곳 연결. 선언795개는 실행 근거로 세지 않음. 나머지152개 기능 및 완전한 action 수용 검증 필요. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
 | S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 내부 저장소 47회 실행은 disk reserve에서 종료됐고 기록 보존. a184b1e 고정 소스로 외장 APFS 저장소에서 새 72시간 실행 중. 이전 시간을 합산하지 않고 완주 receipt 필요. |
 | S7-06 | 공정 품질 승인과 장비 검증 | 사용자 지정 공정 미검/과검 정책·대표 truth·카메라/PLC/MES 실제 장비 승인 필요. |
-| S7-07 | 공개 후보와 릴리스 판정 | 최종 지원 조합/known issues/license/SBOM/서명/업데이트/파일럿 입력을 모아 공개 후보 판정 필요. |
+| S7-07 | 공개 후보와 릴리스 판정 | 실제 DICOM 지원 조합과 source-bound 개발 의존성590개/미해결53개·6개 배포 범위 hold 판정 기록. 실제 shipped source/SBOM/notices·서명·독립 검토·공정 품질·첫 사용자 파일럿은 미완료. 개발 환경 inventory로 배포 증거를 대신하지 않음. |
 | S7-08 | 파일럿 feedback과 지속 유지 | 첫 사용자의 설명 없는 파일럿 및 실제 운영 책임·지원/SLA/유지보수 주기 필요. |
 
 ## 소프트웨어 구현 확인66개
@@ -199,3 +199,9 @@ passed report result, clean harness identity and screenshots for each run.
 Four `2026-10-07-clean-template-draft-*` / `clean-team-reconnect-*` receipts
 are retained. They qualify those exact executed cases, not all156 actions or
 independent/human/physical/release acceptance.
+
+## DICOM pack and action/candidate follow-up
+
+실제 배포 DICOM pack, 원본을 보존하는 CPU/provider·clean browser/Electron 실행, 해독 전 resource/frame 거절과 구체적인 입력 오류 안내를 완료했습니다. 관련 backend52개, 기능 근거144개, renderer849개와 타입 검사가 통과했습니다. 버튼19개의32개 시나리오를 실제 기록에 연결했고, 공개 후보는 미해결 조건을 유지한 hold입니다. 부모 집계66/16/0은 유지하며, 72시간 검사는 독립적으로 계속 실행합니다.
+
+상세 기록: [DICOM runtime and action/candidate inputs](2026-10-07-dicom-actions-candidate.md).

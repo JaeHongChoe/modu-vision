@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+  "source_dirty": false,
+  "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+  "test_source_sha256": "92fd41bcee3d0e0e7658ce503d5630acc304a118b978e5618acc477230ca372e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d5a9a87f3ed2ab5664012a529ad5644dfdedd61da42ac3a9f4825c91977c076b",
+  "harness_sha256": "4e317dd6ab7d72849a3983992cadcde9883aaafa964f404b4bbfb06afdff66bb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

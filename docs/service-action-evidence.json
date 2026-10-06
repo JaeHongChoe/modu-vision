@@ -8,7 +8,8 @@
   "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
   "src/renderer/components/labeling/LabelingToolbar.tsx": "50eadcc577203c09631c0b23358ef509c4c894bb720b43e74666cf91881d538e",
   "src/renderer/components/labeling/AnnotationDraftRecovery.tsx": "21cc584ca3683631e26d7df1d711ea4ad1e59f7baa6931c9c30bc6156cb9874f",
-  "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb"
+  "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb",
+  "src/renderer/components/labeling/DicomPanel.tsx": "1e191527a5572743bd92888d92445734dd314d9d64125ff62c02204cd15cd0e7"
  },
  "records": [
   {
@@ -1345,7 +1346,148 @@
   },
   {
    "id": "F116",
-   "actions": [],
+   "actions": [
+    {
+     "id": "window-view",
+     "label": "Window 적용·정보 조회",
+     "source": "src/renderer/components/labeling/DicomPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+         "kind": "click",
+         "action": "Apply explicit DICOM window and inspect original/view hashes",
+         "expected": "32x16 original coordinates and source identity remain visible",
+         "observed": "Actual native window button produced source hash and owned PNG hash with32x16 dimensions",
+         "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+         "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+         "receipt": "2026-10-07-clean-dicom-electron.json",
+         "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+         "kind": "click",
+         "action": "Apply zero width and interrupt window preparation transport",
+         "expected": "Precise field error and network refusal preserve the last successful view and source",
+         "observed": "Actual zero-width422 showed window_width correction, failed transport preserved visible prior PNG hash, and source bytes remained unchanged",
+         "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+         "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+         "receipt": "2026-10-07-clean-dicom-electron.json",
+         "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+         "kind": "click",
+         "action": "Apply zero width and interrupt window preparation transport",
+         "expected": "Precise field error and network refusal preserve the last successful view and source",
+         "observed": "Actual zero-width422 showed window_width correction, failed transport preserved visible prior PNG hash, and source bytes remained unchanged",
+         "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+         "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+         "receipt": "2026-10-07-clean-dicom-electron.json",
+         "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+         "kind": "click",
+         "action": "Reload the application and regenerate an explicit200/400 window",
+         "expected": "Display controls reset explicitly; same source produces same owned view",
+         "observed": "Actual native controls were blank after reload; explicit200/400 produced the same view path/hash",
+         "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+         "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+         "receipt": "2026-10-07-clean-dicom-electron.json",
+         "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
    "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
   },
   {

@@ -3983,16 +3983,128 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+      "kind": "click",
+      "action": "Apply explicit DICOM window and inspect original/view hashes",
+      "expected": "32x16 original coordinates and source identity remain visible",
+      "observed": "Actual native window button produced source hash and owned PNG hash with32x16 dimensions",
+      "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+      "receipt": "2026-10-07-clean-dicom-electron.json",
+      "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+      "kind": "click",
+      "action": "Generate the same owned window view before/after reload",
+      "expected": "The owned PNG bytes and immutable source are preserved",
+      "observed": "Reopened actual native application generated exactly the same PNG hash/path; original DICOM bytes were unchanged",
+      "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+      "receipt": "2026-10-07-clean-dicom-electron.json",
+      "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+      "kind": "click",
+      "action": "Reload the application and regenerate an explicit200/400 window",
+      "expected": "Display controls reset explicitly; same source produces same owned view",
+      "observed": "Actual native controls were blank after reload; explicit200/400 produced the same view path/hash",
+      "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+      "receipt": "2026-10-07-clean-dicom-electron.json",
+      "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+      "kind": "click",
+      "action": "Apply zero width and interrupt window preparation transport",
+      "expected": "Precise field error and network refusal preserve the last successful view and source",
+      "observed": "Actual zero-width422 showed window_width correction, failed transport preserved visible prior PNG hash, and source bytes remained unchanged",
+      "reviewer": "Codex root source and retained actual execution review; independent/physical/quality approval pending",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
+      "receipt": "2026-10-07-clean-dicom-electron.json",
+      "receipt_sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "61212a8d879a9f294d6b177d80f47cbc91cdeee9f5c9ddff481c6d2cff4b697b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -4005,7 +4117,11 @@
      "state": "pending"
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "Actual macOS arm64 development Electron with an isolated pydicom3.0.2 runtime; not a frozen or signed delivered runtime.",
+    "Synthetic uncompressed single-frame input; additional modalities, compressed decoders and device combinations remain unqualified.",
+    "Human truth, independent review, physical target and full feature/action acceptance remain pending."
+   ]
   },
   {
    "id": "F117",

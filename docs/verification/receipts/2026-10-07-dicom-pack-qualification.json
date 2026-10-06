@@ -1,0 +1,52 @@
+{
+  "schema": "modu-vision.runtime-pack-qualification/v1",
+  "source_sha": "90f6c7c37aa031231554d8c1d85bd034bcfce13a",
+  "pack_id": "pydicom-cpu",
+  "version": "3.0.2",
+  "kind": "dicom",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "python": "3.13.5"
+  },
+  "provider_source": "https://files.pythonhosted.org/packages/46/e0/60466c6d712dad2cf807df315e39863e91609ffd1064ecb835994460bbda/pydicom-3.0.2-py3-none-any.whl",
+  "provider_wheel_sha256": "abf971a5440f84dbaf42c4b6758e30e62480902584f8b270b9a5d146e278a07b",
+  "provider_metadata_sha256": "cb013cc464e41a2836995fb840aa0b9108a88163ec738d0592224749087bfadc",
+  "inventory_sha256": "c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc",
+  "installation_receipt_sha256": "dfe8bc7f7976624519d7cc3b972b963e18c296da133f905afeddbb160ff72695",
+  "total_bytes": 2379963,
+  "licenses": "MIT+BSD-3-Clause",
+  "license_sha256": "39b3259cb15151df25167119087df1fef33624765e639af42447ba6fe86dada3",
+  "inactive_installed": true,
+  "repeat_verified": true,
+  "installed_app_environment_changed": false,
+  "activated": false,
+  "signature_verified": false,
+  "qualification_execution": "separate isolated Python3.13 with pydicom3.0.2; actual uncompressed source/view execution",
+  "backend_tests": {
+    "passed": 52,
+    "failed": 0,
+    "skipped": 0,
+    "junit_sha256": "cebdd102b3b42980432bef34e565fdf68b131d1156f87e0a9569baebbba45a70"
+  },
+  "gui": [
+    {
+      "receipt": "2026-10-07-clean-dicom-electron.json",
+      "sha256": "40100c47d4139a92acf1bcfbea47e21245ba04662cc5fb7d23531a7fdf9fbd8f",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::native DICOM optional runtime preserves source through window errors and reopen"
+    },
+    {
+      "receipt": "2026-10-07-clean-dicom-browser.json",
+      "sha256": "ef9e86aa3d0665b738691e7b55ae077a49b2021688339d78a3075e70e0a0d758",
+      "test": "scripts/e2e/dicom-runtime-pack.spec.ts::DICOM optional runtime preserves source through window errors and reopen"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "public_release_ready": false,
+  "remaining": [
+    "Compressed decoder and broader modality validation",
+    "Other optional providers and actual accelerator matrix",
+    "Frozen application, publisher trust and artifact-scope license authority"
+  ]
+}

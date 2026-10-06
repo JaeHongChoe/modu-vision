@@ -53,3 +53,29 @@ cannot be inferred from a CPU or another GPU receipt.
 No optional pack is fabricated to make an unavailable provider appear ready.
 Reviewed distributable pack bytes, license notices and target execution remain
 S6-03 prerequisites.
+
+## Measured DICOM pack scope
+
+The retained `2026-10-07-dicom-pack-qualification.json` binds the actual
+pydicom3.0.2 universal wheel, its original complete MIT/BSD license notice,
+provider and existing CPU lock SHA-256, immutable inventory and inactive
+installation. Repeat installation verifies the same bytes. A separate owned
+Python3.13 environment installs only that verified local wheel without network
+dependency resolution; the installed application environment is unchanged.
+
+Actual macOS arm64 development Electron and browser runs at source90f6c7c
+decode one synthetic uncompressed32×16 DICOM, apply an explicit window, retain
+original/view hashes through invalid input and interrupted transport, and
+regenerate the same owned PNG after reload.52 affected backend cases also pass,
+including explicit frame selection and header refusal before pixel allocation.
+
+| Combination | Measured status |
+| --- | --- |
+| pydicom3.0.2 / Python3.13 / macOS arm64 / uncompressed CPU input | Actual isolated provider execution and development Electron verified |
+| Compressed DICOM decoder, other modalities and multi-frame GUI | Additional qualification required; the explicit-frame decoder has focused backend controls |
+| Frozen or signed application and actual delivered pack activation | Pending; an inactive inventory is not an activated runtime |
+| NVIDIA/OCR/OpenVINO optional pack and other OS/device combinations | Require their own exact distributable inventory and execution; no inference from this DICOM run |
+
+Window controls intentionally reset on reload. Explicitly repeating the same
+window recreates the same owned view; the receipt does not claim persisted
+window controls, clinical or manufacturing quality, or distribution approval.
