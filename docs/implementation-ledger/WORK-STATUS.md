@@ -1,6 +1,6 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 구현 소스와 실제 실행 소스는 아래 각 receipt에 고정하며 현재 후속 구현은 `4cf1912`다.
+확인일: 2026-10-07 · 구현 소스와 실제 실행 소스는 아래 각 receipt에 고정하며 현재 후속 구현은 `8093e08`다.
 
 **82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
 
@@ -31,11 +31,11 @@
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
-| S6-03 | 선택형 GPU와 runtime pack | 실제 pydicom3.0.2 배포 wheel·라이선스·해시 inventory·비활성 설치/재설치 확인. macOS arm64 CPU 및 깨끗한90f6c7c browser/Electron 영상 읽기·Window·오류·재열기 통과. 다른 provider/압축 decoder·가속기·frozen 배포/서명 조합 검증 필요. |
+| S6-03 | 선택형 GPU와 runtime pack | 실제 pydicom3.0.2 배포 wheel·라이선스·해시 inventory·비활성 설치/재설치 확인. macOS arm64 CPU 및 깨끗한90f6c7c browser/Electron 영상 읽기·Window·오류·재열기 통과. 후속 clean browser/Electron에서 uncompressed/RLE 2-frame4건과 backend의 mono/RGB/multi RLE3건 통과. 표시 cache/source 변조·atomic 중단·dataset alias 재열기 수정. 다른 압축 decoder/provider·가속기·frozen 배포/서명 조합 검증 필요. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 후속 최신 소스 hosted 결과·skip 조건 확인 필요. |
+| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 1352bff hosted 전체 job과 관측 step은 success로 완료. 06979c9 실행 중/0f3be05 pending이며 새 delta의 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 6개 기능의 action30개에55개 실제 시나리오 근거,155개 pending 시나리오 명시. native 기능별 근거24곳 연결. 선언795개는 실행 근거로 세지 않음. 나머지150개 기능 및 완전한 action 수용 검증 필요. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 11개 기능의 action55개에106개 실제 시나리오 근거,279개 pending 시나리오 명시. native 기능별 근거52곳 연결. action 추가 시 미실행 시나리오도 모두 기록한다. 선언795개는 실행 근거로 세지 않음. 나머지145개 기능 및 완전한 action 수용 검증 필요. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
@@ -209,3 +209,9 @@ independent/human/physical/release acceptance.
 ## 실제 앱 복구·진단과 DICOM 무결성 후속 작업
 
 `2026-10-07-app-recovery-dicom-integrity.md`에 원본 해시 보존·새 프로젝트 복원·선택형 비식별 진단·검색/재열기의 clean browser/Electron6건과12개 스크린샷을 연결했다. DICOM cache/receipt/source 재검증·중단 후 atomic publication·자동 window identity를 수정하고 관련171개를 통과했다. 후속 dirty GUI 진단은 clean 실행 근거로 세지 않고 별도 재실행한다. 부모 집계66/16와 최종 수용0은 유지한다.
+
+## clean 앱 콘텐츠·파생 버전과 입력 경로 후속
+
+깨끗한5cfe9bc에서 browser7/Electron7, 총14건과40개 스크린샷이 통과했다. 라벨 좌표·독립 방향·두 클래스 mask·3가지 format·그룹 분할·파생 검수/새 데이터/CPU 재학습/16개 고정 시험 비교·원본 복귀와 RLE frame을 실제 실행했다. 학습 fixture는 API 제출이며 GUI 학습 버튼 전체를 검증한 것으로 세지 않는다. folder picker는 controlled native response이고 human picker/cancel은 미검증이다.
+
+허용된 dataset alias의 DICOM prepare200/GET422 오류를 재현하고 경로 보존으로 수정했다. 대상이 바뀐 alias의 기존 cache는422로 거부하며 원본/cache 바이트를 보존했다. 관련64개가 통과했다. action 원장은55/106/279, 기능별 native 근거52곳이다. 근거 검사133개도 통과했다. parent66/16 및 최종 수용0을 유지한다. 1352bff hosted CI 완료와 현재 delta의 CI는 구분한다. 72시간은 기존 고정 실행의423cycle/약7시간 시점에도 running이며 대기하지 않고 후속 구현을 진행한다.

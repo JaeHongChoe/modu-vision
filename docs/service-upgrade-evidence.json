@@ -3923,19 +3923,209 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검수한 파생 버전을 데이터 원본으로 선택",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     },
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검증한 편집 전 원본으로 돌아가기",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검수한 파생 버전을 데이터 원본으로 선택",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     },
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검증한 편집 전 원본으로 돌아가기",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "파생 학습 데이터 버전 재열기",
+      "expected": "Reload retains saved source branches.",
+      "observed": "Native reload reloaded the saved derived dataset before explicitly returning to original.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검수한 파생 버전을 데이터 원본으로 선택",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     },
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검증한 편집 전 원본으로 돌아가기",
+      "expected": "Use an explicit verified source and preserve original history.",
+      "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -4010,6 +4200,36 @@
         "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
        }
       ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "DICOM frame index and Window 적용·정보 조회",
+      "expected": "Display only a selected supported RLE frame and preserve source identity.",
+      "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+      "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
+      "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       }
+      ]
      }
     ]
    },
@@ -4039,6 +4259,36 @@
        {
         "id": "screenshot-2",
         "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
+       }
+      ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "DICOM frame index and Window 적용·정보 조회",
+      "expected": "Display only a selected supported RLE frame and preserve source identity.",
+      "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+      "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
+      "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
        }
       ]
      }
@@ -4072,6 +4322,36 @@
         "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
        }
       ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "DICOM frame index and Window 적용·정보 조회",
+      "expected": "Display only a selected supported RLE frame and preserve source identity.",
+      "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+      "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
+      "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       }
+      ]
      }
     ]
    },
@@ -4103,6 +4383,36 @@
         "sha256": "deca99b2a0e957981be157d96d3dc6942815bc6acae84642bc4a96f6d4bd6d4c"
        }
       ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "DICOM frame index and Window 적용·정보 조회",
+      "expected": "Display only a selected supported RLE frame and preserve source identity.",
+      "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+      "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
+      "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+       }
+      ]
      }
     ]
    },
@@ -4129,19 +4439,333 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "라벨 내보내기",
+      "expected": "Downloaded LabelMe/COCO/YOLO bundles preserve nested identity; lossy direction export refuses.",
+      "observed": "Native downloads matched project ZIP hashes; two nested images kept exact class/geometry/mask meaning. COCO/YOLO with direction refused422 before exports were created.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "라벨 폴더 선택",
+      "expected": "Show the explicitly selected owned import directory.",
+      "observed": "Real application button received an owned directory from a controlled native dialog response. Human OS picker operation and cancel were not tested.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "가져오기 미리보기",
+      "expected": "Preview both nested images and replacement conflicts.",
+      "observed": "Actual native preview showed batch-a/part.png and batch-b/part.png with conflict detection for all three formats.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검토한 라벨 적용",
+      "expected": "Save backup before replacement; reopen exact annotations and raster.",
+      "observed": "Native reviewed replacement returned backup version, matched saved JSON/mask bytes and reopened both images in labeling for all three formats.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검토한 라벨 적용",
+      "expected": "Save backup before replacement; reopen exact annotations and raster.",
+      "observed": "Native reviewed replacement returned backup version, matched saved JSON/mask bytes and reopened both images in labeling for all three formats.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검토한 라벨 적용",
+      "expected": "Save backup before replacement; reopen exact annotations and raster.",
+      "observed": "Native reviewed replacement returned backup version, matched saved JSON/mask bytes and reopened both images in labeling for all three formats.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "라벨 내보내기",
+      "expected": "Downloaded LabelMe/COCO/YOLO bundles preserve nested identity; lossy direction export refuses.",
+      "observed": "Native downloads matched project ZIP hashes; two nested images kept exact class/geometry/mask meaning. COCO/YOLO with direction refused422 before exports were created.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검토한 라벨 적용",
+      "expected": "Save backup before replacement; reopen exact annotations and raster.",
+      "observed": "Native reviewed replacement returned backup version, matched saved JSON/mask bytes and reopened both images in labeling for all three formats.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -4959,19 +5583,139 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "준비 상태 진단",
+      "expected": "Show task validity, class ratio, unreadable and duplicate input diagnosis after reload.",
+      "observed": "Native UI displayed8 valid/1 invalid and ng1; controlled unreadable source and label-schema issue were recorded; saved diagnosis reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+      "receipt": "2026-10-07-app-readiness-grouped-split-electron.json",
+      "receipt_sha256": "3530e83bf5be572ade802043c151ea3e22cdf7f2d52c5452fc9bf1f16a67a21e",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "준비 상태 진단",
+      "expected": "Show task validity, class ratio, unreadable and duplicate input diagnosis after reload.",
+      "observed": "Native UI displayed8 valid/1 invalid and ng1; controlled unreadable source and label-schema issue were recorded; saved diagnosis reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+      "receipt": "2026-10-07-app-readiness-grouped-split-electron.json",
+      "receipt_sha256": "3530e83bf5be572ade802043c151ea3e22cdf7f2d52c5452fc9bf1f16a67a21e",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "준비 상태 진단",
+      "expected": "Show task validity, class ratio, unreadable and duplicate input diagnosis after reload.",
+      "observed": "Native UI displayed8 valid/1 invalid and ng1; controlled unreadable source and label-schema issue were recorded; saved diagnosis reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+      "receipt": "2026-10-07-app-readiness-grouped-split-electron.json",
+      "receipt_sha256": "3530e83bf5be572ade802043c151ea3e22cdf7f2d52c5452fc9bf1f16a67a21e",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "준비 상태 진단",
+      "expected": "Show task validity, class ratio, unreadable and duplicate input diagnosis after reload.",
+      "observed": "Native UI displayed8 valid/1 invalid and ng1; controlled unreadable source and label-schema issue were recorded; saved diagnosis reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+      "receipt": "2026-10-07-app-readiness-grouped-split-electron.json",
+      "receipt_sha256": "3530e83bf5be572ade802043c151ea3e22cdf7f2d52c5452fc9bf1f16a67a21e",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "분할 적용",
+      "expected": "Keep same-origin images in one group and retain split evidence.",
+      "observed": "Native apply persisted exact ratios, product criterion and original family assignment; reload showed saved receipt and later metadata edits marked it stale without replacing assignments.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+      "receipt": "2026-10-07-app-readiness-grouped-split-electron.json",
+      "receipt_sha256": "3530e83bf5be572ade802043c151ea3e22cdf7f2d52c5452fc9bf1f16a67a21e",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -4989,19 +5733,159 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "정렬 새 버전 저장",
+      "expected": "Save30-degree alignment with transformed annotations and original identity.",
+      "observed": "Native button produced a polygon from bbox, direction20 to50 and unchanged textA01; original images and labels retained.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "정렬 새 버전 저장",
+      "expected": "Save30-degree alignment with transformed annotations and original identity.",
+      "observed": "Native button produced a polygon from bbox, direction20 to50 and unchanged textA01; original images and labels retained.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "변환 이미지·라벨 검수 후 채택 후보",
+      "expected": "Explicitly review converted labels before materializing a training source.",
+      "observed": "Controlled synthetic review was saved and reopened; human manufacturing quality was not approved.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검수한 파생본으로 새 학습 데이터 저장",
+      "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
+      "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-08",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "검수한 파생본으로 새 학습 데이터 저장",
+      "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
+      "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
+      "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -5169,19 +6053,227 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "객체 독립 방향 라벨",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Angle (θ)",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Shift+ArrowRight",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "객체 독립 방향 라벨",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Angle (θ)",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Shift+ArrowRight",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "객체 독립 방향 라벨",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Angle (θ)",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "Shift+ArrowRight",
+      "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
+      "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
+      "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
+      "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+      "kind": "click",
+      "action": "LabelMe direction bundle roundtrip",
+      "expected": "Export and import preserve independent315-degree direction and30-degree OBB angle.",
+      "observed": "Native LabelMe download, reviewed replacement and reopened persisted geometry retained both values; lossy alternatives were refused.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/label-format-roundtrip.spec.ts::native app format bundles preserve two nested images and native class meaning",
+      "receipt": "2026-10-07-app-label-format-roundtrip-electron.json",
+      "receipt_sha256": "77ef579187249fd87be3d3a1134574205bc4783cb25fbda98eb27f3ecf4fdeae",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "13ff3a28021b88155660a2c0bd1e751b745d9623ffc5a66ec338e07610a8eb14"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "390d49efedac85b864b2c0d75054123d4ccf902322185167687ade4b7b3ee148"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e6cf7f5259751bf4ddf8d6b9ba12fe739bd29fc35b2e2b123e909d9ac2100689"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0795ba64c8cbb7134c3ac32661036ba09381dad7d27682436803ca8367c2397f"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "957dbe030cf0047d9579be7e3f21743648e8c0406ccc05b0f2dd6130c12c88d7"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "d60d39e89b6774335ddbf44e011b624b15c4736e7c9793088c936252c841a090"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"

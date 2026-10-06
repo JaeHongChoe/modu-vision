@@ -8223,7 +8223,8 @@
     "backend/engine/model_catalog.py",
     "backend/engine/project_archive.py",
     "backend/engine/project_labelsets.py",
-    "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+    "src/renderer/components/dataset/DatasetWorkflowPanel.tsx",
+    "src/renderer/components/dataset/DerivedDatasetPanel.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -8755,7 +8756,8 @@
    "source_registry": "docs/product-upgrade-program.json",
    "source_files": [
     "backend/engine/data_workbench.py",
-    "src/renderer/components/dataset/DataReadinessPanel.tsx"
+    "src/renderer/components/dataset/DataReadinessPanel.tsx",
+    "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",
@@ -8928,7 +8930,9 @@
    "source_registry": "docs/product-upgrade-program.json",
    "source_files": [
     "backend/engine/rotated_detection.py",
-    "src/renderer/components/training/RotatedBoxFitting.tsx"
+    "src/renderer/components/training/RotatedBoxFitting.tsx",
+    "src/renderer/components/labeling/AnnotationList.tsx",
+    "src/renderer/components/labeling/LabelingCanvas.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",
@@ -9184,7 +9188,9 @@
     "docs/product-upgrade-program.json",
     "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx",
     "src/renderer/components/wizard/ArtifactRetentionPanel.tsx",
-    "src/renderer/components/common/ImagePickerModal.tsx"
+    "src/renderer/components/common/ImagePickerModal.tsx",
+    "src/renderer/components/labeling/LabelingToolbar.tsx",
+    "src/renderer/components/labeling/AnnotationList.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",

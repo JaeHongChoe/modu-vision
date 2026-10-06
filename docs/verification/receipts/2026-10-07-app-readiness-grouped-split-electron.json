@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+  "source_dirty": false,
+  "test": "scripts/e2e/readiness-grouped-split.spec.ts::native declared original families grouped split receipt and task diagnostics reopen",
+  "test_source_sha256": "64776ffd694454770112cee1ba1315a86db3dbcc7e2d156a1f77e9fb83c7ffec",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "bb30cf1c507374d4ae39dd7c58e6617ee24138aa74cd6223f2e24c060658c484",
+  "harness_sha256": "554ffc1af2735304b150de917d993bc9a731a45d83c6bbdf577ab1f814aee0ee",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "fdc640939f7fdd5266c526946b8165dff47118ddfaae2cf702ae3fe1a38f0d26"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b0bd5386b9ddb639a3b8f09e1fec7207c9ecf6eac3aa0b2a383f6e0afac9a9ec"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

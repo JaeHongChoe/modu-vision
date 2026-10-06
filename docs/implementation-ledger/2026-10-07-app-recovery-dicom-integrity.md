@@ -28,3 +28,20 @@ U025와 U030의 명시적인11개 action/23개 scenario 근거를 추가했다. 
 ## 계속 남은 조건
 
 72시간 실행은 고정된 별도 소스로 계속 진행한다. 현재 소스 공개 CI, 살아 있는 worker/lease migration, app+DB 설치 cutover, 실제 서명/publisher, 운영 비밀 정책,10개 모델군 사람이 검토한 truth, 장비·공정 품질과 첫 사용자 파일럿은 별도 미완료 조건이다. 현재 앱3가지 경로 통과는 전체156기능 완료나 공개 릴리스 승인이 아니다.
+
+## 후속 clean 실행과 alias 수정
+
+깨끗한 `5cfe9bc5524ae57ed3d7c83b9334896086381d2b`에서14/14건(browser7,macOS Electron7)이 재시도·skip 없이 통과했다.40개 실제 스크린샷과14개 strict exact-case receipt를 보존했다. 앞선 dirty 진단은 별도 기록으로 그대로 남긴다.
+
+- 벡터 라벨:bbox·polygon·OBB의 exact 좌표, category1/2/3 raster 중심,독립 방향315°/축 회전30°, keyboard nudge·삭제/undo·저장/reload를 확인했다. 세 가지 specialized OBB authoring style을 대신 검증한 것은 아니다.
+- 브러시:두 클래스의 독립 mask, 선택 class erase·undo·redo와 다른 class 해시 보존, fixture lease 종료/reload를 확인했다. 외부 mask 입력은 다음 실행 대상이다.
+- LabelMe/COCO/YOLO:동일 basename을 가진 중첩 이미지2장, exact geometry·class·mask, 실제 download SHA, backup 후 검토한 replacement·재열기 통과. direction을 잃는 COCO/YOLO export는422로 거부했다. native folder dialog response는 controlled fixture이며 human picker/cancel은 미검증이다.
+- 파생 버전:정렬·밝기·명시적 fixture 검수·새 학습 데이터·원본 선택/복귀, 실제 CPU parent/candidate 학습과16개 untouched test 비교가 연결됐다. human model/공정 품질 attestation은 unchecked이고 활성화하지 않았다. 학습 제출은 API setup이므로 GUI train button 검증이라고 주장하지 않는다.
+- 그룹 분할·준비도:선언된 original family와 content duplicate를 한 그룹으로 유지한6그룹/50:25:25 분할, 저장/reload와 이후 metadata 변경의 stale 표시, 읽기 불가·label schema 오류·class 비율/근접 중복 진단을 확인했다.
+- DICOM:uncompressed와 built-in RLE 2-frame의 명시적 window·frame0/1 identity·unavailable frame2 refusal·reload를 확인했다.
+
+이 실행의25개 명시적 action/51개 scenario를 추가하여 전체55action/106verified/279pending이며11개 feature의 action을 검토했다. 나머지145개 feature의 action 목록과 unlisted/cancel/target acceptance는 pending이다.
+
+후속 소스 `8093e08bc070058776053df9394ccd55583a1ac4`는 alias prepare200/GET422 오류의 causal red 이후 수정했다. receipt에 visible imported path를 보존하고 현재 byte SHA를 재검증한다. alias 대상 변경은 기존 view를422로 거부한다. 데이터·라벨 namespace와 DICOM 관련64개가 통과했다.
+
+GitHub run37533663317은 `1352bff9672356decc39dbf7cd2c3fcc4f2d01a9` 소스의 job/관측 step 전부 success로 완료했다. 새 delta/나중 source는 자체 hosted qualification이 필요하다. 현재 요약은 `../verification/receipts/2026-10-07-app-recovery-dicom-summary.json`에 연결한다. 기존72시간은 같은 고정 소스/시작점으로 유지한다.

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+  "source_dirty": false,
+  "test": "scripts/e2e/labeling-vector-content.spec.ts::bbox polygon OBB and independent direction retain exact saved geometry",
+  "test_source_sha256": "4c2715a7ec34bd10b018555b90f6528be11db11074a72c1d6b21e47ba8a6d627",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "bb30cf1c507374d4ae39dd7c58e6617ee24138aa74cd6223f2e24c060658c484",
+  "harness_sha256": "2ff9f5fc1f6b725f5ac3540ff75142c69f8b99c2fa336355333e1e41c7f8e9b0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "47e80febc0008758e8c3e50107cf72fa60ea322c0ef3ad96ed00f19a05445036"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

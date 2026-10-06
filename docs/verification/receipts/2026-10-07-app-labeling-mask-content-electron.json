@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+  "source_dirty": false,
+  "test": "scripts/e2e/labeling-mask-content.spec.ts::native two-class brush erase undo redo and reload preserve exact mask content",
+  "test_source_sha256": "21ea6a63e67a1f8538409129a19d00e326894b021945ae42d7f3cbb7ad1ecff9",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "bb30cf1c507374d4ae39dd7c58e6617ee24138aa74cd6223f2e24c060658c484",
+  "harness_sha256": "8660a25741ae868753a60aee19e705720b55c6992fd1476349014d12a24c2ea3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3a7ef22eb2d6b12180dff10969db993091b95f91c4a59bdf08b61f5c34e72936"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

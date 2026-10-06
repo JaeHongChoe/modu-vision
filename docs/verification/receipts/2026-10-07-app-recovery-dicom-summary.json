@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_actual_app_and_dicom_progress",
+  "implementation_source_sha": "8093e08bc070058776053df9394ccd55583a1ac4",
+  "parent_implementation": {
+    "verified": 66,
+    "pending": 16,
+    "windows_qa_waived": 1,
+    "actionable": 15
+  },
+  "final_accepted": 0,
+  "clean_gui": {
+    "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+    "cases": 14,
+    "browser": 7,
+    "electron": 7,
+    "retries": 0,
+    "skips": 0,
+    "screenshots": 40,
+    "report_sha256": "bb30cf1c507374d4ae39dd7c58e6617ee24138aa74cd6223f2e24c060658c484"
+  },
+  "backend": {
+    "tests": 64,
+    "failures": 0,
+    "skips": 0,
+    "junit_sha256": "3be93ae3c30afe20541a701102dccce92396caf9fe55416c65a1e0abf95a14ca",
+    "scope": "DICOM display identity and authorized alias; dataset loaders/metadata and annotation namespace regressions; prior171-case run overlaps and is separate"
+  },
+  "actions": {
+    "curated_features": 11,
+    "actions": 55,
+    "verified_scenarios": 106,
+    "pending_scenarios": 279,
+    "unreviewed_feature_action_lists": 145,
+    "native_dimensions": 52,
+    "accepted_features": 0
+  },
+  "hosted_ci": {
+    "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 37533663317,
+    "all_observed_steps": "success",
+    "job_count": 1,
+    "run_json_sha256": "2a8ac9cad991ea5fd57d70a6a3a14d21ed21d4cf9260a0270a2c7ed87b1c1cb1",
+    "latest_delta": "requires its own hosted completion"
+  },
+  "soak": {
+    "status": "running",
+    "elapsed_seconds_observed": 25390.722250875027,
+    "cycles_observed": 423,
+    "required_seconds": 259200,
+    "prior_attempts_aggregated": false
+  },
+  "boundaries": [
+    "Synthetic original truth only",
+    "Native macOS development app; controlled folder dialog responses",
+    "CPU qualification environment, built-in pydicom RLE only",
+    "No human manufacturing quality, hardware, signing, operational or independent release acceptance"
+  ],
+  "evidence_regressions": {
+    "passed": 133,
+    "failures": 0,
+    "skips": 0,
+    "junit_sha256": "de16231c33d7f3bfae4fe5c69a25937b93c88cebb594335da5879853d699c29a"
+  }
+}
