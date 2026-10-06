@@ -50,7 +50,7 @@ export function getExecutionContextIdentity(){
 /** Local and selected native actions use the same strict, persisted recipe.
  * The optional legacy callback remains a source-compatibility parameter only;
  * it is never executed as a bypass or as fallback after a failed recipe. */
-export async function executeModelRecipe<T>(task:ModelFamily,stage:'evaluate'|'predict'|'generate',params:Record<string,any>,_legacyLocal?:()=>Promise<T>):Promise<T>{
+export async function executeModelRecipe<T>(task:ModelFamily,stage:'evaluate'|'predict'|'generate'|'benchmark',params:Record<string,any>,_legacyLocal?:()=>Promise<T>):Promise<T>{
  const target=useComputeStore.getState();if(!target.isLoaded)throw new Error('실행 서버 설정을 먼저 확인하세요.');
  const selected=target.selectedProfileId,revision=target.transportRevision;
  const profile=selected?target.profiles.find(row=>row.id===selected):null;if(selected&&!profile)throw new Error('선택한 실행 서버를 찾지 못했습니다.');

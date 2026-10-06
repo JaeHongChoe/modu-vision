@@ -15,14 +15,19 @@ SPECIALISTS=FAMILIES[5:]
 
 def support_matrix():
     return {task:{'train':True,'evaluate':True,'predict':True,'flow':task!='defect_gan',
-                  'quality_approved':False,'adapter':'native_recipe' if task in SPECIALISTS else 'frozen_flow_and_comparison',
+                  'quality_approved':False,'adapter':'native_trial_recipe_and_frozen_flow' if task in FAMILIES[:4] else 'native_recipe' if task in SPECIALISTS else 'frozen_flow_and_comparison',
                   'evaluation_scope':'RGB-statistics diagnostic' if task=='defect_gan' else 'explicit heldout',
                   'generation_only':task=='defect_gan',
-                  'native_recipe_stages':(['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS else ['predict'] if task=='patch_classification' else []),
+                  'benchmark':task in FAMILIES[:4],
+                  'benchmark_scope':'features or DINO export forward; never pipeline timing' if task=='anomaly' else 'model_forward_only' if task in FAMILIES[:4] else 'unsupported; use saved flow timing',
+                  'native_recipe_stages':(['predict','benchmark'] if task in FAMILIES[:4] else ['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS else ['predict'] if task=='patch_classification' else []),
                   'target_acceptance':'pending; CPU control execution is not physical GPU qualification'} for task in FAMILIES}
 
 
 def request_model(task,stage):
+    if task in FAMILIES[:4]:
+        from backend.engine.core_model_trials import CorePredictRequest,CoreBenchmarkRequest
+        if stage in ('predict','benchmark'):return CorePredictRequest if stage=='predict' else CoreBenchmarkRequest
     from backend.api import routes_rotation as rotation, routes_ocr as ocr, routes_enhancement as enhancement
     from backend.api import routes_rotated_detection as obb, routes_defect_gan as gan, routes_patch_classification as patch
     table={('rotation','evaluate'):rotation.EvaluateRequest,('rotation','predict'):rotation.PredictRequest,
@@ -45,7 +50,10 @@ def run_recipe(task,stage,checkpoint,inputs,options,output,device):
     # get_device() fallback from silently changing a requested accelerator.
     target=str(resolve_runtime_device(device));checkpoint=Path(checkpoint);output=Path(output)
     request_model(task,stage)
-    if stage=='evaluate':
+    if task in FAMILIES[:4]:
+        from backend.engine.core_model_trials import execute_core_trial
+        result=execute_core_trial(task,stage,checkpoint,inputs,options,target)
+    elif stage=='evaluate':
         dataset=inputs['dataset'];split=options.get('split','test')
         if split not in ('val','test'):raise ValueError('Recipe evaluation requires heldout val or test')
         if task=='rotation':

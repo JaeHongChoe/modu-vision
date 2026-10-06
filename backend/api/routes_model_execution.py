@@ -20,8 +20,8 @@ router=APIRouter(prefix='/api/model-execution',tags=['model-execution'])
 
 class RecipeRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
-    task:Literal['rotation','ocr','rotated_detection','enhancement','defect_gan','patch_classification']
-    stage:Literal['evaluate','predict','generate']
+    task:Literal['classification','detection','segmentation','anomaly','rotation','ocr','rotated_detection','enhancement','defect_gan','patch_classification']
+    stage:Literal['evaluate','predict','generate','benchmark']
     execution_target:Literal['local','selected_compute']='local'
     device:Literal['cpu','cuda','cuda:0','mps']='cpu'
     compute_profile_id:str|None=None
@@ -43,6 +43,10 @@ def _root(project):
 def _checkpoint(request,task,identifier):
     from backend.api import routes_rotation,routes_ocr,routes_rotated_detection,routes_enhancement,routes_defect_gan,routes_patch_classification
     modules={'rotation':routes_rotation,'ocr':routes_ocr,'rotated_detection':routes_rotated_detection,'enhancement':routes_enhancement,'defect_gan':routes_defect_gan}
+    if task in ('classification','detection','segmentation','anomaly'):
+        from backend.api.routes_evaluation import _resolve_job_artifacts
+        project=get_current_project(request)
+        return _resolve_job_artifacts(identifier,source_dataset_path=project['source_dataset_dir'],source_task=task)[1]
     if task=='patch_classification':return routes_patch_classification._completed_patch(get_current_project(request),identifier)
     return modules[task]._checkpoint(request,identifier)
 

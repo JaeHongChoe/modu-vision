@@ -28,6 +28,10 @@ import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { api } from '../../services/api';
+import {executeModelRecipe,getExecutionContextIdentity} from '../../services/modelExecution';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {CoreModelTrialPanel} from './CoreModelTrialPanel';
+import type {BenchmarkResult} from '../../types';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { LedAnnunciator } from '../common/LedAnnunciator';
 import type { RuntimeExportResult } from '../../types';
@@ -38,7 +42,7 @@ import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
   const { language, backendStatus, task } = useProjectStore();
-  const { benchmarkResult, isBenchmarking, isLoading: isFindingModel, loadEvaluation, runBenchmark } = useEvaluationStore();
+  const { benchmarkResult, isBenchmarking, isLoading: isFindingModel, loadEvaluation } = useEvaluationStore();
   const trainingJobId = useTrainingStore((state) => state.jobId);
   const trainingStatus = useTrainingStore((state) => state.status);
   const trainingIsCurrentData = useTrainingStore((state) => state.isCurrentData);
@@ -69,6 +73,11 @@ export const InferenceCenterStudio: React.FC = () => {
   const [maxTaktLimit, setMaxTaktLimit] = useState<number>(25.0); // Line speed threshold limit in ms
   const [exportFormat, setExportFormat] = useState<'onnx' | 'torchscript'>('onnx');
   const [resolution, setResolution] = useState<number>(256);
+  const [trialDevice,setTrialDevice]=useState<'cpu'|'mps'|'cuda'>('cpu');
+  const compute=useComputeStore();
+  const benchmarkScope=[getExecutionContextIdentity(),compute.selectedProfileId,task,jobId].join('\n');
+  const activeBenchmarkScope=useRef(benchmarkScope);activeBenchmarkScope.current=benchmarkScope;
+  useEffect(()=>{useEvaluationStore.setState({benchmarkResult:null,isBenchmarking:false});setActionError(null);if(compute.selectedProfileId&&trialDevice==='mps')setTrialDevice('cpu');},[compute.selectedProfileId,compute.transportRevision,jobId]);
   const flowPackageRef = useRef<HTMLDivElement>(null);
 
   const showFlowPackage = () => {
@@ -94,7 +103,11 @@ export const InferenceCenterStudio: React.FC = () => {
       setActionError('학습을 완료한 모델을 먼저 선택하세요.');
       return;
     }
-    await runBenchmark(25, resolution);
+    const activeJobId=currentJobId(),startedScope=benchmarkScope;useEvaluationStore.setState({isBenchmarking:true,benchmarkResult:null});
+    try {
+      const result=await executeModelRecipe<BenchmarkResult>(task,'benchmark',{job_id:activeJobId,iterations:25,resolution,device:trialDevice});
+      if(currentJobId()===activeJobId&&activeBenchmarkScope.current===startedScope)useEvaluationStore.setState({benchmarkResult:result,isBenchmarking:false});
+    } catch(e) {if(activeBenchmarkScope.current!==startedScope)return;setActionError(e instanceof Error?e.message:'속도 측정 실패');useEvaluationStore.setState({isBenchmarking:false,benchmarkResult:null});}
   };
 
   const handleExport = async () => {
@@ -156,6 +169,8 @@ python infer.py --self-test`;
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-200 overflow-y-auto select-none p-5 space-y-5 font-sans">
       {/* Top Operator Guidance Banner */}
       <OperatorGuidanceBanner step={6} />
+
+      <CoreModelTrialPanel task={task} jobId={jobId||''} device={trialDevice} setDevice={setTrialDevice}/>
 
       {/* Title & Action Strip */}
       <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">

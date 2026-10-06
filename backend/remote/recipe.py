@@ -50,7 +50,7 @@ def run_recipe_worker(spec_path):
             raise ValueError('Recipe model task or checkpoint differs')
         import torch
         payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
-        if payload.get('task')!=binding['task']:raise ValueError('Recipe checkpoint task differs')
+        if payload.get('task',metadata['task'])!=binding['task']:raise ValueError('Recipe checkpoint task differs')
         inputs={}
         if binding['image_ref']:inputs['image']=files[binding['image_ref']]
         if binding['dataset_ref']:inputs['dataset']=root/binding['dataset_ref']

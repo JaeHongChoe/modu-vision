@@ -70,6 +70,7 @@ jobs:
           backend/tests/test_patch_training_scheduling.py
           backend/tests/test_specialist_runtime_limits.py
           backend/tests/test_execution_recipes.py
+          backend/tests/test_core_execution_recipes.py
           backend/tests/test_specialist_training_queue.py
           backend/tests/test_specialist_cancel_observation.py
           backend/tests/test_remote_training_controls.py

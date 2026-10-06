@@ -3341,6 +3341,12 @@
      "result": "Task119 actual local workbench actions use the same strict receipt endpoint; successful actions refresh current-context history automatically and discard late project/target/older history responses.",
      "scope": "Actual five-family local/selected CPU parity:19 saved receipts and10 selected in-process workers;11 backend cases,renderer784,types/build and actual Chrome/Electron2 pass. Root d4e724eeb90141eb6db8a94b55752576abc90e0afcc26e20c89673a742fee7ca,1456 source inputs/702 artifacts.",
      "platform": "macOS CPU control fixtures; general inference/benchmark/export preflight still pending. Parent not closed; Windows excluded; no new real SSH/GPU or independent/final acceptance."
+    },
+    {
+     "kind": "partial-core-trial-target",
+     "result": "Task120 explicit core-model prediction and forward-only benchmark use the same persisted local/selected recipe; no API-host fallback.",
+     "scope": "14 actual CPU backend cases,renderer784,types/build; actual Chrome and Electron classifier1epoch/prediction/benchmark/reopen/503. 27 saved CPU receipts,14 in-process selected workers; root 1aea91238198dac3669325f9be7451008a22f8bea5e1c80a8cd49e4f1673d8f5,1460 source/985 artifacts.",
+     "platform": "macOS CPU controls only. Parent remains in progress: selected flow/export preflight and all-model qualification pending. One native startup profile read and one thumbnail reload error remain unexplained; no new physical GPU, independent review, Windows or final acceptance."
     }
    ],
    "file_actions": {

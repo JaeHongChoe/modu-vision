@@ -697,3 +697,8 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 ## Task119 로컬 평가·예측 자동 기록 (S4-11 일부)
 
 로컬 작업대 실행도 엄격한 장치 선택과 모델·입력·실행 근거를 저장한다. 실행 직후 기록을 자동 갱신하고 오래된 프로젝트/서버 응답과 뒤늦은 이전 목록을 버린다. 실제 Chrome/Electron2개, backend11,renderer784,types/build 통과. 실제 CPU 근거19개·선택 worker10개, root SHA256 d4e724eeb90141eb6db8a94b55752576abc90e0afcc26e20c89673a742fee7ca. 일반 모델 예측·속도 측정·내보내기 사전검사는 남아 있다. 구현 검증56/82; Windows 제외 남은25개.
+
+
+## Task120 일반 모델 예측·속도 측정 위치 (S4-11 일부)
+
+일반 모델 단일 예측과 forward 속도 측정도 명시적인 CPU/MPS/CUDA 또는 선택 서버에서 실행하고 모델·입력·runtime 기록을 저장한다. classification/segmentation 실제 CPU 제어 모델의 로컬·선택 worker 동일성, 선택 서버 실패503와 CUDA 미지원 거절을 확인했다. backend14,renderer784,types/build 통과. Chrome와 Electron에서 실제 EfficientNet CPU1epoch 학습→예측→25회 forward 계측→자동 기록→재열기→선택 서버 실패를 확인했다. 원본12장 해시 유지, 실제 CPU 기록27개·선택 worker14개, 근거 1aea91238198dac3669325f9be7451008a22f8bea5e1c80a8cd49e4f1673d8f5 (source1460/artifacts985). 계측은 랜덤 tensor 모델 forward이며 전체 검사 처리량이나 모델 품질 승인이 아니다. Electron 최초 설정 읽기 실패1회와 reload 중 thumbnail 실패는 원인 미확정으로 남겼다. 선택 서버 flow/export 사전검사와 전체 모델군 자격 검증은 남아 있어 구현 검증56/82, Windows 제외 남은25개를 유지한다.

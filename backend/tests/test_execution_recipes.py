@@ -82,7 +82,8 @@ def test_recipe_support_matrix_has_every_family_and_explicit_gan_boundary():
     assert len(matrix)==10 and all(row['train'] and row['evaluate'] and row['predict'] for row in matrix.values())
     assert matrix['defect_gan']['flow'] is False and matrix['defect_gan']['quality_approved'] is False
     assert matrix['defect_gan']['native_recipe_stages']==['evaluate','generate']
-    assert matrix['classification']['native_recipe_stages']==[]
+    assert all(matrix[t]['native_recipe_stages']==['predict','benchmark'] for t in ('classification','detection','segmentation','anomaly'))
+    assert 'never pipeline' in matrix['anomaly']['benchmark_scope']
 
 
 @pytest.mark.parametrize('invalid',['traversal','symlink','duplicate','changed_hash'])
