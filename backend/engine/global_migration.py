@@ -102,7 +102,7 @@ def _read_db(path):
     with owned_file_snapshot(path) as copy,closing(sqlite3.connect(copy.resolve().as_uri()+'?mode=ro',uri=True)) as db:yield db
 
 
-def _authority_blockers(root,scopes,*,installation_root=None):
+def _authority_blockers(root,scopes,*,installation_root=None,history_jobs=frozenset()):
     blockers=[]
     with _read_db(root/scopes['context']) as db:
         identities=dict(db.execute('SELECT name,value FROM identities'))
@@ -124,7 +124,10 @@ def _authority_blockers(root,scopes,*,installation_root=None):
             blockers.append('External or unavailable registered project references are unsupported in this phase')
     known={(w,p,k) for k,w,p,_ in locations}
     with _read_db(root/scopes['ledger']) as db:
-        for workspace,project,key,actor,mode in db.execute('SELECT workspace_id,project_id,project_key,actor_id,mode FROM jobs'):
+        for identifier,workspace,project,key,actor,mode in db.execute('SELECT id,workspace_id,project_id,project_key,actor_id,mode FROM jobs'):
+            # A historical converter separately validates each excluded ended
+            # row's source, output, schema and immutable registered namespace.
+            if identifier in history_jobs:continue
             actor_known=(actor==identities['local_actor_id']) if mode=='local' else (actor in users and (project,actor) in members) if mode=='team' else False
             if (workspace,project,key) not in known or not actor_known:
                 blockers.append('Ledger namespace/actor lacks original registered authority; historical adapter required')

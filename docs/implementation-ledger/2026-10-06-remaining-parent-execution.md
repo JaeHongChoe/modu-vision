@@ -27,7 +27,7 @@ Windows native QA remains waived by the user. No Claude source work is resumed.
   platform signing are still required. Runtime-pack inventory does not install packs.
 - Migration: drained explicitly owned current generations preserve post-cutover
   writes using forward recovery, CAS, journal completion and an increasing fence.
-  Historical converters and live worker/uncertain lease adoption remain missing.
+  An explicit terminal local history converter now binds original reviewed registered context without creating worker/lease authority. Live workers, uncertain leases, runtime recovery indexes and unsupported historical schemas remain pending.
 - Process control: actual spawn DataLoader workers are stopped while an unrelated
   process remains alive. Windows native execution is not inferred from that result.
 - Capacity: 100k metadata paging, a separate 10k×8k original image decode, durable
@@ -75,3 +75,13 @@ source/input hashes, GPU ownership and endurance receipts. Functional control
 results and the parent implementation count are reported separately from final
 acceptance. No process quality, signature, deployment or independent review is
 approved by these records.
+
+
+## Actual cohort, process and package closure
+
+See `2026-10-06-cohort-migration-package-closure.md`. Current software count is
+64 verified/18 pending, with zero final acceptance. S7-03 Windows native QA is
+waived, leaving17 actionable parents. S1-09 and S4-13 software dimensions now
+have current actual controls; the Windows11 installation/platform and human
+quality gates are preserved. CI, signing, operational cutover, full coverage,
+physical devices, pilot review and the full72-hour result remain distinct.

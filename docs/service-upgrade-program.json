@@ -1072,6 +1072,12 @@
      "result": "Exact dfb Windows run37242452375 passes actual owned Electron3, including E05 review save/reopen/stale refusal, and collects the new native shared/exclusive admission regressions. Task51 Windows shared-admission refusal is resolved in this hosted source.",
      "scope": "The overall Windows run remains failed on one independent HTTP capture-join timing fixture:1246 backend cases,1230 passed,15 skipped,1 failed. Exact source/JUnit readback SHA-2565bc429f1ca706eeaa01c8ed3969ef8afb94e35e6ae1e2ff7c81b2c377f6e7332.",
      "platform": "Hosted Windows Server2025 only; installed Windows11/SCM, historical live-worker adoption, independent review and whole-parent/final acceptance pending."
+    },
+    {
+     "kind": "ended-local-history-owned-binding",
+     "result": "Preview/CAS/apply/readback attaches exact imported completed/failed/aborted local history to one original registered project and local installation actor. Original journal/model bytes, historical actor audit, post-cutover receipt and later writes survive; no worker/lease authority is created. Final migration/publication suite72 passes. Path traversal was reproduced and then rejected.",
+     "scope": "Owned current-schema offline installations only; runtime recovery indexes, interrupted/live workers, uncertain leases, foreign paths and team authority refuse. Full live/history adapters remain incomplete. Root review only.",
+     "platform": "macOS actual private SQLite and filesystem controls; no installed user records changed"
     }
    ],
    "file_actions": {
@@ -1095,7 +1101,11 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s1_08.py"
+   "proposed_test_file": "backend/tests/test_service_s1_08.py",
+   "remaining": [
+    "Live owned-worker and uncertain-lease adoption with proven identity/fence, runtime local_jobs/remote_jobs adapters and older unsupported schemas remain pending.",
+    "The terminal-history converter is an explicit offline operator action before generation cutover; it does not infer team membership or authorize replay."
+   ]
   },
   {
    "id": "S1-09",
@@ -1104,7 +1114,7 @@
    "files": [
     "src/main/supervisor.ts",
     "backend/engine/local_training_worker.py",
-    "backend/frozen_entry.py",
+    "scripts/frozen_backend_entry.py",
     "scripts/build_backend_binary.py",
     "backend/main.py",
     "backend/tests/test_backend_lifespan_cleanup.py"
@@ -1118,7 +1128,7 @@
     "S1-02",
     "S1-04"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "slice-reviewed-published",
@@ -1144,36 +1154,40 @@
      "result": "Task129 places owned cleanup in finally spanning partial startup and yielded lifespan; detach,preflight,telemetry and device cleanup are each attempted after previous failure, errors stay visible. Bound socket closes when server.run returns or raises. Real Uvicorn early supervisor stdin EOF now records cleanup after recovery rather than only the initial detach.",
      "scope": "New9 causal failures retained then pass. Final backend40passed/2native-Windows-only skipped; actual Chrome/development Electron2pass start/use/closed ports and empty teardown. Source2/artifacts92 plus6 unchanged dependencies; root 7eb7c766668f37783932338283ce9f9137b87fe18c2b09a9c3916ceac1cc664b.",
      "platform": "macOS real Uvicorn with recording recovery controls, no training or GPU submission; native Windows tests waived, independent review/handoff/full S1-09 remain pending. App logs run at warning level; quiet logs do not prove shutdown cleanup order."
+    },
+    {
+     "kind": "current-source-process-and-packaged-readback",
+     "source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
+     "result": "Actual spawned DataLoader workers stop with only their owned parent; unrelated/PID-reused processes survive. Current process/package/source-gate suite171 passes with two native-Windows-only skips. Hosted Windows packaged CPU child train/evaluate/infer/export and app/backend restart readback pass twice; exact NSIS/portable bytes and1533 source checkout hashes match (18 direct,1515 explicit CRLF checkout equivalents).",
+     "scope": "Closes software process/entrypoint implementation; Windows11 restricted-user installation/native QA remains waived and unqualified, platform/hardware/final acceptance pending. Root review, not an independent final approval. Readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
+     "platform": "macOS real spawn/process tests and hosted Windows Server2025 unsigned packaged application; no SCM/Session0/reboot/camera/GPU pack claim"
     }
    ],
    "file_actions": {
     "src/main/supervisor.ts": "Modify",
     "backend/engine/local_training_worker.py": "Modify",
-    "backend/frozen_entry.py": "Create",
     "scripts/build_backend_binary.py": "Modify",
     "backend/main.py": "Modify",
-    "backend/tests/test_backend_lifespan_cleanup.py": "Create"
+    "backend/tests/test_backend_lifespan_cleanup.py": "Create",
+    "scripts/frozen_backend_entry.py": "Modify"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
+    "implementation": "verified",
+    "contract": "verified",
     "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "backend/tests/test_service_s1_09.py",
    "remaining": [
-    "frozen (PyInstaller) worker entrypoint on native Windows (backend/frozen_entry.py, scripts/build_backend_binary.py), a standard-user install with restricted permissions, Windows 11 x64 hardware",
-    "DataLoader child processes of a worker are not exercised by a test (the basic trainer starts none)",
-    "fails safe (unknown, reservation kept): a worker started less than 300 s before a reboot; a reused number whose short-lived holder already exited; a briefly unopenable child fails a cancel at once instead of retrying",
-    "untested: the Electron exit hook, the EPIPE handler, startBackend using backendSpawnOptions()",
-    "the other os.replace sites (project files, receipts, best_model.pt) are not covered by the retry; they are not read concurrently many times a second",
-    "isolation review P3s: a Popen behind an alias or a shadowed local helper passes the AST check; synchronous subprocess.run children (ssh exec, scp/rsync download, flow-package smoke run) are not isolated; torch elastic stops workers with Ctrl+C, which a new process group disables on Windows (unreachable today); the desktop app likely hides the backend console already (Electron windowsHide), unverified on Windows"
+    "Windows11 installed restricted-user/ACL and physical hardware qualification is not claimed; user waived actual Windows QA.",
+    "Conservative unknown process ownership retains reservations rather than signalling an unproven process.",
+    "Independent review and final handoff/target acceptance remain pending."
    ]
   },
   {
@@ -3595,7 +3609,7 @@
     "S3-07",
     "S4-11"
    ],
-   "status": "planned",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "saved-evaluation-labelset-readback-slice",
@@ -3621,6 +3635,12 @@
      "result": "Task81 preserves family/labelset/exact record/group and open state across refresh/reload; missing records/labelsets refuse fallback, explicit review return supersedes manual selection, old responses and queued toggles cannot overwrite newer choices. Renderer708 and six actual Chrome/macOS Electron cases pass, retaining72 exact mask/overlay rasters.",
      "scope": "Controlled immutable saved reports qualify selection/display; no new evaluation/training or whole-parent/model-quality acceptance.",
      "platform": "Chrome/macOS Electron; Windows excluded; root review only."
+    },
+    {
+     "kind": "genuine-learned-native-cohort-and-independent-package",
+     "result": "Five distinct authentic DINOv3 classifiers each train for two epochs against the same immutable dataset version. Native comparison selection/reload/export, two whole-flow evaluations on the same untouched three-image cohort and all five model-node receipts pass. A separate package subprocess reproduces all three whole-flow results; 92 comparison/whole-flow/package contract regressions pass.",
+     "scope": "Synthetic disjoint train/validation/test controls only. Source/checkpoint bytes preserved; no human quality, deployment, physical device or independent-review approval. Native manifest SHA-256 049eddb66c2f8a512cd2b5aff27fb129ef6ff38197a1578f4d93546b0a5fa857.",
+     "platform": "Actual macOS Electron, local CPU and separate package processes; supplied pinned upstream weights; no public CI weight download"
     }
    ],
    "file_actions": {
@@ -3630,17 +3650,21 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s4_13.py"
+   "proposed_test_file": "backend/tests/test_service_s4_13.py",
+   "remaining": [
+    "Human representative process-quality and current target acceptance are separate from synthetic functional controls.",
+    "Independent review and full handoff acceptance remain pending."
+   ]
   },
   {
    "id": "S4-14",
@@ -4313,6 +4337,13 @@
      "result": "Manual37246229228 passes actual unsigned packaged Electron/frozen child CPU train/test-evaluate/infer/export and identical saved results after app restart. Both owned launches close their observed processes and remove temporary userData.",
      "scope": "All1279 source hashes match exact Git/Windows checkout. GitHub archive and both uploaded NSIS/portable executable bytes match recorded hashes. Release/build/observer/CPU result readback SHA-25646137114565fc6a51ae3d8afbd5b7a44576e4de56a912fe7a56e9b84d6887b45. Temporary model hashes are retained CI observations, not downloaded model bytes.",
      "platform": "Hosted Server2025 unsigned functional CPU only; no actual installer execution, Win11/SCM/signing/devices/update recovery or model-quality acceptance. Root review only; parent remains pending."
+    },
+    {
+     "kind": "source-bound-unsigned-frozen-package-execution",
+     "source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
+     "result": "Hosted Windows run37438929535 passed unsigned NSIS/portable build plus actual packaged/frozen CPU train/evaluate/infer/export and identical restart. Downloaded installer/portable SHA-256 and1533 source checkout hashes match. macOS frozen known-image service and packaged CPU application also pass twice on their recorded exact freeze.",
+     "scope": "No system installation/uninstall, signed trust/update cutover, Windows11, SCM, human quality or latest-history-module packaged claim. Exact receipts and test artifacts retained separately. Windows readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
+     "platform": "Windows Server2025 hosted and actual macOS frozen controls; unsigned development artifacts only"
     }
    ],
    "file_actions": {
@@ -4403,7 +4434,15 @@
     "S5-07"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "source-bound-unsigned-frozen-package-execution",
+     "source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
+     "result": "Hosted Windows run37438929535 passed unsigned NSIS/portable build plus actual packaged/frozen CPU train/evaluate/infer/export and identical restart. Downloaded installer/portable SHA-256 and1533 source checkout hashes match. macOS frozen known-image service and packaged CPU application also pass twice on their recorded exact freeze.",
+     "scope": "No system installation/uninstall, signed trust/update cutover, Windows11, SCM, human quality or latest-history-module packaged claim. Exact receipts and test artifacts retained separately. Windows readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
+     "platform": "Windows Server2025 hosted and actual macOS frozen controls; unsigned development artifacts only"
+    }
+   ],
    "file_actions": {
     "backend/engine/runtime_update.py": "Create",
     "build/release-hooks.cjs": "Modify",
@@ -4564,6 +4603,13 @@
      "result": "Task113 repairs the exact hosted262b469 cancellation-publication race and the observability store WAL-helper bypass.47 core and79 related CPU cases pass; actual Chrome/macOS Electron observation/reopen cases pass3.3min. Actual collection separates152 public browser tests from3 authentic-weight browser and3 native model qualifications.",
      "scope": "A controlled delayed/journal-failed/stalled expiration cannot escape as an acknowledged terminal result; failed persistence remains failed and no artifacts publish. Shared bounded WAL retry is reused. Public Linux and existing native workflow source exclude owned-model weights; the source receipt records exact selected/excluded source/report hashes and failed/skipped/missing browser outcomes.1429-source/28-artifact root readback2fc61ec173c02e4f9f48cd6cbc4839721ef2c5aa1bd23dc6753511d58a0c497b. No parent promotion or new hosted success until the composed source run completes.",
      "platform": "Local macOS CPU plus actual Chrome/macOS development Electron; Windows workflow source only, actual Windows excluded. Public hosted composed run pending; no GPU/signing/deployment credentials."
+    },
+    {
+     "kind": "source-bound-unsigned-frozen-package-execution",
+     "source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
+     "result": "Hosted Windows run37438929535 passed unsigned NSIS/portable build plus actual packaged/frozen CPU train/evaluate/infer/export and identical restart. Downloaded installer/portable SHA-256 and1533 source checkout hashes match. macOS frozen known-image service and packaged CPU application also pass twice on their recorded exact freeze.",
+     "scope": "No system installation/uninstall, signed trust/update cutover, Windows11, SCM, human quality or latest-history-module packaged claim. Exact receipts and test artifacts retained separately. Windows readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
+     "platform": "Windows Server2025 hosted and actual macOS frozen controls; unsigned development artifacts only"
     }
    ],
    "file_actions": {
@@ -4965,7 +5011,14 @@
     "S4-14"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "five-distinct-actual-learned-chain",
+     "result": "Five genuine completed DINOv3 checkpoints execute in the same full image chain on all three heldout synthetic controls and export to an independently executed parity-matching package.",
+     "scope": "This completes that multi-checkpoint recipe control, not all ten model families or representative human-reviewed label/quality/device acceptance. All five checkpoint hashes and source images remain unchanged.",
+     "platform": "macOS CPU/native Electron and separate standalone package process"
+    }
+   ],
    "file_actions": {
     "backend/tests": "Extend directory",
     "scripts/e2e/model-lifecycle.spec.ts": "Create",
@@ -9662,17 +9715,17 @@
   "last_verified_on": "2026-10-06",
   "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
-  "verified_source_sha": "92f98d810eacb9f7f335db8c54f351cfcf5d6ef5",
+  "verified_source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 62,
-    "pending": 20
+    "verified": 64,
+    "pending": 18
    },
    "parent_status": {
-    "verification_pending": 56,
-    "in_progress": 11,
-    "planned": 15
+    "verification_pending": 58,
+    "in_progress": 10,
+    "planned": 14
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

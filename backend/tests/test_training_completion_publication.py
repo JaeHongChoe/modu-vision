@@ -9,6 +9,9 @@ from backend.engine.training_provenance import persist_model_binding
 @pytest.mark.parametrize('mode',['fresh','reattached'])
 def test_completed_job_is_not_observable_until_terminal_receipt_is_persisted(tmp_path,monkeypatch,mode):
     monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'user'))
+    # This barrier tests publication ordering. Unrelated GC/device-cache work
+    # after thousands of prior model tests must not consume its wait budget.
+    monkeypatch.setattr(routes,'clear_device_cache',lambda:None)
     entered,release,finished=threading.Event(),threading.Event(),threading.Event()
     real_write=routes._write_job_receipt
     def delayed(record):
@@ -26,10 +29,11 @@ def test_completed_job_is_not_observable_until_terminal_receipt_is_persisted(tmp
     try:
         assert entered.wait(5)
         with ThreadPoolExecutor(max_workers=1) as pool:
-            seen=threading.Event()
+            seen=threading.Event();reader_started=threading.Event()
             def read():
-                current=manager.get_job(record.job_id);seen.set();return current.status,finished.is_set()
+                reader_started.set();current=manager.get_job(record.job_id);seen.set();return current.status,finished.is_set()
             result=pool.submit(read)
+            assert reader_started.wait(5), 'The competing completion reader did not start'
             premature=seen.wait(.1);release.set();observed=result.result(5)
             assert not premature, 'A completed status escaped before its checkpoint/receipt stopped changing'
             assert observed==('completed',True)

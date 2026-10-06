@@ -120,6 +120,10 @@ jobs:
           backend/tests/test_service_s4_06.py
           backend/tests/test_service_s4_07.py
           backend/tests/test_model_comparisons.py
+          backend/tests/test_whole_flow_evaluation.py
+          backend/tests/test_dino_flow_threshold_precision.py
+          backend/tests/test_flow_package.py
+          backend/tests/test_flow_package_raster_parity.py
           backend/tests/test_flow_batch_cli.py
           backend/tests/test_product_delivery.py
           scripts/tests/test_publication_audit.py
@@ -158,6 +162,9 @@ jobs:
           backend/tests/test_training_inventory_parity.py
           backend/tests/test_fixture_pose_json_parity.py
           backend/tests/test_service_s1_08.py
+          backend/tests/test_global_migration.py
+          backend/tests/test_historical_job_binding.py
+          backend/tests/test_migration_sqlite_lifetime.py
           backend/tests/test_anomaly_folder_case.py
           backend/tests/test_service_s4_05_calibration.py backend/tests/test_service_s4_07_evaluation_contract.py
           backend/tests/test_gan_adoption_comparison.py

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
+  "workflow_run": "https://github.com/JaeHongChoe/modu-vision/actions/runs/37438929535",
+  "source_checkout_hashes": {
+    "direct": 18,
+    "crlf_equivalent": 1515,
+    "mismatch": 0
+  },
+  "packaged_receipt_sha256": "e7160daa9cff971447be3a678c56d76701e44ce190b3a59d1aa465e6204df5ec",
+  "build_receipt_sha256": "71c90dcae99aad6cbb43651155568e80aa57af84dd3cb55fb5d98a8a3f9b2b67",
+  "artifacts": [
+    {
+      "path": "release/Vision AI Studio 0.1.0.exe",
+      "bytes": 377910911,
+      "sha256": "c0b46a3b39281dc6b65f5590c11145f5e8ca2e5aa9fdc65eed764cfbb3e006af"
+    },
+    {
+      "path": "release/Vision AI Studio Setup 0.1.0.exe",
+      "bytes": 378174226,
+      "sha256": "6ec89902eab9130001a5c937be57f7b25b1ce1112a4651c0a06dc046f8566f36"
+    }
+  ],
+  "status": "passed",
+  "launches": 2,
+  "restart_readback": "identical",
+  "cpu_stages": {
+    "train": true,
+    "evaluate": true,
+    "infer": true,
+    "export": true
+  },
+  "qualification": {
+    "Windows11_clean_install": "unverified",
+    "signing": "unverified",
+    "system_installation": "not_run",
+    "update_recovery": "unverified",
+    "uninstall": "not_run",
+    "hardware": "unverified",
+    "model_quality": "unverified"
+  },
+  "release_ready": false
+}
