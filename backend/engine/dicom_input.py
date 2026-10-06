@@ -27,7 +27,11 @@ def _first(value, default=None):
 def read_dicom(path, *, window_center=None, window_width=None, frame_index=None):
     try: import pydicom
     except ImportError as exc: raise ValueError('DICOM input requires optional pydicom in the backend Python environment (backend/requirements-dicom.txt).') from exc
-    path=Path(path).resolve();source_bytes=path.read_bytes();digest=hashlib.sha256(source_bytes).hexdigest()
+    # The validated dataset hierarchy can contain a linked source image.
+    # Retain that visible path for subsequent namespace checks; its resolved
+    # target never grants direct access outside the imported hierarchy.
+    path=Path(os.path.abspath(Path(path).expanduser()))
+    source_bytes=path.read_bytes();digest=hashlib.sha256(source_bytes).hexdigest()
     try:
         import io
         ds=pydicom.dcmread(io.BytesIO(source_bytes))

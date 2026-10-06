@@ -215,6 +215,26 @@ def test_dicom_automatic_window_display_reopens_without_changed_pixels(client_wo
     assert response.headers['cache-control']=='no-store'
 
 
+def test_dicom_visible_dataset_alias_reopens_and_rejects_changed_target(client_workspace,dicom,tmp_path):
+    from backend.api import routes_dicom
+    client,project,source=client_workspace;alias=source/'visible-alias.dcm'
+    alias.symlink_to(dicom);original=dicom.read_bytes()
+    client.app.include_router(routes_dicom.router)
+    prepared=client.post('/api/dataset/dicom/view',json={'image_path':str(alias)})
+    assert prepared.status_code==200,prepared.text
+    receipt=prepared.json();response=client.get(receipt['display_url'])
+    assert response.status_code==200,response.text
+    assert receipt['source_path']==str(alias)
+    assert hashlib.sha256(response.content).hexdigest()==receipt['view_sha256']
+    changed=tmp_path/'another-original.dcm';changed.write_bytes(original+b'changed source identity')
+    alias.unlink();alias.symlink_to(changed)
+    cache=Path(receipt['view_path']);before=cache.read_bytes()
+    rejected=client.get(receipt['display_url'])
+    assert rejected.status_code==422,rejected.text
+    assert 'integrity' in rejected.json()['detail']
+    assert cache.read_bytes()==before and dicom.read_bytes()==original
+
+
 @pytest.mark.parametrize('mode',['monochrome','rgb','multi'])
 def test_actual_builtin_rle_decoder_preserves_selected_source_pixels(dicom,tmp_path,mode):
     import pydicom
