@@ -49,6 +49,36 @@ def test_public_collection_excludes_existing_authentic_weight_qualifications():
                for job in windows['jobs'].values() for step in job['steps'])
 
 
+def test_ci_recording_does_not_dirty_the_checkout_before_actual_gui_source_observation(tmp_path):
+    """Execute output placement with controlled producers and the real Git probe."""
+    import os,shlex
+    checkout=tmp_path/'checkout';checkout.mkdir();(checkout/'source.txt').write_text('Original controlled source')
+    for args in [('init','-q'),('add','source.txt'),('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','controlled source')]:
+        subprocess.run(['git',*args],cwd=checkout,check=True,capture_output=True)
+    records=tmp_path/'runner-temp/records';records.mkdir(parents=True)
+    bin_dir=tmp_path/'controlled-bin';bin_dir.mkdir()
+    producers={
+        'python': '#!/usr/bin/env python3\nimport pathlib,sys\na=sys.argv[1:]\nif "--output" in a:p=a[a.index("--output")+1]\nelse:p=next(x.split("=",1)[1] for x in a if x.startswith("--junitxml="))\npathlib.Path(p).write_text("Controlled output placement only")\n',
+        'npx': '#!/bin/sh\nprintf \'{"suites":[]}\\n\'\n',
+        'npm': '#!/bin/sh\nexec node -e '+shlex.quote("const h=require("+json.dumps(str(ROOT/'scripts/e2e/fixtures/harness.cjs'))+");process.stdout.write(JSON.stringify(h.sourceIdentity("+json.dumps(str(checkout))+")));" )+'\n',
+    }
+    for name,script in producers.items():
+        p=bin_dir/name;p.write_text(script);p.chmod(0o700)
+    workflow=yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text());steps=workflow['jobs']['source']['steps']
+    environment={**os.environ,'PATH':str(bin_dir)+os.pathsep+os.environ['PATH'],'MV_CI_RECORD_DIR':str(records)}
+    observation=None
+    for name in ['CPU contract and recovery regressions','Core defect baseline evidence','Browser transport and flow checks']:
+        step=next(s for s in steps if s.get('name')==name)
+        output=subprocess.check_output(['/bin/sh','-eu','-c',step['run']],cwd=checkout,env=environment,text=True)
+        if name.startswith('Browser'):observation=json.loads(output)
+    assert observation['dirty'] is False,'CI output files changed the real Git source observation before GUI execution'
+    assert all((records/name).is_file() for name in ['ci-pytest.xml','ci-baseline-evidence.json','ci-browser-selection.json','ci-owned-model-selection.json'])
+    record_steps=[s for s in steps if s.get('name') in {'CPU contract and recovery regressions','Core defect baseline evidence','Browser transport and flow checks','Record source, toolchain, and license inventory'}]
+    assert all(s.get('env',{}).get('MV_CI_RECORD_DIR')=='${{ runner.temp }}/modu-ci-manifests' for s in record_steps)
+    preserve=next(s for s in steps if s.get('name')=='Preserve evidence')['with']['path']
+    assert '${{ runner.temp }}/modu-ci-manifests' in preserve
+
+
 def test_receipt_distinguishes_selected_failed_and_unavailable_owned_models(tmp_path):
     ci = ci_module()
     public, owned = tmp_path / 'public.json', tmp_path / 'owned.json'

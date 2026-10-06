@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "40621738b5c85972318472c3cd57c218724fdf1a",
+  "source_dirty": false,
+  "test": "scripts/e2e/operations-candidate-flow.spec.ts::native complete improvement cycle prepares an inactive learned candidate, reviews graph and serves its package",
+  "test_source_sha256": "0f476d61e0dbff126a8c3ecb99c772057d93d096662c1d2d977495997c751eb6",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c16336a40dce4dd7e4992c546f18cf0137dbee0aac5571c7f29bedcda6e74261",
+  "harness_sha256": "c30cb5357ab3751a3fcc4d6934213ea4dd8098f84500ce8f6841d10b476e6644",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f4f806404a5e40aa01c1b272f661777486ffd249cc85c7432b8027aae6d90ece"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "50ea7f9e4a185f74e7708066be83975e0c7d7e169fdd69103bf6778c9323954d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

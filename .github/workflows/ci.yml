@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: source-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve the running exact-source qualification while the next run waits.
+  cancel-in-progress: false
 
 jobs:
   source:
@@ -34,6 +35,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
+      - name: Prepare isolated CI records
+        run: mkdir -p "${{ runner.temp }}/modu-ci-manifests"
       - name: Install locked CPU environment
         run: >-
           python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
@@ -49,8 +52,10 @@ jobs:
           npm run test:e2e:harness
           node --test scripts/tests/release-readiness.test.cjs scripts/verify-release-recovery.cjs
       - name: CPU contract and recovery regressions
+        env:
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: >-
-          python -m pytest -q --junitxml=ci-pytest.xml
+          python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-pytest.xml"
           backend/tests/test_flow_class_save_validation.py
           backend/tests/test_detection_object_rules.py
           backend/tests/test_source_mask_annotations.py
@@ -205,33 +210,33 @@ jobs:
           backend/tests/test_service_s4_01_provenance.py
           backend/tests/test_service_s5_07.py
       - name: Core defect baseline evidence
-        run: python scripts/service_baseline_evidence.py --output ci-baseline-evidence.json
+        env:
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
+        run: python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Browser transport and flow checks
         env:
           MV_E2E_ARTIFACT_DIR: ${{ runner.temp }}/modu-e2e
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: |
-          npx playwright test --project=browser --grep-invert @owned-model --list --reporter=json > ci-browser-selection.json
-          npx playwright test --project=browser --grep @owned-model --list --reporter=json > ci-owned-model-selection.json
+          npx playwright test --project=browser --grep-invert @owned-model --list --reporter=json > "$MV_CI_RECORD_DIR/ci-browser-selection.json"
+          npx playwright test --project=browser --grep @owned-model --list --reporter=json > "$MV_CI_RECORD_DIR/ci-owned-model-selection.json"
           npm run test:e2e:browser -- --grep-invert @owned-model --workers=2
       - name: Record source, toolchain, and license inventory
         if: always()
+        env:
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: |
-          python scripts/write_ci_receipt.py --output ci-receipt.json --junit ci-pytest.xml --public-selection ci-browser-selection.json --owned-selection ci-owned-model-selection.json --e2e-root ${{ runner.temp }}/modu-e2e
-          python scripts/license_inventory.py --output ci-license-inventory.json
+          python scripts/write_ci_receipt.py --output "$MV_CI_RECORD_DIR/ci-receipt.json" --junit "$MV_CI_RECORD_DIR/ci-pytest.xml" --public-selection "$MV_CI_RECORD_DIR/ci-browser-selection.json" --owned-selection "$MV_CI_RECORD_DIR/ci-owned-model-selection.json" --e2e-root ${{ runner.temp }}/modu-e2e
+          python scripts/license_inventory.py --output "$MV_CI_RECORD_DIR/ci-license-inventory.json"
       - name: Preserve evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linux-cpu-${{ github.sha }}
           path: |
-            ci-receipt.json
-            ci-baseline-evidence.json
-            ci-license-inventory.json
-            ci-pytest.xml
-            ci-browser-selection.json
-            ci-owned-model-selection.json
+            ${{ runner.temp }}/modu-ci-manifests
             ${{ runner.temp }}/modu-e2e
           retention-days: 14
           if-no-files-found: error

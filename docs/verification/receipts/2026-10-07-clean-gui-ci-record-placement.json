@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "scope": "Actual clean-source native GUI case and controlled CI record placement; root review only",
+  "root_review_only": true,
+  "independent_review_accepted": false,
+  "quality_approved": false,
+  "physical_target_verified": false,
+  "software_parent_accounting": {
+    "verified": 66,
+    "pending": 16,
+    "finally_accepted": 0,
+    "windows_actual_qa_waived": 1,
+    "actionable": 15
+  },
+  "source_file_sha256": {
+    ".github/workflows/ci.yml": "7312cc06a2cdcaa3a099d24c13103d2758c8821f8d9d3665849114ed561c539d",
+    "backend/tests/test_source_ci_model_lanes.py": "3fdf7c099da6ca8d39d942e7a498678a352011a67131d181bbeb76808dafb528"
+  },
+  "native": {
+    "actual": {
+      "actual_pretrained_cpu_training": true,
+      "actual_retraining": true,
+      "actual_native_candidate_preparation": true,
+      "actual_managed_cpu_inference": true,
+      "incumbent_active_graph_unchanged": true,
+      "synthetic_control": true,
+      "manufacturing_quality_accepted": false,
+      "device_accepted": false,
+      "physical_target_verified": false
+    },
+    "duration_seconds": 266.462973,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "strict_gui_receipt_sha256": "795a74e31930885f57afe834d78775657b46c411895955e4678038cfec6cb391",
+    "report_sha256": "c16336a40dce4dd7e4992c546f18cf0137dbee0aac5571c7f29bedcda6e74261",
+    "harness_sha256": "c30cb5357ab3751a3fcc4d6934213ea4dd8098f84500ce8f6841d10b476e6644",
+    "teardown_sha256": "0f058aa314eb967810b2cb1b952011f5d5e0585b54b7d14bea19c4c810cc4904",
+    "private_artifact_readback_sha256": "ecf8c6843afbf975399ad07c97286458a349104edf43023aee10282ab332ac17",
+    "artifact_hash_count": 129,
+    "clean_teardown": true,
+    "delivery": {
+      "whole_flow_current": true,
+      "whole_flow_revision_id": "flowapproval_449a6a47e1cd41d1859c76ac4b5d16fa",
+      "service_application_recorded": true,
+      "service_runtime_ready": true,
+      "service_deployment_id": "2419e7e061dc4ed8947328d9d7228be3",
+      "device_accepted": false,
+      "reasons": [],
+      "snapshot_sha256": "9d99f5ddc5a5718cd25964e3ceadd81b20294b4e3b886ef2165c5bd132eb23b4"
+    },
+    "visual_inspected": true,
+    "source_sha": "40621738b5c85972318472c3cd57c218724fdf1a",
+    "source_dirty": false
+  },
+  "ci_output_placement": {
+    "controlled_producers_only": true,
+    "real_git_observer": true,
+    "red_junit_sha256": "5d0985c23248d36e5d89a0dfc83f6fe2cd8e1164c8c632f514a5a57007d8bd0a",
+    "retained_step_context_failure_junit_sha256": "20d1a92075b2ed215233ca6fba97314086af711c75ddff134d2eb6607ce2934e",
+    "final_junit_sha256": "bff2c8d2a15ce59e2f7c07a50a36c60f3cdcfa42f6e64fac21078230fbb5991c",
+    "final_counts": {
+      "tests": 56,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "runner_context_only_in_steps": true,
+    "old_a184_dirty_gui_cases": 162,
+    "old_a184_clean_gui_cases": 0,
+    "original_source_observations_sha256": "bee1fc280b48ff6829ce66f9662a51830688effbd94da55225b95dfe758e855b",
+    "original_dirty_cases_promoted_to_clean": false,
+    "hosted_result_for_corrected_writer": "pending",
+    "running_ci_qualification_preserved": true
+  },
+  "temporary_storage": {
+    "owned_external": true,
+    "existing_backup_files_changed": false,
+    "ongoing_72h_source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+    "earlier_elapsed_added": false
+  },
+  "baseline_source_sha": "40621738b5c85972318472c3cd57c218724fdf1a",
+  "source_file_pin_scope": "Current CI output-placement delta; native GUI execution belongs only to the separately recorded clean native source SHA"
+}
