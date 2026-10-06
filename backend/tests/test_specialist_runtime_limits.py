@@ -133,6 +133,53 @@ def test_actual_cpu_rotation_budget_runs_optimizer_and_leaves_no_reservation(tmp
     assert not Path(project['models_dir']).joinpath('rotation',row['job_id'],'best_model.pt').exists()
 
 
+@pytest.mark.parametrize('family,module,method', FAMILIES[:-1])
+def test_budget_terminal_readback_waits_for_owned_reservation_return(tmp_path, monkeypatch, family, module, method):
+    from concurrent.futures import ThreadPoolExecutor
+    from backend.engine.shared_scheduler import ResourceLeases, shared_leases
+    client, _, _, dataset = prepared_client(tmp_path, family)
+    entered, release, reader_started, reader_done = (threading.Event() for _ in range(4))
+    real_release = ResourceLeases.release_fenced
+
+    def delayed_release(self, identifier, fence):
+        entered.set()
+        assert release.wait(5), 'Controlled reservation return was not released'
+        return real_release(self, identifier, fence)
+
+    def controlled(*args, cancel_event, **kwargs):
+        assert cancel_event.wait(3)
+        raise InterruptedError('Owned runner returned after runtime cancellation')
+
+    monkeypatch.setattr(ResourceLeases, 'release_fenced', delayed_release)
+    monkeypatch.setattr(module, method, controlled)
+    response = client.post(f'/api/{family}/train', json={
+        'dataset_path': dataset, 'epochs': 20, 'background': True, 'max_runtime_s': .12})
+    assert response.status_code == 202, response.text
+    identifier = response.json()['job_id']
+    try:
+        assert entered.wait(3)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            def read():
+                reader_started.set()
+                row = client.get(f'/api/{family}/jobs/{identifier}').json()
+                reader_done.set()
+                return row
+            future = pool.submit(read)
+            assert reader_started.wait(3)
+            premature = reader_done.wait(.1)
+            release.set()
+            row = future.result(3)
+        if premature:
+            assert row['status'] in {'queued', 'running', 'stopping'}, 'Terminal status escaped before the owned reservation returned'
+            assert row['observation']['pending_finalization'] is True
+            row = await_terminal(client, family, identifier)
+        assert row['status'] == 'stopped' and row['stop_reason'] == 'time_limit'
+        assert row['observation']['pending_finalization'] is False
+        assert not any(item['job_id'] == identifier for item in shared_leases().list())
+    finally:
+        release.set()
+
+
 def test_budget_starts_only_after_admission_and_closes_watchdog(tmp_path):
     from backend.engine.runtime_budget import RuntimeBudget
     from backend.engine.shared_scheduler import ResourceLeases,compute_lease_scope

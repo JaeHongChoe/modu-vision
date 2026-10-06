@@ -1,8 +1,14 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 기준 공개 소스 `16395a47c7afdd1f24c0300d4b88fe40e636dc60`와 기록된 후속 검증
+확인일: 2026-10-07 · 기준 공개 소스 `19dfb64a602621401e36430d38931dcd84074073`와 기록된 후속 검증
 
 **82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
+
+## 실행 순서
+
+- 사용자 지시에 따라 S7-05의 72시간 검사는 외장 저장소의 기존 실행을 계속 유지하고, 완주 판정은 마지막에 확인한다.
+- 다른 진행 가능한 구현·CI·앱 실행 검증은 이 검사 종료를 기다리지 않는다. 같은 실행의 소스·모델·시작 시각을 바꾸거나 이전 실행 시간을 합산하지 않는다.
+- 현재 먼저 처리하는 항목은 S6-05의 공개 CI 실패 수정과 S7-01의 기능별 앱 검증이다. S7-05 완주 전에도 독립 결과를 기록하되 전체 수용 완료로 집계하지 않는다.
 
 ## 단계별 집계
 
@@ -27,7 +33,7 @@
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공: CPU 2198통과·7skip, browser 162통과·1skip. 소스 해시 누락 수정과 95개 선언된 Git 소스 대조 완료. CI 출력 때문에 dirty로 기록된 GUI 162건은 clean으로 승격하지 않음. 출력 외부 경로 수정·관련 56개 통과. 수정된 hosted 결과·skip 조건 확인 필요. |
+| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 후속 최신 소스 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 깨끗한 4062173 소스에서 실제 Electron 개선 전체 흐름 1건·129개 artifact hash와 엄격한 GUI 기록 확보. 156개 기능의 action별 성공/오류/취소/재열기/이관 근거 원장 보완 필요. 단순 매핑이나 1건의 완주는 전체 수용 완료가 아님. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
@@ -171,5 +177,18 @@ Actual abrupt process exit and fresh CLI retry, original preservation, copied
 session revocation and refusal to overwrite later writes pass116 affected tests.
 CI selection controls pass18 tests. This closes a component of S1-08/S6-04,
 without promoting either parent or installer/native/quality acceptance. Source
-CI preserves pending as well as running exact-source qualifications. The
-independent external72-hour run keeps its original source and duration.
+The workflow requests preservation of pending as well as running qualifications.
+Later readback observed19dfb64 cancelled without a job; the cause is unconfirmed,
+and it is not a hosted success. The independent external72-hour run keeps its
+original source and duration.
+
+## Parallel priority and CI follow-up
+
+See `2026-10-07-parallel-priority-ci-recovery.md` and its paired receipt.
+The specialist failure journal waits for its owned fenced reservation return.
+The template GUI scenario confirms the partial draft save before replacement;
+the team scenario waits through an initially unassigned async response. Related
+backend88, mapping guard25, browser2 and actual macOS Electron2 cases pass.
+The GUI runs retain dirty source identities and are not strict clean-source
+acceptance receipts. No parent accounting changes. The72-hour qualification is
+independent and its complete-duration readback is last.

@@ -178,10 +178,14 @@ def start_job(*,project,task,source,output,options,runner,family_digest,warm_sta
             return response
         except (InterruptedError,ValueError,OSError,RuntimeError) as exc:
             for name in ('best_model.pt','model_meta.json','job_receipt.json'):(output/name).unlink(missing_ok=True)
-            persist(status='stopped' if isinstance(exc,InterruptedError) else 'failed',
-                error='Training runtime limit exceeded' if budget.spent and isinstance(exc,InterruptedError) else str(exc),
-                **({'stop_reason':'time_limit'} if budget.spent else {}))
-            if admission is not None:admission.finish_error(exc)
+            # Job readers use this same lock. Do not expose a terminal native
+            # journal while its fenced reservation is still being returned.
+            if admission is None:lease_stack.close()
+            with _LOCK:
+                if admission is not None:admission.finish_error(exc)
+                persist(status='stopped' if isinstance(exc,InterruptedError) else 'failed',
+                    error='Training runtime limit exceeded' if budget.spent and isinstance(exc,InterruptedError) else str(exc),
+                    **({'stop_reason':'time_limit'} if budget.spent else {}))
             if not options.background:raise
         finally:
             try:

@@ -35,6 +35,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await expect(page.getByText('부분 흐름을 추가했습니다. 입력 1개·출력 1개 경계 포트를 기존 노드와 연결하세요.',{exact:true})).toBeVisible();
  expect((await api('/api/flowchart/pipelines')).pipelines.some((v:any)=>v.version===target.graph.version||v.version_id===target.graph.version)).toBe(true);
  await evidence.screenshot(page,'actual-selected-subgraph-explicit-model-reuse-needs-boundary-wiring');
+ // Persist the inserted graph before asking to replace it. The application
+ // correctly refuses replacement if this graph's autosave starts mid-mapping.
+ const partialDraftSaved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flowchart/draft'&&r.request().method()==='PUT');
+ await page.getByRole('button',{name:'초안 저장',exact:true}).click();
+ expect((await partialDraftSaved).ok()).toBe(true);
+ await expect(page.getByRole('status').filter({hasText:'✓ 편집 초안이 저장되었습니다.'})).toBeVisible();
  await page.getByLabel('내 템플릿 선택',{exact:true}).selectOption(template.template_id);
  await page.getByLabel('ROI 결함 검사 템플릿 모델 매핑',{exact:true}).selectOption(target.graph.job_id);
  const apply=page.getByRole('button',{name:'모델·클래스 매핑 후 초안으로 열기',exact:true});

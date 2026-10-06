@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "scope": "Native specialist failure publication and exact CI GUI scenario synchronization; 72-hour soak remains independent and last",
+  "baseline_source_sha": "19dfb64a602621401e36430d38931dcd84074073",
+  "source_file_sha256": {
+    "backend/engine/specialized_training_jobs.py": "667580cee2829a2a5d8d2636e2f74862e2db003bae501c0bf43eb4fd0de6d321",
+    "backend/tests/test_specialist_runtime_limits.py": "ccc9715e35f2c05b6ca2e3a04152947ada1945332be0099b476aeb0a4ba2aac3",
+    "scripts/e2e/flow-template-draft-history.spec.ts": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+    "scripts/e2e/team-edit-closure.spec.ts": "e9fbc997659cf14fb99ec4fc12622509a0b29f9d23045f0b9de907a7ca4bccaf"
+  },
+  "root_review_only": true,
+  "independent_review_accepted": false,
+  "quality_approved": false,
+  "software_parent_accounting": {
+    "verified": 66,
+    "pending": 16,
+    "finally_accepted": 0,
+    "windows_actual_qa_waived": 1,
+    "actionable": 15
+  },
+  "observed_hosted_runs": [
+    {
+      "id": 37489941739,
+      "sha": "1862f7ca05eb98285b3f550b4ac784adb139b034",
+      "conclusion": "failure",
+      "browser_failures": 2
+    },
+    {
+      "id": 37494937909,
+      "sha": "16395a47c7afdd1f24c0300d4b88fe40e636dc60",
+      "conclusion": "failure",
+      "cpu_failures": 1
+    },
+    {
+      "id": 37497339927,
+      "sha": "19dfb64a602621401e36430d38931dcd84074073",
+      "conclusion": "cancelled",
+      "jobs": 0,
+      "cause": "unconfirmed"
+    }
+  ],
+  "qualification": {
+    "initial_barrier_red": {
+      "artifact_sha256": "006019bbd209b545e28834ca1263902a8dd54eec4cef9361324243a6f9d40795",
+      "tests": 4,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 4.674
+    },
+    "final_backend": {
+      "artifact_sha256": "8db26986da3d79c6ebd81205b3a90577839536f382099180d40fd6085674d00a",
+      "tests": 88,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 23.093
+    },
+    "browser": {
+      "report_sha256": "fb3deafb113c3de915d374762c6029854650524872766d6441dbbf693a282145",
+      "cases": [
+        {
+          "case": "cross-project model class mapping preserves source and recovers draft",
+          "project": "browser",
+          "attempts": 1,
+          "statuses": [
+            "passed"
+          ]
+        },
+        {
+          "case": "team edit reconnect compares drafts and preserves two-person review and assignment",
+          "project": "browser",
+          "attempts": 1,
+          "statuses": [
+            "passed"
+          ]
+        }
+      ],
+      "source_dirty": true,
+      "strict_clean_source_receipt": false,
+      "fixture_quality_approved": false
+    },
+    "electron": {
+      "report_sha256": "74643ef0f73f79e9216663f72374e1aaea83e176e95d1b0ff4e073932c536adc",
+      "cases": [
+        {
+          "case": "native cross-project mapping undo redo and persistent draft recovery",
+          "project": "electron",
+          "attempts": 1,
+          "statuses": [
+            "passed"
+          ]
+        },
+        {
+          "case": "native team edit reconnect preserves conflict decisions review policy and queue",
+          "project": "electron",
+          "attempts": 1,
+          "statuses": [
+            "passed"
+          ]
+        }
+      ],
+      "source_dirty": true,
+      "strict_clean_source_receipt": false,
+      "fixture_quality_approved": false
+    },
+    "mapping_guards": {
+      "tests": 25,
+      "passed": 25,
+      "log_sha256": "6eea15927259eded22b450cd4a7ef72221726dea6aa7b8c6f464c4dc684c6d3c"
+    },
+    "e2e_typecheck": {
+      "passed": true,
+      "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+    }
+  },
+  "barrier_refinement": "Enhancement can correctly expose active/stopping while return is pending. The corrected test refuses only premature terminal states; the shared lifecycle for Rotation/OCR/DefectGAN serializes terminal journal and fenced release.",
+  "ci_flow_trace": {
+    "trace_sha256": "45872047672c8c29235de1d7811a7635c464a2167f922914dbbf8cadaa3ff0a4",
+    "mapping_started_utc": "2026-10-06T16:28:53.537Z",
+    "mapping_duration_ms": 67.195,
+    "autosave_started_utc": "2026-10-06T16:28:53.555Z",
+    "autosave_duration_ms": 47.052,
+    "application_refusal": "Graph changed or saving during mapping; safety guard retained"
+  },
+  "soak_last": {
+    "observed_utc": "2026-10-06T21:23:24.367936+00:00",
+    "source_sha": "a184b1e",
+    "requested_seconds": 259200,
+    "status": "running",
+    "elapsed_seconds": 21298.282667624997,
+    "cycles": 355,
+    "completed": 355,
+    "soak_72h_completed": false,
+    "process_identity": {
+      "inference": {
+        "pid": 96648,
+        "create_time": 1791300478.197693,
+        "matches": true
+      },
+      "supervisor": {
+        "pid": 96637,
+        "create_time": 1791300478.132385,
+        "matches": true
+      }
+    },
+    "not_restarted": true,
+    "blocks_other_tasks": false
+  }
+}
