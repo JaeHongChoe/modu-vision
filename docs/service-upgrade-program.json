@@ -1807,7 +1807,12 @@
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
     "src/renderer/components/flowchart/FlowDraftControls.tsx",
     "src/renderer/stores/useFlowchartStore.ts",
-    "backend/engine/flow_workspace.py"
+    "backend/engine/flow_workspace.py",
+    "backend/api/routes_flow_workspace.py",
+    "backend/tests/test_flow_comparison_integrity.py",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.test.cjs",
+    "scripts/e2e/fixtures/flow_comparison_control.py",
+    "scripts/e2e/flow-comparison-integrity.spec.ts"
    ],
    "proposed_contract": "RunTrace / FlowVersionDiff / FixedCohortComparison",
    "acceptance": [
@@ -1821,13 +1826,25 @@
     "S2-06",
     "S2-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "partial-comparison-integrity-debug",
+     "result": "Task125 hashes persisted A/B envelopes, refuses exact saved-version/context changes, quarantines altered records without deleting them and labels legacy hashless records. Optional same-node partial A/B remains REVIEW, never final OK.",
+     "scope": "Backend34,renderer794,types/E2E types/build; Chrome/development Electron2pass using actual local CPU ROI partial execution (4 executions), original pixels unchanged, history reopen and tamper refusal. Root455382aaac9fd969a35949cce6816fe0c87db20d5b3eb4c19794066a9cb74d22,6 changed source inputs/88 artifacts plus exact unchanged Task124 source reference.",
+     "platform": "macOS CPU synthetic control; no model inference/quality, GPU, Windows native, independent review or full parent closure. Large envelope writer limit and full navigation/cache/cohort/model binding qualification remain."
+    }
+   ],
    "file_actions": {
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "Modify",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "Modify",
     "src/renderer/stores/useFlowchartStore.ts": "Modify",
-    "backend/engine/flow_workspace.py": "Modify"
+    "backend/engine/flow_workspace.py": "Modify",
+    "backend/api/routes_flow_workspace.py": "Modify",
+    "backend/tests/test_flow_comparison_integrity.py": "Create",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.test.cjs": "Modify",
+    "scripts/e2e/fixtures/flow_comparison_control.py": "Create",
+    "scripts/e2e/flow-comparison-integrity.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
@@ -9554,8 +9571,8 @@
    },
    "parent_status": {
     "verification_pending": 51,
-    "in_progress": 14,
-    "planned": 17
+    "in_progress": 15,
+    "planned": 16
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

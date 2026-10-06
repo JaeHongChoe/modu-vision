@@ -96,42 +96,82 @@ class FlowCompare(BaseModel):
     device:str=Field(default='cpu',pattern=r'^(cpu|mps|cuda(?::[0-9]+)?)$')
     execution_target:Literal['local','selected_compute']='local'
     compute_profile_id:str|None=None
+    stop_node_id:str|None=Field(default=None,min_length=1,max_length=200)
 
 
 def _comparisons(project): return Path(project['project_dir'])/'flowcharts'/'comparisons'
 
 
+def _comparison_digest(value):
+    return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()).hexdigest()
+
+
+def _comparison_context(project):
+    return {key:project.get(key,'default' if key=='active_labelset_id' else None)
+            for key in ('id','project_dir','source_dataset_dir','active_labelset_id','task')}
+
+
+def _same_comparison_context(request,context,versions):
+    if _comparison_context(get_current_project(request))!=context:
+        raise HTTPException(409,'Comparison project, source or labelset changed; results were not saved')
+    for file,expected in versions.items():
+        if file.is_symlink() or not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest()!=expected:
+            raise HTTPException(409,'Saved comparison flow version changed; results were not saved')
+
+
 @router.get('/comparisons')
 def comparisons(request:Request):
     project=get_current_project(request)
-    rows=[]
+    rows=[];invalid=[]
     for file in _comparisons(project).glob('*.json'):
         try:
+            if file.is_symlink() or file.stat().st_size>128*1024*1024:
+                raise ValueError('linked_or_oversize_record')
             record=json.loads(file.read_text(encoding='utf-8'))
             if record['project_id']==project['id'] and record.get('source_dataset_path')==project.get('source_dataset_dir') and record.get('labelset_id','default')==project.get('active_labelset_id','default'):
-                rows.append(record)
-        except (OSError,ValueError,KeyError): continue
-    return {'comparisons':sorted(rows,key=lambda r:r['created_at'],reverse=True)}
+                if record.get('comparison_id')!=file.stem or not isinstance(record.get('rows'),list) or not isinstance(record.get('created_at'),str):
+                    raise ValueError('invalid_record_identity')
+                if 'record_sha256' in record or 'schema_version' in record:
+                    unsigned={k:v for k,v in record.items() if k not in ('record_sha256','integrity')}
+                    if record.get('schema_version')!=2 or record.get('record_sha256')!=_comparison_digest(unsigned):
+                        raise ValueError('record_hash_changed')
+                    integrity='verified'
+                else:integrity='legacy_unverified'
+                rows.append({**record,'integrity':integrity})
+        except (OSError,ValueError,KeyError,TypeError) as exc:
+            invalid.append({'comparison_id':file.stem,'reason':str(exc) if isinstance(exc,ValueError) else 'unreadable_record'})
+    return {'comparisons':sorted(rows,key=lambda r:r['created_at'],reverse=True),'invalid':invalid}
 
 
 @router.post('/comparisons')
 def compare_versions(req:FlowCompare,request:Request):
     project=_context(request,req.project_id)
+    context=_comparison_context(project)
     if req.version_a==req.version_b: raise HTTPException(422,'Select two different saved flow versions')
     if req.execution_target=='selected_compute' and not req.compute_profile_id:
         raise HTTPException(422,'Select a compute profile before target comparison')
     versions=flows.list_saved_pipelines(project.get('source_dataset_dir'),request=request)['pipelines']
     if not all(any(v['version_id']==x for v in versions) for x in (req.version_a,req.version_b)):
         raise HTTPException(409,'Saved flow versions must belong to the selected source dataset')
+    version_files={flows._version_dir(Path(project['project_dir']))/f'{identifier}.json':None for identifier in (req.version_a,req.version_b)}
+    for file in version_files:
+        if file.is_symlink() or not file.is_file():raise HTTPException(409,'Saved comparison flow version is unavailable')
+        version_files[file]=hashlib.sha256(file.read_bytes()).hexdigest()
     ga=flows.get_saved_pipeline_version(req.version_a,request=request)
     gb=flows.get_saved_pipeline_version(req.version_b,request=request)
+    if req.stop_node_id and any(req.stop_node_id not in {node.id for node in graph.nodes} for graph in (ga,gb)):
+        raise HTTPException(422,'Debug comparison node must exist in both saved versions')
+    _same_comparison_context(request,context,version_files)
     paths=list(dict.fromkeys(_image(project,p) for p in req.image_paths))
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
-    record={'comparison_id':uuid.uuid4().hex,'project_id':project['id'],'source_dataset_path':project.get('source_dataset_dir'),'labelset_id':project.get('active_labelset_id','default'),
+    record={'schema_version':2,'quality_approved':False,'comparison_id':uuid.uuid4().hex,'project_id':project['id'],'source_dataset_path':project.get('source_dataset_dir'),'labelset_id':project.get('active_labelset_id','default'),
         'name':req.name,'created_at':datetime.now(timezone.utc).isoformat(),'version_a':req.version_a,'version_b':req.version_b,
         'graph_a_sha256':pipeline_sha256(ga),'graph_b_sha256':pipeline_sha256(gb),'device':req.device,
-        'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,'rows':[]}
+        'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,
+        'stop_node_id':req.stop_node_id,'comparison_scope':'debug_partial' if req.stop_node_id else 'whole_flow',
+        'version_file_sha256':{file.stem:value for file,value in version_files.items()},'rows':[]}
     for path in paths:
+        _same_comparison_context(request,context,version_files)
         row={'image_path':str(path),'file_name':path.name,'image_sha256':hashes[str(path)]}
         snapshot_root=Path(project.get('dataset_dir') or Path(project['project_dir'])/'dataset')/'flow_compare_inputs'
         snapshot_root.mkdir(parents=True,exist_ok=True)
@@ -145,8 +185,10 @@ def compare_versions(req:FlowCompare,request:Request):
             snapshot.write_bytes(contents)
             snapshot.chmod(0o400)
             try:
-                a=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=ga,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id),request=request)
-                b=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=gb,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id),request=request)
+                a=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=ga,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id,stop_node_id=req.stop_node_id),request=request)
+                _same_comparison_context(request,context,version_files)
+                b=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=gb,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id,stop_node_id=req.stop_node_id),request=request)
+                _same_comparison_context(request,context,version_files)
                 if hashlib.sha256(snapshot.read_bytes()).hexdigest()!=hashes[str(path)]:
                     raise HTTPException(409,'Frozen comparison input was changed')
                 for result in (a,b): result['image_path']=str(path)
@@ -157,5 +199,7 @@ def compare_versions(req:FlowCompare,request:Request):
         if hashlib.sha256(path.read_bytes()).hexdigest()!=hashes[str(path)]: raise HTTPException(409,'Test input changed during comparison; results were not saved')
         record['rows'].append(row)
     record['status']='error' if any('error' in r for r in record['rows']) else 'completed'
+    _same_comparison_context(request,context,version_files)
+    record['record_sha256']=_comparison_digest(record)
     atomic_json(_comparisons(project)/f"{record['comparison_id']}.json",record)
-    return record
+    return {**record,'integrity':'verified'}
