@@ -249,10 +249,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     app.process().stderr?.pipe(logStream, { end: false });
     const seenBackends = new Map<number, { port: number; pid: number | null }>();
     const readStatus = async (page: Page) => {
+      if (page.isClosed()) throw new Error('Native application window closed before its backend status could be read');
       try {
         return await page.evaluate(() => (globalThis as any).api?.getBackendStatus?.() ?? null);
       } catch (error) {
-        if (/Execution context was destroyed|navigation|Target .*closed/i.test(String(error))) return null;
+        // A navigation can temporarily replace a live execution context. A
+        // closed native window cannot recover inside this owned session.
+        if (page.isClosed()) throw new Error('Native application window closed while reading its backend status', {cause: error});
+        if (/Execution context was destroyed|navigation/i.test(String(error))) return null;
         throw error;
       }
     };
