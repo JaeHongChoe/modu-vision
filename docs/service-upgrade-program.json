@@ -3322,13 +3322,19 @@
     "S1-02",
     "S1-05"
    ],
-   "status": "planned",
+   "status": "in_progress",
    "evidence": [
     {
      "kind": "partial-remote-training-controls",
      "result": "Task57 remote workbench queue/priority/runtime fields now cross compute API and persisted coordinator/worker contract; see remaining integration evidence.",
      "scope": "177 affected and118 source contracts, renderer633, actual bounded CPU rotation loopback; source readback28c4c0479a16f96b7d3933e6b01fc812ec75bd4d421d49d8e3bcf9b6528bc019. Partial slice only; parent states unchanged.",
      "platform": "macOS CPU, in-process loopback; no new SSH/GPU execution. New hosted-source qualification and independent/installed/representative acceptance pending."
+    },
+    {
+     "kind": "partial-native-execution-target",
+     "result": "Task118 explicit specialist evaluation/prediction/generation on the selected profile, immutable runtime/model/input receipts and reopen; no API-host fallback.",
+     "scope": "11 actual CPU recipe regressions, 10 actual in-process selected workers across five native families; 27 authorization and45 related checks; renderer783, types/build, actual Chrome and development Electron2 pass. Root readback 512087f8c9bf8254ddde5e9cd3802e6fba32416ccfbaedf216499da44752465b,1456 source inputs/678 artifacts. Parent remains incomplete.",
+     "platform": "macOS CPU and owned loopback; real SSH/GPU, core-model inference/benchmark/export preflight and automatic local-native receipts remain pending. Windows excluded; independent review and final acceptance pending."
     }
    ],
    "file_actions": {
@@ -9497,8 +9503,8 @@
    },
    "parent_status": {
     "verification_pending": 50,
-    "in_progress": 14,
-    "planned": 18
+    "in_progress": 15,
+    "planned": 17
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

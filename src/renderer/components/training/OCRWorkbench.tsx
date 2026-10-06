@@ -1,3 +1,5 @@
+import {executeModelRecipe} from '../../services/modelExecution';
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {openModelFlow} from './ProgramWorkbenchControls';
@@ -149,7 +151,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!datasetPath.trim() || !jobId || busy) return;
     setBusy('evaluate'); setError(''); setEvaluation(null);
     try {
-      const result = await request<OCREvaluation>('/api/ocr/evaluate',{method:'POST',body:JSON.stringify({job_id:jobId,dataset_path:datasetPath.trim(),device})});
+      const result = await executeModelRecipe<OCREvaluation>('ocr','evaluate',{job_id:jobId,dataset_path:datasetPath.trim(),device},()=>request('/api/ocr/evaluate',{method:'POST',body:JSON.stringify({job_id:jobId,dataset_path:datasetPath.trim(),device})}));
       if (sameProject()) setEvaluation(result);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -159,7 +161,7 @@ export const OCRWorkbench: React.FC = () => {
     if (!imagePath.trim() || !jobId || busy || !recipe) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await request<OCRPrediction>('/api/ocr/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:imagePath.trim(),device,include_preview:true,recipe})});
+      const result = await executeModelRecipe<OCRPrediction>('ocr','predict',{job_id:jobId,image_path:imagePath.trim(),device,include_preview:true,recipe},()=>request('/api/ocr/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:imagePath.trim(),device,include_preview:true,recipe})}));
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(describeError(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -171,6 +173,7 @@ export const OCRWorkbench: React.FC = () => {
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <TrainingPreparationPanel family="ocr" model="ctc" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{...trainingOptions,recipe}} />
+      <ModelExecutionEvidence task="ocr" jobId={jobId} />
       <p className="leading-5 text-slate-400">문자가 한 줄로 잘린 이미지와 실제 정답 문자열이 필요합니다. 후보 모델은 자동으로 검사 플로우에 적용되지 않습니다.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label>인식 방식<select aria-label="OCR 인식 방식" value={ocrMode} onChange={event=>setOCRMode(event.target.value as OCRMode)} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="crop">잘린 단일 행 인식 (기존)</option><option value="detect_recognize">수평 문자 영역 제안 후 다중 행 인식</option></select></label>

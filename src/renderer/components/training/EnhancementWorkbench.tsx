@@ -1,3 +1,5 @@
+import {executeModelRecipe} from '../../services/modelExecution';
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
@@ -138,7 +140,7 @@ export function EnhancementWorkbench() {
   const compare=()=>action('원본·개선본 비교',async()=>{
     const row=pairRecords[sampleIndex];if(!row)return;
     const expectedSelection=comparisonSelection.current;
-    const result=await request<{image_base64:string}>('/api/enhancement/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:source.replace(/[/\\]+$/,'')+'/'+row.source_relative_path,device})});
+    const result=await executeModelRecipe<{image_base64:string}>('enhancement','predict',{job_id:jobId,image_path:source.replace(/[/\\]+$/,'')+'/'+row.source_relative_path,device},()=>request('/api/enhancement/predict',{method:'POST',body:JSON.stringify({job_id:jobId,image_path:source.replace(/[/\\]+$/,'')+'/'+row.source_relative_path,device})}));
     if(currentScope.current===scope&&comparisonSelection.current===expectedSelection)setEnhancedPreview(result.image_base64);
   });
   const train = () => action('이미지 개선 학습', async () => {
@@ -150,9 +152,7 @@ export function EnhancementWorkbench() {
     setMetrics(null); setNotice('학습을 시작했습니다. 화면을 이동해도 작업을 다시 열 수 있습니다.');
   });
   const evaluate = () => action('시험 평가', async () => {
-    const result = await request<EnhancementMetrics>('/api/enhancement/evaluate', {
-      method: 'POST', body: JSON.stringify({ dataset_path: datasetPath, job_id: jobId, device }),
-    });
+    const result = await executeModelRecipe<EnhancementMetrics>('enhancement','evaluate',{dataset_path:datasetPath,job_id:jobId,device},()=>request('/api/enhancement/evaluate',{method:'POST',body:JSON.stringify({dataset_path:datasetPath,job_id:jobId,device})}));
     if (currentScope.current === scope) setMetrics(result);
   });
   const cancel = () => action('학습 중단 요청', async () => {
@@ -178,6 +178,7 @@ export function EnhancementWorkbench() {
     <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 font-semibold"><ImagePlus className="h-4 w-4 text-cyan-400" />이미지 개선 모델</summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <TrainingPreparationPanel family="enhancement" model="enhancement" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
+      <ModelExecutionEvidence task="enhancement" jobId={jobId} />
       <p className="leading-5 text-slate-300">입력 이미지와 개선 정답 쌍으로 학습합니다. 현재 데이터의 원본을 정답으로 두고 노이즈 입력을 별도로 준비하거나, 준비된 정답 쌍을 불러올 수 있습니다.</p>
       <details><summary className="cursor-pointer">실제 입력·정답 쌍 가져오기</summary><div className="mt-2 space-y-2">
         <p>현재 프로젝트 원본을 입력으로 사용합니다. 같은 크기로 정합한 정답을 별도 폴더에 준비하고, 입력 상대 경로 ↹ 정답 상대 경로 ↹ train/val/test를 한 줄씩 지정하세요. 복제 픽셀·누락·크기 불일치는 거절합니다.</p>

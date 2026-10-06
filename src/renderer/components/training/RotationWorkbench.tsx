@@ -1,3 +1,4 @@
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {parentCandidateLabel, parentCandidateNotice, type ParentCandidate} from './parentCandidate';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
@@ -55,6 +56,7 @@ export function RotationWorkbench() {
   const selectedData=selectedMetadata?.training_provenance?.family_dataset_path||state.dataset?.dataset_path||selectedMetadata?.dataset_path;
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-5 text-xs text-slate-200">
     <TrainingPreparationPanel family="rotation" model="small_cnn_angle_v1" device={device} datasetPath={state.dataset?.dataset_path} warmStartJobId={parent||undefined} config={{epochs,batch_size:batch,image_size:size,width,learning_rate:rate}} />
+      <ModelExecutionEvidence task="rotation" jobId={state.modelId} />
     <h2 className="flex items-center gap-2 text-base font-semibold"><RotateCw className="h-5 w-5 text-cyan-300" />학습형 정방향 보정</h2>
     <p className="mt-2 leading-5 text-slate-400">각 이미지가 정방향이 되는 반시계 보정각을 정답으로 학습합니다. 360° 방향을 예측하고 원본 해상도를 보존한 정렬 이미지와 좌표 변환을 반환합니다.</p>
     <section aria-label="정렬 지원 범위" className="mt-3 rounded border border-[#344255] p-3 leading-5 text-slate-300">

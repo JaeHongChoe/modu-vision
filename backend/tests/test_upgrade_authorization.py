@@ -32,6 +32,9 @@ from backend.api.shared_authorization import SharedAuthorizationMiddleware
  ('labeler','/api/dataset/imports/job/cancel',True),
  ('trainer','/api/dataset/imports/job/accept',False),
  ('reviewer','/api/dataset/imports/job/accept',True),
+ ('trainer','/api/model-execution/recipes',True),
+ ('labeler','/api/model-execution/recipes',False),
+ ('viewer','/api/model-execution/recipes',False),
 ])
 def test_workspace_role_policy(tmp_path,monkeypatch,role,path,allowed):
     from backend.api import routes_project

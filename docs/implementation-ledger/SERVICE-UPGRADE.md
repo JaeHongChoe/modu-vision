@@ -687,3 +687,8 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 - 남은 것:
   - 9da1093의 hosted Linux 실행 확인, 대소문자 구분 폴더의 Windows 실기.
   - 검토 P3: `os.listdir`로 목록 읽기(50,000개에서 약 106 ms), inspect_dataset 구성 사이의 목록 공유, 살아남은 변이 3개.
+
+
+## Task118 선택 서버 평가·예측·생성 (S4-11 일부)
+
+선택한 서버/장치의 실행 근거와 모델·입력 해시를 저장하고 다시 읽는다. 서버 연결 실패503에서 로컬 예측을 실행하지 않는다. 실제 CPU worker10개, backend11+27+45, renderer783, Chrome/Electron2개 검증 통과. 근거 SHA256 512087f8c9bf8254ddde5e9cd3802e6fba32416ccfbaedf216499da44752465b. 일반 모델 단일 예측·benchmark·export preflight와 로컬 자동 기록은 남아 있어 S4-11은 진행 중이다. 구현 검증56/82, 남은26개 중 Windows 제외25개. 전체 수용·독립 검토·실제 서버 GPU 완료를 뜻하지 않는다.

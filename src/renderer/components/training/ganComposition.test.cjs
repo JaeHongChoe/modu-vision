@@ -24,7 +24,7 @@ test('composition bounds reject invalid native coordinates and retain multiple r
 });
 test('owned preparation and source generation send canonical provenance contracts',async()=>{
   const requests=[];
-  const {ganWorkflow}=load('../../services/ganWorkflow.ts',ref=>ref==='./api'?{request:async(url,options)=>{requests.push({url,body:options?JSON.parse(options.body):null});return {};}}:undefined);
+  const {ganWorkflow}=load('../../services/ganWorkflow.ts',ref=>ref==='./modelExecution'?{executeModelRecipe:async(_task,_stage,_params,local)=>local()}:ref==='./api'?{request:async(url,options)=>{requests.push({url,body:options?JSON.parse(options.body):null});return {};}}:undefined);
   const rows=parseGANCrops('a.png\t0,0,32,32\ttrain\tscratch');
   await ganWorkflow.prepare('/canonical/source',rows);
   assert.equal(requests[0].url,'/api/defect-gan/prepare');assert.equal(requests[0].body.source_dataset_path,'/canonical/source');

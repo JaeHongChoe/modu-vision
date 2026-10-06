@@ -162,7 +162,9 @@ export const TrainingController: React.FC = () => {
     setSyntheticOptions({...dinoSyntheticDefaults});
   }, [task, projectDir, project?.id, project?.active_labelset_id, folderPath]);
 
-  useEffect(() => {if(!taskProposal||taskProposal.scope!==taskPreviewScope())setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision,selectedProfileId]);
+  // Changing the worker keeps the chosen model workspace. Its own scoped hooks
+  // clear pending inputs/results and reject replies from the previous target.
+  useEffect(() => {if(!taskProposal||taskProposal.scope!==taskPreviewScope())setSelectedFamily(handoff?.family||task);}, [task, projectDir,project?.source_dataset_dir,project?.active_labelset_id,transportRevision]);
   useEffect(()=>{if(handoff?.family)setSelectedFamily(handoff.family);},[handoff?.jobId,handoff?.selectionId]);
   const chooseFamily = (family: ModelFamily) => {
     const data = useDatasetStore.getState();

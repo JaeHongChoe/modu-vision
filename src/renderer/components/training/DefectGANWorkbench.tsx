@@ -1,3 +1,4 @@
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import React, { useEffect, useRef, useState } from 'react';
@@ -139,7 +140,7 @@ export const DefectGANWorkbench: React.FC = () => {
   };
 
   const openLastReview = async () => { setError('');try { const history=await specializedApi.ganReviews();const latest=history.reviews.find((r) => r.job_id===jobId);if(!latest)throw new Error('저장된 생성 후보가 없습니다.');const result=await ganWorkflow.openReview(latest.job_id,latest.review_id);if(sameProject()){setReviewDir(result.review_dir);setCandidates(result.candidates);setDecisions({});setAdoptedPath('');setCompositionReceipt(result.source_image_sha256?`원본 SHA ${result.source_image_sha256} · ${result.regions?.length||0}영역 · 시드 ${result.seed}`:'');} } catch(cause){if(sameProject())setError(errorText(cause));} };
-  const evaluateGAN = async () => { setBusy('evaluate');setError('');try {const result=await specializedApi.evaluateGAN(jobId,datasetPath);if(sameProject())setGanEvaluation(result);} catch(cause){if(sameProject())setError(errorText(cause));}finally{if(sameProject())setBusy(null);} };
+  const evaluateGAN = async () => { setBusy('evaluate');setError('');try {const result=await specializedApi.evaluateGAN(jobId,datasetPath,device);if(sameProject())setGanEvaluation(result);} catch(cause){if(sameProject())setError(errorText(cause));}finally{if(sameProject())setBusy(null);} };
   const exportGAN = async () => { setBusy('export');setError('');try {const result=await specializedApi.exportGAN(jobId);if(sameProject())setGenerationPackage(result.package_path);} catch(cause){if(sameProject())setError(errorText(cause));}finally{if(sameProject())setBusy(null);} };
   const adopt = async () => {
     setBusy('adopt');setError('');
@@ -156,6 +157,7 @@ export const DefectGANWorkbench: React.FC = () => {
     </summary>
     <div className="space-y-4 border-t border-[#344255] p-4">
       <TrainingPreparationPanel family="defect_gan" model="defect_gan" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
+      <ModelExecutionEvidence task="defect_gan" jobId={jobId} />
       <p className="leading-5 text-slate-400">실제 결함이 보이는 영역을 지정해 학습합니다. 생성 이미지는 원본 라벨이나 학습 분할에 자동으로 섞이지 않습니다.</p>
       <p className="break-all text-slate-400">원본 이미지 폴더: {projectSource||'프로젝트 원본 폴더를 선택하세요.'}</p>
       <label className="block">프로젝트 소유 학습 데이터<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(datasets.find(row=>row.dataset_path===event.target.value)?.sample_count||null);setWarmParentId('');}} className="mt-1 w-full rounded border border-slate-600 bg-[#0E1722] p-2"><option value="">아래 영역 표로 복사본 준비</option>{datasets.map((row,index)=><option value={row.dataset_path} key={row.dataset_path}>복사본 {index+1} · 영역 {row.sample_count||0}개</option>)}</select></label>

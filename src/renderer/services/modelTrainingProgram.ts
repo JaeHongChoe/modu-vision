@@ -1,6 +1,6 @@
 import type {ParentCandidate} from '../types/parentCandidate';
 import { request, type JobObservation } from './api';
-import {submitModelTraining} from './modelExecution';
+import {submitModelTraining,executeModelRecipe} from './modelExecution';
 import type {TrainingSchedulingOptions} from '../stores/useTrainingStore';
 import type {PatchRecipe} from '../components/flowchart/flowchartGraph';
 import type {FlowchartPipeline} from '../types';
@@ -43,7 +43,7 @@ export const modelTrainingProgram = {
     prepare: (options: {patch_size: number; stride: number; normal_class: string; minimum_overlap: number}) => post<PreparedDataset>('/api/patch-classification/prepare', options),
     manifest: (dataset_path: string) => request<PreparedDataset>(`/api/patch-classification/manifest?${query({dataset_path})}`),
     sample: (dataset_path:string,sample_index:number) => request<PatchSample>(`/api/patch-classification/sample?${query({dataset_path,sample_index})}`),
-    predict: (job_id:string,image_path:string,device:LocalTrainingDevice,recipe:PatchRecipe) => post<PatchPrediction>('/api/patch-classification/predict',{job_id,image_path,device,recipe}),
+    predict: (job_id:string,image_path:string,device:LocalTrainingDevice,recipe:PatchRecipe) => executeModelRecipe<PatchPrediction>('patch_classification','predict',{job_id,image_path,device,recipe},()=>post<PatchPrediction>('/api/patch-classification/predict',{job_id,image_path,device,recipe})),
     recipeFlow: (job_id:string,recipe:PatchRecipe) => post<FlowchartPipeline>('/api/patch-classification/recipe-flow',{job_id,recipe}),
     train: (options: {dataset_path: string; backbone: string; epochs: number; batch_size: number; image_size: number;
       learning_rate: number; device: LocalTrainingDevice; warm_start_job_id?: string; pretrained_checkpoint?: string} & TrainingSchedulingOptions) => submitModelTraining('patch_classification',options,()=>post<ProgramJob>('/api/patch-classification/train', options)),
@@ -67,8 +67,8 @@ export const modelTrainingProgram = {
     cancel: (job_id: string) => post<ProgramJob>(`/api/rotation/jobs/${encodeURIComponent(job_id)}/cancel`, {}),
     parents: (dataset_path: string, image_size: number, width: number) => request<{parents: ParentCandidate[]}>(`/api/rotation/warm-start-parents?${query({dataset_path, image_size, width})}`),
     models: () => request<{models: FamilyModel[]}>('/api/rotation/models'),
-    evaluate: (job_id: string, dataset_path: string, device: LocalTrainingDevice) => post<RotationEvaluation>('/api/rotation/evaluate', {job_id, dataset_path, device, split: 'test'}),
-    predict: (job_id: string, image_path: string, device: LocalTrainingDevice) => post<RotationPrediction>('/api/rotation/predict', {job_id, image_path, device, include_aligned: true}),
+    evaluate: (job_id: string, dataset_path: string, device: LocalTrainingDevice) => executeModelRecipe<RotationEvaluation>('rotation','evaluate',{job_id,dataset_path,device,split:'test'},()=>post<RotationEvaluation>('/api/rotation/evaluate', {job_id, dataset_path, device, split: 'test'})),
+    predict: (job_id: string, image_path: string, device: LocalTrainingDevice) => executeModelRecipe<RotationPrediction>('rotation','predict',{job_id,image_path,device,include_aligned:true},()=>post<RotationPrediction>('/api/rotation/predict', {job_id, image_path, device, include_aligned: true})),
     export: (job_id: string) => post<{package_dir: string}>('/api/rotation/export', {job_id}),
   },
   automated: {

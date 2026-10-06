@@ -1,3 +1,5 @@
+import {executeModelRecipe} from '../../services/modelExecution';
+import {ModelExecutionEvidence} from './ModelExecutionEvidence';
 import {useTrainingRuntime,TrainingRuntimeSettings} from './TrainingRuntimeSettings';
 import {TrainingPreparationPanel} from './TrainingPreparationPanel';
 import {submitModelTraining,controlModelTraining,reconnectModelTraining} from '../../services/modelExecution';
@@ -197,7 +199,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !datasetPath || busy) return;
     setBusy('evaluate'); setError(''); setEvaluation(null);
     try {
-      const result = await request<RotatedEvaluation>('/api/rotated-detection/evaluate',{method:'POST',body:JSON.stringify({job_id:modelId,dataset_path:datasetPath,device})});
+      const result = await executeModelRecipe<RotatedEvaluation>('rotated_detection','evaluate',{job_id:modelId,dataset_path:datasetPath,device},()=>request('/api/rotated-detection/evaluate',{method:'POST',body:JSON.stringify({job_id:modelId,dataset_path:datasetPath,device})}));
       if (sameProject()) setEvaluation(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -207,7 +209,7 @@ export const RotatedDetectionPanel: React.FC = () => {
     if (!modelId || !imagePath.trim() || busy) return;
     setBusy('predict'); setError(''); setPrediction(null);
     try {
-      const result = await request<MultiRotatedPrediction>('/api/rotated-detection/predict',{method:'POST',body:JSON.stringify({job_id:modelId,image_path:imagePath.trim(),device})});
+      const result = await executeModelRecipe<MultiRotatedPrediction>('rotated_detection','predict',{job_id:modelId,image_path:imagePath.trim(),device},()=>request('/api/rotated-detection/predict',{method:'POST',body:JSON.stringify({job_id:modelId,image_path:imagePath.trim(),device})}));
       if (sameProject()) setPrediction(result);
     } catch (cause) { if (sameProject()) setError(errorText(cause)); }
     finally { if (sameProject()) setBusy(null); }
@@ -223,6 +225,7 @@ export const RotatedDetectionPanel: React.FC = () => {
       <label>검출 구현<select aria-label="회전 검출 구현" value={adapter} onChange={event=>{setAdapter(event.target.value as OBBAdapter);setWarmParentId('');}} className={programInput}><option value="fixed_slot_cnn">기존 CNN · 이미지당 1~32 객체 · 별도 방향 학습</option><option value="ultralytics_yolo_obb">YOLO OBB 명시적 선택 · 빈 정상·32 초과 객체 · 축 각도</option></select></label>
       {adapter==='ultralytics_yolo_obb'&&<div className="rounded border border-amber-700 p-3"><label>로컬 OBB 모델 .pt 절대 경로<input value={localModelPath} onChange={event=>{setLocalModelPath(event.target.value);setTrustNativeWeights(false);}} className={programInput}/></label><label className="mt-2 block"><input type="checkbox" checked={trustNativeWeights} onChange={event=>setTrustNativeWeights(event.target.checked)}/> 선택한 로컬 모델의 출처와 네이티브 로딩을 신뢰합니다.</label><p className="mt-2 text-amber-200">YOLO OBB는 별도 방향을 예측하지 않습니다. 로컬 모델과 선택 runtime이 필요하며 가중치를 자동 선택·다운로드하지 않습니다. 이 확인은 현재 프로세스의 정확한 모델 SHA에만 적용됩니다. 서버 재시작·다른 호스트에서는 해당 SHA의 호스트 신뢰 설정이 필요합니다. runtime·가중치 배포 라이선스는 검토 대기 상태입니다. GPU·Windows·모델 품질과 원격 worker 모델 전달은 별도 검증이 필요합니다.</p></div>}
       <TrainingPreparationPanel family="rotated_detection" model="rotated_detector" device={device} datasetPath={datasetPath||undefined} warmStartJobId={warmParentId||undefined} config={{epochs}} />
+      <ModelExecutionEvidence task="rotated_detection" jobId={modelId} />
       <div className="rounded border border-[#344255] bg-[#0E1722] px-3 py-2">
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
         <div className="mt-1 break-all font-mono text-slate-200">{projectSource || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
