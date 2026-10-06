@@ -453,6 +453,7 @@ def run_automated_training(*, task, dataset_path, models_dir, preset='fast', dev
                         'output_dir':str(trial_dir),'current_epoch':measured.get('epochs_completed',epochs_per_trial),'total_epochs':epochs_per_trial,
                         'dataset_fingerprint': training_binding['dataset_fingerprint'] if training_binding else record['source_dataset_fingerprint'],
                         'checkpoint_sha256': digest, 'training_provenance': training_binding, 'search_id': search_id,'device':device,
+                        **({'warm_start':context.warm_start.lineage()} if context.warm_start else {}),
                         **({'compute_profile_id':compute_profile_id,'remote_job_id':measured.get('remote_job_id')} if remote_profile else {})}
                     if remote_profile:
                         receipt = {**json.loads((trial_dir/'job_receipt.json').read_text(encoding='utf-8')),'search_id':search_id,

@@ -126,6 +126,8 @@ def test_fast_retrain_reuses_completed_parent_config_and_preserves_bytes(tmp_pat
     assert config['image_size'] == 32 and config['learning_rate'] == .003 and config['augmentation_profile'] == 'photometric'
     saved = torch.load(reused['winner']['checkpoint_path'], weights_only=True)
     assert saved['warm_start']['parent_checkpoint_sha256'] == parent['checkpoint_sha256']
+    receipt=json.loads(Path(reused['winner']['checkpoint_path']).with_name('job_receipt.json').read_text())
+    assert receipt.get('warm_start')==saved['warm_start'], 'completed candidate receipt must preserve actual warm-start lineage'
     assert reused['configuration_parent']['configuration_sha256']
     assert open(parent['checkpoint_path'], 'rb').read() == before
 

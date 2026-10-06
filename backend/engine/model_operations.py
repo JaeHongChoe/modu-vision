@@ -447,7 +447,10 @@ def _run_cycle_locked(project,event,*,training_fn=None,evaluation_fn=None):
                     def record_activation(values):
                         cycle['result'].update(values);store.save(cycle)
                     cycle['result'].update(_approve_and_deploy(project,policy,evidence,candidate,event,record_activation))
-                else:cycle['result']['candidate_job_id']=candidate
+                else:
+                    from backend.engine.operations_review import freeze_subject
+                    cycle['result']['candidate_job_id']=candidate
+                    cycle['result']['review_handoff']=freeze_subject(project,policy,candidate,evidence)
                 cycle['status']=cycle['result'].get('activation_state','completed') if policy['auto_approve'] else 'awaiting_approval'
             else:cycle['status']='needs_review' if any(row['status']=='needs_review' for row in labels) else 'completed'
             policy['seen'].update({path:inventory[path] for path in new})

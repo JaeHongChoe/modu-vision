@@ -1,0 +1,103 @@
+{
+  "schema": "ManualReviewReleaseGateFollowup/v1",
+  "baseline_source_sha": "2c907b121b87970d95082a94f8704f3be374e9f8",
+  "source_binding": "exact uncommitted file SHA-256 below",
+  "changed_source_files": {
+    ".github/workflows/ci.yml": "c3c19c7942659f9e90d2bc2129f50f2bee85a59afa83eeb56b5b2c939968ed79",
+    "backend/api/routes_model_operations.py": "16513c7c25c68f301d35c62ed808a25483da5bbf6222b9f7c38cc66fde39c3f8",
+    "backend/engine/automated_trials.py": "d89a8a4d65af2135c20587e6b30ea9b6fbe18066d9a5cf5a3fe7658509eef26e",
+    "backend/engine/model_operations.py": "486021127e4b84091c84f413ad987a02a796051e0f3dc75ed6fb84f8fbe8f67c",
+    "backend/tests/test_automated_trials.py": "8b324a95f3057c60ca3b0d1cfd4d5b849af52dbebfbbb035bee22fe54ec90107",
+    "backend/tests/test_model_operations_real_cycle.py": "df8a207c0b647dcad18a63d324a8f1b8787990beea9af426325ec458ac4e8a0f",
+    "scripts/release-readiness.cjs": "d3141b4b273b71a5036a2ff6245ef14e3e03731d09e43cfe63ee7739db2367ea",
+    "scripts/verify-release-recovery.cjs": "bbf5c0fc9e35e040ca7cd67808fe7a13d9741cdec4594a96d174fbf651065988",
+    "src/renderer/components/inference/InferenceCenterStudio.tsx": "96ff40ba8474b5b55562f896369ebce07a613a8fd8f850c018f88e481eb3815c",
+    "src/renderer/components/runtime/ModelOperationsPanel.tsx": "940bb2de1ce61c4dd20f66099d8ceb3f3bf00df77a810cdce4d96ddd311ff8e3",
+    "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
+    "src/renderer/services/generated/apiTypes.ts": "5b1502b6d02db76c3ced3e9c11941514c4c4692894df5b56515a946c58d85029",
+    "backend/engine/operations_review.py": "ebf2b8dd3bff6a3faf776455e110d4436e903675007f7a9ad50afc9ce6e23d43",
+    "backend/tests/test_operations_review_handoff.py": "72bcaf7e7b035c9e9a971c72115706d8de0c1059569b603363f7831ca151a3c1",
+    "scripts/e2e/fixtures/operations_new_image.py": "5b077e82792abbecaf833ed025b96245543dee5e177ced813c30bb84dd99ded7",
+    "scripts/e2e/operations-manual-handoff.spec.ts": "107cc8d8fb3dbbbbea26eca8753146b7a06717d70eb82b2c0febacaf0175a3be",
+    "scripts/tests/release-readiness.test.cjs": "1c0ac6b326824d7af338b4f3061f26e502072b02de7d51ec05e6e16d25b57af7",
+    "src/renderer/components/runtime/ManualOperationsReviewPanel.test.cjs": "e55672b85f05b2b4076f255599826ba02a2386ca625ed92ce33c9e62f30205a2",
+    "src/renderer/components/runtime/ManualOperationsReviewPanel.tsx": "46853f1181dacbc2e1c1bf8aa04ece16f78c610f5a6f25d4163f6897a1828e4a",
+    "src/renderer/components/runtime/ModelOperationsPanel.test.cjs": "a618512fcaa2cc634c83976f26bc69c9efd3895e4f1ca24f4f3836ab5af1de11"
+  },
+  "junit": [
+    {
+      "name": "manual-handoff-security-final.xml",
+      "sha256": "bd815b1f49fb12342f117b6c7c8c0e5eb96aee5a04a7d6a3c39d22f2826d693d",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "manual-handoff-generated-types.xml",
+      "sha256": "ed910941e7b97295afda7696cd308a9885881bcc75a7f58db2b86d2faafcd15f",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "manual-lineage-final.xml",
+      "sha256": "68e9e9ea0c4c426211193f8653f50fe15a9941171c42d2784e3db807653c0259",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "manual-handoff-lineage-actual.xml",
+      "sha256": "db645511fa0c38aadaecb0fb67c2be0fc3bb8e7d3523eb7cf0f6904430369177",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "renderer": {
+    "passed": 835,
+    "failed": 0,
+    "log_sha256": "1c569ad3410c01b49278f639c3618691d4b885c923d09638badf26ca18d4a6e6"
+  },
+  "release_readiness_recovery": {
+    "passed": 9,
+    "failed": 0,
+    "log_sha256": "ea57672e20110a087bc72301d4f7b62bddf764469ec102434f6c3ef4fd807d85",
+    "controlled_native_signature_responses": true
+  },
+  "native": {
+    "actual_pretrained_cpu_retraining": true,
+    "actual_development_electron_reopen": true,
+    "passed": 1,
+    "report_sha256": "b41a27f292b90d8bba6e84efb8af16a3617032fef168e1b337975601e3cc404b",
+    "manifest_sha256": "06615d4e94bc9edb47f5e3dd308e12578cb166422eece04a238482898158f1f0",
+    "source_and_parent_bytes_unchanged": true,
+    "inadequate_synthetic_holdout_refused": true
+  },
+  "actual_cycle": {
+    "sha256": "34caf4c3c168ba0ec219ebb5deffa8cb67318bcaeec3f73275316406ebe866e2",
+    "actual_incumbent_service_inference_during_candidate_training": true
+  },
+  "retained_previous_failures": [
+    "2c907b1 source CI generated types stale: 2075 passed,6 skipped,4 failed",
+    "first native path hidden before package export",
+    "missing automated candidate receipt warm-start lineage",
+    "obsolete release test loader/trust fixture"
+  ],
+  "human_quality_approved": false,
+  "service_applied": false,
+  "physical_device_accepted": false,
+  "signed_release_accepted": false,
+  "hosted_latest_ci_passed": false,
+  "independent_review_accepted": false,
+  "soak_72h_completed": false,
+  "software_parent_counts": {
+    "verified": 64,
+    "pending": 18,
+    "finally_accepted": 0
+  }
+}

@@ -1,6 +1,5 @@
 import type {WorkflowStep} from '../wizard/workflowReadiness';
 import {useProjectStore} from '../../stores/useProjectStore';
-import { ModelOperationsPanel } from './ModelOperationsPanel';
 import { FleetPanel } from './FleetPanel';
 import { SpecializedApprovalPanel } from '../evaluation/SpecializedApprovalPanel';
 import React, { useEffect, useRef, useState } from 'react';
@@ -111,7 +110,6 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     <div className="mt-3 flex gap-2"><select aria-label="서비스 복원 이력" className="min-w-0 flex-1 rounded bg-slate-800 p-2" value={target} onChange={event => setTarget(event.target.value)}><option value="">보존된 적용 이력 선택</option>{state?.history.map(item => <option value={item.deployment_id} key={item.deployment_id}>{new Date(item.created_at * 1000).toLocaleString()} · {item.release.manifest_sha256.slice(0, 12)} · {item.reviewer}</option>)}</select><button type="button" disabled={busy || !target || !reviewer.trim()} className="rounded border border-amber-600 px-3 disabled:opacity-40" onClick={() => void action('/rollback', { deployment_id: target, reviewer })}>서비스 롤백</button></div>
     {state?.native_install?.platform==='Windows'&&<WindowsServiceSetupPanel scopeKey={key} approved={!!state.active}/>}
     <SpecializedApprovalPanel />
-    <ModelOperationsPanel />
     <FleetPanel onNavigate={onNavigate} />
     <CaptureGroupsPanel scopeKey={key}/>
     <ProtocolSettingsPanel value={ready?config:EMPTY_CONFIG} onChange={setConfig} disabled={busy||!ready} onSave={()=>{try{void action('/adapters',JSON.parse(config),'PUT');}catch{setError('설정 JSON 형식을 확인하세요.');}}}/>

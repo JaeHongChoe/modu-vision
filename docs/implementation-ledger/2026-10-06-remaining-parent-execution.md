@@ -92,3 +92,14 @@ See `2026-10-06-flow-team-pack-followup.md` for new full-graph review/service ga
 actual two-account HTTPS conflict/revocation/restart, atomic inactive pack
 installation, source CI repairs and retained endurance interruption observations.
 The unqualified target/signature/human gates remain pending.
+
+## Manual review and release-gate follow-up
+
+See `2026-10-06-manual-review-release-gates.md` for the saved candidate/comparison
+review bridge, first-package UI reachability, account invalidation, actual
+automated warm-start receipt correction and release-readiness distinction.
+33 backend,835 renderer/main,9 readiness/recovery controls and one actual
+DINOv3 development Electron retrain/reopen gate pass. Parent accounting stays
+64 software verified/18 pending until complete parent evidence is available.
+Exact2c907b1 hosted source CI failed on stale generated API types; regeneration
+and its7-case regression pass, with full hosted rerun still required.

@@ -47,6 +47,7 @@ jobs:
           npm run test:renderer
           npm run build
           npm run test:e2e:harness
+          node --test scripts/tests/release-readiness.test.cjs scripts/verify-release-recovery.cjs
       - name: CPU contract and recovery regressions
         run: >-
           python -m pytest -q --junitxml=ci-pytest.xml
@@ -142,6 +143,11 @@ jobs:
           backend/tests/test_service_s5_02.py
           backend/tests/test_service_s5_06.py
           backend/tests/test_service_s5_08_drift.py
+          backend/tests/test_operations_review_handoff.py
+          backend/tests/test_model_operations.py
+          backend/tests/test_model_operations_security.py
+          backend/tests/test_model_operations_policy_revision.py
+          backend/tests/test_automated_trials.py
           backend/tests/test_service_s5_09.py
           backend/tests/test_project_archive_runtime_locks.py
           backend/tests/test_service_s2_05_no_branch.py

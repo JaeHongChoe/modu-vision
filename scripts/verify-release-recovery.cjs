@@ -8,27 +8,44 @@ const test=require('node:test');
 const ts=require('typescript');
 
 function load(relative,electron) {
-  const filename=path.resolve(__dirname,'../src/main',relative);
-  const loaded=new Module(filename,module);loaded.filename=filename;loaded.paths=Module._nodeModulePaths(path.dirname(filename));
-  const original=loaded.require.bind(loaded);
-  loaded.require=name=>name==='electron'?electron:original(name);
-  loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,filename);
-  return loaded.exports;
+  const cache=new Map();
+  function compile(filename) {
+    if(cache.has(filename))return cache.get(filename).exports;
+    const loaded=new Module(filename,module);loaded.filename=filename;loaded.paths=Module._nodeModulePaths(path.dirname(filename));
+    cache.set(filename,loaded);
+    const original=loaded.require.bind(loaded);
+    loaded.require=name=>{
+      if(name==='electron')return electron;
+      const candidate=name.startsWith('.')?path.resolve(path.dirname(filename),name+'.ts'):null;
+      return candidate&&fs.existsSync(candidate)?compile(candidate):original(name);
+    };
+    loaded._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,filename);
+    return loaded.exports;
+  }
+  return compile(path.resolve(__dirname,'../src/main',relative));
 }
 const {DistributionManager}=load('distributionStatus.ts',null);
 const digest=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 
 test('manual release download records interruption and preserves installed executable',async()=>{
-  const root=fs.mkdtempSync(path.join(os.tmpdir(),'vision-delivery-'));
+  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'vision-delivery-')));
   try {
     const installed=path.join(root,'installed.exe');fs.writeFileSync(installed,'working installation');
     const original=digest(fs.readFileSync(installed));
     const bytes=Buffer.from('candidate');
     const manifest={version:'0.2.0',channel:'stable',platform:'win32',arch:'x64',url:'https://release.example/candidate.exe',sha256:digest(bytes),size:bytes.length};
-    const manager=new DistributionManager({appVersion:'0.1.0',packaged:true,appPath:root,executablePath:installed,userDataPath:root,platform:'win32',arch:'x64',
+    const {publicKey,privateKey}=crypto.generateKeyPairSync('ed25519');
+    const compatibility={api_context:1,worker:1,runtime:1,dataset_index:3};
+    const authority={schema_version:1,publisher:'Fixture Publisher',keys:{'fixture':publicKey.export({type:'spki',format:'der'}).toString('base64')},
+      revoked_key_ids:[],allowed_origins:['https://release.example'],compatibility};
+    fs.writeFileSync(path.join(root,'release-trust.json'),JSON.stringify(authority));
+    const {canonical}=load('releaseTrust.ts',null);
+    const raw=Buffer.from(canonical({...manifest,publisher:authority.publisher,compatibility,artifacts:[{path:'candidate.exe',kind:'installer',sha256:manifest.sha256,size:bytes.length}]}));
+    const signed={schema_version:1,key_id:'fixture',payload_b64:raw.toString('base64'),signature_b64:crypto.sign(null,raw,privateKey).toString('base64')};
+    const manager=new DistributionManager({appVersion:'0.1.0',packaged:true,appPath:root,executablePath:installed,userDataPath:root,resourcesPath:root,platform:'win32',arch:'x64',
       runner:async()=>({stdout:JSON.stringify({status:'Valid',publisher:'Fixture Publisher'}),stderr:''}),
       fetcher:async url=>{
-        if(String(url).endsWith('manifest.json'))return new Response(JSON.stringify(manifest));
+        if(String(url).endsWith('manifest.json'))return new Response(JSON.stringify(signed));
         let count=0;
         return new Response(new ReadableStream({pull(controller){if(count++===0)controller.enqueue(bytes.subarray(0,2));else controller.error(new Error('connection interrupted'));}}));
       }});

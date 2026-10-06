@@ -126,13 +126,27 @@ def test_actual_cached_pretrained_operations_cycle_retrains_and_awaits_approval(
     assert comparison['full_test'] is True and comparison['selected_image_count']==comparison['total_test_images']==2
     assert set(policy['holdout'])=={row['file_path'] for row in comparison['images']}
     assert 'approval' not in result and 'deployment' not in result
+    subject=result['review_handoff']
+    comparison_path=Path(project['reports_dir'])/'model_comparisons'/(comparison['comparison_id']+'.json')
+    assert subject['comparison_id']==comparison['comparison_id']
+    assert subject['comparison_sha256']==hashlib.sha256(comparison_path.read_bytes()).hexdigest()
+    assert subject['candidate_checkpoint_sha256']==hashlib.sha256(Path(candidate['checkpoint_path']).read_bytes()).hexdigest()
+    stored_cycle=OperationsStore(project['project_dir']).get(cycle['cycle_id'])
+    handoff=api.get('/api/model-operations/cycles/'+cycle['cycle_id']+'/review-handoff')
+    assert handoff.status_code==200,handoff.text
+    handoff=handoff.json()
+    assert handoff['state']=='revalidation_required' and handoff['next_step'] is None
+    assert any('각 8장' in reason or '각각 8장' in reason for reason in handoff['reasons'])
+    assert not any('계보' in reason for reason in handoff['reasons']),handoff
+    assert handoff['automatic_action']=='none' and handoff['service_applied'] is False
+    assert OperationsStore(project['project_dir']).get(cycle['cycle_id'])==stored_cycle
     assert OperationsStore(project['project_dir']).get(cycle['cycle_id'])['status']=='awaiting_approval'
     assert api.get('/api/model-operations').json()['cycles'][0]['status']=='awaiting_approval'
     assert hashlib.sha256(parent_path.read_bytes()).hexdigest()==parent_hash
     assert originals=={path.relative_to(source).as_posix():hashlib.sha256(path.read_bytes()).hexdigest() for path in source.rglob('*') if path.is_file()}
     if path:=os.environ.get('P10_CAPTURE_EVIDENCE'):
         Path(path).write_text(json.dumps({'evidence_scope':'actual_pretrained_functional_CPU_not_quality_approval',
-            'parent_job_id':parent_id,'parent_checkpoint_sha256':parent_hash,'cycle':cycle,
+            'parent_job_id':parent_id,'parent_checkpoint_sha256':parent_hash,'cycle':cycle,'manual_review_handoff':handoff,
             'independent_service':{'pid':process.pid,'package_manifest_sha256':hashlib.sha256((Path(package['package_path'])/'manifest.json').read_bytes()).hexdigest(),'job':service_result,
                 'overlap':'actual_candidate_batch_progress_then_barrier_while_independent_incumbent_HTTP_inference_completed'},
             'source_sha256':originals},indent=2,allow_nan=False))

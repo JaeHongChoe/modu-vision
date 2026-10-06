@@ -58,6 +58,7 @@ export type ApplyRequest = {
   package_path: string;
   device?: string;
   reviewer: string;
+  whole_flow_revision_id?: string | null;
 };
 
 export type ApprovalRequest = {
@@ -587,11 +588,31 @@ export type FlowNodeData = {
   params?: { [key: string]: unknown };
 };
 
+export type FlowPackageReviewRequest = {
+  package_path: string;
+  device?: string;
+};
+
 export type FlowPreflightRequest = {
   source_dataset_path: string;
   recipe_task: string;
   version_id: string;
   target: { [key: string]: unknown };
+};
+
+export type FlowReviewRequest = {
+  evaluation_id: string;
+  policy: { [key: string]: unknown };
+  reviewer: string;
+  reason: string;
+  holdout_reviewed: boolean;
+  expected_revision?: string | null;
+};
+
+export type FlowSelectionRequest = {
+  expected_revision?: string | null;
+  reviewer: string;
+  reason: string;
 };
 
 export type FlowchartModelReference = {
@@ -1866,6 +1887,9 @@ export interface ApiRequestBody {
   "POST /api/fleet/targets/{target_id}/emergency-rollback": EmergencyRollbackRequest;
   "POST /api/fleet/targets/{target_id}/rollback": backend__api__routes_fleet__RollbackRequest;
   "POST /api/flow-evaluations": EvaluationRequest;
+  "POST /api/flow-evaluations/approvals": FlowReviewRequest;
+  "POST /api/flow-evaluations/approvals/{revision_id}/qualify-package": FlowPackageReviewRequest;
+  "PUT /api/flow-evaluations/approvals/{revision_id}/select": FlowSelectionRequest;
   "POST /api/flow-evaluations/cohorts": CohortRequest;
   "POST /api/flow-workspace/comparisons": FlowCompare;
   "POST /api/flow-workspace/templates": TemplateSave;

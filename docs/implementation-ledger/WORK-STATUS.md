@@ -119,3 +119,14 @@
 - 72시간 연속 운전·사람 품질 승인·실장비·운영 계정·서명·지원 책임은 독립 조건으로 남긴다.
 
 출처: registry와 source freeze·명령·JUnit·GUI trace·SHA receipt. 각 검증의 source/platform/synthetic 범위를 유지한다.
+
+## Manual review and release-gate follow-up
+
+See `2026-10-06-manual-review-release-gates.md` for the saved candidate/comparison
+review bridge, first-package UI reachability, account invalidation, actual
+automated warm-start receipt correction and release-readiness distinction.
+33 backend,835 renderer/main,9 readiness/recovery controls and one actual
+DINOv3 development Electron retrain/reopen gate pass. Parent accounting stays
+64 software verified/18 pending until complete parent evidence is available.
+Exact2c907b1 hosted source CI failed on stale generated API types; regeneration
+and its7-case regression pass, with full hosted rerun still required.

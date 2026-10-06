@@ -124,6 +124,14 @@ def legacy_impact_report(request: Request):
     try: return legacy_impact(project(request))
     except (ValueError, OSError) as exc: raise HTTPException(422, str(exc)) from exc
 
+
+@router.get('/cycles/{cycle_id}/review-handoff')
+def review_handoff(cycle_id:str,request:Request):
+    from backend.engine.operations_review import read_handoff
+    try:return read_handoff(project(request),cycle_id)
+    except KeyError as exc:raise HTTPException(404,'Operations cycle not found') from exc
+    except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
+
 @router.put('/policy')
 def policy(payload:OperationsPolicy,request:Request):
     try:return configure_program(project(request),payload.model_dump())

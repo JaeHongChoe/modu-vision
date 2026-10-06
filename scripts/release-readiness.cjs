@@ -61,7 +61,8 @@ function validateBackend(directory, platform = process.platform, arch = process.
 }
 function readiness(options) {
   const platform = targetPlatform(options.platform || process.platform), arch = targetArch(options.arch || process.arch);
-  const report = {schema_version:1,checked_at:new Date().toISOString(),platform,architecture:arch,status:'failed',signature:{status:'unverified'},prerequisites:[]};
+  const report = {schema_version:1,checked_at:new Date().toISOString(),platform,architecture:arch,status:'failed',
+    release_ready:false,artifact_signature_ready:false,signature:{status:'unverified'},prerequisites:[]};
   if (platform!==process.platform || arch!==process.arch) {
     report.status='requires_target';report.prerequisites.push('Run this validator on the requested operating system and architecture');return report;
   }
@@ -73,9 +74,17 @@ function readiness(options) {
     report.status='runtime_ready';
     if (report.signature.status!=='verified') report.prerequisites.push('Configure a publisher signing identity and verify the final delivered artifact');
     if (report.backend_signature.status!=='verified') report.prerequisites.push('Verify the frozen backend publisher signature separately from the desktop shell');
+    if (report.signature.status==='verified' && report.backend_signature.status==='verified'
+        && report.signature.publisher!==report.backend_signature.publisher) report.prerequisites.push('Desktop shell and frozen backend publishers differ');
     if (platform==='darwin') report.prerequisites.push('Verify notarization and Gatekeeper acceptance on the delivered installer');
     report.prerequisites.push('Physical camera/PLC and approved model acceptance require a target-specific receipt');
-    report.release_ready=report.signature.status==='verified' && report.backend_signature.status==='verified' && report.signature.publisher===report.backend_signature.publisher && options.physicalAcceptance===true;
+    report.artifact_signature_ready=report.signature.status==='verified' && report.backend_signature.status==='verified'
+      && report.signature.publisher===report.backend_signature.publisher
+      && (platform!=='darwin' || report.signature.notarization==='verified');
+    // This probe verifies runtime/artifact observations only. A caller boolean
+    // cannot approve reviewed truth, physical devices, licenses, pilot coverage
+    // or a public release. Those source-bound decisions remain separate gates.
+    report.release_decision='requires_reviewed_release_evidence';
   } catch (error) { report.error=String(error.message||error); }
   return report;
 }

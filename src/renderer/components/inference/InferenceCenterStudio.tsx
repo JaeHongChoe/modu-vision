@@ -38,6 +38,7 @@ import type { RuntimeExportResult } from '../../types';
 import { selectInferenceJobId } from './selectInferenceJob';
 import { BatchInspectionPanel } from './BatchInspectionPanel';
 import { FlowPackagePanel } from './FlowPackagePanel';
+import {ModelOperationsPanel} from '../runtime/ModelOperationsPanel';
 import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
@@ -256,6 +257,7 @@ python infer.py --self-test`;
 
       <div id="whole-flow-package-panel" ref={flowPackageRef} tabIndex={-1}
         className="scroll-mt-4 rounded-lg focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400">
+        <ModelOperationsPanel />
         <FlowPackagePanel sourceFolder={sourceFolder} task={task} />
       </div>
 

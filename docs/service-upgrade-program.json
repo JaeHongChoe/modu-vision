@@ -3693,6 +3693,12 @@
      "result": "Full-graph CAS review, immutable policy/current truth and reviewed cohort package binding; managed apply/rollback model/graph/issuer and command-actor live checks, separately sealed offline recovery. 72 approval/evaluation, 61 initial service and 44 final command-authority cases pass; actual learned five-model native strict-policy refusal observed.",
      "scope": "Legacy model-only compatibility and measured precision/field acceptance remain separate; full parent stays pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
      "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    },
+    {
+     "kind": "manual-review-release-gates-owned-source-followup",
+     "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
+     "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
+     "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
     }
    ],
    "file_actions": {
@@ -4136,6 +4142,12 @@
      "kind": "task106-drift-frozen-human-feedback-model-bindings",
      "result": "backend31/renderer767, production/E2E types and actual Chrome/macOS development Electron2 pass33.0s; root readback d96aff23322c12ed65220273a67bdd912c154df399abe50e96c3746344745617",
      "scope": "Immutable adoption feedback-at-freeze, observed adopt/reject/pending rates and baseline review changes; legacy feedback unrecorded/null, REVIEW prediction delta and exact known model bindings. Controlled persisted service fixtures, no learned/device execution or truth/quality/automatic-training approval. Full parent improvement loop and final acceptance remain pending."
+    },
+    {
+     "kind": "manual-review-release-gates-owned-source-followup",
+     "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
+     "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
+     "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
     }
    ],
    "file_actions": {
@@ -4636,6 +4648,12 @@
      "result": "5098 CPU/core gates pass but browser HTTPS dependency and 35-minute time limit fail. New full-suite workflow adds dependencies with official wheel hashes, new controls, isolated workers and75-minute bound.",
      "scope": "New exact-source hosted full result must be read before promotion. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
      "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    },
+    {
+     "kind": "manual-review-release-gates-owned-source-followup",
+     "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
+     "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
+     "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
     }
    ],
    "file_actions": {
@@ -4694,7 +4712,14 @@
     "S6-11"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "manual-review-release-gates-owned-source-followup",
+     "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
+     "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
+     "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    }
+   ],
    "file_actions": {
     "build/release-hooks.cjs": "Modify",
     "scripts/release-readiness.cjs": "Modify",
@@ -5263,7 +5288,14 @@
     "S0-08"
    ],
    "status": "planned",
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "manual-review-release-gates-owned-source-followup",
+     "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
+     "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
+     "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    }
+   ],
    "file_actions": {
     "docs/release-checklist.md": "Create",
     "docs/implementation-ledger/SERVICE-UPGRADE.md": "Modify after S0-08 handoff",
