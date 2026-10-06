@@ -1,6 +1,6 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 기준 공개 소스 `1862f7ca05eb98285b3f550b4ac784adb139b034`와 기록된 후속 검증
+확인일: 2026-10-07 · 기준 공개 소스 `16395a47c7afdd1f24c0300d4b88fe40e636dc60`와 기록된 후속 검증
 
 **82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
 
@@ -26,7 +26,7 @@
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
-| S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. 설치·DB update 원자적 cutover/중단 복구·실제 publisher 신뢰 설정 필요. |
+| S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
 | S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공: CPU 2198통과·7skip, browser 162통과·1skip. 소스 해시 누락 수정과 95개 선언된 Git 소스 대조 완료. CI 출력 때문에 dirty로 기록된 GUI 162건은 clean으로 승격하지 않음. 출력 외부 경로 수정·관련 56개 통과. 수정된 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 깨끗한 4062173 소스에서 실제 Electron 개선 전체 흐름 1건·129개 artifact hash와 엄격한 GUI 기록 확보. 156개 기능의 action별 성공/오류/취소/재열기/이관 근거 원장 보완 필요. 단순 매핑이나 1건의 완주는 전체 수용 완료가 아님. |
@@ -162,3 +162,14 @@ still needs its own hosted source run. New heavy fixtures, CI downloads and the
 fresh72-hour run use an owned APFS sparse image on the external `backup` volume.
 Existing external backup files remain unchanged. Keep the external drive mounted
 while the endurance run is active; no previous elapsed time is added.
+
+## Interrupted restore follow-up
+
+See `2026-10-07-interrupted-restore-recovery.md` and its paired receipt.
+The exact recovery generation/hash/fence is durable before pointer publication.
+Actual abrupt process exit and fresh CLI retry, original preservation, copied
+session revocation and refusal to overwrite later writes pass116 affected tests.
+CI selection controls pass18 tests. This closes a component of S1-08/S6-04,
+without promoting either parent or installer/native/quality acceptance. Source
+CI preserves pending as well as running exact-source qualifications. The
+independent external72-hour run keeps its original source and duration.

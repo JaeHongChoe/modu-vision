@@ -262,6 +262,55 @@ def _sync_directories(root,*,recursive=True):
         finally:os.close(descriptor)
 
 
+def _resume_restore(root,owner,identifier,path,record,source):
+    """Replay one durable restoration intent; neither originals nor later writes are replaced."""
+    restored_id=record.get('restored_generation');target_hash=record.get('restored_target_sha256')
+    fence=record.get('restored_fence');original_fence=record.get('fence')
+    def hexadecimal(value,size):
+        return isinstance(value,str) and len(value)==size and all(c in '0123456789abcdef' for c in value)
+    if (record.get('schema_version')!=1 or record.get('migration_id')!=identifier
+            or record.get('scopes')!=owner['scopes'] or not hexadecimal(restored_id,32)
+            or restored_id==identifier or not hexadecimal(target_hash,64)
+            or type(original_fence)is not int or original_fence<1
+            or type(fence)is not int or fence!=original_fence+1):
+        raise GlobalMigrationError('Invalid owned restoration intent')
+    restored=root/'.global-generations'/restored_id;seal_path=restored/'.global-generation.json'
+    if any(p.is_symlink() for p in (restored,restored.parent,seal_path)) or not restored.is_dir():
+        raise GlobalMigrationError('Prepared restoration generation is missing or linked')
+    seal=json.loads(seal_path.read_bytes())
+    if (seal.get('schema_version')!=1 or seal.get('installation_id')!=owner['installation_id']
+            or seal.get('generation_id')!=restored_id or seal.get('sealed_sha256')!=target_hash
+            or digest(_snapshot(restored)['inventory'])!=target_hash):
+        raise GlobalMigrationError('Restoration generation integrity changed; forward recovery required')
+    backup=path.parent/'original'
+    if backup.is_symlink() or _snapshot(backup)['inventory']!=record['backup_inventory']:
+        raise GlobalMigrationError('Original backup failed integrity verification')
+    # Initial preview deliberately refuses a second activation once any
+    # generation exists. Its source hash still binds the already drained
+    # original snapshot; a new job/lease/write changes that hash.
+    if source['source_sha256']!=record['source_sha256']:
+        raise GlobalMigrationError('Normal source writes or drain changed; forward recovery required')
+    current=active_generation(root)
+    previous={'schema_version':1,'installation_id':owner['installation_id'],
+        'generation_id':identifier,'sealed_sha256':record['target_sha256'],'fence':original_fence}
+    target={'schema_version':1,'installation_id':owner['installation_id'],
+        'generation_id':restored_id,'sealed_sha256':target_hash,'fence':fence}
+    if current is None or current[1] not in (previous,target):
+        raise GlobalMigrationError('Current generation changed after restoration intent')
+    if current[1]==previous:
+        if record['status']!='restoring' or digest(_snapshot(current[0])['inventory'])!=record['target_sha256']:
+            raise GlobalMigrationError('Normal current writes or restoration state changed; forward recovery required')
+        _publish(root,owner,restored_id,seal,fence=fence)
+    else:
+        # The earlier replace may have succeeded before directory fsync failed.
+        # Confirm its durability before recording a completed restoration.
+        _sync_directories(root,recursive=False)
+    if record['status']!='restored':
+        record['status']='restored';atomic_private_json(path,record)
+        _sync_directories(path.parent,recursive=False)
+    return {'status':'restored','generation_id':restored_id,'fence':fence}
+
+
 def apply(root,*,expected_source_sha256):
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
@@ -305,6 +354,9 @@ def recover(root,identifier,*,action):
                     or previous['fence']+1!=record.get('fence')):
                 raise GlobalMigrationError('Forward journal source pointer is invalid')
             return _forward_view(root,owner,root/'.global-generations'/prior,previous)
+        if record.get('status') in {'restoring','restored'}:
+            if action!='restore':raise GlobalMigrationError('Selected migration is restoring or restored; select restore')
+            return _resume_restore(root,owner,identifier,path,record,source_view())
         if (record.get('kind')=='forward' and action=='finish' and record.get('status')=='prepared'
                 and current and current[1]==record.get('previous_pointer')):
             source=source_view()
@@ -354,9 +406,12 @@ def recover(root,identifier,*,action):
             normalize_staged(restored,owner['scopes'],_known_schemas(owner['scopes']))
             _construct(restored,owner['scopes']);_revoke(restored,owner['scopes'])
         seal=_seal(restored,owner,restored_id)
-        _publish(root,owner,restored_id,seal,fence=current[1]['fence']+1)
-        record.update(status='restored',restored_generation=restored_id);atomic_private_json(path,record)
-        return {'status':'restored','generation_id':restored_id,'fence':current[1]['fence']+1}
+        # A restart must know the exact sealed restoration before the active
+        # pointer changes. Retain staged bytes on every failure for inspection.
+        record.update(status='restoring',restored_generation=restored_id,
+            restored_target_sha256=seal['sealed_sha256'],restored_fence=current[1]['fence']+1)
+        atomic_private_json(path,record);_sync_directories(path.parent,recursive=False)
+        return _resume_restore(root,owner,identifier,path,record,source_view())
 
 
 def main(argv=None):

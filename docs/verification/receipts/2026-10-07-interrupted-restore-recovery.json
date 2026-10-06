@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "scope": "Explicit owned drained POSIX control-store restore interruption recovery; no application installer cutover",
+  "baseline_source_sha": "16395a47c7afdd1f24c0300d4b88fe40e636dc60",
+  "source_file_sha256": {
+    "backend/engine/global_migration.py": "1ee990ddcba83d7299a670df3002e51934b11c49df655832f395a6dfb560d2e3",
+    "backend/tests/test_global_restore_recovery.py": "ad8af30d87261dd4a66a0287ddc1bbc6dd6327f239c32f8e408c12e54bde3ebd",
+    ".github/workflows/ci.yml": "9cdbc50b3cefc9d703e62264ce1fb0328b44eade6dcef63d3625ca9c651ad298"
+  },
+  "software_parent_accounting": {
+    "verified": 66,
+    "pending": 16,
+    "finally_accepted": 0,
+    "windows_actual_qa_waived": 1,
+    "actionable": 15
+  },
+  "root_review_only": true,
+  "independent_review_accepted": false,
+  "quality_approved": false,
+  "physical_target_verified": false,
+  "qualification": {
+    "restore-red": {
+      "sha256": "43d500830d6d3d91820912ef5b7009274138c3838feb540b911f0dbb94eded7b",
+      "counts": {
+        "tests": 6,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 11.61
+    },
+    "restore-green": {
+      "sha256": "06f23ffcbb6dbc6dea1bfd4b728e1460dde8f1a50abe6281c18e32a68b829bac",
+      "counts": {
+        "tests": 43,
+        "failures": 8,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 33.878
+    },
+    "restore-green2": {
+      "sha256": "ea5577007305b7286546efa4d9f782bafac8c60c150739faa26596c7ee480c56",
+      "counts": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 37.482
+    },
+    "restore-durability-red": {
+      "sha256": "778edd6623c24894e97d3d32c717e70565490cbe6e40ce3246cbef088512e88e",
+      "counts": {
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 2.406
+    },
+    "restore-final": {
+      "sha256": "ee9ac6c288ef57ab5b345ffe6ac8769427ea11ddb8183248ab0277a9845cf112",
+      "counts": {
+        "tests": 116,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 75.814
+    },
+    "restore-ci-followup": {
+      "sha256": "493f141d6f32e48ff5cdf758f5a3cb3631023fa7a55f9db182e691fbb46e8fbb",
+      "counts": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "seconds": 3.435
+    }
+  },
+  "behavior": {
+    "restore_intent_before_pointer": true,
+    "exact_generation_reused": true,
+    "real_process_exit_and_fresh_cli": true,
+    "source_and_backup_preserved": true,
+    "later_writes_refused": true,
+    "copied_sessions_revoked": true,
+    "directory_sync_before_completion": true,
+    "initial_and_forward_replay": true,
+    "automatic_worker_adoption": false,
+    "application_installer_cutover": false,
+    "windows_native_power_loss_qualified": false
+  },
+  "ci": {
+    "new_recovery_tests_selected": true,
+    "preserve_running": true,
+    "preserve_pending": true,
+    "queue": "max",
+    "new_hosted_result": "pending"
+  },
+  "external_storage": {
+    "heavy_fixtures_external": true,
+    "ongoing_72h_source_changed": false,
+    "previous_elapsed_added": false
+  }
+}

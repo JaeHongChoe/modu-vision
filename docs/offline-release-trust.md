@@ -45,6 +45,14 @@ cutover with live jobs, cross-schema inverse migration or post-cutover forward
 recovery remains unqualified. After new writes, restoring an old snapshot must
 not discard those writes.
 
+For a supported owned/drained control-store restore, the global migration CLI
+records the sealed recovery generation and next fence before switching its
+pointer. If interrupted, explicitly repeat the same migration identity with
+`recover --action restore`. It reuses that recovery generation and checks its
+original backup, source and target hashes. New writes or changed authority
+refuse replay and require forward recovery. This DB replay does not install an
+application, supply publisher trust or qualify Windows power-loss recovery.
+
 No publisher identity, signed release installer, native installation receipt
 or production root is supplied by the contract fixtures. S6-04/S6-06 remain
 pending for those gates. Do not publish a signed/offline installation support

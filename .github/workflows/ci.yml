@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: source-${{ github.workflow }}-${{ github.ref }}
-  # Preserve the running exact-source qualification while the next run waits.
+  # Preserve running and pending exact-source qualifications across later pushes.
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -189,6 +190,7 @@ jobs:
           backend/tests/test_fixture_pose_json_parity.py
           backend/tests/test_service_s1_08.py
           backend/tests/test_global_migration.py
+          backend/tests/test_global_restore_recovery.py
           backend/tests/test_historical_job_binding.py
           backend/tests/test_terminal_runtime_history.py
           backend/tests/test_terminal_remote_history.py
