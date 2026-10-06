@@ -761,3 +761,9 @@ Backend62,renderer797,types/E2E types/build 통과. 실제 Chrome/development El
 Renderer803,types/E2E types/build 및 Chrome/development Electron2개 통과.46노드·52연결의 지원 그래프에서8개 공유 모델 노드의 개별 임계값, 저장 전 이름 유지, 포인터/키보드 조절, 좁은 창의 그래프 폭, 접기 상태·폭 재열기,72% 노드 탐색과 전체맞춤을 검증했다. 원본6장·저장 그래프·비활성 실행본을 별도로 읽어 확인했다.100노드는 배율 계산 단위 검증만 수행했으며 실행 지원 상한을 늘리지 않았다. root `4ae0c8b106bd8e827bfb321af8e29d248da5936e7b98cc0958f944a5d204b984`(소스7/근거62/기존 의존6개).
 
 구현 전 누락 패널/작은 배율 실패와 fixture 생성 오류·부동소수점 단언 오류를 보존했다. 최종 소스 고정 후 새 실행만 통과 집계했다. 미존재 모델 제어이므로 추론·학습·품질·GPU·독립 리뷰 완료가 아니며 브라우저409/404 배경 오류도 남아 있다. S2-08 전체 요구의 template/class mapping·draft/version 실사용과 대표 frozen 비교는 이어서 확인한다. 구현57/82,미완료25 중 Windows 제외24 활성 미완료와 부모 수용 승인0을 유지한다.
+
+## Task129 시작 도중 종료와 부분 시작 실패의 정리 (S1-09 일부)
+
+실제 Uvicorn에서 supervisor stdin이 시작 도중 닫히면 초기 detach 뒤 복구는 실행되지만 정상 shutdown을 건너뛰어 뒤쪽 정리가 누락됐다. lifespan의 시작과 yield를 finally로 감싸 복구 이후 소유 작업을 다시 detach하고 preflight·telemetry·device 정리를 수행한다. 앞 정리 단계가 실패해도 다음 정리는 시도하며 오류는 숨기지 않는다. server.run 반환/오류 때 바인딩 socket도 닫는다. 일반 학습 worker를 죽이거나 PID로 대상을 선택하지 않는다.
+
+신규9개가 구현 전 실패→수정 후 통과했으며 최종 Backend40pass/Windows 전용2skip. 실제 macOS Uvicorn 조기EOF recording control에서복구→detach→preflight→broadcast→cache,Chrome/development Electron2개에서실제백엔드기동·사용·종료포트·빈teardown을확인했다. root `7eb7c766668f37783932338283ce9f9137b87fe18c2b09a9c3916ceac1cc664b`(소스2/근거92/기존의존6개). 앱은 warning 로그이므로 조용한 로그를 cleanup 순서 증거로 쓰지 않는다. readback의 잘못된 nested log 필드 가정을 수정하고 최초 실패도 보존했다. 실제 Windows·GPU 학습·독립 리뷰·전체 S1-09 승인은 주장하지 않는다. 구현57/82,Windows 제외24 활성 미완료 유지.

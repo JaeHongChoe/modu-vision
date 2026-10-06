@@ -272,31 +272,39 @@ async def lifespan(app: FastAPI):
 @asynccontextmanager
 async def _admitted_lifespan(app: FastAPI):
     """Lifespan context manager orchestrating clean startup and shutdown sequences."""
-    # Startup Sequence
-    loop = asyncio.get_running_loop()
-    broadcaster.start(loop)
-    from backend.remote.coordinator import recover_remote_jobs
-    recover_remote_jobs(training_job_manager)
-    from backend.engine.local_training_worker import recover_local_jobs
-    recover_local_jobs(training_job_manager)
-    from backend.api.routes_dataset_imports import recover_imports_at_startup
-    recover_imports_at_startup(app)
     from backend.api.routes_workers import stop_for_shutdown as stop_worker_preflight
-    from backend.engine.worker_preflight import sweep_stale_runs
-    # Run folders of preflights an earlier app stopped mid-run (its child exited with it) are removed off the event loop.
-    threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
-    logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
-    yield
-    # Graceful Shutdown Sequence
-    logger.info("Initiating Vision AI Studio backend shutdown...")
-    # A normal quit keeps job ownership: owned workers are detached with a recorded intent and reattached on restart.
-    training_job_manager.detach_all_for_shutdown()
-    # A running worker preflight is not a job to reattach: its child is stopped through its handle and its
-    # reservation released.
-    stop_worker_preflight()
-    await broadcaster.shutdown()
-    clear_device_cache()
-    logger.info("Shutdown cleanup complete.")
+    try:
+        # Startup may partially recover workers before a failure or supervisor
+        # EOF. Cleanup must also run when the suspended lifespan is finalized
+        # without Uvicorn's normal shutdown notification.
+        loop = asyncio.get_running_loop()
+        broadcaster.start(loop)
+        from backend.remote.coordinator import recover_remote_jobs
+        recover_remote_jobs(training_job_manager)
+        from backend.engine.local_training_worker import recover_local_jobs
+        recover_local_jobs(training_job_manager)
+        from backend.api.routes_dataset_imports import recover_imports_at_startup
+        recover_imports_at_startup(app)
+        from backend.engine.worker_preflight import sweep_stale_runs
+        # Only stale preflight folders of this installation are swept.
+        threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
+        logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
+        yield
+    finally:
+        logger.info("Initiating Vision AI Studio backend shutdown...")
+        try:
+            # Detach owned jobs for reattachment; do not terminate training.
+            training_job_manager.detach_all_for_shutdown()
+        finally:
+            try:
+                # A preflight is stopped through its owned handle, not a PID.
+                stop_worker_preflight()
+            finally:
+                try:
+                    await broadcaster.shutdown()
+                finally:
+                    clear_device_cache()
+        logger.info("Shutdown cleanup complete.")
 
 
 def create_app(project_dir: Optional[str] = None, shared_auth_dir: Optional[str] = None) -> FastAPI:
@@ -543,7 +551,10 @@ def run_server():
     if os.environ.get(STOP_ON_STDIN_EOF) == "1":
         threading.Thread(target=_stop_when_stdin_closes, args=(server,), name="StopOnStdinEOF", daemon=True).start()
 
-    server.run(sockets=[sock])
+    try:
+        server.run(sockets=[sock])
+    finally:
+        sock.close()
 
 
 # The desktop supervisor keeps this process's stdin open and closes it to ask for a graceful stop (when the app itself

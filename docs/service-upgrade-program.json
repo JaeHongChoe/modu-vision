@@ -1105,7 +1105,9 @@
     "src/main/supervisor.ts",
     "backend/engine/local_training_worker.py",
     "backend/frozen_entry.py",
-    "scripts/build_backend_binary.py"
+    "scripts/build_backend_binary.py",
+    "backend/main.py",
+    "backend/tests/test_backend_lifespan_cleanup.py"
    ],
    "proposed_contract": "OwnedProcessIdentity(pid, create_time, token) / platform_launcher.start(spec)",
    "acceptance": [
@@ -1136,13 +1138,21 @@
      "result": "1791338: the eight Popen launch sites of the published code use one session_isolation() from the standard-library-only backend/engine/process_isolation.py - seven launchers changed by this commit (fleet agent, managed service, operations watcher, deadline runs, distributed training, SSH transfers, background training CLI) and the local training worker, which already used it: start_new_session on POSIX as before (identical arguments at all 8 sites), its own process group and a hidden console on Windows; GAN generation packages carry the module; an AST check fails CI when a Popen skips the helper or sets its own isolation flags (the S1-05 worker preflight child, not yet published, is outside this evidence). Independent review: freeze 1 ACCEPT WITH FIXES (P1: GAN packages lacked the module; P2: the scan missed a site dropping isolation), freeze 2 ACCEPT (20 of 21 mutants killed, the survivor a shadowed local helper)",
      "scope": "author receipt s109iso3-green on the frozen tree (e82b915 + 11 files): 23 test modules incl. the native and GAN package suites, 279 passed, 9 skipped; both CI pytest lists (Linux 409 passed, Windows list 186 passed, run on macOS); the reviewer's own run of 27 modules on the same tree: 307 passed, 9 skipped",
      "platform": "hosted Windows passed every step on 7d788dc, 6309f79, f1a1c6a, e82b915 and 03be617 (code before this change, incl. test_service_s0_06's real local worker and test_service_s1_09) and on fca3267 (run 37107498021, the first hosted run containing 1791338); the hosted runs of 1791338 itself (37107320222 Windows, 37107320252 Linux) were cancelled when fca3267 was pushed; hosted Linux still fails only the existing service-s2-04 browser test"
+    },
+    {
+     "kind": "partial-startup-shutdown-cleanup",
+     "result": "Task129 places owned cleanup in finally spanning partial startup and yielded lifespan; detach,preflight,telemetry and device cleanup are each attempted after previous failure, errors stay visible. Bound socket closes when server.run returns or raises. Real Uvicorn early supervisor stdin EOF now records cleanup after recovery rather than only the initial detach.",
+     "scope": "New9 causal failures retained then pass. Final backend40passed/2native-Windows-only skipped; actual Chrome/development Electron2pass start/use/closed ports and empty teardown. Source2/artifacts92 plus6 unchanged dependencies; root 7eb7c766668f37783932338283ce9f9137b87fe18c2b09a9c3916ceac1cc664b.",
+     "platform": "macOS real Uvicorn with recording recovery controls, no training or GPU submission; native Windows tests waived, independent review/handoff/full S1-09 remain pending. App logs run at warning level; quiet logs do not prove shutdown cleanup order."
     }
    ],
    "file_actions": {
     "src/main/supervisor.ts": "Modify",
     "backend/engine/local_training_worker.py": "Modify",
     "backend/frozen_entry.py": "Create",
-    "scripts/build_backend_binary.py": "Modify"
+    "scripts/build_backend_binary.py": "Modify",
+    "backend/main.py": "Modify",
+    "backend/tests/test_backend_lifespan_cleanup.py": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
@@ -1160,7 +1170,6 @@
    "remaining": [
     "frozen (PyInstaller) worker entrypoint on native Windows (backend/frozen_entry.py, scripts/build_backend_binary.py), a standard-user install with restricted permissions, Windows 11 x64 hardware",
     "DataLoader child processes of a worker are not exercised by a test (the basic trainer starts none)",
-    "a stdin close during startup detaches before recovery runs and skips the shutdown sequence",
     "fails safe (unknown, reservation kept): a worker started less than 300 s before a reboot; a reused number whose short-lived holder already exited; a briefly unopenable child fails a cancel at once instead of retrying",
     "untested: the Electron exit hook, the EPIPE handler, startBackend using backendSpawnOptions()",
     "the other os.replace sites (project files, receipts, best_model.pt) are not covered by the retry; they are not read concurrently many times a second",
