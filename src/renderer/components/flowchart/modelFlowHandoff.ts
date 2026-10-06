@@ -16,7 +16,7 @@ export function readModelFlowHandoff(storage:StorageLike,state:HandoffScope):Mod
 export function clearModelFlowHandoff(storage:StorageLike,state:HandoffScope){storage.removeItem(key(taskHandoffScope(state)));}
 export function compatibleModelNode(node:FlowNode,model:Pick<FlowModelCatalogItem,'task'|'capabilities'>){
  if(model.capabilities?.role==='preprocess')return node.data.node_type==='preprocess'&&node.data.params?.operation===model.capabilities.operation;
- if(model.task==='detection'&&node.data.node_type==='detection_crop')return true;
+ if(node.data.node_type==='detection_crop'&&['detection','rotated_detection'].includes(model.task))return (node.data.task||'detection')===model.task;
  return node.data.node_type==='inspection'&&node.data.task===model.task;
 }
 export function modelScoreBinding(model:FlowModelCatalogItem):Partial<FlowNodeData>{

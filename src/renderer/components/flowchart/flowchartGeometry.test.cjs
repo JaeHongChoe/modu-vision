@@ -24,6 +24,14 @@ test('learned rotation and calibrated geometry are executable editor nodes',()=>
   assert.equal(graph.validateFlowchartGraph(pipeline()),null);
   assert.deepEqual(startup.getFlowchartModelReferences(pipeline()),[{job_id:'rotation-job',task:'rotation'}]);
 });
+test('oriented detector references retain their family and refuse an axis detector automatic binding',()=>{
+  const p={nodes:[node('crop','detection_crop',{task:'rotated_detection',model_job_id:'a'.repeat(32)})],edges:[]};
+  assert.deepEqual(startup.getFlowchartModelReferences(p),[{job_id:'a'.repeat(32),task:'rotated_detection'}]);
+  delete p.nodes[0].data.model_job_id;
+  assert.equal(startup.singleModelAutoBinding(p,'detection','axis-detector'),null);
+  delete p.nodes[0].data.task;
+  assert.equal(startup.getFlowchartModelTask(p.nodes[0]),'detection');
+});
 test('measurement validation rejects malformed points, missing curve controls and nonfinite calibration',()=>{
   for(const patch of [{paths:[{id:'a',points:[[0,0],[NaN,1]]}]},{paths:[{id:'a',interpolation:'bezier',points:[[0,0],[1,1]]}]},{calibration:{unit:'mm',mm_per_pixel_x:Infinity,mm_per_pixel_y:1,source_size:[32,32]}}]){
     const p=pipeline();Object.assign(p.nodes[4].data.params,patch);

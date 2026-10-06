@@ -3,10 +3,11 @@ import type {FlowModelCatalogItem} from '../../services/api';
 import {modelScoreBinding} from './modelFlowHandoff';
 import {validateFlowchartGraph} from './flowchartGraph';
 
-export type FlowRecipeKind = 'single' | 'detector' | 'fixed' | 'rotation' | 'multi';
+export type FlowRecipeKind = 'single' | 'detector' | 'obb' | 'fixed' | 'rotation' | 'multi';
 export const FLOW_RECIPES: Array<{id:FlowRecipeKind; title:string; description:string}> = [
   {id:'single',title:'단일 모델 검사',description:'원본 이미지 → 모델 → 최종 판정'},
   {id:'detector',title:'검출 ROI 검사',description:'검출 모델의 ROI → 검사 모델 → 최종 판정'},
+  {id:'obb',title:'회전 ROI 정렬 검사',description:'회전 검출 다각형 → 맞춤 정렬 → 검사 모델'},
   {id:'fixed',title:'고정 ROI 검사',description:'원본 픽셀 좌표 ROI → 검사 모델 → 최종 판정'},
   {id:'rotation',title:'학습 회전 → OCR·검사',description:'학습된 회전 보정 → OCR 또는 검사 모델'},
   {id:'multi',title:'전처리 → 다중 모델 → 집계',description:'영상 개선 → 두 모델의 독립 판정 → 하나라도 NG'},
@@ -21,7 +22,7 @@ export function recipeModelNodes(pipeline:FlowchartPipeline) {
 
 /** The tasks this recipe node can run, independent of which models exist. */
 export function recipeNodeTasks(node:FlowNode):FlowModelTask[] {
-  if(node.data.node_type==='detection_crop')return ['detection'];
+  if(node.data.node_type==='detection_crop')return ['detection','rotated_detection'];
   if(node.data.node_type==='preprocess')return ['rotation'];
   return INSPECTION_TASKS;
 }
@@ -56,6 +57,10 @@ export function createFlowRecipe(kind:FlowRecipeKind, projectTask:FlowModelTask)
   const task=recipeInspectionTask(projectTask);
   if(kind==='fixed'){const id=node('node_fixed_roi',{label:'고정 ROI',node_type:'fixed_roi',params:{roi_bbox:[0,0,512,512]}});edge(upstream,id,'image');upstream=id;}
   if(kind==='detector'){const id=node('node_crop',{label:'관심 영역 검출',node_type:'detection_crop',task:'detection',crop_padding:12,params:{}});edge(upstream,id,'image');upstream=id;}
+  if(kind==='obb'){
+    const id=node('node_crop',{label:'회전 영역 검출',node_type:'detection_crop',task:'rotated_detection',crop_padding:0,params:{}});edge(upstream,id,'image');
+    const aligned=node('node_align',{label:'회전 ROI 맞춤 정렬',node_type:'preprocess',params:{operation:'fitted_roi'}});edge(id,aligned,'roi');upstream=aligned;
+  }
   if(kind==='rotation'){const id=node('node_rotate',{label:'학습 회전 보정',node_type:'preprocess',task:'rotation',params:{operation:'learned_rotation'}});edge(upstream,id,'image');upstream=id;}
   if(kind==='multi'){const id=node('node_preprocess',{label:'영상 개선',node_type:'preprocess',params:{operation:'improve',contrast:1.1,brightness:0}});edge(upstream,id,'image');upstream=id;}
   const roles=kind==='multi'?['node_inspect','node_inspect_2']:['node_inspect'];

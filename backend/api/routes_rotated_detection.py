@@ -328,6 +328,7 @@ def _run_job(job: _LiveJob, options: TrainRequest) -> None:
                     result.update(checkpoint_sha256=checksum,model_sha256=checksum)
                     def publish():
                         (job.output_dir/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
+                        job.epochs_completed = result.get('epochs_completed', 0)
                         _set_job(job, "completed", result=result)
                     if job.admission is not None:job.admission.complete(publish)
                     else:publish()

@@ -373,7 +373,10 @@ export interface RotatedEvaluation {
   direction_matched_count?: number;
   sample_count: number;
   mean_oriented_iou: number;
-  mean_angle_error_deg: number;
+  mean_angle_error_deg: number | null;
+  mAP_50?: number | null;
+  mAP_50_95?: number | null;
+  matched_objects?: number;
   dataset_sha256: string;
   model_sha256: string;
 }

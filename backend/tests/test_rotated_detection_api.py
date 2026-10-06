@@ -96,6 +96,7 @@ def test_rotated_api_trains_evaluates_predicts_and_scopes_project(tmp_path: Path
     assert started.json()["status"] in ("queued", "running", "completed")
     terminal = _await_terminal(client, job_id)
     assert terminal["status"] == "completed", terminal
+    assert terminal["epochs_completed"] == terminal["result"]["epochs_completed"] == 1
     assert terminal["training_provenance"]["dataset_version_id"]
     from backend.engine.training_provenance import validate_training_binding
     validate_training_binding(terminal["training_provenance"])

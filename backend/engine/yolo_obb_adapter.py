@@ -145,6 +145,9 @@ def _train_yolo_verified(manifest,output,recipe,local,selected,initial_digest,*,
         device=str(device),project=str(output),name='ultralytics_run',exist_ok=True,workers=0,
         pretrained=False,plots=False,amp=False)
     cancellation(None)
+    completed = int(model.trainer.epoch) + 1
+    if not 1 <= completed <= epochs:
+        raise ValueError('YOLO OBB returned an invalid completed epoch count')
     if _digest(local)!=initial_digest:raise ValueError('The selected local model changed during training')
     best=Path(model.trainer.best)
     if not best.is_file(): raise ValueError('YOLO OBB training did not produce a best checkpoint')
@@ -164,7 +167,7 @@ def _train_yolo_verified(manifest,output,recipe,local,selected,initial_digest,*,
         'native_model_sha256':payload['native_model_sha256'],
         'license':{'runtime':'AGPL-3.0 or separately obtained Enterprise terms','weights':'caller supplied local model; provenance requires review',
                    'distribution_status':'pending_review','source_url':'https://www.ultralytics.com/license'},
-        'validation':_metrics(result),'epochs_completed':epochs,'training_samples':manifest.provenance['split_counts']['train']}
+        'validation':_metrics(result),'epochs_completed':completed,'training_samples':manifest.provenance['split_counts']['train']}
     (output/'model_meta.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding='utf-8')
     _register_native_trust(payload['native_model_sha256'])
     return metadata
@@ -272,8 +275,11 @@ def evaluate_yolo(checkpoint,manifest,*,split,device,allow_dataset_revision=Fals
             runtime_metrics=_metrics(model.val(data=str(data),split=split,device=str(device),imgsz=meta['image_size'],workers=0,plots=False,verbose=False,project=temporary,name='validation'))
     tp=sum(s['object_evidence']['counts']['tp'] for s in samples);fp=sum(s['object_evidence']['counts']['fp'] for s in samples);fn=sum(s['object_evidence']['counts']['fn'] for s in samples)
     matched=[m['iou'] for s in samples for m in s['object_evidence']['matches']]
+    angles=[m['angle_error_deg'] for s in samples for m in s['object_evidence']['matches']]
     return {'task':'rotated_detection','adapter':meta['adapter'],'split':split,'sample_count':len(samples),
         'ground_truth_objects':tp+fn,'predicted_objects':tp+fp,'precision':tp/(tp+fp) if tp+fp else 0.,'recall':tp/(tp+fn) if tp+fn else 0.,
         'mean_oriented_iou':sum(matched)/len(matched) if matched else 0.,'samples':samples,
+        'mean_angle_error_deg':sum(angles)/len(angles) if angles else None,'matched_objects':len(matched),
+        'angle_convention':'clockwise_degrees_axial_180','direction_supported':False,
         'dataset_sha256':manifest.provenance['dataset_sha256'],'training_dataset_sha256':meta['dataset_sha256'],
         'dataset_revision_changed':revised,'model_sha256':meta['checkpoint_sha256'],'runtime_metrics':runtime_metrics,**object_average_precision(samples)}

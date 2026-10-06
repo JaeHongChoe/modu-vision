@@ -1456,13 +1456,13 @@ export const FlowchartStudio: React.FC = () => {
                       </label>
                     )}
                     <label className="block text-[#94A3B8]">완료된 학습 모델
-                      <select value={selectedNode.data.model_job_id || ''}
+                      <select aria-label="완료된 학습 모델" value={selectedNode.data.model_job_id || ''}
                         onChange={(event) => {const model=modelCatalog.find(row=>row.job_id===event.target.value);updateNodeData(selectedNode.id,model?modelScoreBinding(model):{model_job_id:undefined,score_spec:undefined,threshold:.5});}}
                         className="mt-1 w-full rounded border border-[#2B3547] bg-[#1A212E] px-2.5 py-1.5 text-[#F8FAFC]">
                         <option value="">모델 선택</option>
                         {selectedNode.data.model_job_id && !modelCatalog.some((model) => model.job_id === selectedNode.data.model_job_id) &&
                           <option value={selectedNode.data.model_job_id}>현재 지정된 모델 · {selectedNode.data.model_job_id}</option>}
-                        {modelCatalog.filter((model) => model.task === (selectedNode.data.node_type === 'detection_crop' ? 'detection' : selectedNode.data.task)).map((model) =>
+                        {modelCatalog.filter((model) => model.task === (selectedNode.data.task || (selectedNode.data.node_type === 'detection_crop' ? 'detection' : undefined))).map((model) =>
                           <option key={model.job_id} value={model.job_id}>{model.label}{model.threshold_settings?.optimal_threshold!==undefined?` · τ ${model.threshold_settings.optimal_threshold.toFixed(3)}`:''}{model.training_labelset_id?` · 라벨 ${model.training_labelset_id}`:''}{model.parent_job_id?' · 이어 학습':''}</option>)}
                       </select>
                     </label>

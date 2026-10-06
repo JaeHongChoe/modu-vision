@@ -89,7 +89,6 @@ export const RotatedDetectionPanel: React.FC = () => {
       try {
         const status = await controlModelTraining<RotatedJob>(job,'status',()=>specializedApi.rotated.job(job.job_id));
         if (!active || !sameProject()) return;
-        setJob(status);
         if (status.status === 'completed') {
           const refreshed = await specializedApi.rotated.models();
           if (!active || !sameProject()) return;
@@ -98,6 +97,8 @@ export const RotatedDetectionPanel: React.FC = () => {
         } else if (status.status === 'aborted') {
           setNotice('회전 박스 학습을 취소했습니다. 후보 모델은 등록되지 않았습니다.');
         }  // a failure and its next action are shown by the job's progress view
+        // Publish the catalog before the terminal status tears down this poll.
+        setJob(status);
       } catch (cause) {
         if (active && sameProject()) setError(errorText(cause));
       }
@@ -226,7 +227,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         <div className="text-slate-400">현재 프로젝트 원본 폴더</div>
         <div className="mt-1 break-all font-mono text-slate-200">{projectSource || '1단계에서 원본 이미지 폴더를 먼저 선택하세요.'}</div>
       </div>
-      {datasets.length>0&&<label>프로젝트에 저장된 회전 박스 정답<select value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(null);setSplitCounts(null);}} className={programInput}>{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
+      {datasets.length>0&&<label>프로젝트에 저장된 회전 박스 정답<select aria-label="프로젝트에 저장된 회전 박스 정답" value={datasetPath} onChange={event=>{setDatasetPath(event.target.value);setSampleCount(null);setSplitCounts(null);}} className={programInput}>{datasets.map((row,index)=><option key={row.dataset_path} value={row.dataset_path}>정답 {index+1} · {row.sample_count}장</option>)}</select></label>}
       <RotatedBoxFitting source={projectSource} scope={`${projectDir}/${projectSource}/${labelsetId}`} onAppend={row=>{setRowsText(old=>old?`${old}\n${row}`:row);setSampleCount(null);setSplitCounts(null);}}/>
       <label className="block text-slate-300">정답 표 · 이미지 상대 경로 ↹ 라벨 ↹ cx,cy,너비,높이,각도 ↹ train/val/test ↹ 객체 방향(선택)
         <textarea value={rowsText} onChange={(event) => { setRowsText(event.target.value); setSampleCount(null); setSplitCounts(null); }} rows={5}
@@ -252,7 +253,7 @@ export const RotatedDetectionPanel: React.FC = () => {
         <button type="button" onClick={() => void startTraining()} disabled={!sampleCount || !!runtime.error || !!busy || isActive || (adapter==='ultralytics_yolo_obb'&&!trustNativeWeights)}
           className="rounded bg-amber-700 px-3 py-2 font-semibold text-white hover:bg-amber-600 disabled:opacity-40">후보 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
-          <select value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}
+          <select aria-label="완료 후보 모델" value={modelId} onChange={(event) => { setModelId(event.target.value);const path=models.find(row=>row.job_id===event.target.value)?.dataset_path;if(path)setDatasetPath(path);setEvaluation(null); setPrediction(null); }}
             className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
             {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id.slice(0, 12)} · {(model as RotatedModelSummary & {adapter?:string}).adapter==='ultralytics_yolo_obb'?'YOLO OBB · 라이선스 검토 대기':`검증 IoU ${((model.validation?.mean_oriented_iou||0)*100).toFixed(1)}%`}</option>)}
@@ -274,7 +275,8 @@ export const RotatedDetectionPanel: React.FC = () => {
       {error && <p role="alert" className="rounded border border-rose-700 bg-rose-950/30 p-2 text-rose-200">{error}</p>}
       {notice && <p role="status" className="text-emerald-300">{notice}</p>}
       {evaluation && <div className="rounded border border-[#344255] bg-[#0E1722] p-3">
-        시험 {evaluation.sample_count}장 · 평균 회전 IoU {(evaluation.mean_oriented_iou * 100).toFixed(1)}% · 평균 축 각도 오차 {evaluation.mean_angle_error_deg.toFixed(1)}°{evaluation.mean_direction_error_deg!==undefined&&<span> · 방향 오차 {evaluation.mean_direction_error_deg===null?'정합 객체 없음':`${evaluation.mean_direction_error_deg.toFixed(1)}°`}</span>}
+        시험 {evaluation.sample_count}장 · 평균 회전 IoU {(evaluation.mean_oriented_iou * 100).toFixed(1)}% · 평균 축 각도 오차 {evaluation.mean_angle_error_deg==null?'정합 객체 없음':`${evaluation.mean_angle_error_deg.toFixed(1)}°`}{evaluation.mean_direction_error_deg!==undefined&&<span> · 방향 오차 {evaluation.mean_direction_error_deg===null?'정합 객체 없음':`${evaluation.mean_direction_error_deg.toFixed(1)}°`}</span>}
+        {evaluation.mAP_50!==undefined&&<p className="mt-1">회전 box mAP@50 {evaluation.mAP_50===null?'정답 없음':`${(evaluation.mAP_50*100).toFixed(1)}%`} · mAP@50:95 {evaluation.mAP_50_95==null?'정답 없음':`${(evaluation.mAP_50_95*100).toFixed(1)}%`} · 정합 객체 {evaluation.matched_objects??0}개</p>}
         <p className="mt-1 text-slate-500">시험 결과는 후보 품질 확인 자료입니다. 현장 승인이나 5단계 플로우 적용을 뜻하지 않습니다.</p>
       </div>}
       {prediction && <div className="grid gap-3 rounded border border-[#344255] bg-[#0E1722] p-3 md:grid-cols-[minmax(0,480px)_1fr]">

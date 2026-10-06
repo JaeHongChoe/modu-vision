@@ -24,7 +24,7 @@ interface FlowchartStartupOptions {
 
 /** Identify model-bearing nodes, including nodes whose model is not bound yet. */
 export function getFlowchartModelTask(node: FlowNode): FlowModelTask | null {
-  if (node.data.node_type === 'detection_crop') return 'detection';
+  if (node.data.node_type === 'detection_crop') return node.data.task === 'rotated_detection' ? 'rotated_detection' : 'detection';
   if (node.data.node_type === 'preprocess' && node.data.params?.operation === 'enhancement') return 'enhancement';
   if (node.data.node_type === 'preprocess' && node.data.params?.operation === 'learned_rotation') return 'rotation';
   if (node.data.node_type !== 'inspection') return null;
@@ -54,7 +54,7 @@ export function singleModelAutoBinding(
 ): { nodeId: string; modelJobId: string } | null {
   if (task === 'detection') {
     const detector = pipeline.nodes.filter((node) => node.data.node_type === 'detection_crop');
-    if (detector.length !== 1 || pipeline.nodes.some((node) => node.data.node_type === 'inspection') || detector[0].data.model_job_id) return null;
+    if (detector.length !== 1 || getFlowchartModelTask(detector[0]) !== 'detection' || pipeline.nodes.some((node) => node.data.node_type === 'inspection') || detector[0].data.model_job_id) return null;
     return { nodeId: detector[0].id, modelJobId: verifiedJobId };
   }
   if (pipeline.nodes.some((node) => node.data.node_type === 'detection_crop')) return null;

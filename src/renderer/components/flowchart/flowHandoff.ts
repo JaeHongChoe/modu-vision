@@ -24,7 +24,7 @@ export function flowRecipeLabel(
     ocr: '문자 인식', rotated_detection: '회전 검출', enhancement: '영상 개선', rotation: '회전 보정', classification: '분류', detection: '검출', segmentation: '분할', anomaly: '이상 탐지',
   };
   const tasks = [...new Set(pipeline.nodes.flatMap((node) => {
-    if (node.data.node_type === 'detection_crop') return ['detection'];
+    if (node.data.node_type === 'detection_crop') return [node.data.task || 'detection'];
     if (node.data.node_type === 'inspection' && node.data.task) return [node.data.task];
     return [];
   }))];
