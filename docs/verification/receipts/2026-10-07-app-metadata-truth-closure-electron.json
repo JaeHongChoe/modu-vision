@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+  "source_dirty": false,
+  "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+  "test_source_sha256": "f9cb9d6369c1cf564fe4dc3be1ec0651c0e442f4b49a094b3fd6306d99f91a36",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "69d5cf2e65eaede41834087748f7eb051b197d628990350f13e611e4e810bd11",
+  "harness_sha256": "4979ff9baea5ef38f6277ace705f348e186f5f6ffa26b20c3e31e5dc9d88ac53",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -437,19 +437,147 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 라벨 복제",
+      "expected": "Create and activate a named label set independently of the default.",
+      "observed": "Actual native Second review creation activated a new labelset ID and retained it after reload; original default preferences stayed intact.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 라벨 복제",
+      "expected": "Create and activate a named label set independently of the default.",
+      "observed": "Actual native Second review creation activated a new labelset ID and retained it after reload; original default preferences stayed intact.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 라벨 복제",
+      "expected": "Create and activate a named label set independently of the default.",
+      "observed": "Actual native Second review creation activated a new labelset ID and retained it after reload; original default preferences stayed intact.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 라벨 복제",
+      "expected": "Create and activate a named label set independently of the default.",
+      "observed": "Actual native Second review creation activated a new labelset ID and retained it after reload; original default preferences stayed intact.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -467,13 +595,109 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "태그 색상 저장",
+      "expected": "Save image-associated tag color without editing image bytes.",
+      "observed": "Actual native inspection-ready tag saved with color#24a7cb; metadata tag association and project preference survived reload. Individual image swatch CSS was not asserted.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "태그 색상 저장",
+      "expected": "Save image-associated tag color without editing image bytes.",
+      "observed": "Actual native inspection-ready tag saved with color#24a7cb; metadata tag association and project preference survived reload. Individual image swatch CSS was not asserted.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "태그 색상 저장",
+      "expected": "Save image-associated tag color without editing image bytes.",
+      "observed": "Actual native inspection-ready tag saved with color#24a7cb; metadata tag association and project preference survived reload. Individual image swatch CSS was not asserted.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
@@ -497,19 +721,147 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "라벨 세트 플래그 저장",
+      "expected": "Default and named-labelset flags remain distinct and reopen.",
+      "observed": "Actual native baseline/default and second-pass/named flags persisted independently; named set and flag reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "라벨 세트 플래그 저장",
+      "expected": "Default and named-labelset flags remain distinct and reopen.",
+      "observed": "Actual native baseline/default and second-pass/named flags persisted independently; named set and flag reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "라벨 세트 플래그 저장",
+      "expected": "Default and named-labelset flags remain distinct and reopen.",
+      "observed": "Actual native baseline/default and second-pass/named flags persisted independently; named set and flag reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-03",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "라벨 세트 플래그 저장",
+      "expected": "Default and named-labelset flags remain distinct and reopen.",
+      "observed": "Actual native baseline/default and second-pass/named flags persisted independently; named set and flag reopened.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -617,7 +969,39 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "클래스별 이미지 ng",
+      "expected": "Display active-labelset class count and request the matching gallery filter.",
+      "observed": "Actual native panel displayed total2 and class statistic button triggered class_name=ng image request; backend statistic bound ng1 to current named labelset. Labeled-state and all-split buttons remain untested.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
     "state": "pending"
@@ -629,7 +1013,39 @@
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-07",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "클래스별 이미지 ng",
+      "expected": "Display active-labelset class count and request the matching gallery filter.",
+      "observed": "Actual native panel displayed total2 and class statistic button triggered class_name=ng image request; backend statistic bound ng1 to current named labelset. Labeled-state and all-split buttons remain untested.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/metadata-truth-closure.spec.ts::native review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "receipt": "2026-10-07-app-metadata-truth-closure-electron.json",
+      "receipt_sha256": "d67ed8c1a20137ab04d454f1124b1f30557ce7f0b6f13ccd5cdd94ddb6491bcf",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ad981482bab5e27ef78ec55946f4b01fc584d7bce6fad1c67e058b861c50431f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "5174bd4619b3e194e5c8e6d89a1d45363851905058e8061bc6db39c6641b6c99"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "99a46cde82e050f2bf2b85c4983b1a0ec7c98f14aad8eb210b8ee9ee07146fbd"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "0b6fe373258b61944b108c34f99f9eaef69cfa4bf0bc913f02e9b5448bd88966"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -4783,19 +5199,371 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "mask 폴더 선택",
+      "expected": "Use a controlled selected owned mask directory.",
+      "observed": "Actual native button displayed owned folder via controlled dialog response; human picker and cancel remain pending.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "mask 미리보기",
+      "expected": "Preview two nested images, class IDs/names/colors and mask shapes.",
+      "observed": "Native preview showed both part.png paths and class31 Void even when unused; exact source sizes and hashes bound the incoming masks.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "검토한 mask 라벨 적용",
+      "expected": "Refuse changed preview and conflicting merged classes; preserve rows and backup.",
+      "observed": "Native changed preview refused409; mask and COCO merge class7/name conflicts refused422 without new versions or edits. Reviewed replace preserved class IDs7/23/31 and raster holes, created backup, and reopened both images.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "원본 이미지 함께 내보내기",
+      "expected": "Export options determine whether originals are included.",
+      "observed": "Actual native checkbox produced mask-only and original-included downloads; both carried explicit source mapping and exact class palette/mask bytes.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     },
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "pixel mask 내보내기",
+      "expected": "Actual downloaded pixels preserve holes and source identity through reimport.",
+      "observed": "Native two downloads matched expected ZIP identities; no-original bundle refused without fallback source and accepted with explicit original mapping, then exact raster holes/classes reopened. Source bytes stayed unchanged.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "검토한 mask 라벨 적용",
+      "expected": "Refuse changed preview and conflicting merged classes; preserve rows and backup.",
+      "observed": "Native changed preview refused409; mask and COCO merge class7/name conflicts refused422 without new versions or edits. Reviewed replace preserved class IDs7/23/31 and raster holes, created backup, and reopened both images.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "검토한 mask 라벨 적용",
+      "expected": "Refuse changed preview and conflicting merged classes; preserve rows and backup.",
+      "observed": "Native changed preview refused409; mask and COCO merge class7/name conflicts refused422 without new versions or edits. Reviewed replace preserved class IDs7/23/31 and raster holes, created backup, and reopened both images.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "검토한 mask 라벨 적용",
+      "expected": "Refuse changed preview and conflicting merged classes; preserve rows and backup.",
+      "observed": "Native changed preview refused409; mask and COCO merge class7/name conflicts refused422 without new versions or edits. Reviewed replace preserved class IDs7/23/31 and raster holes, created backup, and reopened both images.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-05",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "검토한 mask 라벨 적용",
+      "expected": "Refuse changed preview and conflicting merged classes; preserve rows and backup.",
+      "observed": "Native changed preview refused409; mask and COCO merge class7/name conflicts refused422 without new versions or edits. Reviewed replace preserved class IDs7/23/31 and raster holes, created backup, and reopened both images.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/pixel-mask-roundtrip.spec.ts::native pixel-mask bundles retain holes palette and exact image identities",
+      "receipt": "2026-10-07-app-pixel-mask-roundtrip-electron.json",
+      "receipt_sha256": "23ab4a6fb09c72641eb12d902afb6e614d5e10e62da5d2cb31927dc0f10105b8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "121b2cf5b1d60203d3c72352ae119089919e352ab4c52a79005ac57090126c4c"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "3d5532367620e85353f29ae4f86a56116f2432ec36157572529f6309d9edd77d"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "95175af8dabaee7039cb6fc98c08c26b8718414682b25ef1e9e5357168a656d5"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "c4f026e3b7f52afb80c70e2cb7437b2aea902926409b3f992609c23212fb9318"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "1ab1c673639acba1d66c522a112595db9d34ab149a96aaf9cb9994af4be8aeae"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -5023,19 +5791,179 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+      "expected": "Open the selected exact completed comparison without new submission.",
+      "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+      "expected": "Open the selected exact completed comparison without new submission.",
+      "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+      "expected": "Open the selected exact completed comparison without new submission.",
+      "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+      "expected": "Open the selected exact completed comparison without new submission.",
+      "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -5933,19 +6861,331 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 항목 열기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     },
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "원래 평가·비교로 돌아가기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 항목 열기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     },
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "원래 평가·비교로 돌아가기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 항목 열기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     },
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "원래 평가·비교로 돌아가기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "현재 항목 열기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     },
+     {
+      "task": "S3-09",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "kind": "click",
+      "action": "원래 평가·비교로 돌아가기",
+      "expected": "Return to the saved original report and image without rewriting historic results.",
+      "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+       },
+       {
+        "id": "screenshot-5",
+        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"

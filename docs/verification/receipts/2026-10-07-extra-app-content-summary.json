@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_extra_app_content_progress",
+  "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+  "gui": {
+    "passed": 8,
+    "browser": 5,
+    "macos_electron": 3,
+    "skipped": 0,
+    "retries": 0,
+    "screenshots": 38,
+    "report_sha256": "69d5cf2e65eaede41834087748f7eb051b197d628990350f13e611e4e810bd11"
+  },
+  "pixels": {
+    "kind": "actual_saved_mask_pixel_readback",
+    "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+    "observations": [
+      {
+        "mode": "browser",
+        "stage": "imported",
+        "actual_sha256": "3bc6f0123e3f5dd8b5378916e66474aa62c347cb46000864cc33c5f9f7c2b91d",
+        "reference_sha256": "5515e7a0b80005eb3fb66099fb32bdfaf289b4a40505b8370a383cb06c6b7507",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "browser",
+        "stage": "imported",
+        "actual_sha256": "663b20936da15817b285c677954b10bdcda76634084580fcd2419a47f69a0625",
+        "reference_sha256": "8668d6c327f94dae0d42afb88a7f55e36f012f955a0901700ab8cbd0a1058194",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "browser",
+        "stage": "roundtrip",
+        "actual_sha256": "3bc6f0123e3f5dd8b5378916e66474aa62c347cb46000864cc33c5f9f7c2b91d",
+        "reference_sha256": "5515e7a0b80005eb3fb66099fb32bdfaf289b4a40505b8370a383cb06c6b7507",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "browser",
+        "stage": "roundtrip",
+        "actual_sha256": "663b20936da15817b285c677954b10bdcda76634084580fcd2419a47f69a0625",
+        "reference_sha256": "8668d6c327f94dae0d42afb88a7f55e36f012f955a0901700ab8cbd0a1058194",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "electron",
+        "stage": "imported",
+        "actual_sha256": "3bc6f0123e3f5dd8b5378916e66474aa62c347cb46000864cc33c5f9f7c2b91d",
+        "reference_sha256": "5515e7a0b80005eb3fb66099fb32bdfaf289b4a40505b8370a383cb06c6b7507",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "electron",
+        "stage": "imported",
+        "actual_sha256": "663b20936da15817b285c677954b10bdcda76634084580fcd2419a47f69a0625",
+        "reference_sha256": "8668d6c327f94dae0d42afb88a7f55e36f012f955a0901700ab8cbd0a1058194",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "electron",
+        "stage": "roundtrip",
+        "actual_sha256": "3bc6f0123e3f5dd8b5378916e66474aa62c347cb46000864cc33c5f9f7c2b91d",
+        "reference_sha256": "5515e7a0b80005eb3fb66099fb32bdfaf289b4a40505b8370a383cb06c6b7507",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      },
+      {
+        "mode": "electron",
+        "stage": "roundtrip",
+        "actual_sha256": "663b20936da15817b285c677954b10bdcda76634084580fcd2419a47f69a0625",
+        "reference_sha256": "8668d6c327f94dae0d42afb88a7f55e36f012f955a0901700ab8cbd0a1058194",
+        "pixels_equal": true,
+        "shape": [
+          256,
+          256
+        ]
+      }
+    ],
+    "comparisons": 8,
+    "human_annotation_quality_approved": false
+  },
+  "actions": {
+    "actions": 71,
+    "verified_scenarios": 144,
+    "pending_scenarios": 353,
+    "curated_features": 18,
+    "native_dimensions": 78
+  },
+  "parent_implementation": {
+    "verified": 66,
+    "pending": 16,
+    "windows_qa_waived": 1,
+    "actionable": 15
+  },
+  "final_accepted": 0,
+  "hosted_ci_observed_older_source": {
+    "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+    "backend_passed": 2283,
+    "backend_skipped": 7,
+    "browser_passed": 162,
+    "browser_skipped": 1,
+    "scope": "retained job logs; individual CPU skip reasons and authentic-weight exclusions require artifact review; this is an older source, not the latest delta"
+  },
+  "boundaries": [
+    "Synthetic fixture truth and controlled dialog response",
+    "Queue current/open/origin only; next/skip cursor controls were not executed",
+    "Actual learned model training was not performed in comparison fixture",
+    "No human process quality, physical devices, signing or independent release acceptance"
+  ],
+  "binding_tests": {
+    "passed": 133,
+    "failed": 0,
+    "skipped": 0,
+    "junit_sha256": "762c2a174eb49ac13fd0c71c3722a0c8627a4ef4929c5c006c15bca1620f9081"
+  }
+}

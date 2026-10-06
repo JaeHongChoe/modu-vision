@@ -5831,7 +5831,8 @@
     "backend/engine/dataset_metadata.py",
     "backend/engine/model_catalog.py",
     "backend/engine/project_labelsets.py",
-    "src/renderer/components/dataset/DatasetWorkflowPanel.tsx"
+    "src/renderer/components/dataset/DatasetWorkflowPanel.tsx",
+    "src/renderer/components/labeling/LabelSetBar.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -9190,7 +9191,9 @@
     "src/renderer/components/wizard/ArtifactRetentionPanel.tsx",
     "src/renderer/components/common/ImagePickerModal.tsx",
     "src/renderer/components/labeling/LabelingToolbar.tsx",
-    "src/renderer/components/labeling/AnnotationList.tsx"
+    "src/renderer/components/labeling/AnnotationList.tsx",
+    "src/renderer/components/common/EvidenceImageViewer.tsx",
+    "src/renderer/components/labeling/EvidenceEditReturn.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",

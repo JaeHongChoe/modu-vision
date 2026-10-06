@@ -35,7 +35,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
 | S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 1352bff hosted 전체 job과 관측 step은 success로 완료. 06979c9 실행 중/0f3be05 pending이며 새 delta의 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 11개 기능의 action55개에106개 실제 시나리오 근거,279개 pending 시나리오 명시. native 기능별 근거52곳 연결. action 추가 시 미실행 시나리오도 모두 기록한다. 선언795개는 실행 근거로 세지 않음. 나머지145개 기능 및 완전한 action 수용 검증 필요. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 18개 기능의 action71개에144개 실제 시나리오 근거,353개 pending 시나리오 명시. native 기능별 근거78곳 연결. action 추가 시 미실행 시나리오도 모두 기록한다. 선언795개는 실행 근거로 세지 않음. 나머지138개 기능 및 완전한 action 수용 검증 필요. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
@@ -215,3 +215,9 @@ independent/human/physical/release acceptance.
 깨끗한5cfe9bc에서 browser7/Electron7, 총14건과40개 스크린샷이 통과했다. 라벨 좌표·독립 방향·두 클래스 mask·3가지 format·그룹 분할·파생 검수/새 데이터/CPU 재학습/16개 고정 시험 비교·원본 복귀와 RLE frame을 실제 실행했다. 학습 fixture는 API 제출이며 GUI 학습 버튼 전체를 검증한 것으로 세지 않는다. folder picker는 controlled native response이고 human picker/cancel은 미검증이다.
 
 허용된 dataset alias의 DICOM prepare200/GET422 오류를 재현하고 경로 보존으로 수정했다. 대상이 바뀐 alias의 기존 cache는422로 거부하며 원본/cache 바이트를 보존했다. 관련64개가 통과했다. action 원장은55/106/279, 기능별 native 근거52곳이다. 근거 검사133개도 통과했다. parent66/16 및 최종 수용0을 유지한다. 1352bff hosted CI 완료와 현재 delta의 CI는 구분한다. 72시간은 기존 고정 실행의423cycle/약7시간 시점에도 running이며 대기하지 않고 후속 구현을 진행한다.
+
+## 외부 mask·이름 있는 라벨 세트·근거 복귀 후속
+
+추가 clean964e032 browser5/Electron3, 총8건/38개 스크린샷이 통과했다. 외부 multiclass mask의 palette/빈 클래스/구멍·preview 변경/merge 충돌 거부·backup·실제 download/reimport, 이름 있는 labelset와 개별 flags/tag color, class 통계에서 gallery filter, completed comparison 작업의 재열기·현재 검수 이미지/원래 비교로 복귀·현재 라벨 편집과 역사적 report 불변을 실행했다. 저장 mask8개는 원본 reference와 모든 픽셀/class ID가 일치했다.
+
+원장은18개 feature의71action/144verified/353pending이며 최종 feature 수용은0이다. 새 action의 미실행 시나리오도 전부 기록하여 pending 시나리오 수가 늘었다.1352bff hosted log는 CPU2283pass/7skip, browser162pass/1skip을 보여 준다. 최신 소스CI 완료나 authentic weights/skip 조건 전체 검토로 세지 않는다.
