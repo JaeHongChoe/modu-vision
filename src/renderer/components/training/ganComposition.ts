@@ -1,4 +1,8 @@
 import type {ExplicitGANRow,GANRegion} from '../../services/ganWorkflow';
+export function parseGANMask(text:string):GANRegion['mask_polygon'] {
+  if(!text.trim())return undefined;
+  return text.split(';').map(point=>point.split(',').map(value=>Number(value.trim()))) as Array<[number,number]>;
+}
 export function parseGANCrops(value:string):ExplicitGANRow[] {
   const lines=value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
   if(!lines.length)throw new Error('결함 이미지와 영역을 입력하세요.');
@@ -16,5 +20,6 @@ export function validateGANRegions(regions:GANRegion[],size:number[]):string|nul
     if(!row.id.trim()||ids.has(row.id)||row.bbox.length!==4||row.bbox.some(v=>!Number.isInteger(v))||x1<0||y1<0||x2<=x1||y2<=y1||x2>size[0]||y2>size[1]||!Number.isFinite(row.opacity)||row.opacity<=0||row.opacity>1||!Number.isInteger(row.feather_px)||row.feather_px<0||row.feather_px>1024)return '영역 이름, 원본 좌표, 불투명도와 경계 폭을 확인하세요.';
     ids.add(row.id);
     if(row.mask_polygon&&(row.mask_polygon.length<3||row.mask_polygon.some(p=>p.length!==2||p.some(v=>!Number.isFinite(v))||p[0]<x1||p[0]>x2||p[1]<y1||p[1]>y2)))return '외곽선의 세 점 이상을 영역 안에 지정하세요.';
+    if(row.mask_polygon){const points=row.mask_polygon;const twiceArea=points.reduce((area,p,index)=>{const next=points[(index+1)%points.length];return area+p[0]*next[1]-next[0]*p[1];},0);if(Math.abs(twiceArea)<2)return '외곽선이 1px² 이상의 면적을 둘러싸야 합니다.';}
   }return null;
 }

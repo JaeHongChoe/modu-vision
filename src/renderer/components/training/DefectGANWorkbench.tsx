@@ -14,6 +14,7 @@ import {SpecializedTrainingStatus} from './SpecializedTrainingStatus';
 import {TrainingDeviceSelector} from './ProgramWorkbenchControls';
 import {AutoDLWorkbench} from './AutoDLWorkbench';
 import {GANCompositionEditor} from './GANCompositionEditor';
+import {GANDownstreamComparison} from './GANDownstreamComparison';
 import {parseGANCrops,validateGANRegions} from './ganComposition';
 import {ganWorkflow,type ExplicitGANRow,type GANRegion,type GANPreview} from '../../services/ganWorkflow';
 import type {LocalTrainingDevice,PreparedDataset} from '../../services/modelTrainingProgram';
@@ -191,7 +192,7 @@ export const DefectGANWorkbench: React.FC = () => {
           className="mt-1 block w-20 rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5" /></label>
         <button type="button" onClick={() => void train()} disabled={!sampleCount || !!runtime.error || (!!busy || training.active)} className="rounded bg-violet-700 px-3 py-2 font-semibold hover:bg-violet-600 disabled:opacity-40">생성 모델 학습</button>
         <label className="min-w-[220px] flex-1">완료 후보 모델
-          <select disabled={!!busy||training.active} value={jobId} onChange={(event) => { setJobId(event.target.value); setCandidates([]); }} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
+          <select aria-label="완료된 GAN 생성 모델" disabled={!!busy||training.active} value={jobId} onChange={(event) => { setJobId(event.target.value); setCandidates([]); }} className="mt-1 block w-full rounded border border-slate-600 bg-[#0E1722] px-2 py-1.5">
             {!models.length && <option value="">완료 모델 없음</option>}
             {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.job_id.slice(0, 12)} · epoch {model.epochs} · 미검증</option>)}
           </select>
@@ -225,6 +226,7 @@ export const DefectGANWorkbench: React.FC = () => {
         <p className="break-all font-mono text-[10px] text-slate-400">검토 폴더: {reviewDir}</p>
       </div>}
       {adoptedPath && <div className="rounded border border-emerald-700 p-2"><p className="break-all">{adoptedPath}</p><button onClick={() => void useDatasetStore.getState().importFolder(adoptedPath,'classification').then(() => useProjectStore.getState().setStep(3))} className="mt-2 rounded bg-emerald-700 px-3 py-2">채택 데이터로 학습 준비</button></div>}
+      <GANDownstreamComparison />
     </div>
   </details>;
 };

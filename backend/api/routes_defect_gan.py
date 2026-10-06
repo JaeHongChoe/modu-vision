@@ -356,6 +356,51 @@ class GANEvaluateRequest(BaseModel):
     seed: int=0
 
 
+class GANDownstreamComparisonRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    adopted_dataset_path: str = Field(min_length=1)
+    before_job_id: str = Field(pattern=r'^job_[A-Za-z0-9][A-Za-z0-9_-]{0,119}$')
+    after_job_id: str = Field(pattern=r'^job_[A-Za-z0-9][A-Za-z0-9_-]{0,119}$')
+
+
+def _downstream_reports(project):
+    root = Path(project['project_dir']).resolve()
+    reports = Path(project['reports_dir'])
+    if reports.is_symlink() or reports.resolve() != root / 'reports' or (reports / 'gan_adoption_comparisons').is_symlink():
+        raise ValueError('GAN comparison report storage is invalid')
+    return reports / 'gan_adoption_comparisons'
+
+
+@router.post('/downstream-comparison')
+def downstream_comparison(req: GANDownstreamComparisonRequest, request: Request):
+    from backend.engine.gan_adoption_comparison import compare_adoption, save_comparison
+    project = get_current_project(request)
+    adopted = Path(req.adopted_dataset_path)
+    owned = Path(project['dataset_dir']) / 'synthetic_adoptions'
+    try:
+        if project.get('task') != 'classification' or adopted.is_symlink() or owned.is_symlink() or adopted.parent.resolve() != owned.resolve():
+            raise ValueError('GAN comparison needs a project-owned classification adoption dataset')
+        if Path(project.get('source_dataset_dir') or '').resolve() != adopted.resolve():
+            raise ValueError('Select the adopted dataset before comparing its models')
+        report = compare_adoption(project, adopted, req.before_job_id, req.after_job_id)
+        return save_comparison(_downstream_reports(project), report)
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get('/downstream-comparison')
+def latest_downstream_comparison(request: Request):
+    from backend.engine.gan_adoption_comparison import read_comparison
+    project = get_current_project(request)
+    try:
+        root = _downstream_reports(project)
+        reports = [read_comparison(root, path.stem) for path in root.glob('gan_comparison_*.json')]
+        reports = [row for row in reports if row['adopted_source'] == project.get('source_dataset_dir')]
+        return {'comparison': max(reports, key=lambda row: row['created_at']) if reports else None}
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 @router.post('/evaluate')
 def evaluate(req: GANEvaluateRequest, request: Request):
     from backend.engine.defect_gan import evaluate_defect_generator

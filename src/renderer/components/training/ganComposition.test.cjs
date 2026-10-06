@@ -2,6 +2,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const Module=require('node:module');const ts=require('typescript');const test=require('node:test');
 function load(file,mock){const name=path.resolve(__dirname,file),mod=new Module(name,module);mod.filename=name;mod.paths=Module._nodeModulePaths(path.dirname(name));const req=mod.require.bind(mod);mod.require=ref=>mock?.(ref)??req(ref);mod._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return mod.exports;}
 const {parseGANCrops,validateGANRegions}=load('ganComposition.ts');
+test('native polygon mask text is explicit and invalid drafts block generation',()=>{
+  const {parseGANMask}=load('ganComposition.ts');
+  assert.deepEqual(parseGANMask('4,4;24,4;4,24'),[[4,4],[24,4],[4,24]]);
+  assert.equal(parseGANMask(''),undefined);
+  const row={id:'mask',bbox:[4,4,24,24],opacity:1,feather_px:0};
+  assert.ok(validateGANRegions([{...row,mask_polygon:parseGANMask('4,4;12,12;24,24')}],[64,48]));
+  assert.ok(validateGANRegions([{...row,mask_polygon:parseGANMask('4,4;bad;')}],[64,48]));
+});
 test('explicit crop rows preserve human labels and never infer truth from filenames',()=>{
   assert.deepEqual(parseGANCrops('some_NG_name.png\t0,0,32,32\ttrain'),[{image:'some_NG_name.png',bbox:[0,0,32,32],split:'train'}]);
   assert.equal(parseGANCrops('image.png\t1,2,33,34\tval\tscratch')[0].label,'scratch');

@@ -45,3 +45,5 @@ browser results cannot produce a passing browser lane. An earlier failed gate
 records browser execution as `not_recorded`; it does not claim model coverage.
 Mixed selections, unexpected executed tests and multiple execution directories
 are refused instead of choosing a convenient result.
+
+The GAN adoption lane uses explicit local official EfficientNet-B0 weights (`MV_E2E_GAN_CLASSIFIER_WEIGHTS`) for before/after CPU inspection models. It trains the GAN from original train crops, persists explicit synthetic control review, admits generated pixels only to train, compares both classifiers on the complete original test cohort, and verifies a fresh generation-only package. This lane does not stand in for human quality review or production acceptance.

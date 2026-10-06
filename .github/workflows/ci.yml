@@ -148,6 +148,7 @@ jobs:
           backend/tests/test_service_s1_08.py
           backend/tests/test_anomaly_folder_case.py
           backend/tests/test_service_s4_05_calibration.py backend/tests/test_service_s4_07_evaluation_contract.py
+          backend/tests/test_gan_adoption_comparison.py
           backend/tests/test_training_completion_publication.py
           backend/tests/test_runtime_budget_publication.py
           backend/tests/test_source_ci_model_lanes.py
