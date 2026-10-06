@@ -70,6 +70,7 @@ def _snapshot(root):
 
 def preview(root):
     root,owner=_owner(root);result=_snapshot(root);blockers=list(result['blockers']);known=_known_schemas(owner['scopes'])
+    conversions={}
     for name,relative in owner['scopes'].items():
         path=root/relative
         if name in {'local_journals','remote_journals'}:continue
@@ -77,7 +78,11 @@ def preview(root):
         if name in known:
             try:
                 actual=_schema(path)
-                if actual!=known[name]:blockers.append('Unsupported '+name+' schema; this phase requires exact current control schemas')
+                if actual!=known[name]:
+                    from backend.engine.historical_control_schema import predecessor
+                    source=predecessor(name,actual)
+                    if source is None:blockers.append('Unsupported '+name+' schema; an exact recorded current or predecessor structure is required')
+                    else:conversions[name]={'source_commit':source,'target':'current trusted control schema'}
             except (OSError,ValueError,sqlite3.Error) as exc:blockers.append('Unreadable '+name+' scope: '+type(exc).__name__)
         elif name=='profiles':
             from backend.remote.profiles import ProfileStore
@@ -91,6 +96,7 @@ def preview(root):
     source_sha=digest({'inventory':result['source_snapshot']['sha256'],'owner_sha256':hashlib.sha256((root/OWNER_FILE).read_bytes()).hexdigest()})
     result.update(source_sha256=source_sha,installation_id=owner['installation_id'],
                   blockers=sorted(set(blockers)),can_apply=not blockers,activation_supported=True,
+                  schema_conversions=conversions,
                   ownership_policy='owned drained generations only; live or copied workers/leases unsupported')
     return result
 
@@ -268,13 +274,16 @@ def apply(root,*,expected_source_sha256):
         backup=directory/'original';_copy(before,root,backup,scopes=owner['scopes']);backup_view=_snapshot(backup)
         generations=root/'.global-generations';generations.mkdir(exist_ok=True)
         staged=generations/identifier;_copy(before,root,staged,scopes=owner['scopes'])
-        with staged_construction(root,staged):_construct(staged,owner['scopes']);_revoke(staged,owner['scopes'])
+        with staged_construction(root,staged):
+            from backend.engine.historical_control_schema import normalize_staged
+            normalize_staged(staged,owner['scopes'],_known_schemas(owner['scopes']))
+            _construct(staged,owner['scopes']);_revoke(staged,owner['scopes'])
         seal=_seal(staged,owner,identifier)
         if preview(root)['source_sha256']!=before['source_sha256']:raise GlobalMigrationError('Global source changed during staging')
         fence=(previous[1]['fence'] if previous else 0)+1
         journal={'schema_version':1,'installation_id':owner['installation_id'],'migration_id':identifier,'status':'prepared',
             'source_sha256':before['source_sha256'],'source_inventory':before['inventory'],'target_sha256':seal['sealed_sha256'],
-            'backup_inventory':backup_view['inventory'],
+            'backup_inventory':backup_view['inventory'],'schema_conversions':before['schema_conversions'],
             'previous_pointer':previous[1] if previous else None,'fence':fence,'scopes':owner['scopes']}
         atomic_private_json(directory/'journal.json',journal);_sync_directories(directory)
         _publish(root,owner,identifier,seal,fence=fence)
@@ -339,7 +348,12 @@ def recover(root,identifier,*,action):
         if backup.is_symlink():raise GlobalMigrationError('Original backup is linked')
         backup_view=_snapshot(backup)
         if backup_view['inventory']!=record['backup_inventory']:raise GlobalMigrationError('Original backup failed integrity verification')
-        _copy(backup_view,backup,restored);_revoke(restored,owner['scopes']);seal=_seal(restored,owner,restored_id)
+        _copy(backup_view,backup,restored)
+        with staged_construction(root,restored):
+            from backend.engine.historical_control_schema import normalize_staged
+            normalize_staged(restored,owner['scopes'],_known_schemas(owner['scopes']))
+            _construct(restored,owner['scopes']);_revoke(restored,owner['scopes'])
+        seal=_seal(restored,owner,restored_id)
         _publish(root,owner,restored_id,seal,fence=current[1]['fence']+1)
         record.update(status='restored',restored_generation=restored_id);atomic_private_json(path,record)
         return {'status':'restored','generation_id':restored_id,'fence':current[1]['fence']+1}

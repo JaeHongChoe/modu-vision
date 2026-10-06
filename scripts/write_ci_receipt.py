@@ -46,6 +46,25 @@ def _browser_rows(report):
     return rows
 
 
+def _browser_source(root, report, relative):
+    """Playwright file names are relative to config.rootDir, not repo root."""
+    root=Path(root).absolute();relative=Path(relative)
+    if relative.is_absolute() or '..' in relative.parts:
+        raise ValueError('Browser source file escapes the checkout')
+    configured=report.get('config',{}).get('rootDir')
+    test_root=Path(configured) if configured is not None else root
+    if '..' in test_root.parts:
+        raise ValueError('Browser test root contains a parent traversal')
+    if not test_root.is_absolute():test_root=root/test_root
+    if (not test_root.absolute().is_relative_to(root)
+            or any(p.is_symlink() for p in (test_root,*test_root.parents))):
+        raise ValueError('Browser test root escapes or links outside the checkout')
+    file=test_root/relative
+    if any(p.is_symlink() for p in (file,*file.parents)) or not file.resolve().is_relative_to(root.resolve()):
+        raise ValueError('Browser source file escapes or links outside the checkout')
+    return file.relative_to(root).as_posix(), hashlib.sha256(file.read_bytes()).hexdigest() if file.is_file() else None
+
+
 def browser_evidence(root, public_selection=None, owned_selection=None, e2e_root=None):
     lane = {'status': 'not_recorded', 'selected_count': 0,
             'results': {'passed': 0, 'failed': 0, 'skipped': 0, 'not_recorded': 0},
@@ -61,6 +80,8 @@ def browser_evidence(root, public_selection=None, owned_selection=None, e2e_root
     public, lane['selection_sha256'] = load(public_selection)
     owned, lane['owned_selection_sha256'] = load(owned_selection)
     selected, unavailable = _browser_rows(public), _browser_rows(owned)
+    if len({r['id'] for r in selected})!=len(selected) or len({r['id'] for r in unavailable})!=len(unavailable):
+        raise ValueError('Browser selection contains duplicate test identities')
     if (any('owned-model' in r['tags'] for r in selected)
             or any('owned-model' not in r['tags'] for r in unavailable)
             or {r['id'] for r in selected} & {r['id'] for r in unavailable}):
@@ -69,31 +90,41 @@ def browser_evidence(root, public_selection=None, owned_selection=None, e2e_root
     lane['selected_tests'] = selected
     lane['owned_model_tests_not_covered'] = unavailable
     inputs = {}
-    for row in selected + unavailable:
+    for row,report in [(row,public) for row in selected]+[(row,owned) for row in unavailable]:
         relative = row['file']
         if not isinstance(relative, str):
             raise ValueError('Browser source file is missing')
-        file = Path(root) / relative
-        if not file.resolve().is_relative_to(Path(root).resolve()):
-            raise ValueError('Browser source file escapes the checkout')
-        inputs[relative] = hashlib.sha256(file.read_bytes()).hexdigest() if file.is_file() else None
+        canonical,checksum=_browser_source(root,report,relative)
+        if canonical in inputs and inputs[canonical]!=checksum:raise ValueError('Browser source identity changed during observation')
+        inputs[canonical]=checksum;row['source_relative_path']=canonical
     lane['source_input_sha256'] = inputs
+    lane['source_status']='missing' if any(value is None for value in inputs.values()) else 'recorded'
     reports = sorted(Path(e2e_root).glob('*/report.json')) if e2e_root is not None else []
     if len(reports) > 1:
         raise ValueError('CI browser evidence must identify one exact execution')
     observed = {}
     if reports:
         report, lane['report_sha256'] = load(reports[0])
-        observed = {r['id']: r for r in _browser_rows(report)}
+        rows=_browser_rows(report)
+        if len({r['id'] for r in rows})!=len(rows):raise ValueError('Browser execution contains duplicate test identities')
+        observed = {r['id']: r for r in rows}
         if set(observed) - {r['id'] for r in selected}:
             raise ValueError('Browser execution contains unselected tests')
     for row in selected:
+        actual=observed.get(row['id'])
+        if actual and any(actual.get(k)!=row.get(k) for k in ('title','file','tags')):
+            raise ValueError('Browser execution declaration differs from selected source identity')
+        if actual:
+            canonical,checksum=_browser_source(root,report,actual['file'])
+            if canonical!=row['source_relative_path'] or checksum!=inputs[canonical]:
+                raise ValueError('Browser execution source differs from selected source identity')
         status = observed.get(row['id'], {}).get('status', 'not_recorded')
+        row['selection_status']=row['status'];row['status']=status
         key = status if status in ('passed', 'skipped', 'not_recorded') else 'failed'
         lane['results'][key] += 1
     counts = lane['results']
     lane['status'] = ('failed' if counts['failed'] else 'not_recorded' if not reports
-                      else 'incomplete' if counts['skipped'] or counts['not_recorded'] or not selected else 'passed')
+                      else 'incomplete' if counts['skipped'] or counts['not_recorded'] or not selected or lane['source_status']!='recorded' else 'passed')
     return lane
 
 

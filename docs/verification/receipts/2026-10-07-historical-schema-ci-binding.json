@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-06T16:02:08.496464+00:00",
+  "baseline_source_sha": "1862f7ca05eb98285b3f550b4ac784adb139b034",
+  "scope": "Two exact drained predecessor components and CI reporter source binding; neither parent promoted; root review only",
+  "root_review_only": true,
+  "independent_review": false,
+  "quality_accepted": false,
+  "device_accepted": false,
+  "software_parent_accounting": {
+    "verified": 66,
+    "pending": 16,
+    "finally_accepted": 0,
+    "windows_actual_qa_waived": 1,
+    "actionable": 15
+  },
+  "source_file_sha256": {
+    ".github/workflows/ci.yml": "9943f91ca21fc84f6619315b4ad3b13c2ccfef5ec23c777bf2b16f13821ad6aa",
+    "backend/engine/global_migration.py": "36cd39ae03c1192662b5104b8cfeeae7ad069771a53794059a36adc86c48bbd2",
+    "backend/engine/historical_control_schema.py": "45c69978c4a7f1b9b355d05cd9a2a78abe1c0d03188bc624192390704b207637",
+    "backend/tests/test_historical_control_schema.py": "66ad78411081b2da4cc76351ae2da52f1a2366604cb7ed4164d4c2e242cc40d0",
+    "backend/tests/fixtures/historical-control-schemas.json": "d549ebb35ab298ddff99304bca0f21b3a28cadcac2c6c424f44b281a135308bd",
+    "scripts/write_ci_receipt.py": "a9e552d7f14607ea753053ca9af0cea1e312e06c2eb15dae59aa90586384aa94",
+    "backend/tests/test_source_ci_model_lanes.py": "51e9ee0145dbfc47eb5c7c10832abd99cd7c3fcbed213883d7f6e9da3192d100"
+  },
+  "predecessor_original_source_commits": [
+    "86a6faf70c0b1fb74fb53ca5820f341a1334521d",
+    "053999cec646de1281920c249c27c361b3aa5dc0"
+  ],
+  "runs": {
+    "historical_red": {
+      "junit_sha256": "ccaddd6359918c90cb70da29f8d1c782d7d31623306cf0735d7aede84e372f88",
+      "tests": 10,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "historical_final": {
+      "junit_sha256": "cd471c1b518eee920589029dac7bcc79ba1e5bb91f9a4b1ac0f0daeb741456b7",
+      "tests": 112,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ci_source_red": {
+      "junit_sha256": "9820b36595988717f5d7795a964fc98e6072aef00fd78b4455f1a80b47f82464",
+      "tests": 6,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ci_execution_root_red": {
+      "junit_sha256": "e252749aeb1efa4dd7d0718fd78256001c13464aba8157401abe43116d99a083",
+      "tests": 3,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ci_binding_final": {
+      "junit_sha256": "d4cd59dc299346e3fbe7221ae050e1edcd260429170ab98969963959d6557648",
+      "tests": 30,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "official_ci_readback": {
+    "source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+    "run_id": "37479809108",
+    "official_receipt_sha256": "efdd1dc874fa64bc48fa30b1c45d889e3f4517a0c62714151205d170f9c428eb",
+    "official_junit_sha256": "3897a5cac46414a531acfe7cae1e0b6052eb6f97b80a32930947913ff6b88d13",
+    "followup_readback_sha256": "85740027da0f9f3ff89a1392e5b0883f0e2a610043b6b862a2ca252c9e3b7bf3",
+    "corrected_writer_sha256": "a9e552d7f14607ea753053ca9af0cea1e312e06c2eb15dae59aa90586384aa94",
+    "source_files": 95,
+    "cpu": {
+      "tests": 2205,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 7,
+      "status": "recorded"
+    },
+    "browser_results": {
+      "passed": 162,
+      "failed": 0,
+      "skipped": 1,
+      "not_recorded": 0
+    },
+    "browser_status": "incomplete",
+    "owned_model_not_executed": 11,
+    "original_artifact_unchanged": true,
+    "derived_rebinding_is_original_receipt": false
+  },
+  "remaining": [
+    "Live/uncertain global workers and other predecessor schemas",
+    "Hosted CI on the corrected source writer",
+    "Independent review and field/model/publisher/final acceptance"
+  ],
+  "temporary_storage": {
+    "owned_external_scratch": true,
+    "tool_tmp_redirected": true,
+    "existing_backup_files_changed": false,
+    "ongoing_endurance_source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+    "earlier_elapsed_added": false
+  }
+}

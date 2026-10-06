@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "scope": "Original known predecessor DDL only; does not establish installation/actor/worker authority",
+  "versions": [
+    {
+      "scope": "ledger",
+      "source_commit": "86a6faf70c0b1fb74fb53ca5820f341a1334521d",
+      "schema": [
+        [
+          "index",
+          "jobs_idempotency",
+          "jobs",
+          "CREATE UNIQUE INDEX jobs_idempotency\n    ON jobs(workspace_id, project_key, actor_id, kind, idempotency_key) WHERE idempotency_key IS NOT NULL"
+        ],
+        [
+          "table",
+          "artifacts",
+          "artifacts",
+          "CREATE TABLE artifacts(\n    job_id TEXT NOT NULL REFERENCES jobs(id), role TEXT NOT NULL, artifact_id TEXT NOT NULL,\n    revision INTEGER NOT NULL, sha256 TEXT NOT NULL, PRIMARY KEY(job_id, role))"
+        ],
+        [
+          "table",
+          "attempts",
+          "attempts",
+          "CREATE TABLE attempts(\n    job_id TEXT NOT NULL REFERENCES jobs(id), number INTEGER NOT NULL, fencing_token INTEGER NOT NULL,\n    executor TEXT NOT NULL, owner_boot_id TEXT, owner_pid INTEGER, started_ns INTEGER NOT NULL, ended_ns INTEGER, lease_expires_ns INTEGER, worker_id TEXT,\n    PRIMARY KEY(job_id, number))"
+        ],
+        [
+          "table",
+          "cancel_intents",
+          "cancel_intents",
+          "CREATE TABLE cancel_intents(\n    job_id TEXT PRIMARY KEY REFERENCES jobs(id), actor_id TEXT NOT NULL, reason TEXT NOT NULL, requested_ns INTEGER NOT NULL)"
+        ],
+        [
+          "table",
+          "events",
+          "events",
+          "CREATE TABLE events(\n    job_id TEXT NOT NULL REFERENCES jobs(id), seq INTEGER NOT NULL, revision INTEGER NOT NULL, event TEXT NOT NULL,\n    from_state TEXT, to_state TEXT NOT NULL, payload_json TEXT, at_ns INTEGER NOT NULL, PRIMARY KEY(job_id, seq))"
+        ],
+        [
+          "table",
+          "jobs",
+          "jobs",
+          "CREATE TABLE jobs(\n    id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, project_key TEXT NOT NULL, project_id TEXT NOT NULL,\n    actor_id TEXT NOT NULL, mode TEXT NOT NULL, kind TEXT NOT NULL, idempotency_key TEXT,\n    spec_sha256 TEXT NOT NULL, spec_json TEXT NOT NULL, state TEXT NOT NULL, revision INTEGER NOT NULL,\n    parent_id TEXT REFERENCES jobs(id), output_dir TEXT, response_json TEXT, source TEXT NOT NULL,\n    created_ns INTEGER NOT NULL, updated_ns INTEGER NOT NULL, registry_root TEXT, project_dir TEXT, priority INTEGER NOT NULL DEFAULT 0, resources_json TEXT, budget_json TEXT, wait_reason TEXT, queued_ns INTEGER)"
+        ],
+        [
+          "table",
+          "migrations",
+          "migrations",
+          "CREATE TABLE migrations(\n    source_path TEXT PRIMARY KEY, sha256 TEXT NOT NULL, job_id TEXT, outcome TEXT NOT NULL, migrated_ns INTEGER NOT NULL)"
+        ],
+        [
+          "table",
+          "quotas",
+          "quotas",
+          "CREATE TABLE quotas(\n    project_key TEXT PRIMARY KEY, max_running INTEGER NOT NULL)"
+        ]
+      ]
+    },
+    {
+      "scope": "leases",
+      "source_commit": "053999cec646de1281920c249c27c361b3aa5dc0",
+      "schema": [
+        [
+          "table",
+          "devices",
+          "devices",
+          "CREATE TABLE devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))"
+        ],
+        [
+          "table",
+          "leases",
+          "leases",
+          "CREATE TABLE leases(job_id TEXT PRIMARY KEY,host TEXT,selector TEXT,owner TEXT,expires REAL,remote INTEGER,uncertain INTEGER DEFAULT 0, memory_budget_mb INTEGER NOT NULL DEFAULT 0, allow_sharing INTEGER NOT NULL DEFAULT 0, task TEXT, project_id TEXT, account_id TEXT)"
+        ]
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 기준 공개 소스 `a184b1e254e881c0af09f0f788c993b35da92c89`와 기록된 후속 검증
+확인일: 2026-10-07 · 기준 공개 소스 `1862f7ca05eb98285b3f550b4ac784adb139b034`와 기록된 후속 검증
 
 **82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
 
@@ -21,13 +21,13 @@
 
 | ID | 작업 | 실제 남은 조건 |
 |---|---|---|
-| S1-08 | 기존 JSON과 DB migration | 종료된 로컬 및 remote train 이력과 현재 protocol recovery index의 cutover·forward recovery·새 manager 복구는 검증됨. 살아 있는 worker·불확실 lease·구형 schema 이관 필요. |
+| S1-08 | 기존 JSON과 DB migration | 종료된 로컬·remote 이력과 현재 recovery index의 cutover·forward recovery·새 manager 복구 검증됨. 정확한 기존 ledger/lease 두 schema의 원본 보존 변환·복구 112개 통과. 살아 있는 worker·불확실 lease·다른 구형 schema 이관 필요. |
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. 설치·DB update 원자적 cutover/중단 복구·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | a184b1e 공개 Linux CPU·browser 전체 CI 성공. 새 개선 흐름·종료 remote history 변경을 포함한 다음 공개 소스의 hosted 결과 확인 필요. 이전 123cbc browser 실패와 수정 기록 보존. |
+| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공: CPU 2198통과·7skip, browser 162통과·1skip. 실제 artifact의 소스 해시 누락 수정과 95개 Git 소스 대조 완료. 새 변경과 수정된 기록기를 포함한 hosted 결과·skip 조건 확인 필요. 이전 실패와 원본 artifact 보존. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 156개 기능과 action별 성공/오류/취소/재열기/이관 실행 근거 원장 보완 필요. 단순 매핑은 수용 완료가 아님. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |

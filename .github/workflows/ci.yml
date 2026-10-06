@@ -187,6 +187,7 @@ jobs:
           backend/tests/test_historical_job_binding.py
           backend/tests/test_terminal_runtime_history.py
           backend/tests/test_terminal_remote_history.py
+          backend/tests/test_historical_control_schema.py
           backend/tests/test_migration_sqlite_lifetime.py
           backend/tests/test_anomaly_folder_case.py
           backend/tests/test_service_s4_05_calibration.py backend/tests/test_service_s4_07_evaluation_contract.py

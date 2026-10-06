@@ -84,6 +84,50 @@ def test_receipt_survives_an_earlier_ci_gate_without_browser_selections(tmp_path
     assert observed['browser_lane']['selection_status'] == 'not_recorded'
 
 
+def test_actual_reporter_test_root_relative_files_have_exact_source_hashes_and_observed_statuses(tmp_path):
+    import hashlib
+    ci=ci_module();root=tmp_path/'checkout';test_root=root/'scripts/e2e';test_root.mkdir(parents=True)
+    source=test_root/'controlled.spec.ts';source.write_bytes(b'Original selected browser test input')
+    public=tmp_path/'public.json';owned=tmp_path/'owned.json';execution=tmp_path/'runs/one';execution.mkdir(parents=True)
+    def actual(name,tags=(),status=None):
+        value=report(name,tags,status);value['config']={'rootDir':str(test_root)}
+        value['suites'][0]['file']='controlled.spec.ts';return value
+    public.write_text(json.dumps(actual('public')));owned.write_text(json.dumps(actual('owned',['@owned-model'])))
+    (execution/'report.json').write_text(json.dumps(actual('public',status='passed')))
+    lane=ci.browser_evidence(root,public,owned,execution.parent)
+    assert lane['source_input_sha256']=={'scripts/e2e/controlled.spec.ts':hashlib.sha256(source.read_bytes()).hexdigest()}
+    assert lane['selected_tests'][0]['status']=='passed' and lane['selected_tests'][0]['selection_status']=='not_recorded'
+    assert lane['source_status']=='recorded' and lane['status']=='passed'
+
+
+@pytest.mark.parametrize('damage',['missing','linked','foreign_test_root','duplicate_execution','different_source_identity','foreign_execution_root','different_execution_root','parent_in_test_root'])
+def test_browser_receipt_does_not_supply_source_identity_from_missing_foreign_or_ambiguous_inputs(tmp_path,damage):
+    ci=ci_module();root=tmp_path/'checkout';test_root=root/'scripts/e2e';test_root.mkdir(parents=True)
+    source=test_root/'controlled.spec.ts';source.write_bytes(b'Owned original selected source')
+    def actual(status=None):
+        value=report('public',status=status);value['config']={'rootDir':str(test_root)};value['suites'][0]['file']='controlled.spec.ts';return value
+    public=tmp_path/'public.json';owned=tmp_path/'owned.json';public.write_text(json.dumps(actual()));owned.write_text(json.dumps({'config':{'rootDir':str(test_root)},'suites':[]}))
+    execution=tmp_path/'runs/one';execution.mkdir(parents=True);value=actual('passed')
+    if damage=='missing':source.unlink()
+    elif damage=='linked':
+        source.unlink();target=tmp_path/'foreign.spec.ts';target.write_bytes(b'Foreign source');source.symlink_to(target)
+    elif damage=='foreign_test_root':
+        value=actual('passed');p=actual();p['config']['rootDir']=str(tmp_path);public.write_text(json.dumps(p))
+    elif damage=='duplicate_execution':value['suites'][0]['specs'].append(dict(value['suites'][0]['specs'][0]))
+    elif damage=='foreign_execution_root':value['config']['rootDir']=str(tmp_path)
+    elif damage=='different_execution_root':
+        other=root/'other';other.mkdir();(other/'controlled.spec.ts').write_bytes(source.read_bytes())
+        value['config']['rootDir']=str(other)
+    elif damage=='parent_in_test_root':value['config']['rootDir']=str(test_root/'..'/'e2e')
+    else:value['suites'][0]['specs'][0]['title']='Different declaration under reused id'
+    (execution/'report.json').write_text(json.dumps(value))
+    if damage=='missing':
+        lane=ci.browser_evidence(root,public,owned,execution.parent)
+        assert lane['status']=='incomplete' and lane['source_status']=='missing' and lane['results']['passed']==1
+    else:
+        with pytest.raises(ValueError):ci.browser_evidence(root,public,owned,execution.parent)
+
+
 @pytest.mark.parametrize('case', ['overlap', 'unselected_execution', 'ambiguous_execution'])
 def test_lane_receipt_refuses_mixed_scope_or_ambiguous_runs(tmp_path, case):
     public, owned = tmp_path / 'public.json', tmp_path / 'owned.json'
