@@ -42,6 +42,7 @@ import { FlowNodeDebugger } from './FlowNodeDebugger';
 import { FlowWorkspacePanel } from './FlowWorkspacePanel';
 import { FlowEvaluationPanel } from './FlowEvaluationPanel';
 import { FlowGraphNavigator } from './FlowGraphNavigator';
+import { FlowInspectorPanel } from './FlowInspectorPanel';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
@@ -1349,7 +1350,7 @@ export const FlowchartStudio: React.FC = () => {
           </div>
 
           {/* Node Property Inspector Sidebar (Dark Steel Panel) */}
-          <div className="shrink-0 bg-[#131822] border-l border-[#2B3547] p-5 flex flex-col gap-4 overflow-y-auto" style={{ width: 'clamp(300px, 26vw, 380px)' }}>
+          <FlowInspectorPanel language={language}>
             <div className="border-b border-[#2B3547] pb-3">
               <h3 className="text-sm font-bold text-[#F8FAFC] flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-cyan-400" />
@@ -1436,6 +1437,7 @@ export const FlowchartStudio: React.FC = () => {
                   <label className="text-[#94A3B8] block mb-1">노드 명칭 (LABEL)</label>
                   <input
                     type="text"
+                    aria-label={language === 'ko' ? '노드 명칭' : 'Node label'}
                     value={selectedNode.data.label}
                     onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
                     className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC] focus:border-cyan-400 outline-none"
@@ -1707,7 +1709,7 @@ export const FlowchartStudio: React.FC = () => {
                 </ol>
               </div>
             )}
-          </div>
+          </FlowInspectorPanel>
         </div>
       </section>
       <section role="tabpanel" id="flow-panel-test" aria-labelledby="flow-area-test" hidden={activeTab!=='test'}>

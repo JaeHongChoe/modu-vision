@@ -1827,7 +1827,11 @@
     "backend/engine/flow_debug_cache.py",
     "backend/tests/test_flow_debug_cache.py",
     "scripts/e2e/fixtures/flow_debug_model_control.py",
-    "scripts/e2e/flow-debug-model-freeze.spec.ts"
+    "scripts/e2e/flow-debug-model-freeze.spec.ts",
+    "src/renderer/components/flowchart/FlowInspectorPanel.tsx",
+    "src/renderer/components/flowchart/FlowInspectorPanel.test.cjs",
+    "scripts/e2e/fixtures/flow_large_dag_control.py",
+    "scripts/e2e/flow-inspector-large-dag.spec.ts"
    ],
    "proposed_contract": "RunTrace / FlowVersionDiff / FixedCohortComparison",
    "acceptance": [
@@ -1860,6 +1864,12 @@
      "result": "Task127 adds bounded local CPU partial trace reuse keyed to exact full graph, input, executed core checkpoint/config bytes, project and device capacity. Whole-graph identity conservatively invalidates all ancestor/descendant edits. Production/error/untrained runs bypass cache. A/B binds per-node checkpoint/config and input-list hashes and refuses changed/missing input or model files before publication.",
      "scope": "Backend62,renderer797,types/E2E types/build passed. Chrome/development Electron2pass include4 actual GUI partial executions (miss then hit), real deterministic CPU model A/B OK/NG difference and hash/history reopen. Source12/artifacts58 plus6 unchanged dependencies; root 735f7d7dfd605811e7a70ae71f4c3ff6e5462f47a33b536442e83703677d19d2.",
      "platform": "macOS local CPU; deterministic untrained control checkpoints, no representative training/quality/GPU/Windows/independent review or parent completion. Native/browser background409/422/404 logged; no application error-free claim."
+    },
+    {
+     "kind": "partial-inspector-supported-large-dag",
+     "result": "Task128 adds bounded pointer/keyboard inspector resize, mounted-content collapse and app-local layout readback. Invalid/denied storage stays usable. Actual displayed zoom, rather than a fit-scale multiplier ceiling, preserves readability of large graphs.",
+     "scope": "Renderer803,types/E2E types/build; actual Chrome/development Electron2pass.46-node52-edge supported graph,8 shared-model nodes keep distinct thresholds, unsaved name survives collapse, layout reopens and exact saved graph/source hashes stay unchanged.100-node layout calculation only, no expanded execution-node support. Source7/artifacts62 plus6 unchanged dependencies; root 4ae0c8b106bd8e827bfb321af8e29d248da5936e7b98cc0958f944a5d204b984.",
+     "platform": "macOS synthetic navigation controls with unavailable segmentation model; no inference/quality,GPU,native Windows,independent review or parent closure. Browser background409/404 retained separately."
     }
    ],
    "file_actions": {
@@ -1886,7 +1896,11 @@
     "backend/engine/flow_debug_cache.py": "Create",
     "backend/tests/test_flow_debug_cache.py": "Create",
     "scripts/e2e/fixtures/flow_debug_model_control.py": "Create",
-    "scripts/e2e/flow-debug-model-freeze.spec.ts": "Create"
+    "scripts/e2e/flow-debug-model-freeze.spec.ts": "Create",
+    "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "Create",
+    "src/renderer/components/flowchart/FlowInspectorPanel.test.cjs": "Create",
+    "scripts/e2e/fixtures/flow_large_dag_control.py": "Create",
+    "scripts/e2e/flow-inspector-large-dag.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
@@ -1905,8 +1919,7 @@
     "E04"
    ],
    "remaining": [
-    "Graph inspector resize/collapse and broad large-DAG qualification",
-    "Representative frozen model/cohort comparisons and consolidated whole S2-08 requirement coverage",
+    "Representative frozen model/cohort comparisons and consolidated whole S2-08 requirement coverage (including actual cross-project template/class mapping and draft/version workflow)",
     "Independent review, handoff and target acceptance remain separate; native Windows tests waived"
    ]
   },

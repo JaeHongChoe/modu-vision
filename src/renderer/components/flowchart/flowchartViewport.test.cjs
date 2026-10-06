@@ -15,6 +15,16 @@ loaded.paths = Module._nodeModulePaths(__dirname);
 loaded._compile(compiled, filename);
 const { computeFlowchartViewport, readableFlowScale } = loaded.exports;
 
+test('large DAG readability is independent of the tiny fit-all scale',()=>{
+  const nodes=Array.from({length:100},(_,i)=>({position:{x:(i%10)*380,y:Math.floor(i/10)*340}}));
+  const canvas={width:500,height:240},fit=computeFlowchartViewport(nodes,canvas);
+  assert.ok(fit.scale<0.08);
+  const view=computeFlowchartViewport(nodes,canvas,readableFlowScale(fit.scale)/fit.scale);
+  assert.ok(Math.abs(view.scale-0.72)<1e-12);assert.ok(view.contentWidth>2000&&view.contentHeight>2000);
+  assert.equal(computeFlowchartViewport(nodes,canvas,1e6).scale,1.5,'absolute zoom limit bounds rendering');
+  assert.equal(computeFlowchartViewport(nodes,canvas,NaN).scale,fit.scale,'invalid zoom uses fit');
+});
+
 test('node search finds Korean labels, IDs, types and model IDs without changing graph order',()=>{
   const nodes=[{id:'roi-2',position:{x:-500,y:300},data:{label:'한글 고정 영역',node_type:'fixed_roi'}},{id:'ocr-1',position:{x:12000,y:12000},data:{label:'문자 검사',node_type:'inspection',task:'ocr',model_job_id:'JOB_ALPHA'}}];
   const before=JSON.stringify(nodes);

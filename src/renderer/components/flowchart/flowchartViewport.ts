@@ -86,7 +86,10 @@ export function computeFlowchartViewport(
     Math.max(1, width - 2 * CANVAS_PADDING) / graphWidth,
     Math.max(1, height - 2 * CANVAS_PADDING) / graphHeight,
   );
-  const scale = fitScale * Math.max(0.25, Math.min(8, zoomMultiplier));
+  // A large DAG can need much more than 8x its tiny fit scale just to make a
+  // node readable. Bound the actual displayed scale, not its ratio to fit.
+  const multiplier = Number.isFinite(zoomMultiplier) ? zoomMultiplier : 1;
+  const scale = Math.min(1.5, fitScale * Math.max(0.25, multiplier));
   const left = Math.max(CANVAS_PADDING, (width - graphWidth * scale) / 2);
   // A tall editor should open with the graph directly under the toolbar.
   // Vertical centering left a large empty strip before the first node.
