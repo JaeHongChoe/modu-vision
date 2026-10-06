@@ -69,6 +69,7 @@ def _test_file_errors(label, test, root):
         if part not in names:  # exact case, so a wrong-case path fails on every platform alike
             return [f"{label}: test file {test!r} does not exist"]
         folder = folder / part
+        if folder.is_symlink():return [f'{label}: linked test paths are refused']
     if not folder.is_file():
         return [f"{label}: test file {test!r} does not exist"]
     selectors = test.split("::")[1:]
@@ -89,7 +90,7 @@ def _test_file_errors(label, test, root):
     return []
 
 
-def _receipt_errors(label, entry, root):
+def _receipt_errors(label, entry, root, *, retained=None):
     name = entry.get('receipt')
     if name is None: return []
     if not isinstance(name, str) or not _RECEIPT_NAME.fullmatch(name) or not _SHA256.fullmatch(_text(entry.get('receipt_sha256'))):
@@ -112,18 +113,50 @@ def _receipt_errors(label, entry, root):
         return [f'{label}: receipt file is not unique-key JSON']
     if value.get('source_sha') != entry.get('source_sha'):
         return [f'{label}: receipt source differs from the evidence source']
+    if retained is not None:retained.update(value)
     return []
 
 
+def _click_receipt_errors(label,entry,record,root):
+    """Bind the exact executed GUI case; this is reference integrity, not reviewer authority."""
+    test=entry.get('test');errors=[]
+    if (not isinstance(test,str) or not test.startswith('scripts/e2e/')
+            or len(test.split('::'))!=2 or not test.split('::')[1].strip()):
+        errors.append(f'{label}: GUI execution receipt needs an exact scripts/e2e spec::case')
+    if (record.get('schema')!='modu-vision.gui-execution/v1' or record.get('test')!=test
+            or record.get('source_dirty') is not False or record.get('status')!='passed'
+            or record.get('expected_status')!='passed' or record.get('result')!='expected'
+            or type(record.get('attempts')) is not int or record['attempts']!=1):
+        errors.append(f'{label}: GUI execution receipt must match one clean-source expected passed case without retries')
+    platform=record.get('platform')
+    if (record.get('mode') not in {'browser','electron'} or not isinstance(platform,dict)
+            or platform.get('os') not in {'darwin','linux','win32'} or not _text(platform.get('arch'))):
+        errors.append(f'{label}: GUI execution receipt needs the actual browser/native platform')
+    if any(not _SHA256.fullmatch(_text(record.get(k))) for k in ['test_source_sha256','report_sha256','harness_sha256']):
+        errors.append(f'{label}: GUI execution receipt needs exact source/report/harness hashes')
+    elif isinstance(test,str) and not _test_file_errors(label,test,root):
+        if hashlib.sha256((Path(root)/test.split('::')[0]).read_bytes()).hexdigest()!=record['test_source_sha256']:
+            errors.append(f'{label}: GUI executed test bytes changed since receipt')
+    artifacts=record.get('artifacts')
+    if (not isinstance(artifacts,list) or not artifacts or any(not isinstance(row,dict)
+            or not _text(row.get('id')) or not _SHA256.fullmatch(_text(row.get('sha256'))) for row in artifacts)):
+        errors.append(f'{label}: GUI execution receipt needs retained screenshot artifact hashes')
+    return errors
+
+
 def _reference_errors(label, entry, kind, root):
-    """What the evidence cites must match its kind: a click is a browser/app spec run (scripts/e2e) or a hashed
-    receipt; a target run is a hashed receipt with its artifacts; a native Windows run is a hashed receipt or a test the
+    """What the evidence cites must match its kind: a click needs an exact browser/app case and a hashed
+    execution receipt; a target run is a hashed receipt with its artifacts; a native Windows run is a hashed receipt or a test the
     Windows workflow runs."""
-    retained = _receipt_errors(label, entry, root)
+    record={}
+    retained = _receipt_errors(label, entry, root,retained=record)
     test, receipt = entry.get("test"), entry.get("receipt")
     receipted = receipt is not None and _RECEIPT_NAME.fullmatch(_text(receipt)) and _SHA256.fullmatch(_text(entry.get("receipt_sha256")))
     if kind == "click" and not receipted and not (isinstance(test, str) and test.startswith("scripts/e2e/")):
         retained.append(f"{label}: click evidence cites a scripts/e2e spec or a receipt")
+    if kind == "click":
+        if not receipted:retained.append(f'{label}: GUI execution receipt is required; a spec file alone is not an executed case')
+        elif not retained:retained+=_click_receipt_errors(label,entry,record,root)
     if kind == "target" and not (receipted and entry.get("artifacts")):
         retained.append(f"{label}: target evidence needs a receipt with receipt_sha256 and the run's artifacts")
     if kind == "native_windows" and not receipted:

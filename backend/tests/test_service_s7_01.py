@@ -52,6 +52,32 @@ def _verified(**changes):
     return {'state': 'verified', 'evidence': [_entry(**changes)]}
 
 
+def _controlled_gui(root):
+    # This authored record tests schema/format rules, not actual UI acceptance.
+    reference='scripts/e2e/service-s0-08.spec.ts::controlled format case'
+    path=root/'docs/verification/receipts/controlled-gui.json';path.parent.mkdir(parents=True,exist_ok=True)
+    value={'schema':'modu-vision.gui-execution/v1','source_sha':SHA,'source_dirty':False,'test':reference,
+        'test_source_sha256':hashlib.sha256((root/reference.split('::')[0]).read_bytes()).hexdigest(),
+        'mode':'browser','platform':{'os':'linux','arch':'x64'},'status':'passed','expected_status':'passed',
+        'result':'expected','attempts':1,'report_sha256':'b'*64,'harness_sha256':'c'*64,
+        'artifacts':[{'id':'controlled-format','sha256':'d'*64}],
+        'scope':'Authored schema fixture; no actual UI, reviewer or operational acceptance'}
+    path.write_text(json.dumps(value))
+    return _verified(test=reference,receipt=path.name,receipt_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+
+
+def _copy_references(root):
+    files={'scripts/e2e/service-s0-08.spec.ts','.github/workflows/windows-native.yml','backend/tests/test_service_s1_09.py'}
+    for record in _evidence()['records']:
+        for dimension in [*(record.get(k,{}) for k in gate.DIMENSIONS),record.get('platform',{}).get('windows_native',{})]:
+            for row in dimension.get('evidence',[]):
+                if isinstance(row.get('test'),str):files.add(row['test'].split('::')[0])
+    for name in files:
+        dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
+    dest=root/'docs/verification/receipts';dest.parent.mkdir(parents=True,exist_ok=True)
+    if not dest.exists():shutil.copytree(ROOT/'docs/verification/receipts',dest)
+
+
 def test_the_repository_has_one_pending_record_per_legacy_feature_and_nothing_promoted():
     receipt = gate.check_program(_program(), ROOT)
     assert receipt['ok'], receipt['errors']
@@ -233,7 +259,8 @@ def test_well_formed_evidence_of_an_owner_task_is_accepted_for_its_dimension(tmp
         hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
     evidence = _evidence()
     record = evidence['records'][0]
-    record['gui'] = _verified(artifacts=[{'id': 'job_0001', 'sha256': 'a' * 64}])
+    _copy_references(tmp_path)
+    record['gui'] = _controlled_gui(tmp_path)
     record['persist'] = _verified(kind='api', test='backend/tests/test_service_s0_08.py::test_the_command_line_runs_one_defect_for_real_and_writes_its_record')
     record['failure'] = _verified(kind='unit', test=None, receipt='s008d-green', receipt_sha256=hashes['s008d-green'])
     record['target'] = _verified(kind='target', task='S7-01', test=None, receipt='line-3-camera-run', receipt_sha256=hashes['line-3-camera-run'],
@@ -254,7 +281,7 @@ def test_native_windows_is_required_needs_its_own_evidence_and_cannot_be_waived(
         assert any(message in error for error in _errors(evidence=evidence)), (platform, _errors(evidence=evidence))
 
 
-def test_a_claimed_acceptance_without_evidence_fails_and_full_evidence_derives_it():
+def test_a_claimed_acceptance_without_evidence_fails_and_full_evidence_derives_it(tmp_path):
     program, evidence, coverage = _program(), _evidence(), _coverage()
     program['legacy_coverage'][0]['service_acceptance'] = 'accepted'
     assert any("service_acceptance 'accepted' differs from its evidence (pending)" in error for error in _errors(program=program))
@@ -268,8 +295,10 @@ def test_a_claimed_acceptance_without_evidence_fails_and_full_evidence_derives_i
     assert gate.derived_acceptance(record) == 'accepted'
     errors = _errors(program=program, evidence=evidence)
     assert any('coverage.md shows' in error and 'F001' in error for error in errors), 'the coverage table must say accepted too'
+    _copy_references(tmp_path)
+    record['gui']=_controlled_gui(tmp_path)
     shown = coverage.replace(ROW_F001, ROW_F001.replace('| pending |', '| accepted |'))
-    assert _errors(program=program, evidence=evidence, coverage=shown) == []
+    assert _errors(program=program, evidence=evidence, coverage=shown,root=tmp_path) == []
     record['platform']['windows_native'] = {'state': 'pending'}
     assert gate.derived_acceptance(record) == 'pending', 'no acceptance without native Windows'
 

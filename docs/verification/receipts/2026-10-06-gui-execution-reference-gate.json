@@ -1,0 +1,57 @@
+{
+  "schema": "GUIExecutionReferenceGate/v1",
+  "baseline_source_sha": "e54d17993a10b97d0a419bde75ea431305b3f32e",
+  "source_binding": "Exact changed file SHA-256; GUI run is separately bound to its clean published commit",
+  "changed_source_files": {
+    ".github/workflows/ci.yml": "4bae35b3889b40241d2f557ecfc381290ae785dd56f2caaf9569f56dbfa23bcb",
+    "backend/tests/test_service_s7_01.py": "6d19b33376cf2bce457776ca184cb399c462cddea76d127e7f2b36cd13a8af6c",
+    "backend/tests/test_source_ci_model_lanes.py": "7a8c59c93d510367ee29b3273d3e4a546a14ba88f66843e2c276b1dcf6cb025d",
+    "docs/service-upgrade-evidence.json": "7c031d81a0bf20e419648eca90d26727da51e42dad289cc41740af7ac8481c10",
+    "scripts/check_service_plan.py": "cc5f97ec8731d03bf6534b23644029f47ca23f704fdccb6be91604f6fe4a5dfe",
+    "backend/tests/test_gui_execution_evidence.py": "c7f5ed69694e68ecac362509c5dd315a5d37e9d21a24053d916a1b6fb8fc656d",
+    "backend/tests/test_gui_execution_receipt_collector.py": "51a62a10f164c21b6a466bb342d73b92b84b7da1e74a01772d880b043e9f111e",
+    "scripts/gui_execution_receipt.py": "b51ac0267ac09385332ea317032b9e254456fb77f363fa3343fd6aac990beed5"
+  },
+  "junit": [
+    {
+      "name": "gui-execution-gate-final.xml",
+      "sha256": "9d6840598df34cd0a1ecac8a4833bafe24cde71857328bdf60891603c370207e",
+      "tests": 134,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ci-selection-reference-third.xml",
+      "sha256": "671d9d2d28071bd3f133b45dc45d65f9f3ba45bd4e032a82a0437340b9d47a21",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "ci_selected_tests_collected": 2142,
+  "ci_collection_log_sha256": "279554e45c3e549d7be057fd8547eb5a8c12882ab6cee7f0976877ce36bc3107",
+  "actual_gui_receipt": {
+    "name": "2026-10-06-manual-review-e54-gui.json",
+    "sha256": "0e2a373dc2eab2694c6ccc2abec52a5de028b60fe686e9363a2f7f9e54136c74",
+    "source_sha": "e54d17993a10b97d0a419bde75ea431305b3f32e",
+    "clean_source": true,
+    "actual_authentic_dino_parent_and_candidate": true,
+    "actual_electron_reopen": true
+  },
+  "retained_ci_failure": {
+    "run": 37455205183,
+    "source_sha": "e54d17993a10b97d0a419bde75ea431305b3f32e",
+    "cause": "two nonexistent operations test paths; CPU collection exit 4; no CPU tests executed"
+  },
+  "hosted_latest_ci_passed": false,
+  "root_review_only": true,
+  "human_quality_approved": false,
+  "physical_device_accepted": false,
+  "software_parent_counts": {
+    "verified": 64,
+    "pending": 18,
+    "finally_accepted": 0
+  }
+}

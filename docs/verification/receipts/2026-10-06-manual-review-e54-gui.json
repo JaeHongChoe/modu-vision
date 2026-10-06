@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e54d17993a10b97d0a419bde75ea431305b3f32e",
+  "source_dirty": false,
+  "test": "scripts/e2e/operations-manual-handoff.spec.ts::native actual retraining cycle reopens frozen manual review and refuses inadequate quality samples",
+  "test_source_sha256": "107cc8d8fb3dbbbbea26eca8753146b7a06717d70eb82b2c0febacaf0175a3be",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "015f7a95aa81b640acc3b26f82f62607a5aa216c866dec3cd3f210edaba4464a",
+  "harness_sha256": "55c4107ba1fb05fef309774ed74a8edb02441613133bc2acd5478ab797d439ca",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cc7b8dda8ff165a6e1263973e945f7661f5d1f666c94cf9d469d650ce282da69"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

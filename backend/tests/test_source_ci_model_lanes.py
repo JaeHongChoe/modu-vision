@@ -96,3 +96,33 @@ def test_lane_receipt_refuses_mixed_scope_or_ambiguous_runs(tmp_path, case):
         (second / 'report.json').write_text(json.dumps(report('public', status='passed')))
     with pytest.raises(ValueError):
         ci_module().receipt(ROOT, tmp_path / 'missing.xml', public_selection=public, owned_selection=owned, e2e_root=root)
+
+
+def test_all_explicit_ci_pytest_references_exist_and_select_real_functions():
+    """A typo must fail before a hosted workflow skips its entire CPU lane."""
+    import ast,re
+    for workflow in ['ci.yml','windows-native.yml']:
+        value=yaml.safe_load((ROOT/'.github/workflows'/workflow).read_text())
+        references=set()
+        def strings(node):
+            if isinstance(node,str):yield node
+            elif isinstance(node,dict):
+                for item in node.values():yield from strings(item)
+            elif isinstance(node,list):
+                for item in node:yield from strings(item)
+        # Windows stores its selection in matrix.include.tests, then injects it
+        # into the runner command. Inspect both literal steps and matrix values.
+        for command in strings(value['jobs']):
+            references.update(re.findall(r'(?:backend/tests|scripts/tests)/[A-Za-z0-9_./-]+\.py(?:::[A-Za-z0-9_]+)*',command))
+        assert references,workflow
+        for reference in references:
+            file,*selectors=reference.split('::');path=ROOT/file
+            assert path.is_file(),f'{workflow}: missing pytest path {reference}'
+            nodes=ast.parse(path.read_text(encoding='utf-8')).body
+            for index,selector in enumerate(selectors):
+                name=selector.split('[',1)[0]
+                node=next((n for n in nodes if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef,ast.ClassDef)) and n.name==name),None)
+                if index==len(selectors)-1:
+                    assert isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) and name.startswith('test_'),reference
+                else:assert isinstance(node,ast.ClassDef) and name.startswith('Test'),reference
+                nodes=node.body
