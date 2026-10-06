@@ -82,6 +82,8 @@ from backend.api import routes_flowchart as flow_routes
 
 @pytest.mark.parametrize('device,target,profile', [('cpu','local',None),('mps','local',None),('cuda','selected_compute','owned-server')])
 def test_fixed_input_comparison_persists_and_reopens_without_activating_version(tmp_path,monkeypatch,device,target,profile):
+    checkpoint=tmp_path/'fixture-checkpoint.bin';checkpoint.write_bytes(b'controlled model identity, inference mocked')
+    monkeypatch.setattr(flow_routes,'trusted_checkpoint',lambda *a,**kw:checkpoint)
     source=tmp_path/'source';source.mkdir();image=source/'one.png';Image.new('RGB',(64,64),'red').save(image)
     project={'id':'project-a','project_dir':str(tmp_path/'project'),'dataset_dir':str(tmp_path/'project'/'dataset'),'source_dataset_dir':str(source)}
     request=SimpleNamespace(state=SimpleNamespace())
@@ -114,6 +116,8 @@ def test_fixed_input_comparison_persists_and_reopens_without_activating_version(
 
 
 def test_comparison_rejects_modified_input_without_publishing_receipt(tmp_path,monkeypatch):
+    checkpoint=tmp_path/'fixture-checkpoint.bin';checkpoint.write_bytes(b'controlled model identity, inference mocked')
+    monkeypatch.setattr(flow_routes,'trusted_checkpoint',lambda *a,**kw:checkpoint)
     source=tmp_path/'source';source.mkdir();image=source/'one.png';Image.new('RGB',(64,64)).save(image)
     project={'id':'a','project_dir':str(tmp_path/'project'),'source_dataset_dir':str(source)}
     request=SimpleNamespace()
@@ -175,6 +179,8 @@ def test_debug_stop_at_decision_does_not_execute_output_or_select_route(monkeypa
 
 
 def test_comparison_freezes_input_bytes_even_when_source_changes_and_is_restored(tmp_path,monkeypatch):
+    checkpoint=tmp_path/'fixture-checkpoint.bin';checkpoint.write_bytes(b'controlled model identity, inference mocked')
+    monkeypatch.setattr(flow_routes,'trusted_checkpoint',lambda *a,**kw:checkpoint)
     import hashlib
     source=tmp_path/'source';source.mkdir();image=source/'one.png';Image.new('RGB',(64,64),'red').save(image);original=image.read_bytes()
     project={'id':'a','project_dir':str(tmp_path/'project'),'source_dataset_dir':str(source)}

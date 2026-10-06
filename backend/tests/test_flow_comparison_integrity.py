@@ -14,6 +14,8 @@ def control(tmp_path,monkeypatch):
     project={'id':'a','task':'classification','project_dir':str(tmp_path/'project'),'source_dataset_dir':str(source),'active_labelset_id':'default'}
     monkeypatch.setattr(workspace,'get_current_project',lambda _:project)
     monkeypatch.setattr(flows,'get_current_project',lambda _:project)
+    checkpoint=tmp_path/'fixture-checkpoint.bin';checkpoint.write_bytes(b'controlled model identity, inference mocked')
+    monkeypatch.setattr(flows,'trusted_checkpoint',lambda *a,**kw:checkpoint)
     graph=get_fixed_roi_flowchart(inspection_task='classification',job_id='job_control')
     va=flows._save_version(graph,'classification',str(source),Path(project['project_dir']))
     graph=graph.model_copy(deep=True);graph.name='B'
@@ -86,6 +88,50 @@ def test_debug_comparison_forwards_same_node_and_records_partial_scope(control,m
     body.stop_node_id='missing'
     with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
     assert error.value.status_code==422 and len(selected)==2
+
+
+def test_model_bytes_changed_between_versions_refuse_old_cohort_receipt(control,monkeypatch,tmp_path):
+    p,r,body,calls=control;p['models_dir']=str(tmp_path/'models')
+    checkpoint=tmp_path/'checkpoint.bin';checkpoint.write_bytes(b'checkpoint-original')
+    monkeypatch.setattr(flows,'trusted_checkpoint',lambda *a,**kw:checkpoint)
+    def changing(req,request):
+        calls.append(req.pipeline.name);checkpoint.write_bytes(b'checkpoint-replaced')
+        return {'final_verdict':'OK','crops':[],'execution_steps':[]}
+    monkeypatch.setattr(flows,'run_flowchart',changing)
+    with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
+    assert error.value.status_code==409 and 'model' in error.value.detail.lower() and len(calls)==1
+    assert not list((Path(p['project_dir'])/'flowcharts/comparisons').glob('*.json'))
+
+
+def test_new_model_metadata_during_comparison_cannot_be_omitted_from_identity(control,monkeypatch,tmp_path):
+    p,r,body,calls=control;checkpoint=tmp_path/'checkpoint.bin';checkpoint.write_bytes(b'fixed checkpoint')
+    monkeypatch.setattr(flows,'trusted_checkpoint',lambda *a,**kw:checkpoint)
+    def changing(req,request):
+        calls.append(req.pipeline.name);(tmp_path/'model_meta.json').write_text('{"changed":true}')
+        return {'final_verdict':'OK','crops':[],'execution_steps':[]}
+    monkeypatch.setattr(flows,'run_flowchart',changing)
+    with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
+    assert error.value.status_code==409 and len(calls)==1
+
+
+def test_saved_comparison_binds_actual_model_bytes_and_frozen_input_list(control):
+    p,r,body,_=control;record=workspace.compare_versions(body,r)
+    binding=record['model_bindings']['a'][0]
+    assert binding['job_id']=='job_control' and binding['task']=='classification'
+    assert binding['checkpoint_sha256']==hashlib.sha256((Path(p['project_dir']).parent/'fixture-checkpoint.bin').read_bytes()).hexdigest()
+    assert record['model_bindings']['a']==record['model_bindings']['b']
+    assert len(record['cohort_sha256'])==64 and binding['identity_files_sha256']['job_receipt.json'] is None
+
+
+def test_removed_input_cannot_publish_even_if_both_model_runs_complete(control,monkeypatch):
+    p,r,body,calls=control
+    def removing(req,request):
+        calls.append(1);Path(body.image_paths[0]).unlink(missing_ok=True)
+        return {'final_verdict':'OK','crops':[],'execution_steps':[]}
+    monkeypatch.setattr(flows,'run_flowchart',removing)
+    with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
+    assert error.value.status_code==409 and len(calls)==2
+    assert not list((Path(p['project_dir'])/'flowcharts/comparisons').glob('*.json'))
 
 
 def test_comparison_that_cannot_be_reopened_is_refused_before_publication(control,monkeypatch):

@@ -1818,7 +1818,16 @@
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx",
     "src/renderer/components/flowchart/FlowchartStudio.tsx",
     "scripts/e2e/fixtures/flow_navigation_control.py",
-    "scripts/e2e/flow-navigation-record-bounds.spec.ts"
+    "scripts/e2e/flow-navigation-record-bounds.spec.ts",
+    "backend/api/routes_flowchart.py",
+    "backend/tests/test_flow_workspace_upgrade.py",
+    "src/renderer/components/flowchart/FlowNodeDebugger.tsx",
+    "src/renderer/components/flowchart/flowWorkspace.ts",
+    "src/renderer/types/index.ts",
+    "backend/engine/flow_debug_cache.py",
+    "backend/tests/test_flow_debug_cache.py",
+    "scripts/e2e/fixtures/flow_debug_model_control.py",
+    "scripts/e2e/flow-debug-model-freeze.spec.ts"
    ],
    "proposed_contract": "RunTrace / FlowVersionDiff / FixedCohortComparison",
    "acceptance": [
@@ -1845,6 +1854,12 @@
      "result": "Task126 adds label/type/ID/model search, selection-only node jump and overview minimap pointer/keyboard navigation. Persisted A/B writer obeys the same UTF-8 128MiB readback limit; ambiguous duplicate JSON keys are quarantined without deleting records.",
      "scope": "Backend44,renderer797,types/E2E types/build passed; Chrome/development Electron2pass, two-axis navigation/reload with exact saved graph/source hashes unchanged and duplicate-envelope UI quarantine. Root a9b22452e4ee6d977efcc509e44f21c38e4e56c7f76c5a52a103cb7ac7d62bfd,8 source inputs/58 artifacts; unchanged Task125 inputs separately checked.",
      "platform": "macOS synthetic navigation controls with unavailable model; no inference/quality/GPU, native Windows, independent review, final acceptance or parent completion claim. Exact ancestor cache and representative frozen model/cohort comparisons remain."
+    },
+    {
+     "kind": "partial-exact-debug-cache-model-binding",
+     "result": "Task127 adds bounded local CPU partial trace reuse keyed to exact full graph, input, executed core checkpoint/config bytes, project and device capacity. Whole-graph identity conservatively invalidates all ancestor/descendant edits. Production/error/untrained runs bypass cache. A/B binds per-node checkpoint/config and input-list hashes and refuses changed/missing input or model files before publication.",
+     "scope": "Backend62,renderer797,types/E2E types/build passed. Chrome/development Electron2pass include4 actual GUI partial executions (miss then hit), real deterministic CPU model A/B OK/NG difference and hash/history reopen. Source12/artifacts58 plus6 unchanged dependencies; root 735f7d7dfd605811e7a70ae71f4c3ff6e5462f47a33b536442e83703677d19d2.",
+     "platform": "macOS local CPU; deterministic untrained control checkpoints, no representative training/quality/GPU/Windows/independent review or parent completion. Native/browser background409/422/404 logged; no application error-free claim."
     }
    ],
    "file_actions": {
@@ -1862,7 +1877,16 @@
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "Create",
     "src/renderer/components/flowchart/FlowchartStudio.tsx": "Modify",
     "scripts/e2e/fixtures/flow_navigation_control.py": "Create",
-    "scripts/e2e/flow-navigation-record-bounds.spec.ts": "Create"
+    "scripts/e2e/flow-navigation-record-bounds.spec.ts": "Create",
+    "backend/api/routes_flowchart.py": "Modify",
+    "backend/tests/test_flow_workspace_upgrade.py": "Modify",
+    "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "Modify",
+    "src/renderer/components/flowchart/flowWorkspace.ts": "Modify",
+    "src/renderer/types/index.ts": "Modify",
+    "backend/engine/flow_debug_cache.py": "Create",
+    "backend/tests/test_flow_debug_cache.py": "Create",
+    "scripts/e2e/fixtures/flow_debug_model_control.py": "Create",
+    "scripts/e2e/flow-debug-model-freeze.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
@@ -1879,6 +1903,11 @@
    "proposed_test_file": "scripts/e2e/service-s2-08.spec.ts",
    "scope_refinement_ids": [
     "E04"
+   ],
+   "remaining": [
+    "Graph inspector resize/collapse and broad large-DAG qualification",
+    "Representative frozen model/cohort comparisons and consolidated whole S2-08 requirement coverage",
+    "Independent review, handoff and target acceptance remain separate; native Windows tests waived"
    ]
   },
   {

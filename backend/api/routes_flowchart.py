@@ -70,6 +70,8 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 # Persistent cached engine instance for rapid warm execution
 _ENGINE = FlowchartEngine()
 _CPU_ENGINE = FlowchartEngine(device='cpu')
+from backend.engine.flow_debug_cache import DebugRunCache, local_debug_run
+_DEBUG_RUN_CACHE = DebugRunCache()
 _FLOW_SAVE_LOCK = threading.RLock()
 
 
@@ -1193,7 +1195,8 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 with compute_lease_scope(f"flow_{uuid.uuid4().hex}", str(device)):
                     engine = _local_execution_engine(device)
                     with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
-                        result = engine.execute(pipeline=pipeline, image_path=req.image_path, image_id=req.image_id, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}))
+                        result = local_debug_run(_DEBUG_RUN_CACHE, engine, pipeline, req.image_path,
+                            req.image_id, req.stop_node_id, project, verified_checkpoints)
             except ValueError as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             return {**result, "execution_target": "local", "execution_device": str(device), "compute_profile_id": None}

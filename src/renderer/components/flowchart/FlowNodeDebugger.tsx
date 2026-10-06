@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import type {FlowNode,FlowchartPipeline,FlowchartExecutionResult,FlowchartExecutionStep} from '../../types';
-import {nodeEvidenceText,activeInputArtifacts,artifactPage,roiTrace} from './flowWorkspace';
+import {nodeEvidenceText,activeInputArtifacts,artifactPage,roiTrace,debugRunCacheText} from './flowWorkspace';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
 import {compactEvidence, storedRasterLayers, type EvidenceView} from '../common/evidenceViewer';
 
@@ -42,6 +42,7 @@ export function FlowNodeDebugger({node,pipeline,result,versionId}:{node:FlowNode
   return <section aria-label="선택 노드 실행 근거" className="rounded border border-slate-700 bg-slate-950/30 p-3 space-y-3 text-xs">
     <h4 className="font-bold text-sky-200">실행 근거 · {node.data.label}</h4>
     <p className="text-slate-400">{result?.execution_target||'local'} · {result?.execution_device||'—'} · 최종 {result?.final_verdict}</p>
+    {result?.debug_cache&&<p role="status" className="text-sky-200">{debugRunCacheText(result)}</p>}
     {nodeEvidenceText(node,step).map((line,i)=><p key={i}>{line}</p>)}
     {node.data.node_type==='decision'&&<p className="text-amber-200">{result?.rejection_reason}</p>}
     <ArtifactBrowser key={`in:${node.id}`} title="입력" rows={inputs} onSelect={setRoi} onOpen={open}/>

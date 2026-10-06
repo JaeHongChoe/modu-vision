@@ -375,6 +375,7 @@ export interface FlowchartExecutionStep {
 
 export interface FlowchartExecutionResult {
   status: string;
+  debug_cache?: { status: 'hit' | 'miss' | 'bypassed'; identity_sha256?: string; original_latency_ms?: number };
   stop_node_id?: string | null;
   graph_sha256?: string | null;
   final_verdict: 'OK' | 'NG' | 'REVIEW';

@@ -15,6 +15,7 @@ from backend.engine.flowchart_engine import FlowchartPipeline, FlowchartRunReque
 from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.flow_workspace import save_template, load_templates, map_template, compare_results, atomic_json
 from backend.engine.dicom_input import open_source_image
+from backend.engine.flow_debug_cache import checkpoint_files, check_checkpoint_files, file_sha256
 
 router=APIRouter(prefix='/api/flow-workspace',tags=['flow-workspace'])
 MAX_COMPARISON_RECORD_BYTES=128*1024*1024
@@ -137,6 +138,41 @@ def _same_comparison_context(request,context,versions):
             raise HTTPException(409,'Saved comparison flow version changed; results were not saved')
 
 
+def _freeze_comparison_models(graph, project, stop_node_id):
+    scope=flows.debug_ancestor_ids(graph,stop_node_id)
+    checkpoints={};bindings=[]
+    for node in graph.nodes:
+        task=flows.flow_model_task(node)
+        if node.id not in scope or task is None:continue
+        job=node.data.model_job_id
+        if task in flows.SPECIALIZED_TASKS:
+            try:path,_=flows.resolve_specialized_checkpoint(project.get('models_dir'),job,task,project.get('source_dataset_dir'))
+            except (ValueError,OSError) as exc:raise HTTPException(409,f'Comparison model is unavailable: {exc}') from exc
+        else:path=flows.trusted_checkpoint(job,project_models_dir=project.get('models_dir'))
+        if path is None:raise HTTPException(409,f'Comparison model is unavailable for {node.data.label}')
+        checkpoints[(job,task)]=Path(path)
+        try:
+            files=checkpoint_files({(job,task):Path(path)})
+            bindings.append({'node_id':node.id,'job_id':job,'task':task,'checkpoint_sha256':files[Path(path)],
+                'identity_files_sha256':{file.name:sha for file,sha in files.items()}})
+        except (OSError,ValueError) as exc:raise HTTPException(409,'Comparison model identity cannot be read') from exc
+    return bindings,checkpoint_files(checkpoints)
+
+
+def _same_comparison_models(files):
+    try:unchanged=check_checkpoint_files(files)
+    except (OSError,ValueError):unchanged=False
+    if not unchanged:raise HTTPException(409,'Comparison model checkpoint or configuration changed; results were not saved')
+
+
+def _frozen_input_bytes(path, expected):
+    try:contents=path.read_bytes()
+    except OSError as exc:raise HTTPException(409,'Comparison input is unavailable; results were not saved') from exc
+    if hashlib.sha256(contents).hexdigest()!=expected:
+        raise HTTPException(409,'Comparison input changed; results were not saved')
+    return contents
+
+
 @router.get('/comparisons')
 def comparisons(request:Request):
     project=get_current_project(request)
@@ -182,14 +218,21 @@ def compare_versions(req:FlowCompare,request:Request):
     _same_comparison_context(request,context,version_files)
     paths=list(dict.fromkeys(_image(project,p) for p in req.image_paths))
     hashes={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+    bindings_a,models_a=_freeze_comparison_models(ga,project,req.stop_node_id)
+    bindings_b,models_b=_freeze_comparison_models(gb,project,req.stop_node_id)
+    model_files={**models_a,**models_b}
+    _same_comparison_models(models_a);_same_comparison_models(models_b)
     record={'schema_version':2,'quality_approved':False,'comparison_id':uuid.uuid4().hex,'project_id':project['id'],'source_dataset_path':project.get('source_dataset_dir'),'labelset_id':project.get('active_labelset_id','default'),
         'name':req.name,'created_at':datetime.now(timezone.utc).isoformat(),'version_a':req.version_a,'version_b':req.version_b,
         'graph_a_sha256':pipeline_sha256(ga),'graph_b_sha256':pipeline_sha256(gb),'device':req.device,
         'execution_target':req.execution_target,'compute_profile_id':req.compute_profile_id,
         'stop_node_id':req.stop_node_id,'comparison_scope':'debug_partial' if req.stop_node_id else 'whole_flow',
-        'version_file_sha256':{file.stem:value for file,value in version_files.items()},'rows':[]}
+        'version_file_sha256':{file.stem:value for file,value in version_files.items()},
+        'model_bindings':{'a':bindings_a,'b':bindings_b},
+        'cohort_sha256':_comparison_digest([{'image_path':str(path),'sha256':hashes[str(path)]} for path in paths]),'rows':[]}
     for path in paths:
         _same_comparison_context(request,context,version_files)
+        _same_comparison_models(model_files)
         row={'image_path':str(path),'file_name':path.name,'image_sha256':hashes[str(path)]}
         snapshot_root=Path(project.get('dataset_dir') or Path(project['project_dir'])/'dataset')/'flow_compare_inputs'
         snapshot_root.mkdir(parents=True,exist_ok=True)
@@ -197,16 +240,16 @@ def compare_versions(req:FlowCompare,request:Request):
         # cause B to inspect a different image while retaining A's receipt hash.
         with tempfile.TemporaryDirectory(prefix='comparison-',dir=snapshot_root) as temporary:
             snapshot=Path(temporary)/path.name
-            contents=path.read_bytes()
-            if hashlib.sha256(contents).hexdigest()!=hashes[str(path)]:
-                raise HTTPException(409,'Test input changed before comparison')
+            contents=_frozen_input_bytes(path,hashes[str(path)])
             snapshot.write_bytes(contents)
             snapshot.chmod(0o400)
             try:
                 a=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=ga,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id,stop_node_id=req.stop_node_id),request=request)
                 _same_comparison_context(request,context,version_files)
+                _same_comparison_models(model_files)
                 b=flows.run_flowchart(FlowchartRunRequest(project_id=project['id'],pipeline=gb,image_path=str(snapshot),execution_target=req.execution_target,device=req.device,compute_profile_id=req.compute_profile_id,stop_node_id=req.stop_node_id),request=request)
                 _same_comparison_context(request,context,version_files)
+                _same_comparison_models(model_files)
                 if hashlib.sha256(snapshot.read_bytes()).hexdigest()!=hashes[str(path)]:
                     raise HTTPException(409,'Frozen comparison input was changed')
                 for result in (a,b): result['image_path']=str(path)
@@ -214,11 +257,13 @@ def compare_versions(req:FlowCompare,request:Request):
             except HTTPException as exc:
                 if exc.status_code==409: raise
                 row['error']=str(exc.detail)
-        if hashlib.sha256(path.read_bytes()).hexdigest()!=hashes[str(path)]: raise HTTPException(409,'Test input changed during comparison; results were not saved')
+        _frozen_input_bytes(path,hashes[str(path)])
         record['rows'].append(row)
         _ensure_comparison_size(record)
     record['status']='error' if any('error' in r for r in record['rows']) else 'completed'
+    for path in paths:_frozen_input_bytes(path,hashes[str(path)])
     _same_comparison_context(request,context,version_files)
+    _same_comparison_models(model_files)
     record['record_sha256']=_comparison_digest(record)
     _ensure_comparison_size(record)
     atomic_json(_comparisons(project)/f"{record['comparison_id']}.json",record)

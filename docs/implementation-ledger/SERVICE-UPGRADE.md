@@ -740,3 +740,16 @@ Backend34,renderer794,types/E2E types/build 통과. Chrome/Electron2개에서 �
 노드 이름·종류·ID·모델 ID로 검색하고 선택한 위치로 이동한다. 미니맵 클릭·노드 키보드 선택·방향키 이동과 전체 맞춤을 제공하며, 탐색은 저장 그래프·원본·실행 이력을 수정하지 않는다. 저장 비교는 읽기와 같은 UTF-8 128MiB 상한을 넘으면413으로 거절하고, 중복 JSON 키 기록은 원본을 보존한 채 제외한다.
 
 Backend44,renderer797,types/E2E types/build 통과. 실제 Chrome·development Electron2개에서 먼 노드 검색·양축 이동·재열기·저장 그래프/원본 해시 유지·중복 기록 격리를 확인했다. root a9b22452e4ee6d977efcc509e44f21c38e4e56c7f76c5a52a103cb7ac7d62bfd,source8/artifacts58. Python position 자료형과 중첩 summary 선택자 오류를 보존하고 수정 소스를 고정한 새 실행만 통과로 집계했다. 미존재 모델을 쓰는 탐색 제어이므로 모델 추론·품질·GPU·독립 검토와 앱 무오류 완료 주장은 없다. S2-08 정확한 ancestor cache·대표 frozen 모델/코호트 비교와 Task120 startup/thumbnail 오류는 남는다. 구현57/82,미완료25개 중 Windows 제외24개 활성 미완료 유지.
+
+
+## Task127 정확한 부분 실행 캐시와 A/B 모델 고정 (S2-08 일부)
+
+현재 backend CPU의 부분 실행을 정확한 전체 그래프·원본 바이트·실행 범위 모델/설정·프로젝트·장치 설정으로 묶어 재사용한다. 전체 그래프 변경도 보수적으로 새로 실행한다. 외부 fixture/교정/전처리/전용 adapter 및 compiled runtime은 새로 실행하고 전체 생산 검사·오류·미학습 경고·최종 OK는 캐시하지 않는다. Preview JSON32MiB/16개 한도와 복사 격리를 적용하며 재사용의 현재 확인 시간과 최초 실행 시간을 화면에서 구분한다.
+
+A/B는 모델 체크포인트와 config/provenance 파일의 바이트·미존재 상태, 노드별 모델 결합, 고정 입력 목록 해시를 저장한다. 중간 모델 교체·metadata 추가·입력 변경/삭제를409으로 거절한다. 모델이 바뀌었어도 비교를 저장하던 결함을 RED로 재현했다. 기존 hashless/변조 기록의 격리와128MiB 저장 상한을 유지한다.
+
+Backend62,renderer797,types/E2E types/build 통과. 실제 Chrome/development Electron2개에서 CPU 제어 모델 A/B OK→NG·근거 재열기와 API 캐시를 확인하고, GUI 버튼으로 각각2번 부분 실행해 miss→hit 및 REVIEW/최종 OK 금지를 확인했다. 원본8장씩·checkpoint/metadata hash와 활성 흐름 미변경, 소유 프로세스/port 종료를 대조했다. root 735f7d7dfd605811e7a70ae71f4c3ff6e5462f47a33b536442e83703677d19d2,source12/artifacts58 및 변경 없는 의존성6개. 합성·미학습 결정적 checkpoint의 실제 CPU 추론이며 학습·대표 품질·GPU·독립 검토 근거는 아니다. 배경409/422/404가 기록됐으므로 앱 무오류 판정은 하지 않는다.
+
+원래 서명된 저장 JSON과 JavaScript manifest의0.0→0 숫자 표현 차이를 첫 root verifier가 잘못 비교한 실패를 보존했다. 실제 저장 파일의 서명을 검증하고 UI 수신 값과 의미적 동일성을 비교하도록 verifier만 수정했다. 초기 모델 경로 mock을 쓰던 기존 검사 준비도 정확한 제어 파일 identity로 보완했다.
+
+[전체82개 작업표](WORK-STATUS.md): 구현57/82,미완료25개 중 Windows 제외24개 활성 미완료 유지. S2-08 패널 resize/collapse·큰DAG·대표 cohort 및 전체 요구 확인과 Task120 startup/thumbnail 오류를 이어서 처리한다. 부모 수용 승인 완료0개이며 이번 부분 구현을 부모 완료 수에 더하지 않는다.

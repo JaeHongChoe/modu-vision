@@ -1,5 +1,11 @@
 import type { FlowchartPipeline, FlowchartExecutionStep, FlowchartExecutionResult, FlowNode } from '../../types';
 
+export function debugRunCacheText(result:FlowchartExecutionResult):string {
+  if(!result.debug_cache)return '';
+  if(result.debug_cache.status==='hit')return `동일한 부분 실행 근거 재사용 · 최초 실행 ${(result.debug_cache.original_latency_ms??0).toFixed(1)} ms · 현재 확인 ${result.total_latency_ms.toFixed(1)} ms · 최종 검사 판정 아님`;
+  return result.debug_cache.status==='miss'?'부분 실행 새로 계산':'부분 실행 다시 계산 · 재사용하지 않음';
+}
+
 export function flowTestSetStorageKey(scope:{projectId:string;projectDir:string;source:string;task:string;labelset?:string;computeProfileId:string|null;apiIdentity:string}):string {
   return `flow-test-set:v2:${JSON.stringify([scope.apiIdentity,scope.computeProfileId,scope.projectId,scope.projectDir,scope.source,scope.task,scope.labelset||'default'])}`;
 }
