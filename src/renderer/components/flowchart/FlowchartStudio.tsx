@@ -41,6 +41,7 @@ import { ImageRoiEditor } from './ImageRoiEditor';
 import { FlowNodeDebugger } from './FlowNodeDebugger';
 import { FlowWorkspacePanel } from './FlowWorkspacePanel';
 import { FlowEvaluationPanel } from './FlowEvaluationPanel';
+import { FlowGraphNavigator } from './FlowGraphNavigator';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
@@ -1187,7 +1188,7 @@ export const FlowchartStudio: React.FC = () => {
               <ZoomIn className="w-3 h-3" />
             </button>
             <button
-              onClick={() => { setZoomScale(fitViewport.scale); canvasRef.current?.scrollTo({ left: 0, behavior: 'smooth' }); }}
+              onClick={() => { setZoomScale(fitViewport.scale); canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: 'smooth' }); }}
               className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
               title="Fit graph"
               aria-label="플로우 전체 맞춤"
@@ -1239,6 +1240,9 @@ export const FlowchartStudio: React.FC = () => {
 
       {/* Main Flow Canvas or Results View */}
       <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
+        <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
+          canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
+          onSelect={id=>{selectNode(id);setSelectedEdgeId(null);}} />
         <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
           <aside aria-label="검사 노드 팔레트" className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
             <h3 className="font-semibold text-slate-200">검사 노드</h3>
@@ -1253,6 +1257,7 @@ export const FlowchartStudio: React.FC = () => {
           {/* 2D PCB DAG Circuit Canvas */}
           <div
             ref={canvasRef}
+            aria-label="플로우 그래프 캔버스"
             className="min-h-0 min-w-0 flex-1 bg-[#0B0E14] overflow-auto relative"
             style={{
               backgroundImage:

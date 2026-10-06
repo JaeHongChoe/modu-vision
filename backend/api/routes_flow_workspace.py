@@ -17,6 +17,7 @@ from backend.engine.flow_workspace import save_template, load_templates, map_tem
 from backend.engine.dicom_input import open_source_image
 
 router=APIRouter(prefix='/api/flow-workspace',tags=['flow-workspace'])
+MAX_COMPARISON_RECORD_BYTES=128*1024*1024
 
 
 def _library(request):
@@ -106,6 +107,23 @@ def _comparison_digest(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()).hexdigest()
 
 
+def _unique_record_fields(pairs):
+    result={}
+    for key,value in pairs:
+        if key in result:raise ValueError('duplicate_record_field')
+        result[key]=value
+    return result
+
+
+def _ensure_comparison_size(record):
+    # Match atomic_json's UTF-8 formatting without allocating a second full preview envelope.
+    size=0
+    for part in json.JSONEncoder(ensure_ascii=False,indent=2,allow_nan=False).iterencode(record):
+        size+=len(part.encode('utf-8'))
+        if size>MAX_COMPARISON_RECORD_BYTES:
+            raise HTTPException(413,'Comparison previews exceed the saved history limit; compare fewer images')
+
+
 def _comparison_context(project):
     return {key:project.get(key,'default' if key=='active_labelset_id' else None)
             for key in ('id','project_dir','source_dataset_dir','active_labelset_id','task')}
@@ -125,9 +143,9 @@ def comparisons(request:Request):
     rows=[];invalid=[]
     for file in _comparisons(project).glob('*.json'):
         try:
-            if file.is_symlink() or file.stat().st_size>128*1024*1024:
+            if file.is_symlink() or file.stat().st_size>MAX_COMPARISON_RECORD_BYTES:
                 raise ValueError('linked_or_oversize_record')
-            record=json.loads(file.read_text(encoding='utf-8'))
+            record=json.loads(file.read_text(encoding='utf-8'),object_pairs_hook=_unique_record_fields)
             if record['project_id']==project['id'] and record.get('source_dataset_path')==project.get('source_dataset_dir') and record.get('labelset_id','default')==project.get('active_labelset_id','default'):
                 if record.get('comparison_id')!=file.stem or not isinstance(record.get('rows'),list) or not isinstance(record.get('created_at'),str):
                     raise ValueError('invalid_record_identity')
@@ -198,8 +216,10 @@ def compare_versions(req:FlowCompare,request:Request):
                 row['error']=str(exc.detail)
         if hashlib.sha256(path.read_bytes()).hexdigest()!=hashes[str(path)]: raise HTTPException(409,'Test input changed during comparison; results were not saved')
         record['rows'].append(row)
+        _ensure_comparison_size(record)
     record['status']='error' if any('error' in r for r in record['rows']) else 'completed'
     _same_comparison_context(request,context,version_files)
     record['record_sha256']=_comparison_digest(record)
+    _ensure_comparison_size(record)
     atomic_json(_comparisons(project)/f"{record['comparison_id']}.json",record)
     return {**record,'integrity':'verified'}

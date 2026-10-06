@@ -21,6 +21,35 @@ interface CanvasSize {
   height: number;
 }
 
+interface NavigableNode extends PositionedNode {
+  id: string;
+  data: {label: string; node_type: string; task?: string; model_job_id?: string};
+}
+const normalizedQuery = (value:string) => value.normalize('NFKC').trim().toLocaleLowerCase();
+export function findFlowNodes<T extends NavigableNode>(nodes:readonly T[], query:string):T[] {
+  const needle=normalizedQuery(query);
+  return nodes.filter(node=>!needle||[node.id,node.data.label,node.data.node_type,node.data.task,node.data.model_job_id]
+    .some(value=>typeof value==='string'&&normalizedQuery(value).includes(needle)));
+}
+const clampScroll=(value:number,content:number,visible:number)=>Math.max(0,Math.min(Math.max(0,content-visible),value));
+export function flowNodeScrollTarget(node:PositionedNode,viewport:FlowchartViewport,canvas:CanvasSize) {
+  return {
+    left:clampScroll(viewport.offsetX+(node.position.x+FLOW_NODE_WIDTH/2)*viewport.scale-canvas.width/2,viewport.contentWidth,canvas.width),
+    top:clampScroll(viewport.offsetY+(node.position.y+FLOW_NODE_HEIGHT/2)*viewport.scale-canvas.height/2,viewport.contentHeight,canvas.height),
+  };
+}
+export function computeFlowchartMinimap(viewport:Pick<FlowchartViewport,'contentWidth'|'contentHeight'>,canvas:CanvasSize&{left:number;top:number}) {
+  const width=180,height=96,padding=4;
+  const scale=Math.min((width-2*padding)/Math.max(1,viewport.contentWidth),(height-2*padding)/Math.max(1,viewport.contentHeight));
+  const offsetX=(width-viewport.contentWidth*scale)/2,offsetY=(height-viewport.contentHeight*scale)/2;
+  return {width,height,scale,offsetX,offsetY,visible:{x:offsetX+canvas.left*scale,y:offsetY+canvas.top*scale,
+    width:Math.min(canvas.width,viewport.contentWidth)*scale,height:Math.min(canvas.height,viewport.contentHeight)*scale}};
+}
+export function minimapScrollTarget(point:{x:number;y:number},map:ReturnType<typeof computeFlowchartMinimap>,viewport:Pick<FlowchartViewport,'contentWidth'|'contentHeight'>,canvas:CanvasSize) {
+  return {left:clampScroll((point.x-map.offsetX)/map.scale-canvas.width/2,viewport.contentWidth,canvas.width),
+    top:clampScroll((point.y-map.offsetY)/map.scale-canvas.height/2,viewport.contentHeight,canvas.height)};
+}
+
 export interface FlowchartViewport {
   scale: number;
   offsetX: number;

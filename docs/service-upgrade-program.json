@@ -1812,7 +1812,13 @@
     "backend/tests/test_flow_comparison_integrity.py",
     "src/renderer/components/flowchart/FlowWorkspacePanel.test.cjs",
     "scripts/e2e/fixtures/flow_comparison_control.py",
-    "scripts/e2e/flow-comparison-integrity.spec.ts"
+    "scripts/e2e/flow-comparison-integrity.spec.ts",
+    "src/renderer/components/flowchart/flowchartViewport.ts",
+    "src/renderer/components/flowchart/flowchartViewport.test.cjs",
+    "src/renderer/components/flowchart/FlowGraphNavigator.tsx",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx",
+    "scripts/e2e/fixtures/flow_navigation_control.py",
+    "scripts/e2e/flow-navigation-record-bounds.spec.ts"
    ],
    "proposed_contract": "RunTrace / FlowVersionDiff / FixedCohortComparison",
    "acceptance": [
@@ -1833,6 +1839,12 @@
      "result": "Task125 hashes persisted A/B envelopes, refuses exact saved-version/context changes, quarantines altered records without deleting them and labels legacy hashless records. Optional same-node partial A/B remains REVIEW, never final OK.",
      "scope": "Backend34,renderer794,types/E2E types/build; Chrome/development Electron2pass using actual local CPU ROI partial execution (4 executions), original pixels unchanged, history reopen and tamper refusal. Root455382aaac9fd969a35949cce6816fe0c87db20d5b3eb4c19794066a9cb74d22,6 changed source inputs/88 artifacts plus exact unchanged Task124 source reference.",
      "platform": "macOS CPU synthetic control; no model inference/quality, GPU, Windows native, independent review or full parent closure. Large envelope writer limit and full navigation/cache/cohort/model binding qualification remain."
+    },
+    {
+     "kind": "partial-navigation-comparison-record-bounds",
+     "result": "Task126 adds label/type/ID/model search, selection-only node jump and overview minimap pointer/keyboard navigation. Persisted A/B writer obeys the same UTF-8 128MiB readback limit; ambiguous duplicate JSON keys are quarantined without deleting records.",
+     "scope": "Backend44,renderer797,types/E2E types/build passed; Chrome/development Electron2pass, two-axis navigation/reload with exact saved graph/source hashes unchanged and duplicate-envelope UI quarantine. Root a9b22452e4ee6d977efcc509e44f21c38e4e56c7f76c5a52a103cb7ac7d62bfd,8 source inputs/58 artifacts; unchanged Task125 inputs separately checked.",
+     "platform": "macOS synthetic navigation controls with unavailable model; no inference/quality/GPU, native Windows, independent review, final acceptance or parent completion claim. Exact ancestor cache and representative frozen model/cohort comparisons remain."
     }
    ],
    "file_actions": {
@@ -1841,10 +1853,16 @@
     "src/renderer/stores/useFlowchartStore.ts": "Modify",
     "backend/engine/flow_workspace.py": "Modify",
     "backend/api/routes_flow_workspace.py": "Modify",
-    "backend/tests/test_flow_comparison_integrity.py": "Create",
+    "backend/tests/test_flow_comparison_integrity.py": "Modify",
     "src/renderer/components/flowchart/FlowWorkspacePanel.test.cjs": "Modify",
     "scripts/e2e/fixtures/flow_comparison_control.py": "Create",
-    "scripts/e2e/flow-comparison-integrity.spec.ts": "Create"
+    "scripts/e2e/flow-comparison-integrity.spec.ts": "Create",
+    "src/renderer/components/flowchart/flowchartViewport.ts": "Modify",
+    "src/renderer/components/flowchart/flowchartViewport.test.cjs": "Modify",
+    "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "Create",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "Modify",
+    "scripts/e2e/fixtures/flow_navigation_control.py": "Create",
+    "scripts/e2e/flow-navigation-record-bounds.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {

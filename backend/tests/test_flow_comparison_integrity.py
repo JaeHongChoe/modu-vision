@@ -86,3 +86,21 @@ def test_debug_comparison_forwards_same_node_and_records_partial_scope(control,m
     body.stop_node_id='missing'
     with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
     assert error.value.status_code==422 and len(selected)==2
+
+
+def test_comparison_that_cannot_be_reopened_is_refused_before_publication(control,monkeypatch):
+    p,r,body,_=control
+    monkeypatch.setattr(workspace,'MAX_COMPARISON_RECORD_BYTES',1024,raising=False)
+    monkeypatch.setattr(flows,'run_flowchart',lambda *a,**kw:{'final_verdict':'REVIEW','annotated_image':'가'*2000,'crops':[],'execution_steps':[]})
+    with pytest.raises(HTTPException) as error:workspace.compare_versions(body,r)
+    assert error.value.status_code==413
+    assert not list((Path(p['project_dir'])/'flowcharts/comparisons').glob('*.json'))
+
+
+def test_duplicate_history_fields_cannot_be_silently_overwritten(control):
+    p,r,body,_=control;result=workspace.compare_versions(body,r)
+    file=Path(p['project_dir'])/'flowcharts/comparisons'/f"{result['comparison_id']}.json"
+    raw=json.loads(file.read_text());file.write_text('{"status":'+json.dumps(raw['status'])+','+json.dumps(raw)[1:])
+    history=workspace.comparisons(r)
+    assert history['comparisons']==[] and history['invalid']==[{'comparison_id':result['comparison_id'],'reason':'duplicate_record_field'}]
+    assert file.exists()
