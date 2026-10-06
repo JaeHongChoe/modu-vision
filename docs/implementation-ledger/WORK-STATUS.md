@@ -1,6 +1,6 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 기준 공개 소스 `19dfb64a602621401e36430d38931dcd84074073`와 기록된 후속 검증
+확인일: 2026-10-07 · 구현 소스와 실제 실행 소스는 아래 각 receipt에 고정하며 현재 후속 구현은 `4cf1912`다.
 
 **82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
 
@@ -35,7 +35,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
 | S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 후속 최신 소스 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 4개 기능의 버튼19개에32개 실제 시나리오 근거,101개 미실행 시나리오 명시. native GUI/persist/reopen/failure15곳 연결. 선언795개는 실행 근거로 세지 않음. 나머지152개 기능 및 완전한 action 수용 검증 필요. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 6개 기능의 action30개에55개 실제 시나리오 근거,155개 pending 시나리오 명시. native 기능별 근거24곳 연결. 선언795개는 실행 근거로 세지 않음. 나머지150개 기능 및 완전한 action 수용 검증 필요. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
@@ -205,3 +205,7 @@ independent/human/physical/release acceptance.
 실제 배포 DICOM pack, 원본을 보존하는 CPU/provider·clean browser/Electron 실행, 해독 전 resource/frame 거절과 구체적인 입력 오류 안내를 완료했습니다. 관련 backend52개, 기능 근거144개, renderer849개와 타입 검사가 통과했습니다. 버튼19개의32개 시나리오를 실제 기록에 연결했고, 공개 후보는 미해결 조건을 유지한 hold입니다. 부모 집계66/16/0은 유지하며, 72시간 검사는 독립적으로 계속 실행합니다.
 
 상세 기록: [DICOM runtime and action/candidate inputs](2026-10-07-dicom-actions-candidate.md).
+
+## 실제 앱 복구·진단과 DICOM 무결성 후속 작업
+
+`2026-10-07-app-recovery-dicom-integrity.md`에 원본 해시 보존·새 프로젝트 복원·선택형 비식별 진단·검색/재열기의 clean browser/Electron6건과12개 스크린샷을 연결했다. DICOM cache/receipt/source 재검증·중단 후 atomic publication·자동 window identity를 수정하고 관련171개를 통과했다. 후속 dirty GUI 진단은 clean 실행 근거로 세지 않고 별도 재실행한다. 부모 집계66/16와 최종 수용0은 유지한다.

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+  "source_dirty": false,
+  "test": "scripts/e2e/image-library-closure.spec.ts::metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+  "test_source_sha256": "3190a15443e46f2c453659665b1a466875a15de1537051003dbe534314a120f8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7478e67da9591c69996f4fab3e6e8742ac93262bff7c3905912820aca63571ae",
+  "harness_sha256": "64946c053b86cfecdc42875507bc15df0a994ef942d487dd074c18fd547af5a4",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ad77ab717b84d55cf59e34c325cfc4e07f5adc225bf4159f9ac9357c51268360"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f91802933978ecad56aba4a6ff34e8c757cc5c51198e1865a725d8753979819a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

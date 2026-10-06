@@ -5319,16 +5319,96 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-09",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "진단 자료 저장",
+      "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
+      "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-09",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "진단 자료 저장",
+      "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
+      "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-04",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "설치·진단 재열기",
+      "expected": "The installation panel opens and remains reachable after native reload.",
+      "observed": "Actual native tab selection then reload reopened project schema guidance; no installer activation or migration was performed.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-09",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "진단 자료 포함 항목 선택",
+      "expected": "Only the selected section is sent; empty selection disables Save.",
+      "observed": "Actual checkbox choices produced exact one-section requests; no selected section disabled the actual save button.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -5469,19 +5549,159 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S7-01",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "새 프로젝트로 복원",
+      "expected": "Restore to a fresh project preserves data; an existing target refuses overwrite; reopen uses restored project.",
+      "observed": "Actual native restore preserved image/model/config/report hashes, labels, approval audit and SQLite rows; existing target refused; reload retained the restored policy.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S7-01",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "새 프로젝트로 복원",
+      "expected": "Restore to a fresh project preserves data; an existing target refuses overwrite; reopen uses restored project.",
+      "observed": "Actual native restore preserved image/model/config/report hashes, labels, approval audit and SQLite rows; existing target refused; reload retained the restored policy.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S7-01",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "새 프로젝트로 복원",
+      "expected": "Restore to a fresh project preserves data; an existing target refuses overwrite; reopen uses restored project.",
+      "observed": "Actual native restore preserved image/model/config/report hashes, labels, approval audit and SQLite rows; existing target refused; reload retained the restored policy.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S7-01",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "이동 가능 여부 미리 확인",
+      "expected": "Pinned artifacts refuse movement; an eligible report permits a reviewed move.",
+      "observed": "Actual native preview refused the held model with unchanged hash, then accepted the owned report path.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S7-01",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "kind": "click",
+      "action": "새 프로젝트로 복원",
+      "expected": "Restore to a fresh project preserves data; an existing target refuses overwrite; reopen uses restored project.",
+      "observed": "Actual native restore preserved image/model/config/report hashes, labels, approval audit and SQLite rows; existing target refused; reload retained the restored policy.",
+      "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"

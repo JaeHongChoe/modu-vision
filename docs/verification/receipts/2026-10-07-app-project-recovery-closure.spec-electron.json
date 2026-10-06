@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+  "source_dirty": false,
+  "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+  "test_source_sha256": "e90d26c8d0f173f275c62e8afef5fdcac0bcdd695de4a511fb9a4947c3e93915",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7478e67da9591c69996f4fab3e6e8742ac93262bff7c3905912820aca63571ae",
+  "harness_sha256": "42d0f601e45ed5d2ba414b45062bf5005de537b048a15481b224ecfb189098cd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "166543556879062423101224fa7d71ffe6ca8b9046929b7aea629ad79dbe62cd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "285fc1bd2781b1e57664d583f76200d3de3c523fbf37ee5b7b3ba25db4e40707"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

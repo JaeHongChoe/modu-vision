@@ -9181,7 +9181,10 @@
    "source_registry": "docs/product-upgrade-program.json",
    "source_files": [
     "scripts/verify_product_upgrade.py",
-    "docs/product-upgrade-program.json"
+    "docs/product-upgrade-program.json",
+    "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx",
+    "src/renderer/components/wizard/ArtifactRetentionPanel.tsx",
+    "src/renderer/components/common/ImagePickerModal.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",
