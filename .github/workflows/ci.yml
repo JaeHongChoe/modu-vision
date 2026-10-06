@@ -43,7 +43,9 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
       - run: npm ci
       - name: Check preserved scope and acceptance states
-        run: python scripts/check_service_plan.py
+        run: |
+          python scripts/check_service_plan.py
+          python scripts/check_action_evidence.py
       - name: Type checks, renderer regressions, and build
         run: |
           npm run typecheck
@@ -103,6 +105,7 @@ jobs:
           backend/tests/test_service_s7_01.py
           backend/tests/test_gui_execution_evidence.py
           backend/tests/test_gui_execution_receipt_collector.py
+          backend/tests/test_action_evidence.py
           backend/tests/test_segmentation_mask_folder_classes.py
           backend/tests/test_annotation_source_encoding.py
           backend/tests/test_annotation_truncated_source.py
@@ -117,6 +120,7 @@ jobs:
           backend/tests/test_service_s6_10.py
           backend/tests/test_runtime_pack_inventory.py
           backend/tests/test_runtime_pack_installation.py
+          backend/tests/test_dicom_input.py
           backend/tests/test_scale_acceptance.py
           backend/tests/test_inspection_endurance.py
           backend/tests/test_service_failure_matrix.py

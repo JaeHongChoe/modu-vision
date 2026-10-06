@@ -27,16 +27,25 @@ def read_dicom(path, *, window_center=None, window_width=None, frame_index=None)
     try:
         import io
         ds=pydicom.dcmread(io.BytesIO(source_bytes))
-        pixels=ds.pixel_array
     except Exception as exc: raise ValueError(f'Cannot decode DICOM pixel data; compressed input may require an optional pydicom decoder: {exc}') from exc
-    frames=int(getattr(ds,'NumberOfFrames',1));channels=int(getattr(ds,'SamplesPerPixel',1))
+    try:
+        h,w=int(ds.Rows),int(ds.Columns)
+        frames=int(getattr(ds,'NumberOfFrames',1));channels=int(getattr(ds,'SamplesPerPixel',1))
+    except (AttributeError,TypeError,ValueError) as exc:
+        raise ValueError('DICOM requires valid rows, columns, frames and samples') from exc
+    if min(h,w,frames)<=0:raise ValueError('DICOM dimensions and frame count must be positive')
+    if h*w>128_000_000:raise ValueError('DICOM exceeds 128 megapixel resource guard')
+    if frame_index is not None and type(frame_index) is not int:raise ValueError('DICOM frame_index must be an integer')
     if frames>1:
         if frame_index is None: raise ValueError('Multi-frame DICOM requires an explicit frame_index; one source frame must be selected.')
         if not 0<=frame_index<frames: raise ValueError('DICOM frame_index outside available frames')
-        pixels=pixels[frame_index]
     elif frame_index not in (None,0): raise ValueError('DICOM frame_index outside available frames')
-    h,w=int(ds.Rows),int(ds.Columns)
-    if h*w>128_000_000: raise ValueError('DICOM exceeds 128 megapixel resource guard')
+    try:
+        from pydicom.pixels import pixel_array
+        # pydicom >=3 decodes only the requested frame; never materialize an
+        # entire multi-frame pixel array to select one image after allocation.
+        pixels=pixel_array(ds,index=frame_index if frames>1 else None)
+    except Exception as exc:raise ValueError(f'Cannot decode DICOM pixel data; compressed input may require an optional pydicom decoder: {exc}') from exc
     center=_first(window_center,_first(getattr(ds,'WindowCenter',None)))
     width=_first(window_width,_first(getattr(ds,'WindowWidth',None)))
     if width is not None and (not math.isfinite(width) or width<=0): raise ValueError('DICOM window width must be positive and finite')

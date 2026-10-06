@@ -75,7 +75,7 @@ def _copy_references(root):
     for name in files:
         dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
     dest=root/'docs/verification/receipts';dest.parent.mkdir(parents=True,exist_ok=True)
-    if not dest.exists():shutil.copytree(ROOT/'docs/verification/receipts',dest)
+    shutil.copytree(ROOT/'docs/verification/receipts',dest,dirs_exist_ok=True)
 
 
 def test_the_repository_has_one_pending_record_per_legacy_feature_and_nothing_promoted():
@@ -235,7 +235,7 @@ def test_a_lost_duplicated_unknown_or_malformed_record_fails(change):
     ('gui', _verified(test=None, receipt=True, receipt_sha256='0' * 64), 'receipt'),
     ('gui', _verified(artifacts=[{'id': 'model'}]), 'artifacts must be'),
     ('gui', _verified(note='x'), 'unknown fields'),
-    ('gui', _verified(test=None, receipt='/Users/someone/receipt.txt', receipt_sha256='0' * 64), 'plain name'),
+    ('gui', _verified(test=None, receipt='/fixture/receipt.txt', receipt_sha256='0' * 64), 'plain name'),
     ('gui', _verified(test='backend/tests/test_service_s0_08.py'), 'click evidence cites a scripts/e2e spec'),
     ('persist', _verified(task='S6-05', kind='api', test='backend/tests/test_service_s0_08.py'), 'does not own this legacy feature'),
     ('target', _verified(kind='target', task='S0-08'), 'target evidence needs a receipt'),

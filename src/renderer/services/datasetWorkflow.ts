@@ -47,8 +47,23 @@ export const datasetWorkflow = {
 export function workflowError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (error && typeof error === 'object') {
-    const detail = (error as Record<string,unknown>).detail;
+    const record=error as Record<string,unknown>;
+    if(typeof record.message==='string')return record.message;
+    const detail = Array.isArray(error)?error:record.detail;
     if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      const messages=detail.filter((row):row is {loc?:unknown;msg:string}=>
+        Boolean(row)&&typeof row==='object'&&typeof row.msg==='string'&&Boolean(row.msg.trim()))
+        .slice(0,5).map(row=>{
+          const location=Array.isArray(row.loc)?row.loc.filter(part=>
+            typeof part==='string'&&!['body','query','path'].includes(part)||
+            typeof part==='number'&&Number.isSafeInteger(part)&&part>=0).map(part=>String(part).slice(0,64)).join('.').slice(0,100):'';
+          // Pydantic includes input/ctx/URL alongside the message. Those values
+          // can contain operator data or credentials and must not be echoed.
+          return (location?location+': ':'')+row.msg.trim().slice(0,640);
+        });
+      if(messages.length)return messages.join('\n');
+    }
     if (detail && typeof detail === 'object' && 'message' in detail) return String(detail.message);
   }
   return '요청을 처리하지 못했습니다.';

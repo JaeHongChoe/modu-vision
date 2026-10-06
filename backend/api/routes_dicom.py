@@ -14,7 +14,7 @@ class ViewRequest(BaseModel):
     image_path:str
     window_center:float|None=None
     window_width:float|None=Field(None,gt=0)
-    frame_index:int|None=Field(None,ge=0)
+    frame_index:int|None=Field(None,ge=0,strict=True)
 
 @router.post('/view')
 def prepare_view(req:ViewRequest,request:Request):

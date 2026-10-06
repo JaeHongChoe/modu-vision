@@ -60,6 +60,40 @@ def test_dicom_rejects_invalid_window_and_multiframe(dicom):
     with pytest.raises(ValueError,match='frame'):read_dicom(dicom)
 
 
+@pytest.mark.parametrize('header,options,reason', [
+    ({'Rows':65535,'Columns':65535}, {}, '128 megapixel'),
+    ({'Rows':0}, {}, 'positive'),
+    ({'NumberOfFrames':2}, {}, 'explicit frame_index'),
+    ({'NumberOfFrames':2}, {'frame_index':2}, 'outside available frames'),
+    ({'NumberOfFrames':2}, {'frame_index':True}, 'integer'),
+])
+def test_dicom_header_limits_refuse_before_pixel_decoding(dicom,header,options,reason):
+    import pydicom
+    from backend.engine.dicom_input import read_dicom
+    ds=pydicom.dcmread(dicom)
+    for key,value in header.items():setattr(ds,key,value)
+    # Invalid pixel bytes expose ordering: a decoder error must not hide the
+    # header refusal or allocate the dimensions declared by an untrusted file.
+    ds.PixelData=b'\x00\x00';ds.save_as(dicom,enforce_file_format=True)
+    original=dicom.read_bytes()
+    with pytest.raises(ValueError,match=reason):read_dicom(dicom,**options)
+    assert dicom.read_bytes()==original
+
+
+def test_dicom_explicit_frame_preserves_pixels_and_original(dicom):
+    import pydicom
+    from backend.engine.dicom_input import read_dicom
+    ds=pydicom.dcmread(dicom);ds.NumberOfFrames=2
+    ds.PixelData+=np.zeros((16,32),dtype=np.int16).tobytes()
+    ds.save_as(dicom,enforce_file_format=True);original=dicom.read_bytes()
+    first,first_metadata=read_dicom(dicom,frame_index=0)
+    second,second_metadata=read_dicom(dicom,frame_index=1)
+    assert np.asarray(first).min()==0 and np.asarray(first).max()==255
+    assert np.all(np.asarray(second)==255)
+    assert [first_metadata['frame_index'],second_metadata['frame_index']]==[0,1]
+    assert dicom.read_bytes()==original
+
+
 def test_dicom_api_source_metadata_owned_view_and_default_raw(client_workspace,dicom):
     from backend.api import routes_dicom,routes_dataset
     from backend.engine.annotation_storage import set_request_project_root,reset_request_project_root
@@ -76,3 +110,15 @@ def test_dicom_api_source_metadata_owned_view_and_default_raw(client_workspace,d
     assert raw.status_code==200,raw.text
     assert Image.open(__import__('io').BytesIO(raw.content)).size==(32,16)
     assert target.read_bytes()==original
+
+
+@pytest.mark.parametrize('frame',[False,0.0,'0'])
+def test_dicom_api_requires_an_explicit_integer_frame(client_workspace,dicom,frame):
+    from backend.api import routes_dicom
+    client,project,source=client_workspace;target=source/dicom.name
+    target.write_bytes(dicom.read_bytes());original=target.read_bytes()
+    client.app.include_router(routes_dicom.router)
+    response=client.post('/api/dataset/dicom/view',json={'image_path':str(target),'frame_index':frame})
+    assert response.status_code==422,response.text
+    assert target.read_bytes()==original
+    assert not (Path(project['project_dir'])/'dicom_views').exists()

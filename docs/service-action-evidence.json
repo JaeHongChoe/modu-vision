@@ -1,0 +1,2174 @@
+{
+ "schema_version": 1,
+ "kind": "curated_action_evidence_not_complete_feature_acceptance",
+ "sources": {
+  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6647d8f35e3c3e238e7f9b0ab0227d0fc41e076ff30fd0aa370feac6166d9449",
+  "src/renderer/components/flowchart/FlowchartStudio.tsx": "d97e820cfaadeb22b1b04a3becfe46a6d7996230fc5a1638a29a89c580f90288",
+  "src/renderer/components/flowchart/FlowDraftControls.tsx": "73419cd61ad9babe4be683ea3e6ffcf2d2ba9e35034ffe3be98bf16451cb89f9",
+  "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
+  "src/renderer/components/labeling/LabelingToolbar.tsx": "50eadcc577203c09631c0b23358ef509c4c894bb720b43e74666cf91881d538e",
+  "src/renderer/components/labeling/AnnotationDraftRecovery.tsx": "21cc584ca3683631e26d7df1d711ea4ad1e59f7baa6931c9c30bc6156cb9874f",
+  "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb"
+ },
+ "records": [
+  {
+   "id": "F001",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F002",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F003",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F004",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F005",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F006",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F007",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F008",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F009",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F010",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F011",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F012",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F013",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F014",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F015",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F016",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F017",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F018",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F019",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F020",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F021",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F022",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F023",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F024",
+   "actions": [
+    {
+     "id": "assign",
+     "label": "작업 배정",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "작업 배정",
+         "expected": "Actual native assignment persisted assignee and priority90.",
+         "observed": "Actual native assignment persisted assignee and priority90.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "작업 배정",
+         "expected": "After actual reload assignment labeler-a and priority90 are shown.",
+         "observed": "After actual reload assignment labeler-a and priority90 are shown.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "edit-start",
+     "label": "편집 시작",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "편집 시작",
+         "expected": "The assigned actor acquires an owned edit lease through the native button.",
+         "observed": "The assigned actor acquires an owned edit lease through the native button.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "편집 시작",
+         "expected": "The same native button receives422 while another actor is assigned.",
+         "observed": "The same native button receives422 while another actor is assigned.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "save-annotation",
+     "label": "라벨 저장",
+     "source": "src/renderer/components/labeling/LabelingToolbar.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "Explicit restored draft save returns200, matches the original local annotations and removes the local draft.",
+         "observed": "Explicit restored draft save returns200, matches the original local annotations and removes the local draft.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "Stale save refuses and the other actor server labels remain exactly unchanged.",
+         "observed": "Stale save refuses and the other actor server labels remain exactly unchanged.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "Actual aborted network save preserves the local draft while the server still has its previous single annotation.",
+         "observed": "Actual aborted network save preserves the local draft while the server still has its previous single annotation.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "compare-draft",
+     "label": "저장 전 초안 비교·복구",
+     "source": "src/renderer/components/labeling/AnnotationDraftRecovery.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "저장 전 초안 비교·복구",
+         "expected": "Actual comparison dialog shows a server-change conflict and apply is initially disabled.",
+         "observed": "Actual comparison dialog shows a server-change conflict and apply is initially disabled.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "저장 전 초안 비교·복구",
+         "expected": "Closing and reopening the conflict comparison preserves the server foreign annotation until an explicit fresh save.",
+         "observed": "Closing and reopening the conflict comparison preserves the server foreign annotation until an explicit fresh save.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "apply-draft",
+     "label": "비교한 초안을 명시적으로 적용",
+     "source": "src/renderer/components/labeling/AnnotationDraftRecovery.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "Explicit conflict confirmation applies the local draft to the editor; server labels remain foreign until save.",
+         "observed": "Explicit conflict confirmation applies the local draft to the editor; server labels remain foreign until save.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "After a metadata revision moves, actual apply refuses with the comparison-changed alert.",
+         "observed": "After a metadata revision moves, actual apply refuses with the comparison-changed alert.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "approve-vote",
+     "label": "승인 표 제출",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "승인 표 제출",
+         "expected": "Actual native reviewer-b vote is persisted as one review.",
+         "observed": "Actual native reviewer-b vote is persisted as one review.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "reject-vote",
+     "label": "반려 표 제출",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "반려 표 제출",
+         "expected": "Actual reviewer-c rejection produces disputed status with exactly reviewer-b and reviewer-c.",
+         "observed": "Actual reviewer-c rejection produces disputed status with exactly reviewer-b and reviewer-c.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "adjudicate",
+     "label": "최종 승인 조정",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "최종 승인 조정",
+         "expected": "Explicit native adjudication produces approved functional state; controlled actors do not establish human quality approval.",
+         "observed": "Explicit native adjudication produces approved functional state; controlled actors do not establish human quality approval.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "publish-book",
+     "label": "새 기준 버전 발행",
+     "source": "src/renderer/components/labeling/LabelbookEditor.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "새 기준 버전 발행",
+         "expected": "Publishing book v2 clears prior votes and changes workflow state to needs_review.",
+         "observed": "Publishing book v2 clears prior votes and changes workflow state to needs_review.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "새 기준 버전 발행",
+         "expected": "After reload the team assignment and queue persist; API history retains the original book v1.",
+         "observed": "After reload the team assignment and queue persist; API history retains the original book v1.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "queue-filter",
+     "label": "작업 목록 담당 필터",
+     "source": "src/renderer/components/labeling/TeamDataPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "expected": "The labeler-a filter displays part.png in the actual reopened team task list.",
+         "observed": "The labeler-a filter displays part.png in the actual reopened team task list.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+         "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+         "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F025",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F026",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F027",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F028",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F029",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F030",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F031",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F032",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F033",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F034",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F035",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F036",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F037",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F038",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F039",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F040",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F041",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F042",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F043",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F044",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F045",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F046",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F047",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F048",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F049",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F050",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F051",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F052",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F053",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F054",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F055",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F056",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F057",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F058",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F059",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F060",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F061",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F062",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F063",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F064",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F065",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F066",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F067",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F068",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F069",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F070",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F071",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F072",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F073",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F074",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F075",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F076",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F077",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F078",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F079",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F080",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F081",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F082",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F083",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F084",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F085",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F086",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F087",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F088",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F089",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F090",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F091",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F092",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F093",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F094",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F095",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F096",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F097",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F098",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F099",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F100",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F101",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F102",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F103",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F104",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F105",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F106",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F107",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F108",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F109",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F110",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F111",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F112",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F113",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F114",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F115",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F116",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F117",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F118",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F119",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F120",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F121",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F122",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "F123",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U001",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U002",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U003",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U004",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U005",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U006",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U007",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U008",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U009",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U010",
+   "actions": [
+    {
+     "id": "save-whole-template",
+     "label": "전체 흐름 저장",
+     "source": "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Actual native save returned a template containing the original NG class.",
+         "observed": "Actual native save returned a template containing the original NG class.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "save-subgraph",
+     "label": "선택 노드 저장",
+     "source": "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Actual saved subgraph contains exactly the selected ROI/model nodes and one input/output boundary port.",
+         "observed": "Actual saved subgraph contains exactly the selected ROI/model nodes and one input/output boundary port.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "map-target",
+     "label": "모델·클래스 매핑 후 초안으로 열기",
+     "source": "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Selected subgraph mapped to the target model and the boundary-wiring notice was visible.",
+         "observed": "Selected subgraph mapped to the target model and the boundary-wiring notice was visible.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Whole template with missing required class mapping returned422 and displayed the class-mapping error.",
+         "observed": "Whole template with missing required class mapping returned422 and displayed the class-mapping error.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "class-map",
+     "label": "ROI 결함 검사 · 이름 NG 매핑",
+     "source": "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit NG-to-scratch mapping appeared in both request body and mapped class predicate.",
+         "observed": "Explicit NG-to-scratch mapping appeared in both request body and mapped class predicate.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U011",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U012",
+   "actions": [
+    {
+     "id": "undo",
+     "label": "플로우 실행 취소",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Undo restored the original node label after a native textbox edit.",
+         "observed": "Undo restored the original node label after a native textbox edit.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "redo",
+     "label": "플로우 다시 실행",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Redo restored the edited node label after undo.",
+         "observed": "Redo restored the edited node label after undo.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "save-draft",
+     "label": "초안 저장",
+     "source": "src/renderer/components/flowchart/FlowDraftControls.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "초안 저장",
+         "expected": "Saved draft contains the edited label and exact draft hash without active.json.",
+         "observed": "Saved draft contains the edited label and exact draft hash without active.json.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "초안 저장",
+         "expected": "After actual native reload the textbox and draft API retain the same label and hash.",
+         "observed": "After actual native reload the textbox and draft API retain the same label and hash.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "incomplete-policy",
+     "label": "UNKNOWN·미실행·오류 처리",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "UNKNOWN·미실행·오류 처리",
+         "expected": "The NG policy is present in the saved draft API; REVIEW is explicitly restored afterwards.",
+         "observed": "The NG policy is present in the saved draft API; REVIEW is explicitly restored afterwards.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+         "kind": "click",
+         "action": "UNKNOWN·미실행·오류 처리",
+         "expected": "After actual reload the selected incomplete policy remains NG before explicit restoration.",
+         "observed": "After actual reload the selected incomplete policy remains NG before explicit restoration.",
+         "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-clean-template-draft-electron.json",
+         "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U013",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U014",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U015",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U016",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U017",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U018",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U019",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U020",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U021",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U022",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U023",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U024",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U025",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U026",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U027",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U028",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U029",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U030",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U031",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U032",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  },
+  {
+   "id": "U033",
+   "actions": [],
+   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+  }
+ ]
+}

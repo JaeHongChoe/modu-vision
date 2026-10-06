@@ -707,16 +707,128 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-04",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Assign label work, acquire editing lease and submit two reviewer votes",
+      "expected": "Assigned actor can edit; disagreement requires adjudication",
+      "observed": "Actual native assignment/lease/review buttons produced persisted assignee, disputed then explicitly adjudicated states",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+      "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+      "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-04",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Save explicitly compared local draft after concurrent foreign labels",
+      "expected": "No silent overwrite; approved explicit save removes the local draft",
+      "observed": "Foreign server labels survived until explicit compare/apply plus fresh lease/save; saved annotations matched local draft exactly",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+      "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+      "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-04",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Reload team workspace after reassignment and label-book version change",
+      "expected": "Assignment/priority/filter remain and obsolete reviews are cleared",
+      "observed": "Actual native reopened assignment labeler-a, priority90 and task filter; book v2 invalidated earlier votes",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+      "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+      "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-04",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Save while disconnected, save with stale lease and apply comparison after metadata changed",
+      "expected": "Failures preserve local draft and foreign server annotations",
+      "observed": "Actual aborted network save, stale save and moved-revision apply refused; unchanged foreign labels and retained local draft were read back",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+      "receipt": "2026-10-07-clean-team-reconnect-electron.json",
+      "receipt_sha256": "76ab854db80480d55a755ed3fb599e584b673330c21ea959dddf961a734ffb61",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -729,7 +841,11 @@
      "state": "pending"
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "Remaining empty/cancel/error/action paths require separate execution; no complete feature acceptance.",
+    "Windows use QA waived for development; verified Windows support is not asserted.",
+    "Human quality, target execution and independent review are not supplied by controlled fixture actors."
+   ]
   },
   {
    "id": "F025",
@@ -4377,16 +4493,160 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Save selected subgraph and explicitly map models/classes in the target project",
+      "expected": "Selected subgraph exposes one input/output; class mapping is mandatory",
+      "observed": "Actual native buttons saved/reused the selected nodes and explicit mapping; boundary wiring remains manual",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Save the mapped flow draft",
+      "expected": "Persist exact draft label/hash without activating a saved flow",
+      "observed": "Draft API retained the mapped label/hash, source checkpoint/images stayed identical and active.json was absent",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Reload the target project and reopen mapped draft",
+      "expected": "Same mapped draft and model/class bindings are restored",
+      "observed": "Actual native reload restored the draft label and hash",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Apply template with missing required class mapping",
+      "expected": "422 refusal is visible and source remains unchanged",
+      "observed": "Actual native mapping button received422; adding explicit class mapping succeeded without source mutation",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "handoff": {
     "state": "pending"
@@ -4399,7 +4659,11 @@
      "state": "pending"
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "Remaining empty/cancel/error/action paths require separate execution; no complete feature acceptance.",
+    "Windows use QA waived for development; verified Windows support is not asserted.",
+    "Human quality, target execution and independent review are not supplied by controlled fixture actors."
+   ]
   },
   {
    "id": "U011",
@@ -4437,13 +4701,121 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Navigate saved flow to editable target draft and undo/redo a node rename",
+      "expected": "Editing remains a draft with explicit undo/redo",
+      "observed": "Actual native editor undo/redo restored each node label; no active saved flow was created",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Save incomplete-result handling as NG then restore REVIEW",
+      "expected": "Selected policy is saved in the draft without deployment",
+      "observed": "Actual draft API persisted NG; reopened native control showed NG and then explicitly saved REVIEW",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-08",
+      "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "kind": "click",
+      "action": "Reload flow workspace after draft/policy save",
+      "expected": "Draft/policy is restored separately from deployed state",
+      "observed": "Actual native reload restored mapped draft and incomplete policy; active.json remained absent",
+      "reviewer": "Codex root source/assertion and retained execution review; independent and human quality acceptance pending",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "661d24510c0b81af35f7f6418dcbe5275f167568a9c59d6bfba8047885a89167"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "6ec737b85d9b8ab15a8b502a4c2be16769cbf784e0c5d446f9b9b8c13240f238"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "bbb1218fbde4f4f0c705f30386a11f93a7e1fd3973d0001797817250f12aed5b"
+       },
+       {
+        "id": "screenshot-3",
+        "sha256": "de9b43b2df5636538999323db80a922bad4b7adb9ac92681c31740fd1428bf4c"
+       },
+       {
+        "id": "screenshot-4",
+        "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
@@ -4459,7 +4831,11 @@
      "state": "pending"
     }
    },
-   "prerequisites": []
+   "prerequisites": [
+    "Remaining empty/cancel/error/action paths require separate execution; no complete feature acceptance.",
+    "Windows use QA waived for development; verified Windows support is not asserted.",
+    "Human quality, target execution and independent review are not supplied by controlled fixture actors."
+   ]
   },
   {
    "id": "U013",
