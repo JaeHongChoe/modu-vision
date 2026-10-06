@@ -303,6 +303,56 @@ test('renderer server serves static files, blocks traversal and injects the toke
   }
 });
 
+test('synchronous fixture preparation cannot reset or replay a following proxied POST', async () => {
+  const dir = scratch('sync-fixture-gap');
+  fs.writeFileSync(path.join(dir, 'index.html'), 'controlled fixture');
+  const bodies = [];
+  const fake = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      if (req.method === 'POST') bodies.push(body);
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ method: req.method }));
+    });
+  });
+  await new Promise(resolve => fake.listen(0, '127.0.0.1', resolve));
+  const renderer = await harness.startRendererServer({
+    staticDir: dir, backend: { port: fake.address().port, token: 'controlled-token' },
+  });
+  const agent = new http.Agent({ keepAlive: true });
+  const send = (method, body) => new Promise((resolve, reject) => {
+    const req = http.request(renderer.origin + '/api/echo', { method, agent }, res => {
+      let value = '';
+      res.on('data', chunk => { value += chunk; });
+      res.on('error', reject);
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: value }));
+    });
+    req.on('error', reject);
+    req.end(body);
+  });
+  try {
+    const first = await send('GET');
+    assert.equal(first.status, 200);
+    // execFileSync model/fixture preparation blocks this same server loop.
+    // Cross the server's default idle lifetime before issuing one mutation.
+    const until = Date.now() + 6500;
+    while (Date.now() < until) { /* deliberate synchronous preparation */ }
+    const result = await send('POST', 'one-owned-mutation');
+    assert.equal(result.status, 200);
+    assert.deepEqual(bodies, ['one-owned-mutation'], 'POST is delivered exactly once, without transport retries');
+    assert.equal(renderer.stats().proxied, 2);
+    assert.equal(first.headers.connection, 'close');
+    assert.equal(result.headers.connection, 'close');
+    assert.equal(result.headers['keep-alive'], undefined);
+  } finally {
+    agent.destroy();
+    await renderer.close();
+    fake.closeAllConnections();
+    await new Promise(resolve => fake.close(resolve));
+  }
+});
+
 test('electron launch options isolate the profile and never carry backend or shared-store variables', () => {
   const workspace = { root: '/tmp/w', userData: '/tmp/w/userData', home: '/tmp/w/home' };
   const options = harness.electronLaunchOptions({

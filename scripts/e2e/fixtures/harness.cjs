@@ -517,6 +517,11 @@ async function startRendererServer({ staticDir, backend }) {
     && (headers['sec-fetch-site'] === undefined || ['same-origin', 'none'].includes(headers['sec-fetch-site']));
 
   const server = http.createServer((req, res) => {
+    // Synchronous model/fixture subprocesses share this Node loop with the
+    // API client. An idle pooled socket can expire before its close event is
+    // observed after execFileSync returns. Use one connection per request on
+    // both HTTP legs; never retry a mutation. WebSocket upgrades are separate.
+    res.setHeader('connection', 'close');
     const url = req.url || '/';
     if (isProxied(url)) {
       if (!sameOrigin(req.headers)) {
@@ -526,10 +531,14 @@ async function startRendererServer({ staticDir, backend }) {
         return;
       }
       counters.proxied += 1;
+      const headers = { ...forwardedHeaders(req.headers, backend), connection: 'close' };
+      delete headers['keep-alive'];
       const upstream = http.request({
-        host: '127.0.0.1', port: backend.port, method: req.method, path: url, headers: forwardedHeaders(req.headers, backend),
+        host: '127.0.0.1', port: backend.port, method: req.method, path: url, headers, agent: false,
       }, upstreamResponse => {
-        res.writeHead(upstreamResponse.statusCode || 502, upstreamResponse.headers);
+        const responseHeaders = { ...upstreamResponse.headers, connection: 'close' };
+        delete responseHeaders['keep-alive'];
+        res.writeHead(upstreamResponse.statusCode || 502, responseHeaders);
         upstreamResponse.pipe(res);
         upstreamResponse.on('error', () => res.destroy());
       });
