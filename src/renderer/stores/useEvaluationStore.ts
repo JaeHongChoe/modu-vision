@@ -476,6 +476,9 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     const generation = evaluationGeneration;
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();
     const activeJob = jobIdOverride || jobId;
+    if(get().metrics.anomaly_mode && get().metrics.evaluated_split==='test'){
+      set({calibrationSuccess:false,calibrationMessage:'이상탐지 시험 데이터는 평가에만 사용합니다. 저장된 검증·보정 임계값을 유지하세요.'});return;
+    }
     if(get().metrics.score_spec?.domain==='distance'){
       set({calibrationSuccess:false,calibrationMessage:'거리 점수는 학습·검증 데이터로 보정하세요. 현재 모델 임계값 또는 보정 식별자가 연결된 수동 임계값을 사용합니다.'});return;
     }

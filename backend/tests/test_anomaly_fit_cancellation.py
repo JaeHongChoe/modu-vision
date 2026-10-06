@@ -133,6 +133,7 @@ def test_trainer_reports_fit_cancellation_as_aborted(tmp_path, monkeypatch):
     class FakeDataset:
         def __init__(self, root_dir, split, **kwargs):
             self.split = split
+            self.samples = []
 
     trainer = training_module.UnifiedAutoMLTrainer(
         "anomaly", tmp_path, tmp_path / "models", device="cpu", callback=Callback(),
@@ -142,7 +143,7 @@ def test_trainer_reports_fit_cancellation_as_aborted(tmp_path, monkeypatch):
         def __init__(self, **kwargs):
             pass
 
-        def fit(self, dataloader, cancellation_requested=None):
+        def fit(self, dataloader, cancellation_requested=None, calibration_dataset=None):
             assert cancellation_requested is not None
             trainer.abort()
             assert cancellation_requested()

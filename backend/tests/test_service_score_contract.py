@@ -87,6 +87,7 @@ def fitted_detector(monkeypatch, detector_class):
         embed_dim = 2
         def __init__(self, **kwargs):
             super().__init__()
+            self.model_metadata = {'pretrained': False, 'input_normalization': 'rgb_0_1'}
             self.register_buffer('identity', torch.tensor([1.0]))
         def forward(self, pixels):
             return pixels[:, :2].mean(dim=(2,3), keepdim=True) * self.identity

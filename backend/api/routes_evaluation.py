@@ -952,6 +952,9 @@ def _evaluate_anomaly(
     model = reconstruct_anomaly_detector(state_dict, {**ckpt, **meta}, device)
     map_semantics = getattr(model, 'model_metadata', {}).get('map_semantics', 'pixel_score')
     patch_scores = map_semantics == 'patch_score'
+    calibration = getattr(model, 'calibration', None)
+    calibration_sources = (calibration.get('images', []) + calibration.get('training_images', [])) if isinstance(calibration, dict) else []
+    fitted_pixels = {row.get('decoded_sha256') for row in calibration_sources if row.get('decoded_sha256')}
 
     img_size = tuple(meta.get("image_size", [256, 256]))
     image_scores: List[float] = []
@@ -970,6 +973,10 @@ def _evaluate_anomaly(
             if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
             img_p, label, mask_path = val_ds.samples[idx]
             rgb = _read_image_rgb(img_p)
+            if selected_split == 'test' and fitted_pixels:
+                decoded_hash = hashlib.sha256(str(rgb.shape).encode() + rgb.tobytes()).hexdigest()
+                if decoded_hash in fitted_pixels:
+                    raise HTTPException(422, 'Anomaly test decoded content overlaps training or calibration images')
             resized = rgb if patch_scores else cv2.resize(rgb, img_size, interpolation=cv2.INTER_LINEAR)
             img_t = torch.from_numpy(resized.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
             if not patch_scores:
@@ -1069,7 +1076,10 @@ def _evaluate_anomaly(
             "pixel_missing_masks": len(maps) - len(pixel_heatmaps),
             "anomaly_mode": mode,
             "map_semantics": map_semantics,
-            "threshold_basis": anom_metrics['threshold_basis'] if single_class else 'heldout_normal_calibration' if patch_scores and getattr(model, 'calibration', {}).get('normal_image_count', 0) else 'model_default' if patch_scores else anom_metrics['threshold_basis'],
+            "threshold_basis": anom_metrics['threshold_basis'] if single_class else 'heldout_normal_calibration' if isinstance(calibration, dict) and calibration.get('split') in ('val', 'calibration') else 'training_normal_default' if isinstance(calibration, dict) and calibration.get('split') == 'train' else 'model_default' if patch_scores else anom_metrics['threshold_basis'],
+            "calibration": calibration,
+            "calibration_overlap": selected_split != 'test',
+            "calibration_content_separation_verified": selected_split == 'test' and bool(fitted_pixels),
             "threshold_search_available": anom_metrics['threshold_search_available'],
             "active_threshold": optimal_th,
             "score_spec": score_spec,
@@ -1622,6 +1632,8 @@ def run_zero_escape_calibration(
         with _eval_file_lock:
             try:
                 data = json.loads(eval_path.read_text(encoding="utf-8"))
+                if data.get('task') in ('anomaly', 'anomaly_detection') and data.get('metrics', {}).get('evaluated_split') == 'test':
+                    raise HTTPException(422, 'Anomaly test data is evaluation only; preserve its saved validation/calibration threshold')
                 current = validate_calibration_evidence(data, EVALUATION_CONTRACT_VERSION)
                 if current != result["calibration_evidence"]:
                     raise HTTPException(409, "Evaluation predictions changed during calibration; retry the analysis")

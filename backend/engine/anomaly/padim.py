@@ -9,6 +9,7 @@ Strictly trained on normal (OK) images (0 defects in train set).
 from __future__ import annotations
 
 import logging
+import copy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cv2
@@ -37,6 +38,8 @@ class PaDiMDetector:
         seed: int = 42,
         device: Optional[Union[torch.device, str]] = None,
         pretrained: bool = True,
+        pretrained_checkpoint: Optional[str] = None,
+        pretrained_sha256: Optional[str] = None,
     ):
         self.backbone_name = backbone_name
         self.target_dim = target_dim
@@ -47,8 +50,12 @@ class PaDiMDetector:
         self.feature_extractor = ResNetFeatureExtractor(
             backbone_name=backbone_name,
             pretrained=pretrained,
+            pretrained_checkpoint=pretrained_checkpoint,
+            pretrained_sha256=pretrained_sha256,
             local_avg_pool=False,
         ).to(self.device)
+
+        self.model_metadata = dict(self.feature_extractor.model_metadata)
 
         total_dim = self.feature_extractor.embed_dim
         torch.manual_seed(seed)
@@ -58,6 +65,7 @@ class PaDiMDetector:
         self.cov_inv: Optional[torch.Tensor] = None   # [H, W, d, d]
         self.threshold: float = 0.0
         self.score_spec = None
+        self.calibration = None
 
     def to(self, device: Union[torch.device, str]) -> "PaDiMDetector":
         self.device = torch.device(device)
@@ -77,18 +85,22 @@ class PaDiMDetector:
     def fit(
         self, dataloader: torch.utils.data.DataLoader,
         cancellation_requested: Optional[Callable[[], bool]] = None,
+        calibration_dataset=None,
     ) -> Dict[str, Any]:
         """
         Fits Gaussian distributions over normal training images.
         HARD CONSTRAINT: dataloader must contain ONLY normal images.
         """
         check_fit_cancelled(cancellation_requested)
+        from .normal_calibration import prepare_normal_calibration, check_normal_batch, normal_calibration_scores, statistical_calibration
+        snapshot = prepare_normal_calibration(dataloader, calibration_dataset, cancellation_requested) if calibration_dataset is not None else None
         self.feature_extractor.eval()
         all_embeddings: List[torch.Tensor] = []
 
         with torch.no_grad():
             for batch in dataloader:
                 check_fit_cancelled(cancellation_requested)
+                check_normal_batch(batch)
                 images = batch[0] if isinstance(batch, (list, tuple)) else batch
                 images = images.to(self.device)
                 feats = self.feature_extractor(images)  # [B, D, H, W]
@@ -97,6 +109,8 @@ class PaDiMDetector:
                 check_fit_cancelled(cancellation_requested)
 
         check_fit_cancelled(cancellation_requested)
+        if not all_embeddings:
+            raise ValueError("Anomaly fit requires normal training images")
         train_feats = torch.cat(all_embeddings, dim=0).to(self.device)
         N, d, H, W = train_feats.shape
         if N < 2:
@@ -121,23 +135,29 @@ class PaDiMDetector:
         check_fit_cancelled(cancellation_requested)
         self.cov_inv = cov_inv_flat.view(H, W, d, d)
 
-        # Compute training normal scores to calibrate default statistical threshold (mu + 3*sigma)
-        train_scores = self.predict_scores(dataloader, cancellation_requested=cancellation_requested)
+        # Production uses independent validation normals. The direct legacy API
+        # retains an explicitly labelled training-default threshold.
+        train_scores = (normal_calibration_scores(self, snapshot, cancellation_requested) if snapshot is not None
+                        else self.predict_scores(dataloader, cancellation_requested=cancellation_requested))
         check_fit_cancelled(cancellation_requested)
-        mean_s = float(np.mean(train_scores))
-        std_s = float(np.std(train_scores))
-        self.threshold = round(mean_s + 3.0 * std_s, 4)
+        mean_s, std_s = float(np.mean(train_scores)), float(np.std(train_scores))
+        self.threshold, self.calibration = statistical_calibration(train_scores, snapshot)
         self.score_spec = None
         self.state_dict()  # Persist a calibration identity from these fitted statistics.
 
-        return {
+        result = {
             "total_samples": N,
             "feature_dim": d,
             "patch_grid": [H, W],
             "calibrated_threshold": self.threshold,
-            "train_score_mean": round(mean_s, 4),
-            "train_score_std": round(std_s, 4),
+            "calibration_score_mean": round(mean_s, 4),
+            "calibration_score_std": round(std_s, 4),
+            "calibration": copy.deepcopy(self.calibration),
         }
+
+        if snapshot is None:
+            result.update(train_score_mean=round(mean_s, 4), train_score_std=round(std_s, 4))
+        return result
 
     # Alias for trainer integration
     def fit_normal_features(
@@ -232,6 +252,8 @@ class PaDiMDetector:
             "regularizer": self.regularizer,
             "seed": self.seed,
         }
+        if self.calibration is not None:
+            state['calibration'] = copy.deepcopy(self.calibration)
         from backend.engine.score_contract import calibrated_score_spec
         # Serialization can add migrated legacy fields or follow a statistics
         # update. Bind what is actually saved; prediction uses the cached spec.
@@ -248,6 +270,8 @@ class PaDiMDetector:
         if state_dict.get("sub_dims") is not None:
             self.sub_dims = state_dict["sub_dims"].to(self.device)
         self.threshold = state_dict.get("threshold", 0.0)
+        self.seed = state_dict.get("seed", self.seed)
+        self.calibration = copy.deepcopy(state_dict.get("calibration"))
         from backend.engine.score_contract import restore_score_spec
         self.score_spec = restore_score_spec({**state_dict, 'threshold': self.threshold}, 'mahalanobis_distance')
         self.target_dim = state_dict.get("target_dim", self.target_dim)

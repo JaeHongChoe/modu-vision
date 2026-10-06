@@ -102,6 +102,15 @@ def model_metadata(model: nn.Module) -> dict[str, Any]:
 
 def validate_training_controls(task: str, preset: str, options: dict) -> None:
     """Reject unsupported fine-tune/resume combinations before allocating work."""
+    if task in ('anomaly', 'anomaly_detection'):
+        purpose = options.get('anomaly_mode', 'classification')
+        if purpose not in ('classification', 'segmentation'):
+            raise ValueError('anomaly_mode must be classification or segmentation')
+        method = options.get('anomaly_method')
+        if method is not None and method not in ('padim', 'patchcore', 'dino_synthetic'):
+            raise ValueError('Unsupported anomaly method')
+        if method == 'dino_synthetic' and purpose == 'segmentation':
+            raise ValueError('DINO synthetic patch score maps do not provide trained segmentation masks; select image inspection')
     mode = options.get('train_mode', 'head_only')
     if mode not in ('head_only', 'partial', 'full'):
         raise ValueError('train_mode must be head_only, partial, or full')

@@ -76,11 +76,14 @@ export const TrainingController: React.FC = () => {
   const selectedBackbone = modelChoices[task].some(choice => choice.value === trainingBackbone) ? trainingBackbone : modelChoices[task][0].value;
   const syntheticAnomaly = task === 'anomaly' && selectedBackbone === 'dino_synthetic';
   const statisticalRefit = task === 'anomaly' && !syntheticAnomaly;
+  useEffect(() => { if (syntheticAnomaly) setAnomalyPurpose('image'); }, [syntheticAnomaly]);
   let modelOptions: Record<string, unknown> = {};
   let modelOptionsError: string | null = null;
   try { modelOptions = resumeState ? {...resumeState.recipe,resume_checkpoint:resumeState.checkpoint_path} : trainingModelOverrides(task, selectedBackbone, pretrainedCheckpoint, syntheticOptions, anomalyPurpose,
     selectedBackbone.startsWith('dinov3')?{train_mode:trainMode,partial_blocks:partialBlocks}:undefined);
-    if (!resumeState && task !== 'anomaly') Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, manualImageSize)); }
+    if (!resumeState && task !== 'anomaly') Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, manualImageSize));
+    if (statisticalRefit) Object.assign(modelOptions, manualTrainingRecipe('', manualImageSize));
+    if (syntheticAnomaly) Object.assign(modelOptions, manualTrainingRecipe(manualEpochs, '')); }
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
@@ -383,11 +386,13 @@ export const TrainingController: React.FC = () => {
           {selectedBackbone.startsWith('dinov3')&&<p className="mt-2 text-slate-400">헤드만 학습하면 인코더 가중치를 고정합니다. 부분 학습은 마지막 블록과 최종 정규화 계층을, 전체 학습은 인코더 전체를 갱신합니다. 학습 범위가 넓을수록 gradient·optimizer 저장과 메모리 사용이 늘어납니다. 필요한 메모리는 입력 크기·배치·장치에 따라 달라집니다.</p>}
           {task!=='anomaly'&&<div className="mt-3 grid gap-2 sm:grid-cols-2"><label>학습 횟수 (선택)<input aria-label="수동 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining||!!resumeState} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>입력 크기 (선택)<input aria-label="수동 학습 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining||!!resumeState} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><p className="sm:col-span-2 text-slate-400">비워두면 선택 프리셋을 사용합니다. 입력 크기는 16의 배수여야 합니다. 이어가기는 저장된 설정을 그대로 사용하며, 완료 모델의 초기 가중치 사용은 새 학습입니다.</p></div>}
           {selectedBackbone.startsWith('yolo') && <p className="mt-2 text-slate-300">YOLO 사전학습 가중치에서 현재 객체 클래스로 학습합니다. 완료된 YOLO 후보는 ROI 검출 노드에 연결할 수 있습니다.</p>}
-          {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region">이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 출력은 패치 점수 맵이며 픽셀 정답 마스크와 구분합니다.'}</p></div>}
+          {task==='anomaly'&&<div className="mt-3"><label className="block text-sm text-slate-200">이상탐지 검사 목적<select aria-label="이상탐지 검사 목적" value={anomalyPurpose} disabled={isTraining} onChange={event=>setAnomalyPurpose(event.target.value as 'image'|'region')} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="image">이미지 단위 정상·이상 판정</option><option value="region" disabled={syntheticAnomaly}>이상 위치·영역 검토</option></select></label><p className="mt-2 text-slate-300">{anomalyPurpose==='image'?'평가 프로필: 이미지 점수 AUROC·임계값·혼동행렬. 정상·결함 시험 이미지가 모두 필요합니다.':'평가 프로필: 정답 마스크 기반 영역 지표. 정상 학습 이미지와 독립 결함 시험 마스크를 준비하세요.'}{syntheticAnomaly&&' DINOv3 패치 점수 맵은 학습된 영역 마스크가 아니므로 이미지 검사만 지원합니다.'}</p><p className="mt-2 text-slate-300">학습과 겹치지 않는 검증 정상 이미지로 임계값을 고정합니다. 시험 데이터는 그 임계값의 평가에만 사용합니다. 소수 정상 이미지의 보정 결과만으로 현장 과검률을 보증하지 않습니다.</p></div>}
+          {statisticalRefit&&<label className="mt-3 block">이상탐지 입력 크기 (선택)<input aria-label="이상탐지 입력 크기" type="number" min={64} max={1024} step={16} value={manualImageSize} disabled={isTraining} onChange={event=>setManualImageSize(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
+          {syntheticAnomaly&&<label className="mt-3 block">합성 결함 학습 횟수 (선택)<input aria-label="합성 결함 학습 횟수" type="number" min={1} max={500} step={1} value={manualEpochs} disabled={isTraining} onChange={event=>setManualEpochs(event.target.value)} placeholder="선택 프리셋 사용" className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label>}
           {syntheticAnomaly && <DinoSyntheticOptions options={syntheticOptions} disabled={isTraining}
             onChange={options => { setSyntheticOptions(options); setWarmParentId(''); }} />}
           {modelOptionsError && <p role="alert" className="mt-2 text-amber-300">{modelOptionsError}</p>}
-          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || syntheticAnomaly) && <details className="mt-3"><summary className="cursor-pointer text-slate-300">사전학습 파일 가져오기 · 상세 설정</summary><label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
+          {(selectedBackbone.startsWith('dinov3') || selectedBackbone.startsWith('yolo') || task==='anomaly') && <details className="mt-3"><summary className="cursor-pointer text-slate-300">사전학습 파일 가져오기 · 상세 설정</summary><label className="mt-3 block text-slate-300">사전학습 가중치 파일 (선택)
             <input aria-label="사전학습 가중치 파일" value={pretrainedCheckpoint} disabled={isTraining} onChange={event => setPretrainedCheckpoint(event.target.value)}
               placeholder="기본 가중치를 사용하거나 로컬 파일의 절대 경로를 입력하세요"
               className="mt-1 w-full rounded border border-[#415970] bg-[#0B1520] px-2 py-2" />

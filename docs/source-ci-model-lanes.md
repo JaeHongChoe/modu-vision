@@ -6,7 +6,7 @@ read-only repository token and supplies no GPU, deployment, signing or private
 model credentials. The existing Windows native workflow excludes the same model
 tag; workflow source review is not proof of a Windows execution.
 
-The DINO classification, patch-recipe, dense-segmentation and YOLO detection qualifications are
+The DINO classification, patch-recipe, dense-segmentation, YOLO detection and anomaly-calibration qualifications are
 tagged `@owned-model` in both browser and development Electron modes. They train
 with an explicitly supplied, existing authentic checkpoint and compare saved
 evaluation, whole-flow and offline candidate results. They are not replaced by a
@@ -22,6 +22,10 @@ export MV_E2E_DINO_CHECKPOINT="$MV_E2E_DINO_WEIGHTS"
 export MV_E2E_YOLO_WEIGHTS=/absolute/path/to/yolo26n.pt
 npx playwright test --grep @owned-model
 ```
+
+The anomaly qualification also requires the existing torchvision default ResNet18
+checkpoint in the local Torch cache. Its file hash and every official tensor are
+checked independently; the test does not download a replacement.
 
 Use `--project=browser` or `--project=electron` to select one app mode. These tests
 create isolated owned data and model outputs; they do not upload input data or

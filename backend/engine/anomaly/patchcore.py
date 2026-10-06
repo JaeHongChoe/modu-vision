@@ -9,6 +9,7 @@ Strictly trained on normal (OK) images (0 defects in train set).
 from __future__ import annotations
 
 import logging
+import copy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import cv2
@@ -37,6 +38,8 @@ class PatchCoreDetector:
         seed: int = 42,
         device: Optional[Union[torch.device, str]] = None,
         pretrained: bool = True,
+        pretrained_checkpoint: Optional[str] = None,
+        pretrained_sha256: Optional[str] = None,
     ):
         self.backbone_name = backbone_name
         self.coreset_sampling_ratio = coreset_sampling_ratio
@@ -47,12 +50,17 @@ class PatchCoreDetector:
         self.feature_extractor = ResNetFeatureExtractor(
             backbone_name=backbone_name,
             pretrained=pretrained,
+            pretrained_checkpoint=pretrained_checkpoint,
+            pretrained_sha256=pretrained_sha256,
             local_avg_pool=True,
         ).to(self.device)
+
+        self.model_metadata = dict(self.feature_extractor.model_metadata)
 
         self.coreset: Optional[torch.Tensor] = None  # [K, D]
         self.threshold: float = 0.0
         self.score_spec = None
+        self.calibration = None
 
     def to(self, device: Union[torch.device, str]) -> "PatchCoreDetector":
         self.device = torch.device(device)
@@ -68,17 +76,21 @@ class PatchCoreDetector:
     def fit(
         self, dataloader: torch.utils.data.DataLoader,
         cancellation_requested: Optional[Callable[[], bool]] = None,
+        calibration_dataset=None,
     ) -> Dict[str, Any]:
         """
         Collects normal patch embeddings and builds coreset memory bank.
         """
         check_fit_cancelled(cancellation_requested)
+        from .normal_calibration import prepare_normal_calibration, check_normal_batch, normal_calibration_scores, statistical_calibration
+        snapshot = prepare_normal_calibration(dataloader, calibration_dataset, cancellation_requested) if calibration_dataset is not None else None
         self.feature_extractor.eval()
         all_patches: List[torch.Tensor] = []
 
         with torch.no_grad():
             for batch in dataloader:
                 check_fit_cancelled(cancellation_requested)
+                check_normal_batch(batch)
                 images = batch[0] if isinstance(batch, (list, tuple)) else batch
                 images = images.to(self.device)
                 feats = self.feature_extractor(images)  # [B, D, H, W]
@@ -89,6 +101,8 @@ class PatchCoreDetector:
                 check_fit_cancelled(cancellation_requested)
 
         check_fit_cancelled(cancellation_requested)
+        if not all_patches:
+            raise ValueError("Anomaly fit requires normal training images")
         raw_memory = torch.cat(all_patches, dim=0).to(self.device)
         total_patches, embed_dim = raw_memory.shape
 
@@ -119,22 +133,27 @@ class PatchCoreDetector:
         self.coreset = raw_memory[selected_indices]
 
         # Calibrate threshold
-        train_scores = self.predict_scores(dataloader, cancellation_requested=cancellation_requested)
+        train_scores = (normal_calibration_scores(self, snapshot, cancellation_requested) if snapshot is not None
+                        else self.predict_scores(dataloader, cancellation_requested=cancellation_requested))
         check_fit_cancelled(cancellation_requested)
-        mean_s = float(np.mean(train_scores))
-        std_s = float(np.std(train_scores))
-        self.threshold = round(mean_s + 3.0 * std_s, 4)
+        mean_s, std_s = float(np.mean(train_scores)), float(np.std(train_scores))
+        self.threshold, self.calibration = statistical_calibration(train_scores, snapshot)
         self.score_spec = None
         self.state_dict()  # Persist a calibration identity from these fitted statistics.
 
-        return {
+        result = {
             "total_normal_patches": total_patches,
             "coreset_size": target_k,
             "embed_dim": embed_dim,
             "calibrated_threshold": self.threshold,
-            "train_score_mean": round(mean_s, 4),
-            "train_score_std": round(std_s, 4),
+            "calibration_score_mean": round(mean_s, 4),
+            "calibration_score_std": round(std_s, 4),
+            "calibration": copy.deepcopy(self.calibration),
         }
+
+        if snapshot is None:
+            result.update(train_score_mean=round(mean_s, 4), train_score_std=round(std_s, 4))
+        return result
 
     # Alias for trainer integration
     def fit_normal_features(
@@ -223,6 +242,8 @@ class PatchCoreDetector:
             "max_coreset_size": self.max_coreset_size,
             "seed": self.seed,
         }
+        if self.calibration is not None:
+            state['calibration'] = copy.deepcopy(self.calibration)
         from backend.engine.score_contract import calibrated_score_spec
         # Serialization can add migrated legacy fields or follow a statistics
         # update. Bind what is actually saved; prediction uses the cached spec.
@@ -236,6 +257,8 @@ class PatchCoreDetector:
             self.feature_extractor.load_state_dict(state_dict['feature_extractor_state_dict'], strict=True)
         self.coreset = state_dict["coreset"].to(self.device) if state_dict.get("coreset") is not None else None
         self.threshold = state_dict.get("threshold", 0.0)
+        self.seed = state_dict.get("seed", self.seed)
+        self.calibration = copy.deepcopy(state_dict.get("calibration"))
         from backend.engine.score_contract import restore_score_spec
         self.score_spec = restore_score_spec({**state_dict, 'threshold': self.threshold}, 'euclidean_distance')
         self.coreset_sampling_ratio = state_dict.get("coreset_sampling_ratio", self.coreset_sampling_ratio)

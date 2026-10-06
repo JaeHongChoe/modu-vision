@@ -507,10 +507,14 @@ class UnifiedAutoMLTrainer:
                     val_ds.max_dim = 0
                 elif method == 'patchcore':
                     model = PatchCoreDetector(backbone_name="resnet18", device=self.device,
-                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)))
+                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                        pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                        pretrained_sha256=self.overrides.get('pretrained_sha256'), seed=self.overrides.get('seed', 42))
                 else:
                     model = PaDiMDetector(backbone_name="resnet18", device=self.device,
-                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)))
+                        pretrained=self.warm_start is None and bool(self.overrides.get('pretrained', True)),
+                        pretrained_checkpoint=self.overrides.get('pretrained_checkpoint'),
+                        pretrained_sha256=self.overrides.get('pretrained_sha256'), seed=self.overrides.get('seed', 42))
 
             if self.warm_start is not None:
                 from backend.engine.warm_start import architecture_for, load_parent_weights
@@ -545,18 +549,24 @@ class UnifiedAutoMLTrainer:
                     return {"status": "aborted", "epoch": 0}
 
                 try:
+                    import copy
+                    calibration_ds = copy.copy(val_ds)
+                    calibration_ds.samples = [sample for sample in val_ds.samples if int(sample[1]) == 0]
                     if self._anomaly_method == 'dino_synthetic':
+                        from backend.engine.anomaly.normal_calibration import prepare_normal_calibration, verify_normal_snapshot
+                        calibration_snapshot = prepare_normal_calibration(train_ds, calibration_ds, self._abort_flag.is_set)
                         self._last_anomaly_epoch = 0
                         def anomaly_progress(epoch, total_epochs, train_loss, val_loss, lr, metrics):
                             self._last_anomaly_epoch = epoch
                             self.callback.on_epoch_end(epoch - 1, total_epochs, train_loss, val_loss, lr, metrics)
-                        import copy
-                        calibration_ds = copy.copy(val_ds)
-                        calibration_ds.samples = [sample for sample in val_ds.samples if int(sample[1]) == 0]
                         model.fit(train_loader, cancellation_requested=self._abort_flag.is_set,
-                            progress_callback=anomaly_progress, calibration_dataset=calibration_ds if calibration_ds.samples else None)
+                            progress_callback=anomaly_progress, calibration_dataset=calibration_ds)
+                        verify_normal_snapshot(calibration_snapshot, self._abort_flag.is_set)
+                        model.calibration.update(calibration_snapshot['public'])
+                        model.calibration.update({'quality_approved': False, 'population_fpr_verified': False})
+                        model.training_summary['calibration'] = dict(model.calibration)
                     else:
-                        model.fit(train_loader, cancellation_requested=self._abort_flag.is_set)
+                        model.fit(train_loader, cancellation_requested=self._abort_flag.is_set, calibration_dataset=calibration_ds)
                 except AnomalyFitCancelled:
                     clear_device_cache(self.device)
                     stopped_epoch = getattr(self, '_last_anomaly_epoch', 0)
@@ -858,6 +868,9 @@ class UnifiedAutoMLTrainer:
             meta['score_spec'], _ = resolve_model_score(model, None, model.threshold)
             meta['anomaly_threshold'] = model.threshold
             meta['threshold_settings'] = {'threshold': model.threshold}
+            meta['calibration'] = getattr(model, 'calibration', None)
+            meta['map_semantics'] = 'pixel_score'
+            meta['quality_approved'] = False
             if meta['detector_type'] == 'dino_synthetic':
                 meta.update({
                     'anomaly_backbone': model.backbone_name,

@@ -40,6 +40,22 @@ function fixture() {
   return { ...m, state: () => m.useEvaluationStore.getState(), api, training, results };
 }
 
+test('heldout anomaly results cannot send a threshold replacement even for probability scores', async () => {
+  const f = fixture();
+  await f.state().loadEvaluation('job', { folderPath: '/source', task: 'anomaly' });
+  f.useEvaluationStore.setState({metrics:{evaluated_split:'test',anomaly_mode:'classification',score_spec:{domain:'probability'}}});
+  const previousFetch = global.fetch;
+  let posts = 0;
+  global.fetch = async () => { posts++; return {ok:true,json:async()=>({optimal_threshold:.2})}; };
+  try {
+    await f.state().calibrateZeroEscape();
+    assert.equal(posts, 0);
+    assert.equal(f.state().confidenceThreshold, .5);
+    assert.equal(f.state().calibrationSuccess, false);
+    assert.match(f.state().calibrationMessage, /시험/);
+  } finally { global.fetch = previousFetch; }
+});
+
 test('recorded roles control fallback verdicts and override numeric and normal aliases', () => {
   const f = fixture();
   assert.equal(f.computeSampleVerdict(samples[0], 0.5, null, semantics.roles), 'ESCAPE');

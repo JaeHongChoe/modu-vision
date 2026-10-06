@@ -286,7 +286,8 @@ export const EvaluationStudio: React.FC = () => {
   [task, testPredictions, matrix, confidenceThreshold, overkillAnalysis, classSemantics, metrics.mAP_50]);
   const hasDefectSamples = testPredictions.some((p) => isDefectLabel(p.ground_truth, classSemantics?.roles));
   const hasNormalSamples = testPredictions.some((p) => isNormalLabel(p.ground_truth, classSemantics?.roles));
-  const hasCalibrationEvidence = !isLoading && !executionEvidence?.common_cohort && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
+  const heldoutAnomalyTest = Boolean(metrics.anomaly_mode && metrics.evaluated_split === 'test');
+  const hasCalibrationEvidence = !isLoading && !executionEvidence?.common_cohort && !heldoutAnomalyTest && metrics.score_spec?.domain !== 'distance' && Boolean(jobId && hasDefectSamples && hasNormalSamples);
   const hasReportableResult = Boolean(jobId && Object.keys(metrics).length > 0 && testPredictions.length > 0);
   const reportAvailabilityHint = executionEvidence?.common_cohort
     ? '선택 코호트 보고서 내보내기는 아직 지원되지 않습니다.'
@@ -605,7 +606,9 @@ export const EvaluationStudio: React.FC = () => {
               {metrics.selection_overlap && <p className="mt-1 text-amber-200">{language === 'ko'
                 ? '모델 선택에 사용한 검증 데이터의 결과입니다. 별도 시험 데이터에서도 확인하세요.'
                 : 'This validation data was also used for model selection. Verify the model on a separate test set.'}</p>}
-              {metrics.score_spec?.domain === 'distance' && <p className="mt-1 text-cyan-200">저장된 거리 보정 임계값으로 평가합니다. 임계값 보정에는 학습·검증 데이터를 사용하세요.</p>}
+              {metrics.score_spec?.domain === 'distance' && <p className="mt-1 text-cyan-200">거리 점수와 확률을 구분합니다. 저장된 모델 임계값으로 판정하며 점수 맵은 영역 마스크와 구분합니다.</p>}
+              {metrics.calibration && <p className="mt-1 text-cyan-200">임계값 보정: {metrics.calibration.split === 'val' || metrics.calibration.split === 'calibration' ? '별도 검증 정상 이미지' : metrics.calibration.split === 'train' ? '학습 정상 이미지 · 기존 기본값' : '출처 미확인'} · 정상 {metrics.calibration.normal_image_count ?? 0}장 · 비교 {metrics.calibration.comparison || '미확인'}. 현장 과검률 승인과 구분합니다.</p>}
+              {heldoutAnomalyTest && <p className="mt-1 text-cyan-200">시험 데이터는 고정된 임계값의 평가에만 사용합니다. 이 결과로 저장된 보정값을 변경하지 않습니다.</p>}
               {metrics.threshold_search_available === false && <p className="mt-1 text-amber-200">{language === 'ko'
                 ? '정상 또는 불량 정답이 없어 AUROC와 최적 임계값을 산출할 수 없습니다. 판정은 저장된 모델 임계값을 사용합니다.'
                 : 'AUROC and threshold search require both normal and defect truth. Verdicts use the saved model threshold.'}</p>}

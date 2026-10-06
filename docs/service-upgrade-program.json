@@ -2994,8 +2994,18 @@
     "S3-03",
     "S3-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "parent-software-closure",
+     "source_base": "06884c34122cba2c8c59f114e674ce21ee3d15f8",
+     "root_readback_sha256": "160a0cd4b7c3056d10124ab02f673b790d24f8511060ac54bd7b9f62cde3a203",
+     "source_files": 1441,
+     "artifacts": 1867,
+     "scope": "Authentic cached ResNet18 PaDiM/PatchCore and DINOv3 normal-only CPU fit with separate pinned normal validation calibration, disjoint heldout fixed-threshold evaluation, explicit image/region and score/map semantics, saved/reopened recipe and fresh offline candidate parity in Chrome and macOS development Electron. Synthetic software workflow only; no quality/GPU/Windows/installed/physical/independent handoff/final acceptance.",
+     "evidence_document": "docs/verification/2026-10-04-remaining-integration-evidence.md#task115--s4-05-independent-normal-calibration-parent-software-closure"
+    }
+   ],
    "file_actions": {
     "backend/engine/anomaly": "Extend directory",
     "src/renderer/components/training/DinoSyntheticOptions.tsx": "Modify",
@@ -3003,12 +3013,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9463,13 +9473,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 53,
-    "pending": 29
+    "verified": 54,
+    "pending": 28
    },
    "parent_status": {
-    "verification_pending": 47,
+    "verification_pending": 48,
     "in_progress": 15,
-    "planned": 20
+    "planned": 19
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,
