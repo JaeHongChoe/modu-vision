@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-edit-closure.spec.ts::native team edit reconnect preserves conflict decisions review policy and queue",
+  "test_source_sha256": "e9fbc997659cf14fb99ec4fc12622509a0b29f9d23045f0b9de907a7ca4bccaf",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5199041d416a81bb1c37b06c41bc3f2f000cac2d805b9c49c9078bc1b7d38cbb",
+  "harness_sha256": "6a316d67359326f76c15eccd4964cff25fa7c102724ae2c0da7beb96b30eb128",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "526e3fd40dc6e4170ef6a97c6550287e01cd51839b461b8adc3096fb5c32aa80"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "cfa004e7c3a8c8079d838b92bc64e2dceba19ff08fdf21ad4f4b9afb050eb889"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8bc51149bec60b63c36f4ba9fc389f73ac3d18f8779997cc741a281e1ecea32d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

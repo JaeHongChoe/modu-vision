@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-edit-closure.spec.ts::team edit reconnect compares drafts and preserves two-person review and assignment",
+  "test_source_sha256": "e9fbc997659cf14fb99ec4fc12622509a0b29f9d23045f0b9de907a7ca4bccaf",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5199041d416a81bb1c37b06c41bc3f2f000cac2d805b9c49c9078bc1b7d38cbb",
+  "harness_sha256": "7e61a18164bcbac65e377527d781acd961592df082050013750416929ef2d24c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2d9f4033e1672116b57232ea88e5b2b33e166428a7095dd467429eaeecf1fead"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "69442e49d899f1e4a36c13d32511456b147ce6f9d5f80d114967ccb12f7655a4"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "042e7f78bf6db4fbec6d7ea1348df90876bfff78d929ffcaea9246f781ad85aa"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -45,3 +45,16 @@ queue preservation, but configuration intent is not an observed successful run.
 The next ordinary source publication requires its own hosted result and skip
 review. The current72-hour run qualifies its original a184b1e source, not later
 edits. No parent or final acceptance count is promoted by these component fixes.
+
+## Clean source execution follow-up
+
+After the ordinary publication of1352bff9672356decc39dbf7cd2c3fcc4f2d01a9,
+the two browser and two actual Electron cases passed again, four expected passed
+attempts with no retries. The strict collector verified each clean harness source
+identity, current spec against its historical Git bytes, exact report case and
+retained screenshot hashes. Four clean template-draft/team-reconnect receipts
+are retained next to the paired diagnostic receipt. These confirm the executed
+cases only; the156-action acceptance ledger, model quality, independent review
+and target release remain separate. Hosted run37533663317 actually started its
+source job and reached type checks/renderer/build at the recorded readback; it
+had no final conclusion yet. Its running state does not block independent work.

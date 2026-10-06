@@ -35,7 +35,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
 | S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 후속 최신 소스 hosted 결과·skip 조건 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 깨끗한 4062173 소스에서 실제 Electron 개선 전체 흐름 1건·129개 artifact hash와 엄격한 GUI 기록 확보. 156개 기능의 action별 성공/오류/취소/재열기/이관 근거 원장 보완 필요. 단순 매핑이나 1건의 완주는 전체 수용 완료가 아님. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 깨끗한 4062173 소스의 Electron 개선 전체 흐름 1건과 1352bff 소스의 템플릿·팀 재연결 browser/Electron 4건에 엄격한 GUI 기록 확보. 156개 기능의 action별 성공/오류/취소/재열기/이관 근거 원장 보완 필요. 일부 흐름의 완주는 전체 수용 완료가 아님. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
@@ -192,3 +192,10 @@ backend88, mapping guard25, browser2 and actual macOS Electron2 cases pass.
 The GUI runs retain dirty source identities and are not strict clean-source
 acceptance receipts. No parent accounting changes. The72-hour qualification is
 independent and its complete-duration readback is last.
+
+Fresh clean1352bff browser/Electron reruns also pass4/4 without retries.
+The strict collector checks the exact historical spec bytes, single expected
+passed report result, clean harness identity and screenshots for each run.
+Four `2026-10-07-clean-template-draft-*` / `clean-team-reconnect-*` receipts
+are retained. They qualify those exact executed cases, not all156 actions or
+independent/human/physical/release acceptance.
