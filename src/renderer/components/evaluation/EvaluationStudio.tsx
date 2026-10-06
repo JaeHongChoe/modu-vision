@@ -107,6 +107,7 @@ export const EvaluationStudio: React.FC = () => {
   const modelSelectionRevision=useRef(0);
   const [evaluationDevice, setEvaluationDevice] = useState('cpu');
   const [cohortError, setCohortError] = useState<string | null>(null);
+  useEffect(()=>setEvaluationDevice('cpu'),[selectedProfileId]);
   const profileIdentity = JSON.stringify(profiles.find(profile=>profile.id===selectedProfileId) || null);
   const scope = JSON.stringify([profileIdentity, project?.id, projectDir, sourceFolder, task, project?.active_labelset_id, selectedProfileId, transportRevision, getApiPersistenceIdentity()]);
   const scopeRef = useRef(scope); scopeRef.current = scope;
@@ -187,12 +188,13 @@ export const EvaluationStudio: React.FC = () => {
   const requestedCohortJob=cohortModel || (cohortModels.some(model=>model.job_id===linkedJob) ? linkedJob : null);
   const runCohortEvaluation = async (requestedJob:string|null, versionId:string|undefined, profileId:string|null|undefined, device:string|undefined) => {
     const selectionRevision=modelSelectionRevision.current;
-    if (!requestedJob || !sourceFolder || !versionId || !profileId || !device || profileId!==selectedProfileId) return;
+    if (!requestedJob || !sourceFolder || !versionId || !device || (profileId||null)!==selectedProfileId) return;
+    if(!useComputeStore.getState().isLoaded){setCohortError('실행 서버 설정을 먼저 확인하세요.');return;}
     const expected=scope, generation=getProjectContextGeneration();
     const expectedProjectId=project?.id,expectedLabelsetId=project?.active_labelset_id;
     setCohortError(null);
     try { await loadEvaluation(requestedJob,{folderPath:sourceFolder,task,labelsetId:project?.active_labelset_id || 'default',
-      evaluationDatasetVersionId:versionId,computeProfileId:profileId,device,
+      evaluationDatasetVersionId:versionId,computeProfileId:profileId||undefined,device,executionTarget:profileId?'selected_compute':'local',
       isCurrent:()=>modelSelectionRevision.current===selectionRevision && scopeRef.current===expected && getProjectContextGeneration()===generation
         && useComputeStore.getState().selectedProfileId===selectedProfileId
         && JSON.stringify(useComputeStore.getState().profiles.find(profile=>profile.id===selectedProfileId) || null)===profileIdentity
@@ -415,12 +417,13 @@ export const EvaluationStudio: React.FC = () => {
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
         <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
         <label>고정 테스트 코호트<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">기존 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
-        <span>선택 계산 서버: {profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId || '선택 없음'}</span>
-        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">CUDA · 선택 서버 GPU {profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'}</option></select></label>
-        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !selectedProfileId || !sourceFolder} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
+        <span>실행 위치: {selectedProfileId ? profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId : '이 컴퓨터'}</span>
+        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">{selectedProfileId?'CUDA · 선택 서버 GPU '+(profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'):'CUDA · 이 컴퓨터 GPU 0'}</option>{!selectedProfileId&&<option value="mps">Metal MPS · 이 컴퓨터</option>}</select></label>
+        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
         {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
         {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
-        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
+        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.execution_target==='local'?'이 컴퓨터':executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
+        {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
         {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
       </div>
 

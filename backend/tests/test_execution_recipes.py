@@ -83,7 +83,7 @@ def test_recipe_support_matrix_has_every_family_and_explicit_gan_boundary():
     assert all(row['predict']==(task!='defect_gan') and row['generate']==(task=='defect_gan') for task,row in matrix.items())
     assert matrix['defect_gan']['flow'] is False and matrix['defect_gan']['quality_approved'] is False
     assert matrix['defect_gan']['native_recipe_stages']==['evaluate','generate']
-    assert all(matrix[t]['native_recipe_stages']==['predict','benchmark'] for t in ('classification','detection','segmentation','anomaly'))
+    assert all(matrix[t]['native_recipe_stages']==['evaluate','predict','benchmark'] for t in ('classification','detection','segmentation','anomaly'))
     assert 'never pipeline' in matrix['anomaly']['benchmark_scope']
     assert matrix['patch_classification']['adapter']=='native_recipe' and matrix['patch_classification']['native_recipe_stages']==['evaluate','predict']
     from backend.engine.execution_recipe import request_model

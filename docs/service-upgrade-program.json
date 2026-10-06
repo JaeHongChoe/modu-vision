@@ -3311,7 +3311,15 @@
     "src/renderer/services/modelExecution.ts",
     "backend/api/routes_evaluation.py",
     "backend/api/routes_export.py",
-    "backend/engine/exporter.py"
+    "backend/engine/exporter.py",
+    "backend/engine/core_evaluation_recipe.py",
+    "backend/api/routes_model_execution.py",
+    "backend/engine/execution_recipe.py",
+    "backend/remote/evaluation_cohort.py",
+    "backend/remote/recipe.py",
+    "src/renderer/stores/useEvaluationStore.ts",
+    "src/renderer/components/evaluation/EvaluationStudio.tsx",
+    "scripts/e2e/core-cohort-target.spec.ts"
    ],
    "proposed_contract": "execute_recipe(stage, recipe_ref, target_ref, input_snapshot) -> JobRef",
    "acceptance": [
@@ -3322,7 +3330,7 @@
     "S1-02",
     "S1-05"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "partial-remote-training-controls",
@@ -3365,6 +3373,12 @@
      "result": "Task123 actual native YOLO26n untrained detection and fitted random-feature PaDiM CPU predict/forward benchmark parity. Ten-family API/catalog parity, honest GAN generate-only and patch evaluation support. Actual failed reimport keeps the persisted family and error.",
      "scope": "8 canonical CPU receipts/4 selected in-process workers; final detection1 and unchanged anomaly1 pass; catalog3,renderer786,types/build and Chrome/Electron display2 pass. Root9df3bf5d04da2187582b26504d7233378a0730145ad00c21a8fb3626c4c6808c,1467source/323artifacts. Initial unsupported YOLO11n test and task-confirmation failures retained.",
      "platform": "macOS CPU controls; no quality or new real SSH/GPU. Core heldout evaluation still limited to original remote profile; parent remains incomplete. Windows excluded; independent/final acceptance pending."
+    },
+    {
+     "kind": "core-heldout-target-implementation-verified",
+     "result": "Task124 explicit common core heldout evaluation uses the global local/selected target, immutable original test cohort, model/training/labelset/profile/runtime hashes and canonical reopened history; selected failure never invokes API-host evaluation. Combined Task118-124 software execution integration contract is verified.",
+     "scope": "Final actual four-family core evaluations:9 backend receipts (8CPU,1localMPS),4 selected in-process CPU workers; Chrome/development Electron2pass with real GUI1epoch classification training,3test images each,4 native evaluation receipts, immutable reopen and actual selected disconnect503. Renderer790,types/E2E types/build pass. Root7e64149969caa6c6dc4330c6e73c341406a728bfe0e41cb687904bd3c3928bf6 binds1470source/759artifacts; historical slice references are not fresh runs.",
+     "platform": "First six software dimensions verified; handoff/Windows native/target execution remain pending. Synthetic controls do not approve quality; no new real SSH/GPU or independent/final acceptance. Task120 startup/thumbnail anomalies remain unresolved. Windows testing excluded by user."
     }
    ],
    "file_actions": {
@@ -3374,21 +3388,29 @@
     "src/renderer/services/modelExecution.ts": "Modify",
     "backend/api/routes_evaluation.py": "Modify",
     "backend/api/routes_export.py": "Modify",
-    "backend/engine/exporter.py": "Modify"
+    "backend/engine/exporter.py": "Modify",
+    "backend/engine/core_evaluation_recipe.py": "Create",
+    "backend/api/routes_model_execution.py": "Modify",
+    "backend/engine/execution_recipe.py": "Modify",
+    "backend/remote/evaluation_cohort.py": "Modify",
+    "backend/remote/recipe.py": "Modify",
+    "src/renderer/stores/useEvaluationStore.ts": "Modify",
+    "src/renderer/components/evaluation/EvaluationStudio.tsx": "Modify",
+    "scripts/e2e/core-cohort-target.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s4_11.py"
+   "proposed_test_file": "backend/tests/test_core_cohort_recipes.py"
   },
   {
    "id": "S4-12",
@@ -9518,7 +9540,6 @@
    "S5-10",
    "S1-02",
    "S1-08",
-   "S4-11",
    "S5-08"
   ],
   "last_verified_on": "2026-10-06",
@@ -9528,12 +9549,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 56,
-    "pending": 26
+    "verified": 57,
+    "pending": 25
    },
    "parent_status": {
-    "verification_pending": 50,
-    "in_progress": 15,
+    "verification_pending": 51,
+    "in_progress": 14,
     "planned": 17
    },
    "merged_extension_slices": 16,

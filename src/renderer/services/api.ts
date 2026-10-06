@@ -267,6 +267,7 @@ export type RemoteEvaluationResult = EvaluationResults & {
   execution_target?: string; compute_profile_id?: string; compute_profile_name?: string;
   device?: string; resolved_device?: string; runtime_device_identity?: unknown;
   remote_operation_id?: string; evaluation_binding_sha256?: string; execution_profile_sha256?: string;
+  execution?: {receipt_id:string; evidence_sha256:string; execution_target:string; compute_profile_id:string|null; device:string};
 };
 
 export interface DatasetVersionSummary {
@@ -1249,6 +1250,9 @@ export const api = {
     }),
     getRemoteOperations: (jobId: string) => request<{ operations: RemoteEvaluationOperation[] }>(`/api/evaluation/remote-operations?job_id=${encodeURIComponent(jobId)}`),
     cancelRemoteOperation: (opId: string, binding: {job_id: string; cohort_sha256: string; evaluation_binding_sha256: string}) => request<RemoteEvaluationOperation>(`/api/evaluation/remote-operations/${encodeURIComponent(opId)}/cancel`, {method:'POST', body:JSON.stringify(binding)}),
+    runCoreCohort: (body: {task:VisionTask;stage:'evaluate';execution_target:'local'|'selected_compute';device:string;compute_profile_id?:string;
+      params:{job_id:string;dataset_path:string;evaluation_dataset_version_id:string}}) =>
+      request<RemoteEvaluationResult>('/api/model-execution/recipes',{method:'POST',body:JSON.stringify(body)}),
     getResults: (jobId?: string, options?: {
       datasetPath?: string;
       forceRecompute?: boolean;

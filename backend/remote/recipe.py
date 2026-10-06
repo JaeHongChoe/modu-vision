@@ -54,6 +54,13 @@ def run_recipe_worker(spec_path):
         inputs={}
         if binding['image_ref']:inputs['image']=files[binding['image_ref']]
         if binding['dataset_ref']:inputs['dataset']=root/binding['dataset_ref']
+        if binding.get('core_evaluation'):
+            info=binding['core_evaluation']
+            if (info.get('execution_target')!='selected_compute' or info.get('device')!=spec['device']
+                    or info.get('execution_profile_sha256')!=spec.get('execution_profile_sha256')
+                    or info.get('compute_profile_id')!=spec.get('compute_profile_id')):
+                raise ValueError('Core cohort target differs from selected worker')
+            inputs.update(core_evaluation=info,cohort_archive=files['inputs/cohort.tar.gz'],expected_runtime_gpu_uuid=spec.get('expected_runtime_gpu_uuid'))
         device=spec['device'];aliases={binding['source_root']:root/'inputs/original'} if binding['source_root'] else {}
         # Verify selected physical CUDA UUID using the same strict common-cohort
         # evidence as evaluation. Local MPS is never accepted as a remote alias.
@@ -91,7 +98,8 @@ def execute_remote(profile,project,binding,files,device):
     context=operations.RemoteJobContext('job_recipe_'+digest[:24],binding['task'],Path(project['reports_dir'])/'execution_recipes',
         Path(project['dataset_dir']),profile,digest,portable=True)
     paths=operations.run_remote_operation_artifacts(context,'recipe',{'recipe_contract':1,'recipe':binding,'device':device,
-        'expected_runtime_gpu_uuid':expected},input_files=files)
+        'expected_runtime_gpu_uuid':expected,'compute_profile_id':profile.id,
+        'execution_profile_sha256':hashlib.sha256(canonical(profile.model_dump())).hexdigest()},input_files=files)
     report=paths.get('outputs/result.json')
     if report is None:raise ArtifactValidationError('Recipe result is missing')
     result=json.loads(report.read_text());runtime=result.get('runtime',{})

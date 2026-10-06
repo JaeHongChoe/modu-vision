@@ -28,13 +28,16 @@ def support_matrix():
                   'generation_only':task=='defect_gan',
                   'benchmark':task in FAMILIES[:4],
                   'benchmark_scope':'features or DINO export forward; never pipeline timing' if task=='anomaly' else 'model_forward_only' if task in FAMILIES[:4] else 'unsupported; use saved flow timing',
-                  'native_recipe_stages':(['predict','benchmark'] if task in FAMILIES[:4] else ['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS or task=='patch_classification' else []),
+                  'native_recipe_stages':(['evaluate','predict','benchmark'] if task in FAMILIES[:4] else ['evaluate','generate'] if task=='defect_gan' else ['evaluate','predict'] if task in SPECIALISTS or task=='patch_classification' else []),
                   'target_acceptance':'pending; CPU control execution is not physical GPU qualification'} for task in FAMILIES}
 
 
 def request_model(task,stage):
     if task=='patch_classification' and stage=='evaluate':return PatchEvaluationRequest
     if task in FAMILIES[:4]:
+        if stage=='evaluate':
+            from backend.engine.core_evaluation_recipe import CoreEvaluationRequest
+            return CoreEvaluationRequest
         from backend.engine.core_model_trials import CorePredictRequest,CoreBenchmarkRequest
         if stage in ('predict','benchmark'):return CorePredictRequest if stage=='predict' else CoreBenchmarkRequest
     from backend.api import routes_rotation as rotation, routes_ocr as ocr, routes_enhancement as enhancement
@@ -60,8 +63,12 @@ def run_recipe(task,stage,checkpoint,inputs,options,output,device):
     target=str(resolve_runtime_device(device));checkpoint=Path(checkpoint);output=Path(output)
     request_model(task,stage)
     if task in FAMILIES[:4]:
-        from backend.engine.core_model_trials import execute_core_trial
-        result=execute_core_trial(task,stage,checkpoint,inputs,options,target)
+        if stage=='evaluate':
+            from backend.engine.core_evaluation_recipe import run_core_evaluation
+            result=run_core_evaluation(checkpoint,inputs,output,target)
+        else:
+            from backend.engine.core_model_trials import execute_core_trial
+            result=execute_core_trial(task,stage,checkpoint,inputs,options,target)
     elif stage=='evaluate':
         dataset=inputs['dataset'];split=options.get('split','test')
         if split not in ('val','test'):raise ValueError('Recipe evaluation requires heldout val or test')

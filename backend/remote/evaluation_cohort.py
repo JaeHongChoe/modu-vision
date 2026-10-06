@@ -197,9 +197,9 @@ def freeze_cohort(project, version_id, source, task, meta, context):
         raise ValueError('Frozen pixels and labels exceed local preparation limit')
     # The actual frozen training snapshot provides content proof, never filenames.
     from backend.engine.dataset_inventory import is_inventory_path, folder_label_split
-    old = context.dataset_path
-    selection_hashes = set()
-    for path in old.rglob('*'):
+    old = getattr(context,'dataset_path',None)
+    selection_hashes = set(getattr(context,'selection_sha256',()))
+    for path in old.rglob('*') if old is not None else ():
         if path.is_file() and is_inventory_path(path.relative_to(old).parts, task):
             partition = folder_label_split(path.relative_to(old), task)[1]
             if partition is None:
@@ -375,7 +375,8 @@ def validate_binding(spec):
         raise ValueError('Common operation authority belongs to another project')
     if cohort.get('task') != spec['task'] or cohort.get('split') != 'test' or not 1 <= cohort.get('image_count',0) <= MAX_IMAGES:
         raise ValueError('Invalid common test cohort task or count')
-    if spec.get('device') not in ('cpu','cuda:0'):
+    native_local_mps=spec.get('native_core_evaluation_contract')==1 and spec.get('execution_target')=='local' and spec.get('device')=='mps'
+    if spec.get('device') not in ('cpu','cuda:0') and not native_local_mps:
         raise ValueError('Common evaluation requires explicit CPU or logical CUDA 0')
     return cohort
 
@@ -432,7 +433,9 @@ def target_identity(spec):
     from backend.engine.runtime_device import resolve_runtime_device
     from backend.engine.runtime_device_identity import runtime_device_identity
     device=resolve_runtime_device(spec['device'])
-    identity=runtime_device_identity(str(device))
+    if str(device)=='mps' and spec.get('native_core_evaluation_contract')==1 and spec.get('execution_target')=='local':
+        identity={'device':'mps','process_id':os.getpid(),'device_name':'Metal MPS'}
+    else:identity=runtime_device_identity(str(device))
     if identity.get('device')!=spec['device'] or not isinstance(identity.get('process_id'),int) or identity['process_id']<=0:
         raise ValueError('Evaluation runtime identity is unavailable')
     if spec['device']=='cuda:0' and (not _gpu_uuid_matches(identity.get('gpu_uuid'),spec.get('expected_runtime_gpu_uuid'))):
@@ -493,7 +496,7 @@ def worker_evaluate(spec, checkpoint, metadata, data, descriptor, run_dir, cance
                   class_semantics=descriptor['class_semantics'],evaluated_at=routes_evaluation.time.strftime('%Y-%m-%dT%H:%M:%SZ',routes_evaluation.time.gmtime()),
                   common_cohort={'cohort_sha256':descriptor['cohort_sha256'],'dataset_version_id':spec['evaluation_cohort']['dataset_version_id'],
                                  'image_count':len(by_path),'split':'test'},
-                  execution_target='model_compute',compute_profile_id=spec['compute_profile_id'],
+                  execution_target=spec.get('execution_target','model_compute'),compute_profile_id=spec['compute_profile_id'],
                   compute_profile_name=spec['compute_profile_name'],compute_gpu_selector=spec['compute_gpu_selector'],
                   execution_profile_sha256=spec['execution_profile_sha256'],device=spec['device'],resolved_device=str(device),
                   runtime_device_identity=identity,remote_operation_id=run_dir.name,
@@ -539,7 +542,7 @@ def validate_result(result,spec,cohort,artifacts):
     for key in ('compute_profile_id','compute_profile_name','compute_gpu_selector','execution_profile_sha256','device'):
         if result.get(key)!=spec[key]: raise ValueError('Common result selected target binding changed')
     identity=result.get('runtime_device_identity')
-    if result.get('execution_target')!='model_compute' or result.get('resolved_device')!=spec['device'] or not isinstance(identity,dict) or identity.get('device')!=spec['device'] or type(identity.get('process_id')) is not int or identity['process_id']<=0:
+    if result.get('execution_target')!=spec.get('execution_target','model_compute') or result.get('resolved_device')!=spec['device'] or not isinstance(identity,dict) or identity.get('device')!=spec['device'] or type(identity.get('process_id')) is not int or identity['process_id']<=0:
         raise ValueError('Common result runtime identity is absent or stale')
     if spec['device']=='cuda:0' and (not _gpu_uuid_matches(identity.get('gpu_uuid'),spec.get('expected_runtime_gpu_uuid'))):
         raise ValueError('Common result GPU UUID differs from selected resource')

@@ -100,6 +100,7 @@ export function computeSampleVerdict(
 export interface EvaluationSource {
   folderPath: string; task: VisionTask; labelsetId?: string;
   evaluationDatasetVersionId?: string; computeProfileId?: string; device?: string;
+  executionTarget?: 'local'|'selected_compute';
   isCurrent?: () => boolean;
 }
 interface EvaluationState {
@@ -299,16 +300,25 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     // completed checkpoint when this window has lost the training job ID.
     set({ isLoading: true, errorMessage: null, classSemantics: null, overkillAnalysis: null,
       executionEvidence:null, remoteOperation:null, remoteOperationError:null,
-      remoteRequest: requestedJob && source?.evaluationDatasetVersionId && source.computeProfileId
+      remoteRequest: !source?.executionTarget && requestedJob && source?.evaluationDatasetVersionId && source.computeProfileId
         ? {jobId:requestedJob, source, generation} : null });
     try {
-      const res = await api.evaluation.getResults(requestedJob || undefined, source?.folderPath ? {
+      const native=Boolean(source?.executionTarget && source.evaluationDatasetVersionId);
+      if(native && (!requestedJob || !source?.folderPath || !source.device
+        || (source.executionTarget==='selected_compute')!==Boolean(source.computeProfileId)))throw new Error('평가 모델과 실행 위치를 명시적으로 선택하세요.');
+      const res = native ? await api.evaluation.runCoreCohort({task:source!.task,stage:'evaluate',execution_target:source!.executionTarget!,
+        device:source!.device!,...(source!.computeProfileId?{compute_profile_id:source!.computeProfileId}:{}),
+        params:{job_id:requestedJob!,dataset_path:source!.folderPath,evaluation_dataset_version_id:source!.evaluationDatasetVersionId!}})
+      : await api.evaluation.getResults(requestedJob || undefined, source?.folderPath ? {
         sourceDatasetPath: source.folderPath,
         sourceTask: source.task,
         evaluationDatasetVersionId: source.evaluationDatasetVersionId, computeProfileId: source.computeProfileId, device: source.device,
       } : undefined);
       if (generation !== evaluationGeneration || source?.isCurrent?.() === false) return;
-      if (source?.evaluationDatasetVersionId && (res.common_cohort?.dataset_version_id !== source.evaluationDatasetVersionId || res.compute_profile_id !== source.computeProfileId || res.device !== source.device)) throw new Error("반환된 코호트 버전/실행 대상이 요청과 다릅니다.");
+      if (source?.evaluationDatasetVersionId && (res.common_cohort?.dataset_version_id !== source.evaluationDatasetVersionId || (res.compute_profile_id||null) !== (source.computeProfileId||null) || res.device !== source.device)) throw new Error("반환된 코호트 버전/실행 대상이 요청과 다릅니다.");
+      if(native && (res.execution_target!==source!.executionTarget || res.execution?.execution_target!==source!.executionTarget
+        || (res.execution?.compute_profile_id||null)!==(source!.computeProfileId||null) || res.execution?.device!==source!.device
+        || !res.execution?.receipt_id || !/^[0-9a-f]{64}$/.test(res.execution.evidence_sha256)))throw new Error('저장된 평가 실행 기록의 대상이 요청과 다릅니다.');
       if(jobId&&res.job_id!==jobId)throw new Error('요청한 평가 작업과 반환된 작업 ID가 다릅니다. 작업 센터에서 다시 확인하세요.');
       set({
         executionEvidence:res, remoteRequest:null, remoteOperation:null,
