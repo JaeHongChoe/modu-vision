@@ -256,7 +256,13 @@ export const TrainingController: React.FC = () => {
   const currentPhase = jobPhase || status;
 
   return (<>
-    {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(outcome.ok){clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});setSelectedFamily(outcome.task);}else setActionError(`모델 종류를 바꾸지 못했습니다: ${outcome.error}`);}}/>}
+    {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
+      setTaskProposal(null);
+      // A failed reimport may follow a persisted task change. Show that actual
+      // task while keeping its recovery error; it is not ready to train.
+      if(outcome.ok||outcome.applied){clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});setSelectedFamily(outcome.task);}
+      if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
+    }}/>}
     <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
       {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!sourceReady||totalImages<1||split.train<1||split.val<1)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{!sourceReady||totalImages<1||split.train<1||split.val<1?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
       <OperatorGuidanceBanner step={3} />

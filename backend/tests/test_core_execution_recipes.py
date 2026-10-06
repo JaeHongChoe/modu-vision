@@ -6,7 +6,7 @@ from PIL import Image
 from backend.tests.test_model_comparisons import _client,_checkpoint
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 
-@pytest.mark.parametrize('task',['classification','segmentation'])
+@pytest.mark.parametrize('task',['classification','segmentation','detection','anomaly'])
 def test_core_prediction_and_benchmark_use_explicit_cpu_and_saved_model(tmp_path,monkeypatch,task):
     from backend.tests.test_remote_operations import FakeAdditionalRemote
     from backend.remote.recipe import run_recipe_worker
@@ -20,6 +20,19 @@ def test_core_prediction_and_benchmark_use_explicit_cpu_and_saved_model(tmp_path
         model=build_segmentation_model('unet',num_classes=2,pretrained=False)
         torch.save({'task':task,'model_name':'unet','classes':['background','defect'],'image_size':[32,32],'model_state_dict':model.state_dict()},directory/'best_model.pt')
         (directory/'model_meta.json').write_text(json.dumps({'task':task}))
+        rec=json.loads((directory/'job_receipt.json').read_text());rec['task']=task;(directory/'job_receipt.json').write_text(json.dumps(rec))
+    elif task in ('detection','anomaly'):
+        if task=='detection':
+            from backend.engine.detection import create_detection_model
+            model=create_detection_model(backbone='yolo26n',num_classes=2,pretrained=False)
+            metadata={'task':task,'backbone':'yolo26n','classes':['defect'],'image_size':[32,32],'pretrained':False}
+        else:
+            from backend.engine.anomaly import PaDiMDetector
+            model=PaDiMDetector(pretrained=False,target_dim=4)
+            model.fit(torch.utils.data.DataLoader(torch.rand(2,3,32,32),batch_size=2))
+            metadata={'task':task,'detector_type':'padim','feature_backbone':'resnet18','classes':['good','anomaly'],'image_size':[32,32],'pretrained':False}
+        torch.save({**metadata,'model_state_dict':model.state_dict()},directory/'best_model.pt')
+        (directory/'model_meta.json').write_text(json.dumps(metadata))
         rec=json.loads((directory/'job_receipt.json').read_text());rec['task']=task;(directory/'job_receipt.json').write_text(json.dumps(rec))
     profile={'id':'owned-cpu','name':'Owned CPU loopback','ssh_target':'fixture-only','ssh_port':22,'remote_root':str(tmp_path/'remote'),'runtime_kind':'python','runtime_value':'python3'};assert client.post('/api/compute/profiles',json=profile).status_code==201
     class RealCPU(FakeAdditionalRemote):
@@ -42,7 +55,8 @@ def test_core_prediction_and_benchmark_use_explicit_cpu_and_saved_model(tmp_path
         assert pair[0]['execution']['input_binding_sha256']==pair[1]['execution']['input_binding_sha256']
         if stage=='predict':assert pair[0]['predictions']==pair[1]['predictions'] and pair[0]['overlay_base64']==pair[1]['overlay_base64'] and pair[0]['source_sha256']==original
         else:
-            for result in pair:assert result['iterations']==5 and result['measurement_scope']=='model_forward_only' and result['input_kind']=='synthetic_random_tensor' and result['mean_latency_ms']>0
+            scope='feature_extractor_forward_only' if task=='anomaly' else 'model_forward_only'
+            for result in pair:assert result['iterations']==5 and result['measurement_scope']==scope and result['input_kind']=='synthetic_random_tensor' and result['mean_latency_ms']>0
     assert worker.launches==2 and hashlib.sha256(image.read_bytes()).hexdigest()==original
     assert len(client.get('/api/model-execution/recipes',params={'task':task,'job_id':'job_core'}).json()['receipts'])==4
     from backend.api import routes_model_execution

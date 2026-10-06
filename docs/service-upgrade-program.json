@@ -3359,6 +3359,12 @@
      "result": "Task122 explicit patch heldout evaluation and automatic canonical execution history; exact original cohort/model/pixel identity, sidecar regression fixed, selected503 no fallback.",
      "scope": "Backend28 related + final2,renderer786,types/build; actual Chrome/Electron DINOv3 frozen-encoder head-only CPU2epochs with12test patches each. Root41a3bdc1fb6dceb9d399fe151c04eb81b2af96751814120319f1a93e2a14714b,1466source/1143artifacts;3actual selected in-process CPU workers,6receipts/4evaluation records.",
      "platform": "macOS CPU; all-model stage qualification remains. No physical GPU, representative quality, independent review or final acceptance. Windows excluded."
+    },
+    {
+     "kind": "partial-core-target-qualification",
+     "result": "Task123 actual native YOLO26n untrained detection and fitted random-feature PaDiM CPU predict/forward benchmark parity. Ten-family API/catalog parity, honest GAN generate-only and patch evaluation support. Actual failed reimport keeps the persisted family and error.",
+     "scope": "8 canonical CPU receipts/4 selected in-process workers; final detection1 and unchanged anomaly1 pass; catalog3,renderer786,types/build and Chrome/Electron display2 pass. Root9df3bf5d04da2187582b26504d7233378a0730145ad00c21a8fb3626c4c6808c,1467source/323artifacts. Initial unsupported YOLO11n test and task-confirmation failures retained.",
+     "platform": "macOS CPU controls; no quality or new real SSH/GPU. Core heldout evaluation still limited to original remote profile; parent remains incomplete. Windows excluded; independent/final acceptance pending."
     }
    ],
    "file_actions": {

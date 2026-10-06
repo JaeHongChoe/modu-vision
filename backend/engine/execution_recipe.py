@@ -22,8 +22,8 @@ class PatchEvaluationRequest(BaseModel):
 
 
 def support_matrix():
-    return {task:{'train':True,'evaluate':True,'predict':True,'flow':task!='defect_gan',
-                  'quality_approved':False,'adapter':'native_trial_recipe_and_frozen_flow' if task in FAMILIES[:4] else 'native_recipe' if task in SPECIALISTS else 'frozen_flow_and_comparison',
+    return {task:{'train':True,'evaluate':True,'predict':task!='defect_gan','generate':task=='defect_gan','flow':task!='defect_gan',
+                  'quality_approved':False,'adapter':'native_trial_recipe_and_frozen_flow' if task in FAMILIES[:4] else 'native_recipe',
                   'evaluation_scope':'RGB-statistics diagnostic' if task=='defect_gan' else 'explicit heldout',
                   'generation_only':task=='defect_gan',
                   'benchmark':task in FAMILIES[:4],

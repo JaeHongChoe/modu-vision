@@ -712,3 +712,8 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 ## Task122 패치 평가 실행 위치·원본 근거 (S4-11 일부)
 
 패치 시험 평가도 선택한 장치와 공통 실행 경로를 사용하며 원본 이미지·패치 좌표·정답·모델 해시를 확인해 저장한다. 준비 과정의 source_manifest를 잘못 거부하던 실제 앱 결함은 회귀 검사로 재현 후 수정했다. 출처 명세가 바뀌거나 다른 JSON이 포함되면 전송을 거부한다. backend28개와 수정 후 패치 계약2개,renderer786개,types/build 통과. Chrome/Electron에서 공식 DINOv3 인코더를 고정한 head-only CPU2epoch 학습→시험12패치 평가→자동 기록→재열기→선택 대상503 거절까지 앱2개 통과. 실제 선택 CPU worker3개·기록6개·원본 평가 기록4개, root41a3bdc1fb6dceb9d399fe151c04eb81b2af96751814120319f1a93e2a14714b,source1466/artifacts1143. 작은 합성 데이터의 정확도0.1667은 품질 승인이 아니다. 전체 모델군 실행 경로 자격 검증이 남아 있어 구현 검증56/82, Windows 제외 남은25개를 유지한다.
+
+
+## Task123 객체 검출·이상 탐지 실행과 모델 지원표 (S4-11 일부)
+
+실제 YOLO26n·PaDiM CPU 통제 모델의 로컬/선택 worker 예측과 forward 계측에서8개 기록·4개 worker 해시를 확인했다. 10개 모델군의 API/화면 지원표를 맞추고, 데이터 다시 가져오기 실패 후 학습 허브에 이전 종류가 남는 오류를 고쳤다. catalog3,renderer786,types/build 및 실제 Chrome/Electron 표시2개 통과. 근거 SHA256 9df3bf5d04da2187582b26504d7233378a0730145ad00c21a8fb3626c4c6808c. 일반 모델 heldout 평가가 기존 원격 profile에 제한된 부분은 이어서 구현한다. 구현56/82, Windows 제외25개 활성 미완료 유지. 통제 모델의 품질·GPU·독립 검토·전체 수용 완료를 뜻하지 않는다.

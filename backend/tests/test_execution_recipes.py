@@ -79,11 +79,16 @@ def test_rotation_recipe_matches_local_real_model_and_reopens_verified_receipt(t
 def test_recipe_support_matrix_has_every_family_and_explicit_gan_boundary():
     from backend.engine.execution_recipe import support_matrix
     matrix=support_matrix()
-    assert len(matrix)==10 and all(row['train'] and row['evaluate'] and row['predict'] for row in matrix.values())
+    assert len(matrix)==10 and all(row['train'] and row['evaluate'] for row in matrix.values())
+    assert all(row['predict']==(task!='defect_gan') and row['generate']==(task=='defect_gan') for task,row in matrix.items())
     assert matrix['defect_gan']['flow'] is False and matrix['defect_gan']['quality_approved'] is False
     assert matrix['defect_gan']['native_recipe_stages']==['evaluate','generate']
     assert all(matrix[t]['native_recipe_stages']==['predict','benchmark'] for t in ('classification','detection','segmentation','anomaly'))
     assert 'never pipeline' in matrix['anomaly']['benchmark_scope']
+    assert matrix['patch_classification']['adapter']=='native_recipe' and matrix['patch_classification']['native_recipe_stages']==['evaluate','predict']
+    from backend.engine.execution_recipe import request_model
+    for task,row in matrix.items():
+        for stage in row['native_recipe_stages']:assert request_model(task,stage).model_fields['job_id']
 
 
 @pytest.mark.parametrize('invalid',['traversal','symlink','duplicate','changed_hash'])

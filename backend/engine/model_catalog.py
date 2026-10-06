@@ -14,6 +14,8 @@ def _device_kinds() -> tuple:
 
 def model_family_catalog():
     from backend.engine.automated_trials import _RUNNERS
+    from backend.engine.execution_recipe import support_matrix
+    execution=support_matrix()
     definitions = [
         ("classification", "이미지 분류", "DINOv3", ["dinov3_vits16", "dinov3_vitb16", "resnet18", "convnext_tiny", "efficientnet_b0"], "dinov3_vits16", "클래스별 이미지와 서로 분리된 train/val/test", True, "weight_initialization", ["timm"]),
         ("segmentation", "영역 분할", "DINOv3", ["dinov3_vits16", "dinov3_vitb16", "unet"], "dinov3_vits16", "픽셀 마스크 또는 LabelMe polygon", True, "weight_initialization", ["timm"]),
@@ -39,6 +41,7 @@ def model_family_catalog():
             "dependencies": dependencies, "missing_dependencies": missing,
             "quality_approved": False,
             "automated_training": True,
+            "execution": execution[task],
         })
         if task == 'anomaly':
             families[-1]['methods'] = [

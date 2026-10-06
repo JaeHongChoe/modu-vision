@@ -5,8 +5,8 @@ import type { ModelFamily } from '../../services/modelTrainingProgram';
 import { WorkerSupportPanel } from './WorkerSupportPanel';
 
 type Method = {method: string; architectures: string[]; continuation: string; prerequisite: string; missing_dependencies: string[]};
-type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]};
-const stageNames: Record<string, string> = {label: '정답 준비', train: '학습', evaluate: '평가', flow: '플로우 검사', generate: '생성', review: '검토·채택', export: '내보내기'};
+type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]; execution?: {native_recipe_stages: string[]; generation_only: boolean}};
+const stageNames: Record<string, string> = {label: '정답 준비', train: '학습', evaluate: '평가', predict: '단일 예측', benchmark: '모델 forward 계측', flow: '플로우 검사', generate: '생성', review: '검토·채택', export: '내보내기'};
 
 export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
   const [families, setFamilies] = useState<Family[]>([]);
@@ -36,6 +36,10 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
         <p className="mt-2 break-words text-slate-400">구조: {family.architectures.join(' · ')} · 기본 {family.default_architecture}</p>
         <p className="mt-2 text-slate-400">{family.remote_training ? '로컬·서버 학습' : '로컬 학습'} · 이 컴퓨터 {family.devices.map(device => device.toUpperCase()).join(' / ')}</p>
         <p className="mt-1 text-slate-400">{family.stages.map(stage => stageNames[stage] || stage).join(' → ')}</p>
+        {family.execution && <div aria-label={`${family.label} 실행 위치 지원`} className="mt-2 text-slate-300">
+          <p>개별 실행: {family.execution.native_recipe_stages.map(stage => stageNames[stage] || stage).join(' · ')} · 상단 Compute에서 실행 위치 선택</p>
+          {family.execution.generation_only && <p className="mt-1 text-amber-300">생성 후보는 검토 후 학습 데이터에 채택합니다. 검사 플로우 모델로 사용할 수 없습니다.</p>}
+        </div>}
         {!family.methods && family.continuation === 'statistical_refit' && <p className="mt-1 text-slate-400">검증된 부모 특징 추출기로 정상 통계를 다시 구성합니다.</p>}
         {family.methods?.map(method => <div key={method.method} className="mt-2 border-t border-[#314155] pt-2">
           <div className="font-semibold text-cyan-200">{method.method === 'dino_synthetic' ? 'DINOv3 · 합성 결함 학습' : method.method === 'padim' ? 'PaDiM' : 'PatchCore'}</div>
