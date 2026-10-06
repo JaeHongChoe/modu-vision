@@ -2,11 +2,11 @@
 from pathlib import Path
 import re
 from fastapi import APIRouter,HTTPException,Request
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel,Field
 from backend.api.routes_project import get_current_project
 from backend.api.routes_label_suggestions import _image_path
-from backend.engine.dicom_input import normalized_view,is_dicom
+from backend.engine.dicom_input import normalized_view,is_dicom,read_cached_view
 
 router=APIRouter(prefix='/api/dataset/dicom',tags=['dicom'])
 
@@ -29,4 +29,8 @@ def display_view(view_id:str,request:Request):
     if not re.fullmatch('[0-9a-f]{64}',view_id):raise HTTPException(422,detail='Invalid DICOM view ID')
     project=get_current_project(request);path=Path(project['project_dir'])/'dicom_views'/f'{view_id}.png'
     if not path.is_file() or path.is_symlink():raise HTTPException(404,detail='DICOM display view not found')
-    return FileResponse(path,media_type='image/png')
+    try:data=read_cached_view(view_id,path.parent,resolve_source=lambda source:_image_path(project,source))
+    except (ValueError,OSError) as exc:raise HTTPException(422,detail=str(exc)) from exc
+    # Respond with the verified bytes, so delayed file opening cannot serve a
+    # replacement after the original handle/receipt identity check.
+    return Response(data,media_type='image/png',headers={'Cache-Control':'no-store'})
