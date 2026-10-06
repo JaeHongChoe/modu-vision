@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { flowPreflight, type PreflightReport } from '../../services/flowPreflight';
+import { flowPreflight, type PreflightReport,type PreflightTarget } from '../../services/flowPreflight';
+import {useProjectStore} from '../../stores/useProjectStore';
+import {useComputeStore} from '../../stores/useComputeStore';
+import {getExecutionContextIdentity} from '../../services/modelExecution';
 import type { FlowchartPipeline } from '../../types';
 import { byNode, KIND_NAMES, PREFLIGHT_TARGETS, remedyText, sameTarget, staleLine, STATE_NAMES, statusLine } from './flowPreflightText';
 
@@ -13,21 +16,26 @@ export function FlowPreflightPanel({ versionId, recipeTask, sourceDatasetPath, p
   versionId: string | null; recipeTask: string | null; sourceDatasetPath: string; pipeline: FlowchartPipeline | null;
   onSelectNode: (nodeId: string) => void;
 }) {
+  useProjectStore();const compute=useComputeStore();
+  const profile=compute.profiles.find(row=>row.id===compute.selectedProfileId);
+  const targets:{key:string;label:string;target:PreflightTarget}[]=[...PREFLIGHT_TARGETS,...(profile?(['cpu','cuda:0'] as const).map(device=>({key:'selected-'+device,label:`선택 서버 · ${profile.name} · ${device==='cpu'?'CPU':'CUDA'}`,target:{kind:'selected_compute' as const,compute_profile_id:profile.id,device}})):[])];
   const [targetKey, setTargetKey] = useState(PREFLIGHT_TARGETS[0].key);
   const [report, setReport] = useState<PreflightReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const target = PREFLIGHT_TARGETS.find(row => row.key === targetKey)!.target;
+  const chosen=targets.find(row=>row.key===targetKey);const target=chosen?.target;
+  useEffect(()=>{setTargetKey(compute.selectedProfileId?'selected-cpu':'local-cpu');},[compute.selectedProfileId,compute.transportRevision]);
   const generation = useRef(0);
-  const scope = JSON.stringify([versionId, recipeTask, sourceDatasetPath, targetKey]);
+  const context=getExecutionContextIdentity();
+  const scope = JSON.stringify([versionId, recipeTask, sourceDatasetPath,target,profile,context]);
   const currentScope = useRef(scope);
   currentScope.current = scope;
 
   useEffect(() => {
     const request = ++generation.current;
-    const isCurrent = () => request === generation.current && scope === currentScope.current;
+    const isCurrent = () => request === generation.current && scope === currentScope.current&&getExecutionContextIdentity()===context;
     setReport(null); setError(''); setBusy(false);
-    if (versionId) {
+    if (versionId&&target&&compute.isLoaded) {
       flowPreflight.list(versionId).then(async ({ reports }) => {
         const latest = reports.find(row => sameTarget(row.target_identity, target));
         if (!latest || !isCurrent()) return;
@@ -36,12 +44,12 @@ export function FlowPreflightPanel({ versionId, recipeTask, sourceDatasetPath, p
       }).catch(cause => { if (isCurrent()) setError(cause instanceof Error ? cause.message : String(cause)); });
     }
     return () => { generation.current += 1; };
-  }, [versionId, recipeTask, targetKey, sourceDatasetPath]);
+  }, [scope,compute.isLoaded]);
 
   const run = async () => {
-    if (!versionId || !recipeTask || busy) return;
+    if (!versionId || !recipeTask || !target || !compute.isLoaded || busy) return;
     const request = ++generation.current;
-    const isCurrent = () => request === generation.current && scope === currentScope.current;
+    const isCurrent = () => request === generation.current && scope === currentScope.current&&getExecutionContextIdentity()===context;
     setBusy(true); setError('');
     try {
       const checked = await flowPreflight.run({ source_dataset_path: sourceDatasetPath, recipe_task: recipeTask, version_id: versionId, target });
@@ -59,16 +67,18 @@ export function FlowPreflightPanel({ versionId, recipeTask, sourceDatasetPath, p
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-sm">배포 대상<select aria-label="점검 대상" value={targetKey} onChange={event => setTargetKey(event.target.value)}
           className="ml-2 rounded border border-slate-600 bg-slate-950 p-2 text-sm">
-          {PREFLIGHT_TARGETS.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}</select></label>
-        <button type="button" className="workspace-button" disabled={!versionId || !recipeTask || busy} onClick={() => void run()}>
+          {targets.map(row => <option key={row.key} value={row.key}>{row.label}</option>)}</select></label>
+        <button type="button" className="workspace-button" disabled={!versionId || !recipeTask || !target || !compute.isLoaded || busy} onClick={() => void run()}>
           {busy ? '점검 중…' : '점검 실행'}</button>
       </div>
       {!versionId && <p className="text-amber-200">저장된 버전을 열면 점검할 수 있습니다.</p>}
+      {!compute.isLoaded&&<p role="alert" className="text-amber-200">실행 대상 설정을 불러와야 점검할 수 있습니다.{compute.loadError?` ${compute.loadError}`:''}</p>}
       {error && <p role="alert" className="text-amber-200">{error}</p>}
       {report && <>
         {report.stale && <p role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-amber-200">{staleLine(report.stale_reasons)}</p>}
         <p role="status" className={report.stale ? 'text-amber-200' : report.status === 'ready' ? 'text-emerald-300' : report.status === 'blocked' ? 'text-rose-300' : 'text-sky-300'}>{statusLine(report)}</p>
         <p className="text-xs text-slate-400">{new Date(report.checked_at).toLocaleString('ko-KR')} 점검 · 보고서 {report.report_id.slice(0, 8)}</p>
+        {report.runtime&&<p className="text-xs break-all">실제 점검 {report.target_identity.kind==='selected_compute'?report.target_identity.compute_profile_name:'이 컴퓨터'} · {report.runtime.device} · 프로세스 {report.runtime.process_id} · 근거 {report.report_sha256}</p>}
         <ol aria-label="노드별 의존성" className="space-y-2">{byNode(report.requirements, order).map(([nodeId, rows]) => <li key={nodeId ?? 'flow'} className="rounded border border-slate-800 p-2">
           <div className="flex items-center gap-2">
             {nodeId ? <button type="button" className="font-semibold text-cyan-200 underline" onClick={() => onSelectNode(nodeId)}>{label(nodeId)}</button>

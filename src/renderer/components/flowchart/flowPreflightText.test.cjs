@@ -46,6 +46,14 @@ test('targets compare by every field', () => {
   assert.equal(new Set(PREFLIGHT_TARGETS.map(item => item.key)).size, PREFLIGHT_TARGETS.length);
 });
 
+test('selected reports reopen by profile and device while retained binding metadata stays on the server', () => {
+  const selected={kind:'selected_compute',compute_profile_id:'owned',device:'cpu'};
+  assert.equal(sameTarget(selected,{...selected,execution_profile_sha256:'a'.repeat(64),compute_profile_name:'Owned server'}),true);
+  assert.equal(sameTarget(selected,{...selected,compute_profile_id:'other'}),false);
+  assert.equal(sameTarget(selected,{...selected,device:'cuda:0'}),false);
+  assert.match(staleLine(['selected_environment_not_rechecked']),/선택 서버/);
+});
+
 function renderReport(report) {
   const filename = path.resolve(__dirname, 'FlowPreflightPanel.tsx');
   const panel = new Module(filename, module);
@@ -58,6 +66,9 @@ function renderReport(report) {
     'react/jsx-runtime': { jsx, jsxs: jsx },
     './flowPreflightText': m.exports,
     '../../services/flowPreflight': { flowPreflight: new Proxy({}, { get: () => () => { throw new Error('render must not run a preflight'); } }) },
+    '../../stores/useProjectStore':{useProjectStore:()=>({})},
+    '../../stores/useComputeStore':{useComputeStore:()=>({profiles:[],selectedProfileId:null,isLoaded:true})},
+    '../../services/modelExecution':{getExecutionContextIdentity:()=>'/owned-fixture'},
   };
   const original = panel.require.bind(panel);
   panel.require = name => name in mocks ? mocks[name] : original(name);

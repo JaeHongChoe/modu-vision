@@ -7,7 +7,7 @@ import { confirmFlowSave } from './fixtures/flowChange';
 // no model was trained or verified and the synthetic "ready" reply is not deployment-readiness evidence.
 const json = (route: Route, body: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
-test('a late preflight reply cannot claim readiness for a newly selected target', async ({ page, renderer, workspace, evidence }) => {
+for(const switchKind of ['edge','selected'] as const)test(`a late preflight reply cannot claim readiness after ${switchKind} target changes`, async ({ page, renderer, workspace, evidence }) => {
   const model = 'e07-late-display-model';
   expect((await page.request.post(`${renderer.origin}/api/project/create`, { data: { name: 'E07 late reply fixture', task: 'anomaly' } })).ok()).toBe(true);
   expect((await page.request.put(`${renderer.origin}/api/project/update`, { data: { source_dataset_dir: workspace.dataset } })).ok()).toBe(true);
@@ -33,6 +33,7 @@ test('a late preflight reply cannot claim readiness for a newly selected target'
       counts: { ready: 1, missing: 0, mismatch: 0, unavailable: 0, unverified: 0 }, blocked_nodes: {}, decision_blocked: false,
       report_sha256: 'f'.repeat(64), stale: false, stale_reasons: [] });
   });
+  if(switchKind==='selected')expect((await page.request.post(`${renderer.origin}/api/compute/profiles`,{data:{id:'held-preflight-profile',name:'Owned held reply target',ssh_target:'127.0.0.1',ssh_port:1,remote_root:workspace.root+'/held-preflight',runtime_kind:'python',runtime_value:'python3'}})).ok()).toBe(true);
   await installDesktopHostShim(page, renderer.port);
   await page.goto(renderer.url);
   await page.getByRole('button', { name: /05.*플로우차트/ }).click();
@@ -49,15 +50,15 @@ test('a late preflight reply cannot claim readiness for a newly selected target'
   await panel.getByRole('button', { name: '점검 실행' }).click();
   await requestStarted;
   expect(captured.target).toEqual({ kind: 'this_computer', device: 'cpu' });
-  await panel.getByLabel('점검 대상').selectOption({ label: 'Edge · Windows x64 · CPU' });
-  await expect(panel.getByLabel('점검 대상').locator('option:checked')).toHaveText('Edge · Windows x64 · CPU');
+  if(switchKind==='edge'){await panel.getByLabel('점검 대상').selectOption({label:'Edge · Windows x64 · CPU'});await expect(panel.getByLabel('점검 대상').locator('option:checked')).toHaveText('Edge · Windows x64 · CPU');}
+  else {await page.getByRole('combobox').filter({has:page.locator('option[value="held-preflight-profile"]')}).first().selectOption('held-preflight-profile');await expect(panel.getByLabel('점검 대상')).toHaveValue('selected-cpu');}
   const response = page.waitForResponse(reply => reply.url().endsWith('/api/export/flow/preflight') && reply.request().method() === 'POST');
   release();
   await (await response).finished();
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(panel.getByRole('button', { name: '점검 실행' })).toBeEnabled();
   await test.info().attach('held-display-reply', { contentType: 'application/json', body: JSON.stringify({ requests,
-    requested_target: captured.target, selected_target: 'Edge · Windows x64 · CPU', synthetic_display_reply: true,
+    requested_target: captured.target, selected_target: switchKind, synthetic_display_reply: true,
     actual_backend_preflight_called: false, status_after_reply: await panel.getByRole('status').allTextContents() }) });
   expect(requests).toBe(1);
   await expect(panel.getByRole('status')).toHaveCount(0);

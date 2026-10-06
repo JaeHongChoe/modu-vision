@@ -131,6 +131,7 @@ jobs:
           backend/tests/test_service_e03.py
           backend/tests/test_service_e04.py
           backend/tests/test_service_e07.py
+          backend/tests/test_selected_flow_preflight.py
           backend/tests/test_service_e05.py
           backend/tests/test_e05_conflict_identity_contract.py
           backend/tests/test_e05_training_binding_contract.py

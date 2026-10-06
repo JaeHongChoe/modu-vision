@@ -34,6 +34,7 @@ from backend.engine.exporter import (
 )
 from backend.utils.error_catalog import format_error_response
 from backend.api.routes_project import get_current_project
+from backend.remote.flow_preflight import selected_flow_preflight,selected_target
 from backend.api.routes_evaluation import _resolve_job_artifacts
 from backend.api.routes_flowchart import _FLOW_SAVE_LOCK, _recipe_file, _version_dir
 from backend.engine.checkpoint_paths import is_job_id
@@ -320,6 +321,22 @@ def flow_preflight(req: FlowPreflightRequest, request: Request):
     source = _canonical_source(req.source_dataset_path)
     project = get_current_project(request)
     pipeline, release = _preflight_release(project, source, req.recipe_task, req.version_id)
+    if target['kind']=='selected_compute':
+        from backend.remote.profiles import get_profile_store
+        try:
+            profile=get_profile_store().get(target['compute_profile_id']);selected_target(profile,target['device'])
+        except (FileNotFoundError,ValueError) as exc:
+            raise HTTPException(status_code=422,detail=str(exc)) from exc
+        _,checkpoints,_=_saved_flow_models(project,source,req.recipe_task,req.version_id)
+        try:
+            report=selected_flow_preflight(profile,project,pipeline,checkpoints,release,target['device'])
+            if get_profile_store().get(profile.id)!=profile:raise ValueError('Selected preflight profile changed during execution')
+            _,current=_preflight_release(project,source,req.recipe_task,req.version_id)
+            if current!=release:raise ValueError('Selected preflight saved flow changed during execution')
+        except Exception as exc:
+            raise HTTPException(status_code=503,detail=f'Selected preflight failed; no local fallback: {exc}') from exc
+        _preflight_store(project).save(report)
+        return {**report,'stale':False,'stale_reasons':[]}
     here = target["kind"] == "this_computer"
     requirements = _preflight_requirements(project, source, pipeline, target)
     report = preflight.build_report(pipeline, requirements, release=release, target=target,
@@ -358,6 +375,18 @@ def read_flow_preflight(report_id: str, request: Request, source_dataset_path: s
     here = report["target_identity"].get("kind") == "this_computer"
     reasons = preflight.staleness(report, release=current, target=selected, environment_value=preflight.environment() if here else None,
                                  current_requirements=requirements)
+    if report['target_identity'].get('kind')=='selected_compute':
+        from backend.remote.profiles import get_profile_store
+        candidate=selected or preflight.normalize_target(report['target_identity'])
+        try:
+            profile=get_profile_store().get(candidate['compute_profile_id']) if candidate['kind']=='selected_compute' else None
+            bound=selected_target(profile,candidate['device']) if profile else candidate
+        except (FileNotFoundError,ValueError):bound={}
+        # Never compare the remote environment with this API host or present a
+        # stored remote check as a fresh observation without contacting it.
+        reasons=[reason for reason in reasons if reason!='target_changed']
+        if bound!=report['target_identity']:reasons.append('target_changed')
+        reasons.append('selected_environment_not_rechecked')
     return {**report, "stale": bool(reasons), "stale_reasons": reasons}
 
 

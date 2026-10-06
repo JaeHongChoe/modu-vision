@@ -3,6 +3,7 @@ import { request } from './api';
 /** E07: what a saved flow version needs on a deployment target, node by node. */
 export type PreflightTarget =
   | { kind: 'this_computer'; device: string }
+  | { kind:'selected_compute'; compute_profile_id:string; device:'cpu'|'cuda:0'; compute_profile_name?:string; execution_profile_sha256?:string; compute_gpu_selector?:string|null }
   | { kind: 'edge'; profile: 'edge_cpu' | 'edge_cuda'; os: string; architecture: string; device: string };
 
 export interface PreflightRequirement {
@@ -18,6 +19,8 @@ export interface PreflightRequirement {
 }
 
 export interface PreflightReport {
+  runtime?:{device:string;process_id:number;torch_version:string;gpu_uuid?:string|null};
+  report_sha256?:string;
   report_id: string;
   checked_at: string;
   status: 'ready' | 'blocked' | 'unverified';

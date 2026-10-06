@@ -131,6 +131,11 @@ def normalize_target(target: Mapping[str, Any]) -> dict:
         raise ValueError('the target device is cpu, mps, cuda[:index] or openvino:<device>')
     if kind == 'this_computer':
         return {'kind': kind, 'device': device}
+    if kind == 'selected_compute':
+        profile=target.get('compute_profile_id')
+        if not isinstance(profile,str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}',profile) or device not in ('cpu','cuda:0'):
+            raise ValueError('selected_compute requires a profile and explicit CPU or logical CUDA 0')
+        return {'kind':kind,'compute_profile_id':profile,'device':device}
     if kind == 'edge':
         from backend.engine.edge_runtime import SUPPORTED_TARGETS
         profile, os_name, arch = target.get('profile'), target.get('os'), target.get('architecture')

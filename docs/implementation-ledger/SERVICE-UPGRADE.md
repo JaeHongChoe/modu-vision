@@ -702,3 +702,8 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 ## Task120 일반 모델 예측·속도 측정 위치 (S4-11 일부)
 
 일반 모델 단일 예측과 forward 속도 측정도 명시적인 CPU/MPS/CUDA 또는 선택 서버에서 실행하고 모델·입력·runtime 기록을 저장한다. classification/segmentation 실제 CPU 제어 모델의 로컬·선택 worker 동일성, 선택 서버 실패503와 CUDA 미지원 거절을 확인했다. backend14,renderer784,types/build 통과. Chrome와 Electron에서 실제 EfficientNet CPU1epoch 학습→예측→25회 forward 계측→자동 기록→재열기→선택 서버 실패를 확인했다. 원본12장 해시 유지, 실제 CPU 기록27개·선택 worker14개, 근거 1aea91238198dac3669325f9be7451008a22f8bea5e1c80a8cd49e4f1673d8f5 (source1460/artifacts985). 계측은 랜덤 tensor 모델 forward이며 전체 검사 처리량이나 모델 품질 승인이 아니다. Electron 최초 설정 읽기 실패1회와 reload 중 thumbnail 실패는 원인 미확정으로 남겼다. 선택 서버 flow/export 사전검사와 전체 모델군 자격 검증은 남아 있어 구현 검증56/82, Windows 제외 남은25개를 유지한다.
+
+
+## Task121 선택 서버 저장 플로우 사전검사 (S4-11 일부)
+
+저장 버전의 모델·플로우·교정을 고정한 패키지를 선택 서버로 보내 의존성을 점검하고 서버·장치·환경·실행 코드·입력·보고서 해시를 저장한다. 연결 실패503은 로컬 점검으로 바꾸지 않는다. 과거 서버 보고서를 열면 환경 재확인이 필요함을 표시한다. 실제 CPU worker1개, backend16개와 마지막 선택 계약4개, renderer785,types/build 통과. Chrome/Electron 실제 CPU1epoch 학습 모델의 플로우 사전검사·재열기·선택 대상503 및 대상 변경 늦은 응답 거절 등 앱5개 통과. 근거 e3e912f2b1ae8d92e0d9e53ffc9dca83136d824541406443755f48d903281d9b,source1463/artifacts1984. 사전검사는 의존성 확인이며 모델 추론·품질·배포 승인이 아니다. 전체 모델군 자격과 패치 평가 실행 위치가 남아 있어 구현 검증56/82, Windows 제외 남은25개를 유지한다.

@@ -13,6 +13,7 @@ export const PREFLIGHT_TARGETS: { key: string; label: string; target: PreflightT
 ];
 
 export function sameTarget(a: PreflightTarget, b: PreflightTarget): boolean {
+  if(a.kind==='selected_compute'||b.kind==='selected_compute')return a.kind==='selected_compute'&&b.kind==='selected_compute'&&a.compute_profile_id===b.compute_profile_id&&a.device===b.device;
   const keys = (value: PreflightTarget) => JSON.stringify(Object.keys(value).sort().map(key => [key, (value as unknown as Record<string, unknown>)[key]]));
   return keys(a) === keys(b);
 }
@@ -32,6 +33,7 @@ export function statusLine(report: Pick<PreflightReport, 'status' | 'blocked_nod
 
 export function staleLine(reasons: string[]): string {
   const names: Record<string, string> = { release_changed: '플로우 버전이 바뀌었습니다', target_changed: '선택한 대상과 다릅니다',
+    selected_environment_not_rechecked:'선택 서버의 현재 환경은 다시 확인하지 않았습니다',
     environment_changed: '이 컴퓨터의 런타임 구성(패키지·버전·장치)이 바뀌었습니다', artifacts_changed: '모델 또는 교정 파일이 바뀌었습니다' };
   return `이전 점검 결과입니다: ${reasons.map(reason => names[reason] ?? reason).join(', ')}. 다시 점검하세요.`;
 }

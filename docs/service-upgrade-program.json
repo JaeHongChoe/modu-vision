@@ -3347,6 +3347,12 @@
      "result": "Task120 explicit core-model prediction and forward-only benchmark use the same persisted local/selected recipe; no API-host fallback.",
      "scope": "14 actual CPU backend cases,renderer784,types/build; actual Chrome and Electron classifier1epoch/prediction/benchmark/reopen/503. 27 saved CPU receipts,14 in-process selected workers; root 1aea91238198dac3669325f9be7451008a22f8bea5e1c80a8cd49e4f1673d8f5,1460 source/985 artifacts.",
      "platform": "macOS CPU controls only. Parent remains in progress: selected flow/export preflight and all-model qualification pending. One native startup profile read and one thumbnail reload error remain unexplained; no new physical GPU, independent review, Windows or final acceptance."
+    },
+    {
+     "kind": "partial-selected-flow-preflight",
+     "result": "Task121 selected saved-flow dependency checks use frozen package/model/calibration and target/runtime/environment/spec/code/report identities; 503 never invokes host fallback.",
+     "scope": "Backend16 + final4,renderer785,types/build; actual Chrome/Electron trained classifier and display races5pass. Root e3e912f2b1ae8d92e0d9e53ffc9dca83136d824541406443755f48d903281d9b,1463source/1984artifacts; one actual in-process CPU dependency worker.",
+     "platform": "macOS CPU; no inference/quality claim for preflight. All-model stage qualification and patch evaluation target remain; physical GPU, independent and final acceptance pending. Windows excluded."
     }
    ],
    "file_actions": {
