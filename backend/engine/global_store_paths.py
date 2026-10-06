@@ -65,11 +65,12 @@ def resolve_store_path(path):
     path=Path(path).expanduser().absolute();root,owner=owned_root(path)
     if root is None:return path
     relative=path.relative_to(root).as_posix()
-    if relative in owner['scopes'].values() and any(p.is_symlink() for p in (path,*path.parents) if p==root or p.is_relative_to(root)):
+    declared=(relative in owner['scopes'].values() or any(path.is_relative_to(root/owner['scopes'][key]) for key in ('local_journals','remote_journals')))
+    if declared and any(p.is_symlink() for p in (path,*path.parents) if p==root or p.is_relative_to(root)):
         raise ValueError('Declared global control paths cannot follow links')
     active=active_generation(root)
     if not active:return path
-    if relative not in owner['scopes'].values():return path
+    if not declared:return path
     return active[0]/relative
 
 
@@ -87,7 +88,8 @@ def _assert_current_store(root,owner,path):
     if staged and staged[0]==str(root) and path.is_relative_to(Path(staged[1])):return
     active=active_generation(root)
     scopes=set(owner['scopes'].values())
-    if relative.as_posix() in scopes and active:
+    declared=(relative.as_posix() in scopes or any(path.is_relative_to(root/owner['scopes'][key]) for key in ('local_journals','remote_journals')))
+    if declared and active:
         raise ValueError('Global generation changed; restart this store before accessing it')
     if relative.parts and relative.parts[0]=='.global-generations':
         if not active or not path.is_relative_to(active[0]):

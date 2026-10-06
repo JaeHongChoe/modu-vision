@@ -29,7 +29,8 @@ class EmergencyReasonRequired(ValueError):
 
 
 class FleetRegistry:
-    def __init__(self,project_dir):
+    def __init__(self,project_dir,*,accounts=None,authority_user_id=None):
+        self.accounts=accounts;self.authority_user_id=authority_user_id
         base=Path(project_dir)
         if base.is_symlink():raise ValueError('Fleet project storage is linked')
         self.root=base/'fleet';self.root.mkdir(parents=True,exist_ok=True)
@@ -114,11 +115,18 @@ class FleetRegistry:
             raise
     def _apply_authorized(self,identifier,release,*,reviewer,restored_from,project):
         from backend.engine.release_eligibility import authorize_release_action
+        from backend.engine.managed_service import ManagedService
         action='rollback' if restored_from else 'apply'
         # Reject before ledger recovery as well: rejected commands send no traffic.
         authorize_release_action(release['package_path'],project,action=action)
+        manager=ManagedService(project['project_dir'])
+        def check_selected():
+            manager.command_authority(project,self.accounts,self.authority_user_id)
+            manager.check_live_release(release,project,accounts=self.accounts,action=action)
+        check_selected()
         def apply_remote(selected):
             authorize_release_action(selected['package_path'],project,action=action)
+            if selected==release:check_selected()
             from backend.engine.flow_package_runtime import verify_flow_package
             from backend.engine.inspection_service import _verify_release_policy
             package=Path(selected['package_path']);policy_path=Path(selected.get('release_policy') or '')
@@ -135,7 +143,9 @@ class FleetRegistry:
                     raise ValueError('Field stage acknowledgment identity mismatch')
                 response=client.post('/agent/v1/apply',json={'manifest_sha256':selected['manifest_sha256'],'device':selected['device']});response.raise_for_status()
                 DeploymentLedger._validate_ack(selected,response.json())
-                ack=client.get('/agent/v1/runtime');ack.raise_for_status();return ack.json()
+                ack=client.get('/agent/v1/runtime');ack.raise_for_status()
+                if selected==release:check_selected()
+                return ack.json()
         return self.ledger(identifier).apply(release,apply_remote,reviewer=reviewer,restored_from=restored_from)
     def emergency_events(self,identifier):
         self.target(identifier)

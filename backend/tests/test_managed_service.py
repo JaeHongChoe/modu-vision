@@ -5,18 +5,20 @@ from backend.tests.test_model_deployments import _fixture,_report,_approve
 from backend.engine.flow_package import build_flow_package
 from backend.engine.flowchart_engine import get_single_segmentation_flowchart
 from backend.engine.managed_service import ManagedService
+from backend.tests.runtime_release_fixture import synthetic_model_report
 
 
 def test_managed_process_apply_readback_restart_and_real_rollback(tmp_path):
     client,project,source,fingerprint,models=_fixture(tmp_path)
-    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt,reviewed_graph_fixture,synthetic_service_truth,synthetic_model_report
     real_classification_checkpoints(models)
+    fingerprint=synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'],models=models)
     service=ManagedService(project['project_dir'])
     history=[]
     try:
         for number,(baseline,candidate) in enumerate([('job_base','job_candidate'),('job_candidate','job_third')]):
             comparison_id='comparison_'+str(number)*32
-            _report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison_id)
+            synthetic_model_report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison_id)
             response=_approve(client,source,comparison_id)
             assert response.status_code==200,response.text
             revision=response.json()['revision']
@@ -25,6 +27,7 @@ def test_managed_process_apply_readback_restart_and_real_rollback(tmp_path):
                 if node.data.node_type=='inspection':node.data.task='classification'
             result=build_flow_package(pipeline=pipeline,checkpoints={candidate:models[candidate]},output_base_dir=tmp_path/'exports',package_name=f'release_{number}',approved_revisions={candidate:{key:revision[key] for key in ('revision_id','job_id','task','checkpoint_sha256')}})
             cohort_receipt(result['package_path'],pipeline,{candidate:models[candidate]},[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
+            reviewed_graph_fixture(project,pipeline,[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
             deployed=service.apply(result['package_path'],'cpu','operator',project)
             assert service.readback()['manifest_sha256']==deployed['release']['manifest_sha256']
             if number==0:
@@ -37,7 +40,7 @@ def test_managed_process_apply_readback_restart_and_real_rollback(tmp_path):
         recovered=ManagedService(project['project_dir'])
         assert recovered.start()['manifest_sha256']==history[1]['release']['manifest_sha256']
         assert recovered.config['pid']!=process_before
-        restored=recovered.rollback(history[0]['deployment_id'],'operator')
+        restored=recovered.rollback(history[0]['deployment_id'],'operator',project)
         assert restored['restored_from']==history[0]['deployment_id']
         assert recovered.readback()['manifest_sha256']==history[0]['release']['manifest_sha256']
         recovered.stop()
@@ -90,12 +93,13 @@ def test_redacted_mes_token_survives_routine_config_edit_and_can_be_explicitly_c
 
 
 def test_manual_two_model_same_task_approvals_stage_exactly_and_rollback_revokes_candidate(tmp_path):
-    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt,reviewed_graph_fixture,synthetic_service_truth
     client,project,source,fingerprint,models=_fixture(tmp_path)
     real_classification_checkpoints(models);selected={}
+    fingerprint=synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'],models=models)
     for number,(baseline,candidate) in enumerate((('job_base','job_candidate'),('job_candidate','job_third'))):
         comparison='comparison_'+str(number)*32
-        _report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
+        synthetic_model_report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
         approved=_approve(client,source,comparison);assert approved.status_code==200,approved.text
         selected[candidate]=approved.json()['revision']
     graph=get_single_segmentation_flowchart(job_id='job_candidate')
@@ -108,6 +112,7 @@ def test_manual_two_model_same_task_approvals_stage_exactly_and_rollback_revokes
     approvals={job:{key:revision[key] for key in ('revision_id','job_id','task','checkpoint_sha256')} for job,revision in selected.items()}
     exported=build_flow_package(pipeline=graph,checkpoints=checkpoints,output_base_dir=tmp_path/'exports',package_name='two_classifiers',approved_revisions=approvals)
     cohort_receipt(exported['package_path'],graph,checkpoints,[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
+    reviewed_graph_fixture(project,graph,[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
     service=ManagedService(project['project_dir'])
     staged=service.stage(exported['package_path'],project,'cpu')
     assert staged['device']=='cpu'

@@ -66,12 +66,17 @@ def _view(root, owner):
             if set(spec) != {'legacy_source', 'legacy_sha256'} or spec_digest(spec) != row['spec_sha256']:
                 raise ValueError('Historical source specification changed')
             source = _owned_path(root, spec['legacy_source'])
-            if source.is_relative_to(root / 'local_jobs') or source.is_relative_to(root / 'remote_jobs'):
+            if source.is_relative_to(root / 'remote_jobs'):
                 raise ValueError('Runtime recovery indexes require a separate reviewed ownership adapter')
             raw = source.read_bytes()
             if hashlib.sha256(raw).hexdigest() != spec['legacy_sha256']:
                 raise ValueError('Historical origin source changed')
             journal = json.loads(raw)
+            if source.is_relative_to(root / owner['scopes']['local_journals']):
+                from backend.engine.terminal_runtime_history import validate_local
+                if source.parent != root / owner['scopes']['local_journals']:
+                    raise ValueError('Nested local recovery indexes are unsupported')
+                validate_local(root, owner['scopes'], source, journal)
             if (journal.get('job_id') != row['id'] or from_legacy(journal.get('status') or journal.get('state')) != row['state']
                     or journal.get('output_dir') != row['output_dir']):
                 raise ValueError('Historical source identity/state/output differs from its ledger')
@@ -97,6 +102,8 @@ def _view(root, owner):
         except (ValueError, KeyError, TypeError, OSError) as exc:
             blockers.append(row['id'] + ': ' + str(exc))
     blockers += migration._authority_blockers(root, owner['scopes'], history_jobs={r['job_id'] for r in rows})
+    from backend.engine.terminal_runtime_history import journal_blockers
+    blockers += journal_blockers(root, owner['scopes'])
     record = {'schema_version': 1, 'installation_id': owner['installation_id'],
         'source_sha256': snapshot['source_snapshot']['sha256'], 'rows': rows,
         'blockers': sorted(set(blockers)), 'can_apply': bool(rows) and not blockers,

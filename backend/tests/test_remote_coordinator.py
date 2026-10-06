@@ -7,6 +7,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+import pytest
 
 from backend.api.routes_training import JobRecord
 from backend.remote.coordinator import reconnect_remote_training, run_remote_training
@@ -15,6 +16,20 @@ from backend.remote.profiles import ComputeProfile
 
 def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+@pytest.fixture(autouse=True)
+def bounded_fake_foundation(tmp_path, monkeypatch):
+    """Fake SSH control tests transfer bounded bytes, not cached real weights.
+
+    Actual pretrained resolution and model execution have separate qualification
+    suites. This fixture still exercises production copy/hash/spec/upload logic.
+    """
+    from backend.remote import coordinator
+    path = tmp_path / 'controlled-foundation.safetensors'
+    path.write_bytes(b'controlled transport bytes; not an executable model')
+    monkeypatch.setattr(coordinator, '_local_pretrained_weights',
+                        lambda *args: (path, _digest(path.read_bytes()), 'controlled fixture', 'dinov3_vits16'))
 
 
 class FakeRemote:

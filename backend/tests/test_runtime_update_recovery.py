@@ -102,13 +102,14 @@ def test_managed_restart_restores_prior_live_runtime_after_interrupted_apply(tmp
     from backend.engine.flowchart_engine import get_single_segmentation_flowchart
     from backend.engine.managed_service import ManagedService
     client,project,source,fingerprint,models=_fixture(tmp_path)
-    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt
+    from backend.tests.runtime_release_fixture import real_classification_checkpoints,cohort_receipt,reviewed_graph_fixture,synthetic_service_truth,synthetic_model_report
     real_classification_checkpoints(models)
+    fingerprint=synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'],models=models)
     service=ManagedService(project['project_dir']);releases=[]
     try:
         for number,(baseline,candidate) in enumerate((('job_base','job_candidate'),('job_candidate','job_third'))):
             comparison='comparison_'+str(number)*32
-            _report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
+            synthetic_model_report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
             approved=_approve(client,source,comparison)
             assert approved.status_code==200,approved.text
             revision=approved.json()['revision']
@@ -117,6 +118,7 @@ def test_managed_restart_restores_prior_live_runtime_after_interrupted_apply(tmp
                 if node.data.node_type=='inspection':node.data.task='classification'
             exported=build_flow_package(pipeline=graph,checkpoints={candidate:models[candidate]},output_base_dir=tmp_path/'exports',package_name=f'recovery_{number}',approved_revisions={candidate:{key:revision[key] for key in ('revision_id','job_id','task','checkpoint_sha256')}})
             cohort_receipt(exported['package_path'],graph,{candidate:models[candidate]},[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
+            reviewed_graph_fixture(project,graph,[source/'test'/'OK'/'ok_00.png',source/'test'/'NG'/'ng_00.png'])
             releases.append({**service.stage(exported['package_path'],project),'device':'cpu'})
         accepted=service.ledger.apply(releases[0],service.apply_runtime,reviewer='operator')
         pid=service.config['pid']

@@ -1,6 +1,6 @@
 """Separate saved whole-flow evaluation history, with immutable cohort inputs."""
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from backend.api.routes_project import get_current_project
 from backend.api.routes_image_truth import execute, require_role
@@ -45,6 +45,41 @@ class FlowPackageReviewRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     package_path: str
     device: str = Field(default='cpu',min_length=1,max_length=100)
+
+
+class RuntimeFlowReviewRequest(FlowPackageReviewRequest):
+    reviewer: str = Field(min_length=1,max_length=100)
+    reason: str = Field(min_length=8,max_length=2000)
+    holdout_reviewed: StrictBool
+    expected_revision: str | None = Field(default=None,pattern=r'^runtimeflow_[0-9a-f]{32}$')
+
+
+def _review_package(project,path):
+    from pathlib import Path
+    package=Path(path).absolute()
+    if (any(p.is_symlink() for p in (package,*package.parents)) or
+            not package.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports')):
+        raise ValueError('Select an unlinked package exported by the current project')
+    return package
+
+
+@router.post('/approvals/{revision_id}/runtime-preview')
+def runtime_flow_preview(revision_id: str,body: FlowPackageReviewRequest,request: Request):
+    from backend.engine.whole_flow_runtime_review import preview_runtime_flow
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    return execute(lambda:preview_runtime_flow(project,_review_package(project,body.package_path),revision_id,
+        device=body.device,accounts=getattr(request.app.state,'accounts',None)))
+
+
+@router.post('/approvals/{revision_id}/runtime-review')
+def runtime_flow_review(revision_id: str,body: RuntimeFlowReviewRequest,request: Request):
+    from backend.engine.whole_flow_runtime_review import approve_runtime_flow
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    payload=body.model_dump();package=payload.pop('package_path')
+    payload['reviewer']=request_actor(request,body.reviewer)
+    account=getattr(request.state,'account_user',None)
+    return execute(lambda:approve_runtime_flow(project,_review_package(project,package),revision_id,**payload,
+        authority_user_id=account['id'] if account else None,accounts=getattr(request.app.state,'accounts',None)))
 
 
 @router.get('/approvals/active')

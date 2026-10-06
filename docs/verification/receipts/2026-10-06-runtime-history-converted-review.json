@@ -1,0 +1,378 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-06T14:27:37.719801+00:00",
+  "baseline_source_sha": "123cbc583dd5c0200feda001418ca5a2ef618016",
+  "scope": "Owned edited source software controls. Each older run is bound to its separately retained source freeze.",
+  "root_review_only": true,
+  "independent_review": false,
+  "quality_accepted": false,
+  "device_accepted": false,
+  "physical_target_verified": false,
+  "final_parent_acceptance_count": 0,
+  "software_parent_accounting": {
+    "verified": 65,
+    "pending": 17,
+    "windows_install_use_waived": 1,
+    "actionable_pending": 16
+  },
+  "source_file_sha256": {
+    ".github/workflows/ci.yml": "e1768a15d4892cbfd2877ed3fcfe57170c91d25d90f3865230e31f692127189e",
+    "backend/api/routes_fleet.py": "941e69da1cbc566bb94b324314dfba64f37ff2cd7a59218b47354ab5e359a81b",
+    "backend/api/routes_flow_evaluation.py": "0bb1d29928a23014d4398b396ba2a6b0d2511049bb39bcd8fae89e7e67e1f6f3",
+    "backend/engine/dataset_loaders.py": "c866008fd9349d2f94f18eb99a8264ff8b5af25e2b69b760a5f5d5ba127716e8",
+    "backend/engine/fleet.py": "efe277c2ef5ee3d19b7276ce3421d97dc542fcaaa64f620aabd8bcab4318a0bc",
+    "backend/engine/flow_package.py": "6441c22bb6525a7b9885d17085e5bb63854ec6404b0c54fa6a4fc1c443a8851f",
+    "backend/engine/flow_package_runtime.py": "0880c9d53224138c5c2d629badd163213cae8328749efbb9be1c7fdc6aa7e536",
+    "backend/engine/gan_package_runtime.py": "d5e420cf08b7a465474c2867a367c7a3a0560650b6254ffcc2f67328ca70b660",
+    "backend/engine/global_migration.py": "72941b1b4830fbeecd54849f1f76ef6dcce8abaf19c824e0d5eb529baa2c9e21",
+    "backend/engine/global_store_paths.py": "fd7003dc45cbc5ec8d27b6a9a4bc871754612f3077eb11de8e329794797cc0c1",
+    "backend/engine/historical_job_binding.py": "013c7603849927c1c0d1278f2bc9b19e790d18057e5c5827a6e998ac7adf5d75",
+    "backend/engine/inspection_service.py": "e8d37ace4a51aa26b7900d8af7d79657080c3ff3b0b3c8f6c4b0970740e9e8ce",
+    "backend/engine/local_training_worker.py": "e71a418f3041cedc33ff70f706731a517f0d85058277a4f36e820ea4fe8778c3",
+    "backend/engine/managed_service.py": "cead2f1b5a3d16345773b0dc1cc8bef10cd66bdacaba0a88728c3e19c2f24052",
+    "backend/engine/migration_inventory.py": "9a70bdd1ee2fc25972d9497a45e471cb723601ada5b3a0a4771faae2186c3757",
+    "backend/engine/release_eligibility.py": "d2d8d1f67ad7ec9e28d50b5901fae5ff88636b11a7427d79654a2eccd5616e93",
+    "backend/engine/terminal_runtime_history.py": "106b9605be12a69970aeed94e8653c92724359f8a194b6e63544f4618ca61dd7",
+    "backend/engine/whole_flow_approval.py": "739d9da830842326d57f6d01b3c3bf6ffb9ef541e9154c6b791ccd2535fd088d",
+    "backend/engine/whole_flow_runtime_review.py": "5f1fb270675d09bf818e6712b1c3b5c8f3ef072e3eb7826401293d457cfbed3c",
+    "backend/remote/coordinator.py": "db92098231ddd01194081270115bd9c2b070eb1268f6e275f5a0a96e8c30e2f0",
+    "backend/tests/runtime_release_fixture.py": "9e253ad9561b093e8b1e4520c9e070e7ca861457b1b36501ff8a22b17e5cc74c",
+    "backend/tests/test_fleet.py": "eabaddcbd36bac39fab7fae69c036c8d1616e869d08ef3ab98a198ce6b03874e",
+    "backend/tests/test_fleet_emergency_rollback.py": "1bfd1703363a1ce572b8a35367599a7a9c12e71445a061c0b76dd71ed424a6ba",
+    "backend/tests/test_gan_generation_package.py": "b4152ae114899dda21d3c9ed22cbd4bbdad47c7fafaf52aecd6997263e737b89",
+    "backend/tests/test_managed_service.py": "f26cc56d9b7083701d4d64ea4995de5431963229a0316c63e32b7e7a95d69b09",
+    "backend/tests/test_openvino_runtime.py": "ed60447bc3c317147da760d52aabaa5b342b0a70e32994c4eaec55ee872e7464",
+    "backend/tests/test_operations_deployment_flow.py": "5b636a6d619fe13424b8c5e6a007d3b1c2018f3663281aa9b555592859fb0bad",
+    "backend/tests/test_remote_coordinator.py": "096f048d2d87a13d49a8bc007da13f2db2c994fbf7bb6ee067fbb11f0b0a1de3",
+    "backend/tests/test_runtime_deadline_sdk.py": "dafbd65b76f81a4537d841d3ca8fb0141f11dcdf5fc162c217281ca58146f483",
+    "backend/tests/test_runtime_update_recovery.py": "961c86a46f4855448706788e4dd0052d796ec9bb454ff0ac07a96d7ba1f1a494",
+    "backend/tests/test_service_release_eligibility.py": "82d5af0699d014297a5c92dc3c73ff5d5dcdb512e7f58fdac8b09fadd46f6fad",
+    "backend/tests/test_service_s5_06.py": "da2d0ca363231874e32fc8fa8685cd1f2648a56a1ca182618a1fad8416e713f5",
+    "backend/tests/test_split_seed_order.py": "26342d9df33fda03c521301bbed3eabe2f487eba5a9e28cdb6ea6310ea99853e",
+    "backend/tests/test_terminal_runtime_history.py": "054da6369dcd93d0a85c5d855fecbe363228da19fbfc5d76c42592b35681b437",
+    "backend/tests/test_whole_flow_runtime_review.py": "7b4a70e8adf3244304a89a5af94fb7583a54672f861a08310fe226da2ce2e893",
+    "backend/tests/test_whole_flow_service.py": "ecdf2e668cb8037dc3a7ac86a395954a3ce48efd9ecdadb21c6faff387c663eb",
+    "native_runtime/vision_runtime.cpp": "6f7658b74c8b32ea3ed70361b4749da9fb8ea17fa3f12dcd4380d7cf4bee834a",
+    "scripts/e2e/converted-flow-review.spec.ts": "7de69848995011f6e6e864c00fbd9c2d4e4136aced3d71b438b10f620d62bcf7",
+    "scripts/e2e/enhancement-pair-closure.spec.ts": "f321fd736c62e0ac40aae07df586f82388f28c29c8247141a1ba21b73105853b",
+    "scripts/e2e/fixtures/converted_flow_control.py": "c376c7c5453d7fd2be6fb5bac35e7af96ee4be6d79b22f5296c68e27c432f9d4",
+    "scripts/e2e/fixtures/fleet_runtime.py": "77930f65c53117ce250d6f04110e5bea0be9112153be815a13b5141d2f9e99af",
+    "scripts/e2e/fixtures/harness.cjs": "6abce1665e27b8af6761a8557a6a589470dadf071df16db48eb94edde3f3f9cf",
+    "scripts/e2e/fixtures/modelRecipe.ts": "dcf1badbce033b0f227b23fa6da512054eb975f9de57b763fb93521c7d364855",
+    "scripts/e2e/fixtures/operator_runtime.py": "7b76f46640eba9bdb5a6749b87ef7d050ac77652d5fcf4c30b71c00afbb54f69",
+    "scripts/e2e/fixtures/provenance_binding.py": "d678a3f6426f3ed41ccfe430e7168af8de59c97f9109ab5dadd2df64e77ce5eb",
+    "scripts/e2e/fleet-actual-rollout.spec.ts": "b9289eed3378122a5eb4c3b983891a731e81bd5509133f5c00812e5010b2d30d",
+    "scripts/e2e/keyboard-canvas-closure.spec.ts": "1096bd32b43281c4d2c53ae95c220ef2fca00a8f85f449e959a176e75c3f15c6",
+    "scripts/e2e/label-format-roundtrip.spec.ts": "9b213bebd449b9e8c54f2fca566d7340297e65195c07ab1730816815aa9eb6a6",
+    "scripts/e2e/ocr-actual-training.spec.ts": "86caedc34dbc6ed8a6b7f7d812d0668b4056c096955effd9c2a004dff9e9c0b9",
+    "scripts/e2e/provenance-closure.spec.ts": "1079b8a87771e793ee7fb5a69e8fe4a648f70f956860adb59b419fc83e3d2f6e",
+    "scripts/e2e/rotation-actual-training.spec.ts": "adc669bc7974d7fadd244266a283de1a7ded656e210c498eca4a589fcc549ff9",
+    "scripts/e2e/service-s0-08.spec.ts": "d239edd0dfdd2c2df1e44c18b4bdcac3add82aaadc4400070e23aae26090cebc",
+    "scripts/e2e/service-s1-05.spec.ts": "6e85d6dcb34712af4e2847ae9032dd9f4c750c34068b8a873f3ba79863370e5b",
+    "scripts/e2e/service-s2-03.spec.ts": "061b9a57b40d1db4579c7441ed12675b51af7aa9058fdea342d4fddc3e8eefeb",
+    "scripts/e2e/service-s2-04.spec.ts": "202e5e314eaccc2252948e6692a647fabc4ac64f6b3a12ec7859bad8d26c1b90",
+    "scripts/tests/e2e-harness.test.cjs": "0aa12c78e7def59a56e391bd661b77d51d66846492d85b30d2acd9003aae9986",
+    "src/renderer/components/inference/PackageLibraryPanel.test.cjs": "4e5cb447f22c05c6a8b5d313aa45b524197d3b2323b1609a1a339356f944b20f",
+    "src/renderer/components/inference/PackageLibraryPanel.tsx": "f4e6397f52beacccd17120c9868560c5b789069fbf0a3f5a81b48541c6c75b59",
+    "src/renderer/components/inference/RuntimeFlowReviewPanel.test.cjs": "e82411f89f11fa5aaa484fbe8ab1e9e37e9db302b07b72978985dabfbc5c6bd1",
+    "src/renderer/components/inference/RuntimeFlowReviewPanel.tsx": "8bfe4cee953f4dbb685bf88c7af4678fadb8e66593581a883c537ef1dfffb829",
+    "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "e9e698083eefe2f89768e55a0bcd1fc9c7c4a93f67199333e49e9edbf0c9422f",
+    "src/renderer/components/inference/runtimeDeployment.test.cjs": "794d9fd35a3fb72b6e0c8c4772d5c5196fe843b5c57d01b2b5b54a5bd93a94db",
+    "src/renderer/services/generated/apiTypes.ts": "e1572af07018e383dcd9ff99afc521358c3f739165b1288ebd9c37e471e402ff",
+    "src/renderer/services/productDeliveryApi.ts": "c2d46f9100aceacfc297d015821fc35dd55fb2a9b15766549c5685674c6a46de",
+    "src/renderer/services/wholeFlowApproval.ts": "2012779bc19c783f2ef1072c1ef91a29dab0735d81423bb611b62e3812e6677f"
+  },
+  "contract_runs": {
+    "terminal-history-final-retained": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 13,
+      "duration_seconds": 12.815,
+      "junit_sha256": "32b38d1ac5739965aed4e76cbb749eb7b714a68b7a1057362741f66c523b5674",
+      "retained_name": "terminal-history-final-retained.xml"
+    },
+    "terminal-runtime-regression-retained": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 93,
+      "duration_seconds": 45.69,
+      "junit_sha256": "b0711a478e8af5d63428c3e6859dccb11f61acdc96e51cc0cf98cffb9e393f72",
+      "retained_name": "terminal-runtime-regression-retained.xml"
+    },
+    "converted-flow-final-retained": {
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 15,
+      "duration_seconds": 60.364,
+      "junit_sha256": "21b5ba4f14267d3fcaf08a33c35b78368ef7ea74e31a919351937de5975f7138",
+      "retained_name": "converted-flow-final-retained.xml"
+    },
+    "native-bytecode-green": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 1,
+      "duration_seconds": 45.988,
+      "junit_sha256": "5d27e99e2fcd92d31ee33ca0656b66d74ede58af024d4ff8fdc8a99b143a1ba0",
+      "retained_name": "native-bytecode-green.xml"
+    },
+    "generator-bytecode-green": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 11,
+      "duration_seconds": 9.588,
+      "junit_sha256": "851841aa137a9fbcfe1676c1d1d60af9214481a629436f88a3ddc63e993452d1",
+      "retained_name": "generator-bytecode-green.xml"
+    },
+    "split-order-final": {
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 44,
+      "duration_seconds": 3.536,
+      "junit_sha256": "bf21f0331cdd5f28f156df6825f0161070500beaaa26f4027c0b63dc299b4659",
+      "retained_name": "split-order-final.xml"
+    },
+    "central-flow-final": {
+      "tests": 66,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 65,
+      "duration_seconds": 417.799,
+      "junit_sha256": "5e74e682743ee8279d627c6e7875852a823b4084a6e21e14a9f06ff821620d0d",
+      "retained_name": "central-flow-final.xml"
+    },
+    "central-entrypoint-light": {
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 82,
+      "duration_seconds": 19.527,
+      "junit_sha256": "700f829c09fc479353610c5d2dd637c53071b3b899f913b6ea3002fc8e7025e3",
+      "retained_name": "central-entrypoint-light.xml"
+    },
+    "operations-central-final": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "duration_seconds": 243.287,
+      "junit_sha256": "67c39e05447e6e82996c7074dae0e10c9889312a5ab4c69b8a7534af524e9544",
+      "retained_name": "operations-central-final.xml"
+    },
+    "converted-service-isolation-green": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "duration_seconds": 2.646,
+      "junit_sha256": "26e0f8d2250e44fa0ac21f49e2755d7a9dbfb94d033d52bb52ce810dd10b70ea",
+      "retained_name": "converted-service-isolation-green.xml"
+    },
+    "central-entrypoint-device-final": {
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 24,
+      "duration_seconds": 6.577,
+      "junit_sha256": "f1c87f6dfbd8fa1270e82ae2dd8bc4021723013e7e2d6b279b60300114b4b912",
+      "retained_name": "central-entrypoint-device-final.xml"
+    }
+  },
+  "renderer": {
+    "passed": 841,
+    "skipped": 0,
+    "failures": 0,
+    "log_sha256": "6cd7e0f8ae3d18acb24deecaae1828b18e9c51e057a1922a067fba6adef898e2"
+  },
+  "harness": {
+    "passed": 15,
+    "skipped": 0,
+    "failures": 0,
+    "log_sha256": "d824493ce63c5cd9619498ccad00b509abe2242d0c413f41cd9e51ba64726725"
+  },
+  "actual_native_converted_gate": {
+    "passed": 1,
+    "skipped": 0,
+    "failures": 0,
+    "retries": 0,
+    "duration_ms": 84597.985,
+    "source_file_count": 1576,
+    "source_freeze_sha256": "d6fbe41a12b4bcf7670bbc33902d88c9f90368d81b6673df950769aafe6c7b42",
+    "unchanged": true,
+    "evidence_files": 103,
+    "readback_sha256": "bf19ba872c05b7091574d9baf89231b327f0c4b06482d9ba5ed4ad5c246d339a",
+    "actual_conversion": true,
+    "actual_managed_IR_inference": true,
+    "saved_review_reopened": true,
+    "synthetic_control": true
+  },
+  "actual_browser_repair_gate": {
+    "passed": 24,
+    "skipped": 0,
+    "failures": 0,
+    "retries": 0,
+    "source_file_count": 1414,
+    "scope": "Predates subsequent central gates; exact recorded dirty-source freeze only",
+    "readback_sha256": "7b0c68e98a9bd2ced434587843e3da144416c7bb0c452f9b33acfe541169cfdd"
+  },
+  "retained_receipt_sha256": {
+    "ci-browser-repairs-exact-readback.json": "7b0c68e98a9bd2ced434587843e3da144416c7bb0c452f9b33acfe541169cfdd",
+    "central-flow-native-fleet-readback.json": "d6fe65b77d13990e76a1755c558533fd2b9c00e382e4ff5a1b0048e788351cdd",
+    "converted-native-sixth-readback.json": "bf19ba872c05b7091574d9baf89231b327f0c4b06482d9ba5ed4ad5c246d339a",
+    "central-entrypoint-native-apfs-clone-receipt.json": "66b7266968da41ddad60016fe45a98e4f33792c952feb483c61186fc54fa4c59",
+    "central-flow-final-apfs-clone-receipt.json": "e4209032706ebf64cd0e145606e6b2c803b529089dee476e5ba92fb596e40cc8",
+    "initialized-cxx-host-receipt.json": "2e40920019d2aa4c79d2daedf51383f2094ffb208a3bb22757cf98e5ede9e785"
+  },
+  "failed_attempts": {
+    "converted_native": {
+      "attempts_retained": 5,
+      "first": "dependency opt-in was absent and conversion case skipped",
+      "second": "service panel remount lost form input",
+      "third": "nonunique package picker selector",
+      "fourth": "disk full and no complete teardown",
+      "fifth": "actual ready IR service could not infer without deadline; fixed owned-worker routing",
+      "logs_sha256": {
+        "converted-native-first.log": "6385c4cadfd921cbcb93d18810c0e81b0c23b4805d8b2376ffdcb96df1b1e114",
+        "converted-native-second.log": "909243d2b7d76f766575eb982d2d6b786b5abecd96d1bf5cfe729429014d7054",
+        "converted-native-final.log": "328ca81ac6686592be0964f7373279ace48a4924cbf91427c28b84d690559d41",
+        "converted-native-fourth.log": "b7c5b1460dad67a2f313aea29099a01d8f1c5bdbd05131acede1cec8a34e98d7",
+        "converted-native-fifth.log": "404da6f858c8f453675ac70fb2b351dc319e440b4fae9596d0c202b44687fa45"
+      }
+    },
+    "broad_entrypoint": "ENOSPC ended before JUnit publication; not a passing count"
+  },
+  "published_CI": {
+    "source_sha": "123cbc583dd5c0200feda001418ca5a2ef618016",
+    "url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/37457022393",
+    "status": "failed",
+    "cpu_passed": 2136,
+    "cpu_skipped": 6,
+    "browser_passed": 145,
+    "browser_failed": 17,
+    "browser_skipped": 1,
+    "new_composed_source_hosted_result": "pending"
+  },
+  "endurance": {
+    "completed_72_hours": false,
+    "attempts_not_summed": true,
+    "first_observed_interruption": {
+      "cycles": 50,
+      "elapsed_seconds": 3007.6529,
+      "reason": "disk-space reserve"
+    },
+    "second_observed_exit": {
+      "cycles": 5,
+      "elapsed_seconds": 240.8137266249978,
+      "status": "unexpected_exit_without_terminal_receipt",
+      "observer_stop_reason": "disk-space reserve"
+    },
+    "new_continuous_attempt_required": true
+  },
+  "scoped_APFS_clones": {
+    "central-flow-apfs-duplicate-clone-receipt.json": {
+      "duplicate_paths_replaced": null,
+      "retained_unique_hashes": null,
+      "protected_unchanged": null,
+      "protected_count": null,
+      "errors": [],
+      "free_before": 1230360576,
+      "free_after": 3745792000,
+      "all_file_paths_retained": null,
+      "plan_sha256": "5f5e23688775e8bb85772073af1d36f84a1b17f67a41c3eab277f3a1fa9ce734",
+      "receipt_sha256": "632f2e395661f4fcd53e7b4aaee6e432b77d2e9cbbf3c5c13a5a320e953debe1"
+    },
+    "central-flow-v2-apfs-clone-receipt.json": {
+      "duplicate_paths_replaced": 159,
+      "retained_unique_hashes": 6,
+      "protected_unchanged": 9887,
+      "protected_count": 9887,
+      "errors": [],
+      "free_before": 1191284736,
+      "free_after": 3278921728,
+      "all_file_paths_retained": true,
+      "plan_sha256": "0f3cf849fecdac25ee31aa8cc4a00fcc33ca8a3c25c2acd1d2cb9719fff25fa5",
+      "receipt_sha256": "6ca83ad1f464b666fba2cd349b9ed21a9a9ea283132ade3d04e3d4cfe5549435"
+    },
+    "central-flow-final-apfs-clone-receipt.json": {
+      "duplicate_paths_replaced": 164,
+      "retained_unique_hashes": 6,
+      "protected_unchanged": 11152,
+      "protected_count": 11152,
+      "errors": [],
+      "free_before": 833679360,
+      "free_after": 3009495040,
+      "all_file_paths_retained": true,
+      "plan_sha256": "291fff81cc57499138ada49a90c58c78e3790685c517c3b478fd9806cc0bf380",
+      "receipt_sha256": "e4209032706ebf64cd0e145606e6b2c803b529089dee476e5ba92fb596e40cc8"
+    },
+    "central-entrypoint-native-apfs-clone-receipt.json": {
+      "duplicate_paths_replaced": 80,
+      "retained_unique_hashes": 10,
+      "protected_unchanged": 10413,
+      "protected_count": 10413,
+      "errors": [],
+      "free_before": 158621696,
+      "free_after": 2616094720,
+      "all_file_paths_retained": true,
+      "plan_sha256": "e3159031fbc836add2e879b79a0a940415474e494a14e2c6d8fd99eb653c4c5d",
+      "receipt_sha256": "66b7266968da41ddad60016fe45a98e4f33792c952feb483c61186fc54fa4c59"
+    },
+    "runtime-history-wave-apfs-clone-receipt.json": {
+      "plan_sha256": "826006e1a8e61f895884304f7bd07cd09c70354d3539e707268deca14e9e3de5",
+      "duplicate_paths_replaced": 424,
+      "retained_unique_hashes": 12,
+      "protected_count": 33226,
+      "protected_unchanged": 33226,
+      "errors": [],
+      "free_before": 322502656,
+      "free_after": 1114148864,
+      "all_file_paths_retained": true,
+      "receipt_sha256": "c7d3b56f1a36e91a51ed714ca56fcb69714a41ccfeb421dc79b08a82fa0c56ce"
+    }
+  },
+  "remaining": [
+    "Live or uncertain migration and ended remote/older schema adapters",
+    "Operational trust provision, publisher signing and target/device qualification",
+    "Representative human truth/process quality and pilot responsibility",
+    "Complete new-source hosted CI and all action receipts",
+    "A fresh uninterrupted 72-hour terminal qualification"
+  ],
+  "types": {
+    "runtime-history-typecheck-final.log": {
+      "passed": true,
+      "log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+    },
+    "runtime-history-e2e-types-final.log": {
+      "passed": true,
+      "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+    },
+    "runtime-history-api-check.log": {
+      "passed": true,
+      "log_sha256": "8cee5629a50d238db0e1d80dff3f08755eba4994172ca857d6acad0b5e837ed5"
+    }
+  },
+  "plan_check_sha256": "981bef84bfc6d004be6c68582b3196a5ee538e5a90844f9625613dff1f378c9d",
+  "publication_audit": {
+    "inherited_findings": 77,
+    "new_reviewed_synthetic_contacts": 4,
+    "new_review_required": 0,
+    "unexamined": 0,
+    "report_sha256": "08a57da30a45736989bb57121a43ada21e75a99528964caa8d8a1dcfb402d153"
+  }
+}

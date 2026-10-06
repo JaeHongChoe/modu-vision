@@ -62,6 +62,29 @@ def test_python_predictor_executor_use_same_full_dag_and_strict_options(real_pac
     with pytest.raises(ValueError,match='unknown|Unknown'): Executor(package).execute({'image_path':str(image),'fake':1})
 
 
+def test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes(real_package,tmp_path):
+    import hashlib,importlib.util,py_compile,struct
+    from backend.engine.flow_package_runtime import Predictor
+    package,image=real_package
+    verified=package/'backend/engine/runtime_configuration.py'
+    marker=tmp_path/'unlisted-bytecode-executed'
+    poison=tmp_path/'controlled-poison.py'
+    poison.write_text(f'from pathlib import Path\nPath({str(marker)!r}).write_text("unverified")\nraise RuntimeError("unlisted cached code")\n')
+    cache=Path(importlib.util.cache_from_source(str(verified)));cache.parent.mkdir(exist_ok=True)
+    py_compile.compile(str(poison),cfile=str(cache),doraise=True)
+    raw=cache.read_bytes();stat=verified.stat()
+    # Timestamp header names the checksum-verified source; the unlisted payload differs.
+    cache.write_bytes(raw[:8]+struct.pack('<II',int(stat.st_mtime)&0xffffffff,stat.st_size)+raw[16:])
+    before={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+    result=Predictor(package,deadline_ms=30000,cpu_threads=1).predict(image)
+    assert result['final_verdict']=='NG' and not marker.exists()
+    direct=subprocess.run([sys.executable,str(package/'run_flow.py'),'--image',str(image),
+        '--deadline-ms','30000'],capture_output=True,text=True,timeout=40)
+    assert direct.returncode==0,direct.stderr
+    assert json.loads(direct.stdout)['final_verdict']=='NG' and not marker.exists()
+    assert before=={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+
+
 def test_runtime_package_deadline_survives_reopen_and_cli(real_package,tmp_path):
     from backend.engine.flow_package_runtime import Predictor
     package,image=real_package
@@ -89,6 +112,23 @@ def test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph(real_pack
     assert compare_flow_results(Predictor(package,deadline_ms=30000).predict(image),native)['status']=='passed'
     timed=subprocess.run(command+['1'],capture_output=True,text=True,encoding="utf-8",timeout=20)
     assert timed.returncode==3 and json.loads(timed.stdout)['status']=='timeout'
+    # Native startup must ignore the same source-looking unlisted bytecode as
+    # Python SDK startup, before the runtime bridge or configuration is imported.
+    import hashlib,importlib.util,py_compile,struct
+    cached_marker=tmp_path/'unlisted-native-bytecode-executed'
+    controlled=tmp_path/'controlled-native-cache.py'
+    controlled.write_text(f'from pathlib import Path\nPath({str(cached_marker)!r}).write_text("unverified")\nraise RuntimeError("unlisted native cached code")\n')
+    for name in ('native_runtime_bridge.py','runtime_configuration.py'):
+        source=package/'backend/engine'/name
+        cache=Path(importlib.util.cache_from_source(str(source)));cache.parent.mkdir(exist_ok=True)
+        py_compile.compile(str(controlled),cfile=str(cache),doraise=True)
+        raw=cache.read_bytes();stat=source.stat()
+        cache.write_bytes(raw[:8]+struct.pack('<II',int(stat.st_mtime)&0xffffffff,stat.st_size)+raw[16:])
+    snapshot={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+    cached=subprocess.run(command,capture_output=True,text=True,encoding='utf-8',timeout=45)
+    assert cached.returncode==0,cached.stderr
+    assert json.loads(cached.stdout)['final_verdict']=='NG' and not cached_marker.exists()
+    assert snapshot=={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
     marker=tmp_path/'unverified-code-executed'
     bridge=package/'backend/engine/native_runtime_bridge.py'
     bridge.write_text(bridge.read_text()+f'\nfrom pathlib import Path\nPath({str(marker)!r}).write_text("escaped")\n')

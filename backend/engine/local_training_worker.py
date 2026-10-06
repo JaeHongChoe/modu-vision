@@ -25,6 +25,7 @@ import psutil
 
 from backend.engine.runtime_process_control import atomic_private_json, command_sha256, session_isolation
 from backend.remote.file_replace import read_text
+from backend.engine.global_store_paths import resolve_store_path, store_admission, owned_root
 
 POLL_SECONDS = .05
 OWNERSHIP_RECHECK_SECONDS = 1.
@@ -44,11 +45,11 @@ class LocalWorkerUncertain(RuntimeError):
 
 
 def _index():
-    return Path(os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR') or Path.home() / '.modu_vision') / 'local_jobs'
+    return resolve_store_path(Path(os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR') or Path.home() / '.modu_vision') / 'local_jobs')
 
 
 def _save(journal):
-    with _LOCK:
+    with _LOCK, store_admission(_index()):
         root = Path(journal['output_dir'])
         path = root / 'local_job.json'
         if path.is_file():
@@ -445,7 +446,7 @@ def _recover_local_journals(manager, *, job_id=None):
                 raise ValueError('Recovered local launch specification differs from its journal')
             spec = json.loads(spec_path.read_text(encoding='utf-8'))
             if (spec['job_id'] != journal['job_id'] or Path(spec['output_dir']).resolve() != root
-                    or Path(spec['lease_path']).resolve() != manager._leases.path.resolve()):
+                    or resolve_store_path(spec['lease_path']).resolve() != manager._leases.path.resolve()):
                 raise ValueError('Recovered local specification differs from its job or reservation store')
             leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'])
             record = JobRecord(journal['job_id'], spec['task'], spec['preset'], spec['dataset_path'], str(root), 'running',
@@ -481,12 +482,15 @@ def _spec(record, overrides, device, split_root, leases):
     if parent:
         parent['checkpoint_path'] = str(parent['checkpoint_path'])
         parent['classes'] = list(parent['classes'])
+    lease_path=leases.path
+    installation,owner=owned_root(lease_path)
+    if installation is not None:lease_path=installation/owner['scopes']['leases']
     return {'protocol_version': 1, 'job_id': record.job_id, 'task': record.task, 'preset': record.preset,
             'dataset_path': str(Path(record.dataset_path).resolve()), 'output_dir': str(Path(record.output_dir).resolve()),
             'config_overrides': overrides or {}, 'device': device, 'split_manifest_root': split_root,
             'warm_start': parent, 'dataset_binding': record.dataset_binding,
             'source_dataset_path': record.source_dataset_path, 'dataset_fingerprint': record.dataset_fingerprint,
-            'lease_path': str(leases.path), 'lease_owner': leases.owner}
+            'lease_path': str(lease_path), 'lease_owner': leases.owner}
 
 
 def _observe(record, status, callback, seen):

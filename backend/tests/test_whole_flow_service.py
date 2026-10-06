@@ -76,6 +76,86 @@ def test_review_cannot_be_omitted_to_bypass_current_project_gate(tmp_path,monkey
     assert calls==['flowapproval_'+'b'*32]
 
 
+def test_new_central_release_requires_review_even_without_current_selection(tmp_path,monkeypatch):
+    from backend.engine import whole_flow_approval as module
+    monkeypatch.setattr(module,'current_approval',lambda *a,**k:None)
+    monkeypatch.setattr(module,'qualify_package',lambda *a,**k:pytest.fail('No graph was reviewed'))
+    with pytest.raises(ValueError,match='Whole-flow.*review.*required'):
+        ManagedService.whole_flow_review(tmp_path,{},'cpu')
+
+
+def test_non_http_evidence_uses_project_split_and_restores_outer_context(tmp_path):
+    from backend.tests.test_model_deployments import _fixture
+    from backend.tests.runtime_release_fixture import synthetic_service_truth
+    from backend.engine.release_eligibility import evidence_context
+    from backend.api.routes_model_comparisons import _fingerprint
+    from backend.engine.dataset_fingerprint import fingerprint_dataset
+    from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root,scoped_split_root
+    _,project,source,_,_=_fixture(tmp_path)
+    synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'])
+    split=Path(project['dataset_dir'])/'splits'
+    expected=fingerprint_dataset(source,studio_root=Path(project['annotations_dir']),
+        split_manifest=split/(hashlib.sha256(str(source).encode()).hexdigest()+'.json'))
+    outer=tmp_path/'other-project-splits';token=set_request_split_root(outer)
+    try:
+        with evidence_context(project):assert _fingerprint(source)==expected
+        assert scoped_split_root(tmp_path/'unused')==outer
+    finally:reset_request_split_root(token)
+
+
+def test_fleet_refuses_unbound_graph_before_network_or_ledger(staged_review,monkeypatch):
+    from backend.engine.fleet import FleetRegistry
+    service,project,_,release,_=staged_review
+    unbound={key:value for key,value in release.items() if key!='whole_flow_review'}
+    registry=FleetRegistry(project['project_dir'])
+    target=registry.save_target(name='No network',url='https://example.invalid',token='fixture-token-12345678')
+    monkeypatch.setattr(FleetRegistry,'client',lambda *a,**k:pytest.fail('Unbound release sent traffic'))
+    with pytest.raises(ValueError,match='Whole-flow.*review.*missing|required'):
+        registry.apply(target['target_id'],unbound,reviewer='fixture',project=project)
+    assert registry.ledger(target['target_id']).history()==[]
+
+
+def test_legacy_offline_seal_remains_recoverable_but_new_command_refuses(staged_review,monkeypatch):
+    service,project,_,release,_=staged_review
+    policy_path=Path(release['release_policy']);policy=json.loads(policy_path.read_text())
+    del policy['whole_flow_review'];policy_path.write_text(json.dumps(policy))
+    legacy={key:value for key,value in release.items() if key!='whole_flow_review'}
+    # Compatibility applies only to already sealed offline recovery, not a
+    # fresh central stage/apply/rollback command.
+    _verify_release_policy(Path(legacy['package_path']),verify_flow_package(Path(legacy['package_path']))[1],policy_path,device='cpu')
+    monkeypatch.setattr(service,'whole_flow_review',lambda *a,**k:None)
+    with pytest.raises(ValueError,match='Whole-flow.*review.*missing|required'):
+        service.check_live_release(legacy,project)
+
+
+def test_selected_graph_review_must_equal_seal_sent_to_runtime(staged_review):
+    service,project,_,release,_=staged_review
+    path=Path(release['release_policy']);policy=json.loads(path.read_text())
+    policy['whole_flow_review']['approval_sha256']='b'*64
+    path.write_text(json.dumps(policy))
+    with pytest.raises(ValueError,match='Whole-flow.*seal|policy'):
+        service.check_live_release(release,project)
+
+
+def test_fleet_rechecks_command_actor_after_actual_transport_ack(staged_review,monkeypatch):
+    from backend.engine.fleet import FleetRegistry
+    from backend.tests.test_service_release_eligibility import _Transport
+    _,project,_,release,review=staged_review
+    monkeypatch.setattr(ManagedService,'whole_flow_review',staticmethod(lambda *a,**k:dict(review)))
+    class Accounts:
+        role='reviewer'
+        def project_role(self,user,identifier):return self.role
+    accounts=Accounts();registry=FleetRegistry(project['project_dir'],accounts=accounts,authority_user_id='fixture-user')
+    target=registry.save_target(name='Controlled ACK',url='https://example.invalid',token='fixture-token-12345678')
+    class Transport(_Transport):
+        def get(self,url):accounts.role='viewer';return super().get(url)
+    transport=Transport();monkeypatch.setattr(registry,'client',lambda _:transport)
+    with pytest.raises(ValueError,match='command authority'):
+        registry.apply(target['target_id'],release,reviewer='fixture',project=project)
+    assert ('POST','/agent/v1/apply') in transport.calls
+    assert registry.ledger(target['target_id']).active() is None
+
+
 def test_live_authority_rechecked_after_ack_and_offline_recovery_is_distinct(tmp_path,monkeypatch):
     service=ManagedService(tmp_path);candidate={'package_path':'candidate','device':'cpu'}
     calls=[]

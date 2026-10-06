@@ -8,16 +8,19 @@ from pathlib import Path
 
 @contextmanager
 def evidence_context(project):
-    """Use the project's annotations even outside an HTTP request."""
+    """Use the same annotation and heldout split scope as an HTTP request."""
     from backend.engine.annotation_storage import (
         set_request_annotation_root, reset_request_annotation_root,
         set_request_project_root, reset_request_project_root,
     )
+    from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root
     annotation_token = set_request_annotation_root(Path(project['annotations_dir']))
     project_token = set_request_project_root(Path(project['project_dir']))
+    split_token = set_request_split_root(Path(project['dataset_dir'])/'splits')
     try:
         yield
     finally:
+        reset_request_split_root(split_token)
         reset_request_project_root(project_token)
         reset_request_annotation_root(annotation_token)
 

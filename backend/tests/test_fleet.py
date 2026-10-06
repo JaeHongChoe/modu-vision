@@ -32,7 +32,8 @@ def test_real_field_agent_release_inference_reopen_and_rollback(tmp_path,monkeyp
     from backend.engine.flow_package import build_flow_package
     from backend.engine.flowchart_engine import get_single_segmentation_flowchart
     from backend.engine.fleet_agent import create_agent_app
-    from backend.tests.runtime_release_fixture import cohort_receipt,bind_policy
+    from backend.tests.runtime_release_fixture import cohort_receipt,bind_policy,reviewed_graph_fixture,synthetic_service_truth,synthetic_model_report
+    from backend.engine.managed_service import ManagedService
     client,project,source,fingerprint,models=_fixture(tmp_path)
     import torch,json
     from backend.engine.classification.model import create_classification_model
@@ -44,6 +45,7 @@ def test_real_field_agent_release_inference_reopen_and_rollback(tmp_path,monkeyp
         meta={'task':'classification','backbone':'resnet18','classes':['OK','NG'],'image_size':[32,32]}
         torch.save({**meta,'model_state_dict':model.state_dict()},checkpoint)
         checkpoint.with_name('model_meta.json').write_text(json.dumps(meta))
+    fingerprint=synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'],models=models)
     agent_app=create_agent_app(tmp_path/'field' ,'agent-test-secret-12345678')
     registry=FleetRegistry(project['project_dir']);target=registry.save_target(name='Loopback Field',url='http://127.0.0.1:8514',token='agent-test-secret-12345678')
     monkeypatch.setattr(registry,'client',lambda identifier:TestClient(agent_app,headers={'Authorization':'Bearer agent-test-secret-12345678'}))
@@ -51,7 +53,7 @@ def test_real_field_agent_release_inference_reopen_and_rollback(tmp_path,monkeyp
     try:
         for number,(baseline,candidate) in enumerate([('job_base','job_candidate'),('job_candidate','job_third')]):
             comparison='comparison_'+str(number)*32
-            _report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
+            synthetic_model_report(project,source,fingerprint,models,incumbent=baseline,candidate=candidate,comparison_id=comparison)
             approved=_approve(client,source,comparison);assert approved.status_code==200,approved.text
             revision=approved.json()['revision'];pipeline=get_single_segmentation_flowchart(job_id=candidate)
             next(n for n in pipeline.nodes if n.data.node_type=='inspection').data.task='classification'
@@ -59,8 +61,11 @@ def test_real_field_agent_release_inference_reopen_and_rollback(tmp_path,monkeyp
             package=Path(built['package_path']);digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
             cohort_receipt(package,pipeline,{candidate:models[candidate]},
                            [source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'])
+            review=reviewed_graph_fixture(project,pipeline,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'])
+            qualified=ManagedService.whole_flow_review(package,project,'cpu',review['revision_id'])
             manifest=json.loads((package/'manifest.json').read_text())
-            policy=bind_policy({'schema_version':1,'manifest_sha256':digest,'approval_revisions':manifest['release']['approval_revisions']},package)
+            policy=bind_policy({'schema_version':1,'manifest_sha256':digest,'approval_revisions':manifest['release']['approval_revisions'],
+                                'whole_flow_review':qualified},package)
             policy_path=tmp_path/('release'+str(number)+'.policy.json');policy_path.write_text(json.dumps(policy))
             if number==0:
                 archive=package_archive(package)
@@ -82,7 +87,8 @@ def test_real_field_agent_release_inference_reopen_and_rollback(tmp_path,monkeyp
                     assert json.loads(received_policy.read_text())==policy
                 assert not list(agent_app.state.agent.releases.glob('stage-*'))
             deployed=registry.apply(target['target_id'],{'package_path':str(package),'manifest_sha256':digest,'device':'cpu',
-                'release_policy':str(policy_path),'parity_receipt_sha256':policy['parity_receipt_sha256']},reviewer='qa')
+                'release_policy':str(policy_path),'parity_receipt_sha256':policy['parity_receipt_sha256'],
+                'whole_flow_review':qualified},reviewer='qa')
             assert deployed['ack']['manifest_sha256']==digest and registry.readback(target['target_id'])['matches_active']
             deployments.append(deployed)
             if number==0:

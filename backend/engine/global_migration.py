@@ -83,10 +83,8 @@ def preview(root):
             from backend.remote.profiles import ProfileStore
             try:ProfileStore(path)._read()
             except (ValueError,OSError) as exc:blockers.append('Invalid profile store: '+type(exc).__name__)
-    for name in ('local_journals','remote_journals'):
-        path=root/owner['scopes'][name]
-        if path.exists() and (not path.is_dir() or any(path.iterdir())):
-            blockers.append('Historical '+name+' requires reviewed actor/namespace adapter; not activated by this phase')
+    from backend.engine.terminal_runtime_history import journal_blockers
+    if not blockers:blockers.extend(journal_blockers(root,owner['scopes']))
     if not blockers:
         blockers.extend(_authority_blockers(root,owner['scopes']))
     if active_generation(root):blockers.append('An active generation already exists; migrate forward from it in a separately supported conversion')
@@ -147,13 +145,14 @@ def _forward_view(root,owner,generation,pointer):
     for name,relative in owner['scopes'].items():
         source=generation/relative
         if name in {'local_journals','remote_journals'}:
-            if source.exists() and (not source.is_dir() or any(source.iterdir())):
-                blockers.append('Historical '+name+' requires a reviewed actor/namespace adapter')
+            continue
         elif not source.is_file():blockers.append('Missing declared '+name+' scope')
         elif name in known and _schema(source)!=known[name]:blockers.append('Unsupported '+name+' schema')
         elif name=='profiles':
             from backend.remote.profiles import ProfileStore
             ProfileStore(source)._read()
+    from backend.engine.terminal_runtime_history import journal_blockers
+    if not blockers:blockers.extend(journal_blockers(generation,owner['scopes'],installation_root=root))
     if not blockers:blockers.extend(_authority_blockers(generation,owner['scopes'],installation_root=root))
     original=_snapshot(root)
     view.update(source_sha256=digest({'generation':view['source_snapshot']['sha256'],
@@ -209,7 +208,9 @@ def advance(root,*,expected_source_sha256):
 def _copy(before,source,destination,*,scopes=None):
     destination.mkdir(parents=True,exist_ok=False)
     for row in before['inventory']['files']:
-        if scopes is not None and row['path'] not in set(scopes.values()):continue
+        if scopes is not None and row['path'] not in set(scopes.values()):
+            relative=Path(row['path'])
+            if relative.parent.as_posix()!=scopes['local_journals']:continue
         path=source/row['path'];target=destination/row['path'];target.parent.mkdir(parents=True,exist_ok=True)
         with owned_file_snapshot(path) as copied:shutil.copyfile(copied,target,follow_symlinks=False)
         if hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']:raise GlobalMigrationError('Source changed during global backup')

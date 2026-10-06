@@ -28,6 +28,8 @@ for n in graph.nodes:
     if n.data.node_type=='inspection':n.data.task='classification'
 version=uuid.uuid4().hex;flow=directory/'flowcharts'/'versions'/f'{version}.json';flow.parent.mkdir(parents=True,exist_ok=True);flow.write_text(json.dumps({'version_id':version,'pipeline':graph.model_dump(),'pipeline_hash':pipeline_sha256(graph),'source_dataset_path':str(source),'created_at':'controlled-history'}))
 image=source/'ok'/'sample-ok.png';assert image.is_file()
+split_assignment=routes_dataset._read_split_manifest(source)[str(image)]
+assert split_assignment in {'train','val'}
 identity={'image_id':'sample-ok','file_path':str(image),'file_name':image.name,'split':None}
 run_id=str(uuid.uuid4());execution={'execution_target':'local','device':'cpu','project_id':project['id'],'compute_profile_id':None};encoded=json.dumps(execution,sort_keys=True,separators=(',',':'))
 request=SimpleNamespace(state=SimpleNamespace(scoped_project=project))
@@ -36,4 +38,4 @@ with _store(request) as conn:
     conn.execute('INSERT INTO rows(run_id,image_path,image_json,state,result_json,image_sha256,updated_at) VALUES(?,?,?,?,?,?,?)',(run_id,str(image),json.dumps(identity),'REVIEW',json.dumps({'status':'success','final_verdict':'REVIEW','is_ok':False,'controlled_fixture':True}),sha(image),'controlled-history'))
 protected=[checkpoint,model/'model_meta.json',flow,Path(binding['version_dir'])/'manifest.json',Path(binding['version_dir'])/'team-data.json']
 protected.extend((Path(binding['version_dir'])/'labels').rglob('*'))
-print(json.dumps({'project':project,'image':str(image),'image_sha256':sha(image),'binding':binding,'flow_version_id':version,'graph_sha256':pipeline_sha256(graph),'run_id':run_id,'checkpoint_sha256':sha(checkpoint),'frozen_files':{str(p):sha(p) for p in protected if p.is_file()},'historical_result':'controlled_inert_no_model_execution'}))
+print(json.dumps({'project':project,'image':str(image),'image_sha256':sha(image),'binding':binding,'split_assignment':split_assignment,'flow_version_id':version,'graph_sha256':pipeline_sha256(graph),'run_id':run_id,'checkpoint_sha256':sha(checkpoint),'frozen_files':{str(p):sha(p) for p in protected if p.is_file()},'historical_result':'controlled_inert_no_model_execution'}))

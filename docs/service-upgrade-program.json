@@ -1103,8 +1103,8 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_08.py",
    "remaining": [
-    "Live owned-worker and uncertain-lease adoption with proven identity/fence, runtime local_jobs/remote_jobs adapters and older unsupported schemas remain pending.",
-    "The terminal-history converter is an explicit offline operator action before generation cutover; it does not infer team membership or authorize replay."
+    "Live owned-worker and uncertain-lease adoption with proven identity/fence, ended remote recovery-index adapters and older unsupported schemas remain pending.",
+    "Current-protocol ended local indexes and immutable original launch/lease-owner bindings now survive owned drained cutover and forward recovery without creating worker or lease authority."
    ]
   },
   {
@@ -3686,7 +3686,7 @@
     "S2-05",
     "S4-13"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "owned-local-component-followup",
@@ -3699,6 +3699,12 @@
      "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
      "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
      "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    },
+    {
+     "kind": "actual-native-converted-complete-graph-review-and-IR-service",
+     "result": "Actual macOS development Electron converts FP32 OpenVINO CPU, separately reviews the measured full graph, persists/reopens it through the saved library, applies the qualified managed service and completes actual IR input inference. 1 native case passes with zero skips/retries; all1576 source files match before/after and103 JSON/PNG evidence hashes are retained. 15 separate runtime-review,65 central-authority,82 entrypoint,2 actual automated refusal/recovery and2 no-deadline isolation regressions pass.",
+     "scope": "Root review only. Deliberately all-OK initialized weights and permissive synthetic policy do not approve model quality or physical equipment. Earlier five native attempts and incomplete ENOSPC runs remain recorded. Receipt SHA-256 f4c3c5d4f0e81185e3df16150ada4d1697d6a629502308d001d102d98725360d",
+     "platform": "Actual macOS development Electron, actual PyTorch/OpenVINO CPU processes and owned local services; Windows install/use waived, no signing or installed target claim."
     }
    ],
    "file_actions": {
@@ -3709,19 +3715,20 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-4-models.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
    },
    "proposed_test_file": "backend/tests/test_service_s4_14.py",
    "remaining": [
-    "Legacy model-only compatibility and measured precision/field acceptance remain separate; full parent stays pending."
+    "Representative human process-quality, physical target/device qualification and independent handoff acceptance remain pending.",
+    "Software functional controls are synthetic; precision acceptance and complete-graph review are separate saved authorities."
    ]
   },
   {
@@ -4688,7 +4695,8 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
-    "New exact-source hosted full result must be read before promotion."
+    "Read the complete new exact published-source hosted result before promotion; exact123 CPU2136 passed/6 skipped and browser145 passed/17 failed/1 skipped remains failed.",
+    "The repaired24-case edited-source Chrome gate passes all selected cases with unchanged1414-file source pin; it is not the clean published GUI collector or complete156-action acceptance."
    ]
   },
   {
@@ -5220,7 +5228,8 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
    "remaining": [
-    "Actual terminal72-hour successful receipt and target qualification remain pending."
+    "A new uninterrupted terminal72-hour successful receipt and target qualification remain pending.",
+    "The durable attempt ended at50 cycles/3007.65 seconds on its actual disk-reserve exit receipt; no prior interrupted elapsed time is combined."
    ]
   },
   {
@@ -9792,12 +9801,12 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 64,
-    "pending": 18
+    "verified": 65,
+    "pending": 17
    },
    "parent_status": {
-    "verification_pending": 58,
-    "in_progress": 14,
+    "verification_pending": 59,
+    "in_progress": 13,
     "planned": 10
    },
    "merged_extension_slices": 16,

@@ -284,6 +284,9 @@ def split_dataset(
     if not items:
         return {"train": [], "val": []}
 
+    # Filesystem enumeration varies across platforms. Seeded assignments must
+    # identify the same images, not their incidental position in that listing.
+    items = sorted(items, key=lambda row: (str(row.get("label", "default")), str(row.get("image_path", row.get("id", "")))))
     rng = np.random.default_rng(seed)
 
     class_groups: Dict[str, List[Dict[str, Any]]] = {}

@@ -139,7 +139,10 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     device=options['device']
     if device.startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
         raise ValueError('OpenVINO requires a verified converted package')
-    if options['deadline_ms'] is not None and not _owned_worker:
+    # Converted inference must also use the isolated interpreter when a
+    # service has no deadline. Its API process may already have loaded binary
+    # extensions that cannot coexist with the OpenVINO macOS runtime.
+    if (options['deadline_ms'] is not None or device.startswith('openvino:')) and not _owned_worker:
         return _run_isolated(package_dir,image_path,image_id,options)
     from backend.engine.edge_runtime import enforce_edge_device
     pipeline, checkpoints = verify_flow_package(package_dir)
@@ -204,6 +207,9 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
             python=os.environ['VISION_OPENVINO_PYTHON'] if explicit_openvino else sys.executable
             command=[python,'-c',bootstrap,str(root),str(request),str(output)]
         env={**os.environ,'PYTHONPATH':str(root),'PYTHONNOUSERSITE':'1',
+             # An owned empty prefix prevents unlisted cache payloads from
+             # shadowing verified source, and never writes into a release.
+             'PYTHONDONTWRITEBYTECODE':'1','PYTHONPYCACHEPREFIX':str(Path(temporary)/'bytecode'),
              'OMP_NUM_THREADS':str(options['cpu_threads']),'MKL_NUM_THREADS':str(options['cpu_threads'])}
         outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root,cancel_event=cancel_event)
         if outcome['status'] in ('timeout','cancelled'):

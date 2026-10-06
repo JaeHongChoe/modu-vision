@@ -113,7 +113,7 @@ test('model family choice uses the same cancellable task impact preview',async({
   await family.click();await dialog.getByRole('button',{name:'영향 확인 후 변경',exact:true}).click();
   await expect(dialog).not.toBeVisible();await expect(current).toHaveAttribute('aria-pressed','true');
   await expect(page.getByRole('combobox',{name:'검사 작업 종류'})).toHaveValue('classification');
-  await expect(page.getByText(/모델 종류를 바꾸지 못했습니다:.*S203 family change refused/)).toBeVisible();
+  await expect(page.getByText(/모델 종류 변경 후 확인이 필요합니다:.*S203 family change refused/)).toBeVisible();
 });
 
 test('approval missing comparison has a focused recovery link',async({page,request,renderer,workspace,evidence})=>{

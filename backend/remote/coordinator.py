@@ -21,6 +21,7 @@ import threading
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Optional
+from backend.engine.global_store_paths import resolve_store_path, store_admission
 
 from backend.remote.profiles import ComputeProfile
 from backend.remote.snapshot import build_snapshot
@@ -99,7 +100,7 @@ def _atomic_json(path: Path, value: dict[str, Any]) -> None:
 
 def _journal_index() -> Path:
     root = Path(os.environ.get("VISION_AI_STUDIO_USER_DATA_DIR") or Path.home() / ".modu_vision")
-    return root / "remote_jobs"
+    return resolve_store_path(root / "remote_jobs")
 
 
 def _read_journal(output: Path, job_id: str) -> dict[str, Any]:
@@ -118,7 +119,7 @@ def _read_journal(output: Path, job_id: str) -> dict[str, Any]:
 
 
 def _save_journal(journal: dict[str, Any]) -> None:
-    with _JOURNAL_LOCK:
+    with _JOURNAL_LOCK, store_admission(_journal_index()):
         output = Path(journal["output_dir"])
         path = output / "remote_job.json"
         # A cancellation can arrive from the API while the monitor holds its

@@ -34,19 +34,19 @@ def fixture(tmp_path):
     return project,source,policy,approval.json(),request,saved
 
 
-def test_automatic_deployment_saves_new_exact_flow_and_applies_real_service(tmp_path):
+def test_automatic_model_approval_cannot_apply_an_unreviewed_candidate_graph(tmp_path):
     project,source,policy,approval,request,saved=fixture(tmp_path)
     # The chosen version is independent of the workspace's current recipe tab.
     project['task']='segmentation'
-    try:
-        with project_scope(project):result=_deploy_candidate(project,policy,'job_candidate',approval,threading.Event())
-        assert result['parity']['status']=='passed'
-        assert result['source_flow_version_id']==saved['version_id']
-        assert result['flow_version_id']!=saved['version_id']
-        reopened=get_active_pipeline(str(source),request)
-        assert next(n for n in reopened.nodes if n.data.node_type=='inspection').data.model_job_id=='job_candidate'
-        assert ManagedService(project['project_dir']).readback()['manifest_sha256']==result['local']['release']['manifest_sha256']
-    finally:ManagedService(project['project_dir']).stop()
+    active=Path(project['project_dir'])/'flowcharts'/'active.json';before=active.read_bytes()
+    with project_scope(project),pytest.raises(ValueError,match='complete.*graph|whole.flow|Whole.flow'):
+        _deploy_candidate(project,policy,'job_candidate',approval,threading.Event())
+    assert active.read_bytes()==before
+    reopened=get_active_pipeline(str(source),request)
+    assert next(n for n in reopened.nodes if n.data.node_type=='inspection').data.model_job_id=='job_base'
+    service=ManagedService(project['project_dir'])
+    assert service.ledger.active() is None
+    assert service.readback()['status']=='stopped'
 
 
 def test_failed_service_application_restores_prior_graph_pointer_and_recipe(tmp_path,monkeypatch):

@@ -155,7 +155,7 @@ class ManagedService:
                 os.rename(temporary,destination)
             finally:
                 if temporary.exists():shutil.rmtree(temporary)
-        policy=self.releases/(digest+('.'+review['approval_sha256'] if review else '')+'.policy.json')
+        policy=self.releases/(digest+('.'+review.get('runtime_review_sha256',review['approval_sha256']) if review else '')+'.policy.json')
         if policy.is_symlink():raise ValueError('Staged release policy is linked')
         verify_release_evidence(destination,device,expected_receipt_sha256=evidence['receipt_sha256'])
         with release_authority(project):
@@ -300,14 +300,22 @@ class ManagedService:
         if revision is None:
             current=current_approval(project,accounts=accounts)
             revision=current['revision_id'] if current else None
-        return qualify_package(project,package,revision,device=device,accounts=accounts) if revision else None
+        if not revision:raise ValueError('Whole-flow review is required for a new central release; evaluate and review the complete graph first')
+        return qualify_package(project,package,revision,device=device,accounts=accounts)
     def check_live_release(self,release,project,*,accounts=None,action='apply'):
         from backend.engine.release_eligibility import authorize_release_action
         authorize_release_action(release['package_path'],project,action=action)
         bound=release.get('whole_flow_review')
+        if not isinstance(bound,dict):raise ValueError('Whole-flow release review is missing; legacy seals authorize offline recovery only')
         current=self.whole_flow_review(release['package_path'],project,release['device'],
-            bound['revision_id'] if bound else None,accounts=accounts)
+            bound['revision_id'],accounts=accounts)
         if current!=bound:raise ValueError('Whole-flow release review is missing, changed, or no longer valid')
+        policy_path=Path(release.get('release_policy') or '')
+        if policy_path.is_symlink() or not policy_path.is_file() or policy_path.stat().st_size>65536:
+            raise ValueError('Whole-flow release seal is unavailable')
+        policy=json.loads(policy_path.read_text(encoding='utf-8'))
+        if policy.get('whole_flow_review')!=bound:
+            raise ValueError('Whole-flow release seal differs from the selected reviewed graph')
     def checked_apply(self,project,accounts,candidate,*,authority_user_id=None):
         def apply(release):
             # Recovery restores only the last committed, separately sealed

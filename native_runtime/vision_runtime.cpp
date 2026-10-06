@@ -50,7 +50,7 @@ bool initialize(char** error) {
 #endif
     if (Py_IsInitialized()) return true;
     PyConfig config;PyConfig_InitPythonConfig(&config);
-    config.parse_argv=0;config.use_environment=0;config.user_site_directory=0;
+    config.parse_argv=0;config.use_environment=0;config.user_site_directory=0;config.write_bytecode=0;
     auto status=PyConfig_SetBytesString(&config,&config.program_name,MV_PYTHON_EXECUTABLE);
     if (!PyStatus_Exception(status)) status=PyConfig_SetBytesString(&config,&config.executable,MV_PYTHON_EXECUTABLE);
     if (!PyStatus_Exception(status)) status=Py_InitializeFromConfig(&config);
@@ -58,6 +58,26 @@ bool initialize(char** error) {
     PyConfig_Clear(&config);
     PyEval_SaveThread();
     return true;
+}
+bool prepare_package_import(char** error) {
+    // Source hashes do not bind an existing source-looking .pyc payload. Use
+    // one empty private prefix for this interpreter, including dlopen hosts
+    // whose interpreter was initialized before the SDK. The GIL is held here.
+    static PyObject* directory=nullptr;
+    if (!directory) {
+        PyObject* module=PyImport_ImportModule("tempfile");
+        directory=module?PyObject_CallMethod(module,"TemporaryDirectory","s","modu-native-bytecode-"):nullptr;
+        Py_XDECREF(module);
+    }
+    if (!directory) { if(error)*error=error_text();return false; }
+    // TemporaryDirectory's finalizer removes this empty owned directory at
+    // interpreter exit. Keep its object alive while any SDK handle may import.
+    PyObject* prefix=PyObject_GetAttrString(directory,"name");
+    bool ok=prefix && PySys_SetObject("pycache_prefix",prefix)==0
+        && PySys_SetObject("dont_write_bytecode",Py_True)==0;
+    Py_XDECREF(prefix);
+    if (!ok && error)*error=error_text();
+    return ok;
 }
 bool verify_package(const char* package,char** error) {
     // Use only the interpreter's standard library before any package import.
@@ -114,6 +134,7 @@ extern "C" MV_API void* mv_create(const char* package_dir,const char* options,ch
     if(!package_dir||!initialize(error))return nullptr;
     auto gil=PyGILState_Ensure();
     if(!verify_package(package_dir,error)){PyGILState_Release(gil);return nullptr;}
+    if(!prepare_package_import(error)){PyGILState_Release(gil);return nullptr;}
     PyObject* path=PyUnicode_FromString(package_dir);
     if(!path||PyList_Insert(PySys_GetObject("path"),0,path)<0){Py_XDECREF(path);if(error)*error=error_text();PyGILState_Release(gil);return nullptr;}
     Py_DECREF(path);

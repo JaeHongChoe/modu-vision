@@ -8,7 +8,7 @@ import hashlib,json,sqlite3,tempfile
 from pathlib import Path
 from backend.engine.project_archive import _sqlite_file,_sqlite_snapshot
 
-_TERMINAL={'completed','failed','cancelled','canceled','interrupted','error','expired','rejected','succeeded'}
+_TERMINAL={'completed','failed','aborted','cancelled','canceled','interrupted','error','expired','rejected','succeeded'}
 _EXCLUDED={'.migrations','runtime_lifecycle.lock','migration_admission.lock'}
 
 

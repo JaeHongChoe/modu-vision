@@ -1372,6 +1372,15 @@ export type Row = {
   source_sha256?: string | null;
 };
 
+export type RuntimeFlowReviewRequest = {
+  package_path: string;
+  device?: string;
+  reviewer: string;
+  reason: string;
+  holdout_reviewed: boolean;
+  expected_revision?: string | null;
+};
+
 export type SamplingPolicyRequest = {
   expected_revision: number;
   policy: { [key: string]: unknown };
@@ -1889,6 +1898,8 @@ export interface ApiRequestBody {
   "POST /api/flow-evaluations": EvaluationRequest;
   "POST /api/flow-evaluations/approvals": FlowReviewRequest;
   "POST /api/flow-evaluations/approvals/{revision_id}/qualify-package": FlowPackageReviewRequest;
+  "POST /api/flow-evaluations/approvals/{revision_id}/runtime-preview": FlowPackageReviewRequest;
+  "POST /api/flow-evaluations/approvals/{revision_id}/runtime-review": RuntimeFlowReviewRequest;
   "PUT /api/flow-evaluations/approvals/{revision_id}/select": FlowSelectionRequest;
   "POST /api/flow-evaluations/cohorts": CohortRequest;
   "POST /api/flow-workspace/comparisons": FlowCompare;

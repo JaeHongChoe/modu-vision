@@ -672,6 +672,14 @@ function assertElectronBuild(appDir) {
 
 function electronLaunchOptions({ appDir, workspace, python = resolvePython(), devServerUrl, baseEnv = process.env, isolateHome = false, electronPath }) {
   const env = sanitizeEnv(baseEnv);
+  // Optional runtime dependencies must be chosen for this test explicitly;
+  // inherited production app variables still cannot redirect shared stores.
+  if (baseEnv.MV_E2E_OPENVINO_PYTHON) {
+    const selected = baseEnv.MV_E2E_OPENVINO_PYTHON;
+    if (!path.isAbsolute(selected) || !fs.statSync(selected).isFile())
+      throw new Error('The E2E OpenVINO interpreter must be an absolute regular file');
+    env.VISION_OPENVINO_PYTHON = selected;
+  }
   Object.assign(env, {
     VISION_AI_STUDIO_USER_DATA_DIR: workspace.userData,
     VISION_AI_PYTHON: python,

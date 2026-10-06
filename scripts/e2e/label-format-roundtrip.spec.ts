@@ -53,7 +53,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await chooseFolder(dir);await panel.getByRole('button',{name:'라벨 폴더 선택',exact:true}).click();await expect(panel.getByText(dir,{exact:true})).toBeVisible();
   await panel.getByLabel('기존 라벨 충돌 처리',{exact:true}).selectOption('replace');
   const previewResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dataset/formats/import'&&r.request().method()==='POST');await panel.getByRole('button',{name:'가져오기 미리보기',exact:true}).click();const previewReply=await previewResponse;expect(previewReply.status(),await previewReply.text()).toBe(200);const preview=await previewReply.json();
-  expect(preview.preview.map((r:any)=>r.file_name)).toEqual(['batch-a/part.png','batch-b/part.png']);expect(preview.preview.every((r:any)=>r.conflict)).toBe(true);
+  expect(preview.preview.map((r:any)=>r.file_name).sort()).toEqual(['batch-a/part.png','batch-b/part.png']);expect(preview.preview.every((r:any)=>r.conflict)).toBe(true);
   const appliedResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dataset/formats/import'&&r.request().method()==='POST');await panel.getByRole('button',{name:'검토한 라벨 적용',exact:true}).click();const appliedReply=await appliedResponse;expect(appliedReply.status(),await appliedReply.text()).toBe(200);const applied=await appliedReply.json();expect(applied.backup_version_id).toBeTruthy();await expect(panel.getByRole('status').filter({hasText:'이전 버전'})).toBeVisible();
   const reopened:any[]=[];
   for(let i=0;i<paths.length;i++){

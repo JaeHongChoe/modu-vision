@@ -38,7 +38,14 @@ def build_generator_package(checkpoint: Path, output_dir: Path) -> Path:
             target=staging/'backend'/'engine'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(engine/name,target)
         (staging/'backend'/'__init__.py').write_text('',encoding='utf-8')
         (staging/'backend'/'engine'/'__init__.py').write_text('',encoding='utf-8')
-        (staging/'generate.py').write_text('from backend.engine.gan_package_runtime import main\nif __name__ == "__main__": raise SystemExit(main())\n',encoding='utf-8')
+        (staging/'generate.py').write_text('''import sys,tempfile
+# Only source bytes are checksum-bound; unlisted existing bytecode is ignored.
+with tempfile.TemporaryDirectory(prefix="modu-generator-bytecode-") as bytecode:
+    sys.dont_write_bytecode=True
+    sys.pycache_prefix=bytecode
+    from backend.engine.gan_package_runtime import main
+    if __name__ == "__main__": raise SystemExit(main())
+''',encoding='utf-8')
         (staging/'requirements.txt').write_text('numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\n',encoding='utf-8')
         (staging/'workflow.json').write_text(json.dumps({'task':'defect_gan','stages':['explicit_defect_crops','trained_generator','heldout_diagnostic','generate_unreviewed','human_review','adopt_train_only'],'output_state':'synthetic_unreviewed','quality_status':'unvalidated'}),encoding='utf-8')
         (staging/'README.md').write_text('# GAN generation workflow\nInstall requirements, then run `python generate.py --output /new/review/directory --count 8 --seed 0 --device cpu`. Add `--source-image /original/image.png --regions /regions.json` to compose into explicit original-coordinate regions. Each region declares `id`, `bbox` and optional `opacity`, `feather_px`, `mask_polygon`. The manifest verifies every package file before checkpoint loading. Generated candidates require review and an explicit defect label before adoption into training data. This workflow does not issue an inspection verdict.\n', encoding='utf-8')
@@ -107,7 +114,9 @@ class GeneratorExecutor:
             request_path.write_text(json.dumps({**request,'output_dir':str(staged),'device':self.options['device']}),encoding='utf-8')
             bootstrap='from backend.engine.gan_package_runtime import generator_worker;generator_worker()'
             result=execute_owned_process([sys.executable,'-c',bootstrap,str(self.root),str(request_path),str(result_path)],deadline_ms=self.options['deadline_ms'],cwd=self.root,cancel_event=cancel_event,
-                env={**os.environ,'PYTHONPATH':str(self.root),'OMP_NUM_THREADS':str(self.options['cpu_threads']),'MKL_NUM_THREADS':str(self.options['cpu_threads'])})
+                env={**os.environ,'PYTHONPATH':str(self.root),'PYTHONDONTWRITEBYTECODE':'1',
+                     'PYTHONPYCACHEPREFIX':str(Path(temporary)/'bytecode'),
+                     'OMP_NUM_THREADS':str(self.options['cpu_threads']),'MKL_NUM_THREADS':str(self.options['cpu_threads'])})
             if result['status'] in ('timeout','cancelled'):return {**result,'task':'defect_gan','output_state':'synthetic_unreviewed','quality_status':'unvalidated'}
             if result['returncode']!=0:raise RuntimeError('Owned generation failed: '+result['stderr'])
             def relocate(value):

@@ -14,7 +14,7 @@ test('S1-05: a CPU preflight from the model hub moves the classification stages 
   expect((await page.request.post(`${renderer.origin}/api/project/create`, { data: { name: 'S1-05 worker', task: 'classification' } })).status()).toBe(200);
   expect((await page.request.put(`${renderer.origin}/api/project/update`, { data: { source_dataset_dir: workspace.dataset } })).status()).toBe(200);
   await installDesktopHostShim(page, renderer.port);
-  const imported = page.waitForResponse(response => new URL(response.url()).pathname === '/api/dataset/import' && response.request().method() === 'POST');
+  const imported = page.waitForResponse(response => new URL(response.url()).pathname === '/api/dataset/current-summary' && response.request().method() === 'GET');
   await page.goto(renderer.url);
   expect((await imported).status()).toBe(200);
   await page.getByRole('button', { name: /03.*오토딥러닝/ }).click();

@@ -27,6 +27,12 @@ def fleet(tmp_path,monkeypatch):
     import backend.engine.release_eligibility as eligibility
     monkeypatch.setattr(eligibility,'release_authority',lambda project:nullcontext())
     monkeypatch.setattr(eligibility,'authorize_release_action',lambda package,project,action:gates.append(action))
+    # These are simulated transport/ledger controls. Actual graph/truth/model
+    # qualification is exercised in test_whole_flow_service and real native
+    # fleet cases, rather than granted by this synthetic mock package.
+    from backend.engine.managed_service import ManagedService
+    monkeypatch.setattr(ManagedService,'check_live_release',
+        lambda self,release,project,**kwargs:gates.append('whole_flow:'+kwargs['action']))
     monkeypatch.setattr('backend.engine.flow_package_runtime.verify_flow_package',lambda package:(None,{}))
     monkeypatch.setattr('backend.engine.inspection_service._verify_release_policy',lambda *args,**kwargs:None)
     monkeypatch.setattr('backend.engine.fleet.package_archive',lambda package:b'fixture-package-bytes')

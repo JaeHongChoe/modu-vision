@@ -88,7 +88,7 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   evidence.note('trained_model', { job_id: jobId, score_spec: model.score_spec });
 
   await installDesktopHostShim(page, renderer.port);
-  const imported = page.waitForResponse(response => new URL(response.url()).pathname === '/api/dataset/import' && response.request().method() === 'POST');
+  const imported = page.waitForResponse(response => new URL(response.url()).pathname === '/api/dataset/current-summary' && response.request().method() === 'GET');
   await page.goto(renderer.url);
   expect((await imported).status()).toBe(200);
   await page.getByRole('button', { name: /05.*플로우차트/ }).click();

@@ -224,8 +224,14 @@ def qualify_package(project,package,revision_id,*,device,accounts=None):
             raise ValueError('Package checkpoints differ from the reviewed full graph')
         model_approvals=authorize_release_action(package,project,action='stage')
         evidence=verify_release_evidence(package,device)
-        if evidence['receipt_kind']!='flow_parity':
-            raise ValueError('A measured precision variant requires a separate full-flow review')
+        if evidence['receipt_kind']=='measured_precision_cohort':
+            from backend.engine.whole_flow_runtime_review import verified_runtime_review
+            qualified=verified_runtime_review(project,package,revision_id,device=device,accounts=accounts)
+            verified_approval(project,revision_id,accounts=accounts)
+            if verify_release_evidence(package,device,expected_receipt_sha256=evidence['receipt_sha256'])!=evidence:
+                raise ValueError('Package changed during converted whole-flow qualification')
+            return qualified
+        if evidence['receipt_kind']!='flow_parity':raise ValueError('Unknown whole-flow runtime evidence')
         parity_file=package/'parity_receipt.json'
         if parity_file.stat().st_size>2*1024*1024:raise ValueError('Package parity receipt is oversized')
         raw=parity_file.read_bytes()

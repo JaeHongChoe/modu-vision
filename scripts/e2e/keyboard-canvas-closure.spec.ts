@@ -121,7 +121,10 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
         }
     }
     await page.evaluate(() => document.documentElement.style.zoom = '1');
+    const savedDraft = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/draft' && response.request().method() === 'PUT');
     await key(page, page.getByRole('button', { name: '초안 저장', exact: true }));
+    const savedDraftResponse = await savedDraft;
+    expect(savedDraftResponse.ok(), await savedDraftResponse.text()).toBe(true);
     await expect.poll(async () => (await api('/api/flowchart/draft')).pipeline.nodes.find((n: any) => n.id === roiId)?.data.params.roi_bbox).toEqual([65, 32, 258, 162]);
     const draft = await api('/api/flowchart/draft');
     await evidence.screenshot(page, 'keyboard-nodes-original-roi-scale');

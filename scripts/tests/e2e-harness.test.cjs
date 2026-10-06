@@ -320,6 +320,18 @@ test('electron launch options isolate the profile and never carry backend or sha
   assert.equal(options.env.VISION_RESOURCE_LEASE_DB, undefined);
 });
 
+test('native OpenVINO uses only the explicitly selected test interpreter', () => {
+  const args = { appDir:'/runs/app', workspace:{userData:'/owned/profile'}, python:'/base/python',
+    devServerUrl:'http://127.0.0.1:9' };
+  const unselected=harness.electronLaunchOptions({...args,baseEnv:{VISION_OPENVINO_PYTHON:'/shared/python'}});
+  assert.equal(unselected.env.VISION_OPENVINO_PYTHON,undefined);
+  const selected=harness.electronLaunchOptions({...args,baseEnv:{MV_E2E_OPENVINO_PYTHON:process.execPath,
+    VISION_OPENVINO_PYTHON:'/shared/python',VISION_RESOURCE_LEASE_DB:'/shared/db'}});
+  assert.equal(selected.env.VISION_OPENVINO_PYTHON,process.execPath);
+  assert.equal(selected.env.VISION_RESOURCE_LEASE_DB,undefined);
+  assert.throws(()=>harness.electronLaunchOptions({...args,baseEnv:{MV_E2E_OPENVINO_PYTHON:'relative/python'}}),/absolute/);
+});
+
 test('preflight reports missing browsers, version drift and interpreter problems before any test runs', () => {
   const ready = {
     playwright: { locked: '1.0.0', installed: '1.0.0' }, electron: { locked: '2.0.0', installed: '2.0.0' },

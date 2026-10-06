@@ -15,7 +15,7 @@ function render(reviewed){
   const job={job_id:'a'.repeat(32),status:'completed',error:null,result:{package_path:'/project/exports/candidate',models:[{job_id:'model',task:'segmentation',precision:'int8',metrics:{max_absolute_error:.01,validation_image_count:2,reference_latency_mean_ms:8,latency_mean_ms:4}}]}};
   const injected={0:['CPU'],7:job,10:'engineer',11:'Actual holdout outputs reviewed',12:reviewed,14:{model:'revision'},16:{index:0,total:1,image_sha256:'a'.repeat(64),reference:{final_verdict:'NG',roi_count:0,crops:[]},candidate:{final_verdict:'NG',roi_count:0,crops:[]},comparison:{status:'passed',mismatched_fields:[]}}};
   const mockReact={...react,useState:initial=>react.useState(Object.hasOwn(injected,index)?injected[index++]:(index++,initial))};
-  const {RuntimeOptimizationPanel}=load('RuntimeOptimizationPanel.tsx',ref=>ref==='react'?mockReact:ref==='../../services/api'?{api:{}}:ref==='../../services/runtimeDeploymentApi'?{runtimeDeploymentApi:{}}:ref==='../../stores/useProjectStore'?{useProjectStore:selector=>selector({projectDir:'/project'})}:undefined);
+  const {RuntimeOptimizationPanel}=load('RuntimeOptimizationPanel.tsx',ref=>ref==='react'?mockReact:ref==='../../services/api'?{api:{}}:ref==='../../services/runtimeDeploymentApi'?{runtimeDeploymentApi:{}}:ref==='../../stores/useProjectStore'?{useProjectStore:selector=>selector({projectDir:'/project'})}:ref==='./RuntimeFlowReviewPanel'?{RuntimeFlowReviewPanel:()=>null}:undefined);
   return require('react-dom/server').renderToStaticMarkup(react.createElement(RuntimeOptimizationPanel,{packagePath:'/project/exports/source',sourceFolder:'/original',task:'segmentation'}));
 }
 test('runtime panel presents measured evidence and requires explicit holdout review',()=>{

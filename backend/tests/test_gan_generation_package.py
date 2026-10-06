@@ -26,6 +26,26 @@ def test_heldout_gan_evaluation_and_verified_generation_package(tmp_path:Path):
     packaged=json.loads(completed.stdout)
     assert [c['sha256'] for c in local['candidates']]==[c['sha256'] for c in packaged['candidates']]
     assert all(c['status']=='synthetic_unreviewed' for c in packaged['candidates'])
+    import importlib.util,py_compile,struct
+    from backend.engine.gan_package_runtime import GeneratorExecutor
+    verified=package/'backend/engine/gan_package_runtime.py'
+    marker=tmp_path/'unlisted-generator-cache-executed';poison=tmp_path/'controlled-generator-cache.py'
+    poison.write_text(f'from pathlib import Path\nPath({str(marker)!r}).write_text("unverified")\nraise RuntimeError("unlisted generator cached code")\n')
+    cache=Path(importlib.util.cache_from_source(str(verified)));cache.parent.mkdir(exist_ok=True)
+    py_compile.compile(str(poison),cfile=str(cache),doraise=True)
+    raw=cache.read_bytes();stat=verified.stat()
+    cache.write_bytes(raw[:8]+struct.pack('<II',int(stat.st_mtime)&0xffffffff,stat.st_size)+raw[16:])
+    before={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+    direct=subprocess.run([sys.executable,str(package/'generate.py'),'--output',str(tmp_path/'uncached-cli'),'--count','2','--seed','7'],
+        cwd=tmp_path,env={**os.environ,'PYTHONPATH':''},capture_output=True,text=True,timeout=30)
+    assert direct.returncode==0,direct.stderr
+    assert not marker.exists()
+    executed=GeneratorExecutor(package,deadline_ms=30000).execute({'output_dir':str(tmp_path/'uncached-executor'),'count':2,'seed':7})
+    for result in (json.loads(direct.stdout),executed):
+        assert [c['sha256'] for c in result['candidates']]==[c['sha256'] for c in local['candidates']]
+        assert all(c['status']=='synthetic_unreviewed' for c in result['candidates'])
+    assert not marker.exists()
+    assert before=={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
     (package/'best_model.pt').write_bytes(b'tampered')
     import pytest
     with pytest.raises(ValueError,match='checksum'):

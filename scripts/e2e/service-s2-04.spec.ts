@@ -33,7 +33,7 @@ async function setup(page:Page,renderer:RendererServer,workspace:Workspace,evide
  await page.route('**/api/flowchart/models/verify',async route=>{record(route);if(hold)await new Promise<void>(resolve=>{release=resolve;});return json(route,refuse?{detail:'fixture: model reference revoked'}:{verified_job_ids:[model]},refuse?409:200);});
  await page.route('**/api/export/flow/approval-prerequisites?*',route=>{record(route);return json(route,{status:'ready',approval_created:false,approval_revision_ids:{[model]:'revision-fixture'},models:[{job_id:model,task:'anomaly',node_ids:['node_inspect'],checkpoint_sha256:'a'.repeat(64),candidates:[],selected_revision_id:'revision-fixture',reason:null}]});});
  await installDesktopHostShim(page,renderer.port);
- const imported=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/import'&&response.request().method()==='POST');
+ const imported=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/current-summary'&&response.request().method()==='GET');
  await page.goto(renderer.url);const importResponse=await imported;expect(importResponse.status()).toBe(200);
  const importReadback=await importResponse.json();expect(importReadback.total_images).toBe(5);evidence.note('dataset_import',importReadback);
  await expect(page.getByRole('button',{name:/\.png 라벨링에서 열기$/})).toHaveCount(5);
@@ -61,7 +61,9 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}])test(`f
   return {overlap:next?Math.max(0,box.bottom-next.getBoundingClientRect().top):0,rowInside:row.bottom<=box.bottom+1,height:box.height};});
  expect(layout.overlap,'nothing below is drawn over the edit area').toBe(0);expect(layout.rowInside,'the canvas row stays inside the edit area').toBe(true);
  expect(layout.height,'the edit area keeps at least 240 px').toBeGreaterThanOrEqual(240);
- await expect(page.getByRole('list',{name:'목적 레시피'}).getByRole('button')).toHaveCount(5);
+ // The rotated ROI starter is part of the current six-recipe catalog.
+ await expect(page.getByRole('list',{name:'목적 레시피'}).getByRole('button')).toHaveCount(6);
+ await expect(page.getByRole('list',{name:'목적 레시피'}).getByRole('button',{name:/^회전 ROI 정렬 검사/})).toBeVisible();
  await expect(page.locator('[data-primary-action]:visible')).toHaveText(['플로우 저장']);
  await evidence.screenshot(page,`s204-edit-${viewport.width}`);
  await area(page,'편집').focus();await page.keyboard.press('ArrowRight');await expect(area(page,'테스트')).toBeFocused();await expect(area(page,'테스트')).toHaveAttribute('aria-selected','true');

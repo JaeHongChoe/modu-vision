@@ -15,19 +15,21 @@ from backend.engine.fleet import FleetRegistry
 from backend.engine.flow_package import build_flow_package
 from backend.engine.flowchart_engine import FlowchartEngine, get_single_segmentation_flowchart
 from backend.engine.managed_service import ManagedService
-from backend.tests.runtime_release_fixture import real_classification_checkpoints, cohort_receipt
+from backend.tests.runtime_release_fixture import real_classification_checkpoints, cohort_receipt, synthetic_service_truth, reviewed_graph_fixture, synthetic_model_report
 from backend.tests.test_model_deployments import _fixture, _report, _approve, _params
 
 
-@pytest.fixture
-def bound_context(tmp_path, monkeypatch):
+def _bound_context(tmp_path,monkeypatch,*,reviewed=False):
     monkeypatch.chdir(tmp_path)
     client, project, source, fingerprint, models = _fixture(tmp_path)
     real_classification_checkpoints(models)
+    if reviewed:synthetic_service_truth(project,[source/'test/OK/ok_00.png',source/'test/NG/ng_00.png'],models=models)
     for checkpoint in models.values():
         (checkpoint.parent / 'dataset').mkdir(exist_ok=True)
     annotation_token = set_request_annotation_root(Path(project['annotations_dir']))
     project_token = set_request_project_root(Path(project['project_dir']))
+    from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root
+    split_token=set_request_split_root(Path(project['dataset_dir'])/'splits')
     # Deterministic predictions isolate evidence freshness from model quality.
     with monkeypatch.context() as patch:
         patch.setattr(FlowchartEngine, 'execute', lambda self, **kw: {'final_verdict': Path(kw['image_path']).parent.name})
@@ -40,8 +42,19 @@ def bound_context(tmp_path, monkeypatch):
     try:
         yield client, project, source, models, report
     finally:
+        reset_request_split_root(split_token)
         reset_request_annotation_root(annotation_token)
         reset_request_project_root(project_token)
+
+
+@pytest.fixture
+def bound_context(tmp_path,monkeypatch):
+    yield from _bound_context(tmp_path,monkeypatch)
+
+
+@pytest.fixture
+def reviewed_context(tmp_path,monkeypatch):
+    yield from _bound_context(tmp_path,monkeypatch,reviewed=True)
 
 
 def _change_truth(project, source):
@@ -61,6 +74,13 @@ def _package(tmp_path, source, models, revision, name='release'):
     package = Path(result['package_path'])
     cohort_receipt(package, graph, {job: models[job]}, [source/'test/OK/ok_00.png', source/'test/NG/ng_00.png'])
     return package
+
+
+def _review_package(project,package):
+    from backend.engine.flow_package_runtime import verify_flow_package
+    graph,_=verify_flow_package(Path(package))
+    parity=json.loads((Path(package)/'parity_receipt.json').read_text())
+    return reviewed_graph_fixture(project,graph,[row['image_path'] for row in parity['images']])
 
 
 def test_changed_reviewed_truth_blocks_approval(bound_context):
@@ -120,8 +140,8 @@ class _Transport:
     def json(self): return dict(self.response)
 
 
-def test_central_rollback_rechecks_revocation_and_preserves_valid_history(bound_context, tmp_path, monkeypatch):
-    client, project, source, models, first_report = bound_context
+def test_central_rollback_rechecks_revocation_and_preserves_valid_history(reviewed_context, tmp_path, monkeypatch):
+    client, project, source, models, first_report = reviewed_context
     service = ManagedService(project['project_dir'])
     registry = FleetRegistry(project['project_dir'])
     target = registry.save_target(name='Transport fixture', url='https://example.invalid', token='fixture-token-no-network')
@@ -129,12 +149,13 @@ def test_central_rollback_rechecks_revocation_and_preserves_valid_history(bound_
     monkeypatch.setattr(FleetRegistry, 'client', lambda self, identifier: transport)
     revisions = []; releases = []; deployed = []
     for index, (baseline, candidate) in enumerate([('job_base','job_candidate'), ('job_candidate','job_third')]):
-        report = first_report if index == 0 else _report(project, source, deployments._fingerprint(source), models,
+        report = first_report if index == 0 else synthetic_model_report(project, source, deployments._fingerprint(source), models,
             incumbent=baseline, candidate=candidate, comparison_id='comparison_'+'b'*32)
         approved = _approve(client, source, report['comparison_id'])
         assert approved.status_code == 200, approved.text
         revision = approved.json()['revision']
         package = _package(tmp_path, source, models, revision, 'release'+str(index))
+        _review_package(project,package)
         release = service.stage(package, project, device='cpu')
         revisions.append(revision); releases.append(release)
         deployed.append(registry.apply(target['target_id'], release, reviewer='fixture'))
@@ -203,11 +224,12 @@ def test_approval_rechecks_truth_changed_after_assessment(bound_context, monkeyp
     assert client.get('/api/model-deployments/active', params=_params(source)).json()['active'] is None
 
 
-def test_stage_rechecks_truth_changed_while_copying(bound_context, tmp_path, monkeypatch):
-    client, project, source, models, report = bound_context
+def test_stage_rechecks_truth_changed_while_copying(reviewed_context, tmp_path, monkeypatch):
+    client, project, source, models, report = reviewed_context
     approved = _approve(client, source, report['comparison_id'])
     assert approved.status_code == 200, approved.text
     package = _package(tmp_path, source, models, approved.json()['revision'])
+    _review_package(project,package)
     import shutil
     copy = shutil.copyfile
     changed = False

@@ -58,6 +58,8 @@ jobs:
           backend/tests/test_service_score_contract.py
           backend/tests/test_dataset_index_stat_identity.py
           backend/tests/test_dataset_source_status.py
+          backend/tests/test_dataset_import_contract.py
+          backend/tests/test_split_seed_order.py
           backend/tests/test_annotation_save_source_spelling.py
           backend/tests/test_service_release_eligibility.py
           backend/tests/test_fleet_emergency_rollback.py
@@ -79,6 +81,7 @@ jobs:
           backend/tests/test_specialist_training_queue.py
           backend/tests/test_specialist_cancel_observation.py
           backend/tests/test_remote_training_controls.py
+          backend/tests/test_remote_coordinator.py
           backend/tests/test_remote_training_state_transfer.py
           backend/tests/test_remote_compute_reliability.py
           backend/tests/test_training_status_observation.py
@@ -129,6 +132,11 @@ jobs:
           backend/tests/test_whole_flow_evaluation.py
           backend/tests/test_whole_flow_approval.py
           backend/tests/test_whole_flow_service.py
+          backend/tests/test_whole_flow_runtime_review.py
+          backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
+          backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
+          backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph
+          backend/tests/test_gan_generation_package.py
           backend/tests/test_dino_flow_threshold_precision.py
           backend/tests/test_flow_package.py
           backend/tests/test_flow_package_raster_parity.py
@@ -177,6 +185,7 @@ jobs:
           backend/tests/test_service_s1_08.py
           backend/tests/test_global_migration.py
           backend/tests/test_historical_job_binding.py
+          backend/tests/test_terminal_runtime_history.py
           backend/tests/test_migration_sqlite_lifetime.py
           backend/tests/test_anomaly_folder_case.py
           backend/tests/test_service_s4_05_calibration.py backend/tests/test_service_s4_07_evaluation_contract.py

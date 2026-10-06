@@ -23,17 +23,25 @@ from backend.engine.edge_runtime import create_edge_profile
 
 
 _RUNNER = """#!/usr/bin/env python3
-from backend.engine.flow_package_runtime import main
+import sys, tempfile
+sys.dont_write_bytecode = True
+with tempfile.TemporaryDirectory(prefix='vision-flow-bytecode-') as _owned_cache:
+    sys.pycache_prefix = _owned_cache
+    from backend.engine.flow_package_runtime import main
 
-if __name__ == '__main__':
-    raise SystemExit(main())
+    if __name__ == '__main__':
+        raise SystemExit(main())
 """
 
 _SERVICE_RUNNER = """#!/usr/bin/env python3
-from backend.engine.inspection_service import main
+import sys, tempfile
+sys.dont_write_bytecode = True
+with tempfile.TemporaryDirectory(prefix='vision-service-bytecode-') as _owned_cache:
+    sys.pycache_prefix = _owned_cache
+    from backend.engine.inspection_service import main
 
-if __name__ == '__main__':
-    raise SystemExit(main())
+    if __name__ == '__main__':
+        raise SystemExit(main())
 """
 
 _EDGE_RUNNER = """#!/usr/bin/env python3

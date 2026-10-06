@@ -10,6 +10,25 @@ from PIL import Image
 from backend.tests.test_runtime_deadline_sdk import real_package
 
 
+@pytest.mark.parametrize('deadline', [None, 30000])
+def test_openvino_service_inference_uses_owned_worker_without_a_deadline(tmp_path, monkeypatch, deadline):
+    """A ready service must not import OpenVINO into the API process."""
+    from backend.engine import flow_package_runtime as runtime
+    package = tmp_path / 'converted'
+    package.mkdir()
+    (package / 'manifest.json').write_text(json.dumps({'files': [{'path': 'openvino_models.json'}]}))
+    (package / 'runtime_config.json').write_text(json.dumps({'device': 'openvino:CPU', 'cpu_threads': 1}))
+    calls = []
+    def isolated(root, image, image_id, options):
+        calls.append((root, image, image_id, options))
+        return {'final_verdict': 'REVIEW', 'runtime_execution': {'isolated_process': True}}
+    monkeypatch.setattr(runtime, '_run_isolated', isolated)
+    result = runtime.run_flow_package(package, tmp_path / 'input.png', 'queued-image', deadline_ms=deadline)
+    assert result['runtime_execution']['isolated_process'] is True
+    assert calls == [(package, tmp_path / 'input.png', 'queued-image',
+                      {'device': 'openvino:CPU', 'cpu_threads': 1, 'deadline_ms': deadline})]
+
+
 def test_openvino_target_never_falls_back_to_cpu():
     pytest.importorskip('openvino')
     from backend.engine.openvino_runtime import available_openvino_devices,require_openvino_device

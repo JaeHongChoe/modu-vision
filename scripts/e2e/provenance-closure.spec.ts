@@ -21,7 +21,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  let dialog=page.getByRole('dialog',{name:'데이터·모델·판정 이력',exact:true});
  await dialog.getByLabel('검사 이미지',{exact:true}).selectOption(image);
  const traceRoute='/api/provenance?image_path='+encodeURIComponent(image);
- const before=await api(traceRoute);expect(before.review_binding.image_eligible).toBe(true);expect(before.models[0].data_state).toBe('current');expect(before.split.sha256).toMatch(/^[a-f0-9]{64}$/);expect(before.split.sha256).toBe(fixture.binding.split_sha256);expect(before.split.assignment).toBe('val');
+ const before=await api(traceRoute);expect(before.review_binding.image_eligible).toBe(true);expect(before.models[0].data_state).toBe('current');expect(before.split.sha256).toMatch(/^[a-f0-9]{64}$/);expect(before.split.sha256).toBe(fixture.binding.split_sha256);expect(before.split.assignment).toBe(fixture.split_assignment);
  await expect(dialog.getByRole('region',{name:'현재 검수·학습 적격성'})).toContainText('전체 적격 1장');
  await dialog.getByText('classification · job_trace',{exact:false}).click();
  await expect(dialog).toContainText(before.split.sha256);

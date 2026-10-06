@@ -8,9 +8,10 @@ from fastapi.testclient import TestClient
 from backend.engine.fleet import FleetRegistry
 from backend.engine.managed_service import ManagedService
 from backend.main import create_app
-from backend.tests.test_service_release_eligibility import bound_context, _package, _Transport
+from backend.tests.test_service_release_eligibility import bound_context, reviewed_context, _package, _Transport, _review_package
 from backend.tests.test_model_deployments import _fixture, _report, _approve, _params
 from backend.api import routes_model_deployments as deployments
+from backend.tests.runtime_release_fixture import synthetic_model_report
 
 
 def _shared_sessions(tmp_path, project):
@@ -86,15 +87,16 @@ def test_desktop_capability_is_explicit_and_caller_cannot_supply_actor(emergency
     assert no_token.status_code == 401
 
 
-def test_emergency_owner_admin_local_success_and_revocation_preserve_live_gates(bound_context, tmp_path, monkeypatch):
-    desktop, project, source, models, first_report = bound_context
+def test_emergency_owner_admin_local_success_and_revocation_preserve_live_gates(reviewed_context, tmp_path, monkeypatch):
+    desktop, project, source, models, first_report = reviewed_context
     first = _approve(desktop, source, first_report['comparison_id'])
     assert first.status_code == 200, first.text
-    second_report = _report(project, source, deployments._fingerprint(source), models,
+    second_report = synthetic_model_report(project, source, deployments._fingerprint(source), models,
         incumbent='job_candidate', candidate='job_third', comparison_id='comparison_'+'b'*32)
     second = _approve(desktop, source, second_report['comparison_id'])
     assert second.status_code == 200, second.text
     package = _package(tmp_path, source, models, second.json()['revision'])
+    _review_package(project,package)
     release = ManagedService(project['project_dir']).stage(package, project, device='cpu')
     registry = FleetRegistry(project['project_dir'])
     target = registry.save_target(name='Mock agent', url='https://example.invalid', token='fixture-token-12345678')

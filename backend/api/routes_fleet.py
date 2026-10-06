@@ -65,7 +65,9 @@ def rollback_capabilities(request,project):
 def scope(request):
     project=get_current_project(request)
     if not project:raise HTTPException(409,'Open a project first')
-    return FleetRegistry(project['project_dir']),project
+    account=getattr(request.state,'account_user',None)
+    return FleetRegistry(project['project_dir'],accounts=getattr(request.app.state,'accounts',None),
+                         authority_user_id=account['id'] if account else None),project
 
 
 def execute(action):
@@ -93,7 +95,7 @@ def deploy(target_id:str,payload:DeployRequest,request:Request):
         store.target(target_id)
         try:
             if not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?|openvino:(CPU|GPU|NPU)',payload.device):raise ValueError('Unsupported field execution device')
-            release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device)
+            release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device,accounts=store.accounts)
         except (ValueError,OSError,RuntimeError) as exc:
             store.record_failure(target_id,action='apply',reviewer=payload.reviewer,error=exc)
             raise
@@ -135,7 +137,7 @@ def create_rollout(payload:RolloutRequest,request:Request):
     def action():
         import re
         if not re.fullmatch(r'cpu|mps|cuda(?::[0-9]+)?|openvino:(CPU|GPU|NPU)',payload.device):raise ValueError('Unsupported field execution device')
-        release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device)
+        release=ManagedService(project['project_dir']).stage(payload.package_path,project,device=payload.device,accounts=store.accounts)
         return store.create_rollout(release,target_ids=payload.target_ids,canary_target_ids=payload.canary_target_ids,batch_size=payload.batch_size,reviewer=payload.reviewer,project=project)
     return execute(action)
 
