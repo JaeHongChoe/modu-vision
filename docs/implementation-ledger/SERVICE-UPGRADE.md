@@ -692,3 +692,8 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 ## Task118 선택 서버 평가·예측·생성 (S4-11 일부)
 
 선택한 서버/장치의 실행 근거와 모델·입력 해시를 저장하고 다시 읽는다. 서버 연결 실패503에서 로컬 예측을 실행하지 않는다. 실제 CPU worker10개, backend11+27+45, renderer783, Chrome/Electron2개 검증 통과. 근거 SHA256 512087f8c9bf8254ddde5e9cd3802e6fba32416ccfbaedf216499da44752465b. 일반 모델 단일 예측·benchmark·export preflight와 로컬 자동 기록은 남아 있어 S4-11은 진행 중이다. 구현 검증56/82, 남은26개 중 Windows 제외25개. 전체 수용·독립 검토·실제 서버 GPU 완료를 뜻하지 않는다.
+
+
+## Task119 로컬 평가·예측 자동 기록 (S4-11 일부)
+
+로컬 작업대 실행도 엄격한 장치 선택과 모델·입력·실행 근거를 저장한다. 실행 직후 기록을 자동 갱신하고 오래된 프로젝트/서버 응답과 뒤늦은 이전 목록을 버린다. 실제 Chrome/Electron2개, backend11,renderer784,types/build 통과. 실제 CPU 근거19개·선택 worker10개, root SHA256 d4e724eeb90141eb6db8a94b55752576abc90e0afcc26e20c89673a742fee7ca. 일반 모델 예측·속도 측정·내보내기 사전검사는 남아 있다. 구현 검증56/82; Windows 제외 남은25개.

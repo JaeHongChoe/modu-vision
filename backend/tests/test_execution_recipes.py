@@ -129,6 +129,18 @@ def test_all_native_recipes_execute_actual_completed_models_on_owned_cpu(tmp_pat
         from backend.engine.defect_gan import validate_composition_source
         generated=result.json();validate_composition_source(generated['review_dir'],generated)
         assert len(generated['candidates'])==2 and all(Path(r['path']).is_file() for r in generated['candidates'])
+    local_body={**body,'execution_target':'local'};local_body.pop('compute_profile_id')
+    local=client.post('/api/model-execution/recipes',json=local_body);assert local.status_code==200,local.text
+    a,b=local.json(),result.json();assert a['execution']['device']=='cpu' and a['execution']['input_binding_sha256']==b['execution']['input_binding_sha256']
+    if task=='defect_gan':assert [v['sha256'] for v in a['candidates']]==[v['sha256'] for v in b['candidates']]
+    else:assert a['source_sha256']==b['source_sha256']
+    reopened=client.get('/api/model-execution/recipes/'+a['execution']['receipt_id']);assert reopened.status_code==200
+    assert reopened.json()['evidence_sha256']==a['execution']['evidence_sha256']
     body.update(stage='evaluate',params={'job_id':job,'dataset_path':dataset,'split':'test'})
     evaluated=client.post('/api/model-execution/recipes',json=body);assert evaluated.status_code==200,evaluated.text
     assert evaluated.json()['execution']['runtime']['torch_version'] and remote.launches==2
+    local_body={**body,'execution_target':'local'};local_body.pop('compute_profile_id')
+    local_eval=client.post('/api/model-execution/recipes',json=local_body);assert local_eval.status_code==200,local_eval.text
+    metric={'ocr':'character_error_rate','rotated_detection':'mAP_50','enhancement':'output_mse','defect_gan':'rgb_statistics_mmd'}[task]
+    assert local_eval.json()[metric]==evaluated.json()[metric]
+    assert local_eval.json()['execution']['checkpoint_sha256']==evaluated.json()['execution']['checkpoint_sha256']

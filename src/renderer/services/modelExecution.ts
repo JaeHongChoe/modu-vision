@@ -1,4 +1,4 @@
-import {request} from './api';
+import {request,getApiPersistenceIdentity,getProjectContextGeneration} from './api';
 import {useComputeStore} from '../stores/useComputeStore';
 import {useProjectStore} from '../stores/useProjectStore';
 import type {ModelFamily} from './modelTrainingProgram';
@@ -40,18 +40,27 @@ export async function requireLocalSearch<T>(local:()=>T|Promise<T>):Promise<T>{
  return local();
 }
 
-/** All native trial actions share the selected execution profile; a failed
- * server request has no local retry. Legacy local routes remain compatible. */
-export async function executeModelRecipe<T>(task:ModelFamily,stage:'evaluate'|'predict'|'generate',params:Record<string,any>,local:()=>Promise<T>):Promise<T>{
- if(useComputeStore.getState().isLoaded===false)throw new Error('실행 서버 설정을 먼저 확인하세요.');
- const target=useComputeStore.getState();if(!target.selectedProfileId)return local();
- if(!target.isLoaded)throw new Error('실행 서버 설정을 먼저 확인하세요.');
- const profile=target.profiles.find(row=>row.id===target.selectedProfileId);if(!profile)throw new Error('선택한 실행 서버를 찾지 못했습니다.');
- const {device='cpu',...options}=params;if(device==='mps')throw new Error('선택 서버에서는 MPS 대신 서버 CPU 또는 CUDA를 선택하세요.');
- if(!['cpu','cuda','cuda:0'].includes(device))throw new Error('실행 장치를 확인하세요.');
- const signature=JSON.stringify(profile);
- const result=await request<T>('/api/model-execution/recipes',{method:'POST',body:JSON.stringify({task,stage,execution_target:'selected_compute',compute_profile_id:profile.id,device,params:options})});
- const current=useComputeStore.getState();
- if(current.selectedProfileId!==profile.id||current.transportRevision!==target.transportRevision||JSON.stringify(current.profiles.find(row=>row.id===profile.id))!==signature)throw new Error('실행 서버가 변경됐습니다. 현재 위치에서 다시 확인하세요.');
+type RecipeCompletion={task:string;jobId:string;context:string};
+const recipeListeners=new Set<(event:RecipeCompletion)=>void>();
+export function subscribeModelRecipes(listener:(event:RecipeCompletion)=>void){recipeListeners.add(listener);return()=>{recipeListeners.delete(listener);};}
+export function getExecutionContextIdentity(){
+ const project=useProjectStore.getState(),compute=useComputeStore.getState();
+ return JSON.stringify([project.projectDir,project.project?.id,project.project?.source_dataset_dir,project.project?.active_labelset_id,compute.transportRevision,getApiPersistenceIdentity(),getProjectContextGeneration()]);
+}
+/** Local and selected native actions use the same strict, persisted recipe.
+ * The optional legacy callback remains a source-compatibility parameter only;
+ * it is never executed as a bypass or as fallback after a failed recipe. */
+export async function executeModelRecipe<T>(task:ModelFamily,stage:'evaluate'|'predict'|'generate',params:Record<string,any>,_legacyLocal?:()=>Promise<T>):Promise<T>{
+ const target=useComputeStore.getState();if(!target.isLoaded)throw new Error('실행 서버 설정을 먼저 확인하세요.');
+ const selected=target.selectedProfileId,revision=target.transportRevision;
+ const profile=selected?target.profiles.find(row=>row.id===selected):null;if(selected&&!profile)throw new Error('선택한 실행 서버를 찾지 못했습니다.');
+ const {device='cpu',...options}=params;
+ if(profile&&device==='mps')throw new Error('선택 서버에서는 MPS 대신 서버 CPU 또는 CUDA를 선택하세요.');
+ if(!['cpu','cuda','cuda:0','mps'].includes(device))throw new Error('실행 장치를 확인하세요.');
+ const signature=JSON.stringify(profile),context=getExecutionContextIdentity();
+ const result=await request<T>('/api/model-execution/recipes',{method:'POST',body:JSON.stringify({task,stage,execution_target:profile?'selected_compute':'local',...(profile?{compute_profile_id:profile.id}:{}),device,params:options})});
+ const current=useComputeStore.getState(),currentProfile=selected?current.profiles.find(row=>row.id===selected):null;
+ if(current.selectedProfileId!==selected||current.transportRevision!==revision||JSON.stringify(currentProfile)!==signature||getExecutionContextIdentity()!==context)throw new Error('프로젝트 또는 실행 서버가 변경됐습니다. 현재 위치에서 다시 확인하세요.');
+ for(const listener of recipeListeners)listener({task,jobId:String(options.job_id),context});
  return result;
 }

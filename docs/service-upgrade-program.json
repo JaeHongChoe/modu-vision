@@ -3335,6 +3335,12 @@
      "result": "Task118 explicit specialist evaluation/prediction/generation on the selected profile, immutable runtime/model/input receipts and reopen; no API-host fallback.",
      "scope": "11 actual CPU recipe regressions, 10 actual in-process selected workers across five native families; 27 authorization and45 related checks; renderer783, types/build, actual Chrome and development Electron2 pass. Root readback 512087f8c9bf8254ddde5e9cd3802e6fba32416ccfbaedf216499da44752465b,1456 source inputs/678 artifacts. Parent remains incomplete.",
      "platform": "macOS CPU and owned loopback; real SSH/GPU, core-model inference/benchmark/export preflight and automatic local-native receipts remain pending. Windows excluded; independent review and final acceptance pending."
+    },
+    {
+     "kind": "partial-local-native-recipe-receipts",
+     "result": "Task119 actual local workbench actions use the same strict receipt endpoint; successful actions refresh current-context history automatically and discard late project/target/older history responses.",
+     "scope": "Actual five-family local/selected CPU parity:19 saved receipts and10 selected in-process workers;11 backend cases,renderer784,types/build and actual Chrome/Electron2 pass. Root d4e724eeb90141eb6db8a94b55752576abc90e0afcc26e20c89673a742fee7ca,1456 source inputs/702 artifacts.",
+     "platform": "macOS CPU control fixtures; general inference/benchmark/export preflight still pending. Parent not closed; Windows excluded; no new real SSH/GPU or independent/final acceptance."
     }
    ],
    "file_actions": {
