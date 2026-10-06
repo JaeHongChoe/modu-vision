@@ -165,66 +165,70 @@ def test_actual_openvino_full_flow_review_and_package_reopen(tmp_path,monkeypatc
     project=dict(id='actual-converted-control',project_dir=str(project_dir),source_dataset_dir=str(source),
         dataset_dir=str(project_dir/'dataset'),annotations_dir=str(project_dir/'annotations'),
         models_dir=str(project_dir/'models'),task='segmentation',active_labelset_id='default')
-    model=build_segmentation_model('unet',num_classes=2,pretrained=False)
-    with torch.no_grad():
-        for parameter in model.parameters():parameter.zero_()
-        model.head.bias[1]=8
-    checkpoint=project_dir/'models/job_ir/best_model.pt';checkpoint.parent.mkdir(parents=True)
-    torch.save(dict(task='segmentation',model_name='unet',classes=['background','defect'],image_size=[32,32],model_state_dict=model.state_dict()),checkpoint)
-    (checkpoint.parent/'model_meta.json').write_text(json.dumps({'task':'segmentation','classes':['background','defect']}))
-    graph=get_single_segmentation_flowchart('job_ir');graph.nodes[1].data.crop_padding=0
-    graph.nodes[1].data.params={'min_defect_area_px':1}
-    version='9'*32;folder=project_dir/'flowcharts/versions';folder.mkdir(parents=True)
-    (folder/(version+'.json')).write_text(json.dumps({'version_id':version,'recipe_task':'segmentation','source_dataset_path':str(source),'pipeline':graph.model_dump()}))
-    files=[]
-    for name,color,truth in [('normal',(20,30,40),'OK'),('defect',(170,40,30),'NG')]:
-        file=source/(name+'.png');Image.new('RGB',(32,32),color).save(file);files.append(file)
-        current=image_truth.read_truth(project,str(file),task='segmentation',classes=['background','defect'])
-        image_truth.declare_truth(project,str(file),task='segmentation',classes=['background','defect'],verdict=truth,
-            defect_classes=['defect'] if truth=='NG' else [],reviewer='Synthetic control author',
-            expected_revision=current['truth_revision'],expected_image_revision=current['image_revision'])
-    split=project_dir/'dataset/splits'/f'{hashlib.sha256(str(source).encode()).hexdigest()}.json';split.parent.mkdir(parents=True)
-    split.write_text(json.dumps({'folder_path':str(source),'assignments':{p.name:'test' for p in files}}))
-    provider=lambda *args:{('job_ir','segmentation'):{'path':str(checkpoint),'metadata':{'classes':['background','defect']}}}
-    cohort=flow_evaluation.freeze_cohort(project,version,model_provider=provider)
-    evaluated=flow_evaluation.evaluate_flow(project,version,cohort['cohort_id'],model_provider=provider,
-        engine=FlowchartEngine(device='cpu',checkpoint_resolver=lambda *_:checkpoint))
-    assert evaluated['status']=='completed' and evaluated['metrics']['overkill_rate']==1
-    monkeypatch.setattr(whole_flow_approval,'verify_project_context',lambda _:None)
-    # Deliberately permissive synthetic policy exercises integration, not acceptable process quality.
-    policy=dict(policy_id='synthetic-control-only',revision=1,minimum_normal=1,minimum_defect=1,
-        maximum_escape_rate=0,maximum_overkill_rate=1,maximum_review_rate=0)
-    base=whole_flow_approval.approve_flow(project,evaluation_id=evaluated['evaluation_id'],policy=policy,
-        reviewer='Synthetic control author',reason='Actual execution integration control; not manufacturing approval',
-        holdout_reviewed=True,expected_revision=None)
-    exports=project_dir/'exports'
-    original=Path(build_flow_package(pipeline=graph,checkpoints={'job_ir':checkpoint},output_base_dir=exports,package_name='original')['package_path'])
-    inputs=_optimization_input_receipt(project,source,[],[str(p) for p in files])
-    converted=optimize_flow_package(original,output_dir=exports/'converted',validation_images=files,input_receipt=inputs)
-    revision={'revision_id':'7'*32,'job_id':'job_ir','task':'segmentation','checkpoint_sha256':hashlib.sha256(checkpoint.read_bytes()).hexdigest()}
-    released=Path(approve_precision_package(converted['package_path'],exports/'approved',revisions={'job_ir':revision},
-        reviewer='Synthetic control author',reason='Actual measured IR integration control',maximum_absolute_drift=.001,holdout_reviewed=True)['package_path'])
-    # Controlled model approval authority only; package verification, input/truth binding,
-    # PyTorch/IR inference, metrics, persistence and revalidation stay actual.
-    monkeypatch.setattr(release_eligibility,'authorize_release_action',lambda *a,**k:[revision])
-    before={p.relative_to(released).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in released.rglob('*') if p.is_file()}
-    with pytest.raises(ValueError,match='runtime review'):
-        whole_flow_approval.qualify_package(project,released,base['revision_id'],device='openvino:CPU')
-    review=approve_runtime_flow(project,released,base['revision_id'],device='openvino:CPU',reviewer='Synthetic control author',
-        reason='Actual converted decisions and explicit synthetic truth reviewed for integration control',holdout_reviewed=True,expected_revision=None)
-    assert review['subject']['metrics']['overkill_rate']==1
-    qualified=whole_flow_approval.qualify_package(project,released,base['revision_id'],device='openvino:CPU')
-    assert qualified['runtime_review_revision_id']==review['revision_id'] and qualified['device_accepted'] is False
-    from backend.engine.inspection_service import _verify_release_policy
-    seal=tmp_path/'sealed-policy.json';seal.write_text(json.dumps({'schema_version':1,
-        'manifest_sha256':hashlib.sha256((released/'manifest.json').read_bytes()).hexdigest(),
-        'approval_revisions':[revision],'device':'openvino:CPU',
-        'runtime_acceptance_sha256':qualified['runtime_acceptance_sha256'],'whole_flow_review':qualified}))
-    _verify_release_policy(released,verify_flow_package(released)[1],seal,device='openvino:CPU')
-    actual=Predictor(released,device='openvino:CPU',deadline_ms=30000).predict(files[0])
-    assert actual['model_runtime']['backend']=='openvino' and actual['final_verdict']=='NG'
-    assert before=={p.relative_to(released).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in released.rglob('*') if p.is_file()}
-    receipt=dict(actual_pytorch_and_openvino_execution=True,synthetic_truth=True,process_quality_approved=False,
-        model_authority_controlled=True,package_bytes_unchanged=True,device_accepted=False,
-        checkpoint_sha256=revision['checkpoint_sha256'],runtime_review_sha256=review['record_sha256'],qualified=qualified)
-    (tmp_path/'actual-converted-flow-receipt.json').write_text(json.dumps(receipt,indent=2))
+    from backend.engine.release_eligibility import evidence_context
+    # Match the app request's annotation and saved heldout-split context for
+    # receipt creation, conversion and all subsequent live revalidation.
+    with evidence_context(project):
+        model=build_segmentation_model('unet',num_classes=2,pretrained=False)
+        with torch.no_grad():
+            for parameter in model.parameters():parameter.zero_()
+            model.head.bias[1]=8
+        checkpoint=project_dir/'models/job_ir/best_model.pt';checkpoint.parent.mkdir(parents=True)
+        torch.save(dict(task='segmentation',model_name='unet',classes=['background','defect'],image_size=[32,32],model_state_dict=model.state_dict()),checkpoint)
+        (checkpoint.parent/'model_meta.json').write_text(json.dumps({'task':'segmentation','classes':['background','defect']}))
+        graph=get_single_segmentation_flowchart('job_ir');graph.nodes[1].data.crop_padding=0
+        graph.nodes[1].data.params={'min_defect_area_px':1}
+        version='9'*32;folder=project_dir/'flowcharts/versions';folder.mkdir(parents=True)
+        (folder/(version+'.json')).write_text(json.dumps({'version_id':version,'recipe_task':'segmentation','source_dataset_path':str(source),'pipeline':graph.model_dump()}))
+        files=[]
+        for name,color,truth in [('normal',(20,30,40),'OK'),('defect',(170,40,30),'NG')]:
+            file=source/(name+'.png');Image.new('RGB',(32,32),color).save(file);files.append(file)
+            current=image_truth.read_truth(project,str(file),task='segmentation',classes=['background','defect'])
+            image_truth.declare_truth(project,str(file),task='segmentation',classes=['background','defect'],verdict=truth,
+                defect_classes=['defect'] if truth=='NG' else [],reviewer='Synthetic control author',
+                expected_revision=current['truth_revision'],expected_image_revision=current['image_revision'])
+        split=project_dir/'dataset/splits'/f'{hashlib.sha256(str(source).encode()).hexdigest()}.json';split.parent.mkdir(parents=True)
+        split.write_text(json.dumps({'folder_path':str(source),'assignments':{p.name:'test' for p in files}}))
+        provider=lambda *args:{('job_ir','segmentation'):{'path':str(checkpoint),'metadata':{'classes':['background','defect']}}}
+        cohort=flow_evaluation.freeze_cohort(project,version,model_provider=provider)
+        evaluated=flow_evaluation.evaluate_flow(project,version,cohort['cohort_id'],model_provider=provider,
+            engine=FlowchartEngine(device='cpu',checkpoint_resolver=lambda *_:checkpoint))
+        assert evaluated['status']=='completed' and evaluated['metrics']['overkill_rate']==1
+        monkeypatch.setattr(whole_flow_approval,'verify_project_context',lambda _:None)
+        # Deliberately permissive synthetic policy exercises integration, not acceptable process quality.
+        policy=dict(policy_id='synthetic-control-only',revision=1,minimum_normal=1,minimum_defect=1,
+            maximum_escape_rate=0,maximum_overkill_rate=1,maximum_review_rate=0)
+        base=whole_flow_approval.approve_flow(project,evaluation_id=evaluated['evaluation_id'],policy=policy,
+            reviewer='Synthetic control author',reason='Actual execution integration control; not manufacturing approval',
+            holdout_reviewed=True,expected_revision=None)
+        exports=project_dir/'exports'
+        original=Path(build_flow_package(pipeline=graph,checkpoints={'job_ir':checkpoint},output_base_dir=exports,package_name='original')['package_path'])
+        inputs=_optimization_input_receipt(project,source,[],[str(p) for p in files])
+        converted=optimize_flow_package(original,output_dir=exports/'converted',validation_images=files,input_receipt=inputs)
+        revision={'revision_id':'7'*32,'job_id':'job_ir','task':'segmentation','checkpoint_sha256':hashlib.sha256(checkpoint.read_bytes()).hexdigest()}
+        released=Path(approve_precision_package(converted['package_path'],exports/'approved',revisions={'job_ir':revision},
+            reviewer='Synthetic control author',reason='Actual measured IR integration control',maximum_absolute_drift=.001,holdout_reviewed=True)['package_path'])
+        # Controlled model approval authority only; package verification, input/truth binding,
+        # PyTorch/IR inference, metrics, persistence and revalidation stay actual.
+        monkeypatch.setattr(release_eligibility,'authorize_release_action',lambda *a,**k:[revision])
+        before={p.relative_to(released).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in released.rglob('*') if p.is_file()}
+        with pytest.raises(ValueError,match='runtime review'):
+            whole_flow_approval.qualify_package(project,released,base['revision_id'],device='openvino:CPU')
+        review=approve_runtime_flow(project,released,base['revision_id'],device='openvino:CPU',reviewer='Synthetic control author',
+            reason='Actual converted decisions and explicit synthetic truth reviewed for integration control',holdout_reviewed=True,expected_revision=None)
+        assert review['subject']['metrics']['overkill_rate']==1
+        qualified=whole_flow_approval.qualify_package(project,released,base['revision_id'],device='openvino:CPU')
+        assert qualified['runtime_review_revision_id']==review['revision_id'] and qualified['device_accepted'] is False
+        from backend.engine.inspection_service import _verify_release_policy
+        seal=tmp_path/'sealed-policy.json';seal.write_text(json.dumps({'schema_version':1,
+            'manifest_sha256':hashlib.sha256((released/'manifest.json').read_bytes()).hexdigest(),
+            'approval_revisions':[revision],'device':'openvino:CPU',
+            'runtime_acceptance_sha256':qualified['runtime_acceptance_sha256'],'whole_flow_review':qualified}))
+        _verify_release_policy(released,verify_flow_package(released)[1],seal,device='openvino:CPU')
+        actual=Predictor(released,device='openvino:CPU',deadline_ms=30000).predict(files[0])
+        assert actual['model_runtime']['backend']=='openvino' and actual['final_verdict']=='NG'
+        assert before=={p.relative_to(released).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in released.rglob('*') if p.is_file()}
+        receipt=dict(actual_pytorch_and_openvino_execution=True,synthetic_truth=True,process_quality_approved=False,
+            model_authority_controlled=True,package_bytes_unchanged=True,device_accepted=False,
+            checkpoint_sha256=revision['checkpoint_sha256'],runtime_review_sha256=review['record_sha256'],qualified=qualified)
+        (tmp_path/'actual-converted-flow-receipt.json').write_text(json.dumps(receipt,indent=2))
