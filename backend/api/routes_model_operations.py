@@ -54,6 +54,15 @@ class RunRequest(BaseModel):
     background:bool=True
 
 
+class CandidateFlowPreparationRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    source_version_id:str=Field(pattern=r'^[0-9a-f]{32}$')
+    expected_graph_sha256:str=Field(pattern=r'^[0-9a-f]{64}$')
+    expected_subject_sha256:str=Field(pattern=r'^[0-9a-f]{64}$')
+    reviewer:str=Field(min_length=1,max_length=100)
+    reason:str=Field(min_length=10,max_length=2000)
+
+
 class LegacyImpactEntry(BaseModel):
     issue: str
     reason: str
@@ -128,9 +137,21 @@ def legacy_impact_report(request: Request):
 @router.get('/cycles/{cycle_id}/review-handoff')
 def review_handoff(cycle_id:str,request:Request):
     from backend.engine.operations_review import read_handoff
-    try:return read_handoff(project(request),cycle_id)
+    try:return read_handoff(project(request),cycle_id,accounts=getattr(request.app.state,'accounts',None))
     except KeyError as exc:raise HTTPException(404,'Operations cycle not found') from exc
     except (ValueError,OSError) as exc:raise HTTPException(409,str(exc)) from exc
+
+
+@router.post('/cycles/{cycle_id}/prepare-flow')
+def prepare_flow(cycle_id:str,payload:CandidateFlowPreparationRequest,request:Request):
+    from backend.engine.operations_review import prepare_candidate_flow
+    from backend.api.routes_image_truth import require_role
+    from backend.api.shared_authorization import request_actor
+    current=project(request);require_role(request,current,{'owner','reviewer'})
+    supplied=payload.model_dump();supplied['reviewer']=request_actor(request,payload.reviewer)
+    try:return prepare_candidate_flow(current,cycle_id,**supplied)
+    except KeyError as exc:raise HTTPException(404,'Operations cycle not found') from exc
+    except (ValueError,OSError,OperationsBusy) as exc:raise HTTPException(409,str(exc)) from exc
 
 @router.put('/policy')
 def policy(payload:OperationsPolicy,request:Request):

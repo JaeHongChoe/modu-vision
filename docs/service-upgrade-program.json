@@ -1078,6 +1078,12 @@
      "result": "Preview/CAS/apply/readback attaches exact imported completed/failed/aborted local history to one original registered project and local installation actor. Original journal/model bytes, historical actor audit, post-cutover receipt and later writes survive; no worker/lease authority is created. Final migration/publication suite72 passes. Path traversal was reproduced and then rejected.",
      "scope": "Owned current-schema offline installations only; runtime recovery indexes, interrupted/live workers, uncertain leases, foreign paths and team authority refuse. Full live/history adapters remain incomplete. Root review only.",
      "platform": "macOS actual private SQLite and filesystem controls; no installed user records changed"
+    },
+    {
+     "kind": "owned-manual-improvement-external-history-followup",
+     "result": "Ended remote protocol train history validated through drained cutover/forward recovery; 73 related cases passed, one explicitly deselected actual local training case already recorded separately.",
+     "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
+     "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
     }
    ],
    "file_actions": {
@@ -4136,7 +4142,7 @@
     "S5-05",
     "S5-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "merged-implementation-slice",
@@ -4155,6 +4161,12 @@
      "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
      "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
      "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    },
+    {
+     "kind": "owned-manual-improvement-external-history-followup",
+     "result": "Actual DINOv3 CPU parent and candidate training, 24 fixed heldout comparison, explicit synthetic model/whole-graph reviews, native inactive candidate preparation/reopen, actual 24-input package parity and independent managed HTTP inference passed in one fresh 269.60-second Electron run; 45 backend,12 focused and845 renderer/main pass.",
+     "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
+     "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
     }
    ],
    "file_actions": {
@@ -4164,12 +4176,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-5-operations.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -4661,6 +4673,12 @@
      "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
      "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
      "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    },
+    {
+     "kind": "owned-manual-improvement-external-history-followup",
+     "result": "Exact published a184b1e hosted Linux CPU run37479809108 completed successfully. New edited delta hosted run remains required; authentic-weight native run is separately scoped.",
+     "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
+     "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
     }
    ],
    "file_actions": {
@@ -5208,6 +5226,12 @@
      "result": "Two detached observers disappeared without observed terminal exits. Frozen source/pins reverified; tracked foreground observer starts a new259200-second clock with prior elapsed excluded.",
      "scope": "Actual terminal72-hour successful receipt and target qualification remain pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
      "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    },
+    {
+     "kind": "owned-manual-improvement-external-history-followup",
+     "result": "Earlier internal attempt ended after47 cycles at the disk reserve. New independent72-hour run begins on owned external APFS scratch with exact a184b1e source, mount/process identity and disk reserve supervision; no elapsed time is combined.",
+     "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
+     "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
     }
    ],
    "file_actions": {
@@ -9794,19 +9818,19 @@
    "S1-08",
    "S5-08"
   ],
-  "last_verified_on": "2026-10-06",
+  "last_verified_on": "2026-10-07",
   "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
   "owner": "Codex",
   "verified_source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 65,
-    "pending": 17
+    "verified": 66,
+    "pending": 16
    },
    "parent_status": {
-    "verification_pending": 59,
-    "in_progress": 13,
+    "verification_pending": 60,
+    "in_progress": 12,
     "planned": 10
    },
    "merged_extension_slices": 16,

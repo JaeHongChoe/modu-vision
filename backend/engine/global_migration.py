@@ -210,7 +210,7 @@ def _copy(before,source,destination,*,scopes=None):
     for row in before['inventory']['files']:
         if scopes is not None and row['path'] not in set(scopes.values()):
             relative=Path(row['path'])
-            if relative.parent.as_posix()!=scopes['local_journals']:continue
+            if relative.parent.as_posix() not in {scopes['local_journals'],scopes['remote_journals']}:continue
         path=source/row['path'];target=destination/row['path'];target.parent.mkdir(parents=True,exist_ok=True)
         with owned_file_snapshot(path) as copied:shutil.copyfile(copied,target,follow_symlinks=False)
         if hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']:raise GlobalMigrationError('Source changed during global backup')

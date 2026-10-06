@@ -1,8 +1,8 @@
-"""Validate ended local recovery journals without acquiring worker authority.
+"""Validate ended recovery journals without acquiring worker authority.
 
 Only an original owned installation with current control schemas is supported.
-Live/uncertain sessions and remote recovery journals still require their own
-ownership protocol. No process is signalled, lease released or source rewritten.
+Live/uncertain sessions still require their own ownership protocol. Remote
+records are archival only: no connection, launch, signal or lease is created.
 """
 import hashlib
 import json
@@ -82,21 +82,97 @@ def validate_local(root, scopes, path, journal):
         raise ValueError('Runtime session is live or uncertain; migration cannot adopt it as ended')
 
 
+def validate_remote(root, scopes, path, journal):
+    """Original confirmed exit and received bytes, never current SSH authority.
+
+    This adapter supports the original current train manifest, not relocated
+    specialist aliases, optimizer resume or remote operation results. It reads
+    the coordinator's existing exit confirmation; it does not check a server's
+    current process state or create authority to use that server again.
+    """
+    from backend.remote.profiles import ComputeProfile
+    root = Path(root).absolute()
+    identifier, state = journal.get('job_id'), journal.get('state')
+    if (not isinstance(identifier, str) or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}', identifier)
+            or Path(path).name != identifier + '.json' or journal.get('protocol_version') != 1
+            or journal.get('operation') != 'train' or state not in TERMINAL
+            or journal.get('worker_terminal_state') != state or journal.get('worker_exit_confirmed') is not True):
+        raise ValueError('Only confirmed ended current remote training journals can migrate')
+    profile = ComputeProfile.model_validate(journal.get('profile'))
+    handle = journal.get('remote_handle')
+    pattern = r'[1-9][0-9]*:[0-9a-f]{32}' if profile.runtime_kind == 'python' else r'[0-9a-fA-F]{12,64}'
+    if not isinstance(handle, str) or not re.fullmatch(pattern, handle):
+        raise ValueError('Remote history lacks its original launch handle')
+    output = Path(journal['output_dir']).absolute()
+    _, run_raw = _read(root, output / 'remote_job.json')
+    _, index_raw = _read(root, path)
+    if index_raw != run_raw:
+        raise ValueError('Remote recovery index differs from its original run journal')
+    spec_path = _file(root, output / 'remote_spec.json')
+    spec, raw = _read(root, spec_path)
+    transfers, launch = journal.get('transfers'), journal.get('launch_spec')
+    if not isinstance(transfers, list) or not 1 <= len(transfers) <= 32 or not isinstance(launch, dict):
+        raise ValueError('Remote history lacks its bounded original transfer/launch specification')
+    selected = [r for r in transfers if isinstance(r, dict) and r.get('target') == 'spec.json']
+    if (len(selected) != 1 or selected[0].get('source') != str(spec_path)
+            or type(selected[0].get('size')) is not int or selected[0]['size'] != len(raw)
+            or selected[0].get('sha256') != hashlib.sha256(raw).hexdigest()):
+        raise ValueError('Remote original launch specification changed')
+    if (spec.get('protocol_version') != 1 or spec.get('job_id') != identifier or spec.get('operation') != 'train'
+            or spec.get('task') != journal.get('task') or spec.get('preset') != journal.get('preset')
+            or not re.fullmatch('[0-9a-f]{64}', str(journal.get('input_manifest_sha256', '')))
+            or spec.get('input_manifest_sha256') != journal['input_manifest_sha256']
+            or launch.get('operation', 'train') != 'train'):
+        raise ValueError('Remote history launch belongs to another run, task or snapshot')
+    receipt, _ = _read(root, output / 'job_receipt.json')
+    if (receipt.get('job_id') != identifier or receipt.get('status') != state
+            or receipt.get('task') != journal['task'] or receipt.get('output_dir') != str(output)
+            or receipt.get('compute_profile_id') != profile.id):
+        raise ValueError('Remote terminal receipt differs from its original job/profile')
+    if state != 'completed':
+        return
+    manifest, _ = _read(root, output / 'remote_artifacts.json')
+    if (manifest.get('protocol_version') != 1 or manifest.get('job_id') != identifier
+            or manifest.get('operation') != 'train' or manifest.get('input_manifest_sha256') != journal['input_manifest_sha256']
+            or 'relocation' in manifest):
+        raise ValueError('Remote received artifact manifest belongs to another or relocated run')
+    rows = manifest.get('artifacts')
+    if not isinstance(rows, list) or len(rows) != 2 or any(not isinstance(row, dict) for row in rows):
+        raise ValueError('Remote received artifact list is invalid')
+    names = [row.get('path') for row in rows]
+    if any(not isinstance(name, str) for name in names) or set(names) != {'outputs/best_model.pt', 'outputs/model_meta.json'}:
+        raise ValueError('Remote received artifact identities differ from the current train manifest')
+    for row in rows:
+        file = _file(root, output / Path(row['path']).name)
+        if (type(row.get('size')) is not int or row['size'] < 1 or file.stat().st_size != row['size']
+                or not re.fullmatch('[0-9a-f]{64}', str(row.get('sha256', '')))):
+            raise ValueError('Remote received artifact size or checksum is invalid')
+        with file.open('rb') as stream:
+            checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
+        if checksum != row['sha256'] or (file.name == 'best_model.pt' and receipt.get('checkpoint_sha256') != checksum):
+            raise ValueError('Remote received artifact or completed receipt checksum changed')
+    metadata, _ = _read(root, output / 'model_meta.json')
+    if metadata.get('task') != journal['task']:
+        raise ValueError('Remote received model task differs')
+    binding = launch.get('dataset_binding')
+    if binding and (metadata.get('training_provenance') != binding or spec.get('dataset_binding') != binding
+                    or receipt.get('training_provenance') != binding):
+        raise ValueError('Remote received model provenance differs from its launch or receipt')
+
+
 def journal_blockers(source_root, scopes, *, installation_root=None):
     """Inspect every declared index file before a drained generation is copied."""
     from backend.engine.global_migration import _read_db
     source_root = Path(source_root).absolute()
     original = Path(installation_root or source_root).absolute()
     errors = []
-    remote = source_root / scopes['remote_journals']
-    if remote.exists() and (not remote.is_dir() or any(remote.iterdir())):
-        errors.append('Historical remote_journals requires a separately reviewed remote ownership adapter')
-    index = source_root / scopes['local_journals']
-    if not index.exists():
-        return errors
-    if index.is_symlink() or not index.is_dir():
-        return errors + ['Runtime local recovery index must be an unlinked directory']
-    entries = sorted(index.iterdir())
+    entries=[]
+    for kind in ('local','remote'):
+        index=source_root/scopes[kind+'_journals']
+        if not index.exists() and not index.is_symlink():continue
+        if index.is_symlink() or not index.is_dir():
+            errors.append('Runtime '+kind+' recovery index must be an unlinked directory');continue
+        entries.extend((kind,path) for path in sorted(index.iterdir()))
     if len(entries) > 1000:
         return errors + ['Runtime history exceeds the bounded 1000-journal conversion']
     if not entries:return errors
@@ -104,7 +180,7 @@ def journal_blockers(source_root, scopes, *, installation_root=None):
         with _read_db(source_root / scopes['ledger']) as db:
             db.row_factory = sqlite3.Row
             rows={}
-            for path in entries:
+            for _,path in entries:
                 row=db.execute('SELECT * FROM jobs WHERE id=?',(path.stem,)).fetchone()
                 if row is not None:rows[row['id']]=dict(row)
         with _read_db(source_root / scopes['context']) as db:
@@ -112,12 +188,12 @@ def journal_blockers(source_root, scopes, *, installation_root=None):
         if len(locations)>1000:return errors+['Runtime history exceeds the bounded 1000-project conversion']
     except (OSError,ValueError,sqlite3.Error) as error:
         return errors+['Runtime history control stores are unavailable: '+str(error)]
-    for path in entries:
+    for kind,path in entries:
         try:
             journal, raw = _read(original, path)
-            validate_local(original, scopes, path, journal)
+            (validate_local if kind=='local' else validate_remote)(original,scopes,path,journal)
             row = rows.get(journal['job_id'])
-            if row is None or row['state'] != journal['status'] or row['output_dir'] != journal['output_dir']:
+            if row is None or row['state'] != journal['status' if kind=='local' else 'state'] or row['output_dir'] != journal['output_dir']:
                 raise ValueError('Runtime history lacks its exact terminal ledger record')
             output = Path(row['output_dir'])
             matches = [r for r in locations if output.is_relative_to(Path(r[3]))]

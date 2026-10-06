@@ -201,6 +201,14 @@ export type CandidateBatchRequest = {
   image_paths: Array<string>;
 };
 
+export type CandidateFlowPreparationRequest = {
+  source_version_id: string;
+  expected_graph_sha256: string;
+  expected_subject_sha256: string;
+  reviewer: string;
+  reason: string;
+};
+
 export type CandidateRequest = {
   backend: "grounding_dino" | "template_match" | "foundation" | "vlm";
   image_path: string;
@@ -1932,6 +1940,7 @@ export interface ApiRequestBody {
   "POST /api/model-deployments/rollback": backend__api__routes_model_deployments__RollbackRequest;
   "POST /api/model-deployments/specialized-approve": SpecializedApprovalRequest;
   "POST /api/model-execution/recipes": RecipeRequest;
+  "POST /api/model-operations/cycles/{cycle_id}/prepare-flow": CandidateFlowPreparationRequest;
   "PUT /api/model-operations/policy": OperationsPolicy;
   "POST /api/model-operations/run": backend__api__routes_model_operations__RunRequest;
   "POST /api/ocr/evaluate": OCREvaluateRequest;

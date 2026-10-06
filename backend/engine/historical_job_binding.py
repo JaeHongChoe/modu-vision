@@ -1,4 +1,4 @@
-"""Explicit offline binding of ended local history; no worker/lease adoption.
+"""Explicit offline binding of ended owned history; no worker/lease adoption.
 
 The existing legacy importer retains unbound provenance. This converter attaches
 only its exact terminal rows to an already registered owned local project. The
@@ -60,14 +60,12 @@ def _view(root, owner):
         try:
             if (row['state'] not in {'completed', 'failed', 'aborted'} or row['mode'] != 'local' or row['project_id'] != 'legacy'
                     or row['actor_id'] != 'legacy' or row['idempotency_key'] is not None or row['operation_json'] is not None):
-                raise ValueError('Only unchanged ended local legacy history can be bound')
+                raise ValueError('Only unchanged ended locally owned legacy history can be bound')
             if not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}', row['id']):raise ValueError('Historical job identity is invalid')
             spec = json.loads(row['spec_json'])
             if set(spec) != {'legacy_source', 'legacy_sha256'} or spec_digest(spec) != row['spec_sha256']:
                 raise ValueError('Historical source specification changed')
             source = _owned_path(root, spec['legacy_source'])
-            if source.is_relative_to(root / 'remote_jobs'):
-                raise ValueError('Runtime recovery indexes require a separate reviewed ownership adapter')
             raw = source.read_bytes()
             if hashlib.sha256(raw).hexdigest() != spec['legacy_sha256']:
                 raise ValueError('Historical origin source changed')
@@ -77,6 +75,11 @@ def _view(root, owner):
                 if source.parent != root / owner['scopes']['local_journals']:
                     raise ValueError('Nested local recovery indexes are unsupported')
                 validate_local(root, owner['scopes'], source, journal)
+            elif source.is_relative_to(root / owner['scopes']['remote_journals']):
+                from backend.engine.terminal_runtime_history import validate_remote
+                if source.parent != root / owner['scopes']['remote_journals']:
+                    raise ValueError('Nested remote recovery indexes are unsupported')
+                validate_remote(root, owner['scopes'], source, journal)
             if (journal.get('job_id') != row['id'] or from_legacy(journal.get('status') or journal.get('state')) != row['state']
                     or journal.get('output_dir') != row['output_dir']):
                 raise ValueError('Historical source identity/state/output differs from its ledger')
@@ -107,7 +110,7 @@ def _view(root, owner):
     record = {'schema_version': 1, 'installation_id': owner['installation_id'],
         'source_sha256': snapshot['source_snapshot']['sha256'], 'rows': rows,
         'blockers': sorted(set(blockers)), 'can_apply': bool(rows) and not blockers,
-        'policy': 'ended local history only; original actor retained; no launch, lease or team authority created'}
+        'policy': 'ended owned history only; original actor retained; no connection, launch, lease or team authority created'}
     record['preview_sha256'] = migration.digest(record)
     return record
 

@@ -1,8 +1,8 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-06 · 기준 공개 소스 `123cbc583dd5c0200feda001418ca5a2ef618016`와 기록된 후속 검증
+확인일: 2026-10-07 · 기준 공개 소스 `a184b1e254e881c0af09f0f788c993b35da92c89`와 기록된 후속 검증
 
-**82개 중 소프트웨어 구현 확인65개, 구현 미완료17개.** 이번 실제 검증으로 원래25개 중8개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은16개다. 최종 수용 승인은0개다.
+**82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
 
 ## 단계별 집계
 
@@ -13,33 +13,32 @@
 | S2 | 10 | 10 | 0 |
 | S3 | 10 | 10 | 0 |
 | S4 | 14 | 14 | 0 |
-| S5 | 10 | 7 | 3 |
+| S5 | 10 | 8 | 2 |
 | S6 | 11 | 6 | 5 |
 | S7 | 8 | 0 | 8 |
 
-## 미완료17개
+## 미완료16개
 
 | ID | 작업 | 실제 남은 조건 |
 |---|---|---|
-| S1-08 | 기존 JSON과 DB migration | 종료된 로컬 이력과 현재 protocol recovery index의 cutover·forward recovery·새 manager 복구는 검증됨. 살아 있는 worker·불확실 lease·종료된 remote adapter·구형 schema 이관 필요. |
+| S1-08 | 기존 JSON과 DB migration | 종료된 로컬 및 remote train 이력과 현재 protocol recovery index의 cutover·forward recovery·새 manager 복구는 검증됨. 살아 있는 worker·불확실 lease·구형 schema 이관 필요. |
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
-| S5-08 | data drift와 개선 반복 | drift/feedback 구성 요소에서 재학습·동일 cohort 비교·사람 승인·배포까지 전체 개선 경로 필요. |
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. 설치·DB update 원자적 cutover/중단 복구·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | 123cbc 공개 CPU 2136통과·6skip, browser 145통과·17실패·1skip. 실패했던 17개는 수정 후 관련 24개 실제 Chrome 시나리오에서 모두 통과. 새 구성 소스의 hosted 전체 결과 확인 필요. |
+| S6-05 | 공개 CI와 source 재현성 | a184b1e 공개 Linux CPU·browser 전체 CI 성공. 새 개선 흐름·종료 remote history 변경을 포함한 다음 공개 소스의 hosted 결과 확인 필요. 이전 123cbc browser 실패와 수정 기록 보존. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 156개 기능과 action별 성공/오류/취소/재열기/이관 실행 근거 원장 보완 필요. 단순 매핑은 수용 완료가 아님. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
-| S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 이전 중단 기록 보존. durable observer도 disk reserve 조건으로 50회·3007.65초에서 종료된 실제 receipt 확인. 이 시간을 합산하지 않고 새 72시간 완주 검증 필요. |
+| S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 내부 저장소 47회 실행은 disk reserve에서 종료됐고 기록 보존. a184b1e 고정 소스로 외장 APFS 저장소에서 새 72시간 실행 중. 이전 시간을 합산하지 않고 완주 receipt 필요. |
 | S7-06 | 공정 품질 승인과 장비 검증 | 사용자 지정 공정 미검/과검 정책·대표 truth·카메라/PLC/MES 실제 장비 승인 필요. |
 | S7-07 | 공개 후보와 릴리스 판정 | 최종 지원 조합/known issues/license/SBOM/서명/업데이트/파일럿 입력을 모아 공개 후보 판정 필요. |
 | S7-08 | 파일럿 feedback과 지속 유지 | 첫 사용자의 설명 없는 파일럿 및 실제 운영 책임·지원/SLA/유지보수 주기 필요. |
 
-## 소프트웨어 구현 확인65개
+## 소프트웨어 구현 확인66개
 
 | ID | 작업 |
 |---|---|
@@ -100,6 +99,7 @@
 | S5-05 | 제품 recipe와 traceability |
 | S5-06 | 장비 fleet와 단계 배포 |
 | S5-07 | 관측과 운영 알림 |
+| S5-08 | drift·검수·재학습·비교와 명시적 승인 후 후보 서비스 적용 |
 | S5-09 | 백업과 복구 및 보존기한 |
 | S6-01 | 오픈소스와 모델 라이선스 정책 |
 | S6-07 | 외부 기여와 프로젝트 운영 |
@@ -127,7 +127,7 @@ review bridge, first-package UI reachability, account invalidation, actual
 automated warm-start receipt correction and release-readiness distinction.
 33 backend,835 renderer/main,9 readiness/recovery controls and one actual
 DINOv3 development Electron retrain/reopen gate pass. Parent accounting stays
-64 software verified/18 pending until complete parent evidence is available.
+64 software verified/18 pending at that earlier recorded slice.
 Exact2c907b1 hosted source CI failed on stale generated API types; regeneration
 and its7-case regression pass, with full hosted rerun still required.
 
@@ -144,3 +144,21 @@ IR gate promotes S4-14 software implementation, giving65 verified/17 pending.
 No final acceptance count is promoted. The first 72-hour attempt has an observed interrupted exit; the second stopped
 at5 cycles and could not write a terminal child receipt after disk exhaustion.
 Neither is a completed endurance qualification and their durations are not added.
+
+## Complete improvement loop and external temporary storage
+
+See `2026-10-07-improvement-external-history.md` and its paired receipt.
+One fresh actual CPU/native run covers reviewed new input, authentic DINOv3
+parent/candidate training,24 fixed heldout comparisons, explicit fixture model
+and whole-graph review, independent inactive candidate graph, reopen,24-input
+package parity and managed HTTP inference. Current graph/service observation is
+shown after native reload without changing the original active graph or model.
+This promotes the manual S5-08 software path to66 verified/16 pending.
+Synthetic authority does not approve manufacturing quality; automatic promotion
+is not recorded as supported. Independent/final acceptance remains0.
+
+The exact a184b1e hosted Linux source run completed successfully. The new delta
+still needs its own hosted source run. New heavy fixtures, CI downloads and the
+fresh72-hour run use an owned APFS sparse image on the external `backup` volume.
+Existing external backup files remain unchanged. Keep the external drive mounted
+while the endurance run is active; no previous elapsed time is added.
