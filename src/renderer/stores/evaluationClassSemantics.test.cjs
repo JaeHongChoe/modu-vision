@@ -12,7 +12,7 @@ function load(file, mocks = {}) {
   m.paths = Module._nodeModulePaths(__dirname);
   const req = m.require.bind(m);
   m.require = key => Object.hasOwn(mocks, key) ? mocks[key]
-    : key.endsWith('/classSemantics') || key.endsWith('/hostAdapter') ? load(path.resolve(path.dirname(name), key) + '.ts') : req(key);
+    : key.endsWith('/classSemantics') || key.endsWith('/hostAdapter') || key.endsWith('/browserSession') ? load(path.resolve(path.dirname(name), key) + '.ts') : req(key);
   m._compile(ts.transpileModule(fs.readFileSync(name, 'utf8'), {
     compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, name);

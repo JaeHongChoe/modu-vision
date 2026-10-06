@@ -4,6 +4,17 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 function compile(file,mocks={}){const name=path.join(__dirname,file);const m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);
   m.require=ref=>ref in mocks?mocks[ref]:original(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const graph=compile('flowchartGraph.ts');
+test('original-image bounds mark a fixed ROI before execution without using model resize dimensions',()=>{
+ const p=valid();p.nodes.push(node('roi','fixed_roi',{params:{roi_bbox:[4,4,64,40]}}));p.edges[0]={...p.edges[0],target:'roi'};p.edges.push({id:'crop',source:'roi',target:'seg',payload_type:'roi'});
+ const marked=graph.flowIssuesByTarget(p,undefined,[48,48]);assert.match(marked.nodes.get('roi')?.[0]||'',/원본 48×48.*경계/);
+ assert.match(graph.validateFlowchartGraph(p,undefined,[48,48]),/경계/);
+ p.nodes.at(-1).data.params.roi_bbox=[4,4,48,48];assert.equal(graph.validateFlowchartGraph(p,undefined,[48,48]),null);
+ assert.equal(graph.validateFlowchartGraph(p,undefined,[128,128]),null,'a model input size is not original-image bounds');
+});
+test('reference fixture coordinates require runtime pose validation rather than raw original bounds',()=>{
+ const p=valid();p.nodes.push(node('roi','fixed_roi',{params:{roi_bbox:[4,4,64,40],fixture:{reference:'owned-reference'}}}));p.edges[0]={...p.edges[0],target:'roi'};p.edges.push({id:'crop',source:'roi',target:'seg',payload_type:'roi'});
+ assert.equal(graph.validateFlowchartGraph(p,undefined,[48,48]),null);
+});
 const node=(id,node_type,extra={})=>({id,position:{x:0,y:0},data:{label:id,node_type,...extra}});
 function valid(){return {id:'p',name:'p',nodes:[node('in','input'),node('seg','inspection',{task:'segmentation',threshold:0.5}),node('cls','inspection',{task:'classification',threshold:0.5}),node('judge','decision',{rule:'any_defect_is_ng'}),node('out','output')],
   edges:[{id:'e1',source:'in',target:'seg',payload_type:'image'},{id:'e2',source:'in',target:'cls',payload_type:'image'},{id:'e3',source:'seg',target:'judge',payload_type:'result'},{id:'e4',source:'cls',target:'judge',payload_type:'result'},{id:'e5',source:'judge',target:'out',payload_type:'result'}]};}
@@ -206,4 +217,21 @@ test('S2-05 review 2: the nearest model node decides the classes, and a blank la
  const catalog=[{job_id:'job_cls',class_names:['OK','NG'],class_ids:[0,1]}];
  const flow=valid();flow.nodes[2].data.model_job_id='job_cls';flow.nodes[2].data.label='   ';flow.edges[3]={...flow.edges[3],predicate:{kind:'class',operator:'present',class_name:'Crack'}};
  assert.ok((graph.flowIssuesByTarget(flow,catalog).edges.get('e4')||[]).some(message=>/'Crack': cls 모델에 없는 이름입니다/.test(message)));
+});
+
+test('incomplete results cannot use an OK policy and point at their decision node',()=>{
+ const p=valid();p.nodes.find(n=>n.id==='judge').data.params={incomplete_policy:'ok'};
+ assert.ok(graph.flowGraphIssues(p).some(i=>i.kind==='node'&&i.id==='judge'&&i.message.includes('미실행')));
+ p.nodes.find(n=>n.id==='judge').data.params={incomplete_policy:'ng'};
+ assert.equal(graph.validateFlowchartGraph(p),null);
+});
+
+test('object count rules refuse unknown classes, booleans, duplicates and conditional decisions',()=>{
+ const p={id:'count',name:'count',nodes:[node('in','input'),node('det','detection_crop',{task:'detection',model_job_id:'job',threshold:.5,params:{object_requirements:[{class_name:'bolt',min_count:1,max_count:2}]}}),node('judge','decision',{rule:'any_defect_is_ng'}),node('out','output')],edges:[{id:'a',source:'in',target:'det',payload_type:'image'},{id:'b',source:'det',target:'judge',payload_type:'result'},{id:'c',source:'judge',target:'out',payload_type:'result'}]};
+ const models=[{job_id:'job',class_names:['bolt','washer'],class_ids:[1,2]}];
+ assert.equal(graph.validateFlowchartGraph(p,models),null);
+ const bad=structuredClone(p);bad.nodes[1].data.params.object_requirements[0].min_count=true;assert.match(graph.validateFlowchartGraph(bad,models),/최소·최대/);
+ bad.nodes[1].data.params.object_requirements[0].min_count=1;bad.nodes[1].data.params.object_requirements[0].class_name='missing';assert.match(graph.validateFlowchartGraph(bad,models),/기록된 객체/);
+ bad.nodes[1].data.params.object_requirements=[...p.nodes[1].data.params.object_requirements,...p.nodes[1].data.params.object_requirements];assert.match(graph.validateFlowchartGraph(bad,models),/클래스 이름/);
+ bad.nodes[1].data.params.object_requirements=p.nodes[1].data.params.object_requirements;bad.edges[1].isBranch='pass';assert.match(graph.validateFlowchartGraph(bad,models),/조건 없이/);
 });

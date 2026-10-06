@@ -78,6 +78,12 @@ def validate_recorded_flow_classes(pipeline: Any, resolve_model: Callable[[Any],
                 f"Edge {edge.id} class '{wanted}' is not recorded by source model node {edge.source}."
             )
 
+    from backend.engine.object_requirements import object_requirements, validate_object_vocabulary
+    for node in pipeline.nodes:
+        rules = object_requirements(node.data.params)
+        if rules is not None:
+            validate_object_vocabulary(rules, vocabulary(node.id).get("class_names"))
+
     for node in pipeline.nodes:
         if node.data.node_type == "inspection" and node.data.task == "segmentation":
             model_id = node.id

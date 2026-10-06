@@ -116,6 +116,47 @@ def test_a_process_at_a_reused_number_is_never_signalled():
         other.wait(30)
 
 
+def test_real_spawn_dataloader_children_stop_with_their_owned_parent_only(tmp_path):
+    from backend.engine import local_training_worker as worker
+    from backend.engine.runtime_process_control import session_isolation
+    token=uuid.uuid4().hex
+    folder=tmp_path/'실제 DataLoader workers with spaces';folder.mkdir()
+    log=folder/'ready.json'
+    env={**os.environ,'MODU_VISION_LOCAL_WORKER_TOKEN':token,'CUDA_VISIBLE_DEVICES':'',
+         'OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1','MKL_NUM_THREADS':'1'}
+    bystander=_sleeper();owned=None;members=[]
+    try:
+        with log.open('wb') as output:
+            owned=subprocess.Popen([sys.executable,str(ROOT/'backend/tests/fixtures/dataloader_owned_worker.py')],
+                cwd=folder,env=env,stdout=output,stderr=output,**session_isolation())
+            owner=psutil.Process(owned.pid)
+            journal={'owner_pid':owned.pid,'owner_created_at':owner.create_time(),'owner_token':token,
+                'owner_session':owned.pid,'owner_username':owner.username(),'owner_boot_id':worker._boot_id()}
+            deadline=time.monotonic()+90;ready=None
+            while time.monotonic()<deadline and owned.poll() is None:
+                for line in log.read_text(encoding='utf-8').splitlines():
+                    if line.startswith('{'):
+                        ready=json.loads(line);break
+                if ready:break
+                time.sleep(.1)
+            assert ready and ready['values']==[0,1],log.read_text(encoding='utf-8')
+            members=worker._owned_members(journal)
+            assert set(ready['workers']).issubset({p.pid for p in members})
+            assert bystander.pid not in {p.pid for p in members}
+            assert worker._stop_owned(journal,force=True)
+            owned.wait(30)
+            assert worker._owned_members(journal)==[]
+            assert bystander.poll() is None
+    finally:
+        # Every fallback handle was captured from this test's owned tree.
+        for process in members:
+            try:
+                if process.is_running():process.kill()
+            except psutil.NoSuchProcess:pass
+        if owned is not None and owned.poll() is None:owned.kill();owned.wait(30)
+        bystander.kill();bystander.wait(30)
+
+
 class _Listed:
     """A listed process; `denied` names the inspections the platform refuses for it."""
     def __init__(self, pid, username, token=None, *, denied=(), created=0.0, parent=1, exits=False):

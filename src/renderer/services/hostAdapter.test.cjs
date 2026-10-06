@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 // S1-10: desktop host features go through the preload bridge; a plain browser refuses them with an explicit message
 // (never a silent no-op), opens links in a new tab without access to the page, and needs no bridge for anything else.
-function load(){const file=path.join(__dirname,'hostAdapter.ts');const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
+function load(name='hostAdapter.ts'){const file=path.join(__dirname,name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);m.require=key=>key==='./browserSession'?load('browserSession.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 function withWindow(value,run){const previous=global.window;global.window=value;return Promise.resolve().then(run).finally(()=>{global.window=previous;});}
 test('S1-10: a browser host refuses desktop features with what to do instead',()=>withWindow({open:()=>null},async()=>{
  const {host,HostUnavailable,hostErrorMessage}=load();

@@ -237,3 +237,63 @@ def test_linked_declared_control_file_cannot_be_attached(tmp_path):
     original.symlink_to(outside)
     with pytest.raises(ValueError,match='link'):ProfileStore(original).list()
     assert outside.read_text()=='{"profiles":[],"selected":null}'
+
+def test_forward_generation_preserves_new_writes_and_never_reactivates_old_sessions(tmp_path):
+    from backend.engine.global_migration import preview,apply,preview_forward,advance,recover,GlobalMigrationError
+    from backend.engine.global_store_paths import resolve_store_path
+    from backend.engine.shared_accounts import AccountStore
+    root,scopes,*_=owned(tmp_path)
+    first=apply(root,expected_source_sha256=preview(root)['source_sha256'])
+    account=AccountStore(root/scopes['accounts'])
+    added=account.create_user('post-cutover-user','fixture-password-456')
+    session=account.login('fixture-admin','fixture-password-123')
+    prior_path=resolve_store_path(root/scopes['accounts']);prior_bytes=prior_path.read_bytes()
+    review=preview_forward(root);assert review['can_apply']
+    second=advance(root,expected_source_sha256=review['source_sha256'])
+    assert second['fence']==2
+    assert prior_path.read_bytes()==prior_bytes
+    fresh=AccountStore(root/scopes['accounts']);assert added['id'] in {r['id'] for r in fresh.users()}
+    with pytest.raises(ValueError,match='expired|unavailable'):fresh.authenticate(session['token'])
+    with pytest.raises(ValueError,match='restart|generation'):account.create_user('retired-write','fixture-password-456')
+    # Once the new generation has written, rolling back cannot lose that user.
+    fresh.create_user('latest-user','fixture-password-456')
+    with pytest.raises(GlobalMigrationError,match='writes|changed|forward'):recover(root,second['migration_id'],action='restore')
+    assert added['id'] in {r['id'] for r in fresh.users()}
+
+
+def test_forward_generation_refuses_stale_preview_and_live_authority(tmp_path):
+    from backend.engine.global_migration import preview,apply,preview_forward,advance,GlobalMigrationError
+    from backend.engine.global_store_paths import resolve_store_path
+    root,scopes,*_=owned(tmp_path);apply(root,expected_source_sha256=preview(root)['source_sha256'])
+    review=preview_forward(root)
+    resolve_store_path(root/scopes['profiles']).write_text('{"profiles":[],"selected":null,"new":true}')
+    with pytest.raises(GlobalMigrationError,match='changed'):advance(root,expected_source_sha256=review['source_sha256'])
+    # Current-generation drain validation still applies after user writes.
+    ledger=resolve_store_path(root/scopes['ledger'])
+    with sqlite3.connect(ledger) as db:
+        db.execute("INSERT INTO jobs(id,workspace_id,project_key,project_id,actor_id,mode,kind,spec_sha256,spec_json,state,revision,source,created_ns,updated_ns) VALUES('j','w','p','p','a','local','training','h','{}','running',1,'fixture',1,1)")
+    blocked=preview_forward(root);assert not blocked['can_apply']
+    pointer=(root/'global-active.json').read_bytes()
+    with pytest.raises(GlobalMigrationError):advance(root,expected_source_sha256=blocked['source_sha256'])
+    assert (root/'global-active.json').read_bytes()==pointer
+
+def test_prepared_forward_recovery_finishes_exact_snapshot_and_restore_sanitizes(tmp_path,monkeypatch):
+    from backend.engine import global_migration as migration
+    from backend.engine.global_store_paths import resolve_store_path
+    from backend.engine.shared_accounts import AccountStore
+    root,scopes,*_=owned(tmp_path)
+    migration.apply(root,expected_source_sha256=migration.preview(root)['source_sha256'])
+    account=AccountStore(root/scopes['accounts'])
+    user=account.create_user('preserved-forward-user','fixture-password-456')
+    session=account.login('fixture-admin','fixture-password-123')
+    before=set(p.name for p in (root/'.global-migrations').iterdir())
+    with monkeypatch.context() as patch:
+        patch.setattr(migration,'_publish',lambda *a,**k:(_ for _ in ()).throw(OSError('injected before pointer cutover')))
+        with pytest.raises(OSError):migration.advance(root,expected_source_sha256=migration.preview_forward(root)['source_sha256'])
+    new=set(p.name for p in (root/'.global-migrations').iterdir())-before;assert len(new)==1
+    identifier=new.pop()
+    assert migration.recover(root,identifier,action='finish')['status']=='applied'
+    restored=migration.recover(root,identifier,action='restore');assert restored['fence']==3
+    fresh=AccountStore(root/scopes['accounts']);assert user['id'] in {r['id'] for r in fresh.users()}
+    with pytest.raises(ValueError,match='expired|unavailable'):fresh.authenticate(session['token'])
+    assert (root/'projects/labels.json').read_bytes()==b'{"label":"original"}'

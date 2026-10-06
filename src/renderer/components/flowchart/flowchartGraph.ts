@@ -343,7 +343,7 @@ function guarded(message: string, check: () => string | null): string | null {
 /** Every problem of the graph in the order the backend reports them (S2-05). With `first`, stops at the first one,
  *  which is the validator's answer; otherwise each node and connection reports its own first problem, so the editor can
  *  mark all of them at once. */
-export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, models: catalog }: { first?: boolean; models?: FlowModelVocabulary[] } = {}): FlowIssue[] {
+export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, models: catalog, sourceSize }: { first?: boolean; models?: FlowModelVocabulary[]; sourceSize?:number[] } = {}): FlowIssue[] {
   const issues: FlowIssue[] = [];
   const report = (message: string, kind: FlowIssue['kind'] = 'graph', id: string | null = null) => {
     issues.push({ kind, id, message });
@@ -420,6 +420,12 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
       }
       const parents = incoming.get(fixedRoi.id) || [];
       if (parents.length !== 1 || parents[0].source !== inputId) return `${fixedRoi.data.label}: 원본 이미지 입력 연결선 하나가 필요합니다.`;
+      // Fixed ROIs are in original pixels. A fixture pose is transformed at
+      // runtime, so its reference coordinates cannot use these raw bounds.
+      if (!fixedRoi.data.params?.fixture && sourceSize?.length===2 && sourceSize.every(v=>Number.isInteger(v)&&v>0)
+        && (rectangle[2]>sourceSize[0] || rectangle[3]>sourceSize[1])) {
+        return `${fixedRoi.data.label}: 원본 ${sourceSize[0]}×${sourceSize[1]} 픽셀 경계를 벗어난 고정 ROI입니다.`;
+      }
       if (!(outgoing.get(fixedRoi.id) || []).length) return `${fixedRoi.data.label}: 검사 모델로 연결하세요.`;
       return null;
     }],
@@ -450,6 +456,18 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
       }
       if (node.data.node_type === 'inspection' && !['segmentation', 'classification', 'anomaly', 'patch_classification', 'ocr', 'rotated_detection'].includes(node.data.task || '')) {
         return `${node.data.label}: 지원하지 않는 검사 작업입니다.`;
+      }
+      if(node.data.params && 'object_requirements' in node.data.params){
+        const rules=node.data.params.object_requirements;
+        const targets=outgoing.get(node.id)||[];
+        if(node.data.node_type!=='detection_crop'||node.data.task!=='detection'||targets.some(edge=>nodes.get(edge.target)?.data.node_type!=='decision'||edge.predicate||edge.isBranch)||!['any_defect_is_ng',undefined].includes(decisions[0].data.rule))return `${node.data.label}: 객체 수 규칙은 검출 모델에서 판정 노드로 조건 없이 직접 연결하고 하나라도 결함이면 NG를 사용하세요.`;
+        if(!Array.isArray(rules)||rules.length<1||rules.length>64)return `${node.data.label}: 객체 수 규칙은 1~64개가 필요합니다.`;
+        const names=modelClassNames(catalog,node.data.model_job_id),seen=new Set<string>();
+        for(const row of rules){
+          if(!row||Object.keys(row).some(key=>!['class_name','min_count','max_count'].includes(key))||typeof row.class_name!=='string'||!row.class_name.trim()||row.class_name!==row.class_name.trim()||row.class_name.length>200||seen.has(row.class_name)||!Number.isInteger(row.min_count)||row.min_count<0||row.min_count>1000000||(row.max_count!=null&&(!Number.isInteger(row.max_count)||row.max_count<row.min_count||row.max_count>1000000)))return `${node.data.label}: 객체 클래스 이름과 최소·최대 개수를 확인하세요.`;
+          seen.add(row.class_name);
+          if(!names?.includes(row.class_name))return `${node.data.label}: 학습 모델에 기록된 객체 클래스를 선택하세요.`;
+        }
       }
       if (node.data.task === 'ocr') {
         const issue=ocrRuleIssue(node.data.params || {});if(issue)return `${node.data.label}: ${issue}`;
@@ -538,6 +556,9 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
         (spec&&['domain','unit','direction','calibration_id'].some(key=>node.data.score_spec?.[key as keyof typeof spec]!==spec[key as keyof typeof spec]))))return '전역 점수 룰에는 동일한 단위와 보정 식별자가 필요합니다.';
     }
     const noBranch = decision.data.params?.no_branch_policy;
+    if (!['review', 'ng'].includes(decision.data.params?.incomplete_policy ?? 'review')) {
+      return 'UNKNOWN・미실행・오류 결과는 REVIEW 또는 NG로 처리해야 합니다.';
+    }
     if (noBranch != null && !(NO_BRANCH_POLICIES as readonly unknown[]).includes(noBranch)) {
       return '조건이 하나도 맞지 않은 이미지의 판정은 검토, OK, NG 중 하나여야 합니다.';
     }
@@ -576,15 +597,15 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
 }
 
 /** Mirrors the backend's supported executable graph, including saved linear flows. */
-export function validateFlowchartGraph(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[]): string | null {
-  return flowGraphIssues(pipeline, { first: true, models })[0]?.message ?? null;
+export function validateFlowchartGraph(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[], sourceSize?:number[]): string | null {
+  return flowGraphIssues(pipeline, { first: true, models, sourceSize })[0]?.message ?? null;
 }
 
 /** The issues of each node and connection, for marking them on the canvas. */
-export function flowIssuesByTarget(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[]): { nodes: Map<string, string[]>; edges: Map<string, string[]> } {
+export function flowIssuesByTarget(pipeline: FlowchartPipeline, models?: FlowModelVocabulary[], sourceSize?:number[]): { nodes: Map<string, string[]>; edges: Map<string, string[]> } {
   const nodes = new Map<string, string[]>();
   const edges = new Map<string, string[]>();
-  for (const issue of flowGraphIssues(pipeline, { models })) {
+  for (const issue of flowGraphIssues(pipeline, { models, sourceSize })) {
     if (!issue.id || issue.kind === 'graph') continue;
     const target = issue.kind === 'node' ? nodes : edges;
     target.set(issue.id, [...(target.get(issue.id) || []), issue.message]);
@@ -597,9 +618,10 @@ export function locateFlowIssue(
   pipeline: FlowchartPipeline,
   message: string | null,
   models?: FlowModelVocabulary[],
+  sourceSize?:number[],
 ): { kind: 'node' | 'edge'; id: string } | null {
   if (!message) return null;
-  const first = flowGraphIssues(pipeline, { first: true, models })[0];
+  const first = flowGraphIssues(pipeline, { first: true, models, sourceSize })[0];
   // A connection saved without an id has only a positional key on the canvas; there is nothing to select.
   const selectable = first?.kind === 'node' || pipeline.edges.some((edge) => edge.id && edge.id === first?.id);
   if (first && first.message === message && first.id && first.kind !== 'graph' && selectable) return { kind: first.kind, id: first.id };

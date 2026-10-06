@@ -21,7 +21,7 @@ import type { FlowchartCrop } from '../../types';
 export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}> = ({onSelectNode}) => {
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
 
-  const [filter, setFilter] = useState<'all' | 'ng' | 'ok'>('all');
+  const [filter, setFilter] = useState<'all' | 'ng' | 'ok' | 'review'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<'score_desc' | 'score_asc' | 'id_asc' | 'label_asc'>('score_desc');
   const [hoveredRoiId, setHoveredRoiId] = useState<string | null>(null);
@@ -35,7 +35,8 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
     node.data.node_type === 'inspection' && node.data.task === 'segmentation'
   );
   const defectiveCount = crops.filter((c) => c.verdict === 'NG').length;
-  const normalCount = crops.length - defectiveCount;
+  const normalCount = crops.filter(c => c.verdict === 'OK').length;
+  const reviewCount = crops.filter(c => c.verdict === 'REVIEW').length;
 
   // Filter & Search & Sort
   const processedCrops = useMemo(() => {
@@ -44,6 +45,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
     // 1. Verdict Filter
     if (filter === 'ng') result = result.filter((c) => c.verdict === 'NG');
     if (filter === 'ok') result = result.filter((c) => c.verdict === 'OK');
+    if (filter === 'review') result = result.filter(c => c.verdict === 'REVIEW');
 
     // 2. Search Query
     if (searchQuery.trim()) {
@@ -272,6 +274,9 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
             >
               OK ({normalCount})
             </button>
+            <button onClick={() => setFilter('review')} className={`px-2 py-0.5 rounded ${filter === 'review' ? 'bg-amber-500 text-slate-950' : 'text-amber-300'}`}>
+              REVIEW ({reviewCount})
+            </button>
           </div>
         </div>
 
@@ -313,6 +318,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
           ) : (
             processedCrops.map((crop) => {
               const isNg = crop.verdict === 'NG';
+              const cropReview = crop.verdict === 'REVIEW';
               const isHovered = hoveredRoiId === crop.roi_id;
               const hasDefectArea = typeof crop.defect_area_px === 'number' && Number.isFinite(crop.defect_area_px);
               const hasBlobCount = typeof crop.blob_count === 'number' && Number.isFinite(crop.blob_count);
@@ -330,7 +336,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                   className={`p-2.5 rounded border transition-colors cursor-pointer flex space-x-3 items-center ${
                     isNg
                       ? 'border-l-4 border-l-[#EF4444] border-t-[#2B3547] border-r-[#2B3547] border-b-[#2B3547] bg-[#1E1417]/50 hover:bg-[#28181D]'
-                      : 'border-l-4 border-l-[#10B981] border-t-[#2B3547] border-r-[#2B3547] border-b-[#2B3547] bg-[#121E1C]/40 hover:bg-[#162724]'
+                      : cropReview ? 'border-l-4 border-amber-700 bg-amber-950/30' : 'border-l-4 border-l-[#10B981] border-t-[#2B3547] border-r-[#2B3547] border-b-[#2B3547] bg-[#121E1C]/40 hover:bg-[#162724]'
                   } ${isHovered ? 'ring-1 ring-[#F59E0B]/70' : ''}`}
                 >
                   {/* Thumbnail Frame */}
@@ -354,7 +360,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                       </span>
                       <span
                         className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                          isNg ? 'bg-[#EF4444] text-white' : 'bg-[#10B981] text-slate-950'
+                          isNg ? 'bg-[#EF4444] text-white' : cropReview ? 'bg-amber-500 text-slate-950' : 'bg-[#10B981] text-slate-950'
                         }`}
                       >
                         {crop.verdict}
@@ -369,7 +375,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                           : '결함 점수:'}
                       </span>
                       <div className="flex items-center space-x-1.5">
-                        <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                        <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : cropReview ? 'text-amber-300' : 'text-[#10B981]'}`}>
                           {(crop.defect_score * 100).toFixed(1)}%
                         </span>
                         <span className="text-slate-400 text-[9px] tabular-nums">

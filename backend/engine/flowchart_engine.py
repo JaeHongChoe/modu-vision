@@ -171,7 +171,7 @@ class CropInspectionResult(BaseModel):
     defect_score: float
     score_spec: Optional[Dict[str, Any]] = None
     score_basis: Optional[str] = None
-    verdict: Literal["OK", "NG"]
+    verdict: Literal["OK", "NG", "REVIEW"]
     crop_thumbnail: str  # Base64 Data URI
     flaw_type: str
     confidence: Optional[float] = None
@@ -217,6 +217,7 @@ class FlowchartExecutionStep(BaseModel):
     selected_edge_ids: List[str] = Field(default_factory=list)
     skip_reason: Optional[str] = None
     artifacts: List[Dict[str, Any]] = Field(default_factory=list)
+    count_rule_results: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 class FlowchartExecutionResult(BaseModel):
@@ -765,6 +766,15 @@ def ordered_linear_nodes(pipeline: FlowchartPipeline) -> List[FlowNode]:
             raise ValueError(f"Aggregate node {node.id} must feed the decision directly.")
         if node.data.rule not in ("any_ng", "all_ng"):
             raise ValueError("Aggregate rule must be any_ng or all_ng.")
+    from backend.engine.object_requirements import object_requirements
+    for node in pipeline.nodes:
+        count_rules = object_requirements(node.data.params)
+        if count_rules is not None and (
+            node.data.node_type != "detection_crop" or node.data.task != "detection"
+            or any(edge.target != decision_id or edge.predicate or edge.isBranch for edge in outgoing[node.id])
+            or decisions[0].data.rule not in (None, "any_defect_is_ng")
+        ):
+            raise ValueError("object_requirements needs an axis-aligned detector with unconditional direct decision results and any_defect_is_ng")
     decision_inputs = incoming[decision_id]
     if not decision_inputs or any(nodes[edge.source].data.node_type not in ("inspection", "detection_crop", "blob_measure", "measurement", "aggregate") for edge in decision_inputs):
         raise ValueError("Decision needs incoming model results.")
@@ -1153,6 +1163,11 @@ class FlowchartEngine:
         job_id = det_node.data.model_job_id if det_node else None
 
         det_model, is_trained = self._get_detection_model(job_id=job_id)
+        from backend.engine.object_requirements import object_requirements, validate_object_vocabulary
+        count_rules = object_requirements(det_node.data.params) if det_node else None
+        if count_rules is not None:
+            key = self._cache_key("detection", job_id, "fast", self._resolve_checkpoint(job_id, "detection"))
+            validate_object_vocabulary(count_rules, self._model_classes.get(key, []))
         img_tensor = torch.from_numpy(img_rgb).permute(2, 0, 1).float().unsqueeze(0) / 255.0
 
         boxes_out: List[List[int]] = []
@@ -1171,6 +1186,9 @@ class FlowchartEngine:
                 f_boxes = p_boxes[mask]
                 f_scores = p_scores[mask]
                 f_labels = class_ids[mask] if class_ids is not None else None
+                if count_rules is not None and (f_labels is None or any(
+                        type(value.item()) is not int or not 1 <= int(value) <= len(self._model_classes.get(key, [])) for value in f_labels)):
+                    raise ValueError("Required-object predictions lack recorded foreground class IDs")
                 key = self._cache_key("detection", job_id, "fast", self._resolve_checkpoint(job_id, "detection"))
                 known_classes = self._model_classes.get(key, [])
                 for index, (b, s) in enumerate(zip(f_boxes, f_scores)):
@@ -1210,7 +1228,7 @@ class FlowchartEngine:
                 labels_out.append("ic_chip" if idx < 2 else "component")
 
         latency_ms = (time.time() - t0) * 1000.0
-        status = "passed" if is_trained or len(boxes_out) > 0 else "warning_untrained"
+        status = "passed" if is_trained or (len(boxes_out) > 0 and count_rules is None) else "warning_untrained"
 
         rois = []
         for i, (b, s, l) in enumerate(zip(boxes_out, scores_out, labels_out)):
@@ -2209,10 +2227,21 @@ class FlowchartEngine:
                                 incomplete_reasons.append(f"Measurement {node.id}: {exc}")
                                 continue
                             if rows:
+                                unverified_mm = any(
+                                    row.get('threshold_unit') == 'mm' and not (
+                                        (row.get('calibration') or {}).get('ref')
+                                        and (row.get('calibration') or {}).get('acquisition_verified') is True
+                                        and not (row.get('calibration') or {}).get('refused')
+                                    ) for row in rows
+                                )
+                                if unverified_mm:
+                                    incomplete_reasons.append(
+                                        f"Measurement {node.id} requires verified acquisition calibration for mm verdicts."
+                                    )
                                 evidence.append(crop.model_copy(update={'measurements': rows,
-                                    'verdict': 'NG' if any(r['verdict'] == 'NG' for r in rows) else 'OK',
+                                    'verdict': 'REVIEW' if unverified_mm else 'NG' if any(r['verdict'] == 'NG' for r in rows) else 'OK',
                                     'flaw_type': 'Original-coordinate geometry measurement'}))
-                        branch_verdict = 'NG' if any(c.verdict == 'NG' for c in evidence) else 'OK' if evidence else 'REVIEW'
+                        branch_verdict = 'NG' if any(c.verdict == 'NG' for c in evidence) else 'REVIEW' if any(c.verdict == 'REVIEW' for c in evidence) else 'OK' if evidence else 'REVIEW'
                         if not evidence: incomplete_reasons.append(f"Measurement {node.id} has no measured source evidence.")
                     elif node.data.node_type == "aggregate" and parent_edges:
                         verdicts = [
@@ -2384,6 +2413,18 @@ class FlowchartEngine:
                         "NG" if detected and node.id in detector_only_ids else
                         "OK" if detected or status == "passed" else "REVIEW"
                     )
+                    from backend.engine.object_requirements import object_requirements, count_objects
+                    count_rules = object_requirements(node.data.params)
+                    if count_rules is not None:
+                        if status == "passed":
+                            count_results = count_objects(count_rules, detected)
+                            branch_verdict = "NG" if any(row["verdict"] == "NG" for row in count_results) else "OK"
+                            status = "flagged_ng" if branch_verdict == "NG" else "passed"
+                            node_evidence[node.id] = [crop.model_copy(update={"verdict": branch_verdict,
+                                "flaw_type": "객체 수 규칙", "score_basis": "object_count_rule_indicator", "defect_score": 1.0 if branch_verdict == "NG" else 0.0}) for crop in node_evidence[node.id]]
+                        else:
+                            incomplete_reasons.append(f"Object count node {node.id} requires a completed trained detector.")
+                            node_evidence[node.id] = [crop.model_copy(update={"verdict": "REVIEW"}) for crop in node_evidence[node.id]]
                     output_count = len(detected)
                 else:
                     started = time.time()
@@ -2429,6 +2470,7 @@ class FlowchartEngine:
                     branch_verdict=branch_verdict,
                     selected_edge_ids=[edge.id for edge in selected],
                     skip_reason=step_reason,
+                    count_rule_results=count_results if node.data.node_type == "detection_crop" and count_rules is not None and status in ("passed", "flagged_ng") else [],
                     artifacts=fixture_artifacts + region_artifacts(img_rgb, node_rois[node.id], node_evidence[node.id]),
                 ))
             return (node_rois[selected_node.id], node_evidence[selected_node.id],
@@ -2524,6 +2566,14 @@ class FlowchartEngine:
                 crops, decision_node, no_inspection_reason=no_inspection_reason,
                 empty_is_ok=empty_is_ok and not incomplete_reasons,
             )
+        count_steps = [step for step in execution_steps if step.node_id in {edge.source for edge in decision_edges}
+                       and step.count_rule_results]
+        failed_counts = [row for step in count_steps for row in step.count_rule_results if row["verdict"] == "NG"]
+        if failed_counts:
+            verdict, is_ok, dec_status = "NG", False, "flagged_ng"
+            reason = "; ".join(f"{row['class_name']}: detected {row['count']}, required {row['min_count']}..{row['max_count'] if row['max_count'] is not None else 'unbounded'}" for row in failed_counts)
+        elif count_steps and not crops:
+            verdict, is_ok, reason, dec_status = "OK", True, "Explicit object count requirements passed.", "passed"
         if incomplete_reasons:
             incomplete_policy = decision_node.data.params.get("incomplete_policy", "review")
             if incomplete_policy == "ng":

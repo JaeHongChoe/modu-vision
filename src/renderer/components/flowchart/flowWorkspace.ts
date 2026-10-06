@@ -48,6 +48,7 @@ export function flowSkipReasonText(reason:string):string {
 export function nodeEvidenceText(node:FlowNode,step:FlowchartExecutionStep):string[] {
   const lines=[`입력 ${step.input_count??0}개 → 출력 ${step.output_count??0}개 · ${step.branch_verdict||step.status} · ${step.latency_ms.toFixed(1)} ms`];
   if(step.skip_reason) lines.push(flowSkipReasonText(step.skip_reason));
+  for(const row of step.count_rule_results||[]) lines.push(`${row.class_name}: 검출 ${row.count}개 · 필요 ${row.min_count}~${row.max_count??'제한 없음'}개 · ${row.verdict}`);
   const rules=(node.data.params?.class_rules||[]) as Array<Record<string,number>>;
   for(const artifact of step.artifacts||[]) {
     const measured=(artifact.evidence?.blob_measurements||[]) as Array<Record<string,unknown>>;

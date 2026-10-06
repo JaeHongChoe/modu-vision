@@ -142,7 +142,7 @@ function projectErrorMessage(error: unknown): string {
   return '프로젝트를 열지 못했습니다.';
 }
 
-export async function saveOpenEdits(): Promise<void> {
+export async function saveOpenEdits(options?: {allowCleanDisconnect?: boolean}): Promise<void> {
   if (useModelAssistRunStore.getState().activeOperations > 0) {
     throw new Error('모델 보조 라벨링 요청이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
   }
@@ -157,7 +157,23 @@ export async function saveOpenEdits(): Promise<void> {
   if (training.isTraining) {
     throw new Error('학습이 진행 중입니다. 작업이 끝난 후 프로젝트를 전환하세요.');
   }
+  const flow = useFlowchartStore.getState();
+  if (flow.isRunning) {
+    throw new Error('플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
+  }
+  if (flow.isLoading || flow.isSaving) {
+    throw new Error('플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.');
+  }
   const currentProject = useProjectStore.getState().project;
+  // Logout is authenticated independently of project membership. A clean view
+  // must remain disconnectable after revocation; unsaved work retains the
+  // existing save/refusal path and every running-operation guard above.
+  const sourceNeedsSave = currentProject && dataset.hasSelectedFolder
+    && dataset.datasetKey === `${dataset.folderPath}\0${currentProject.task}` && !dataset.importError
+    && (dataset.sourceSaveError || currentProject.source_dataset_dir !== dataset.folderPath);
+  if (options?.allowCleanDisconnect && !sourceNeedsSave && !flow.pipelineDirty
+      && !useAnnotationStore.getState().isDirty) return;
+
   if (currentProject) {
     const backendProject = await api.project.getCurrent();
     if (backendProject.id !== currentProject.id || backendProject.project_dir !== currentProject.project_dir) {
@@ -198,13 +214,6 @@ export async function saveOpenEdits(): Promise<void> {
         staleDatasetKeys: state.staleDatasetKeys.includes(picked) ? [...new Set([...state.staleDatasetKeys, adopted])] : state.staleDatasetKeys,
       });
     }
-  }
-  const flow = useFlowchartStore.getState();
-  if (flow.isRunning) {
-    throw new Error('플로우 실행이 진행 중입니다. 완료 후 프로젝트를 전환하세요.');
-  }
-  if (flow.isLoading || flow.isSaving) {
-    throw new Error('플로우를 불러오거나 저장하는 중입니다. 완료 후 프로젝트를 전환하세요.');
   }
   // Saving a changed label invalidates flow state; preserve the edited graph first.
   if (flow.pipelineDirty) {

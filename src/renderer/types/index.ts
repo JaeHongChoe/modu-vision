@@ -330,7 +330,7 @@ export interface FlowchartCrop {
   defect_score: number;
   score_spec?: ScoreSpec | null;
   score_basis?: string | null;
-  verdict: 'OK' | 'NG';
+  verdict: 'OK' | 'NG' | 'REVIEW';
   crop_thumbnail: string;
   flaw_type: string;
   confidence?: number;
@@ -370,6 +370,7 @@ export interface FlowchartExecutionStep {
   branch_verdict?: 'OK' | 'NG' | 'REVIEW' | null;
   selected_edge_ids?: string[];
   skip_reason?: string | null;
+  count_rule_results?: Array<{class_name:string; count:number; min_count:number; max_count:number|null; verdict:'OK'|'NG'}>;
   artifacts?: Array<{ roi_id: string; bbox: number[]; image: string; mask?: string; source_transform?: number[][]; image_size?: number[]; evidence?: Record<string, unknown> }>;
 }
 

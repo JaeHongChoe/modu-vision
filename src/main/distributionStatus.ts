@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {readTrustAuthority,readBoundedStableFile,verifySignedRelease,verifyOfflineRelease} from './releaseTrust';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import type {DistributionState,NativeSignature,UpdateChannel,UpdateRelease,ManualDelivery,DeliveryRecovery,DistributionBackend} from '../types/electron';
@@ -68,6 +69,8 @@ export class DistributionManager {
   private release:UpdateRelease|null=null;
   private manifestSHA:string|null=null;
   private revision=0;
+  private publisher:string|null=null;
+  private authoritySHA:string|null=null;
   constructor(options:DistributionOptions){
     if(fs.existsSync(options.userDataPath)&&fs.lstatSync(options.userDataPath).isSymbolicLink())throw new Error('Distribution user storage cannot be a symbolic link');
     this.options={...options,userDataPath:fs.existsSync(options.userDataPath)?fs.realpathSync(options.userDataPath):path.resolve(options.userDataPath)};
@@ -87,7 +90,7 @@ export class DistributionManager {
   private deliveryJournal():(DeliveryRecovery&{partial_path?:string})|null {
     const file=this.deliveryPath();unlinked(file);if(!fs.existsSync(file))return null;
     if(fs.statSync(file).size>8192)throw new Error('Delivery journal is too large');
-    const value=JSON.parse(fs.readFileSync(file,'utf8'));
+    const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(readBoundedStableFile(file,8192,'Delivery journal')));
     if(value.schema_version!==1||typeof value.status!=='string'||typeof value.version!=='string'||! /^[0-9a-f]{64}$/.test(value.manifest_sha256)||! /^[0-9a-f]{64}$/.test(value.candidate_sha256)||(value.installed_sha256!==null&&! /^[0-9a-f]{64}$/.test(value.installed_sha256)))throw new Error('Delivery journal identity is invalid');
     if(value.candidate_path)value.candidate_path=this.ownedDeliveryPath(value.candidate_path);
     return value;
@@ -115,7 +118,7 @@ export class DistributionManager {
     const file=this.configPath();unlinked(file);
     if(!fs.existsSync(file))return null;
     if(fs.statSync(file).size>4096)throw new Error('Update channel configuration is too large');
-    const value=JSON.parse(fs.readFileSync(file,'utf8')) as UpdateChannel;
+    const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(readBoundedStableFile(file,4096,'Channel configuration'))) as UpdateChannel;
     this.validateChannel(value);return value;
   }
   private validateChannel(value:UpdateChannel):void {
@@ -193,10 +196,15 @@ export class DistributionManager {
   }
   async check():Promise<DistributionState> {
     const configuration=this.configuration();if(!configuration)throw new Error('Configure the actual release channel first');
-    const started=this.revision;const chunks:Buffer[]=[];this.release=null;this.manifestSHA=null;
+    const started=this.revision;const chunks:Buffer[]=[];this.release=null;this.manifestSHA=null;this.publisher=null;this.authoritySHA=null;
+    const trustFile=path.join(this.options.resourcesPath||process.resourcesPath||this.options.appPath,'release-trust.json');
+    const trust=this.options.packaged?readTrustAuthority(trustFile):null;
     await this.request(configuration.manifest_url,MANIFEST_LIMIT,15000,chunk=>{chunks.push(Buffer.from(chunk));});
     if(started!==this.revision)throw new Error('Update configuration changed during checking; check again');
-    const bytes=Buffer.concat(chunks),value=JSON.parse(bytes.toString('utf8')) as UpdateRelease;
+    const bytes=Buffer.concat(chunks),parsed=JSON.parse(bytes.toString('utf8'));
+    const value:UpdateRelease=trust?verifySignedRelease(parsed,trust,{platform:this.options.platform,arch:this.options.arch,
+      channel:configuration.channel,current_version:this.options.appVersion,origin:httpsUrl(configuration.manifest_url).origin}):parsed;
+    if(trust){this.publisher=trust.publisher;this.authoritySHA=crypto.createHash('sha256').update(JSON.stringify(trust)).digest('hex');}
     if(!value||typeof value.version!=='string')throw new Error('Release manifest needs a version');version(value.version);
     if(value.channel!==configuration.channel)throw new Error('Release channel differs from configuration');
     if(value.platform!==this.options.platform||value.arch!==this.options.arch)throw new Error('Release platform or architecture differs from this installation');
@@ -208,8 +216,8 @@ export class DistributionManager {
   }
   async download():Promise<ManualDelivery> {
     if(!this.release||!this.manifestSHA)throw new Error('Check a newer release before manual delivery');
-    const before=this.manifestSHA,release=this.release,started=this.revision;await this.check();
-    if(before!==this.manifestSHA||started!==this.revision)throw new Error('Release manifest changed since checking; check again');
+    const before=this.manifestSHA,authorityBefore=this.authoritySHA,release=this.release,started=this.revision;await this.check();
+    if(before!==this.manifestSHA||authorityBefore!==this.authoritySHA||started!==this.revision)throw new Error('Release manifest changed since checking; check again');
     const directory=path.join(this.options.userDataPath,'updates');unlinked(directory);fs.mkdirSync(directory,{recursive:true,mode:0o700});
     const extension=path.extname(new URL(release.url).pathname);const suffix=['.dmg','.exe','.zip','.AppImage'].includes(extension)?extension:'.bin';
     const target=path.join(directory,`release-${release.version}-${release.platform}-${release.arch}${suffix}`),temporary=path.join(directory,'.'+crypto.randomUUID()+'.partial');unlinked(target);
@@ -223,11 +231,61 @@ export class DistributionManager {
       fs.fsyncSync(fd);fs.closeSync(fd);opened=false;fs.renameSync(temporary,target);
       this.saveDelivery({...journal,status:'verifying',partial_path:undefined,checked_at:new Date().toISOString()});
       const signature=await this.signature(target,false),installed=await this.signature();
-      const matched=signature.status==='verified'&&installed.status==='verified'&&!!signature.publisher&&signature.publisher===installed.publisher&&this.installedSHA()===journal.installed_sha256;
+      const matched=signature.status==='verified'&&installed.status==='verified'&&!!signature.publisher&&signature.publisher===installed.publisher&&(!this.options.packaged||signature.publisher===this.publisher)&&this.installedSHA()===journal.installed_sha256;
       this.saveDelivery({...journal,status:matched?'handoff_ready':'publisher_required',partial_path:undefined,checked_at:new Date().toISOString()});
       return {version:release.version,path:target,sha256:release.sha256,integrity_verified:true,signature,publisher_matches_installed:matched,handoff_ready:matched,
         prerequisite:matched?'Back up the project, then install the verified package manually':'A valid artifact signature matching the installed publisher is required for a verified installation handoff; no automatic installation occurred'};
     }catch(cause){if(opened)try{fs.closeSync(fd);}catch{}this.saveDelivery({...journal,status:'failed',partial_path:undefined,error:cause instanceof Error?cause.name:'DeliveryFailure',checked_at:new Date().toISOString()});throw cause;}
     finally{fs.rmSync(temporary,{force:true});}
+  }
+
+  /** Verify a user-selected offline bundle. No installer, migration, subprocess
+   * code from the bundle, or network request is executed. */
+  async verifyOffline(manifestPath:string):Promise<ManualDelivery> {
+    if(!this.options.packaged)throw new Error('Offline release handoff requires the packaged application and its provisioned publisher authority');
+    const trust=readTrustAuthority(path.join(this.options.resourcesPath||process.resourcesPath||this.options.appPath,'release-trust.json'));
+    const raw=readBoundedStableFile(manifestPath,MANIFEST_LIMIT,'Release manifest');
+    const envelope=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
+    // Channel is a local choice, not a value selected by the signed feed.
+    const channel=this.configuration()?.channel||'stable';
+    const target={platform:this.options.platform,arch:this.options.arch,channel,current_version:this.options.appVersion,origin:trust.allowed_origins[0]};
+    const sourceDirectory=path.join(path.dirname(manifestPath),'artifacts');
+    const verified=verifyOfflineRelease(sourceDirectory,envelope,trust,target),release=verified.release;
+    const installer=release.artifacts.find(a=>a.kind==='installer')!;
+    const directory=path.join(this.options.userDataPath,'updates');unlinked(directory);fs.mkdirSync(directory,{recursive:true,mode:0o700});
+    const owned=path.join(directory,`offline-${crypto.randomUUID()}${path.extname(installer.path)}`),temporary=path.join(directory,'.'+crypto.randomUUID()+'.partial');
+    const source=path.join(sourceDirectory,installer.path);unlinked(source);
+    const before=this.installedSHA(),manifestSHA=crypto.createHash('sha256').update(raw).digest('hex');
+    const started=this.revision;
+    const journal:DeliveryRecovery&{partial_path?:string}={schema_version:1,status:'verifying',version:release.version,manifest_sha256:manifestSHA,
+      candidate_sha256:release.sha256,installed_sha256:before,checked_at:new Date().toISOString()};
+    let input:number|undefined,output:number|undefined;
+    try{
+      this.saveDelivery({...journal,status:'downloading',candidate_path:owned,partial_path:temporary});
+      input=fs.openSync(source,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
+      const stat=fs.fstatSync(input);if(!stat.isFile()||stat.size!==installer.size)throw new Error('Offline installer identity changed');
+      output=fs.openSync(temporary,'wx',0o600);const digest=crypto.createHash('sha256'),buffer=Buffer.alloc(1024*1024);let size=0,count;
+      while((count=fs.readSync(input,buffer,0,Math.min(buffer.length,installer.size-size+1),null))>0){size+=count;if(size>installer.size)throw new Error('Offline installer size changed');digest.update(buffer.subarray(0,count));let offset=0;while(offset<count)offset+=fs.writeSync(output,buffer,offset,count-offset);}
+      const after=fs.fstatSync(input);
+      if(size!==installer.size||digest.digest('hex')!==installer.sha256||after.mtimeMs!==stat.mtimeMs||after.ino!==stat.ino||after.dev!==stat.dev)throw new Error('Offline installer checksum or identity changed');
+      fs.fsyncSync(output);fs.closeSync(output);output=undefined;fs.renameSync(temporary,owned);
+      this.saveDelivery({...journal,candidate_path:owned});
+      const signature=await this.signature(owned,false),installed=await this.signature();
+      // Recheck trust and every optional pack after native verification awaits.
+      const currentTrust=readTrustAuthority(path.join(this.options.resourcesPath||process.resourcesPath||this.options.appPath,'release-trust.json'));
+      if(started!==this.revision)throw new Error('Update channel changed during offline verification');
+      if(JSON.stringify(currentTrust)!==JSON.stringify(trust))throw new Error('Pinned release authority changed during verification');
+      verifyOfflineRelease(sourceDirectory,envelope,currentTrust,target);
+      unlinked(manifestPath);
+      if(crypto.createHash('sha256').update(readBoundedStableFile(manifestPath,MANIFEST_LIMIT,'Release manifest')).digest('hex')!==manifestSHA)throw new Error('Offline manifest changed during native verification');
+      if(crypto.createHash('sha256').update(fs.readFileSync(owned)).digest('hex')!==release.sha256)throw new Error('Owned installer changed during native verification');
+      const matched=signature.status==='verified'&&installed.status==='verified'&&signature.publisher===trust.publisher
+        &&installed.publisher===trust.publisher&&this.installedSHA()===before;
+      this.saveDelivery({...journal,candidate_path:owned,status:matched?'handoff_ready':'publisher_required'});
+      return {version:release.version,path:owned,sha256:release.sha256,integrity_verified:true,signature,
+        publisher_matches_installed:matched,handoff_ready:matched,offline:true,artifacts_verified:verified.artifacts_verified,
+        prerequisite:'All offline bundle hashes verified. Native publisher acceptance, project backup and an idle execution window are required before manual installation; no installation or migration occurred'};
+    }catch(cause){this.saveDelivery({...journal,status:'failed',candidate_path:fs.existsSync(owned)?owned:undefined,error:cause instanceof Error?cause.name:'OfflineFailure'});throw cause;}
+    finally{if(input!==undefined)fs.closeSync(input);if(output!==undefined)fs.closeSync(output);fs.rmSync(temporary,{force:true});}
   }
 }

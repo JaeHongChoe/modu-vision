@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),crypto=require('node:crypto');
-function load(){const file=path.join(__dirname,'distributionStatus.ts');assert.ok(fs.existsSync(file),'distribution manager must exist');const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;}
+function load(name='distributionStatus.ts'){const file=path.join(__dirname,name);assert.ok(fs.existsSync(file),'distribution manager must exist');const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key==='./releaseTrust'?load('releaseTrust.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;}
 function fixture(t,extra={}){const {DistributionManager}=load(),directory=fs.mkdtempSync(path.join(os.tmpdir(),'desktop-distribution-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));return new DistributionManager({appVersion:'2.3.4',packaged:false,appPath:'/Application.app',executablePath:'/Application.app/executable',userDataPath:directory,platform:'darwin',arch:'arm64',...extra});}
 function response(value){return new Response(typeof value==='string'?value:JSON.stringify(value),{status:200});}
 test('actual app version and development state do not invent signing or updates',async t=>{const m=fixture(t,{runner:async()=>assert.fail('no signing in development')});const state=await m.status();assert.equal(state.app_version,'2.3.4');assert.equal(state.signature.status,'development');assert.equal(state.update.status,'not_configured');assert.equal(state.update.automatic_update_available,false);});
@@ -76,4 +76,29 @@ test('journal flush failure during recovery preserves the previous recovery reco
   finally{Object.assign(fs,{fsyncSync,renameSync});}
   assert.equal(renames,0);assert.deepEqual(fs.readFileSync(file),before);
   assert.equal(fs.readdirSync(m.options.userDataPath).some(x=>x.endsWith('.tmp')),false);
+});
+
+
+test('a packaged application refuses an unsigned manifest without a provisioned publisher authority',async t=>{
+ const m=fixture(t,{packaged:true,resourcesPath:'/no-provisioned-authority',runner:async()=>({stdout:'',stderr:'TeamIdentifier=fixture-publisher'}),
+ fetcher:async()=>response({version:'2.4.0',channel:'stable',platform:'darwin',arch:'arm64',url:'https://releases.example/app.dmg',sha256:'a'.repeat(64),size:8})});
+ await m.configure({channel:'stable',manifest_url:'https://releases.example/manifest.json'});
+ await assert.rejects(()=>m.check(),/pinned release authority/);
+ assert.equal((await m.status()).update.release,null);
+});
+
+test('offline delivery verifies a pinned manifest and all packs without contacting a server or installing',async t=>{
+ const resources=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'offline-delivery-')));t.after(()=>fs.rmSync(resources,{recursive:true,force:true}));
+ const {publicKey,privateKey}=crypto.generateKeyPairSync('ed25519'),{canonical}=load('releaseTrust.ts');
+ const compatibility={api_context:1,worker:1,runtime:1,dataset_index:3},trust={schema_version:1,publisher:'publisher-fixture',keys:{current:publicKey.export({type:'spki',format:'der'}).toString('base64')},revoked_key_ids:[],allowed_origins:['https://release.test'],compatibility};
+ fs.writeFileSync(path.join(resources,'release-trust.json'),JSON.stringify(trust));fs.mkdirSync(path.join(resources,'artifacts'));
+ const bytes=Buffer.from('isolated installer fixture'),pack=Buffer.from('isolated optional pack fixture'),hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+ fs.writeFileSync(path.join(resources,'artifacts','app.dmg'),bytes);fs.writeFileSync(path.join(resources,'artifacts','optional.zip'),pack);
+ const value={version:'2.4.0',channel:'stable',platform:'darwin',arch:'arm64',url:'https://release.test/app.dmg',sha256:hash(bytes),size:bytes.length,publisher:trust.publisher,compatibility,
+ artifacts:[{path:'app.dmg',kind:'installer',sha256:hash(bytes),size:bytes.length},{path:'optional.zip',kind:'runtime_pack',sha256:hash(pack),size:pack.length}]};
+ const raw=Buffer.from(canonical(value)),manifest=path.join(resources,'release.json');fs.writeFileSync(manifest,JSON.stringify({schema_version:1,key_id:'current',payload_b64:raw.toString('base64'),signature_b64:crypto.sign(null,raw,privateKey).toString('base64')}));
+ const m=fixture(t,{packaged:true,resourcesPath:resources,fetcher:async()=>assert.fail('offline must not fetch'),runner:async()=>{throw Error('unsigned controlled artifact');}});
+ const result=await m.verifyOffline(manifest);assert.equal(result.integrity_verified,true);assert.equal(result.handoff_ready,false);assert.equal(result.artifacts_verified,2);assert.equal(result.offline,true);
+ assert.deepEqual(fs.readFileSync(result.path),bytes);assert.deepEqual(fs.readFileSync(path.join(resources,'artifacts','optional.zip')),pack);
+ assert.equal((await m.status()).update.recovery.status,'publisher_required');
 });

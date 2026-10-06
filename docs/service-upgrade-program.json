@@ -1561,7 +1561,7 @@
     "S1-05",
     "S2-04"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "slice-reviewed-published",
@@ -1604,6 +1604,12 @@
      "result": "Missing/failed/REVIEW upstream input now records upstream_incomplete rather than a known condition_not_met. Only known unmet branches propagate not_reached; later Blob/aggregate nodes preserve unknown evidence. Six controlled causal cases failed before correction. Affected flow contracts80 passed; renderer9 passed and both TypeScript projects passed. Actual local SDK/batch19 passed with3 declared environment skips.",
      "scope": "Task37 onb146414 plus owned engine, tests and two renderer files; synthetic CPU adapters for the unknown cases, actual generated CPU packages for SDK checks; root review only; no parent or feature acceptance promoted",
      "platform": "Local macOS CPU/native C++ and renderer unit checks. C# and Linux-loader cases not executed locally; exact hosted source/platform rerun pending"
+    },
+    {
+     "kind": "software-parent-closure",
+     "reference": "docs/implementation-ledger/2026-10-06-remaining-parent-execution.md",
+     "result": "Task133: typed rules now include required detector class counts and explicit missing/excess NG without invented ROIs; untrained/incomplete remains REVIEW; model class save checks and original pixel bounds; unverified mm cannot produce a qualified physical verdict.",
+     "scope": "Actual trained YOLO Chrome/Electron scenarios2pass, required-object API/related112pass and16 dedicated count controls, current broad backend664pass/renderer827pass/types/build. Existing typed chain/Blob/predicate/merge controls retained. Manufacturing quality/calibration hardware/Windows actual acceptance remain separate."
     }
    ],
    "file_actions": {
@@ -1614,12 +1620,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -1854,7 +1860,7 @@
     "S2-06",
     "S2-07"
    ],
-   "status": "in_progress",
+   "status": "verification_pending",
    "evidence": [
     {
      "kind": "partial-comparison-integrity-debug",
@@ -1879,6 +1885,12 @@
      "result": "Task128 adds bounded pointer/keyboard inspector resize, mounted-content collapse and app-local layout readback. Invalid/denied storage stays usable. Actual displayed zoom, rather than a fit-scale multiplier ceiling, preserves readability of large graphs.",
      "scope": "Renderer803,types/E2E types/build; actual Chrome/development Electron2pass.46-node52-edge supported graph,8 shared-model nodes keep distinct thresholds, unsaved name survives collapse, layout reopens and exact saved graph/source hashes stay unchanged.100-node layout calculation only, no expanded execution-node support. Source7/artifacts62 plus6 unchanged dependencies; root 4ae0c8b106bd8e827bfb321af8e29d248da5936e7b98cc0958f944a5d204b984.",
      "platform": "macOS synthetic navigation controls with unavailable segmentation model; no inference/quality,GPU,native Windows,independent review or parent closure. Browser background409/404 retained separately."
+    },
+    {
+     "kind": "software-parent-closure",
+     "reference": "docs/implementation-ledger/2026-10-06-remaining-parent-execution.md",
+     "result": "Task134: whole/subgraph template save, explicit cross-project model/class mapping, draft/reopen/Undo/Redo actual Chrome/Electron2pass; exact graph/input/model cache identity, frozen A/B, branch reasons, version differences and large DAG navigation/inspector records from Tasks125-128 retained.",
+     "scope": "All software assertions exercised across retained precise source slices and current tests; selected templates expose unconnected boundary ports rather than auto-activating. Synthetic and trained controls are not representative quality approval or independent review."
     }
    ],
    "file_actions": {
@@ -1913,12 +1925,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -4814,8 +4826,15 @@
     "S6-07",
     "S1-05"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "verification_pending",
+   "evidence": [
+    {
+     "kind": "software-parent-closure",
+     "reference": "docs/implementation-ledger/2026-10-06-remaining-parent-execution.md",
+     "result": "Task130: browser HTTPS cookie host supports actual login/CSRF/role revocation/source restore/upload/download/flow viewing; four pinned licensed permissioned static extension contracts and a finite reviewed camera fixture.",
+     "scope": "Backend browser/extension contracts and actual Chrome HTTPS session; native feature boundaries explicit. Broad current backend664pass/2 Windows-only skip, renderer827pass; type checks/build; overall final acceptance and physical devices remain pending."
+    }
+   ],
    "file_actions": {
     "src/renderer/services/hostAdapter.ts": "Modify after S1-10 handoff",
     "docs/extension-contracts.md": "Create",
@@ -4823,12 +4842,12 @@
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
    "acceptance_state": {
-    "implementation": "pending",
-    "contract": "pending",
-    "gui": "pending",
-    "persist": "pending",
-    "reopen": "pending",
-    "failure": "pending",
+    "implementation": "verified",
+    "contract": "verified",
+    "gui": "verified",
+    "persist": "verified",
+    "reopen": "verified",
+    "failure": "verified",
     "handoff": "pending",
     "windows_native": "pending",
     "target_execution": "pending"
@@ -9635,13 +9654,13 @@
   "progress": {
    "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
    "parent_implementation": {
-    "verified": 57,
-    "pending": 25
+    "verified": 60,
+    "pending": 22
    },
    "parent_status": {
-    "verification_pending": 51,
-    "in_progress": 15,
-    "planned": 16
+    "verification_pending": 54,
+    "in_progress": 13,
+    "planned": 15
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

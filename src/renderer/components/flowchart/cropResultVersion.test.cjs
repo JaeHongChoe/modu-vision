@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),test=require('node:test');
-function render(current, scoreSpec){
+function render(current, scoreSpec, measurements, verdict = 'NG'){
  const crop={roi_id:'seg:1',source_node_id:'seg',label:'NG',bbox:[0,0,10,10],defect_score:.4,
-   verdict:'NG',crop_thumbnail:'fixture.png',flaw_type:'scratch',defect_area_px:12,score_spec:scoreSpec};
+   verdict,measurements,crop_thumbnail:'fixture.png',flaw_type:'scratch',defect_area_px:12,score_spec:scoreSpec};
  const pipeline={nodes:[{id:'seg',data:{node_type:'inspection',task:'segmentation',threshold:.8,params:{min_defect_area_px:999}}}],edges:[]};
  const state={pipeline,executionResult:{crops:[crop]},executionIdentity:{semantic_key:'saved'},setInspectedCrop(){}};
  const jsx=(type,props)=>({type,props:props||{}}),empty=()=>null;
@@ -29,4 +29,14 @@ test('stale crop retains its explicitly recorded score threshold',()=>{
 test('current crop can explain its current node threshold and minimum defect area',()=>{
  const rendered=text(render(true));assert.match(rendered,/임계 기준: 80.0%/);assert.match(rendered,/12 \/ 999 px/);
  assert.ok(!rendered.includes('이전 규칙의 실행 결과'));
+});
+
+test('unverified physical rows show source pixels and REVIEW without losing historical calculations',()=>{
+ const measurement={id:'width',coordinate_space:'original_image',source_size:[32,32],measurement_source:'source_path',length:4,length_px:8,unit:'mm',threshold_unit:'mm',verdict:'NG',calibration:{mm_per_pixel_x:.5,mm_per_pixel_y:.5,acquisition_verified:false}};
+ const output=text(render(true,undefined,[measurement],'REVIEW'));
+ assert.match(output,/8.00 px/);assert.doesNotMatch(output,/4.00 mm/);assert.match(output,/width · REVIEW/);
+ assert.match(output,/검증된 교정 근거 없음/);assert.doesNotMatch(output,/설정 기준 이내/);
+ assert.equal(measurement.length,4);
+ const verified=text(render(true,undefined,[{...measurement,calibration:{...measurement.calibration,ref:'sha256:pinned',acquisition_verified:true}}]));
+ assert.match(verified,/4.00 mm/);assert.match(verified,/width · NG/);
 });

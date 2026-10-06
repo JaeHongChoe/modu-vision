@@ -8,7 +8,7 @@ const test = require('node:test');
 // Actual component callbacks and project-store transitions; only React's hook
 // scheduler, sibling stores, and API/IPC/telemetry transports are controlled.
 const tick = () => new Promise(resolve => setImmediate(resolve));
-function hostAdapterModule(){const file=path.join(__dirname,'..','..','services','hostAdapter.ts');const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
+function hostAdapterModule(name='hostAdapter.ts'){const file=path.join(__dirname,'..','..','services',name);const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);m.require=key=>key==='./browserSession'?hostAdapterModule('browserSession.ts'):original(key);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
 function load(relative, mocks) {
   const filename = path.resolve(__dirname, relative), loaded = new Module(filename, module);
   loaded.filename = filename; loaded.paths = Module._nodeModulePaths(path.dirname(filename));

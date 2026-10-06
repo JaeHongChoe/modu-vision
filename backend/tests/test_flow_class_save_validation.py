@@ -316,3 +316,19 @@ def test_genuinely_empty_legacy_class_vocabulary_remains_unknown(flow_api):
     model(metadata={"task": "segmentation", "classes": [], "class_names": [], "class_ids": []})
     response = save(graph_with_rule("predicate", "unknown"))
     assert response.status_code == 200, response.text
+
+
+def test_required_objects_bind_recorded_detector_classes_and_saved_recipe(flow_api):
+    from backend.engine.flowchart_engine import get_single_detection_flowchart
+    client, source, root, model, save = flow_api
+    model('job_count', 'detection', {'task':'detection','classes':['bolt','washer']})
+    graph=get_single_detection_flowchart('job_count')
+    node=next(n for n in graph.nodes if n.data.node_type=='detection_crop')
+    node.data.params['object_requirements']=[{'class_name':'bolt','min_count':1,'max_count':2}]
+    answer=save(graph); assert answer.status_code==200,answer.text
+    before={str(p.relative_to(root)):p.read_bytes() for p in (root/'flowcharts').rglob('*.json')}
+    assert any(b'object_requirements' in value for value in before.values())
+    node.data.params['object_requirements'][0]['class_name']='unrecorded'
+    refused=save(graph);assert refused.status_code==422,refused.text
+    assert 'recorded' in refused.text
+    assert {str(p.relative_to(root)):p.read_bytes() for p in (root/'flowcharts').rglob('*.json')}==before

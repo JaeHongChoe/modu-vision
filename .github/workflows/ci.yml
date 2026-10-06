@@ -49,6 +49,7 @@ jobs:
         run: >-
           python -m pytest -q --junitxml=ci-pytest.xml
           backend/tests/test_flow_class_save_validation.py
+          backend/tests/test_detection_object_rules.py
           backend/tests/test_source_mask_annotations.py
           backend/tests/test_service_joint_augmentation.py
           backend/tests/test_service_score_contract.py
@@ -97,6 +98,11 @@ jobs:
           backend/tests/test_service_e01.py
           backend/tests/test_service_s2_01.py
           backend/tests/test_extension_adapter_review.py
+          backend/tests/test_service_s6_10.py
+          backend/tests/test_runtime_pack_inventory.py
+          backend/tests/test_scale_acceptance.py
+          backend/tests/test_inspection_endurance.py
+          backend/tests/test_service_failure_matrix.py
           backend/tests/test_extension_dino_finetune.py
           backend/tests/test_extension_integration_review.py
           backend/tests/test_extension_ocr_flow_evidence.py

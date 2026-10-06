@@ -114,7 +114,9 @@ def test_measurement_node_saves_path_and_mask_area_in_result(monkeypatch):
     assert rows['width']['length'] == 4
     assert rows['width']['verdict'] == 'NG'
     assert rows['class_2']['area'] == 16
-    assert result['final_verdict'] == 'NG'
+    assert result['final_verdict'] == 'REVIEW'
+    assert result['crops'][0]['verdict'] == 'REVIEW'
+    assert 'verified acquisition calibration' in result['rejection_reason']
 
 
 def test_geometry_api_rejects_calibration_from_another_source(tmp_path):

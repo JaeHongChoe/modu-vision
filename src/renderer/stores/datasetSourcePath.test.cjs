@@ -99,7 +99,7 @@ test('an empty saved path is not adopted, and a newer pick made while the path i
   assert.deepEqual(held.imports, ['/private/var/qa/second']);
 });
 
-function loadProjectStore(dataset, update) {
+function loadProjectStore(dataset, update, getCurrent) {
   const name = path.resolve(__dirname, 'useProjectStore.ts');
   const m = new Module(name, module);
   m.filename = name;
@@ -107,7 +107,7 @@ function loadProjectStore(dataset, update) {
   const value = initial => ({ getState: () => initial, setState: change => Object.assign(initial, typeof change === 'function' ? change(initial) : change) });
   const project = { id: 'p1', name: 'P', project_dir: '/projects/p1', task: 'segmentation', source_dataset_dir: null };
   const mocks = {
-    '../services/api': { api: { project: { getCurrent: async () => project, update } },
+    '../services/api': { api: { project: { getCurrent: getCurrent || (async () => project), update } },
       getApiPersistenceIdentity: () => 'local', getProjectContext: () => null, getProjectContextGeneration: () => 0, setCachedPort() {} },
     '../services/datasetWorkflow': { datasetWorkflow: {}, workflowError: error => String(error?.message || error) },
     './projectViewState': { projectViewScope: () => 'scope', readProjectStep: () => 3, rememberProjectStep() {} },
@@ -217,4 +217,38 @@ test('a retried source save never adopts over a newer pick or a re-import in pro
     assert.notEqual(state.folderPath, '/private/var/qa/data', JSON.stringify(change));
     assert.notEqual(state.datasetKey, '/private/var/qa/data\0segmentation');
   }
+});
+
+
+test('reopening a saved source only reads its scoped summary and never saves/imports it', async () => {
+  const writes = [];
+  const summary = {total_images:6,source_images:6,classes:{defect:6},split:{train:4,val:1,test:1}};
+  const api = {project:{update:async()=>{writes.push('update');throw new Error('viewer cannot write');}},
+    dataset:{import:async()=>{writes.push('import');throw new Error('viewer cannot import');},
+      currentSummary:async data=>{assert.deepEqual(data,{folder_path:'/saved/source',task:'segmentation'});return summary;},
+      getImages:async()=>({items:[],total:6})}};
+  const store=load(api,{project:{id:'p1'}});
+  store.getState().setFolderPath('/saved/source');
+  await store.getState().ensureImported('segmentation');
+  assert.deepEqual(writes,[]);
+  assert.equal(store.getState().importError,null);
+  assert.equal(store.getState().sourceSaveError,null);
+  assert.equal(store.getState().totalImages,6);
+  assert.equal(store.getState().lastImportedKey,'/saved/source\0segmentation');
+});
+
+test('a saved-source mismatch refuses restoration instead of importing a different folder', async () => {
+  const api={dataset:{currentSummary:async()=>{throw new Error('saved source changed');}},project:{update:async()=>{throw new Error('must not save');}}};
+  const store=load(api,{project:{id:'p1'}});
+  store.getState().setFolderPath('/saved/source');
+  await assert.rejects(store.getState().ensureImported('segmentation'),/saved source changed/);
+  assert.match(store.getState().importError,/saved source changed/);
+  assert.equal(store.getState().lastImportedKey,null);
+});
+
+
+test('clean logout remains possible after membership revocation without project reads or writes',async()=>{
+  const dataset={getState:()=>({hasSelectedFolder:false}),setState:()=>{}};
+  const {saveOpenEdits}=loadProjectStore(dataset,()=>assert.fail('no source save'),async()=>{throw new Error('membership revoked');});
+  await saveOpenEdits({allowCleanDisconnect:true});
 });

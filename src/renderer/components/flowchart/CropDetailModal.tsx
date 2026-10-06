@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import {
+  AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -15,11 +16,23 @@ import {
   XCircle,
 } from 'lucide-react';
 import { isExecutionResultCurrent, useFlowchartStore } from '../../stores/useFlowchartStore';
-import type { FlowchartCrop, FlowchartPipeline, FlowNode } from '../../types';
+import type { FlowchartCrop, FlowchartPipeline, FlowNode, GeometryMeasurement } from '../../types';
 
 interface CropDetailModalProps {
   crop: FlowchartCrop | null;
   onClose: () => void;
+}
+
+/** Historical numeric rows stay intact; unverified physical scale cannot be shown as a qualified mm verdict. */
+export function measurementDisplay(row: GeometryMeasurement) {
+  const physical = row.unit === 'mm' || row.unit === 'mm2';
+  const qualified = Boolean(row.calibration?.ref && row.calibration.acquisition_verified === true && !row.calibration.refused);
+  const blocked = physical && !qualified;
+  const value = blocked ? (row.length !== undefined ? row.length_px : row.area_px) : (row.length ?? row.area);
+  return {value: typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '확인 불가',
+    unit: blocked ? (row.length !== undefined ? 'px' : 'px²') : row.unit.replace('2', '²'),
+    verdict: row.threshold_unit === 'mm' && !qualified ? 'REVIEW' : row.verdict,
+    notice: !qualified && row.calibration ? `검증된 교정 근거 없음 · mm 판정 미사용${row.calibration.refused ? `: ${row.calibration.refused}` : ''}` : null};
 }
 
 const modelNodeForCrop = (pipeline: FlowchartPipeline | null, crop: FlowchartCrop): FlowNode | undefined => {
@@ -82,6 +95,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
   const height = Math.round(y2 - y1);
   const areaPx = width * height;
   const isNg = crop.verdict === 'NG';
+  const needsReview = crop.verdict === 'REVIEW';
 
   // Read the threshold from the model that produced this ROI, including detector-only flows.
   const inspectNode = resultIsCurrent ? modelNodeForCrop(pipeline, crop) : undefined;
@@ -164,17 +178,17 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 className={`p-3 rounded border flex items-center justify-between ${
                   isNg
                     ? 'bg-[#2D1216] border-[#EF4444] text-[#EF4444]'
-                    : 'bg-[#0E2A20] border-[#10B981] text-[#10B981]'
+                    : needsReview ? 'bg-amber-950 border-amber-500 text-amber-300' : 'bg-[#0E2A20] border-[#10B981] text-[#10B981]'
                 }`}
               >
                 <div className="flex items-center space-x-2">
-                  {isNg ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {isNg ? <XCircle className="w-4 h-4" /> : needsReview ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span className="font-mono font-bold text-xs uppercase">
                     {hasBlobCount || hasLargestBlobArea ? 'Blob 측정 판정' : '로컬 모델 판정'}: {crop.verdict}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0E14]/60 border border-current">
-                  {isNg ? '결함 기준 초과' : '설정 기준 이내'}
+                  {isNg ? '결함 기준 초과' : needsReview ? '근거 확인 필요' : '설정 기준 이내'}
                 </span>
               </div>
 
@@ -183,7 +197,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 <div className="flex justify-between text-[11px] font-mono mb-1.5">
                   <span className="text-slate-400">{isSegmentation ? '최고 결함 픽셀 확률:' : '결함 / 이상 점수:'}</span>
                   <div className="flex items-center space-x-2">
-                    <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
+                    <span className={`font-bold tabular-nums ${isNg ? 'text-[#EF4444]' : needsReview ? 'text-amber-300' : 'text-[#10B981]'}`}>
                       {distance ? `${crop.defect_score.toFixed(4)} ${scoreUnit}` : `${scorePercent.toFixed(1)}%`}
                     </span>
                     <span className="text-slate-400 text-[10px] tabular-nums">
@@ -195,7 +209,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
                 {/* Progress Bar with Threshold Pin */}
                 <div className="w-full bg-[#1A212E] h-2 rounded border border-[#2B3547] overflow-hidden relative">
                   <div
-                    className={`h-full transition-all ${isNg ? 'bg-[#EF4444]' : 'bg-[#10B981]'}`}
+                    className={`h-full transition-all ${isNg ? 'bg-[#EF4444]' : needsReview ? 'bg-amber-500' : 'bg-[#10B981]'}`}
                     style={{ width: `${Math.min(100, Math.max(0, scorePercent))}%` }}
                   />
                   {/* Threshold Pin Marker */}
@@ -284,7 +298,7 @@ export const CropDetailModal: React.FC<CropDetailModalProps> = ({ crop, onClose 
               </div>}
               {!!crop.measurements?.length && <div className="mt-3 space-y-2 rounded border border-teal-800 bg-[#0B0E14] p-3">
                 <h4 className="font-semibold text-teal-200">원본 좌표 길이·면적</h4>
-                {crop.measurements.map(row => <div key={row.id} className="border-t border-slate-700 pt-1"><strong>{row.id} · {row.verdict}</strong><p>{row.length !== undefined ? row.length.toFixed(2) : row.area?.toFixed(2)} {row.unit.replace('2','²')}</p><p className="text-[10px] text-slate-400">{row.source_size?.join(' × ')} px · {row.measurement_source === 'source_path' ? row.interpolation === 'bezier' ? '곡선 길이' : '다각선 길이' : row.measurement_source === 'segmentation_mask' ? '클래스 마스크 면적' : '다각형 면적'}</p>{row.calibration?.refused ? <p className="text-[10px] text-amber-300">mm 미사용: {row.calibration.refused}</p> : row.calibration && <p className="text-[10px] text-slate-400">교정 X {row.calibration.mm_per_pixel_x} / Y {row.calibration.mm_per_pixel_y} mm/px{row.calibration.ref ? ` · ${row.calibration.method === 'known_length_planar' ? '기준 길이 교정' : '수동 교정'}${row.calibration.acquisition_verified ? '' : ' · 카메라 설정 미확인'}` : ''}</p>}</div>)}
+                {crop.measurements.map(row => {const display = measurementDisplay(row); return <div key={row.id} className="border-t border-slate-700 pt-1"><strong>{row.id} · {display.verdict}</strong><p>{display.value} {display.unit}</p><p className="text-[10px] text-slate-400">{row.source_size?.join(' × ')} px · {row.measurement_source === 'source_path' ? row.interpolation === 'bezier' ? '곡선 길이' : '다각선 길이' : row.measurement_source === 'segmentation_mask' ? '클래스 마스크 면적' : '다각형 면적'}</p>{display.notice ? <p className="text-[10px] text-amber-300">{display.notice}</p> : row.calibration && <p className="text-[10px] text-slate-400">교정 X {row.calibration.mm_per_pixel_x} / Y {row.calibration.mm_per_pixel_y} mm/px{row.calibration.ref ? ` · ${row.calibration.method === 'known_length_planar' ? '기준 길이 교정' : '수동 교정'}${row.calibration.acquisition_verified ? '' : ' · 카메라 설정 미확인'}` : ''}</p>}</div>;})}
               </div>}
             </div>
 

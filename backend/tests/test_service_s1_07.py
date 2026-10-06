@@ -497,3 +497,22 @@ def test_expired_bearer_is_rejected_before_captured_project_execution(team):
     with app.state.accounts._db() as db:
         db.execute('UPDATE sessions SET expires=? WHERE token_hash=?',(time.time()-1,hashlib.sha256(token.encode()).hexdigest()))
     assert client.get('/api/project/current',headers={'X-Vision-Context':json.dumps(context)}).status_code==401
+
+
+def test_viewer_restores_only_the_saved_source_without_writes(team, tmp_path):
+    from PIL import Image
+    _,_,owner,project,_,clients=team
+    source=tmp_path/'saved-source'
+    (source/'OK').mkdir(parents=True)
+    Image.new('RGB',(16,16),'white').save(source/'OK'/'one.png')
+    updated=owner.put('/api/project/update',json={'source_dataset_dir':str(source)}).json()
+    before=(Path(project['project_dir'])/'project.json').read_bytes()
+    viewer=clients['vieweruser']
+    params={'folder_path':str(source),'task':updated['task']}
+    r=viewer.get('/api/dataset/current-summary',params=params)
+    assert r.status_code==200,r.text
+    assert r.json()['total_images']==1
+    assert viewer.get('/api/dataset/current-summary',params={**params,'task':'segmentation'}).status_code==409
+    assert viewer.post('/api/dataset/import',json=params).status_code==403
+    assert viewer.put('/api/project/update',json={'source_dataset_dir':str(source)}).status_code==403
+    assert (Path(project['project_dir'])/'project.json').read_bytes()==before

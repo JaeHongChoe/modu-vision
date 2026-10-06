@@ -6,6 +6,7 @@ const api: ElectronAPI = {
   configureUpdateChannel:configuration=>ipcRenderer.invoke('distribution:configure-channel',configuration),
   checkForUpdate:()=>ipcRenderer.invoke('distribution:check-update'),
   downloadUpdate:()=>ipcRenderer.invoke('distribution:download-update'),
+  verifyOfflineUpdate:()=>ipcRenderer.invoke('distribution:verify-offline-update'),
   getSharedConnection:()=>ipcRenderer.invoke('shared:get'),
   loginSharedServer:input=>ipcRenderer.invoke('shared:login',input),
   selectSharedProject:id=>ipcRenderer.invoke('shared:select',id),

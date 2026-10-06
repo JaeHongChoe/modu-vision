@@ -18,3 +18,8 @@ test('ROI trace follows selected branches and excludes an unselected sibling',()
   const result={execution_steps:[{node_id:'roi',status:'passed',selected_edge_ids:['a'],artifacts:[{roi_id:'r1'}]},{node_id:'no',status:'skipped',artifacts:[]},{node_id:'yes',status:'flagged_ng',selected_edge_ids:['c'],artifacts:[{roi_id:'r1:patch_2'}]},{node_id:'next',status:'passed',artifacts:[{roi_id:'r1:patch_2'}]}]};
   assert.deepEqual(m.exports.roiTrace('r1:patch_2',graph,result).map(r=>r.node_id),['roi','yes','next']);
 });
+
+test('missing objects show measured zero and required bounds without ROI artifacts',()=>{
+ const lines=nodeEvidenceText({data:{node_type:'detection_crop',params:{}}},{node_id:'det',status:'flagged_ng',latency_ms:1,artifacts:[],count_rule_results:[{class_name:'bolt',count:0,min_count:1,max_count:2,verdict:'NG'}]});
+ assert.ok(lines.some(line=>line.includes('bolt: 검출 0개')&&line.includes('1~2개')&&line.includes('NG')));
+});

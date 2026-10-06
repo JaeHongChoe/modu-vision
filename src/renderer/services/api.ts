@@ -660,7 +660,15 @@ function artifactQuery(ref:ArtifactRef):string {
 }
 let cachedPort: number | null = null;
 let sharedBase:string|null=null;
-export function setSharedApiBase(base:string|null):void {
+type BrowserRequestOptions = (url:string,method:string) => {credentials?:RequestCredentials;headers?:Record<string,string>};
+let browserRequestOptions:BrowserRequestOptions|undefined;
+function secureBrowserOrigin():string|null {
+  if(typeof window==='undefined'||window.api||browserLaunchPort())return null;
+  const origin=window.location?.origin;
+  return origin&&/^https:\/\//.test(origin)?origin:null;
+}
+export function setSharedApiBase(base:string|null,options?:BrowserRequestOptions):void {
+  browserRequestOptions=base?options:undefined;
   if(sharedBase===base)return;
   sharedBase=base;boundProjectContext=null;contextGeneration++;notifyContext();
 }
@@ -722,6 +730,7 @@ export function setCachedPort(port: number | null): void {
 
 export async function getApiBaseUrl(): Promise<string> {
   if(sharedBase)return sharedBase;
+  const origin=secureBrowserOrigin();if(origin)return origin;
   const port = await getBackendPort();
   return `http://127.0.0.1:${port}`;
 }
@@ -733,6 +742,7 @@ export function resolveApiUrl(path: string, port?: number): string {
   }
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   if(sharedBase)return `${sharedBase}${cleanPath}`;
+  const origin=secureBrowserOrigin();if(origin)return `${origin}${cleanPath}`;
   // Persisted images can render before the first async backend request on reload.
   // Use the browser's launch port immediately; a pending desktop bridge must not
   // expose an image path to an unrelated backend at the default port.
@@ -746,7 +756,7 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   const {projectContext,responseType='json',...fetchOptions}=options;
   const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore'].includes(path)
     && projectContext===undefined;
-  const generation=contextGeneration,transport=sharedBase;
+  const generation=contextGeneration,transport=sharedBase,sessionOptions=browserRequestOptions;
   const selected=projectContext===null||selecting?null:projectContext??boundProjectContext;
   if(selected&&!validContext(selected))throw new Error('프로젝트 요청 문맥을 확인하세요.');
   const captured=selected?{...selected}:null;
@@ -757,9 +767,12 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
     headers.set('X-Vision-Context',JSON.stringify(captured));
   }
   // Capture both transport and project before a port lookup or selection can yield.
-  const base = transport||`http://127.0.0.1:${await getBackendPort()}`;
+  const base = transport||secureBrowserOrigin()||`http://127.0.0.1:${await getBackendPort()}`;
   const url = `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  const browserOptions=sessionOptions?.(url,fetchOptions.method||'GET')||{};
+  for(const [key,value] of Object.entries(browserOptions.headers||{}))headers.set(key,value);
   const response = await fetch(url, {
+    ...browserOptions,
     ...fetchOptions,
     headers,
   });
@@ -1037,6 +1050,20 @@ export const api = {
         corrupted_images?: any[];
         validation?: DatasetQuickValidation;
       }>('/api/dataset/import', { method: 'POST', body: JSON.stringify(data) }),
+
+    currentSummary: (data: { folder_path: string; task: VisionTask }) =>
+      request<{
+        status: string;
+        total_images: number;
+        source_images?: number;
+        unlabeled_images?: number;
+        split_supported?: boolean;
+        split_unavailable_reason?: string | null;
+        classes: Record<string, number>;
+        split: { train: number; val: number; test?: number };
+        corrupted_images?: any[];
+        validation?: DatasetQuickValidation;
+      }>(`/api/dataset/current-summary?${new URLSearchParams(data).toString()}`),
 
     generate: (data: {
       task: VisionTask | 'all';

@@ -1,3 +1,4 @@
+import {ObjectCountEditor} from './ObjectCountEditor';
 import {FixtureReferencePanel} from './FixtureReferencePanel';
 /**
  * src/renderer/components/flowchart/FlowchartStudio.tsx
@@ -30,7 +31,7 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
-import { api, resolveApiUrl,getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
+import { api, request, resolveApiUrl,getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type FlowModelCatalogItem, type SavedFlowVersion } from '../../services/api';
 import {readModelFlowHandoff,clearModelFlowHandoff,bindModelToFlow,compatibleModelNode,modelScoreBinding,thresholdUpdate} from './modelFlowHandoff';
 import type { FlowNode, FlowchartPipeline, FlowModelTask } from '../../types';
 import {ClassRulesEditor,FlowResourcesEditor,MeasurementEditor,OCRRulesEditor} from './FlowGeometryEditors';
@@ -175,6 +176,16 @@ export const FlowchartStudio: React.FC = () => {
     setInspectedCrop,
     clearError,
   } = useFlowchartStore();
+  const sourceKey=`${getProjectContextGeneration()}/${folderPath}/${selectedImage?.imagePath||''}`;
+  const [sourceInfo,setSourceInfo]=useState<{key:string;size?:number[];error?:string}|null>(null);
+  useEffect(()=>{
+    let live=true;setSourceInfo(null);
+    if(selectedImage?.imagePath)request<{width:number;height:number}>(`/api/flow-workspace/image-info?image_path=${encodeURIComponent(selectedImage.imagePath)}`)
+      .then(value=>{if(!Number.isInteger(value.width)||!Number.isInteger(value.height)||value.width<1||value.height<1)throw Error('원본 이미지 크기를 확인할 수 없습니다.');if(live)setSourceInfo({key:sourceKey,size:[value.width,value.height]});})
+      .catch(cause=>{if(live)setSourceInfo({key:sourceKey,error:String(cause.message||cause)});});
+    return()=>{live=false;};
+  },[sourceKey]);
+  const originalSize=sourceInfo?.key===sourceKey?sourceInfo.size:undefined;
   // Results stay visible after edits; they are current only for the semantics they ran with.
   const resultIsCurrent = isExecutionResultCurrent({ executionResult, executionIdentity, pipeline });
   // The canvas pairs evidence with the current rules, so it only shows a current run.
@@ -366,12 +377,13 @@ export const FlowchartStudio: React.FC = () => {
     node.data.node_type === 'inspection' && !node.data.model_job_id
   ) ?? false;
   const needsModel = !pipeline || missingDetectionModel || missingInspectionModel || pipeline.nodes.some(node=>getFlowchartModelTask(node)!==null&&!node.data.model_job_id);
-  const graphError = pipeline ? validateFlowchartGraph(pipeline, modelCatalog) : null;
-  const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError, modelCatalog) : null;
+  const graphError = pipeline ? validateFlowchartGraph(pipeline, modelCatalog,originalSize)
+    || (selectedImage&&sourceInfo?.key===sourceKey?sourceInfo.error||null:null) : null;
+  const graphIssue = pipeline ? locateFlowIssue(pipeline, graphError, modelCatalog,originalSize) : null;
   // Every node's and connection's own problem, marked where it is (the banner keeps the first one).
-  const flowIssues = pipeline ? flowIssuesByTarget(pipeline, modelCatalog) : null;
+  const flowIssues = pipeline ? flowIssuesByTarget(pipeline, modelCatalog,originalSize) : null;
   const canVerifyGraph = modelCheck.status !== 'checking' && hasSelectedFolder && !datasetIsLoading
-    && !importError && datasetKey === `${folderPath}\0${task}`;
+    && !importError && datasetKey === `${folderPath}\0${task}` && (!selectedImage||Boolean(originalSize));
 
   const verifyCurrentPipeline = async (current: FlowchartPipeline, sourceFolder: string) => {
     const modelNodes = current.nodes.filter((node) => getFlowchartModelTask(node) !== null);
@@ -1487,7 +1499,7 @@ export const FlowchartStudio: React.FC = () => {
                         : selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && !pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
                         ? '원본 해상도를 타일로 검사합니다. 타일 상한 초과 시 REVIEW로 표시하고, 결과 이미지는 축소 미리보기입니다.'
                         : selectedNode.data.node_type === 'detection_crop' && !pipeline?.nodes.some((node) => node.data.node_type === 'inspection')
-                          ? '검출된 결함 객체가 있으면 NG, 없으면 OK로 판정합니다. 검출 모델 하나만 필요합니다.'
+                          ? selectedNode.data.params?.object_requirements ? '필수 객체의 최소·최대 개수를 검사합니다. 모델이 미완료이거나 검사하지 못하면 REVIEW로 남습니다.' : '검출된 결함 객체가 있으면 NG, 없으면 OK로 판정합니다. 검출 모델 하나만 필요합니다.'
                         : pipeline?.nodes.some((node) => node.data.node_type === 'detection_crop')
                           ? '검출 모델과 검사 모델이 모두 필요합니다. 결과는 로컬 화면에만 표시됩니다.'
                           : '전체 이미지를 선택한 모델로 검사합니다. 결과는 로컬 화면에만 표시됩니다.'}
@@ -1585,6 +1597,8 @@ export const FlowchartStudio: React.FC = () => {
                   </div>
                 )}
 
+                {selectedNode.data.node_type === 'detection_crop' && selectedNode.data.task === 'detection' && <ObjectCountEditor key={selectedNode.id} params={selectedNode.data.params||{}} classes={modelCatalog.find(row=>row.job_id===selectedNode.data.model_job_id)?.class_names||[]} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
+
                 {selectedNode.data.node_type === 'inspection' && selectedNode.data.task === 'segmentation' && <ClassRulesEditor key={selectedNode.id} classes={pipeline?nodeClassChoices(pipeline,selectedNode.id,modelCatalog):[]} params={selectedNode.data.params||{}} onChange={params=>updateNodeData(selectedNode.id,{params})}/>}
 
                 {selectedNode.data.node_type === 'detection_crop' && selectedNode.data.crop_padding !== undefined && (
@@ -1662,6 +1676,16 @@ export const FlowchartStudio: React.FC = () => {
                           className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
                       </div>
                     )}
+                    <div className="mt-3">
+                      <label htmlFor="flow-incomplete-policy" className="text-[#94A3B8] block mb-1">UNKNOWN·미실행·오류 처리</label>
+                      <select id="flow-incomplete-policy" value={selectedNode.data.params?.incomplete_policy ?? 'review'}
+                        onChange={(event) => updateNodeData(selectedNode.id, {params: {...selectedNode.data.params, incomplete_policy: event.target.value}})}
+                        className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]">
+                        <option value="review">REVIEW · 검토 대기 (기본)</option>
+                        <option value="ng">NG · 불합격으로 차단</option>
+                      </select>
+                      <p className="mt-1 text-xs text-slate-400">모델 오류, 누락된 결과, 미검증 mm 교정 등은 OK로 처리하지 않습니다.</p>
+                    </div>
                     <div className="mt-3">
                       <label htmlFor="flow-no-branch-policy" className="text-[#94A3B8] block mb-1">조건이 하나도 맞지 않은 이미지</label>
                       <select id="flow-no-branch-policy" value={selectedNode.data.params?.no_branch_policy ?? ''}

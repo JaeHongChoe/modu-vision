@@ -102,7 +102,7 @@ def _read_db(path):
     with owned_file_snapshot(path) as copy,closing(sqlite3.connect(copy.resolve().as_uri()+'?mode=ro',uri=True)) as db:yield db
 
 
-def _authority_blockers(root,scopes):
+def _authority_blockers(root,scopes,*,installation_root=None):
     blockers=[]
     with _read_db(root/scopes['context']) as db:
         identities=dict(db.execute('SELECT name,value FROM identities'))
@@ -120,7 +120,7 @@ def _authority_blockers(root,scopes):
         blockers.append('Account and context authority differ; no automatic workspace rebind')
     for (path,) in projects:
         p=Path(path)
-        if not p.is_absolute() or not p.is_dir() or any(x.is_symlink() for x in (p,*p.parents)) or not p.resolve().is_relative_to(root):
+        if not p.is_absolute() or not p.is_dir() or any(x.is_symlink() for x in (p,*p.parents)) or not p.resolve().is_relative_to(installation_root or root):
             blockers.append('External or unavailable registered project references are unsupported in this phase')
     known={(w,p,k) for k,w,p,_ in locations}
     with _read_db(root/scopes['ledger']) as db:
@@ -129,6 +129,78 @@ def _authority_blockers(root,scopes):
             if (workspace,project,key) not in known or not actor_known:
                 blockers.append('Ledger namespace/actor lacks original registered authority; historical adapter required')
     return blockers
+
+
+def _forward_view(root,owner,generation,pointer):
+    """Inspect a specifically bound generation without activating retired stores."""
+    seal_path=generation/'.global-generation.json'
+    if any(p.is_symlink() for p in (generation,generation.parent,seal_path)):
+        raise GlobalMigrationError('Forward source generation cannot be linked')
+    seal=json.loads(seal_path.read_bytes())
+    if (seal.get('installation_id')!=owner['installation_id'] or seal.get('generation_id')!=pointer.get('generation_id')
+            or seal.get('sealed_sha256')!=pointer.get('sealed_sha256')):
+        raise GlobalMigrationError('Forward source ownership or seal differs')
+    view=_snapshot(generation);known=_known_schemas(owner['scopes']);blockers=list(view['blockers'])
+    for name,relative in owner['scopes'].items():
+        source=generation/relative
+        if name in {'local_journals','remote_journals'}:
+            if source.exists() and (not source.is_dir() or any(source.iterdir())):
+                blockers.append('Historical '+name+' requires a reviewed actor/namespace adapter')
+        elif not source.is_file():blockers.append('Missing declared '+name+' scope')
+        elif name in known and _schema(source)!=known[name]:blockers.append('Unsupported '+name+' schema')
+        elif name=='profiles':
+            from backend.remote.profiles import ProfileStore
+            ProfileStore(source)._read()
+    if not blockers:blockers.extend(_authority_blockers(generation,owner['scopes'],installation_root=root))
+    original=_snapshot(root)
+    view.update(source_sha256=digest({'generation':view['source_snapshot']['sha256'],
+        'original':original['source_snapshot']['sha256'],'pointer':pointer,
+        'owner_sha256':hashlib.sha256((root/OWNER_FILE).read_bytes()).hexdigest()}),
+        installation_id=owner['installation_id'],blockers=sorted(set(blockers)),can_apply=not blockers,
+        source_generation=pointer['generation_id'],ownership_policy='owned drained current generation; no live authority adoption')
+    return view
+
+
+def preview_forward(root):
+    root,owner=_owner(root)
+    with store_admission(root):
+        current=active_generation(root)
+        if current is None:raise GlobalMigrationError('Forward migration requires an active owned generation')
+        return _forward_view(root,owner,*current)
+
+
+def advance(root,*,expected_source_sha256):
+    """Preserve post-cutover writes in another drained current-schema generation.
+
+    This is forward recovery, not a historical schema converter or live adoption.
+    Old generations and installation files remain intact, and copied sessions are revoked.
+    """
+    root,owner=_owner(root)
+    with store_admission(root,exclusive=True):
+        current=active_generation(root)
+        if current is None:raise GlobalMigrationError('Forward migration requires an active owned generation')
+        before=_forward_view(root,owner,*current)
+        if before['source_sha256']!=expected_source_sha256:raise GlobalMigrationError('Forward source changed since preview')
+        if not before['can_apply']:raise GlobalMigrationError('; '.join(before['blockers']))
+        identifier=uuid.uuid4().hex;directory=root/'.global-migrations'/identifier
+        directory.mkdir(parents=True,exist_ok=False)
+        backup=directory/'original';_copy(before,current[0],backup,scopes=owner['scopes'])
+        staged=root/'.global-generations'/identifier;_copy(before,current[0],staged,scopes=owner['scopes'])
+        with staged_construction(root,staged):_construct(staged,owner['scopes']);_revoke(staged,owner['scopes'])
+        seal=_seal(staged,owner,identifier)
+        if active_generation(root)[1]!=current[1] or _forward_view(root,owner,*current)['source_sha256']!=before['source_sha256']:
+            raise GlobalMigrationError('Forward source changed during staging')
+        fence=current[1]['fence']+1
+        record={'schema_version':1,'kind':'forward','installation_id':owner['installation_id'],
+            'migration_id':identifier,'status':'prepared','source_sha256':before['source_sha256'],
+            'source_inventory':before['inventory'],'target_sha256':seal['sealed_sha256'],
+            'backup_inventory':_snapshot(backup)['inventory'],'previous_pointer':current[1],
+            'fence':fence,'scopes':owner['scopes']}
+        atomic_private_json(directory/'journal.json',record);_sync_directories(directory)
+        _publish(root,owner,identifier,seal,fence=fence)
+        record['status']='applied';atomic_private_json(directory/'journal.json',record)
+        return {'status':'applied','migration_id':identifier,'fence':fence,'kind':'forward',
+            'session_policy':'copied sessions and OIDC pending revoked'}
 
 
 def _copy(before,source,destination,*,scopes=None):
@@ -212,6 +284,28 @@ def recover(root,identifier,*,action):
         path,record=_journal(root,identifier);current=active_generation(root)
         if record['installation_id']!=owner['installation_id']:raise GlobalMigrationError('Foreign migration journal')
         if action not in {'finish','restore'}:raise GlobalMigrationError('Select finish or restore')
+        def source_view():
+            if record.get('kind')!='forward':return preview(root)
+            previous=record.get('previous_pointer') or {};prior=previous.get('generation_id')
+            if (not isinstance(prior,str) or len(prior)!=32 or any(c not in '0123456789abcdef' for c in prior)
+                    or previous.get('installation_id')!=owner['installation_id'] or type(previous.get('fence')) is not int
+                    or previous['fence']+1!=record.get('fence')):
+                raise GlobalMigrationError('Forward journal source pointer is invalid')
+            return _forward_view(root,owner,root/'.global-generations'/prior,previous)
+        if (record.get('kind')=='forward' and action=='finish' and record.get('status')=='prepared'
+                and current and current[1]==record.get('previous_pointer')):
+            source=source_view()
+            if source['source_sha256']!=record['source_sha256'] or not source['can_apply']:
+                raise GlobalMigrationError('Forward source changed after preparation')
+            staged=root/'.global-generations'/identifier;seal_path=staged/'.global-generation.json'
+            if any(p.is_symlink() for p in (staged,staged.parent,seal_path)):
+                raise GlobalMigrationError('Prepared forward generation is linked')
+            seal=json.loads(seal_path.read_bytes())
+            if (seal.get('installation_id')!=owner['installation_id'] or seal.get('generation_id')!=identifier
+                    or seal.get('sealed_sha256')!=record['target_sha256']
+                    or digest(_snapshot(staged)['inventory'])!=record['target_sha256']):
+                raise GlobalMigrationError('Prepared forward generation integrity differs')
+            _publish(root,owner,identifier,seal,fence=record['fence']);current=active_generation(root)
         if current is None and action=='finish' and record.get('status')=='prepared' and record.get('previous_pointer') is None:
             if preview(root)['source_sha256']!=record['source_sha256'] or not preview(root)['can_apply']:
                 raise GlobalMigrationError('Source or drain changed after prepared migration')
@@ -230,7 +324,7 @@ def recover(root,identifier,*,action):
         if not current or current[1]['generation_id']!=identifier:raise GlobalMigrationError('Selected migration is not current')
         if current[1].get('fence')!=record.get('fence') or current[1].get('sealed_sha256')!=record['target_sha256']:
             raise GlobalMigrationError('Current migration fence or seal changed')
-        if digest(_snapshot(current[0])['inventory'])!=record['target_sha256'] or preview(root)['source_sha256']!=record['source_sha256']:
+        if digest(_snapshot(current[0])['inventory'])!=record['target_sha256'] or source_view()['source_sha256']!=record['source_sha256']:
             raise GlobalMigrationError('Normal writes or source changed after migration; forward recovery required')
         if action=='finish':
             record['status']='applied';atomic_private_json(path,record);return {'status':'applied','migration_id':identifier}
@@ -252,16 +346,18 @@ def main(argv=None):
     import argparse
     parser=argparse.ArgumentParser(description=__doc__)
     commands=parser.add_subparsers(dest='command',required=True)
-    for command in ('initialize','preview','apply','recover'):
+    for command in ('initialize','preview','apply','preview-forward','advance','recover'):
         item=commands.add_parser(command);item.add_argument('--root',required=True)
         if command=='initialize':item.add_argument('--scopes-file',required=True)
-        elif command=='apply':item.add_argument('--expected-source-sha256',required=True)
+        elif command in ('apply','advance'):item.add_argument('--expected-source-sha256',required=True)
         elif command=='recover':item.add_argument('--migration-id',required=True);item.add_argument('--action',choices=('finish','restore'),required=True)
     args=parser.parse_args(argv)
     try:
         if args.command=='initialize':result=initialize_owned(args.root,scopes=json.loads(Path(args.scopes_file).read_bytes()))
         elif args.command=='preview':result=preview(args.root)
+        elif args.command=='preview-forward':result=preview_forward(args.root)
         elif args.command=='apply':result=apply(args.root,expected_source_sha256=args.expected_source_sha256)
+        elif args.command=='advance':result=advance(args.root,expected_source_sha256=args.expected_source_sha256)
         else:result=recover(args.root,args.migration_id,action=args.action)
     except (ValueError,OSError,TypeError,sqlite3.Error) as exc:
         print(json.dumps({'status':'refused','error':str(exc)},sort_keys=True));return 1

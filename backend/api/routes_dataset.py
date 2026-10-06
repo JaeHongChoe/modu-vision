@@ -526,6 +526,21 @@ def _validate_folder_images(folder: Path):
     return corrupted, checked, False, gaps
 
 
+@router.get("/current-summary")
+def current_dataset_summary(request: Request, folder_path: str, task: str):
+    """Read the selected project's saved source without changing its path or revision.
+
+    The explicit selector must match the saved context, so a delayed reopen
+    cannot silently adopt another project's source or task.
+    """
+    from backend.api.routes_project import get_current_project
+    project = get_current_project(request)
+    source = project.get("source_dataset_dir")
+    if not source or str(Path(folder_path).resolve()) != str(Path(source).resolve()) or task != project["task"]:
+        raise HTTPException(409, "Saved project source or task changed; reopen the current project")
+    return import_dataset(DatasetImportRequest(folder_path=source, task=project["task"], validate_images=True))
+
+
 @router.post("/import")
 def import_dataset(req: DatasetImportRequest):
     """Scans dataset directory and returns total_images, classes, and split."""

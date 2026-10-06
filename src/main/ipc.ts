@@ -67,6 +67,14 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   ipcMain.handle('distribution:configure-channel',(event,input)=>{authorizeShared(event);return distribution.configure(input);});
   ipcMain.handle('distribution:check-update',event=>{authorizeShared(event);return distribution.check();});
   ipcMain.handle('distribution:download-update',event=>{authorizeShared(event);return distribution.download();});
+  ipcMain.handle('distribution:verify-offline-update',async event=>{
+    authorizeShared(event);
+    if(!app.isPackaged)throw new Error('Offline release handoff requires the packaged application and its provisioned publisher authority');
+    const win=BrowserWindow.fromWebContents(event.sender),options:OpenDialogOptions={title:'서명된 오프라인 릴리스 목록 선택',properties:['openFile'],filters:[{name:'Release manifest',extensions:['json']}]};
+    const result=win?await dialog.showOpenDialog(win,options):await dialog.showOpenDialog(options);
+    if(result.canceled||!result.filePaths[0])return null;
+    authorizeShared(event);return distribution.verifyOffline(result.filePaths[0]);
+  });
   ipcMain.handle('shared:get',event=>{authorizeShared(event);return getSharedConnection();});
   ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});

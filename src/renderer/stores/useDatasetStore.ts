@@ -51,7 +51,7 @@ interface DatasetState {
   setClassFilter: (className: string | null) => void;
   setLabelFilter: (status: 'all' | 'labeled' | 'unlabeled') => void;
   setTrainRatio: (ratio: number) => void;
-  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean) => Promise<void>;
+  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean, restoreSaved?: boolean) => Promise<void>;
   ensureImported: (task: VisionTask) => Promise<void>;
   generateSynthetic: (params: {
     task: VisionTask;
@@ -154,7 +154,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
-  importFolder: async (folder, task, allowRecoveryOverride) => {
+  importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false) => {
     const pickedFolder = folder;
     let key = importKey(folder, task);
     const previous = get().lastImportedKey;
@@ -181,7 +181,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
     try {
-      try {
+      if (!restoreSaved) try {
         const project = await api.project.update({ source_dataset_dir: folder });
         if (requestId !== latestImportRequest || get().datasetKey !== key) return;
         // The project API is the authority for the canonical source path. Keep
@@ -219,7 +219,9 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
         }
       }
-      const res = await api.dataset.import({ folder_path: folder, task, validate_images: true });
+      const res = restoreSaved
+        ? await api.dataset.currentSummary({ folder_path: folder, task })
+        : await api.dataset.import({ folder_path: folder, task, validate_images: true });
       if (requestId !== latestImportRequest || get().datasetKey !== key) return;
       set({
         totalImages: res.total_images,
@@ -253,7 +255,9 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   ensureImported: async (task) => {
     const { folderPath, hasSelectedFolder, datasetKey } = get();
     if (!folderPath || !hasSelectedFolder || datasetKey === importKey(folderPath, task)) return;
-    await get().importFolder(folderPath, task);
+    // Reopening a saved source is a read. Choosing/replacing a source uses
+    // importFolder directly and still requires project write permission.
+    await get().importFolder(folderPath, task, undefined, true);
   },
 
   generateSynthetic: async (params) => {
