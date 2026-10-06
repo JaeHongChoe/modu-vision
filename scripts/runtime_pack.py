@@ -1,4 +1,4 @@
-"""S6-03 reviewed local runtime inventory. Never installs, imports, or fetches.
+"""S6-03 reviewed local runtime inventory and inert, isolated installation.
 
 The expected inventory SHA comes from a separately reviewed source/release.
 This unsigned inventory is not a substitute for the signed release authority
@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
+import tempfile
 from urllib.parse import urlsplit
 
 DESCRIPTOR_FIELDS = {'id','version','kind','platform','arch','source','license','driver_minimum','compatibility','files'}
@@ -137,9 +138,117 @@ def verify_pack(root,raw,*,expected_sha256,platform,arch,compatibility,free_byte
             'installed':False,'signature_verified':False,'execution_verified':False,'files':manifest['files']}
 
 
+def _copy_payload(source, destination, files):
+    """Copy bounded reviewed bytes; never import, unpack, or run a payload."""
+    for row in files:
+        path = source / row['path']
+        if any(p.is_symlink() for p in (path, *path.parents)):
+            raise ValueError('Source pack became linked during installation')
+        target = destination / row['path']; target.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0))
+        try:
+            original = os.fstat(fd)
+            if not stat.S_ISREG(original.st_mode) or original.st_size != row['size']:
+                raise ValueError('Source payload changed before copying')
+            digest = hashlib.sha256(); count = 0
+            with target.open('xb') as writer:
+                while block := os.read(fd, min(1024 * 1024, row['size'] - count + 1)):
+                    count += len(block)
+                    if count > row['size']: raise ValueError('Source payload grew during copying')
+                    digest.update(block); writer.write(block)
+                writer.flush(); os.fsync(writer.fileno())
+            current = os.fstat(fd)
+            if (count != row['size'] or digest.hexdigest() != row['sha256']
+                    or (original.st_dev,original.st_ino,original.st_size,original.st_mtime_ns)
+                    != (current.st_dev,current.st_ino,current.st_size,current.st_mtime_ns)):
+                raise ValueError('Source payload changed during copying')
+        finally: os.close(fd)
+
+
+def _publish_directory(source,target):
+    """Atomic no-replace publication; unsupported filesystems are refused."""
+    import ctypes
+    import errno
+    import sys
+    if os.name=='nt':
+        os.rename(source,target)
+        return
+    library=ctypes.CDLL(None,use_errno=True)
+    if sys.platform=='darwin':
+        function=getattr(library,'renamex_np',None)
+        arguments=(os.fsencode(source),os.fsencode(target),4)  # RENAME_EXCL in SDK sys/stdio.h
+        types=(ctypes.c_char_p,ctypes.c_char_p,ctypes.c_uint)
+    elif sys.platform.startswith('linux'):
+        function=getattr(library,'renameat2',None)
+        arguments=(-100,os.fsencode(source),-100,os.fsencode(target),1)  # AT_FDCWD, RENAME_NOREPLACE
+        types=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint)
+    else:function=None
+    if function is None:raise OSError(errno.ENOTSUP,'Atomic no-replace publication is unavailable')
+    function.argtypes=types;function.restype=ctypes.c_int
+    if function(*arguments)!=0:
+        code=ctypes.get_errno();raise OSError(code,os.strerror(code),str(target))
+
+
+def install_pack(root, raw, *, store, expected_sha256, platform, arch, compatibility, driver_version=None):
+    """Publish an immutable inactive installation after source and copy checks.
+
+    The store must already be an explicit local directory. No system dependency,
+    activation pointer, driver, service, environment or existing pack is changed.
+    Independently reviewed inventory pins remain necessary; installation supplies
+    neither publisher identity nor target execution qualification.
+    """
+    source, store = Path(root).absolute(), Path(store).absolute()
+    for directory in (source, store):
+        if (any(p.is_symlink() for p in (directory,*directory.parents))
+                or not directory.is_dir()):
+            raise ValueError('Installation source and store must be explicit unlinked directories')
+    source, store = source.resolve(), store.resolve()
+    if source.is_relative_to(store) or store.is_relative_to(source):
+        raise ValueError('Installation store and source pack must be disjoint')
+    args = dict(expected_sha256=expected_sha256, platform=platform, arch=arch,
+                compatibility=compatibility, driver_version=driver_version)
+    verified = verify_pack(source, raw, free_bytes=shutil.disk_usage(store).free, **args)
+    target = store / f"{verified['id']}-{json.loads(raw)['version']}-{expected_sha256}"
+    receipt = {**verified, 'state':'installed_inactive_runtime_unqualified', 'installed':True,
+               'activated':False, 'installation_path':str(target)}
+
+    def existing():
+        if target.is_symlink() or not target.is_dir():
+            raise ValueError('Existing installation is linked or not a directory')
+        if {p.name for p in target.iterdir()} != {'payload','inventory.json','receipt.json'}:
+            raise ValueError('Existing installation contains unreviewed entries')
+        for name in ('inventory.json','receipt.json'):
+            file = target/name
+            if file.is_symlink() or not file.is_file() or file.stat().st_size>1024*1024:
+                raise ValueError('Existing installation record is unavailable')
+        if (target/'inventory.json').read_bytes() != raw or (target/'receipt.json').read_bytes() != canonical_bytes(receipt):
+            raise ValueError('Existing installation records differ from the reviewed installation')
+        verify_pack(target/'payload', raw, free_bytes=shutil.disk_usage(store).free, **args)
+        return receipt
+
+    if target.exists() or target.is_symlink(): return existing()
+    with tempfile.TemporaryDirectory(prefix='.pack-', dir=store) as temporary:
+        staging = Path(temporary)/'installation'; payload = staging/'payload'; payload.mkdir(parents=True)
+        _copy_payload(source, payload, verified['files'])
+        verify_pack(payload, raw, free_bytes=shutil.disk_usage(store).free, **args)
+        verify_pack(source, raw, free_bytes=shutil.disk_usage(store).free, **args)
+        for name, data in (('inventory.json',raw),('receipt.json',canonical_bytes(receipt))):
+            with (staging/name).open('xb') as writer:
+                writer.write(data); writer.flush(); os.fsync(writer.fileno())
+        if target.exists() or target.is_symlink(): return existing()
+        # Publish the complete nonempty directory. A competing publisher may win;
+        # its bytes must verify identically, and are never overwritten/repaired.
+        try: _publish_directory(staging, target)
+        except OSError:
+            if target.exists() or target.is_symlink(): return existing()
+            raise
+    return existing()
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode',choices=['inventory','verify']); parser.add_argument('--root',type=Path,required=True)
+    parser.add_argument('mode',choices=['inventory','verify','install']); parser.add_argument('--root',type=Path,required=True)
+    parser.add_argument('--store',type=Path)
     parser.add_argument('--document',type=Path,required=True); parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--expected-sha256'); parser.add_argument('--platform'); parser.add_argument('--arch')
     parser.add_argument('--worker-protocol',type=int); parser.add_argument('--runtime-protocol',type=int); parser.add_argument('--driver-version')
@@ -147,12 +256,16 @@ def main():
     if args.document.stat().st_size>1024*1024: raise ValueError('Inventory document exceeds 1MiB')
     raw=args.document.read_bytes()
     if args.mode=='inventory': result=inventory_pack(args.root,json.loads(raw))
+    elif args.mode=='install':
+        if args.store is None: raise ValueError('An explicit existing local --store is required for installation')
+        result=install_pack(args.root,raw,store=args.store,expected_sha256=args.expected_sha256,platform=args.platform,arch=args.arch,
+                            compatibility={'worker':args.worker_protocol,'runtime':args.runtime_protocol},driver_version=args.driver_version)
     else: result=verify_pack(args.root,raw,expected_sha256=args.expected_sha256,platform=args.platform,arch=args.arch,
                              compatibility={'worker':args.worker_protocol,'runtime':args.runtime_protocol},
                              driver_version=args.driver_version,free_bytes=shutil.disk_usage(args.root).free)
     with args.output.open('xb') as out: out.write(canonical_bytes(result)); out.flush(); os.fsync(out.fileno())
     print(json.dumps({'output':str(args.output),'sha256':hashlib.sha256(canonical_bytes(result)).hexdigest(),
-                      'installed':False,'execution_verified':False}))
+                      'installed':result.get('installed',False),'execution_verified':False}))
 
 
 if __name__=='__main__': main()

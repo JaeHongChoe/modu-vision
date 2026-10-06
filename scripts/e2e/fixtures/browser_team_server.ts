@@ -48,9 +48,17 @@ Path(sys.argv[2]).chmod(0o600)
   const port = (server.address() as {port: number}).port, origin = `https://127.0.0.1:${port}`;
   try {
     const command = harness.backendCommand({workspace});
-    backend = await harness.startOwnedBackend({...command,
+    const startBackend = () => harness.startOwnedBackend({...command,
       args: [...command.args, '--shared-auth-dir', path.join(workspace.userData, 'team-accounts')],
       env: {...command.env, MODU_BROWSER_ORIGINS: JSON.stringify([origin])}});
+    backend = await startBackend();
+    const stopBackend = async () => {
+      const previous = backend;
+      const stop = await previous.stop(), closed = await harness.waitForPortClosed(previous.port, 10000);
+      if (!closed || harness.processAlive(previous.pid) || !stop.exited || stop.groupAlive || stop.escaped.length)
+        throw new Error('Owned browser team backend did not stop cleanly');
+      return {stop, backend_port_closed: closed};
+    };
     const call = async (route: string, body?: unknown, token?: string, method?: string) => {
       const response = await fetch(backend.baseUrl + route, {
         method: method || (body === undefined ? 'GET' : 'POST'), headers: {'Content-Type': 'application/json',
@@ -59,15 +67,28 @@ Path(sys.argv[2]).chmod(0o600)
       if (!response.ok) throw new Error(`Fixture API ${route}: ${response.status} ${await response.text()}`);
       return response.json();
     };
-    return {origin, port, backend, call, close: async () => {
-      await new Promise<void>(resolve => server.close(() => resolve()));
-      const stop = await backend.stop(), closed = await harness.waitForPortClosed(backend.port, 10000);
-      if (!closed || harness.processAlive(backend.pid) || !stop.exited || stop.groupAlive || stop.escaped.length)
-        throw new Error('Owned browser team fixture did not stop cleanly');
-      return {stop, backend_port_closed: closed, proxy_port_closed: await harness.waitForPortClosed(port, 10000)};
+    return {origin, port, get backend() {return backend;}, call, restart: async () => {
+      // Keep the HTTPS origin, accounts, project and metadata stores unchanged.
+      // The upstream capability rotates and never enters browser sessions.
+      const previous = {pid: backend.pid, port: backend.port, logs: backend.logs};
+      const stopped = await stopBackend(); backend = null;
+      backend = await startBackend();
+      return {previous, stopped, current: {pid: backend.pid, port: backend.port, logs: backend.logs}};
+    }, close: async () => {
+      // The renderer can still hold its authenticated SSE stream at teardown.
+      // Stop accepting connections before closing this fixture's sockets.
+      await new Promise<void>(resolve => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      });
+      const stopped = backend ? await stopBackend() : {backend_port_closed: true};
+      return {...stopped, proxy_port_closed: await harness.waitForPortClosed(port, 10000)};
     }};
   } catch (error) {
-    await new Promise<void>(resolve => server.close(() => resolve()));
+    await new Promise<void>(resolve => {
+      server.close(() => resolve());
+      server.closeAllConnections();
+    });
     if (backend) await backend.stop();
     throw error;
   }

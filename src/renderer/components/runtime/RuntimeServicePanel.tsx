@@ -11,6 +11,7 @@ import {WindowsServiceSetupPanel} from './WindowsServiceSetupPanel';
 import {CaptureGroupsPanel} from './CaptureGroupsPanel';
 import {ProtocolSettingsPanel} from './ProtocolSettingsPanel';
 import {useDeliveryScope} from './useDeliveryScope';
+import {wholeFlowApproval} from '../../services/wholeFlowApproval';
 
 type RuntimeIdentity = { status: string; manifest_sha256?: string; pipeline_id?: string; device?: string };
 type Deployment = { deployment_id: string; reviewer: string; restored_from?: string; release: { manifest_sha256: string; device: string }; created_at: number };
@@ -29,6 +30,7 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
   const [device, setDevice] = useState('cpu');
   const [devices, setDevices] = useState<string[]>(['cpu']);
   const [reviewer, setReviewer] = useState('');
+  const [flowReview,setFlowReview]=useState('');
   const [target, setTarget] = useState('');
   const [config, setConfig] = useState(EMPTY_CONFIG);
   const [busy, setBusy] = useState(false);
@@ -50,6 +52,10 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
     const started = currentProject.current;
     setState(null); setLoadedScope(null); setConfig(EMPTY_CONFIG);
     setPackagePath(''); setError(''); setNotice(''); setTarget(''); setBusy(false);
+    setFlowReview('');
+    if(projectDir)void wholeFlowApproval.active().then(value=>{
+      if(valid&&currentProject.current===started)setFlowReview(value?.revision_id||'');
+    }).catch(()=>{});
     setDevice('cpu');setDevices(['cpu']);
     if(projectDir)void runtimeDeploymentApi.capabilities().then(cap=>{if(valid&&currentProject.current===started)setDevices([...cap.torch_devices,...cap.openvino.devices.map(value=>'openvino:'+value)]);}).catch(()=>{});
     if (projectDir) request<ServiceState>('/api/runtime-services').then(result => {
@@ -91,9 +97,11 @@ export const RuntimeServicePanel: React.FC<{ projectDir: string | null;initialPa
       <label>적용 검토자<input aria-label="서비스 검토자" className="mt-1 w-full rounded bg-slate-800 p-2" value={reviewer} onChange={event => setReviewer(event.target.value)} /></label>
     </div>
     <p className="mt-2 text-slate-400">응답 제한 시간과 CPU 스레드 수는 전체 flow 내보내기에서 저장합니다. 정밀도 승인 패키지는 검토한 실행 장치를 사용합니다.</p>
+    <label className="mt-2 block text-slate-300">전체 흐름 검토 revision<input aria-label="서비스 전체 흐름 검토 revision" className="mt-1 w-full rounded bg-slate-800 p-2" value={flowReview} onChange={event=>setFlowReview(event.target.value)}/></label>
+    <p className="mt-1 text-slate-400">저장된 전체 흐름 검토가 있으면 공정 기준·정답·모든 모델과 패키지 시험 입력을 다시 검사합니다. 적용·롤백은 현장 장치 수용 승인과 별도입니다.</p>
     <div className="mt-2 flex flex-wrap gap-2">
     {deployBlocker&&<div className="mt-2 text-xs text-amber-200"><p id="runtime-deploy-reason">적용 보류: {deployBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!packagePath.trim())void (onNavigate||useProjectStore.getState().setStep)(6);else document.querySelector<HTMLElement>('[aria-label="서비스 검토자"]')?.focus();}}>{!packagePath.trim()?'승인·패키지 확인 (6단계)':'적용 입력 확인'}</button></div>}
-      <button aria-describedby={deployBlocker?'runtime-deploy-reason':undefined} type="button" disabled={busy || !packagePath.trim() || !reviewer.trim()} onClick={() => void action('/apply', { package_path: packagePath, device, reviewer })} className="rounded bg-blue-700 px-3 py-2 disabled:opacity-40">승인 패키지 적용</button>
+      <button aria-describedby={deployBlocker?'runtime-deploy-reason':undefined} type="button" disabled={busy || !packagePath.trim() || !reviewer.trim()} onClick={() => void action('/apply', { package_path: packagePath, device, reviewer, whole_flow_revision_id:flowReview.trim()||null })} className="rounded bg-blue-700 px-3 py-2 disabled:opacity-40">승인 패키지 적용</button>
       <button type="button" disabled={busy || !state?.active} onClick={() => void action('/start')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">서비스 시작</button>
       <button type="button" disabled={busy || state?.runtime.status === 'stopped'} onClick={() => void action('/stop')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">서비스 중지</button>
       <button type="button" disabled={busy || !state?.active} onClick={() => void action('/install')} className="rounded border border-slate-600 px-3 py-2 disabled:opacity-40">자동 시작 설치 파일 준비</button>

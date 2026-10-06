@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.api.routes_project import get_current_project
 from backend.api.routes_image_truth import execute, require_role
 from backend.engine import flow_evaluation
+from backend.engine import whole_flow_approval
+from backend.api.shared_authorization import request_actor
 
 router = APIRouter(prefix='/api/flow-evaluations', tags=['flow-evaluations'])
 
@@ -20,6 +22,64 @@ class EvaluationRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     version_id: str = Field(pattern=r'^[0-9a-f]{32}$')
     cohort_id: str = Field(pattern=r'^cohort_[0-9a-f]{32}$')
+
+
+class FlowReviewRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    evaluation_id: str = Field(pattern=r'^eval_[0-9a-f]{32}$')
+    policy: dict
+    reviewer: str = Field(min_length=1,max_length=100)
+    reason: str = Field(min_length=8,max_length=2000)
+    holdout_reviewed: bool
+    expected_revision: str | None = Field(default=None,pattern=r'^flowapproval_[0-9a-f]{32}$')
+
+
+class FlowSelectionRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    expected_revision: str | None = Field(default=None,pattern=r'^flowapproval_[0-9a-f]{32}$')
+    reviewer: str = Field(min_length=1,max_length=100)
+    reason: str = Field(min_length=8,max_length=2000)
+
+
+class FlowPackageReviewRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    package_path: str
+    device: str = Field(default='cpu',min_length=1,max_length=100)
+
+
+@router.get('/approvals/active')
+def active_flow_review(request: Request):
+    return execute(lambda: whole_flow_approval.current_approval(get_current_project(request),accounts=getattr(request.app.state,'accounts',None)))
+
+
+@router.post('/approvals')
+def approve_flow_review(body: FlowReviewRequest, request: Request):
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    payload=body.model_dump();payload['reviewer']=request_actor(request,body.reviewer)
+    account=getattr(request.state,'account_user',None)
+    return execute(lambda: whole_flow_approval.approve_flow(project,**payload,
+        authority_user_id=account['id'] if account else None,accounts=getattr(request.app.state,'accounts',None)))
+
+
+@router.put('/approvals/{revision_id}/select')
+def select_flow_review(revision_id: str, body: FlowSelectionRequest, request: Request):
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    payload=body.model_dump();payload['reviewer']=request_actor(request,body.reviewer)
+    return execute(lambda: whole_flow_approval.select_approval(project,revision_id,**payload,
+        accounts=getattr(request.app.state,'accounts',None)))
+
+
+@router.post('/approvals/{revision_id}/qualify-package')
+def qualify_flow_review(revision_id: str,body: FlowPackageReviewRequest,request: Request):
+    from pathlib import Path
+    project=get_current_project(request);require_role(request,project,{'owner','reviewer'})
+    package=Path(body.package_path).absolute()
+    def qualify():
+        if not package.resolve().is_relative_to(Path(project['project_dir']).resolve()/'exports'):
+            raise ValueError('Select a package exported by the current project')
+        return whole_flow_approval.qualify_package(project,package,revision_id,device=body.device,
+            accounts=getattr(request.app.state,'accounts',None))
+    return execute(qualify)
 
 
 @router.get('/scope/{version_id}')

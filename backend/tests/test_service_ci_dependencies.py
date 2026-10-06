@@ -41,7 +41,7 @@ def test_cpu_ci_lock_covers_declared_runtime_and_testing_dependencies(platform):
             version = Version(next(iter(selected.specifier)).version)
         assert version in declared.specifier
     assert str(entries['pytest'].specifier) == '==8.3.4'
-    for transitive in ['starlette', 'pydantic-core', 'anyio', 'scipy', 'sympy', 'matplotlib', 'requests', 'urllib3', 'packaging', 'pluggy', 'iniconfig', 'pydicom']:
+    for transitive in ['starlette', 'pydantic-core', 'anyio', 'scipy', 'sympy', 'matplotlib', 'requests', 'urllib3', 'packaging', 'pluggy', 'iniconfig', 'pydicom', 'cryptography', 'cffi', 'pycparser']:
         assert transitive in entries
     assert not any(name.startswith(('nvidia-', 'triton', 'cuda-', 'pytorch-triton')) for name in entries)
     for package in ['torch', 'torchvision']:

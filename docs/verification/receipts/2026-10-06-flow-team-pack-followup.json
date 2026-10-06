@@ -1,0 +1,151 @@
+{
+  "schema": "OwnedComponentFollowup/v1",
+  "baseline_source_sha": "5098dacac413677362b4cee741ae6ebbac874259",
+  "source_binding": "uncommitted file hashes below; not the baseline commit itself",
+  "changed_source_files": {
+    ".github/workflows/ci.yml": "e17bda126e39cb41e91c1e19ca4b82d6a4fc21703612e64eb11f7bd033cfe20f",
+    "backend/api/routes_flow_evaluation.py": "7155230625534723cee42102dfa490545b540db09b5eaee798287a5f89ecb5a7",
+    "backend/api/routes_runtime_services.py": "22510b92bd1c12549f15fb9ad5356b284dd131db2fffb6918ec3eb2684e61d2b",
+    "backend/engine/inspection_service.py": "c2dbae646257fdb87a7ea6cae0233cf300874a58c9f25321cd1cfca68c2c6f9e",
+    "backend/engine/managed_service.py": "2bcd22d6367488c0c363a185293ad38563956e74865f398bab3d6c7362f1cd3f",
+    "backend/tests/test_service_ci_dependencies.py": "c34dbc61719073f9f1c4fb1f0ef67a665524bb9e784c55caec46bdd3a696bbee",
+    "build/ci/requirements-ci.in": "604b1643ad1c28e5b4f15710ca7ce0c9b0d1ad5f092df38f818e5140fb918112",
+    "build/ci/requirements-ubuntu-py313-cpu.lock": "8cdf81456d7fab13d7e49057eb6eab0439620e9355404300535a5d62fdba6453",
+    "build/ci/requirements-windows-py313-cpu.lock": "600f3673aff3f600c929bd42f79026bd837a60cfd756d6f5c53de07c172b7212",
+    "scripts/e2e/fixtures/browser_team_server.ts": "6b71eeedf529f0b72306a1881a8274db85f8fca6e1c55755988e86b030c033b4",
+    "scripts/e2e/service-s0-05.spec.ts": "df3d961ee5460a3c5e8ef4e932c0744c61a4f77d6cc56215e2ab56cb6ff9d4f8",
+    "scripts/e2e/trained-cohort-comparison.spec.ts": "37ff5560257e9d133112eba0f18bce89ef50121d3847152fdcd764632dd4f5c8",
+    "scripts/runtime_pack.py": "0993968796b8272b1572775b0245d718ce3dc22f7dfe3e1db21dbacc65146dc1",
+    "src/renderer/components/flowchart/FlowEvaluationPanel.tsx": "6bc25a086a4c58f7d23f5b909dc948ddbca770d716de1ba3624780ac2a0f1f57",
+    "src/renderer/components/runtime/RuntimeServicePanel.tsx": "0f09bd373af0ce7d0dc594810163d40fde1463edd6dd2dead93fe377c0298867",
+    "backend/engine/whole_flow_approval.py": "554e81772ef78153b71f6d1de656c85d28ac9064db07d0de60f647d0f039f500",
+    "backend/tests/test_runtime_pack_installation.py": "5cced9bef8fe73a49a2af7b32a26d0a46a6144912b6754cb1af50f2748169412",
+    "backend/tests/test_whole_flow_approval.py": "6c929a7b665d178f66087dabf99891ca0782cbef0aa729eac0357ce72e428a77",
+    "backend/tests/test_whole_flow_service.py": "d51e62a257c716008eba6ed7078f92f44a9410468d270954a5ca048d314c07b1",
+    "scripts/e2e/team-recovery.spec.ts": "558a13257fee4d66795f4cc52217049cbfabf50eb36561a9a479f9af4ae051b1",
+    "src/renderer/components/flowchart/WholeFlowApprovalPanel.tsx": "f7b8dda5298875ce46950b2c9ba07e2770699b4c086212d93951ef2e594baf7a",
+    "src/renderer/services/wholeFlowApproval.ts": "a3e25ec87d971caed1ffc6067aa32f3e440af4d5bbe7a0ec8da66afebbae5392"
+  },
+  "junit": [
+    {
+      "name": "whole-flow-approval-reviewed.xml",
+      "sha256": "3dd2117219b3f8f6d55d32280944358846f57d25020cac20a8fd00caf87f8131",
+      "tests": 72,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "whole-flow-service-third.xml",
+      "sha256": "ecd9fddf7d8580fb7b9fd74ea126850b40ace036cdb1937125f8c71110bc8f16",
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "service-command-authority-reviewed.xml",
+      "sha256": "d4ea5bacff5d11f11f1460b608dc65e5fa0b13a1861b8cdb3dc47c69cb10bc65",
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "runtime-pack-noreplace-reviewed.xml",
+      "sha256": "c3a550b10b25092e9153d23847b45d38902f73d4899e18a9f1daec05ca57fa81",
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "harness_manifests": [
+    {
+      "scenario": "team-recovery-fourth-artifacts",
+      "case": "browser-team-session-brows-696c7-e-revocation-refuses-writes-browser",
+      "sha256": "8191dbbf7e6318d9c53a43e452d21081a432e2d5b4f1227a95efb528bd4400bc"
+    },
+    {
+      "scenario": "team-recovery-fourth-artifacts",
+      "case": "team-recovery-independent--a94f1-edits-after-backend-restart-browser",
+      "sha256": "18aaa006b8364a3fbdeab3153a63eb9adb1f18dfc499e4a7d1d2e97776e16bab"
+    },
+    {
+      "scenario": "whole-flow-review-native-second-artifacts",
+      "case": "trained-cohort-comparison--d4e2b--five-checkpoint-whole-flow-electron",
+      "sha256": "21d7d5fb3de04adb765f649d0b2217bb5ec4b88439d27b8ab2f168c9e8d6119b"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-02-a-raw--b5ffd-opened-and-used-for-the-run-browser",
+      "sha256": "6cbb77506d33b396b5ca0490ffe56221fd5ed548f5a70651fabcaa3b9d35d082"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-flow-c-669a2-rules-as-an-earlier-version-browser",
+      "sha256": "00a59e84b28f475c47ff7d697dd0516797ed74953a358c73685b95b3f7b41085"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-flow-c-ed68e--earlier-version-until-undo-browser",
+      "sha256": "9b1ecc9aa7e059f2714f7a809e768269db043b5994318b7a6bc30f1755a13d21"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--0dd7b-ad-after-a-truth-save-fails-browser",
+      "sha256": "6fd50b156eec810bc6f31360c9931d46ed1d3a6d28cea951e5f39af1a1b88479"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--12eca-e-opens-in-the-image-viewer-browser",
+      "sha256": "cade02a7301c699655f1b38496a0484b1019d3454a1e1b82e8a79fb8399f216b"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--82876-id-for-the-selected-version-browser",
+      "sha256": "9dc7f470c4a55e4a998fc4418cc2873247311d9864bc7e402f775e135602aef9"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--a9439-n-for-re-evaluation-at-once-browser",
+      "sha256": "73dc780bf0fd0475146876513276aefef42c194ea3de9b8a8157ade7c416f950"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--af35e-the-selected-version-result-browser",
+      "sha256": "b5f7c49ab6deff568a297a377ea63094103cb0ad3e5b4f8a7f38fc9658746074"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-S0-05-whole--d6e99-n-be-run-on-the-flow-canvas-browser",
+      "sha256": "841130d111316c69d25eb03e950e3f00ffb38889a1ba0e1374d1d2fcc6e40f61"
+    },
+    {
+      "scenario": "whole-flow-browser-qualified-artifacts",
+      "case": "service-s0-05-a-refused-mo-bfb38--active-family-and-says-why-browser",
+      "sha256": "98d55b64e5dba2aff15f97e386d5fd0c0bf8812b2360c0e10880098003badf51"
+    }
+  ],
+  "fault_matrix": {
+    "receipt_sha256": "3230de1a66874546075d418c59fd84a6a6bca3aa01f61b67a6edd05cfec46074",
+    "source_manifest_sha256": "5501b8609bc7fcdb59178709659a2e8c3d472dada3703e28dca8abe2219cf852",
+    "scenarios": {
+      "team_edit_conflicts": "local_controls_verified",
+      "role_revocation_and_actor_scope": "local_controls_verified",
+      "same_job_concurrent_submit": "local_controls_verified",
+      "api_restart_worker_recovery": "local_controls_verified",
+      "network_interruption_and_partial_transfer": "local_controls_verified",
+      "pid_reuse_and_foreign_reservations": "local_controls_verified",
+      "capacity_disk_full_and_oom": "local_controls_verified",
+      "cancel_races": "local_controls_verified",
+      "truth_permission_version_before_release": "local_controls_verified",
+      "partial_update_recovery": "local_controls_verified"
+    },
+    "physical_target_verified": false
+  },
+  "human_quality_approval": false,
+  "independent_review": false,
+  "publisher_signed": false,
+  "soak_72h_completed": false
+}

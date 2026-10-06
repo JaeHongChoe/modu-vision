@@ -5,12 +5,15 @@ from pydantic import BaseModel,Field
 from backend.api.routes_project import get_current_project
 from backend.engine.managed_service import ManagedService
 from backend.engine.field_adapters import FieldAdapterConfig
+from backend.api.routes_image_truth import require_role
+from backend.api.shared_authorization import request_actor
 
 router=APIRouter(prefix='/api/runtime-services',tags=['runtime-services'])
 class ApplyRequest(BaseModel):
     package_path:str
     device:str='cpu'
     reviewer:str=Field(min_length=1,max_length=100)
+    whole_flow_revision_id:str|None=Field(default=None,pattern=r'^flowapproval_[0-9a-f]{32}$')
 class RollbackRequest(BaseModel):
     deployment_id:str
     reviewer:str=Field(min_length=1,max_length=100)
@@ -19,9 +22,10 @@ class ScmConfiguration(BaseModel):
     network_required:bool=False
     warmup_image:str|None=None
 
-def manager(request):
+def manager(request,allowed=None):
     project=get_current_project(request)
     if project is None:raise HTTPException(409,'Open a project before managing the inspection service')
+    if allowed:require_role(request,project,allowed)
     return ManagedService(project['project_dir']),project
 
 def execute(action):
@@ -33,10 +37,15 @@ def state(request:Request):
     service,_=manager(request);return execute(service.state)
 @router.post('/apply')
 def apply(payload:ApplyRequest,request:Request):
-    service,project=manager(request);return execute(lambda:service.apply(payload.package_path,payload.device,payload.reviewer,project))
+    service,project=manager(request,{'owner','reviewer'})
+    return execute(lambda:service.apply(payload.package_path,payload.device,request_actor(request,payload.reviewer),project,
+        whole_flow_revision_id=payload.whole_flow_revision_id,accounts=getattr(request.app.state,'accounts',None),
+        authority_user_id=getattr(request.state,'account_user',{}).get('id')))
 @router.post('/rollback')
 def rollback(payload:RollbackRequest,request:Request):
-    service,_=manager(request);return execute(lambda:service.rollback(payload.deployment_id,payload.reviewer))
+    service,project=manager(request,{'owner','reviewer'})
+    return execute(lambda:service.rollback(payload.deployment_id,request_actor(request,payload.reviewer),project,
+        accounts=getattr(request.app.state,'accounts',None),authority_user_id=getattr(request.state,'account_user',{}).get('id')))
 @router.post('/start')
 def start(request:Request):
     service,_=manager(request);return execute(service.start)

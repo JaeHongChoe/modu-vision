@@ -94,7 +94,33 @@ test('native genuine learned models compare heldout cohort and five-checkpoint w
     row.node_evidence.filter((step: any) => step.node_id === id && !['error', 'warning', 'skipped'].includes(step.status)).length === 1))).toBe(true);
   const saved = await api('GET', '/api/flow-evaluations/' + b.evaluation_id);
   expect(saved.record_sha256).toBe(b.record_sha256);
+  // A functioning learned graph with incorrect OK predictions must still fail
+  // an explicit zero-overkill quality policy. This fixture grants no approval.
+  await window.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(4).click();
+  await window.getByRole('tab', {name: '일괄 평가', exact: true}).click();
+  const whole = window.getByRole('region', {name: '전체 흐름 평가', exact: true});
+  await expect(whole).toBeVisible();
+  const toggle = whole.getByRole('button', {name: '전체 흐름 평가 · 정답 검토', exact: true});
+  if (await toggle.count() && await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+  await whole.getByLabel('전체 흐름 평가 버전', {exact: true}).selectOption(versions.version_b);
+  await whole.getByLabel('전체 흐름 평가 이력', {exact: true}).selectOption(b.evaluation_id);
+  await whole.getByText('전체 흐름 품질 검토·승인', {exact: true}).click();
+  await whole.getByLabel('공정 기준 ID', {exact: true}).fill('synthetic-zero-error-control');
+  await whole.getByLabel('전체 흐름 검토자', {exact: true}).fill('Synthetic software control');
+  await whole.getByLabel('전체 흐름 검토 이유', {exact: true}).fill('Synthetic refusal control; no human process quality approval.');
+  await whole.getByLabel('시험 정답과 전체 흐름 판정을 직접 검토했습니다.', {exact: true}).check();
+  const reviewResponse = window.waitForResponse(r => new URL(r.url()).pathname === '/api/flow-evaluations/approvals' && r.request().method() === 'POST');
+  await whole.getByRole('button', {name: '전체 흐름 검토 저장', exact: true}).click();
+  const refused = await reviewResponse;
+  expect(refused.status()).toBe(409);
+  expect((await refused.text())).toContain('exceeds');
+  await expect(whole.getByRole('alert')).toContainText('exceeds');
+  expect(await api('GET', '/api/flow-evaluations/approvals/active')).toBeNull();
+  await evidence.screenshot(window, 'native-learned-whole-graph-policy-refusal');
+  evidence.note('whole_graph_quality_gate', {actual_learned_models: 5, current_truth_evaluation: true,
+    explicit_zero_error_policy_refused: true, approval_created: false, human_quality_approved: false});
   await window.reload();
+  await window.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(3).click();
   await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(compared.report_id, {timeout: 15_000});
   await evidence.screenshot(window, 'native-genuine-comparison-reopen');
   for (const file of fixture.files) expect(sha(file.path)).toBe(file.sha256);

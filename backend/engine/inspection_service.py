@@ -113,6 +113,25 @@ def _verify_release_policy(package_dir: Path, checkpoints: dict[str, Path], poli
     if not isinstance(parity_sha,str) or not re.fullmatch('[0-9a-f]{64}',parity_sha):
         raise ValueError('Release policy must bind a completed cohort acceptance receipt checksum')
     verify_release_evidence(package_dir,accepted_device,expected_receipt_sha256=parity_sha)
+    if 'whole_flow_review' in policy:
+        review=policy['whole_flow_review']
+        fields={'contract','revision_id','approval_sha256','graph_sha256','evaluation_sha256',
+                'policy_sha256','cohort_sha256','manifest_sha256','parity_receipt_sha256','device',
+                'model_approval_revisions','runtime_cohort_qualified','device_accepted'}
+        if (not isinstance(review,dict) or set(review)!=fields
+                or review['contract']!='whole_flow_review_v1'
+                or not isinstance(review['revision_id'],str) or not re.fullmatch('flowapproval_[0-9a-f]{32}',review['revision_id'])
+                or review['runtime_cohort_qualified'] is not True or review['device_accepted'] is not False):
+            raise ValueError('Invalid separately sealed whole-flow review')
+        for name in fields:
+            if name.endswith('_sha256') and (not isinstance(review[name],str) or not re.fullmatch('[0-9a-f]{64}',review[name])):
+                raise ValueError('Invalid whole-flow review checksum')
+        from backend.engine.flow_provenance import pipeline_sha256
+        graph,_=verify_flow_package(package_dir)
+        if (review['manifest_sha256']!=policy['manifest_sha256'] or review['device']!=accepted_device
+                or review['parity_receipt_sha256']!=parity_sha or review['model_approval_revisions']!=revisions
+                or review['graph_sha256']!=pipeline_sha256(graph)):
+            raise ValueError('Sealed whole-flow review differs from the runtime package')
 
 
 class FileJob(BaseModel):

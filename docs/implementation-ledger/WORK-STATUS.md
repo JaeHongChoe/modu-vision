@@ -1,6 +1,6 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-06 · 기준 공개 소스 `9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf`와 기록된 후속 검증
+확인일: 2026-10-06 · 기준 공개 소스 `5098dacac413677362b4cee741ae6ebbac874259`와 기록된 후속 검증
 
 **82개 중 소프트웨어 구현 확인64개, 구현 미완료18개.** 이번 실제 검증으로 원래25개 중7개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은17개다. 최종 수용 승인은0개다.
 
@@ -22,20 +22,20 @@
 | ID | 작업 | 실제 남은 조건 |
 |---|---|---|
 | S1-08 | 기존 JSON과 DB migration | 종료된 로컬 이력의 명시적 변환은 검증됨. 살아 있는 worker·불확실 lease·runtime recovery index와 구형 schema 이관 필요. |
-| S4-14 | 모델 및 전체 flow 승인 | 전체 graph·모델·ROI·rules 평가에 결합된 승인·활성화·rollback과 package/target 적격성 연결 필요. |
+| S4-14 | 모델 및 전체 flow 승인 | 전체 graph 검토·현재 정답/권한/CAS·같은 heldout package parity·서비스 apply/rollback 재검증 구현과 로컬 검증 완료. legacy 호환 경로와 target/precision 승인 전체 연결은 미완료. |
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S5-08 | data drift와 개선 반복 | drift/feedback 구성 요소에서 재학습·동일 cohort 비교·사람 승인·배포까지 전체 개선 경로 필요. |
 | S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
-| S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory에서 optional pack 설치·실제 대상 변환/추론·지원 조합 측정 필요. |
+| S6-03 | 선택형 GPU와 runtime pack | 검증된 inventory의 원자적 비활성 설치/재설치/경쟁·변조 거절은 완료. 실제 배포 pack·대상 변환/추론·지원 조합 측정은 미완료. |
 | S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. 설치·DB update 원자적 cutover/중단 복구·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | 최신 소스의 Linux 공개 CI 전체 재실행·읽기 검증 필요. 이전9ae 실행은1933 통과/1 게시 barrier timeout 실패 기록 유지. |
+| S6-05 | 공개 CI와 source 재현성 | 최신 소스의 Linux 공개 CI 전체 재실행·읽기 검증 필요. 5098 CPU/core 통과, 브라우저 HTTPS 의존성 누락과 35분 한도 종료 기록 유지. 수정 소스 hosted 결과 확인 필요. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 156개 기능과 action별 성공/오류/취소/재열기/이관 실행 근거 원장 보완 필요. 단순 매핑은 수용 완료가 아님. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
-| S7-04 | 팀 동시 작업과 fault injection | 실제 두 사용자 동시 작업 및 crash·네트워크·disk/OOM·부분전송/갱신 fault 통합 검증 필요. |
-| S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 고정 source72시간 연속 운전 진행 중; 종료 후 최종 receipt 확인 필요. |
+| S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
+| S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 이전 실행 2회 중단 기록 보존. 새 고정 source 72시간 실행 시작; 실제 종료 receipt 확인 필요. |
 | S7-06 | 공정 품질 승인과 장비 검증 | 사용자 지정 공정 미검/과검 정책·대표 truth·카메라/PLC/MES 실제 장비 승인 필요. |
 | S7-07 | 공개 후보와 릴리스 판정 | 최종 지원 조합/known issues/license/SBOM/서명/업데이트/파일럿 입력을 모아 공개 후보 판정 필요. |
 | S7-08 | 파일럿 feedback과 지속 유지 | 첫 사용자의 설명 없는 파일럿 및 실제 운영 책임·지원/SLA/유지보수 주기 필요. |

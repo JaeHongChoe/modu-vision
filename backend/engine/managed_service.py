@@ -126,7 +126,7 @@ class ManagedService:
         if manifest.get('runtime_acceptance_sha256') and device!=manifest['runtime']['device']:
             raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
     @serialized_lifecycle
-    def stage(self,package_path,project,device=None):
+    def stage(self,package_path,project,device=None,*,whole_flow_revision_id=None,accounts=None):
         package=Path(package_path).expanduser()
         if package.is_symlink():raise ValueError('Linked release package is unsupported')
         package=package.resolve(strict=True)
@@ -137,6 +137,7 @@ class ManagedService:
         evidence=verify_release_evidence(package,device)
         from backend.engine.release_eligibility import authorize_release_action, release_authority
         approvals=authorize_release_action(package,project,action='stage')
+        review=self.whole_flow_review(package,project,device,whole_flow_revision_id,accounts=accounts)
         digest=hashlib.sha256((package/'manifest.json').read_bytes()).hexdigest()
         destination=self.releases/digest
         if destination.is_symlink():raise ValueError('Staged release directory is linked')
@@ -154,14 +155,17 @@ class ManagedService:
                 os.rename(temporary,destination)
             finally:
                 if temporary.exists():shutil.rmtree(temporary)
-        policy=self.releases/(digest+'.policy.json')
+        policy=self.releases/(digest+('.'+review['approval_sha256'] if review else '')+'.policy.json')
         if policy.is_symlink():raise ValueError('Staged release policy is linked')
         verify_release_evidence(destination,device,expected_receipt_sha256=evidence['receipt_sha256'])
         with release_authority(project):
             # Copy/parity work can outlive a truth edit or approval revocation.
             authorize_release_action(destination,project,action='stage')
+            if self.whole_flow_review(destination,project,device,whole_flow_revision_id,accounts=accounts)!=review:
+                raise ValueError('Whole-flow review changed while staging')
             policy_payload={'schema_version':1,'manifest_sha256':digest,'approval_revisions':approvals,
                             'device':device}
+            if review:policy_payload['whole_flow_review']=review
             if evidence['receipt_kind']=='flow_parity':policy_payload['parity_receipt_sha256']=evidence['receipt_sha256']
             if manifest.get('runtime_acceptance_sha256'):policy_payload['runtime_acceptance_sha256']=manifest['runtime_acceptance_sha256']
             if policy.exists() and json.loads(policy.read_text(encoding='utf-8'))!=policy_payload:raise ValueError('Existing release policy differs')
@@ -171,6 +175,7 @@ class ManagedService:
             _verify_release_policy(destination,verify_flow_package(destination)[1],policy,device=device)
             return {'package_path':str(destination),'release_policy':str(policy),'manifest_sha256':digest,'device':device,
                     'approval_revisions':approvals,
+                    **({'whole_flow_review':review} if review else {}),
                     ('parity_receipt_sha256' if evidence['receipt_kind']=='flow_parity' else 'runtime_acceptance_sha256'):evidence['receipt_sha256'],
                     'acceptance_contract':evidence['receipt_kind'],
                     'parity_cohort_sha256':evidence['cohort_sha256'],'input_root':project.get('source_dataset_dir')}
@@ -258,17 +263,63 @@ class ManagedService:
             response=client.post('/v1/runtime/apply',json=release);response.raise_for_status()
             ack=client.get('/v1/runtime');ack.raise_for_status();return ack.json()
     @serialized_lifecycle
-    def apply(self,package,device,reviewer,project):
+    def apply(self,package,device,reviewer,project,*,whole_flow_revision_id=None,accounts=None,authority_user_id=None):
+        self.command_authority(project,accounts,authority_user_id)
         self.validate_accepted_device(package,device)
-        release={**self.stage(package,project,str(resolve_runtime_device(device))),'device':str(resolve_runtime_device(device))}
-        previous = self.ledger.active()
-        try: return self.ledger.apply(release,self.apply_runtime,reviewer=reviewer)
-        except Exception:
-            if previous is None: self.stop()
-            raise
+        from backend.engine.release_eligibility import release_authority
+        with release_authority(project):
+            release={**self.stage(package,project,str(resolve_runtime_device(device)),
+                whole_flow_revision_id=whole_flow_revision_id,accounts=accounts),'device':str(resolve_runtime_device(device))}
+            previous = self.ledger.active()
+            try:return self.ledger.apply(release,self.checked_apply(project,accounts,release,authority_user_id=authority_user_id),reviewer=reviewer)
+            except Exception:
+                if previous is None:self.stop()
+                raise
     @serialized_lifecycle
-    def rollback(self,deployment_id,reviewer):
-        return self.ledger.rollback(deployment_id,self.apply_runtime,reviewer=reviewer)
+    def rollback(self,deployment_id,reviewer,project=None,*,accounts=None,authority_user_id=None):
+        self.command_authority(project,accounts,authority_user_id)
+        target=next((row for row in self.ledger.history() if row['deployment_id']==deployment_id),None)
+        if target is None:raise KeyError(deployment_id)
+        if project is None:
+            if target['release'].get('whole_flow_review'):raise ValueError('Whole-flow rollback requires live project authority')
+            return self.ledger.rollback(deployment_id,self.apply_runtime,reviewer=reviewer)
+        from backend.engine.release_eligibility import release_authority
+        with release_authority(project):
+            # Explicit rollback is a new central command; sealed restart/recovery
+            # retains its independently verified offline policy.
+            self.check_live_release(target['release'],project,accounts=accounts,action='rollback')
+            return self.ledger.rollback(deployment_id,self.checked_apply(project,accounts,target['release'],authority_user_id=authority_user_id),reviewer=reviewer)
+    @staticmethod
+    def command_authority(project,accounts,user_id):
+        if user_id is not None and (not project or accounts is None
+                or accounts.project_role(user_id,project['id']) not in {'owner','reviewer'}):
+            raise ValueError('Runtime command authority is unavailable or revoked')
+    @staticmethod
+    def whole_flow_review(package,project,device,revision=None,*,accounts=None):
+        from backend.engine.whole_flow_approval import current_approval,qualify_package
+        if revision is None:
+            current=current_approval(project,accounts=accounts)
+            revision=current['revision_id'] if current else None
+        return qualify_package(project,package,revision,device=device,accounts=accounts) if revision else None
+    def check_live_release(self,release,project,*,accounts=None,action='apply'):
+        from backend.engine.release_eligibility import authorize_release_action
+        authorize_release_action(release['package_path'],project,action=action)
+        bound=release.get('whole_flow_review')
+        current=self.whole_flow_review(release['package_path'],project,release['device'],
+            bound['revision_id'] if bound else None,accounts=accounts)
+        if current!=bound:raise ValueError('Whole-flow release review is missing, changed, or no longer valid')
+    def checked_apply(self,project,accounts,candidate,*,authority_user_id=None):
+        def apply(release):
+            # Recovery restores only the last committed, separately sealed
+            # release. It is not a newly authorized central deployment.
+            if release!=candidate:return self.apply_runtime(release)
+            self.command_authority(project,accounts,authority_user_id)
+            self.check_live_release(release,project,accounts=accounts)
+            ack=self.apply_runtime(release)
+            self.command_authority(project,accounts,authority_user_id)
+            self.check_live_release(release,project,accounts=accounts)
+            return ack
+        return apply
     def read_adapter_config(self):
         from backend.engine.field_adapters import load_adapter_config
         config=load_adapter_config(self.root/'adapters.json' if (self.root/'adapters.json').exists() else None).model_dump()

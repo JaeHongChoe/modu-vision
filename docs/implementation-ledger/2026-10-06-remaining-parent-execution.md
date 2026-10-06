@@ -24,7 +24,7 @@ Windows native QA remains waived by the user. No Claude source work is resumed.
 - Offline trust: pinned Ed25519 authority, exact target/protocol/version and artifact
   inventory, revocation/downgrade refusal, stable bounded manifest reads, streaming
   owned installer staging and interrupted journals. Installation/DB cutover and
-  platform signing are still required. Runtime-pack inventory does not install packs.
+  platform signing are still required. The reviewed runtime-pack installer now copies and atomically publishes an inactive pack; it does not execute or qualify its runtime.
 - Migration: drained explicitly owned current generations preserve post-cutover
   writes using forward recovery, CAS, journal completion and an increasing fence.
   An explicit terminal local history converter now binds original reviewed registered context without creating worker/lease authority. Live workers, uncertain leases, runtime recovery indexes and unsupported historical schemas remain pending.
@@ -32,7 +32,7 @@ Windows native QA remains waived by the user. No Claude source work is resumed.
   process remains alive. Windows native execution is not inferred from that result.
 - Capacity: 100k metadata paging, a separate 10k×8k original image decode, durable
   queue duplicate/backpressure/reopen controls and actual bounded CPU endurance.
-  A frozen 72-hour run is live; elapsed time is not a completed soak.
+  Two frozen 72-hour runs were interrupted without observed terminal exits. A new tracked run resets the continuous clock; elapsed time is not a completed soak.
 - CUDA: actual optimizer/AMP/RNG next-step exact resume and changed-recipe refusal
   run on an owned GPU reservation. This is a small CUDA component control, not
   the full native AutoDL/DDP workflow qualification.
@@ -85,3 +85,10 @@ waived, leaving17 actionable parents. S1-09 and S4-13 software dimensions now
 have current actual controls; the Windows11 installation/platform and human
 quality gates are preserved. CI, signing, operational cutover, full coverage,
 physical devices, pilot review and the full72-hour result remain distinct.
+
+## Whole-flow, team and pack follow-up
+
+See `2026-10-06-flow-team-pack-followup.md` for new full-graph review/service gates,
+actual two-account HTTPS conflict/revocation/restart, atomic inactive pack
+installation, source CI repairs and retained endurance interruption observations.
+The unqualified target/signature/human gates remain pending.

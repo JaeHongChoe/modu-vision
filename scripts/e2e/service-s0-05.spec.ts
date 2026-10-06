@@ -116,9 +116,9 @@ function anomalyDataset(workspace: Workspace): string {
 
 async function openStep(page: Page, port: number, url: string, step: RegExp) {
   await installDesktopHostShim(page, port);
-  const imported=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/dataset/import'&&response.request().method()==='POST');
   await page.goto(url);
-  expect((await imported).status()).toBe(200);
+  // Reopening a saved source restores its index; it need not issue a new import.
+  // Wait for the workspace we actually use instead of a mutation side effect.
   await expect(page.getByRole('navigation', { name: '프로젝트 작업 공간' })).toBeVisible();
   await page.getByRole('button', { name: step }).click();
 }
@@ -150,7 +150,7 @@ async function chooseImage(page: Page, fileName: string) {
   await expect(page.getByText(fileName).first()).toBeVisible();
 }
 
-async function dragNode(page: Page, node: ReturnType<typeof flowNodes>, dx: number, dy: number) {
+async function dragNode(page: Page, node: ReturnType<typeof flowNodes>, dx: number, dy: number, blocked=false) {
   const box = await node.boundingBox();
   if (!box) throw new Error('node is not visible');
   const before = await node.evaluate(element => (element as HTMLElement).style.left);
@@ -158,7 +158,9 @@ async function dragNode(page: Page, node: ReturnType<typeof flowNodes>, dx: numb
   await page.mouse.down();
   for (let step = 1; step <= 6; step++) await page.mouse.move(box.x + box.width / 2 + dx * step / 6, box.y + 12 + dy * step / 6);
   await page.mouse.up();
-  await expect.poll(() => node.evaluate(element => (element as HTMLElement).style.left)).not.toBe(before);
+  const position=()=>node.evaluate(element => (element as HTMLElement).style.left);
+  if(blocked)await expect.poll(position).toBe(before);
+  else await expect.poll(position).not.toBe(before);
 }
 
 const runButton = (page: Page) => page.getByRole('button', { name: /선택 이미지 검사/ });
@@ -207,7 +209,7 @@ test.describe('S0-05 flow canvas versions', () => {
     expect(runs).toHaveLength(1);
   });
 
-  test('a move during a run keeps that run; a rule edit during a run stores it as an earlier version', async ({ page, renderer, workspace, evidence }) => {
+  test('an inflight run refuses layout moves and records changed rules as an earlier version', async ({ page, renderer, workspace, evidence }) => {
     const log = fixtureLog(evidence);
     const runs: Json[] = [];
     const gate = new Gate();
@@ -223,7 +225,7 @@ test.describe('S0-05 flow canvas versions', () => {
     await runButton(page).click();
     await gate.reached();
     await flowTab(page).click();
-    await dragNode(page, decisionNode(page), 120, 40);
+    await dragNode(page, decisionNode(page), 120, 40,true);
     gate.release();
     await expect(resultsTab(page), 'the run that was moving still lands').toHaveText(/검사 결과 \(1 ROI\)$/);
     await expect(page.getByText(discardedRun)).toHaveCount(0);
@@ -238,7 +240,7 @@ test.describe('S0-05 flow canvas versions', () => {
     await flowTab(page).click();
     await thresholdInput(page).fill('0.8');
     gate.release();
-    await expect(resultsTab(page), 'a run whose rules changed lands as an earlier version').toHaveText(/검사 결과 \(1 ROI\) · 이전 버전$/);
+    await expect(resultsTab(page), 'a rule edit preserves the captured run as an earlier version').toHaveText(/검사 결과 \(1 ROI\) · 이전 버전$/);
     await expect(page.getByText(discardedRun)).toHaveCount(0);
     await expect(page.getByRole('status', { name: '이전 버전 실행 결과' })).toBeVisible();
     await evidence.screenshot(page, '02-rule-edit-during-run');
@@ -487,7 +489,7 @@ test('a refused model family change keeps the active family and says why', async
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await family('segmentation').click();
   await page.getByRole('dialog', { name: '검사 작업 변경 영향' }).getByRole('button', { name: '영향 확인 후 변경', exact: true }).click();
-  await expect(page.getByRole('alert').filter({ hasText: '모델 종류를 바꾸지 못했습니다: Another job is running (S0-05 fixture)' })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: '모델 종류 변경 후 확인이 필요합니다: Another job is running (S0-05 fixture)' })).toBeVisible();
   await expect(family('classification')).toHaveAttribute('aria-pressed', 'true');
   await expect(family('segmentation')).toHaveAttribute('aria-pressed', 'false');
   const current = await (await page.request.get(`${renderer.origin}/api/project/current`)).json() as Json;

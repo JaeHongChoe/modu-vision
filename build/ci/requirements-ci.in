@@ -24,3 +24,8 @@ pydantic==2.10.3
 uvicorn[standard]==0.38.0
 python-multipart==0.0.20
 httpx==0.28.1
+
+# Self-signed, owned loopback HTTPS browser fixtures.
+cryptography==50.0.2
+cffi==2.0.0
+pycparser==2.23

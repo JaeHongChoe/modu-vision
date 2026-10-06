@@ -3686,8 +3686,15 @@
     "S2-05",
     "S4-13"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "owned-local-component-followup",
+     "result": "Full-graph CAS review, immutable policy/current truth and reviewed cohort package binding; managed apply/rollback model/graph/issuer and command-actor live checks, separately sealed offline recovery. 72 approval/evaluation, 61 initial service and 44 final command-authority cases pass; actual learned five-model native strict-policy refusal observed.",
+     "scope": "Legacy model-only compatibility and measured precision/field acceptance remain separate; full parent stays pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
+     "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    }
+   ],
    "file_actions": {
     "backend/api/routes_model_deployments.py": "Modify",
     "backend/engine/runtime_release_evidence.py": "Modify",
@@ -3706,7 +3713,10 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "backend/tests/test_service_s4_14.py"
+   "proposed_test_file": "backend/tests/test_service_s4_14.py",
+   "remaining": [
+    "Legacy model-only compatibility and measured precision/field acceptance remain separate; full parent stays pending."
+   ]
   },
   {
    "id": "S5-01",
@@ -4386,8 +4396,15 @@
     "S6-01",
     "S6-02"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "owned-local-component-followup",
+     "result": "Explicit reviewed pack inactive installer: bounded checked copy, real free space, source/copy recheck, durable records, atomic no-replace and repeat verification; installer/inventory/CI contracts 36 pass.",
+     "scope": "Actual distributed optional pack, provider execution and supported hardware/precision matrix remain pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
+     "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    }
+   ],
    "file_actions": {
     "build/remote/requirements-models.lock": "Modify",
     "scripts/runtime_pack.py": "Create",
@@ -4408,6 +4425,9 @@
    "proposed_test_file": "backend/tests/test_service_s6_03.py",
    "scope_refinement_ids": [
     "E07"
+   ],
+   "remaining": [
+    "Actual distributed optional pack, provider execution and supported hardware/precision matrix remain pending."
    ]
   },
   {
@@ -4610,6 +4630,12 @@
      "result": "Hosted Windows run37438929535 passed unsigned NSIS/portable build plus actual packaged/frozen CPU train/evaluate/infer/export and identical restart. Downloaded installer/portable SHA-256 and1533 source checkout hashes match. macOS frozen known-image service and packaged CPU application also pass twice on their recorded exact freeze.",
      "scope": "No system installation/uninstall, signed trust/update cutover, Windows11, SCM, human quality or latest-history-module packaged claim. Exact receipts and test artifacts retained separately. Windows readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
      "platform": "Windows Server2025 hosted and actual macOS frozen controls; unsigned development artifacts only"
+    },
+    {
+     "kind": "owned-local-component-followup",
+     "result": "5098 CPU/core gates pass but browser HTTPS dependency and 35-minute time limit fail. New full-suite workflow adds dependencies with official wheel hashes, new controls, isolated workers and75-minute bound.",
+     "scope": "New exact-source hosted full result must be read before promotion. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
+     "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
     }
    ],
    "file_actions": {
@@ -4644,12 +4670,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
-    "test code still has about 810 default-encoding reads outside the Windows job list",
-    "Unknown or unreproduced decoder-header errors remain visible; the narrow source geometry classifier covers only tested plain Pillow messages. Native Windows execution of the new header regressions remains pending.",
-    "Validate the newly composed source in hosted Windows after source-label decoding and byte-preserving receipt checkout fixes; earlier exact-source Windows results remain retained separately.",
-    "Hosted source-bound readbacks enumerate context 7 and worker 8 platform-specific skips; these do not provide installed Windows 11 or native POSIX-equivalent acceptance.",
-    "Native Windows ACL behavior and installed-user-store/directory durability remain unqualified; POSIX 0o600/0o700 modes are not Windows ACL enforcement.",
-    "native Windows run of the LabelMe encoding regressions (cp949 on a Korean-locale Windows)"
+    "New exact-source hosted full result must be read before promotion."
    ]
   },
   {
@@ -5099,8 +5120,15 @@
     "S5-10",
     "S6-04"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "owned-local-component-followup",
+     "result": "Exact source local ten-scenario fault matrix 40 pass and actual two-account HTTPS browser conflict/revocation/OS backend restart 2 pass. Original images/metadata and unaffected session preserved.",
+     "scope": "Injected transport/OOM/disk controls do not prove physical faults or signed application/DB cutover; target fault parent stays pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
+     "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    }
+   ],
    "file_actions": {
     "backend/tests/test_service_failure_matrix.py": "Create",
     "scripts/e2e/team-recovery.spec.ts": "Create"
@@ -5117,7 +5145,10 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s7-04.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s7-04.spec.ts",
+   "remaining": [
+    "Injected transport/OOM/disk controls do not prove physical faults or signed application/DB cutover; target fault parent stays pending."
+   ]
   },
   {
    "id": "S7-05",
@@ -5137,8 +5168,15 @@
     "S5-02",
     "S5-07"
    ],
-   "status": "planned",
-   "evidence": [],
+   "status": "in_progress",
+   "evidence": [
+    {
+     "kind": "owned-local-component-followup",
+     "result": "Two detached observers disappeared without observed terminal exits. Frozen source/pins reverified; tracked foreground observer starts a new259200-second clock with prior elapsed excluded.",
+     "scope": "Actual terminal72-hour successful receipt and target qualification remain pending. Root review only. Receipt SHA-256 b3155d1352df33c4583557e09c822a642e4778a724fd57459d50fe0706c20b17",
+     "platform": "macOS private filesystem/process/HTTP/browser/development Electron; no installed target change"
+    }
+   ],
    "file_actions": {
     "scripts/acceptance/scale_and_soak.py": "Create",
     "docs/implementation-ledger": "Extend directory"
@@ -5155,7 +5193,10 @@
     "windows_native": "pending",
     "target_execution": "pending"
    },
-   "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts"
+   "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
+   "remaining": [
+    "Actual terminal72-hour successful receipt and target qualification remain pending."
+   ]
   },
   {
    "id": "S7-06",
@@ -9724,8 +9765,8 @@
    },
    "parent_status": {
     "verification_pending": 58,
-    "in_progress": 10,
-    "planned": 14
+    "in_progress": 14,
+    "planned": 10
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

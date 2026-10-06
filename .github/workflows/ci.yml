@@ -17,7 +17,9 @@ concurrency:
 jobs:
   source:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
+    # Both lanes retain their full selected suites and isolated workspaces.
+    timeout-minutes: 75
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
@@ -102,6 +104,7 @@ jobs:
           backend/tests/test_extension_adapter_review.py
           backend/tests/test_service_s6_10.py
           backend/tests/test_runtime_pack_inventory.py
+          backend/tests/test_runtime_pack_installation.py
           backend/tests/test_scale_acceptance.py
           backend/tests/test_inspection_endurance.py
           backend/tests/test_service_failure_matrix.py
@@ -121,6 +124,8 @@ jobs:
           backend/tests/test_service_s4_07.py
           backend/tests/test_model_comparisons.py
           backend/tests/test_whole_flow_evaluation.py
+          backend/tests/test_whole_flow_approval.py
+          backend/tests/test_whole_flow_service.py
           backend/tests/test_dino_flow_threshold_precision.py
           backend/tests/test_flow_package.py
           backend/tests/test_flow_package_raster_parity.py
@@ -190,7 +195,7 @@ jobs:
         run: |
           npx playwright test --project=browser --grep-invert @owned-model --list --reporter=json > ci-browser-selection.json
           npx playwright test --project=browser --grep @owned-model --list --reporter=json > ci-owned-model-selection.json
-          npm run test:e2e:browser -- --grep-invert @owned-model
+          npm run test:e2e:browser -- --grep-invert @owned-model --workers=2
       - name: Record source, toolchain, and license inventory
         if: always()
         run: |
