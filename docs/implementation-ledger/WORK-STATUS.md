@@ -1,10 +1,8 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-06 · 기반 HEAD: `10ea7bee4ae62a174d3c7b0d2422075b0a44ea1a` · Task130–134 작업 소스 및 검증 포함
+확인일: 2026-10-06 · 기반 HEAD: `f9be229af937601c8f4a58bb6df6bfcc43f6f6d5` · Task135 구현 및 실제 검증 포함
 
-**82개 중 소프트웨어 구현 확인 60개, 구현 미완료 22개.** 이번에 S2-05, S2-08, S6-10의 소프트웨어 구현 확인을 추가했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제로 제외해 진행 대상은 21개다. 최종 수용 승인은 0개다.
-
-구현 확인은 품질 승인·대상 장비·서명·운영 배포·독립 리뷰의 완료와 다르다. 나머지 코드 및 실제 검증 작업을 계속 진행하며 Claude는 재개하지 않는다.
+**82개 중 소프트웨어 구현 확인 62개, 구현 미완료 20개.** S3-06 실제 프롬프트·few-label 학습과 S4-12 실제 AutoDL·원격 exact resume를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은 19개다. 최종 수용 승인은 0개다.
 
 ## 단계별 집계
 
@@ -13,20 +11,18 @@
 | S0 | 9 | 9 | 0 |
 | S1 | 10 | 8 | 2 |
 | S2 | 10 | 10 | 0 |
-| S3 | 10 | 9 | 1 |
-| S4 | 14 | 11 | 3 |
+| S3 | 10 | 10 | 0 |
+| S4 | 14 | 12 | 2 |
 | S5 | 10 | 7 | 3 |
 | S6 | 11 | 6 | 5 |
 | S7 | 8 | 0 | 8 |
 
-## 미완료 작업 22개
+## 미완료 작업 20개
 
-| ID | 작업 | 남은 요구 범위 |
+| ID | 작업 | 남은 조건 |
 |---|---|---|
 | S1-08 | 기존 JSON과 DB migration | migration dry-run→backup→count/hash/revision 비교→원자적 cutover→복구를 검증한다. 기존 원본·labels·split·모델·flow·결과·승인을 보존한다. / SQLite를 NAS에서 여러 호스트가 직접 열지 않는다. 최초 team 모드는 단일 API/scheduler, PostgreSQL adapter는 다중 API 요구와 부하 검증 후 지원한다. / migration 전에 writer 중지·job drain/저장·backup revision 고정·cutover journal을 수행한다. cutover 후 정상 쓰기가 발생하면 오래된 backup의 무조건 restore를 금지하고 검증된 역변환 또는 forward recovery를 선택한다. 기존 지원 backbone/decoder checkpoint의 offline 재구성·평가·flow/export compatibility를 fixture로 유지한다. 신규 adapter가 기존 config/좌표/score 의미를 바꾸면 명시적 version migration을 요구한다. / 앱/서버 전역 local_jobs·remote_jobs·resource leases·compute profiles·accounts/memberships도 dry-run migration한다. 실제 살아 있는 owned worker와 불확실 lease는 receipt/identity/fence로 adopt하고 중복 실행/고아 예약을 만들지 않는다. 복사본에서 타 설치의 token/lease를 새 실행 권한으로 활성화하지 않는다. |
 | S1-09 | Windows 프로세스와 실행 entrypoint | Windows spawn/frozen entrypoint/DataLoader/경로 공백·한글/권한 제한에서 실행·종료·재시작이 동작한다. / 자식 process tree만 종료하며 다른 프로세스에 재사용된 PID는 종료하지 않는다. GPU pack 없는 CPU 설치에서도 실행된다. |
-| S3-06 | 모델과 프롬프트 라벨 제안 | 기존 모델 일괄 제안→사람 검토→승인과 point/box/text/image prompt·한국어 keyword 조건·예제 비교를 후보 상태로 연결한다. / 실제 provider/device/weight hash·오류·취소·재시작을 기록한다. 외부 provider는 opt-in이며 데이터 전송 범위·비밀정보 보관을 표시한다. 자동 승인과 무단 원본 변경을 하지 않는다. / positive/negative image prompt·제외영역·긴 text 결합·box→polygon·작은 수동 label 기반 추천기 갱신·candidate size와 CPU/GPU filter를 유지한다. synthetic/provider 결과는 review 상태를 거친다. |
-| S4-12 | AutoDL과 checkpoint 재개 | 원격/로컬 trial를 같은 snapshot/seed/objective/budget에 묶고 진행·비용예산·취소·완료 trial 재사용을 제공한다. / warm-start와 exact resume를 구분한다. optimizer/RNG/AMP/step 복원과 재개 불가능 recipe의 이유를 표시한다. DDP는 replica data-parallel로 정직하게 표시한다. / quick·architecture/hyperparameter/augmentation 유한 탐색·fast retrain과 선택 latency objective의 실제 적용 controls를 공개한다. search중지·완료trial·best config 재사용을 검증한다. |
 | S4-13 | 동일 cohort 모델과 전체 flow 평가 | 동일 테스트 cohort에서 모델 A/B·이미지 차이·class/제품/Lot 오류·threshold sweep·재평가 history를 제공한다. CLS/SEG/DET/OCR/OBB/회전/개선 metric을 task에 맞게 사용한다. / 전체 flow의 OK/NG/REVIEW·미검/과검·node/ROI 근거·truth coverage와 unavailable metric을 기록한다. calibration split과 test split 역할을 지킨다. / 서로 다른 task 모델은 동일 이미지의 공통 판정/오류 기준으로 비교한다. task 전용 metric의 직접 비교가 불가능하면 unavailable과 이유를 표시한다. Best/Important flag·부모 모델별 재평가·checkpoint/data/config/metric/prediction JSON export를 유지한다. threshold sweep/tuning의 기본 입력은 val/calibration이다. heldout test에서는 고정된 threshold/rules만 평가한다. exploratory test tuning을 하면 deployment-quality 근거에서 제외하고 새 untouched heldout을 요구한다. |
 | S4-14 | 모델 및 전체 flow 승인 | 모델·다중 모델·ROI·전처리·분기·merge·decision rules가 함께 포함된 전체 flow를 승인 대상으로 지정한다. / 활성화/rollback·package parity·device acceptance·현재 승인 eligibility를 연결한다. graph나 threshold 변경은 새 평가/승인 요구로 표시하고 실행 패키지 구성과 checksum을 검증한다. |
 | S5-01 | 독립 검사 서비스 | Studio 종료 후 Windows service/Linux daemon에서 검사한다. 서비스 시작·정지·재부팅·해당 사용자권한·GPU warmup·readiness를 구분한다. / 같은 input id의 중복 요청 결과 게시를 제어하고 전원 중단 후 inbox/results/outbox를 복구한다. 시간 초과·미실행은 OK가 아니다. / Studio non-admin 설치와 SCM 서비스 등록을 분리한다. SCM은 명시적 elevation·전용 service account·ProgramData ACL·project/network credentials를 검사한다. 사용자 로그인이 없는 reboot/Session0에서 GPU/camera/network 접근을 실제 검증한다. 등록 거절 시 개인 Studio는 유지한다. |
@@ -46,9 +42,7 @@
 | S7-07 | 공개 후보와 릴리스 판정 | critical defects=0, 공개된 supported 조합은 실제 target기능 증거를 가지며 stale 승인·판정 불일치·데이터유실·무단접근 회귀를 통과한다. / 라이선스·Windows native install·upgrade/restore·문서·지원표·source/SBOM·서명 상태와 known issues를 공개한다. 외부 조건 pending을 완료로 바꾸지 않는다. |
 | S7-08 | 파일럿 feedback과 지속 유지 | 설명 없이 사용자가 데이터→학습→평가→flow→검사/오류검수를 수행하는 파일럿을 기록하고 막힌 동선과 운영 장애를 다음 release에 반영한다. / 지원/보안/회귀 triage·patch release·schema/protocol deprecation·backup/restore 연습 주기를 운영한다. 서비스 SLA는 실제 측정과 운영 책임이 정해진 뒤 약속한다. / 첫 usability pilot은 public release 전에 수행하며 결과와 critical blocker 해결을 S7-07의 입력으로 제공한다. 이후 유지보수 feedback은 반복 release 운영으로 이어간다. |
 
-각 항목의 실제 완료 근거와 남은 코드/외부 검증은 [상세 작업 기록](2026-10-06-remaining-parent-execution.md)에 정리했다.
-
-## 구현 확인된 작업 60개
+## 소프트웨어 구현 확인 62개
 
 | ID | 작업 |
 |---|---|
@@ -83,6 +77,7 @@
 | S3-03 | 태그와 명시적 정답 |
 | S3-04 | 팀 라벨 편집과 충돌 처리 |
 | S3-05 | 라벨 도구 기능과 format 왕복 |
+| S3-06 | 모델과 프롬프트 라벨 제안 |
 | S3-07 | 제품과 Lot 분할 및 준비도 |
 | S3-08 | 비파괴 편집과 재학습 영향 |
 | S3-09 | 검사 수집과 active learning |
@@ -98,6 +93,7 @@
 | S4-09 | 이미지 개선 실제 pair recipe |
 | S4-10 | GAN 생성과 사람 검토 |
 | S4-11 | 모든 작업의 실행 위치 통합 |
+| S4-12 | AutoDL과 checkpoint 재개 |
 | S5-02 | 폴더와 HTTP 입력 |
 | S5-03 | 카메라와 video adapter |
 | S5-04 | PLC와 MES 범용 연동 |
@@ -115,10 +111,10 @@
 
 ## 이번 실행의 확인 결과
 
-- 현재 소스의 백엔드 664개 통과, Windows 전용 2개 제외. 화면 회귀 827개 통과, 타입 검사·개발 빌드 통과.
-- 실제 HTTPS 팀 서버/흐름/오프라인 경계 9개, 부분 템플릿 2개, 실제 학습 YOLO 객체 수·검출 ROI·후속 모델·패키지 2개 통과.
-- 현재 세대 forward migration 37개, 실제 DataLoader 자식 종료, 100k 메타데이터/큰 원본 이미지/queue 측정, GPU의 작은 exact-resume control 근거 확보.
-- 고정 소스의 72시간 연속 운전은 실행 중이다. 완료로 계산하지 않는다.
-- 오프라인 manifest·pack 검증과 installer staging은 구현됐으나 실제 설치·DB cutover·서명은 남았다. 기능별 실제 실행 원장 및 실장비/품질/파일럿도 남았다.
+- 실제 원격 CUDA: 중단·재개와 연속 학습의 가중치/optimizer/scheduler/AMP/RNG/epoch/step이 모두 일치했다. 원본과 타 GPU 예약은 보존했다.
+- 실제 앱: AutoDL 측정·재사용·재학습·중단, 원격 재개 선택, 실제 SAM2/텍스트/이미지 예시·거절·재열기·배치 취소·few-label 학습/refine을 확인했다.
+- 원격 재개 회귀 140개, 화면 회귀 827개와 타입 검사가 통과했다. 공개 CI와 현재 코드의 frozen known-image 검증은 별도로 진행 중이다.
+- 72시간 고정 소스 연속 운전은 실행 중이며 완료로 세지 않는다.
+- 인간 품질 승인·실장비·운영 계정·서명·지원 책임은 소프트웨어 회귀 통과와 별개다. Windows 실제 QA 면제를 해당 플랫폼 실행 성공으로 표시하지 않는다.
 
-출처는 registry 및 각 Task의 source freeze·명령·JUnit·GUI trace·SHA 근거다. 예전 검증을 모두 최신 소스로 재실행한 것으로 주장하지 않는다.
+출처는 registry와 source freeze·명령·JUnit·GUI trace·SHA 근거다. 이전 검증을 모두 최신 코드로 재실행한 것으로 주장하지 않는다.

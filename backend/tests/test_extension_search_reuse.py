@@ -55,3 +55,27 @@ def test_reuse_rejects_changed_seed_or_measured_checkpoint(tmp_path, monkeypatch
     Path(first['winner']['checkpoint_path']).write_bytes(b'changed')
     with pytest.raises(ValueError, match='checkpoint|hash'):
         run_automated_training(**options, seed=7, reuse_search_id=first['search_id'])
+
+
+def test_api_reuse_without_version_field_reuses_verified_original_snapshot(tmp_path, monkeypatch):
+    from backend.tests.test_extension_training_api import client
+    options, calls = setup(tmp_path / 'small-runner', monkeypatch)
+    api, project, source = client(tmp_path)
+    request = {'task': 'classification', 'dataset_path': str(source), 'device': 'cpu',
+        'seed': 7, 'background': False, 'epochs_per_trial': 1, 'mode': 'quick',
+        'base_config': options['base_config'], 'budget': {'max_trials': 1, 'max_total_epochs': 1, 'max_seconds': 30}}
+    first = api.post('/api/automated-training/start', json=request)
+    assert first.status_code == 200, first.text
+    assert first.json()['status'] == 'completed', first.text
+    original = first.json()
+    reused = api.post('/api/automated-training/start', json={**request, 'reuse_search_id': original['search_id']})
+    assert reused.status_code == 200, reused.text
+    result = reused.json()
+    assert result['training_provenance'] == original['training_provenance']
+    assert result['epochs_consumed'] == 0 and result['status'] == 'completed'
+    assert result['winner']['reused_from_search_id'] == original['search_id']
+    assert calls == ['dinov3_vits16'], 'a reuse request must not launch another measured trial'
+    Image.new('RGB', (64, 64), 'red').save(source / 'train' / 'good' / 'a.png')
+    refused = api.post('/api/automated-training/start', json={**request, 'reuse_search_id': original['search_id']})
+    assert refused.status_code in (409, 422), refused.text
+    assert calls == ['dinov3_vits16'], 'changed input must fail before a new worker'

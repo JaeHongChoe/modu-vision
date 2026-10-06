@@ -64,10 +64,10 @@ def test_the_live_progress_message_rounds_numbers_and_keeps_other_recorded_metri
 
 
 def _anomaly_dataset(root: Path) -> Path:
-    for folder, count, defect in (('train/good', 6, False), ('test/good', 2, False), ('test/defect', 2, True)):
+    for partition, (folder, count, defect) in enumerate((('train/good', 6, False), ('test/good', 2, False), ('test/defect', 2, True))):
         (root / folder).mkdir(parents=True, exist_ok=True)
         for index in range(count):
-            image = Image.new('RGB', (48, 48), (200, 200, 200))
+            image = Image.new('RGB', (48, 48), (200 - partition * 12, 200, 200))
             pen = ImageDraw.Draw(image)
             pen.rectangle((4 + index, 4, 20 + index, 20), fill=(180, 180, 180))
             if defect:

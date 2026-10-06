@@ -81,6 +81,8 @@ def test_terminal_publication_keeps_claim_until_owned_worker_exit(owned_run, mon
     record, profile, journal = owned_run
     class PublishedWorker(StaleWorker):
         def exec(self, profile, argv, **kwargs):
+            if argv[-1].endswith('training_state_artifact.json'):
+                return subprocess.CompletedProcess(argv, 1, '', 'No completed epoch state')
             return subprocess.CompletedProcess(argv, 0, json.dumps({'protocol_version': 1,
                 'job_id': record.job_id, 'operation': 'train', 'status': state}), '')
         def stop_owned(self, profile, run_id, handle, *, force=False):
@@ -101,6 +103,8 @@ def test_terminal_owned_cleanup_preserves_published_outcome_after_confirmed_exit
     record, profile, journal = owned_run
     class PublishedWorker(StaleWorker):
         def exec(self, profile, argv, **kwargs):
+            if argv[-1].endswith('training_state_artifact.json'):
+                return subprocess.CompletedProcess(argv, 1, '', 'No completed epoch state')
             return subprocess.CompletedProcess(argv, 0, json.dumps({'protocol_version': 1,
                 'job_id': record.job_id, 'operation': 'train', 'status': 'aborted'}), '')
     monkeypatch.setattr(coordinator, 'TERMINAL_EXIT_GRACE_SECONDS', 0, raising=False)
@@ -436,6 +440,8 @@ def test_local_disk_full_after_remote_terminal_is_failure_not_connection_uncerta
     record, profile, _ = owned_run
     class Completed(StaleWorker):
         def exec(self, selected, argv, **kwargs):
+            if argv[-1].endswith('training_state_artifact.json'):
+                return subprocess.CompletedProcess(argv, 1, '', 'No completed epoch state')
             return subprocess.CompletedProcess(argv, 0, json.dumps({'protocol_version': 1, 'job_id': record.job_id,
                                              'operation': 'train', 'status': 'completed'}), '')
     def full(*args):

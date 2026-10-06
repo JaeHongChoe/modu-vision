@@ -76,15 +76,29 @@ def start(req:StartRequest,request:Request):
     if not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():raise HTTPException(409,'Automated training source must match the active project')
     from backend.engine.training_provenance import bind_training_version,bind_family_training
     dataset=Path(req.family_dataset_path).expanduser() if req.family_dataset_path else source
+    # Reuse selects an existing immutable input, rather than silently creating
+    # a different version ID for the same bytes. The binding below still checks
+    # current labels, splits, source and team-data policy before any worker.
+    version = req.dataset_version_id
+    if req.reuse_search_id and version is None:
+        try:
+            previous = read_search(Path(project['models_dir']), req.reuse_search_id)
+            if (previous.get('task') != req.task
+                    or Path(previous.get('source_dataset_path') or previous['dataset_path']).resolve() != source):
+                raise ValueError('Reusable search belongs to a different source or task')
+            version = previous['training_provenance']['dataset_version_id']
+            if not version: raise ValueError('Reusable search has no immutable training version')
+        except (KeyError, TypeError, OSError, ValueError) as exc:
+            raise HTTPException(422, f'Cannot bind reusable search: {exc}') from exc
     try:
         if req.task in ('ocr','rotated_detection'):
             from backend.engine.prepared_family_datasets import resolve_family_dataset
             dataset=resolve_family_dataset(project,req.task,dataset).root
         if req.task in ('patch_classification','rotation','enhancement','ocr','rotated_detection','defect_gan'):
-            binding=bind_family_training(project,dataset,req.task,req.dataset_version_id)
+            binding=bind_family_training(project,dataset,req.task,version)
         elif req.family_dataset_path and dataset!=source:
             raise ValueError('This task trains directly from the registered project source')
-        else:binding=bind_training_version(project,source,req.dataset_version_id)
+        else:binding=bind_training_version(project,source,version)
     except (ValueError,OSError) as exc:raise HTTPException(422,str(exc)) from exc
     try:
         from backend.engine.automated_trials import validate_trial_controls

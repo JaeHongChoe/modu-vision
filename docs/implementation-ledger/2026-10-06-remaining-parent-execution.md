@@ -47,8 +47,8 @@ Windows native QA remains waived by the user. No Claude source work is resumed.
 |---|---|
 | S1-08 | Live owned-worker/uncertain-lease adoption and historical scope conversion. |
 | S1-09 | Remaining entrypoint/process contracts and frozen Windows implementation review; native QA waived. |
-| S3-06 | Real trusted prompt provider/weights, long Korean and positive/negative image scenarios, review/cancel/restart. |
-| S4-12 | Actual local/remote AutoDL using identical snapshot/seed/budget, reuse/stop and full checkpoint resume. |
+| S3-06 | Software controls verified in Task135 with authentic SAM2/Grounding DINO/DINOv3, native long text/image examples, actual few-label fit/refine, reject/reopen/cancel. Annotation/semantic quality remains unapproved. |
+| S4-12 | Software controls verified in Task135: actual same-version local/remote trials, native reuse/retrain/stop and full CUDA model/optimizer/scheduler/AMP/RNG exact resume. Unsupported recipes refuse explicitly. |
 | S4-13 | Representative same-cohort comparisons and whole multi-model flow quality measurements. |
 | S4-14 | Authorized human model/flow approval with current truth, permissions and exact exported bindings. |
 | S5-01 | Dedicated service account/boot readiness and actual target service/device lifecycle. |

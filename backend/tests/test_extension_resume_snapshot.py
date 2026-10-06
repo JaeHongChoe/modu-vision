@@ -10,7 +10,7 @@ def test_resume_lineage_remains_bound_to_the_loaded_state(tmp_path):
     path = tmp_path / 'latest_training_state.pt'
     state = {
         'schema_version': 1, 'semantics': 'exact_resume', 'boundary': 'epoch',
-        'identity': {}, 'model_state_dict': {}, 'optimizer_state_dict': {},
+        'identity': {'recipe': {}}, 'model_state_dict': {}, 'optimizer_state_dict': {},
         'scheduler_state_dict': {}, 'scaler_state_dict': {}, 'scaler_enabled': False,
         'rng_state': {}, 'early_stopping': {}, 'next_epoch': 2, 'global_step': 8,
     }

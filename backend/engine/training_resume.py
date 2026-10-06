@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import pickle
 from pathlib import Path
 import random
 
@@ -23,6 +24,21 @@ def backend_numeric_flags():
             'cuda_matmul_allow_tf32':torch.backends.cuda.matmul.allow_tf32}
 
 
+def dataset_content_sha256(dataset_path):
+    """Training-relevant relative names and stable bytes survive snapshot relocation."""
+    from backend.engine.dataset_fingerprint import _files_under, source_artifact_identity
+    root = Path(dataset_path).expanduser().resolve()
+    if not root.is_dir(): raise ValueError('Exact resume dataset is unavailable')
+    digest = hashlib.sha256(b'modu-exact-epoch-dataset-v1\0')
+    for path in _files_under(root):
+        relative = path.relative_to(root).as_posix()
+        with source_artifact_identity(root, relative) as (_, content, size):
+            digest.update(relative.encode('utf-8')); digest.update(b'\0')
+            digest.update(str(size).encode('ascii')); digest.update(b'\0')
+            digest.update(content.encode('ascii')); digest.update(b'\0')
+    return digest.hexdigest()
+
+
 def build_identity(*, task, preset, recipe, dataset_path, classes, model, device):
     from backend.engine.dataset_fingerprint import fingerprint_dataset
     from backend.engine.warm_start import architecture_for
@@ -32,6 +48,7 @@ def build_identity(*, task, preset, recipe, dataset_path, classes, model, device
         'task': task, 'preset': preset, 'recipe': recipe,
         'architecture': architecture_for(task, preset, recipe), 'classes': list(classes),
         'dataset_fingerprint': fingerprint_dataset(Path(dataset_path)), 'device': str(device),
+        'dataset_content_sha256': dataset_content_sha256(dataset_path),
         'torch_version': str(torch.__version__),
         'parameters': {name: [list(parameter.shape), str(parameter.dtype), parameter.requires_grad]
                        for name, parameter in model.named_parameters()},
@@ -77,12 +94,19 @@ def read_training_state(path):
     path = Path(path)
     if path.is_symlink() or not path.is_file(): raise ValueError('Exact resume training state is unavailable')
     payload = path.read_bytes()
-    state = torch.load(io.BytesIO(payload), map_location='cpu', weights_only=True)
+    try:
+        state = torch.load(io.BytesIO(payload), map_location='cpu', weights_only=True)
+    except (pickle.UnpicklingError, EOFError, RuntimeError, TypeError) as exc:
+        raise ValueError('Exact resume training state payload is invalid') from exc
     required = {'identity', 'model_state_dict', 'optimizer_state_dict', 'scheduler_state_dict',
                 'scaler_state_dict', 'scaler_enabled', 'rng_state', 'early_stopping', 'next_epoch', 'global_step'}
     if (not isinstance(state, dict) or state.get('schema_version') != 1 or state.get('semantics') != 'exact_resume'
             or state.get('boundary') != 'epoch' or not required.issubset(state)):
         raise ValueError('Checkpoint has no complete exact training state; use warm-start for model-only checkpoints')
+    if (any(not isinstance(state[key], dict) for key in ('identity', 'model_state_dict', 'optimizer_state_dict',
+            'scheduler_state_dict', 'scaler_state_dict', 'rng_state', 'early_stopping'))
+            or not isinstance(state['identity'].get('recipe'), dict) or type(state['scaler_enabled']) is not bool):
+        raise ValueError('Exact resume training state structure is invalid')
     if any(type(state[key]) is not int or state[key] < 0 for key in ('next_epoch', 'global_step')):
         raise ValueError('Exact resume epoch or step is invalid')
     # The source job may atomically advance latest_training_state.pt while a
@@ -91,9 +115,16 @@ def read_training_state(path):
     return state
 
 
-def restore_training_state(path, model, optimizer, scheduler, scaler, *, identity, early_stopping):
+def restore_training_state(path, model, optimizer, scheduler, scaler, *, identity, early_stopping, allow_snapshot_relocation=False):
     state = read_training_state(path)
-    if state['identity'] != identity: raise ValueError('Exact resume identity differs: dataset, recipe, classes, model, or device changed')
+    expected = identity; recorded = state['identity']
+    if allow_snapshot_relocation:
+        content = recorded.get('dataset_content_sha256')
+        if not content or content != expected.get('dataset_content_sha256'):
+            raise ValueError('Exact resume relocated dataset content differs')
+        expected = {key:value for key,value in expected.items() if key != 'dataset_fingerprint'}
+        recorded = {key:value for key,value in recorded.items() if key != 'dataset_fingerprint'}
+    if recorded != expected: raise ValueError('Exact resume identity differs: dataset, recipe, classes, model, or device changed')
     if state['scaler_enabled'] != scaler.is_enabled(): raise ValueError('Exact resume AMP scaler configuration differs')
     if state['rng_state'].get('cuda') and (not torch.cuda.is_available() or len(state['rng_state']['cuda']) != torch.cuda.device_count()):
         raise ValueError('Exact resume CUDA RNG topology differs')

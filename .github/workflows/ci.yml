@@ -76,6 +76,8 @@ jobs:
           backend/tests/test_specialist_training_queue.py
           backend/tests/test_specialist_cancel_observation.py
           backend/tests/test_remote_training_controls.py
+          backend/tests/test_remote_training_state_transfer.py
+          backend/tests/test_remote_compute_reliability.py
           backend/tests/test_training_status_observation.py
           backend/tests/test_parent_selector_summary.py
           backend/tests/test_service_s2_09.py

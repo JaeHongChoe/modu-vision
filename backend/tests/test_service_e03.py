@@ -504,7 +504,10 @@ def test_valid_plane_region_is_enforced_by_the_isolated_flow_package(tmp_path, f
         assert 'valid plane region' in result['rejection_reason']
         assert not rows, 'a refused domain cannot keep physical values or an OK measurement'
     else:
-        assert result['final_verdict'] == 'OK', result['rejection_reason']
+        # The standalone CLI has no observed acquisition metadata. Geometry
+        # stays available, but physical limits cannot approve this acquisition.
+        assert result['final_verdict'] == 'REVIEW', result['rejection_reason']
+        assert 'verified acquisition' in result['rejection_reason']
         width = next(row for row in rows if row['id'] == 'width')
         area = next(row for row in rows if row.get('class_id') == 2)
         assert (width['unit'], width['verdict']) == ('mm', 'OK')

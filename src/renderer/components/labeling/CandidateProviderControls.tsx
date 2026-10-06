@@ -48,7 +48,16 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
     if(!running)return;useModelAssistRunStore.getState().begin();let active=true;
     const poll=async()=>{try{
       if(activeBatch){const next=await provider.batch(activeBatch.id);if(active&&sameProject())setBatches(old=>old.map(b=>b.id===next.id?next:b));}
-      if(featureJob&&labelingJobActive(featureJob.status)){const next=await provider.training(featureJob.id);if(active&&sameProject()){setFeatureJob(next);if(next.status==='completed'){const models=await provider.featureModels();if(active&&sameProject()){setFeatureModels(models.models);setModelId(next.model_id||'');}}}}
+      if(featureJob&&labelingJobActive(featureJob.status)){
+        const next=await provider.training(featureJob.id);
+        // Fetch the completed model before changing running. Marking the job
+        // terminal first cleans up this effect while this request is in flight.
+        const models=next.status==='completed'?await provider.featureModels():null;
+        if(active&&sameProject()){
+          if(models){setFeatureModels(models.models);setModelId(next.model_id||'');}
+          setFeatureJob(next);
+        }
+      }
     }catch(e){if(active&&sameProject())setError(workflowError(e));}};
     const timer=window.setInterval(()=>void poll(),1000);return()=>{active=false;window.clearInterval(timer);useModelAssistRunStore.getState().end();};
   },[running,activeBatch?.id,featureJob?.id,scope]);
@@ -78,7 +87,15 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const train=(refine:boolean)=>run(async()=>{
     const next=await provider.train({device,backbone:setup?.configuration.feature_backbone||'dinov3_vits16',epochs,learning_rate:learningRate,
       ...(checkpoint?{pretrained_checkpoint:checkpoint}:{}),...(checkpointHash?{pretrained_sha256:checkpointHash}:{}),...(refine?{parent_model_id:modelId}:{})});
-    if(sameProject()){setFeatureJob(next);localStorage.setItem(`foundation-feature-job:${scope}`,next.id);}
+    if(sameProject()){
+      setFeatureJob(next);localStorage.setItem(`foundation-feature-job:${scope}`,next.id);
+      // A small real fit may finish before the start response is serialized.
+      // Such a terminal response never starts the active-job polling effect.
+      if(next.status==='completed'){
+        const models=await provider.featureModels();
+        if(sameProject()){setFeatureModels(models.models);setModelId(next.model_id||'');}
+      }
+    }
   });
   const loadAll=()=>run(async()=>{if(!folderPath||!project)return;const paths:string[]=[];let total=Infinity;
     while(paths.length<total&&paths.length<5000){const page=await api.dataset.getImages({folder_path:folderPath,task:project.task,limit:500,offset:paths.length});if(!sameProject())return;paths.push(...page.items.map(i=>i.file_path));total=page.total;if(!page.items.length)break;}

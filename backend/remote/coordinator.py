@@ -12,6 +12,7 @@ import errno
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -237,7 +238,7 @@ def _local_pretrained_weights(task, preset, overrides):
 def _pretrained_transfer(output, task, preset, overrides, parent=None):
     options = dict(overrides or {})
     # Parent checkpoints already contain all initialized weights and their provenance.
-    if parent is not None or not options.get('pretrained', True):
+    if parent is not None or options.get('resume_checkpoint') or not options.get('pretrained', True):
         options.pop('pretrained_checkpoint', None)
         return options, None, None
     receipt = _local_pretrained_weights(task, preset, options)
@@ -263,6 +264,36 @@ def _remote_path(profile: ComputeProfile, job_id: str, relative: str) -> str:
     if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
         raise ValueError(f"Invalid remote run path: {relative}")
     return str(PurePosixPath(profile.remote_root) / "runs" / job_id / path)
+
+
+def _copy_training_state(transport, profile, journal, output):
+    """Receive only a terminal owned run's separately sealed epoch state."""
+    if journal.get('operation', 'train') != 'train': return
+    manifest = _remote_json(transport, profile, _remote_path(profile, journal['job_id'], 'training_state_artifact.json'))
+    if manifest is None: return  # Old workers and zero completed epochs have no continuation.
+    from backend.remote.training_state_transfer import MAX_STATE_BYTES, STATE_ARTIFACT, identity_sha256
+    if (not isinstance(manifest, dict) or manifest.get('protocol_version') != PROTOCOL_VERSION
+            or manifest.get('job_id') != journal['job_id'] or manifest.get('operation') != 'train'
+            or not re.fullmatch(r'[0-9a-f]{64}', str(journal.get('input_manifest_sha256', '')))
+            or manifest.get('input_manifest_sha256') != journal.get('input_manifest_sha256')
+            or manifest.get('path') != STATE_ARTIFACT or type(manifest.get('size')) is not int
+            or not 0 < manifest['size'] <= MAX_STATE_BYTES
+            or not isinstance(manifest.get('sha256'), str) or not re.fullmatch(r'[0-9a-f]{64}', manifest['sha256'])):
+        raise ArtifactValidationError('Remote training-state manifest differs from this owned run')
+    staging = output / '.remote-downloads'; staging.mkdir(mode=0o700, exist_ok=True)
+    path = staging / 'latest_training_state.pt'
+    if path.is_symlink(): raise ArtifactValidationError('Remote training state staging path is linked')
+    transport.download(profile, f"runs/{journal['job_id']}/{STATE_ARTIFACT}", path)
+    if path.stat().st_size != manifest['size'] or _sha256(path) != manifest['sha256']:
+        raise ArtifactValidationError('Remote training-state bytes differ')
+    from backend.engine.training_resume import read_training_state
+    state = read_training_state(path)
+    if (state['identity'].get('task') != journal['task'] or state['identity'].get('preset') != journal['preset']
+            or identity_sha256(state['identity']) != manifest.get('identity_sha256')
+            or any(state[key] != manifest.get(key) for key in ('next_epoch', 'global_step'))):
+        raise ArtifactValidationError('Remote training-state identity differs')
+    os.replace(path, output / 'latest_training_state.pt')
+    _atomic_json(output / 'training_state_receipt.json', manifest)
 
 
 def _remote_json(transport: SSHTransport, profile: ComputeProfile, path: str) -> Optional[dict[str, Any]]:
@@ -467,6 +498,8 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
                 logger.exception('Could not save terminal publication; reconciling owned worker exit %s', job_id)
             _confirm_owned_exit(transport, profile, job_id, handle)
             journal['worker_exit_confirmed'] = True
+            if state in {'completed', 'aborted'}:
+                _copy_training_state(transport, profile, journal, output)
         record.phase = "syncing" if state == "completed" else state
         for attr in ("current_epoch", "total_epochs", "current_step", "total_steps"):
             value = status.get(attr)
@@ -642,6 +675,13 @@ def run_remote_training(
             operation=journal.get('operation','train')
             remote_overrides, pretrained_envelope, pretrained_transfer = _pretrained_transfer(
                 output, record.task, record.preset, config_overrides, getattr(record, 'warm_start', None)) if operation=='train' else ({},None,None)
+            state_envelope = state_transfer = None
+            if operation == 'train':
+                from backend.remote.training_state_transfer import stage_training_state
+                if (remote_overrides.get('resume_checkpoint') and (profile.distributed_processes > 1 or getattr(record, 'warm_start', None))):
+                    raise ValueError('Exact resume is separate from DDP and warm-start')
+                remote_overrides, state_envelope, state_transfer = stage_training_state(
+                    output, remote_overrides, task=record.task, preset=record.preset)
             spec = {
                 "protocol_version": PROTOCOL_VERSION,
                 "job_id": job_id,
@@ -671,6 +711,8 @@ def run_remote_training(
             if profile.memory_budget_mb:spec['resources']={'memory_budget_mb':profile.memory_budget_mb,'allow_sharing':profile.allow_sharing}
             if pretrained_envelope:
                 spec['pretrained_weights'] = pretrained_envelope
+            if state_envelope:
+                spec['training_state'] = state_envelope
             parent_transfer = None
             if getattr(record, "warm_start", None):
                 from backend.engine.warm_start import portable_parent
@@ -685,6 +727,7 @@ def run_remote_training(
             )
             if parent_transfer: transfers = transfers + (parent_transfer,)
             if pretrained_transfer: transfers = transfers + (pretrained_transfer,)
+            if state_transfer: transfers = transfers + (state_transfer,)
             if source_snapshot:transfers=transfers+((source_snapshot.archive_path,'source.tar.gz'),)
             journal['transfers'] = [{'source': str(source.absolute()), 'target': target,
                                      'size': source.stat().st_size, 'sha256': _sha256(source)} for source, target in transfers]

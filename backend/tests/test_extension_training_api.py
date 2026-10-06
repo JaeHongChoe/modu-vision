@@ -83,13 +83,13 @@ def test_api_remote_autodl_roundtrip_preserves_verified_worker_artifacts(tmp_pat
 
 
 def resume_checkpoint(project, source):
-    from backend.engine.training_resume import save_training_state, backend_numeric_flags
+    from backend.engine.training_resume import save_training_state, backend_numeric_flags, dataset_content_sha256
     from backend.engine.dataset_fingerprint import fingerprint_dataset
     from backend.engine.trainer import EarlyStopping
     model = torch.nn.Linear(3, 2); optimizer = torch.optim.AdamW(model.parameters()); scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1)
     path = Path(project['models_dir']) / 'stopped' / 'latest_training_state.pt'
     identity = {'task': 'classification', 'preset': 'fast', 'recipe': {'epochs': 3, 'backbone': 'dinov3_vits16', 'train_mode': 'head_only'},
-        'dataset_fingerprint': fingerprint_dataset(source), 'device': 'cpu', 'torch_version': str(torch.__version__), 'backend_flags':backend_numeric_flags()}
+        'dataset_fingerprint': fingerprint_dataset(source), 'dataset_content_sha256': dataset_content_sha256(source), 'device': 'cpu', 'torch_version': str(torch.__version__), 'backend_flags':backend_numeric_flags()}
     save_training_state(path, model, optimizer, scheduler, torch.amp.GradScaler('cpu', enabled=False),
         identity=identity, next_epoch=1, global_step=2, early_stopping=EarlyStopping())
     return path
@@ -151,3 +151,27 @@ def test_unsupported_specialist_measurements_fail_before_submission(tmp_path):
         validate_trial_controls('ocr','fast',{'recipe':{'mode':'detect_recognize'}})
     with pytest.raises(ValueError, match='OBB'):
         validate_trial_controls('rotated_detection','fast',{'recipe':{'adapter':'ultralytics_yolo_obb'}})
+
+
+def test_legacy_unbound_resume_is_not_offered_or_launched(tmp_path, monkeypatch):
+    api, project, source = client(tmp_path); checkpoint = resume_checkpoint(project, source)
+    payload = torch.load(checkpoint, weights_only=True)
+    payload['identity'].pop('dataset_content_sha256', None)
+    torch.save(payload, checkpoint)
+    monkeypatch.setattr('backend.api.routes_training.training_job_manager.start_job',
+        lambda **kw: (_ for _ in ()).throw(AssertionError('legacy input identity must fail before launch')))
+    result = api.get('/api/training/resume-states', params={'dataset_path': str(source), 'task': 'classification'})
+    assert result.json()['states'] == [], 'a state that cannot match the current strict identity cannot be selectable'
+    refused = api.post('/api/training/start', json={'task': 'classification', 'dataset_path': str(source),
+        'config_overrides': {'resume_checkpoint': str(checkpoint)}})
+    assert refused.status_code == 422 and 'snapshot' in str(refused.json()).lower()
+
+
+def test_invalid_resume_tensor_payload_is_a_client_error_before_launch(tmp_path, monkeypatch):
+    api, project, source = client(tmp_path); checkpoint = resume_checkpoint(project, source)
+    checkpoint.write_bytes(b'invalid-training-state')
+    monkeypatch.setattr('backend.api.routes_training.training_job_manager.start_job',
+        lambda **kw: (_ for _ in ()).throw(AssertionError('invalid checkpoint must fail before launch')))
+    refused = api.post('/api/training/start', json={'task': 'classification', 'dataset_path': str(source),
+        'config_overrides': {'resume_checkpoint': str(checkpoint)}})
+    assert refused.status_code == 422

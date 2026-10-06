@@ -269,6 +269,8 @@ def _read_train_spec(spec_path: Path, run_dir: Path) -> dict[str, Any]:
         overrides['pretrained_origin'] = weights['source']
     elif overrides.get('pretrained_checkpoint') or overrides.get('pretrained_origin'):
         raise ValueError('Pretrained checkpoint needs a hash-bound run input')
+    from backend.remote.training_state_transfer import restore_transferred_state
+    restore_transferred_state(run_dir, data)
     return data
 
 
@@ -330,6 +332,26 @@ def _artifact_manifest(run_dir: Path, spec: dict[str, Any]) -> dict[str, Any]:
         "input_manifest_sha256": spec["input_manifest_sha256"],
         "artifacts": rows,
     }
+
+
+def _publish_training_state(run_dir, spec):
+    """Seal the last complete epoch, even when its following epoch was cancelled."""
+    from backend.remote.training_state_transfer import MAX_STATE_BYTES, STATE_ARTIFACT, identity_sha256
+    path = _run_relative_file(run_dir, STATE_ARTIFACT, 'training state artifact')
+    if not path.exists(): return
+    if path.is_symlink() or not 0 < path.stat().st_size <= MAX_STATE_BYTES:
+        raise ValueError('Training state artifact is linked or exceeds its size limit')
+    from backend.engine.training_resume import read_training_state
+    state = read_training_state(path)
+    if state['identity'].get('task') != spec['task'] or state['identity'].get('preset') != spec.get('preset', 'fast'):
+        raise ValueError('Training state artifact belongs to a different task or preset')
+    size, digest = _sha256_file(path)
+    if digest != state['_checkpoint_sha256']: raise ValueError('Training state changed before sealing')
+    _atomic_json(run_dir / 'training_state_artifact.json', {
+        'protocol_version': PROTOCOL_VERSION, 'job_id': spec['job_id'], 'operation': 'train',
+        'input_manifest_sha256': spec['input_manifest_sha256'], 'path': STATE_ARTIFACT,
+        'size': size, 'sha256': digest, 'identity_sha256': identity_sha256(state['identity']),
+        'next_epoch': state['next_epoch'], 'global_step': state['global_step']})
 
 
 def _operation_artifact_manifest(run_dir: Path, spec: dict[str, Any], operation: str,
@@ -484,6 +506,8 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         if spec.get("warm_start"):
             from backend.engine.warm_start import restore_portable_parent
             warm_start_args["warm_start"] = restore_portable_parent(run_dir, spec["warm_start"], spec["task"])
+        if spec.get('training_state'):
+            warm_start_args['resume_snapshot_relocation'] = True
         trainer = trainer_factory(
             task=spec["task"], dataset_path=snapshot.data_path, output_dir=output_dir,
             preset=spec.get("preset", "fast"), device=spec.get("device"), callback=callback,
@@ -507,6 +531,7 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
         budget.__enter__()
         from backend.engine.source_aliases import source_alias_scope
         with source_alias_scope(aliases):result = trainer.train(job_id=spec["job_id"])
+        _publish_training_state(run_dir, spec)
         budget.check()
         stop_watcher.set()
         watcher.join(timeout=1)
@@ -535,6 +560,10 @@ def run_train(spec_path: Path, trainer_factory: Callable[..., Any] | None = None
     except SnapshotCancelled:
         return status.update(status="aborted")
     except InterruptedError:
+        try:
+            _publish_training_state(run_dir, spec)
+        except Exception as exc:
+            return _failed_status(status, exc, run_dir)
         return status.update(status='aborted',**({'stop_reason':'time_limit','error':'Training runtime limit exceeded'}
             if budget is not None and budget.spent else {}))
     except Exception as exc:

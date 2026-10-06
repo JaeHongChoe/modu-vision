@@ -537,6 +537,7 @@ export type FlowCompare = {
   device?: string;
   execution_target?: "local" | "selected_compute";
   compute_profile_id?: string | null;
+  stop_node_id?: string | null;
 };
 
 export type FlowDraftSaveRequest = {
@@ -640,6 +641,12 @@ export type GANCompositionRegion = {
   opacity?: number;
   feather_px?: number;
   mask_polygon?: Array<Array<number>> | null;
+};
+
+export type GANDownstreamComparisonRequest = {
+  adopted_dataset_path: string;
+  before_job_id: string;
+  after_job_id: string;
 };
 
 export type GANEvaluateRequest = {
@@ -1218,6 +1225,15 @@ export type ReadinessRequest = {
 export type RecipeFlowRequest = {
   job_id: string;
   recipe?: PatchRecipe;
+};
+
+export type RecipeRequest = {
+  task: "classification" | "detection" | "segmentation" | "anomaly" | "rotation" | "ocr" | "rotated_detection" | "enhancement" | "defect_gan" | "patch_classification";
+  stage: "evaluate" | "predict" | "generate" | "benchmark";
+  execution_target?: "local" | "selected_compute";
+  device?: "cpu" | "cuda" | "cuda:0" | "mps";
+  compute_profile_id?: string | null;
+  params: { [key: string]: unknown };
 };
 
 export type ReevaluateRequest = {
@@ -1812,6 +1828,7 @@ export interface ApiRequestBody {
   "POST /api/dataset/split": DatasetSplitRequest;
   "POST /api/dataset/versions": VersionCreateRequest;
   "POST /api/defect-gan/adopt": backend__api__routes_defect_gan__AdoptRequest;
+  "POST /api/defect-gan/downstream-comparison": GANDownstreamComparisonRequest;
   "POST /api/defect-gan/evaluate": GANEvaluateRequest;
   "POST /api/defect-gan/export": GANExportRequest;
   "POST /api/defect-gan/generate": GANGenerateRequest;
@@ -1879,6 +1896,7 @@ export interface ApiRequestBody {
   "POST /api/model-deployments/approve": ApprovalRequest;
   "POST /api/model-deployments/rollback": backend__api__routes_model_deployments__RollbackRequest;
   "POST /api/model-deployments/specialized-approve": SpecializedApprovalRequest;
+  "POST /api/model-execution/recipes": RecipeRequest;
   "PUT /api/model-operations/policy": OperationsPolicy;
   "POST /api/model-operations/run": backend__api__routes_model_operations__RunRequest;
   "POST /api/ocr/evaluate": OCREvaluateRequest;

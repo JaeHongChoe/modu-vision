@@ -140,7 +140,7 @@ export const TrainingController: React.FC = () => {
   const jobProfile = profiles.find((profile) => profile.id === jobComputeProfileId);
   const jobGpuSelector = jobProfile?.gpu_selector?.trim();
   const selectedReadiness = modelOptionsError ? {ready: false, reason: modelOptionsError}
-    : trainingComputeReadiness(selectedProbe, task, preset, modelOptions, !!warmParentId);
+    : trainingComputeReadiness(selectedProbe, task, preset, modelOptions, !!warmParentId || !!resumeState);
   const completedJobId = status === 'completed' ? jobId : null;
   const displayedJobLabel = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
     ? jobProfile?.name || jobComputeLabel
@@ -151,7 +151,7 @@ export const TrainingController: React.FC = () => {
   const sourceReady = Boolean(projectDir && folderPath && project?.source_dataset_dir===folderPath && datasetKey === `${folderPath}\0${task}`);
   useEffect(()=>{
     let current=true;setResumeStates([]);setResumeState(null);setResumeError('');
-    if(sourceReady&&!selectedProfileId&&task!=='anomaly')void request<{states:Array<NonNullable<typeof resumeState>>}>(`/api/training/resume-states?${new URLSearchParams({dataset_path:folderPath,task,preset})}`)
+    if(sourceReady&&task!=='anomaly'&&(!selectedProfileId||task==='classification'))void request<{states:Array<NonNullable<typeof resumeState>>}>(`/api/training/resume-states?${new URLSearchParams({dataset_path:folderPath,task,preset,...(selectedProfileId?{compute_profile_id:selectedProfileId}:{})})}`)
       .then(result=>{if(current)setResumeStates(result.states);}).catch(cause=>{if(current)setResumeError(String(cause));});
     return()=>{current=false;};
   },[sourceReady,folderPath,task,preset,projectDir,selectedProfileId,completedJobId,transportRevision]);
@@ -408,7 +408,7 @@ export const TrainingController: React.FC = () => {
           {statisticalRefit && <p className="mt-2 text-slate-300">이상탐지는 정상 이미지로 특징 통계를 구성합니다. 부모 모델 사용 시 검증된 특징 추출기로 통계를 다시 구성합니다.</p>}
         </div>
 
-        {!selectedProfileId&&task!=='anomaly'&&<div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200"><label>중단된 학습 이어가기 · Epoch 경계<select aria-label="정확한 학습 이어가기" value={resumeState?.checkpoint_path||''} disabled={isTraining} onChange={event=>{const row=resumeStates.find(state=>state.checkpoint_path===event.target.value)||null;setResumeState(row);setWarmParentId('');if(row){setTrainingBackbone(String(row.recipe.model_name||row.recipe.backbone||selectedBackbone));setTrainMode((row.recipe.train_mode||'head_only') as typeof trainMode);setPartialBlocks(Number(row.recipe.partial_blocks)||2);}}} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="">새 학습 또는 완료 모델의 초기 가중치 사용</option>{resumeStates.map(row=><option key={row.checkpoint_path} value={row.checkpoint_path}>Epoch {row.next_epoch}/{String(row.recipe.epochs)} 완료 · Step {row.global_step} · {row.device}</option>)}</select></label><p className="mt-2 text-slate-400">동일 데이터·구조·설정·장치에서 마지막으로 완료한 Epoch부터 optimizer·RNG·AMP·scheduler 상태를 복원합니다. 진행 중이던 Epoch는 다시 시작합니다. 서버와 DDP 이어가기는 지원하지 않습니다.</p>{resumeState&&<p className="mt-2 text-cyan-200">저장된 학습 설정 사용 · 전체 {String(resumeState.recipe.epochs)} Epoch · 마지막 완료 Step {resumeState.global_step}</p>}{resumeError&&<p role="alert" className="mt-2 text-amber-300">{resumeError}</p>}</div>}
+        {task!=='anomaly'&&(!selectedProfileId||task==='classification')&&<div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200"><label>중단된 학습 이어가기 · Epoch 경계<select aria-label="정확한 학습 이어가기" value={resumeState?.checkpoint_path||''} disabled={isTraining} onChange={event=>{const row=resumeStates.find(state=>state.checkpoint_path===event.target.value)||null;setResumeState(row);setWarmParentId('');if(row){setTrainingBackbone(String(row.recipe.model_name||row.recipe.backbone||selectedBackbone));setTrainMode((row.recipe.train_mode||'head_only') as typeof trainMode);setPartialBlocks(Number(row.recipe.partial_blocks)||2);}}} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="">새 학습 또는 완료 모델의 초기 가중치 사용</option>{resumeStates.map(row=><option key={row.checkpoint_path} value={row.checkpoint_path}>Epoch {row.next_epoch}/{String(row.recipe.epochs)} 완료 · Step {row.global_step} · {row.device}</option>)}</select></label><p className="mt-2 text-slate-400">동일 데이터·구조·설정·장치에서 마지막으로 완료한 Epoch부터 optimizer·RNG·AMP·scheduler 상태를 복원합니다. 진행 중이던 Epoch는 다시 시작합니다. 분류 서버 학습은 원래 프로필과 종료가 확인된 worker의 검증된 상태를 전송합니다. 변환된 데이터 작업·MPS·DDP 이어가기는 지원하지 않습니다.</p>{resumeState&&<p className="mt-2 text-cyan-200">저장된 학습 설정 사용 · 전체 {String(resumeState.recipe.epochs)} Epoch · 마지막 완료 Step {resumeState.global_step}</p>}{resumeError&&<p role="alert" className="mt-2 text-amber-300">{resumeError}</p>}</div>}
 
         {warmStartSupported && <div className="rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs text-slate-200">
           <div className="font-semibold text-white">이전 모델에서 재학습</div>

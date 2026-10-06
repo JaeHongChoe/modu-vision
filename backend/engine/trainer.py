@@ -305,10 +305,12 @@ class UnifiedAutoMLTrainer:
         callback: Optional[TrainingCallback] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
         warm_start: Optional[WarmStartParent] = None,
+        resume_snapshot_relocation: bool = False,
     ):
         self.task = task.lower().strip()
         self.dataset_path = Path(dataset_path)
         self.output_dir = Path(output_dir)
+        self.resume_snapshot_relocation = resume_snapshot_relocation
         if warm_start is not None:
             from backend.engine.specialized_warm_start import require_new_candidate
             require_new_candidate(self.output_dir, warm_start)
@@ -636,7 +638,7 @@ class UnifiedAutoMLTrainer:
             global_step = 0; first_epoch = 0
             if self.overrides.get('resume_checkpoint'):
                 state = restore_training_state(self.overrides['resume_checkpoint'], model, optimizer, scheduler, scaler,
-                    identity=resume_identity, early_stopping=early_stopping)
+                    identity=resume_identity, early_stopping=early_stopping, allow_snapshot_relocation=self.resume_snapshot_relocation)
                 first_epoch, global_step = state['next_epoch'], state['global_step']
                 if first_epoch >= epochs or early_stopping.early_stop:
                     raise ValueError('Exact resume has no remaining epochs in the original recipe')
