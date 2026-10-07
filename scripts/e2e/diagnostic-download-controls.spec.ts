@@ -1,0 +1,74 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import type {Page,Route} from '@playwright/test';
+import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+const harness=require('./fixtures/harness.cjs');
+type Api=(route:string,body?:any)=>Promise<any>;
+type Download=(action:()=>Promise<unknown>,label:string)=>Promise<string>;
+test.use({actionTimeout:10_000});
+const digest=(file:string)=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,download:Download,url?:string,nativeDownloadCount?:()=>Promise<number>){
+ if(url)await page.goto(url);else await page.reload();
+ const enter=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();};
+ const close=async()=>{await page.getByRole('button',{name:'패키지·장치·설치·진단 닫기',exact:true}).click();};
+ await enter();await expect(page.getByText('프로젝트를 열면 패키지·운영·설치 준비를 확인할 수 있습니다.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'설치·진단',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'진단 자료 저장',exact:true})).toHaveCount(0);await close();
+ await api('/api/project/create',{name:'Diagnostic download controls',task:'classification'});const project=await api('/api/project/current');
+ const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/support_bundle_error.py'),workspace.root,JSON.stringify(project)],{encoding:'utf8',timeout:15_000}));
+ await api('/api/project/update',{source_dataset_dir:fixture.source});await page.reload();
+ const original=digest(fixture.image),persisted=path.join(project.project_dir,'delivery/diagnostics.json');expect(original).toBe(fixture.image_sha256);
+ let posts=0,pageDownloadCount=0;page.on('download',()=>pageDownloadCount++);const downloadCount=async()=>nativeDownloadCount?nativeDownloadCount():pageDownloadCount;
+ const observe=(req:any)=>{if(new URL(req.url()).pathname==='/api/product-delivery/diagnostics'&&req.method()==='POST')posts++;};page.on('request',observe);
+ const failInstall=async(route:Route)=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Controlled installation unavailable'})});
+ await page.route('**/api/product-delivery/installation',failInstall);await enter();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
+ await expect(page.getByRole('alert').filter({hasText:'Controlled installation unavailable'})).toBeVisible();await expect(page.getByText('실행 환경 확인 중…',{exact:true})).toBeVisible();
+ expect(posts).toBe(0);expect(fs.existsSync(persisted)).toBe(false);await evidence.screenshot(page,'actual-installation-transport-error-no-export');
+ await close();await page.unroute('**/api/product-delivery/installation',failInstall);await enter();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await expect(page.getByText(/프로젝트 schema/)).toBeVisible();
+ const installation=await api('/api/product-delivery/installation');await expect(page.getByText(`실행 백엔드 ${installation.app_version||'버전 확인 필요'} · ${installation.host.os} ${installation.host.architecture} · Python ${installation.host.python}`,{exact:true})).toBeVisible();
+ const panel=page.getByRole('group',{name:'문제 보고 자료',exact:true}),save=panel.getByRole('button',{name:'진단 자료 저장',exact:true});
+ const names=['버전·의존성','패키지','장치 실행','검사·오류'];
+ const selectOnly=async(name:string)=>{for(const other of names)await panel.getByRole('checkbox',{name:other,exact:true}).uncheck();await panel.getByRole('checkbox',{name,exact:true}).check();};
+ await selectOnly('패키지');
+ const firstResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/product-delivery/diagnostics'&&r.request().method()==='POST');
+ const baselineDownload=await download(()=>save.click(),'diagnostics-baseline');const first=await firstResponse;expect(first.ok(),await first.text()).toBe(true);expect(first.request().postDataJSON()).toEqual({sections:['packages']});
+ const baseline=await first.json();expect(JSON.parse(fs.readFileSync(baselineDownload,'utf8'))).toEqual(baseline.bundle);expect(JSON.parse(fs.readFileSync(persisted,'utf8'))).toEqual(baseline.bundle);const baselineHash=digest(persisted);
+ await expect(page.getByText('비식별 진단 JSON 저장 요청 완료',{exact:true})).toBeVisible();const committedPosts=posts,committedDownloads=await downloadCount();expect(committedDownloads).toBe(1);
+ await selectOnly('장치 실행');await close();expect(posts).toBe(committedPosts);expect(await downloadCount()).toBe(committedDownloads);expect(digest(persisted)).toBe(baselineHash);
+ await enter();await page.getByRole('button',{name:'설치·진단',exact:true}).click();for(const name of names)await expect(panel.getByRole('checkbox',{name,exact:true})).toBeChecked();
+ expect(digest(persisted)).toBe(baselineHash);await expect(page.getByText('비식별 진단 JSON 저장 요청 완료',{exact:true})).toHaveCount(0);
+ for(const name of names)await panel.getByRole('checkbox',{name,exact:true}).uncheck();await expect(save).toBeDisabled();expect(posts).toBe(committedPosts);
+ await selectOnly('검사·오류');
+ let release!:()=>void;const blocked=new Promise<void>(resolve=>release=resolve);let reached!:()=>void;const requested=new Promise<void>(resolve=>reached=resolve);
+ const failExport=async(route:Route)=>{expect(route.request().postDataJSON()).toEqual({sections:['operator_errors']});reached();await blocked;await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Controlled diagnostic unavailable'})});};
+ await page.route('**/api/product-delivery/diagnostics',failExport);await save.click();await requested;await expect(save).toBeDisabled();for(const name of names)await expect(panel.getByRole('checkbox',{name,exact:true})).toBeDisabled();
+ release();await expect(page.getByRole('alert').filter({hasText:'Controlled diagnostic unavailable'})).toBeVisible();await expect(save).toBeEnabled();await expect(panel.getByRole('checkbox',{name:'검사·오류',exact:true})).toBeChecked();
+ expect(digest(persisted)).toBe(baselineHash);expect(await downloadCount()).toBe(committedDownloads);expect(posts).toBe(committedPosts+1);await evidence.screenshot(page,'actual-diagnostic-error-preserves-prior-bundle');
+ await page.unroute('**/api/product-delivery/diagnostics',failExport);
+ const retryResponse=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/product-delivery/diagnostics'&&r.request().method()==='POST');const retryDownload=await download(()=>save.click(),'diagnostics-explicit-retry');const retried=await retryResponse;
+ expect(retried.ok(),await retried.text()).toBe(true);expect(retried.request().postDataJSON()).toEqual({sections:['operator_errors']});const accepted=await retried.json();
+ expect(accepted.redacted).toBe(true);expect(accepted.includes_source_images).toBe(false);const exported=JSON.parse(fs.readFileSync(retryDownload,'utf8'));expect(exported).toEqual(accepted.bundle);expect(JSON.parse(fs.readFileSync(persisted,'utf8'))).toEqual(exported);expect(exported.sections).toEqual(['operator_errors']);
+ expect(Object.keys(exported).sort()).toEqual(['schema_version','created_at','project_id','sections','operator_results'].sort());expect(exported.operator_results).toHaveLength(1);expect(exported.operator_results[0]).toMatchObject({state:'failed',model_verdict:null});
+ const text=JSON.stringify(exported);for(const forbidden of fixture.forbidden)expect(text).not.toContain(forbidden);expect(text).not.toContain(fixture.image);expect(text).not.toContain(fixture.image_sha256);expect(exported.operator_results[0].error).toContain('[REDACTED]');expect(exported.operator_results[0].error).toContain('[URL]');
+ const finalHash=digest(persisted),finalPosts=posts,finalDownloads=await downloadCount();expect(finalDownloads).toBe(2);await expect(page.getByText('비식별 진단 JSON 저장 요청 완료',{exact:true})).toBeVisible();await evidence.screenshot(page,'actual-explicit-retry-download-persisted-handoff');
+ await close();await enter();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await expect(page.getByText(/프로젝트 schema/)).toBeVisible();for(const name of names)await expect(panel.getByRole('checkbox',{name,exact:true})).toBeChecked();
+ expect(posts).toBe(finalPosts);expect(await downloadCount()).toBe(finalDownloads);expect(digest(persisted)).toBe(finalHash);expect(digest(fixture.image)).toBe(original);await evidence.screenshot(page,'actual-diagnostic-reopen-prior-bytes-retained');
+ for(const file of [baselineDownload,retryDownload,persisted,fixture.image])evidence.addFile(file);
+ evidence.note('diagnostic_download_controls',{actual_ui_and_backend:true,no_project_actions_absent:true,controlled_installation_503:true,installation_close_and_explicit_reopen_recovered:true,installation_metadata_matches_backend:true,unsubmitted_section_cancel_no_request:true,transient_sections_reset_on_reopen:true,empty_export_disabled:true,controlled_diagnostics_503:true,busy_controls_disabled:true,prior_bundle_preserved_on_error:true,exact_selected_section_explicit_retry:true,download_and_persisted_bundle_identical:true,actual_controlled_failure_redacted:true,reopen_did_not_download_or_export:true,original_hash_preserved:true,no_external_upload:true,no_training_submitted:true,human_quality_approval:false,independent_acceptance:false,baseline_download_sha256:digest(baselineDownload),retry_download_sha256:digest(retryDownload),persisted_sha256:finalHash});
+ page.off('request',observe);
+}
+
+test('diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen',async({page,request,renderer,workspace,evidence})=>{
+ const api:Api=async(route,body)=>{const r=body===undefined?await request.get(renderer.origin+route):route.endsWith('/update')?await request.put(renderer.origin+route,{data:body}):await request.post(renderer.origin+route,{data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};
+ const download:Download=async(action,label)=>{const event=page.waitForEvent('download');await action();const item=await event,target=path.join(workspace.logs,label+'.json');await item.saveAs(target);expect(await item.failure()).toBeNull();return target;};
+ await exercise(page,workspace,evidence,api,download,renderer.url);
+});
+test('native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const {window,app}=electronSession,backend=await electronSession.waitForBackend();
+ await app.evaluate(({session})=>{(globalThis as any).__diagnosticControlDownloadEvents=0;session.defaultSession.on('will-download',()=>{(globalThis as any).__diagnosticControlDownloadEvents++;});});
+ const api:Api=(route,body)=>window.evaluate(async({port,route,body})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{...(body===undefined?{}:{method:route.endsWith('/update')?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned API ${r.status}`);return r.json();},{port:backend.port,route,body});
+ const download:Download=async(action,label)=>{const target=path.join(workspace.logs,label+'.json');await app.evaluate(({session},file)=>{(globalThis as any).__diagnosticControlDownload=null;session.defaultSession.once('will-download',(_event,item)=>{item.setSavePath(file);item.once('done',(_ev,state)=>{(globalThis as any).__diagnosticControlDownload=state;});});},target);await action();await expect.poll(()=>app.evaluate(()=>(globalThis as any).__diagnosticControlDownload)).toBe('completed');return target;};
+ await exercise(window,workspace,evidence,api,download,undefined,()=>app.evaluate(()=>(globalThis as any).__diagnosticControlDownloadEvents));
+});
