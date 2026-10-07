@@ -110,7 +110,10 @@ export class PortableUpdateManager {
     if(result.status!=='reviewed'||!hex(result.plan_sha256)||!hex(result.source_sha256)||!hex(result.installation_id,32)
       ||result.authority_sha256!==trusted.authoritySHA||result.publisher!==trusted.trust.publisher||result.channel!==channel
       ||typeof result.version!=='string'||typeof result.current_version!=='string'||result.application_started!==false
-      ||!['application_file_count','pack_count','artifact_bytes','database_fence'].every(k=>Number.isSafeInteger(result[k])&&result[k]>=0))throw Error('Invalid portable review response');
+      ||!['portable/v1','darwin-app/v2'].includes(result.application_layout)
+      ||(result.application_layout==='darwin-app/v2'&&this.options.platform!=='darwin')
+      ||(result.application_layout==='portable/v1'&&result.application_link_count!==0)
+      ||!['application_file_count','application_link_count','pack_count','artifact_bytes','database_fence'].every(k=>Number.isSafeInteger(result[k])&&result[k]>=0))throw Error('Invalid portable review response');
     this.review={id:crypto.randomUUID(),manifest,channel,sha:result.plan_sha256};
     return {...result,review_id:this.review.id,root:this.root!};
   });}

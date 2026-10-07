@@ -223,6 +223,69 @@ def _safe_path(value):
     return value
 
 
+def _application_namespaces(names):
+    namespaces={}
+    for name in names:
+        parts=name.split('/')
+        for count in range(1,len(parts)+1):
+            prefix='/'.join(parts[:count]);fold=prefix.casefold();kind='file' if count==len(parts) else 'directory'
+            prior=namespaces.get(fold)
+            if prior and prior!=(prefix,kind):raise UpdateError('Portable file/directory/link namespace conflicts')
+            namespaces[fold]=(prefix,kind)
+    return namespaces
+
+
+def _native_layout(manifest):
+    """Resolve signed aliases lexically without touching the host filesystem.
+
+    Schema1 retains its no-link contract. Schema2 is one darwin .app whose
+    ordinary inventory uses only canonical paths; aliases have no descendants
+    in that inventory and can never escape into data, trust or host locations.
+    """
+    if manifest['platform']!='darwin':raise UpdateError('Native linked layout requires darwin')
+    files={row['path'] for row in manifest['files']};links=manifest['links']
+    if not isinstance(links,list) or len(links)>512:raise UpdateError('Invalid native link inventory')
+    if not files:raise UpdateError('Native application inventory is empty')
+    app=next(iter(files)).split('/')[0]
+    if not app.endswith('.app'):raise UpdateError('Native application must use one app root')
+    root=app+'/Contents/'
+    if any(not name.startswith(root) for name in files):raise UpdateError('Native files escaped the app Contents root')
+    expected={}
+    for row in links:
+        _fields(row,{'path','target'});name=_safe_path(row['path']);target=row['target']
+        if (not name.startswith(root) or name in expected or name in files or not isinstance(target,str)
+                or not 0<len(target)<=240 or target.startswith('/') or '\\' in target
+                or any(part=='' for part in target.split('/'))):raise UpdateError('Invalid native internal link')
+        expected[name]=target
+    namespaces=_application_namespaces([*files,*expected,'portable-application.json'])
+    directories={prefix for prefix,kind in namespaces.values() if kind=='directory'}
+    _safe_path(manifest['entrypoint'])
+    if (not manifest['entrypoint'].startswith(root+'MacOS/') or manifest['entrypoint']not in files):
+        raise UpdateError('Native entrypoint must be a canonical regular Contents/MacOS file')
+
+    for name,target in expected.items():
+        parts=name.rsplit('/',1)[0].split('/');pending=target.split('/');seen=set();expansions=0
+        while pending:
+            part=pending.pop(0)
+            if part=='.':continue
+            if part=='..':
+                if len(parts)<=2:raise UpdateError('Native link escaped the app Contents root')
+                parts.pop();continue
+            parts.append(part);candidate=_safe_path('/'.join(parts))
+            if candidate in expected:
+                state=(candidate,tuple(pending))
+                if state in seen or expansions>=64:raise UpdateError('Cyclic or excessive native internal links')
+                seen.add(state);expansions+=1
+                pending=expected[candidate].split('/')+pending;parts=parts[:-1];continue
+            if candidate not in files and candidate not in directories:raise UpdateError('Dangling native internal link')
+            if pending and candidate not in directories:raise UpdateError('Native link traverses a regular file')
+        candidate='/'.join(parts)
+        if candidate not in files and candidate not in directories:raise UpdateError('Dangling native internal link')
+        if candidate in directories and (name.startswith(candidate+'/') or name==candidate):
+            raise UpdateError('Native directory link forms an ancestor cycle')
+    return expected,directories
+
+
 def _portable(archive,release,*,destination=None):
     with _file(archive,1024**3) as (reader,_),zipfile.ZipFile(reader) as bundle:
         members=bundle.infolist();names=[m.filename for m in members]
@@ -231,13 +294,15 @@ def _portable(archive,release,*,destination=None):
         for member in members:
             _safe_path(member.filename);mode=member.external_attr>>16
             if (member.is_dir() or member.flag_bits&1 or member.file_size>1024**3
-                    or stat.S_IFMT(mode) not in (0,stat.S_IFREG)):
-                raise UpdateError('Portable archive cannot contain links, special or encrypted files')
-        if 'portable-application.json' not in names or bundle.getinfo('portable-application.json').file_size>1024**2:
-            raise UpdateError('Portable application manifest missing or excessive')
+                    or stat.S_IFMT(mode) not in (0,stat.S_IFREG,stat.S_IFLNK)):
+                raise UpdateError('Portable archive cannot contain special or encrypted files')
+        if ('portable-application.json' not in names or bundle.getinfo('portable-application.json').file_size>1024**2
+                or stat.S_IFMT(bundle.getinfo('portable-application.json').external_attr>>16)not in (0,stat.S_IFREG)):
+            raise UpdateError('Portable application regular manifest missing or excessive')
         raw=bundle.read('portable-application.json');manifest=_json(raw)
-        _fields(manifest,{'schema_version','version','platform','arch','entrypoint','files'})
-        if type(manifest['schema_version'])is not int or manifest['schema_version']!=1 or any(manifest[k]!=release[k] for k in ('version','platform','arch')):
+        native=isinstance(manifest,dict) and manifest.get('schema_version')==2
+        _fields(manifest,{'schema_version','version','platform','arch','entrypoint','files'}|({'links'}if native else set()))
+        if type(manifest['schema_version'])is not int or manifest['schema_version']not in (1,2) or any(manifest[k]!=release[k] for k in ('version','platform','arch')):
             raise UpdateError('Portable application target/version differs from signed release')
         rows=manifest['files']
         if not isinstance(rows,list) or not 0<len(rows)<=10000:raise UpdateError('Invalid portable application inventory')
@@ -248,25 +313,29 @@ def _portable(archive,release,*,destination=None):
                     or type(row['size'])is not int or not 0<row['size']<=1024**3 or type(row['executable'])is not bool):
                 raise UpdateError('Invalid portable application inventory')
             folded.add(name.casefold());expected[name]=row
-        if set(names)!=set(expected)|{'portable-application.json'}:raise UpdateError('Portable application membership differs')
-        namespaces={}
-        for name in [*expected,'portable-application.json']:
-            parts=name.split('/')
-            for count in range(1,len(parts)+1):
-                prefix='/'.join(parts[:count]);fold=prefix.casefold();kind='file' if count==len(parts) else 'directory'
-                prior=namespaces.get(fold)
-                if prior and prior!=(prefix,kind):raise UpdateError('Portable file/directory namespace conflicts')
-                namespaces[fold]=(prefix,kind)
+        links,_=_native_layout(manifest) if native else ({},set())
+        if not native and any(stat.S_IFMT(member.external_attr>>16)not in (0,stat.S_IFREG)for member in members):
+            raise UpdateError('Portable schema1 archive cannot contain links')
+        if set(names)!=set(expected)|set(links)|{'portable-application.json'}:raise UpdateError('Portable application membership differs')
+        _application_namespaces([*expected,*links,'portable-application.json'])
+        _safe_path(manifest['entrypoint'])
         if manifest['entrypoint'] not in expected or not expected[manifest['entrypoint']]['executable']:
             raise UpdateError('Portable application entrypoint is not an executable inventory member')
+        # Validate each signed alias before creating a destination or any link.
+        for name,target in links.items():
+            member=bundle.getinfo(name);encoded=target.encode('utf-8')
+            if stat.S_IFMT(member.external_attr>>16)!=stat.S_IFLNK or member.file_size!=len(encoded)or bundle.read(name)!=encoded:
+                raise UpdateError('Native link archive type or target differs from signed inventory')
+        if any(stat.S_IFMT(bundle.getinfo(name).external_attr>>16)not in (0,stat.S_IFREG)for name in expected):
+            raise UpdateError('Canonical application inventory must contain only regular files')
         if destination is not None:
-            destination.mkdir(mode=0o700,parents=True,exist_ok=False)
+            destination=_unlinked(destination);destination.mkdir(mode=0o700,parents=True,exist_ok=False)
             _write_raw(destination/'portable-application.json',raw)
         for name,row in expected.items():
             if bundle.getinfo(name).file_size!=row['size']:raise UpdateError('Portable application size differs')
             writer=None;digest=hashlib.sha256();total=0
             if destination is not None:
-                target=destination/name;target.parent.mkdir(mode=0o700,parents=True,exist_ok=True);writer=open(target,'xb')
+                target=_unlinked(destination/name);target.parent.mkdir(mode=0o700,parents=True,exist_ok=True);writer=open(target,'xb')
             try:
                 with bundle.open(name) as source:
                     while chunk:=source.read(1024**2):
@@ -278,6 +347,11 @@ def _portable(archive,release,*,destination=None):
                 if writer:writer.flush();os.fchmod(writer.fileno(),0o500 if row['executable'] else 0o400);os.fsync(writer.fileno())
             finally:
                 if writer:writer.close()
+        # All regular bytes are now verified. Namespace admission forbids every
+        # symbolic parent, so a link is never traversed while materializing files.
+        if destination is not None:
+            for name,target in links.items():
+                file=_unlinked(destination/name);file.parent.mkdir(mode=0o700,parents=True,exist_ok=True);os.symlink(target,file)
         return manifest,_sha(raw)
 
 
@@ -382,7 +456,8 @@ def review_update(plan):
         'envelope_sha256':plan.envelope_sha256,'authority_sha256':plan.authority_sha256,
         'current_version':plan.target['current_version'],'version':plan.app['version'],
         'publisher':plan.app['publisher'],'channel':plan.app['channel'],
-        'application_file_count':len(manifest['files']),'pack_count':len(plan.packs),
+        'application_file_count':len(manifest['files']),'application_layout':'darwin-app/v2' if manifest['schema_version']==2 else 'portable/v1',
+        'application_link_count':len(manifest.get('links',[])),'pack_count':len(plan.packs),
         'artifact_bytes':sum(row['size'] for row in plan.app['artifacts']),
         'database_fence':plan.previous_database['fence'] if plan.previous_database else 0,
         'copied_session_policy':'revoked','application_started':False,
@@ -448,12 +523,21 @@ def _validated_intent(root,identifier):
     manifest,manifest_sha=_portable(directory/'bundle'/installer['path'],release)
     generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
     if _sha(_read(application/'portable-application.json',1024**2))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
-    expected={row['path'] for row in manifest['files']}|{'portable-application.json'}
+    links,directories=_native_layout(manifest) if manifest['schema_version']==2 else ({},set())
+    expected={row['path'] for row in manifest['files']}|set(links)|{'portable-application.json'}
     actual=set()
     for path in application.rglob('*'):
-        _unlinked(path)
-        if path.is_file():actual.add(path.relative_to(application).as_posix())
-        elif not path.is_dir():raise UpdateError('Installed application contains a special file')
+        name=path.relative_to(application).as_posix()
+        if path.is_symlink():
+            _unlinked(path.parent)
+            if name not in links or os.readlink(path)!=links[name]:raise UpdateError('Installed native link target changed')
+            actual.add(name)
+        else:
+            _unlinked(path)
+            if name in links:raise UpdateError('Installed native link replaced with a regular member')
+            if path.is_file():actual.add(name)
+            elif not path.is_dir():raise UpdateError('Installed application contains a special file')
+            elif manifest['schema_version']==2 and name not in directories:raise UpdateError('Installed native directory membership differs')
     if actual!=expected:raise UpdateError('Installed application membership differs')
     for row in manifest['files']:
         _check_file(application/row['path'],row)

@@ -51,7 +51,7 @@
   "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "aa5325b16c0f836c038b286679b20d25812580cc0992880f287754995d8eebca",
   "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
   "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
-  "src/renderer/components/runtime/PortableUpdatePanel.tsx": "b14a02353deea057182c1094092b2339dd91b6d36d4ed0a484f465e88e2f52bf",
+  "src/renderer/components/runtime/PortableUpdatePanel.tsx": "938dcde621ba4e3d1a6863a00afcfeb0b1bff3823a56eb2a076327dc50d3e96a",
   "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "cf0c49e1cb75377c37351424ba3f536db39b3c55bdd05c6c4e39aa45bcfac248",
   "src/renderer/components/dataset/CaptureIntakePanel.tsx": "7021606464274e98970014a0a18bc8b273a22db2e7f2436f6ad163eef4770b36"
  },

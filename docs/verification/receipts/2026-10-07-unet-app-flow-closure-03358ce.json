@@ -1,0 +1,143 @@
+{
+  "schema": "modu-vision.unet-actual-app-flow/v1",
+  "source_sha": "03358ce8bbfb5f5e924bd406a9a9d90fa0ad9e07",
+  "gui_receipt": "2026-10-07-unet-app-flow-03358ce-browser.json",
+  "gui_receipt_sha256": "002a83fe0c227643e1808da2d35fed6fd36d75d879e63470adc1555a99361935",
+  "actual_gui_passed": 1,
+  "actual_modes": [
+    "browser"
+  ],
+  "retry_count": 0,
+  "screenshots": 13,
+  "jobs": [
+    {
+      "job_id": "job_1791371333_4d1766",
+      "status": "aborted",
+      "worker_exit_confirmed": true,
+      "worker_exit_code": 0,
+      "record_sha256": "49bee579fbba99415dd9be8cc02c495f6ae0531c8985c85d32447bbdb2766ff9"
+    },
+    {
+      "job_id": "job_1791371388_ed0675",
+      "status": "completed",
+      "worker_exit_confirmed": true,
+      "worker_exit_code": 0,
+      "record_sha256": "4ae383762fe16f89a1d4bfb659be62ee6c13e566f45956979ea2a9c34d17ed16"
+    }
+  ],
+  "training": {
+    "epochs": 12,
+    "steps": 36,
+    "device": "cpu",
+    "checkpoint_sha256": "789ca14c0070a775b9ad0333b40660651c6a212440fa4524dec322ea9589ba27",
+    "model_meta_sha256": "4c507fe7a745554a539eb084a1c0877a981e6623928d808bcdbc392f0a786e4e",
+    "log_sha256": "189680df307f81a18a1640bc15a7baf0e4361d685e7a0718c183fd717b4946d8"
+  },
+  "evaluation": {
+    "job_id": "job_1791371388_ed0675",
+    "file_sha256": "9a0e885dd68a5e2c953e13ca4def4dd7c9c3ff8a44ceb353b89eb0af7b81cd60",
+    "metrics": {
+      "evaluated_split": "val",
+      "selection_overlap": true,
+      "miou": 0.9623,
+      "mdice": 0.9805,
+      "pixel_accuracy": 0.998,
+      "foreground_iou": 0.9266,
+      "per_class_iou": {
+        "background": 0.9979,
+        "defect": 0.9266
+      },
+      "per_class_dice": {
+        "background": 0.999,
+        "defect": 0.9619
+      },
+      "best_metric": 0.84119
+    },
+    "selection_overlap": true,
+    "scope": "Generated48 images/train40/val8, binary masks64px; validation selection overlap means this is not an independent quality cohort."
+  },
+  "flow": {
+    "final_verdict": "NG",
+    "device": "cpu",
+    "steps": [
+      {
+        "node": "node_input",
+        "status": "passed",
+        "out": 1,
+        "edges": [
+          "node_input-node_fixed_roi"
+        ]
+      },
+      {
+        "node": "node_fixed_roi",
+        "status": "passed",
+        "out": 1,
+        "edges": [
+          "node_fixed_roi-node_inspect"
+        ]
+      },
+      {
+        "node": "node_inspect",
+        "status": "passed",
+        "out": 1,
+        "edges": [
+          "node_inspect-node_decision"
+        ]
+      },
+      {
+        "node": "node_decision",
+        "status": "flagged_ng",
+        "out": 1,
+        "edges": [
+          "node_decision-node_output"
+        ]
+      },
+      {
+        "node": "node_output",
+        "status": "flagged_ng",
+        "out": 1,
+        "edges": []
+      }
+    ]
+  },
+  "inspection": {
+    "total": 8,
+    "ok": 0,
+    "ng": 6,
+    "review": 2,
+    "clean_images": 2
+  },
+  "history": "Same saved run UUID after actual browser reload and8/8 retained. CSV download event and suggested filename observed; CSV bytes were not retained or inspected.",
+  "package": {
+    "parity_receipt_sha256": "4e866e68e3f681c3816469191c48fa54363284c2b61b7c65c947eba5e24e3a42",
+    "status": "passed",
+    "image_count": 1,
+    "independent_process": true,
+    "device": "cpu",
+    "compared_fields": [
+      "final_verdict",
+      "roi_count",
+      "defective_roi_count",
+      "routed_output_node_id",
+      "rejection_reason",
+      "inspected_image_size",
+      "execution_resources",
+      "execution_steps",
+      "crops"
+    ],
+    "mismatched_fields": [],
+    "approval_included": false,
+    "scope": "One generated CPU image only, no target-device or cohort approval."
+  },
+  "labels_step_02": {
+    "observation": {
+      "mask_labels_shown": false,
+      "note": "QA finding: the mask folders train the model but step 02 shows no labels for them (S3-01 mask binding gap)"
+    },
+    "screen_readback": "Screenshot at0/0 and labelset loading. A mask binding gap is not established by this premature observation; no positive label-content acceptance."
+  },
+  "owned_teardown_sha256": "55606474f834390906ba46ac43804649d0bcf37fe5fe4a10697365774d07128c",
+  "scope": "Actual screen-driven browser register/train/abort/release/restart/evaluate/fixed-ROI/class-branch/save/run/node-inspector/batch/reload/export flow, actual backend and CPU model. Browser desktop-folder shim only; no Electron native, GPU, representative quality, human approval, physical-device, real publisher or independent acceptance.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}

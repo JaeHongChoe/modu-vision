@@ -22,6 +22,7 @@ def test_preview_is_read_only_and_install_requires_the_reviewed_source(tmp_path,
     assert review['status'] == 'reviewed' and review['version'] == '1.0.0'
     assert review['source_sha256'] == plan(root, value).source_sha256
     assert review['application_file_count'] == 1 and review['pack_count'] == 0
+    assert review['application_layout'] == 'portable/v1' and review['application_link_count'] == 0
     assert review['installation_id'] and len(review['plan_sha256']) == 64
     assert 'password' not in json.dumps(review) and 'key' not in review
     # Preview can establish the admission lock but changes no scope/artifact.

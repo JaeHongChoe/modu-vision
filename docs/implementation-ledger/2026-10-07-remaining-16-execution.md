@@ -9,7 +9,7 @@
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
 | S6-03 | 선택 runtime pack | 별도 FP32/FP16 pack 및 OpenVINO/NNCF INT8 pack64파일 설치·재검증; 실제 Xeon CPU 양자화·full flow·OCR 및 관련140개 통과 | 다른 provider/장치·대표 정답 cohort·native license/publisher 승인 |
-| S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
+| S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
 | S7-01 | 전체 기능 행동 coverage | 197개 curated action, 496개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 883개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
@@ -217,3 +217,13 @@
 - Cleane481810에서 CI와 같은 public selector183 cases를 실제 로컬 Chrome으로 실행했다.181 passed/1 failed/1 skipped/retries0이다. 최초 direct ExFAT attempt의 SQLite readonly 실패와 이후 별도 APFS write/WAL preflight를 보존했다. 실행 중인 기존72h scratch는 바꾸지 않았다.
 - 실패1건은 queue fixture의 decode/Fit 시점이다. 수정 후 cleanba52900 actual browser3/Electron3가 통과했고 같은 원래 queue assertions의16차원/32entries를 새 실제receipt에 재연결했다. 기존5743664 receipts와 원래action entries export는 보존했으며 재연결로 새 차원 수를 늘리지 않았다.
 - UNet app-flow skip은 통과로 세지 않는다. 기존 전체 선택을 수정 후 전체 성공으로 바꾸지 않으며 최신 hosted CI도 pending이다. Public receipt:public-browser-replay-e481810.
+
+## 추가 실행: UNet 실제 앱 흐름
+
+Clean03358ce의 actual browser1 passed(8.8min, retries0, screenshots13, owned teardown)이다. 생성48장/train40/val8·binary64px masks를 앱에서 등록하고 실제CPU UNet를 중단/예약 반환 후 새job으로12epochs36steps 완료했다. 같은job 평가, ROI[8,8,56,56]·모델 class branch 저장, node 실행 근거, 실제val8장(6NG/2REVIEW), 같은 이력UUID reload, CSV download event 및 별도프로세스 one-imageCPU package parity를 확인했다. CSV bytes 자체는 보존하지 않았다. Evaluation selection_overlap=true로 독립 품질 cohort가 아니며 package 승인을 포함하지 않았다. Step02 screenshot은0/0 loading으로 마스크 라벨 표시나 gap을 결론낼 수 없다. Electron/GPU/target/quality/전체 수락은 pending이다. Public receipt:unet-app-flow-closure-03358ce.
+
+## 추가 구현: macOS 앱 내부 Framework 연결의 업데이트 계약
+
+기존portable schema1의 link 거절은 유지하고, darwin schema2의 한 .app/Contents 안에서만 canonical regular files와 서명된 내부 link 목록을 허용했다. 실제 link expansion 뒤 dotdot을 처리하며 escape/dangling/cycle·file/dir/case 충돌·alias 하위 파일·unsigned/다른 target·설치 후 ordinary-file replacement/empty directory/foreign parent 변경을 거절한다. 모든 regular bytes를 검증한 뒤만 link를 생성하고 launch/recovery에서 원시 target·모든 canonical hashes/modes·DB pair를 다시 검사한다. UI review에 실제 layout/link count를 표시하고 main에서 contract를 검증한다.
+
+Owned qualification-key macOS fixture의 actual install→entrypoint→new profile write→forward recovery와 기존파일 보존, malformed/tampered controls 포함 Python109 pass, main18 pass, product/E2E typechecks pass다. 최초 positive red와 설치 후 ordinary-file replacement 실패를 모두 보존했다. 실제 native publisher/codesign/OS installer/install-home/known-image acceptance를 뜻하지 않으며 S6-04 부모는 pending이다. 다음 실제 GUI와 전체 앱 replay는 별도 실행 기록으로 남긴다.
