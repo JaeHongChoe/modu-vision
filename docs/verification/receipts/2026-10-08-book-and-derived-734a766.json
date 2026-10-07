@@ -1,0 +1,235 @@
+{
+  "schema": "modu-vision.book-and-derived-clean-controls/v1",
+  "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+  "source_files": {
+    "scripts/e2e/team-book-draft-controls.spec.ts": "bc86864283f7f829b4830f3379bf83948040fd926c0c61d1e4d160ab4eca27ba",
+    "src/renderer/components/labeling/CategorySelector.tsx": "53c9d2f8cf69e8aec7f249162e2b29ed54ef11e57b25e1282cb11810649b7922",
+    "scripts/e2e/derived-workflow-closure.spec.ts": "a6f9f887de9a40420ebfe1e38fdb58004626d37f89582d3db44536e9bc6b8ac4"
+  },
+  "results": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 119.43595054099569,
+    "source_inputs": 2148,
+    "source_unchanged": true,
+    "clean_before_and_after": true
+  },
+  "cases": [
+    {
+      "mode": "browser",
+      "label": "derived-workflow",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-derived-workflow-734a766-browser.json",
+      "execution_receipt_sha256": "c75e058ee7c8f6b7dc18341588ec14da79fe2d371134b86c8fac147125419d4b",
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 927,
+        "stoppedAt": "2026-10-07T22:25:02.476Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "expected_console_failures_retained": [
+        "Failed to load resource: the server responded with a status of 409 (Conflict)",
+        "Failed to load resource: the server responded with a status of 409 (Conflict)",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_EMPTY_RESPONSE",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+        "Failed to load resource: net::ERR_CONNECTION_REFUSED"
+      ],
+      "controls": {
+        "actual_original_and_warm_start_CPU_training_completed": true,
+        "baseline_job_id": "job_1791411870_d9ea19",
+        "candidate_job_id": "job_1791411885_3fcd5b",
+        "comparison_report_id": "comparison_2d18c8c22b1c4b79bcde44eb203938c1",
+        "comparison_images": 16,
+        "comparison_errors": 0,
+        "exact_pair_and_full_test": true,
+        "original_images_annotations_and_fixed_test_preserved": true,
+        "original_source_returned": true,
+        "human_attestation_unchecked": true
+      }
+    },
+    {
+      "mode": "electron",
+      "label": "derived-workflow",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-derived-workflow-734a766-electron.json",
+      "execution_receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 57416,
+            "pid": 41364,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          41364
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "expected_console_failures_retained": [],
+      "controls": {
+        "actual_original_and_warm_start_CPU_training_completed": true,
+        "baseline_job_id": "job_1791411927_5bcd82",
+        "candidate_job_id": "job_1791411942_d1f697",
+        "comparison_report_id": "comparison_a999ef2f933b46c9bfd7783e969be3a7",
+        "comparison_images": 16,
+        "comparison_errors": 0,
+        "exact_pair_and_full_test": true,
+        "original_images_annotations_and_fixed_test_preserved": true,
+        "original_source_returned": true,
+        "human_attestation_unchecked": true
+      }
+    },
+    {
+      "mode": "browser",
+      "label": "team-book",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-team-book-734a766-browser.json",
+      "execution_receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 858,
+        "stoppedAt": "2026-10-07T22:25:10.934Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "expected_console_failures_retained": [
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      ],
+      "controls": {
+        "book_dimensions": [
+          "empty",
+          "invalid",
+          "error",
+          "cancel",
+          "handoff"
+        ],
+        "assignment_dimensions": [
+          "cancel"
+        ],
+        "book_version": 2,
+        "book_sha256": "3157623c46b108f3c860de0511a5d305e1e751099f5e6eb5fc0c8c9074f59073",
+        "exact_new_palette_selected": true,
+        "unsent_assignment_retained_not_inflight_cancellation": true,
+        "annotation_write": false
+      }
+    },
+    {
+      "mode": "electron",
+      "label": "team-book",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-team-book-734a766-electron.json",
+      "execution_receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 57471,
+            "pid": 41639,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          41639
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "expected_console_failures_retained": [],
+      "controls": {
+        "book_dimensions": [
+          "empty",
+          "invalid",
+          "error",
+          "cancel",
+          "handoff"
+        ],
+        "assignment_dimensions": [
+          "cancel"
+        ],
+        "book_version": 2,
+        "book_sha256": "2e867267e0fed78def043094a21870aa08adadc269f53f6c8fa5dee84a548470",
+        "exact_new_palette_selected": true,
+        "unsent_assignment_retained_not_inflight_cancellation": true,
+        "annotation_write": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "cf9180af1146c4b82b68aba14eae6834eb21de8fa846d985cd8c6ed8f61b2f16",
+    "result.log": "2c169c7f3d9bcd8cf912b014227c565718cdac46110ff2cebf18b08d6581dca6",
+    "source-before.json": "e650461af9a280ce18f12396c5d05aec548c6723c139aa3e6427e2feae3be081",
+    "source-after.json": "e650461af9a280ce18f12396c5d05aec548c6723c139aa3e6427e2feae3be081"
+  },
+  "report_sha256": "2ef5128b03ff0d61eb116eedbefe0d20a5fdf7e7e7e4cb6b51bedf7c4367b7f2",
+  "global_teardown_sha256": "9e160b95d38ca041f015916f5387d4bf661031b258c6e2c13bdf66fa90f37f66",
+  "independent_review_sha256": {
+    "book": "8f7beeb4164722251e9fe3ca2dbc2a8933cdc38e850413cf02d7db7b4e1b46c3",
+    "derived": "016daa282bd0f5136b6fbf3248603aa62353afa5df874f7a704353a43b0dda8b"
+  },
+  "refreshed_derived_references": {
+    "docs/service-action-evidence.json": 13,
+    "docs/service-upgrade-evidence.json": 12
+  },
+  "retained_prior_red": {
+    "hosted_source": "0b7501a3a0788c8ae517050c062a40cf76e25b94",
+    "hosted_run": 37683444172,
+    "comparison_POST_sent": false,
+    "cause": "Preferred candidate hydration reloaded catalog during comparison click; UI button briefly disabled. Actual trace timing retained.",
+    "fixed": "Await exact candidate hydration, actual pair, localCPU/full-test and enabled button. Original10s response/95s training/65s comparison preserved.",
+    "book": "Actual published palette exposed visual active state without aria-pressed. One production line exposes existing Boolean; no selection behavior change."
+  },
+  "acceptance": {
+    "new_curated_scenarios": 6,
+    "model_quality_or_human_truth": false,
+    "installed_target_or_OS_registration": false,
+    "publisher_or_release": false,
+    "hardware_or_complete_process_tree": false,
+    "new_hosted_CI_success": false,
+    "whole_parent_accepted": false
+  }
+}

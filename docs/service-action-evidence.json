@@ -3270,7 +3270,85 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "작업 배정 초안 닫기",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Explicit dialog close before assignment POST leaves server UUID/revision/labels unchanged; reopened unsent draft retained. This does not cancel a dispatched request or roll back assignment.",
+         "observed": "Explicit dialog close before assignment POST leaves server UUID/revision/labels unchanged; reopened unsent draft retained. This does not cancel a dispatched request or roll back assignment."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "작업 배정 초안 닫기",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Explicit dialog close before assignment POST leaves server UUID/revision/labels unchanged; reopened unsent draft retained. This does not cancel a dispatched request or roll back assignment.",
+         "observed": "Explicit dialog close before assignment POST leaves server UUID/revision/labels unchanged; reopened unsent draft retained. This does not cancel a dispatched request or roll back assignment."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -3985,16 +4063,328 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Blank actor produces actual local refusal with no books POST; original book/history/settings/image queue remain unchanged.",
+         "observed": "Blank actor produces actual local refusal with no books POST; original book/history/settings/image queue remain unchanged."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Blank actor produces actual local refusal with no books POST; original book/history/settings/image queue remain unchanged.",
+         "observed": "Blank actor produces actual local refusal with no books POST; original book/history/settings/image queue remain unchanged."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Duplicate OK class produces actual local validation refusal with no books POST and unchanged original records.",
+         "observed": "Duplicate OK class produces actual local validation refusal with no books POST and unchanged original records."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Duplicate OK class produces actual local validation refusal with no books POST and unchanged original records.",
+         "observed": "Duplicate OK class produces actual local validation refusal with no books POST and unchanged original records."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Exact valid books POST controlled503 before backend dispatch preserves v1; explicit real200 retry publishes only v2 and one history row.",
+         "observed": "Exact valid books POST controlled503 before backend dispatch preserves v1; explicit real200 retry publishes only v2 and one history row."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Exact valid books POST controlled503 before backend dispatch preserves v1; explicit real200 retry publishes only v2 and one history row.",
+         "observed": "Exact valid books POST controlled503 before backend dispatch preserves v1; explicit real200 retry publishes only v2 and one history row."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Explicit close before submission discards unsent book title/definition; original book/history/settings/images unchanged. No in-flight POST cancellation claim.",
+         "observed": "Explicit close before submission discards unsent book title/definition; original book/history/settings/images unchanged. No in-flight POST cancellation claim."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Explicit close before submission discards unsent book title/definition; original book/history/settings/images unchanged. No in-flight POST cancellation claim.",
+         "observed": "Explicit close before submission discards unsent book title/definition; original book/history/settings/images unchanged. No in-flight POST cancellation claim."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -4028,7 +4418,85 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::book draft refusals and close preserve records then explicit publication hands off exact palette",
+         "receipt": "2026-10-08-team-book-734a766-browser.json",
+         "receipt_sha256": "b142356e55e71b7a5921b06e9731a5fb1e8df266e8bf98056ababd21c09e261f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b204aa8c7af2a61939bd615603722b67dfa8fe65f98acd5ed9ccaa0590f8a9ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ee0bf6c614507dee2bf1bce04b2444223dea56e34be0c9b1ebba5d87c9d86cbb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86393c036f354420fdc70e4a099369742555dc5356b6ba49fedefc895b7fdfdc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "148278a343a4c73549b63c86c20555fa4680e3a93ba997b88f2e6cd1649a6e20"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b98faf1e06ba7ca7d70c9753f98062ecb932c707269a856f510ba2119753b816"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ad85a7df3e2ecc69ade12582de41603cb73aa539c3efd74a5ff0b5af6d6ee40a"
+          }
+         ],
+         "expected": "Published book v2 and SHA/category ID reach actual labeling palette; new category pressed true, old false, shared v2 visible and no annotation write.",
+         "observed": "Published book v2 and SHA/category ID reach actual labeling palette; new category pressed true, old false, shared v2 visible and no annotation write."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+         "kind": "click",
+         "action": "팀 기준서 발행",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+         "receipt": "2026-10-08-team-book-734a766-electron.json",
+         "receipt_sha256": "a9a89cc06cae25ec5d12dffa08079ef3d14d62ed9ea4acecd1a905e3600c9b0e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+          }
+         ],
+         "expected": "Published book v2 and SHA/category ID reach actual labeling palette; new category pressed true, old false, shared v2 visible and no annotation write.",
+         "observed": "Published book v2 and SHA/category ID reach actual labeling palette; new category pressed true, old false, shared v2 visible and no annotation write."
+        }
+       ]
       }
      }
     },
@@ -12592,27 +13060,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검수한 파생 버전을 데이터 원본으로 선택",
          "expected": "Use an explicit verified source and preserve original history.",
          "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -12948,27 +13416,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검수한 파생 버전을 데이터 원본으로 선택",
          "expected": "Use an explicit verified source and preserve original history.",
          "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -12986,27 +13454,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검증한 편집 전 원본으로 돌아가기",
          "expected": "Use an explicit verified source and preserve original history.",
          "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -13342,27 +13810,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검증한 편집 전 원본으로 돌아가기",
          "expected": "Use an explicit verified source and preserve original history.",
          "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17627,27 +18095,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "정렬 새 버전 저장",
          "expected": "Save30-degree alignment with transformed annotations and original identity.",
          "observed": "Native button produced a polygon from bbox, direction20 to50 and unchanged textA01; original images and labels retained.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17683,27 +18151,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "밝기 새 버전 저장",
          "expected": "Create a child brightness version without replacing original pixels.",
          "observed": "Native0.7 brightness version retained aligned parent and original hash.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17739,27 +18207,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "변환 이미지·라벨 검수 후 채택 후보",
          "expected": "Explicitly review converted labels before materializing a training source.",
          "observed": "Controlled synthetic review was saved and reopened; human manufacturing quality was not approved.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17782,27 +18250,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "변환 이미지·라벨 검수 후 채택 후보",
          "expected": "Explicitly review converted labels before materializing a training source.",
          "observed": "Controlled synthetic review was saved and reopened; human manufacturing quality was not approved.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17823,27 +18291,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검수한 파생본으로 새 학습 데이터 저장",
          "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
          "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17857,27 +18325,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검수한 파생본으로 새 학습 데이터 저장",
          "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
          "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17897,27 +18365,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "검수한 파생본으로 새 학습 데이터 저장",
          "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
          "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17935,27 +18403,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "파생 편집 기준 버전",
          "expected": "Reopen the saved derived version and its review history.",
          "observed": "Native reload followed by explicit version selection restored the saved reviewed history; default selection persistence is not claimed.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }
@@ -17978,27 +18446,27 @@
        "evidence": [
         {
          "task": "S3-08",
-         "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+         "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
          "kind": "click",
          "action": "파생 편집 기준 버전",
          "expected": "Reopen the saved derived version and its review history.",
          "observed": "Native reload followed by explicit version selection restored the saved reviewed history; default selection persistence is not claimed.",
-         "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
+         "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
          "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-         "receipt": "2026-10-07-app-derived-workflow-closure-electron.json",
-         "receipt_sha256": "5a1d901507d4be1f533420343ebe7dd6f409d794677a0a0db2bd52c748544db3",
+         "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
+         "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ce82a4a4755b87cd708c050201ba04b019036db14b7f9aae67baad7b9828bb5"
+           "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
           },
           {
            "id": "screenshot-1",
-           "sha256": "28820c69743eb16689ce2058ff3f48aa868df48811e29edfaecdf5fc95674cce"
+           "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "6fb4b69c4f83e60deb9aed0b72712492c4f350607a513714588bce52e08ff0a3"
+           "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
           }
          ]
         }

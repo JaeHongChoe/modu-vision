@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-book-draft-controls.spec.ts::native book draft refusals close and exact palette handoff preserve labels",
+  "test_source_sha256": "bc86864283f7f829b4830f3379bf83948040fd926c0c61d1e4d160ab4eca27ba",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2ef5128b03ff0d61eb116eedbefe0d20a5fdf7e7e7e4cb6b51bedf7c4367b7f2",
+  "harness_sha256": "168641866f11cfd2966024650561f67204fa8a51aba96a1124ce6dd0f3138ae9",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "aeb6da5a080accbdc83c4626b22f8d1db3352f10aa328a56b49a35119a0bdf11"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "970ac2e214976e3778ce16eae7ac32ac319198cc08cef199992bd076371f07f5"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "1b82e66e0bd9f57b96f717f25e1743b1cd3ae28a035044f366acffd1753877a3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "738df0e6e81a79fc18c2d99cb29cdd0a3047f00e487ad13bea9aeb4a5e43f696"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "2d458c3b06e27c2c70604bd6b7818340f043ddd0e885d4ca7db7a8542b66785e"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "2fe6e2743939c2dabfe80d987b00c1d38ba74f34e58b117244a267e359ddec78"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

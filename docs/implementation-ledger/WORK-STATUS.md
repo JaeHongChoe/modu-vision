@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의586개 시나리오 검증,863개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의592개 시나리오 검증,857개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -340,3 +340,11 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 원래 native 지연 HTTP200 provenance는 거짓이다. 별도 인증된 실제 GET의 snapshot을 원래 UI 응답에 controlled200으로 전달했고, 요청 종료와 새 빈 프로젝트에 옛 상태가 다시 그려지지 않는 범위만 확인했다.
 - generated allOK weights가 syntheticNG를 놓친 결과는 보존했다. controlled 검토/정답은 사람의 모델 품질 승인이나 설치·publisher·장비·whole tree 수락이 아니다. 실제 owned daemon/app/backend/port 정리는 확인됐다.
 - action 집계586verified/863pending, 구현 부모69verified/13pending, Windows 면제 후 요청 범위11pending을 유지한다. 공개 CI의 `0b7501a` CPU 회귀 통과·browser191통과/1실패도 유지하며 최신 소스의 hosted 성공으로 대신하지 않는다.
+
+
+## 2026-10-08 기준서5개·미전송 배정 닫기1개와 파생 workflow 재검증
+
+- clean `734a766`에서 browser2/source Electron2가119.44초, retry 없이 통과하고2148개 입력이 동일했다. 빈 작업자·중복 클래스 로컬 거절, 정확한 books POST503 뒤 명시적 실제200 재시도, 미전송 기준서 닫기, 발행v2의 실제 라벨 palette 전달5개를 검증했다. 미전송 배정 닫기1개는 server record 보존/재열기 시 초안 유지이며, 전송 중 요청 취소나 rollback이 아니다.
+- 실제 새 category 선택 상태를 접근성에도 표시하도록 기존 Boolean의 aria-pressed 한 줄을 추가했다. 원래 라벨·mask·검수 기록·이미지 hash는 보존하고 annotation 저장은 하지 않았다.
+- 실제 hosted `0b7501a` 실패 trace에서 comparison POST가 없음을 확인했다. 후보 화면 hydration 중 catalog refresh가 클릭 시 버튼을 잠시 비활성화했다. 정확한 후보 job 표시·모델 쌍·전체 test/로컬CPU·활성 버튼을 먼저 기다리고 기존10초 응답/95초 학습/65초 비교 제한을 유지했다. 실제 원본/CPU warm-start 학습, 동일16개 고정 test 비교, 원본 복귀를 root clean source에서 다시 수행하고 기존25개 근거 참조만 새 실행 기록으로 갱신했다.
+- 집계592verified/857pending, 부모 구현69verified/13pending을 유지한다. 새 hosted CI·사람 품질·설치·publisher·장비·전체 부모 수락으로 표시하지 않는다.
