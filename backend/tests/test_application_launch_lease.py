@@ -8,6 +8,8 @@ import subprocess
 import sys
 import threading
 import zipfile
+from contextlib import contextmanager
+import select
 
 import psutil
 import pytest
@@ -47,6 +49,263 @@ def stop_fixture(supervisor):
         os.killpg(process.pid, signal.SIGTERM)
         process.wait(timeout=5)
     supervisor.close()
+
+
+@contextmanager
+def backend_lifetime_admission(root):
+    """Real separate-process shared fence, as backend.main lifespan retains."""
+    script = ('from backend.engine.migration_guard import maintenance_guard; import sys; '
+              'guard=maintenance_guard(sys.argv[1]); guard.__enter__(); '
+              'print("shared-admitted",flush=True); sys.stdin.read(1); guard.__exit__(None,None,None)')
+    child = subprocess.Popen([sys.executable, '-c', script, str(root)],
+        cwd=Path(__file__).resolve().parents[2], stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert select.select([child.stdout], [], [], 10)[0], 'controlled shared admission did not start'
+        assert child.stdout.readline(128).strip() == 'shared-admitted'
+        yield child
+    finally:
+        if child.poll() is None:
+            child.stdin.write('x'); child.stdin.flush(); child.stdin.close()
+        try: child.wait(timeout=5)
+        except subprocess.TimeoutExpired: child.kill(); child.wait(timeout=5)
+        assert child.returncode == 0, child.stderr.read(2048)
+
+
+def artifact_receipt(root, row):
+    receipt = {'schema_version': 1, 'status': 'succeeded', 'nonce': row['nonce'],
+        'binding': row['binding'], 'process': row['process']}
+    expected = {}
+    for name in ('checkpoint', 'input', 'output'):
+        file = root/'projects'/('shared-admission-'+name+'.bin'); file.write_bytes(name.encode())
+        receipt[name] = {'path': file.relative_to(root).as_posix(), 'sha256': sha(file.read_bytes())}
+        expected[name+'_sha256'] = receipt[name]['sha256']
+    return receipt, expected
+
+
+def test_live_backend_shared_admission_allows_controller_transitions_and_blocks_cutover(tmp_path):
+    from backend.engine import application_launch_lease as lease, runtime_update as update
+    root, value, current = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    second = fixture(tmp_path, version='1.1.0', key=value['key'], authority=value['authority'])
+    second['target']['current_version'] = '1.0.0'; proposed = plan(root, second)
+    try:
+        row = supervisor.start()
+        with backend_lifetime_admission(root):
+            assert supervisor.claim(row['process'])['claimed'] is True
+            ready = supervisor.ready(row['binding'], row['process'])
+            assert ready['state'] == 'ready' and ready['native_app_handshake_verified'] is False
+            assert lease.inspect_launch(root)['state'] == 'ready'
+            receipt, expected = artifact_receipt(root, row)
+            result = supervisor.known_image(receipt, expected=expected)
+            assert result['status'] == 'artifact_binding_verified'
+            assert result['actual_application_inference_verified'] is False
+            assert result['known_image_execution_qualified'] is False
+            assert supervisor.known_image(receipt, expected=expected) == result
+            for mutation in (lambda: reserve(root, value), lambda: supervisor.start(),
+                             lambda: update.install_update(root, proposed),
+                             lambda: update.recover_update(root, current['update_id'])):
+                with pytest.raises(ValueError, match='admission'): mutation()
+            process = supervisor._process
+            os.killpg(process.pid, signal.SIGTERM); process.wait(timeout=5)
+            observed = supervisor.observe_exit()
+            assert observed['state'] == 'recovery_required'
+            assert observed['exit_observation']['process_tree_exit_verified'] is False
+            supervisor.close()
+            assert lease.inspect_launch(root)['state'] == 'recovery_required'
+        with pytest.raises(ValueError, match='launch ownership'): update.install_update(root, proposed)
+        with pytest.raises(ValueError): supervisor.cancel()
+    finally: stop_fixture(supervisor)
+
+
+def test_transition_mutex_refuses_overlapping_ready_without_stale_revision_loss(tmp_path, monkeypatch):
+    from backend.engine import application_launch_lease as lease, runtime_update as update
+    root, value, current = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    entered = threading.Event(); release = threading.Event(); results = []; errors = []
+    try:
+        row = supervisor.start(); supervisor.claim(row['process']); before = lease.inspect_launch(root)['revision']
+        def pause(point):
+            if point == 'before_lease_compare_and_swap': entered.set(); assert release.wait(10)
+        monkeypatch.setattr(lease, '_checkpoint', pause)
+        def ready():
+            try: results.append(supervisor.ready(row['binding'], row['process']))
+            except BaseException as exc: errors.append(exc)
+        thread = threading.Thread(target=ready); thread.start()
+        try:
+            assert entered.wait(10)
+            with pytest.raises(ValueError, match='transition'): supervisor.ready(row['binding'], row['process'])
+            with pytest.raises(ValueError, match='transition'): lease.inspect_launch(root)
+            database_handle = supervisor._lock
+            with pytest.raises(ValueError, match='transition'): supervisor.close()
+            assert supervisor._lock is database_handle
+            with pytest.raises(ValueError, match='admission'): update.recover_update(root, current['update_id'])
+        finally: release.set(); thread.join(15)
+        assert not thread.is_alive() and not errors and results[0]['revision'] == before+1
+        assert lease.inspect_launch(root)['revision'] == before+1
+    finally:
+        release.set(); stop_fixture(supervisor)
+
+
+@pytest.mark.parametrize('damage', ['competing_revision', 'journal_bytes', 'pointer_bytes'])
+def test_journal_compare_and_swap_refuses_changed_publication(tmp_path, monkeypatch, damage):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    try:
+        row = supervisor.start(); supervisor.claim(row['process'])
+        journal = root/lease.LEASES/supervisor.nonce/'journal.json'; pointer = root/lease.ACTIVE_LEASE
+        changed = []
+        def intervene(point):
+            if point != 'before_lease_compare_and_swap': return
+            if damage == 'competing_revision':
+                record = json.loads(journal.read_bytes()); record['revision'] += 1; record['reason'] = 'controlled competing publication'
+                publication = json.loads(pointer.read_bytes()); publication.update(revision=record['revision'], record_sha256=sha(canonical(record)))
+                journal.write_bytes(canonical(record)); pointer.write_bytes(canonical(publication))
+            elif damage == 'journal_bytes': journal.write_bytes(journal.read_bytes()+b'\n')
+            else: pointer.write_bytes(pointer.read_bytes()+b'\n')
+            changed.append((journal.read_bytes(), pointer.read_bytes()))
+        monkeypatch.setattr(lease, '_checkpoint', intervene)
+        with pytest.raises(ValueError, match='publication changed'): supervisor.ready(row['binding'], row['process'])
+        assert len(changed) == 1 and changed[0] == (journal.read_bytes(), pointer.read_bytes())
+    finally:
+        monkeypatch.setattr(lease, '_checkpoint', lambda point: None); stop_fixture(supervisor)
+
+
+def test_readback_acquires_mutex_before_partial_journal_pointer_validation(tmp_path, monkeypatch):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    entered = threading.Event(); release = threading.Event(); results = []; errors = []
+    try:
+        row = supervisor.start(); supervisor.claim(row['process'])
+        def pause(point):
+            if point == 'after_transition_journal': entered.set(); assert release.wait(10)
+        monkeypatch.setattr(lease, '_checkpoint', pause)
+        def ready():
+            try: results.append(supervisor.ready(row['binding'], row['process']))
+            except BaseException as exc: errors.append(exc)
+        thread = threading.Thread(target=ready); thread.start()
+        try:
+            assert entered.wait(10)
+            # Journal has advanced and the pointer has not: another reader must
+            # refuse busy before interpreting this valid in-flight publication.
+            with pytest.raises(ValueError, match='transition is busy'): lease.inspect_launch(root)
+        finally: release.set(); thread.join(15)
+        assert not thread.is_alive() and not errors and results[0]['state'] == 'ready'
+        assert lease.inspect_launch(root)['state'] == 'ready'
+    finally:
+        release.set(); stop_fixture(supervisor)
+
+
+def test_transition_journal_crash_never_repairs_pointer_or_unlocks(tmp_path, monkeypatch):
+    from backend.engine import application_launch_lease as lease, runtime_update as update
+    root, value, current = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    try:
+        row = supervisor.start(); supervisor.claim(row['process'])
+        def crash(point):
+            if point == 'after_transition_journal': raise KeyboardInterrupt()
+        monkeypatch.setattr(lease, '_checkpoint', crash)
+        with pytest.raises(KeyboardInterrupt): supervisor.ready(row['binding'], row['process'])
+        journal = root/lease.LEASES/supervisor.nonce/'journal.json'; pointer = root/lease.ACTIVE_LEASE
+        snapshot = journal.read_bytes(), pointer.read_bytes()
+        with pytest.raises(ValueError, match='publication'): lease.inspect_launch(root)
+        with pytest.raises(ValueError): supervisor.ready(row['binding'], row['process'])
+        with pytest.raises(ValueError): update.recover_update(root, current['update_id'])
+        assert snapshot == (journal.read_bytes(), pointer.read_bytes())
+    finally:
+        process = supervisor._process
+        if process.poll() is None: os.killpg(process.pid, signal.SIGTERM); process.wait(timeout=5)
+        with pytest.raises(ValueError): supervisor.close()
+        assert supervisor._lock is None
+
+
+@pytest.mark.parametrize('schema_version', [True, 1.0])
+def test_pointer_snapshot_reread_rejects_numeric_schema_coercion(tmp_path, monkeypatch, schema_version):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    original_load = lease._load
+    try:
+        row = supervisor.start(); supervisor.claim(row['process'])
+        pointer = root/lease.ACTIVE_LEASE; journal = root/lease.LEASES/supervisor.nonce/'journal.json'; altered = []
+        def replace_after_validation(path):
+            record = original_load(path)
+            publication = json.loads(pointer.read_bytes()); publication['schema_version'] = schema_version
+            pointer.write_bytes(canonical(publication)); altered.append((journal.read_bytes(), pointer.read_bytes()))
+            return record
+        monkeypatch.setattr(lease, '_load', replace_after_validation)
+        with pytest.raises(ValueError, match='publication changed'): supervisor.ready(row['binding'], row['process'])
+        assert len(altered) == 1 and altered[0] == (journal.read_bytes(), pointer.read_bytes())
+    finally:
+        monkeypatch.setattr(lease, '_load', original_load)
+        process = supervisor._process
+        if process.poll() is None: os.killpg(process.pid, signal.SIGTERM); process.wait(timeout=5)
+        with pytest.raises(ValueError): supervisor.close()
+        assert supervisor._lock is None
+
+
+@pytest.mark.parametrize('schema_version', [True, 1.0])
+def test_spawn_intent_requires_exact_integer_schema(tmp_path, schema_version):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    try:
+        row = supervisor.start(); intent = root/lease.LEASES/supervisor.nonce/'spawn-intent.json'
+        changed = json.loads(intent.read_bytes()); changed['schema_version'] = schema_version; intent.write_bytes(canonical(changed))
+        with pytest.raises(ValueError, match='spawn ownership intent'): supervisor.claim(row['process'])
+        with pytest.raises(ValueError): lease.assert_quiescent(root)
+    finally:
+        process = supervisor._process
+        if process.poll() is None: os.killpg(process.pid, signal.SIGTERM); process.wait(timeout=5)
+        with pytest.raises(ValueError): supervisor.close()
+        assert supervisor._lock is None
+
+
+@pytest.mark.parametrize('proof', [1, 1.0])
+def test_only_boolean_never_spawned_proof_can_pass_quiescence(tmp_path, proof):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path); supervisor = reserve(root, value); supervisor.cancel()
+    journal = root/lease.LEASES/supervisor.nonce/'journal.json'; pointer = root/lease.ACTIVE_LEASE
+    record = json.loads(journal.read_bytes()); record['exit_observation'] = {'never_spawned': proof}
+    publication = json.loads(pointer.read_bytes()); publication['record_sha256'] = sha(canonical(record))
+    journal.write_bytes(canonical(record)); pointer.write_bytes(canonical(publication))
+    before = journal.read_bytes(), pointer.read_bytes()
+    with pytest.raises(ValueError, match='unproved'): lease.assert_quiescent(root)
+    assert before == (journal.read_bytes(), pointer.read_bytes())
+
+
+def test_cancel_requires_exact_committed_database_binding_types(tmp_path):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path); supervisor = reserve(root, value)
+    journal = root/lease.LEASES/supervisor.nonce/'journal.json'; pointer = root/lease.ACTIVE_LEASE
+    record = json.loads(journal.read_bytes()); record['binding']['database_pointer']['fence'] = float(record['binding']['database_pointer']['fence'])
+    publication = json.loads(pointer.read_bytes()); publication['record_sha256'] = sha(canonical(record))
+    journal.write_bytes(canonical(record)); pointer.write_bytes(canonical(publication))
+    before = journal.read_bytes(), pointer.read_bytes()
+    with pytest.raises(ValueError, match='binding changed'): supervisor.cancel()
+    assert before == (journal.read_bytes(), pointer.read_bytes())
+
+
+@pytest.mark.parametrize('damage', ['missing', 'replaced', 'linked', 'hardlinked', 'fifo'])
+def test_transition_lock_identity_damage_refuses_live_controller_and_readback(tmp_path, damage):
+    from backend.engine import application_launch_lease as lease
+    root, value, _ = installed(tmp_path, looping=True); supervisor = reserve(root, value)
+    try:
+        row = supervisor.start(); lock = root/lease.LEASES/supervisor.nonce/'transition.lock'
+        if damage == 'hardlinked': os.link(lock, root/'controlled-lock-link')
+        else:
+            lock.rename(root/'controlled-original-lock')
+            if damage == 'replaced': lock.write_bytes(b'')
+            elif damage == 'linked': lock.symlink_to(root/'controlled-original-lock')
+            elif damage == 'fifo': os.mkfifo(lock)
+        with backend_lifetime_admission(root):
+            with pytest.raises(ValueError): supervisor.claim(row['process'])
+            with pytest.raises(ValueError): lease.inspect_launch(root)
+        with pytest.raises(ValueError): lease.assert_quiescent(root)
+    finally:
+        process = supervisor._process
+        if process.poll() is None: os.killpg(process.pid, signal.SIGTERM); process.wait(timeout=5)
+        handle = supervisor._lock
+        with pytest.raises(ValueError): supervisor.close()
+        # Damaged mutex was never admitted: production cannot drop this handle
+        # behind a possible in-flight controller. Release only our test fixture.
+        assert supervisor._lock is handle
+        handle.__exit__(None, None, None); supervisor._lock = None
 
 
 def test_reservation_reopens_exact_committed_identity_and_blocks_updates(tmp_path):

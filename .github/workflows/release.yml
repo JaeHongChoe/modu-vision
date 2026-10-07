@@ -52,8 +52,6 @@ jobs:
       RELEASE_CANDIDATE_DIR: ${{ vars.RELEASE_CANDIDATE_DIR }}
       RELEASE_BINDING_SHA256: ${{ vars.RELEASE_BINDING_SHA256 }}
       RELEASE_PYZ_TOC: ${{ vars.RELEASE_PYZ_TOC }}
-      RELEASE_LICENSE_REPORT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/license-gate.json
-      RELEASE_CANDIDATE_OUTPUT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/candidate-manifest.json
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       HF_HUB_OFFLINE: '1'
       TRANSFORMERS_OFFLINE: '1'
@@ -72,6 +70,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/release_candidate_gate.cjs preflight
+      - name: Bind diagnostic paths after native runner allocation
+        env:
+          RELEASE_LICENSE_REPORT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/license-gate.json
+          RELEASE_CANDIDATE_OUTPUT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/candidate-manifest.json
+        run: |
+          set -euo pipefail
+          printf '%s\n' "RELEASE_LICENSE_REPORT=$RELEASE_LICENSE_REPORT" "RELEASE_CANDIDATE_OUTPUT=$RELEASE_CANDIDATE_OUTPUT" >> "$GITHUB_ENV"
       - name: Require independently pinned prepared candidate before building
         id: binding
         run: node scripts/release_candidate_gate.cjs configuration

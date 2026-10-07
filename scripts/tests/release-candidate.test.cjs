@@ -55,13 +55,36 @@ test('parsed workflow permits manual protected candidate diagnostics only, with 
  const preflight=workflow.jobs.preflight,candidate=workflow.jobs.candidate;
  assert.equal(preflight.environment,undefined);assert.equal(candidate.needs,'preflight');assert.equal(candidate.environment,'release-candidate');assert.deepEqual(candidate['runs-on'],['self-hosted','macOS','ARM64','vision-release-candidate']);
  assert.match(preflight.if,/workflow_dispatch/);assert.match(preflight.if,/refs\/heads\/main/);assert.match(candidate.if,/workflow_dispatch/);assert.match(candidate.if,/refs\/heads\/main/);
- const runs=candidate.steps.filter(s=>s.run).map(s=>s.run);assert.equal(runs[0],'node scripts/release_candidate_gate.cjs preflight');assert.equal(runs[1],'node scripts/release_candidate_gate.cjs configuration');
+ const runSteps=candidate.steps.filter(s=>s.run),runs=runSteps.map(s=>s.run);
+ assert.equal(runs[0],'node scripts/release_candidate_gate.cjs preflight');
+ const diagnosticSteps=runSteps.filter(s=>s.env?.RELEASE_CANDIDATE_OUTPUT);
+ assert.equal(diagnosticSteps.length,1);assert.equal(runSteps[1],diagnosticSteps[0]);
+ assert.deepEqual(Object.keys(diagnosticSteps[0].env).sort(),['RELEASE_CANDIDATE_OUTPUT','RELEASE_LICENSE_REPORT']);
+ assert.equal(runs[2],'node scripts/release_candidate_gate.cjs configuration');
+ assert.doesNotMatch(JSON.stringify(candidate.env),/runner\./);
+ for(const [key,file] of [['RELEASE_LICENSE_REPORT','license-gate.json'],['RELEASE_CANDIDATE_OUTPUT','candidate-manifest.json']]){
+   assert.equal(diagnosticSteps[0].env[key],`${'${{ runner.temp }}'}/release-candidate-${'${{ github.run_id }}'}-${'${{ github.run_attempt }}'}/${file}`);
+ }
  assert.ok(runs.findIndex(s=>s.includes('distribution_release_gate.py'))<runs.findIndex(s=>s==='node scripts/release_candidate_gate.cjs candidate'));
  const allRuns=Object.values(workflow.jobs).flatMap(j=>j.steps.filter(s=>s.run).map(s=>s.run)).join('\n');
  assert.doesNotMatch(allRuns,/--sign|--force|notarytool|security import|security create-keychain|gh release|--publish|electron-builder|curl.*(?:POST|PUT)|defaults write/i);
  assert.ok(Object.values(workflow.jobs).flatMap(j=>j.steps).filter(s=>s.uses).every(s=>/@[a-f0-9]{40}$/.test(s.uses)));
  assert.equal(candidate.env.CSC_IDENTITY_AUTO_DISCOVERY,'false');assert.doesNotMatch(JSON.stringify(workflow),/secrets\./);
  const upload=candidate.steps.at(-1);assert.match(upload.with.path,/\*\.json$/);assert.ok(!Object.keys(workflow.jobs).some(j=>/windows|publish|sign|deploy/i.test(j)));
+});
+test('diagnostic path initialization preserves spaced native paths in the runner environment file without source work',()=>{
+ const yaml=require('node:module').createRequire(path.join(sourceRoot,'package.json'))('js-yaml');
+ const workflow=yaml.load(fs.readFileSync(path.resolve(__dirname,'../../.github/workflows/release.yml'),'utf8'));
+ const steps=workflow.jobs.candidate.steps.filter(s=>s.env?.RELEASE_CANDIDATE_OUTPUT);assert.equal(steps.length,1);
+ const root=fs.mkdtempSync(path.join(temporaryRoot,'native runner diagnostics ')),envFile=path.join(root,'runner environment'),outputDir=path.join(root,'diagnostics not yet created');
+ const license=path.join(outputDir,'license-gate.json'),manifest=path.join(outputDir,'candidate-manifest.json');
+ fs.writeFileSync(envFile,'EXISTING_RUNNER_VARIABLE=retained\n',{mode:0o600});
+ try{
+   const result=cp.spawnSync('/bin/bash',['-c',steps[0].run],{cwd:root,encoding:'utf8',env:{PATH:process.env.PATH,GITHUB_ENV:envFile,RELEASE_LICENSE_REPORT:license,RELEASE_CANDIDATE_OUTPUT:manifest}});
+   assert.equal(result.status,0);assert.equal(result.error,undefined);assert.equal(result.stdout,'');assert.equal(result.stderr,'');
+   assert.equal(fs.readFileSync(envFile,'utf8'),`EXISTING_RUNNER_VARIABLE=retained\nRELEASE_LICENSE_REPORT=${license}\nRELEASE_CANDIDATE_OUTPUT=${manifest}\n`);
+   assert.equal(fs.existsSync(outputDir),false);assert.deepEqual(fs.readdirSync(root),['runner environment']);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 test('stable reader rejects growth at admitted size, oversized inputs, hard links and same-byte named replacement',()=>{
  const root=fs.mkdtempSync(path.join(temporaryRoot,'stable-read-')),file=path.join(root,'bytes');
