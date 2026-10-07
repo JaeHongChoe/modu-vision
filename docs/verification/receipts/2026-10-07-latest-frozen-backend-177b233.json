@@ -1,0 +1,172 @@
+{
+  "schema": "modu-vision.frozen-backend-execution/v1",
+  "source_sha": "177b23389975586625139e65b081c1e808972719",
+  "source_inputs_match_commit": true,
+  "platform": "Darwin",
+  "architecture": "arm64",
+  "compiler": {
+    "name": "PyInstaller",
+    "version": "6.22.3"
+  },
+  "build_identity_sha256": "86d014f9aa5628a495b4ba3f1d3bb53f0108c29d5acc0d61b831997de39c0316",
+  "executable_sha256": "3702ecb7c0ee159c29e88c6d762cc03cb1eadcbf0aaaaee89f4ec2957f289fcb",
+  "release_inventory_sha256": "59f1643676b128aae1ef0485ffd3bbdbb41bfc463a367e41e73eae16a26411d8",
+  "resource_count": 325,
+  "frozen_file_count": 11809,
+  "startup_and_restart_passed": true,
+  "acceptance_sha256": "0192a683820dbb6de82cc77c276859bc478d4b09d1a763013d09bb9639ea2e31",
+  "known_image_qualified": true,
+  "license_texts": {
+    "status": "collected",
+    "component_count": 270,
+    "file_count": 336,
+    "manifest_sha256": "66f7ebfdd682c867851a7e4488abf58450c328abedd574094d5a223407438ed7",
+    "missing": [],
+    "suppliers": [
+      {
+        "component": "et-xmlfile@1.1.0",
+        "sha256": "a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada",
+        "source_url": "https://files.pythonhosted.org/packages/96/c2/3dd434b0108730014f1b96fd286040dc3bcb70066346f7e01ec2ac95865f/et_xmlfile-1.1.0-py3-none-any.whl",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "ffmpy@1.0.0",
+        "sha256": "19ee5defbb6148c54c2d605adddbb49e37b1f37fbf18e5b45e4e1fae94be5331",
+        "source_url": "https://raw.githubusercontent.com/Ch00k/ffmpy/3b3c56f3ef04b3868b401c3fa2cc6ea294b78dfb/LICENSE",
+        "basis": "exact_version_wheel_and_immutable_upstream_license_bytes",
+        "upstream_commit": "3b3c56f3ef04b3868b401c3fa2cc6ea294b78dfb",
+        "package_sha256": "5640e5f0fd03fb6236d0e119b16ccf6522db1c826fdf35dcb87087b60fd7504f",
+        "package_source_url": "https://files.pythonhosted.org/packages/55/56/dd3669eccebb6d8ac81e624542ebd53fe6f08e1b8f2f8d50aeb7e3b83f99/ffmpy-1.0.0-py3-none-any.whl",
+        "release_ref_sha256": "444bda4eb9f72470646b8f2aa4606cbc83ab0f026efe905c9cb04dd59b80585f",
+        "release_tag_sha256": "5af4dda65507b5e9eb0795e63882cb807afd3b548bb085bac5e232f26dc81ca2"
+      },
+      {
+        "component": "gradio-client@1.13.3",
+        "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "source_url": "https://raw.githubusercontent.com/gradio-app/gradio/c0d94f07b52ba268cf86f225f61f9b2b993670c2/LICENSE",
+        "basis": "exact_version_wheel_and_immutable_upstream_license_bytes",
+        "upstream_commit": "c0d94f07b52ba268cf86f225f61f9b2b993670c2",
+        "package_sha256": "3f63e4d33a2899c1a12b10fe3cf77b82a6919ff1a1fb6391f6aa225811aa390c",
+        "package_source_url": "https://files.pythonhosted.org/packages/6e/0b/337b74504681b5dde39f20d803bb09757f9973ecdc65fd4e819d4b11faf7/gradio_client-1.13.3-py3-none-any.whl",
+        "release_ref_sha256": "fd43ff7cde98de3a0f4ade13386ac2049bceec15fe75d257be738efbb5a2f4f4",
+        "release_tag_sha256": "522909d16901e70a4ecdfadf662b02950a68a2e3f08e4affab7c6a6b42460a2d",
+        "version_file_sha256": "a65ec658c9a97cb7a6da85d1b4e7461f3454eeb4faef42457a9ea4c226648fcf"
+      },
+      {
+        "component": "jsonpointer@2.1",
+        "sha256": "150f80c5badd02c757da6644852f612f88e8b4bc2f9852dcbf557c8738919686",
+        "source_url": "https://files.pythonhosted.org/packages/23/52/05f67532aa922e494c351344e0d9624a01f74f5dd8402fe0d1b563a6e6fc/jsonpointer-2.1-py2.py3-none-any.whl",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "lief@0.16.4",
+        "sha256": "09a3d6b346c12d818c223ab99fb4f81be42e129d70ce9bc4b6dc76bdc942b6e7",
+        "source_url": "https://raw.githubusercontent.com/lief-project/LIEF/10f74acfddc349552a0e48075b29424aeea1945a/LICENSE",
+        "basis": "exact_version_wheel_and_immutable_upstream_license_bytes",
+        "upstream_commit": "10f74acfddc349552a0e48075b29424aeea1945a",
+        "package_sha256": "07df595b627d5a428bcc11a6ae46abd041e0e9b185b7664d85d7f62bd5a9318e",
+        "package_source_url": "https://files.pythonhosted.org/packages/ba/58/08084895c1bf3550bcea7ac03510870af71dcdce68741dc743ab724e5a4d/lief-0.16.4-cp38-cp38-macosx_11_0_arm64.whl",
+        "release_ref_sha256": "bde53f88b9e46ac45eff60320550cc4c32bf7ce20db167a03c02e9501a4146fc"
+      },
+      {
+        "component": "loguru@0.7.3",
+        "sha256": "b35d026cc7aca9d5859a02eb87ddf7a386a24c986838651bd1f283f94e003327",
+        "source_url": "https://raw.githubusercontent.com/Delgan/loguru/ae3bfd1b85b6b4a3db535f69b975687c79498be4/LICENSE",
+        "basis": "exact_version_wheel_and_immutable_upstream_license_bytes",
+        "upstream_commit": "ae3bfd1b85b6b4a3db535f69b975687c79498be4",
+        "package_sha256": "31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c",
+        "package_source_url": "https://files.pythonhosted.org/packages/0c/29/0348de65b8cc732daa3e33e67806420b2ae89bdce2b04af740289c5c6c8c/loguru-0.7.3-py3-none-any.whl",
+        "release_ref_sha256": "5e1be1e168f9bc5f4c4c929050944e58e941cc21a288e6ce1e7292e0166d98bb",
+        "release_tag_sha256": "9402cb90c04460e1fe27e4202e4da92a974d2947b35c6b77483d0778fe6c88f2"
+      },
+      {
+        "component": "multipledispatch@0.6.0",
+        "sha256": "8767c8a56a24a69d4bf42561c408bdf3e3ffa40699989aec50b96f4b4351efd9",
+        "source_url": "https://raw.githubusercontent.com/mrocklin/multipledispatch/2cc8df6f8871c83c67a60f4b1b54f73702c87457/LICENSE.txt",
+        "basis": "exact_version_wheel_and_immutable_upstream_license_bytes",
+        "upstream_commit": "2cc8df6f8871c83c67a60f4b1b54f73702c87457",
+        "package_sha256": "a55c512128fb3f7c2efd2533f2550accb93c35f1045242ef74645fc92a2c3cba",
+        "package_source_url": "https://files.pythonhosted.org/packages/89/79/429ecef45fd5e4504f7474d4c3c3c4668c267be3370e4c2fd33e61506833/multipledispatch-0.6.0-py3-none-any.whl",
+        "release_ref_sha256": "077917ecfaf2c5379a2a06c488cb4a4fdb73c345716bd1b6fdea90e80291e282"
+      },
+      {
+        "component": "pyobjc-core@10.1",
+        "sha256": "1844f1c8e282839e6fdcb9a9722396c1c12fb1e9331eb68828a26f28a3b2b2b1",
+        "source_url": "https://files.pythonhosted.org/packages/50/d5/0b93cb9dc94ab4b78b2b7aa54c80f037e4de69897fff81a5ededa91d2704/pyobjc-core-10.1.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "roman-numerals-py@3.1.0",
+        "sha256": "9da2ad2fb670bcf24e81070ceb3be72f6c11c440d73bd579fbeca1e9f330954c",
+        "source_url": "https://files.pythonhosted.org/packages/53/97/d2cbbaa10c9b826af0e10fdf836e1bf344d9f0abb873ebc34d1f49642d3f/roman_numerals_py-3.1.0-py3-none-any.whl",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "sphinxcontrib-applehelp@2.0.0",
+        "sha256": "2f29ef331735ce958efa4734873f084941970894c6090408b079c61b2e1c06d1",
+        "source_url": "https://files.pythonhosted.org/packages/ba/6e/b837e84a1a704953c62ef8776d45c3e8d759876b4a84fe14eba2859106fe/sphinxcontrib_applehelp-2.0.0.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "sphinxcontrib-devhelp@2.0.0",
+        "sha256": "411f5d96d445d1d73bb5d52133377b4248ec79db5c793ce7dbe59e074b4dd1ad",
+        "source_url": "https://files.pythonhosted.org/packages/f6/d2/5beee64d3e4e747f316bae86b55943f51e82bb86ecd325883ef65741e7da/sphinxcontrib_devhelp-2.0.0.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "sphinxcontrib-htmlhelp@2.1.0",
+        "sha256": "c9e2916ace8aad64cc13a0d233ee22317f2b9025b9cf3295249fa985cc7082e9",
+        "source_url": "https://files.pythonhosted.org/packages/43/93/983afd9aa001e5201eab16b5a444ed5b9b0a7a010541e0ddfbbfd0b2470c/sphinxcontrib_htmlhelp-2.1.0.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "sphinxcontrib-qthelp@2.0.0",
+        "sha256": "4fe7d0ac8fc171045be623aba3e2a8f613f8682731f9153bb2e40ece16b9bbab",
+        "source_url": "https://files.pythonhosted.org/packages/68/bc/9104308fc285eb3e0b31b67688235db556cd5b0ef31d96f30e45f2e51cae/sphinxcontrib_qthelp-2.0.0.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      },
+      {
+        "component": "sphinxcontrib-serializinghtml@2.0.0",
+        "sha256": "e9d912827f872c029017a53f0ef2180b327c3f7fd23c87229f7a8e8b70031d4d",
+        "source_url": "https://files.pythonhosted.org/packages/3b/44/6716b257b0aa6bfd51a1b31665d1c205fb12cb5ad56de752dfa15657de2f/sphinxcontrib_serializinghtml-2.0.0.tar.gz",
+        "basis": "exact_version_offline_vendor_archive_license_bytes"
+      }
+    ],
+    "public_distribution_approved": false,
+    "native_library_terms": "separate_inventory_review_required"
+  },
+  "sitecustomize_in_pyz": false,
+  "signature_status": "unverified",
+  "optional_features_unavailable": [
+    "transformers",
+    "pydicom",
+    "openvino",
+    "nncf",
+    "pynvml"
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "release_approved": false,
+  "inspection": {
+    "receipt_sha256": "9e0d7072b7c5b78b06d35adfef1fb32b79d12918252786d2aa892d60f2c1af60",
+    "manifest_sha256": "a2172268f53aca6c68357c8943e94f92388fde371ad1b787d5ca8f1548449fa8",
+    "image_sha256": "657b3f7ab29ed2b02f43f612bd2fd2c99b92bf3454158a896399aac0d4bf3514",
+    "device": "cpu",
+    "executions": [
+      {
+        "job_id": "5aea4cdc58fe480a88a695078043a902",
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "48874a7bb0b22b9dbddb7357135efaf44a17ffc02fac4d511f7206a0aeebcb1f"
+      },
+      {
+        "job_id": "1cb171133ee9460789ae0c18b3b83d25",
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "51298622931006169701b136a47238ba52675138194706da114d173a35158883"
+      }
+    ],
+    "model_quality_approval": "unverified",
+    "physical_acceptance": "unverified"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1376a34135cb6be39ff8a6240f4a1efc5d8e2847",
+  "source_dirty": false,
+  "test": "scripts/e2e/fleet-actual-rollout.spec.ts::actual authenticated CPU fleet canary, disconnect continuity and rollback",
+  "test_source_sha256": "b9289eed3378122a5eb4c3b983891a731e81bd5509133f5c00812e5010b2d30d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "103c03fc8f06be550338b77a97116607bd30b5bb4fd89bcb77c8e37ab588b535",
+  "harness_sha256": "675cd78ce0d751b3c20984351a991e00dbab9185af5000c840e635b8275a824e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6716095f3f794634bcc672edb798628ad416b9e45da99197bbd6b60825e85808"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

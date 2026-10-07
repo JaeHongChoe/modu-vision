@@ -1,0 +1,87 @@
+{
+  "schema": "modu-vision.remaining-contract-execution/v1",
+  "recorded_at": "2026-10-07T02:59:13.377950+00:00",
+  "platform": "macOS arm64",
+  "checks": [
+    {
+      "name": "operation-history-related-final",
+      "source_sha": "33d52c3e6e1f0c995204705a0c27c16910b1122b",
+      "junit_sha256": "eb57757524ec2b91d2289ee8b0ad975503a07d88126c75935722f172d57b3dc3",
+      "log_sha256": "b25238f5915b1ee1664bfc0afde3c13d9871f53e2cc65d88533298e937e1224c",
+      "tests": 163,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 280.399
+    },
+    {
+      "name": "security-final",
+      "source_sha": "14d926fc908227368644f95a354b3ab40725bacc",
+      "junit_sha256": "79e587fcb52df5af5e768b513bcf28362dd5b5da431d665d86fb3ec0c87071bb",
+      "log_sha256": "16cc6a5b76b11e7d07fafbe10a49997ac1a388a926e4382b79ffbf60805f5afd",
+      "tests": 74,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 28.681
+    },
+    {
+      "name": "security-session-unlinked",
+      "source_sha": "177b23389975586625139e65b081c1e808972719",
+      "junit_sha256": "88c88d4282a9cbcc34c91914d7942f5adb00fce65c29567a1fde39bc9241855e",
+      "log_sha256": "e52189ce36ce2f2169485f9740f459b542487d3db1a172de83cca936ae2efde6",
+      "tests": 37,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 17.749
+    },
+    {
+      "name": "offline-license-final",
+      "source_sha": "33d52c3e6e1f0c995204705a0c27c16910b1122b",
+      "junit_sha256": "2cc72c257d164c970bc0bb4cb0ae16fff8beea1070f39221ef2eb0493ef410dc",
+      "log_sha256": "e9102a53e8b1437e0e91ce25876656e1d67b65e55210dfa3e5cf6a0e311edaf7",
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 25.715
+    },
+    {
+      "name": "direct-compiler-green",
+      "source_sha": "177b23389975586625139e65b081c1e808972719",
+      "junit_sha256": "75e01f7592bc4274172548b8203c2df1843f8f2e9ecf0904546454c7959447d3",
+      "log_sha256": "a32ed71c62d4da67558cdfcec123cf37375911ce8ce15bdf0f1982f21cd43482",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.268
+    },
+    {
+      "name": "heartbeat-archive-fix",
+      "source_sha": "867f4a93257436063e6cf43d4c0cd639a6d86026",
+      "junit_sha256": "658c413e553703cb30eb410941371d4cd3e8bea2ec80178f8612018a650d6f82",
+      "log_sha256": "9b9f7a404d2054242eddb7262068b5abe54ef4a5d9bb12e7d2403b6c5f4a04a3",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 29.261
+    }
+  ],
+  "tests_overlap": true,
+  "sum_is_not_unique_test_count": true,
+  "retained_failed_attempts": [
+    "operation-history-red",
+    "upstream-license-red",
+    "direct-compiler-red",
+    "security-session-final",
+    "linux-177b233-archive-licenses",
+    "ci-0ead-failure"
+  ],
+  "scope": "Actual source-bound contract execution. Earlier edited checks are bound to the committed identical tested source files; they do not claim a clean full checkout, independent review or whole-parent acceptance.",
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "windows_native_qualified": false
+}
