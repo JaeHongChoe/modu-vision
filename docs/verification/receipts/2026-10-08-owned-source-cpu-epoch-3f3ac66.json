@@ -1,0 +1,144 @@
+{
+  "schema": "modu-vision.owned-source-cpu-epoch-execution/v1",
+  "source_sha": "3f3ac6651e60d2e681faaefa64b487f66b3093f1",
+  "source_bindings": {
+    "backend/engine/application_launch_execution.py": "ced6d9f40abb1a46f2c5572c17b51fd29b02a075bdaadd58a9a2016417d68d70",
+    "backend/tests/test_application_launch_execution.py": "0e5b94e3d65df72608b28d423fe9bddce6572d5c0cfa7fd4d6456cdd20121aad",
+    "backend/engine/application_launch_controller.py": "9c798db6641ce3aa8eab5684397216f3bdc3a7c6d190813e094d40e3bf9a01d6",
+    "backend/engine/application_launch_handshake.py": "901fa8ab5c4f6a8463f7e5b0f8851a3bfd28c499bce781e5267ed5f108d9c53d",
+    "backend/engine/application_launch_lease.py": "9a9f4fe44f3f01f65f7691c9fda911db31617d30e2de0ba12adfb42793742df3",
+    "backend/main.py": "98ef112732929adf7705a668866d378a774a8577a1a8bf7313f79be22a8d288e",
+    "src/main/applicationLaunch.ts": "614307b41861685e702fddec65fbef18d1c7cd4e316ad89e84ed9a7209bfd605"
+  },
+  "independent_handoff_freeze_sha256": "14c51aa3b71330d4abd5715173dc84eef9228e9bc68fe8f01f6baf95d8942426",
+  "root_current_gate": {
+    "passed": 102,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "new_cpu_cases": 41,
+    "other_controller_and_lease_cases": 61,
+    "seconds": 342.07,
+    "tracked_inputs_unchanged": 2110,
+    "node_bridge_and_supervisor_passed": 15,
+    "main_preload_typecheck_exit_code": 0
+  },
+  "earlier_handoff_gate": {
+    "final_cpu_passed": 41,
+    "pre_mask_related_passed": 192,
+    "pre_mask_gated": 2,
+    "later_mask_delta_in_only_cpu_module_and_test": true,
+    "not_a_full_final_related_rerun": true
+  },
+  "actual_retained_math": {
+    "semantic_output": {
+      "final_verdict": "OK",
+      "roi_count": 1,
+      "defective_roi_count": 0,
+      "routed_output_node_id": "output",
+      "recognized_texts": [
+        "A"
+      ]
+    },
+    "runtime_execution": {
+      "cpu_threads": 1,
+      "deadline_ms": 30000,
+      "device": "cpu",
+      "elapsed_ms": 8169.113,
+      "isolated_process": true,
+      "pid": 68736
+    },
+    "runtime_source_sha256": "02321169f9b4e94f31eb265e6f0f31a4ec656b8ecaf389cd0230176b27de9009",
+    "receipt_sha256": "c35fa598611af0e80168b934c94ea416ed98e088f109c3d32157a3144194bd56",
+    "output_sha256": "2b56e8840c92eb60c7c93cc75b396822d498e780c99359e031b56f0834f92079",
+    "controlled_device_visibility": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "NVIDIA_VISIBLE_DEVICES": "none"
+    },
+    "reviewed_package_python_did_not_shadow_current_runtime": true,
+    "original_authenticated_epoch_binding_verified": true
+  },
+  "retained_primary": {
+    "cpu-execution-current.xml": "2495c37a7b9320fb249d9fa671f8031b6fedbbbdd7e875e8aad1e8164cbb57da",
+    "cpu-execution-current.log": "2a67be2c989919ee550eedebaa0c9354d64639650725ac93b7738eb24120f583",
+    "cpu-execution-current-command.json": "bf86ed8a63dfa8eceb510733d0d566cd3f15c3de15de82afd07c3527144003dc",
+    "cpu-execution-source-before.json": "e172ba5299c239c8779837469dfe9eff14086b6c4675ad7abce87f2977722880",
+    "cpu-execution-source-after.json": "e172ba5299c239c8779837469dfe9eff14086b6c4675ad7abce87f2977722880",
+    "cpu-execution-current-node.log": "b21662849eacdba92083157b3ce0d013d8d43545f2f11cf2dd196493b1ac7e18",
+    "cpu-execution-current-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "contract": {
+    "frozen_mode": "requires_target: fixed frozen CPU worker is not qualified",
+    "inspect_mode": "--inspect-cpu-execution --expected-launch-nonce <32hex> plus same3 plan pins and existing expected app/DB/authority pins; no transition mutex/mutation/repair",
+    "lease_protocol": 3,
+    "legacy_lifecycle_json_unchanged": true,
+    "legacy_protocol2_readable": true,
+    "plan_paths": [
+      "delivery/launch-known-image/plan.json",
+      "delivery/launch-known-image/package",
+      "delivery/launch-known-image/input.png",
+      "delivery/launch-known-image/results"
+    ],
+    "run_flags": [
+      "--cpu-known-image-workspace-id32",
+      "--cpu-known-image-project-id32",
+      "--cpu-known-image-plan-sha25664"
+    ],
+    "run_flags_note": "Actual flag names omit32/64 suffix; lengths are strict protocol types. All3 required together. Existing authority/expected-installation/update/fence flags unchanged. No renderer caller.",
+    "source_only": true
+  },
+  "independent_review_findings_closed": [
+    {
+      "evidence": "copy-first-red / copy-green-cpu",
+      "finding": "source copy reused source fd"
+    },
+    {
+      "evidence": "admission-first-red / admission-cpu-green",
+      "finding": "original registry SQLite name reopened after descriptor check"
+    },
+    {
+      "evidence": "retained bounded runtime copy; actual reviewed package Python poison ignored",
+      "finding": "current runtime original path import could bypass pre/post pin on restore"
+    },
+    {
+      "evidence": "backend-claim-first-red / origin-release-green",
+      "finding": "returned backend challenge not independently cached"
+    },
+    {
+      "evidence": "release-copy-first-red / origin-release-green",
+      "finding": "release semantic helper reopened originals"
+    },
+    {
+      "evidence": "scoped output-directory sync before proof; fd/directory sync before retained worker",
+      "finding": "output directory durability missing"
+    },
+    {
+      "evidence": "malformed-lifetime-first-red / malformed-readback-green",
+      "finding": "malformed nested result could kill controller"
+    },
+    {
+      "evidence": "closed exact receipt schema and prepublication validator; original owner exact repeat/foreign refusal",
+      "finding": "sealed receipt scope/checkpoint/tree fields insufficient"
+    },
+    {
+      "evidence": "cpu-mask-first-red worker probe null/null / final-cpu-mask-green actual empty/none",
+      "finding": "CPU child visibility not explicitly masked"
+    }
+  ],
+  "limitations": [
+    "Generated controlled SmallCTCOCR checkpoint/known-image and controlled source main/backend fixtures; actual CTC math is not a completed training-job or quality acceptance.",
+    "Source worker origin, original sealed process/epoch/app/database binding and semantic oracle are checked; real installed-native application lifecycle and frozen execution remain pending.",
+    "Candidate preactivation S010, fixed frozen CPU dispatcher, active writer/process-tree reconciliation and OS installer remain separate work.",
+    "Read-only repeat detects modified output and stale binding; original tamper cases and uncertain ownership are preserved without automatic replay/lease release.",
+    "No live GPU, external deployment, new authority, user-home adoption, original72-hour worker or unrelated job changed."
+  ],
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0,
+  "actual_application_inference_verified": false,
+  "actual_frozen_execution_verified": false,
+  "model_quality_approved": false,
+  "worker_process_tree_exit_verified": false,
+  "release_ready": false
+}

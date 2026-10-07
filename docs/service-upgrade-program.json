@@ -4836,6 +4836,14 @@
           "receipt_sha256": "ad919678b166487b09a049d7c807f774ae3a28841442394203ed8b222f30ea91",
           "result": "385 unchanged related outcomes plus36 corrected command/inventory/resource regressions,952 renderer/main cases and4 clean actual GUI cases verified. The initial388-case gate retained3 stale-fixture failures; no second full-suite execution is claimed.",
           "scope": "Controlled real source process binding and actual GUI lifecycle/recovery controls only; native packaged positive startup, actual known-image inference, whole writer reconciliation, publisher, installer and release remain pending."
+        },
+        {
+          "kind": "actual-controlled-source-owned-cpu-epoch",
+          "source_sha": "3f3ac6651e60d2e681faaefa64b487f66b3093f1",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-source-cpu-epoch-3f3ac66.json",
+          "receipt_sha256": "af5b66a884006b641c02c02b5fa77f0ee9a55d0b4307b68fd64cac2897138952",
+          "result": "Current combined source102 Python cases passed with zero skips, including41 new CPU-origin cases;15 bridge/supervisor cases and main/preload typecheck passed. Actual isolated CPU OCR output A and exact retained output hash verified.",
+          "scope": "Controlled source fixtures and generated checkpoint, not training provenance/native/frozen/S010 preactivation/quality/process-tree/release acceptance."
         }
       ],
       "file_actions": {
@@ -5145,6 +5153,14 @@
           "receipt_sha256": "356791c4bccaab2b866e1e886cf89ea43c419d9cf668840a255671715f59d2b2",
           "result": "17 current related cases passed with2 initial gates; missing compiler was provisioned privately and the C# case then passed on the same unchanged source.18 distinct passed cases, Linux loader remains unavailable.",
           "scope": "Actual controlled CPU graph and host C++/C# SDK/deadline execution; no installed-native, GPU, Windows, quality, immutable-release or whole-feature acceptance."
+        },
+        {
+          "kind": "actual-controlled-source-owned-cpu-epoch",
+          "source_sha": "3f3ac6651e60d2e681faaefa64b487f66b3093f1",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-source-cpu-epoch-3f3ac66.json",
+          "receipt_sha256": "af5b66a884006b641c02c02b5fa77f0ee9a55d0b4307b68fd64cac2897138952",
+          "result": "Current combined source102 Python cases passed with zero skips, including41 new CPU-origin cases;15 bridge/supervisor cases and main/preload typecheck passed. Actual isolated CPU OCR output A and exact retained output hash verified.",
+          "scope": "Controlled source fixtures and generated checkpoint, not training provenance/native/frozen/S010 preactivation/quality/process-tree/release acceptance."
         }
       ],
       "file_actions": {
@@ -6042,6 +6058,14 @@
           "receipt_sha256": "356791c4bccaab2b866e1e886cf89ea43c419d9cf668840a255671715f59d2b2",
           "result": "17 current related cases passed with2 initial gates; missing compiler was provisioned privately and the C# case then passed on the same unchanged source.18 distinct passed cases, Linux loader remains unavailable.",
           "scope": "Actual controlled CPU graph and host C++/C# SDK/deadline execution; no installed-native, GPU, Windows, quality, immutable-release or whole-feature acceptance."
+        },
+        {
+          "kind": "actual-controlled-source-owned-cpu-epoch",
+          "source_sha": "3f3ac6651e60d2e681faaefa64b487f66b3093f1",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-source-cpu-epoch-3f3ac66.json",
+          "receipt_sha256": "af5b66a884006b641c02c02b5fa77f0ee9a55d0b4307b68fd64cac2897138952",
+          "result": "Current combined source102 Python cases passed with zero skips, including41 new CPU-origin cases;15 bridge/supervisor cases and main/preload typecheck passed. Actual isolated CPU OCR output A and exact retained output hash verified.",
+          "scope": "Controlled source fixtures and generated checkpoint, not training provenance/native/frozen/S010 preactivation/quality/process-tree/release acceptance."
         }
       ],
       "file_actions": {

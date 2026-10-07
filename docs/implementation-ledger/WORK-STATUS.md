@@ -267,3 +267,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 저장 평가 새로고침의 빈 목록·오류·다시 열기 · 530803a
 
 실제 브라우저와 macOS Electron에서 각1회, retry0으로 통과했다. 빈 프로젝트의 새로고침200, 제어된503 뒤 기존 이력·결과 제거와 재평가 차단, 명시적 재시도 뒤 정확한 ID/SHA 복원, 실제 reload 후 선택 유지3차원을 추가 확인했다. 저장된 시험 보고서·입력 hash와2105개 소스는 불변이며 평가·학습·job 생성은 없었다. 현재207개 행동의575개 시나리오 검증·874개 pending이다. 부모69/13·요청 필요11·종합 수락0, 모델 추론·사람 품질 검수·72시간은 그대로 남는다. 근거: `../verification/receipts/2026-10-08-saved-evaluation-refresh-closure-530803a.json`.
+
+## 원래 백엔드 epoch에 고정한 실제 CPU 검증 · 3f3ac66
+
+등록된 프로젝트·계획·원본 앱과 데이터 세대를 독립적으로 고정하고, 확인된 원래 controller/main/backend 연결로만1회 CPU 검증을 전달한다. 현재 조합 소스의102건 Python 검사와15건 main bridge 검사가 통과했고 main·preload 타입 검사도 통과했다. 생성한 시험 OCR 체크포인트가 실제 별도 CPU 계산으로 문자 A를 반환했으며 결과 hash와 CUDA 비가시 환경을 확인했다. 시험용 main/backend·체크포인트 근거이며 학습 완료 출처나 설치 앱·frozen·모델 품질 수락이 아니다. 사전 실행 S010·전체 writer/프로세스 계보·설치 adapter는 이어서 구현한다. 부모69/13·요청 필요11·종합 수락0, 행동575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-owned-source-cpu-epoch-3f3ac66.json`.
