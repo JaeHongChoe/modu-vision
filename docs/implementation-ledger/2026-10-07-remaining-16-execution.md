@@ -249,3 +249,5 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 
 - 최초720c1bb decoder GUI는 range 값 표기와 native route.fetch 인증 경로의 fixture 오류로 중단했다. 기존 actual CPU raster/flow 회귀는 browser/Electron 각1 passed이다. 실패·owned teardown을 보존하고 인증된 실제 read의 명시적 fixture 재생으로 교정했다. 인증을 끄거나 token을 꺼내지 않는다.
 - 2c27b6e 재실행에서 viewer는 외부 이미지를 거절했지만 뒤쪽 검사 preview가 같은 외부 URL을 요청하는 실제 경계 결함을 browser/Electron에서 재현했다. 저장 판정 preview는 inline raster, 원본 thumbnail은 지정 APIpath로 제한하고 원본 썸네일을 판정 overlay와 구분한다. Full renderer/main890 passed·최신 두 타입 검사 passed이다. 최종 clean GUI까지 scenario 수를 유지한다.
+
+- 925b48c 재검사에서 main preview/thumbnail은 차단됐지만 기존 ROI card가 외부 crop_thumbnail을 요청하는 경로도 재현했다. 실패 trace의 실제 IMG Full image를 확인해 같은 inline-only 계약으로 교정했다. 원래 실패와 actual CPU/flow 두 회귀 pass를 보존하며 최종 GUI까지 scenario는 승격하지 않는다.

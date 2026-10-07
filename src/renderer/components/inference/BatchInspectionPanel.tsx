@@ -630,7 +630,9 @@ export const BatchInspectionPanel: React.FC = () => {
                           <div className="flex max-h-36 gap-2 overflow-auto">
                             {selected.result.crops.map((crop) => (
                               <div key={crop.roi_id} className="w-24 shrink-0 rounded border border-[#243043] p-1 text-[10px] text-slate-300">
-                                {crop.crop_thumbnail && <img src={resolveApiUrl(crop.crop_thumbnail)} alt={crop.label} className="h-16 w-full object-contain" />}
+                                {crop.crop_thumbnail&&safeSnapshot(crop.crop_thumbnail)
+                                  ? <img src={crop.crop_thumbnail} alt={crop.label} className="h-16 w-full object-contain" />
+                                  : <span className="text-amber-200">저장된 ROI 이미지 없음</span>}
                                 <div className="truncate">{crop.label}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
                               </div>
                             ))}
