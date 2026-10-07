@@ -19,6 +19,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');await api('/api/dataset/import',{folder_path:workspace.dataset,task:'classification'});
  const image=workspace.images.find(row=>row.label==='ng')!,query='/api/annotations/'+path.basename(image.path,'.png')+'?file_path='+encodeURIComponent(image.path);
  await api('/api/annotations/save',{image_id:path.basename(image.path,'.png'),image_path:image.path,image_width:32,image_height:32,actor:'fixture-label-author',annotations:[{id:'fixture-label',type:'tag',label:'ng',category_id:1,is_normal:false}]});
+ // Normal UI reads register the other image and default team settings. Stabilize those owned records before freezing all annotation bytes.
+ await api('/api/dataset/metadata?limit=10');await api('/api/team-data');
  const saved=await api(query),defaultRoot=path.join(created.project_dir,'annotations'),originalLabels=files(defaultRoot);expect(Object.keys(originalLabels).length).toBeGreaterThan(0);
  const prefFile=path.join(created.project_dir,'preferences.json');let patches=0,copies=0;
  const observe=(req:any)=>{const u=new URL(req.url());if(u.pathname==='/api/project/preferences'&&req.method()==='PATCH')patches++;if(u.pathname==='/api/project/labelsets'&&req.method()==='POST')copies++;};page.on('request',observe);
