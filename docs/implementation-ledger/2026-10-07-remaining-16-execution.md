@@ -94,3 +94,11 @@
 - 최초 준비 스크립트가 pydot의 `MIT.txt`/`Python-2.0.txt`를 놓쳤다. Wheel의 정확한 METADATA License-File 경로로 원문을 확인했으며 라이선스 라벨이나 다른 원문으로 대체하지 않았다. 별도 byte-audit의 필수 저장 공간 인수 누락도 실패 원본을 남긴 뒤 실제 여유 공간 값으로 교정했다.
 - 최적화 화면의 다른 source 캐시, foreign job poll, source 변경 뒤 늦은 제출 응답을 세 회귀 검사로 재현했다. Cache key에 source/task를 포함하고 모든 작업 응답의 ID·package·source를 확인했다. 기존 명시적 작업 재열기도 유지되며 관련 renderer110 passed이다. Browser1 passed에서는 controlled HTTP 응답을 사용해 잘못된 이력·조회 거절과 정상 조회 재개를 확인했다. 이 UI control을 실제 INT8 실행 근거와 합쳐 native/품질 승인으로 쓰지 않는다.
 - 부모 구현67/82·미완료15/82·전체 수락0을 유지한다. S1-08의 살아 있는 worker 인계는 store/lease/journal을 함께 전환해야 하며, 현재 drain 요건을 제거하는 방식으로 처리하지 않았다.
+
+
+## 추가 실행: 원본 연결의 실제 앱 회귀와 오류 회복
+
+- clean source32160f4에서 browser/Electron2 passed/0 skipped/0 retry이다. Browser는 controlled 최적화 HTTP 응답으로 다른 source cache와 foreign job 조회를 거절한다. Electron은 실제 CPU→OpenVINO 변환, 별도 fixture 검토, 저장 패키지 재열기와 owned IR service의 실제 이미지 upload/inference를 완료했다. 원본 package/model/input 해시와 owned process/port 종료를 대조했다.
+- 합성 모델은 정상으로만 분류해 NG를 놓친다. 두 이미지의 원본/변환 일치와 permissive fixture review를 현장 품질·사람의 승인으로 사용하지 않는다. 공개 receipt `2026-10-07-optimization-binding-32160f4-{browser,electron}.json`이며 기존3ab27ae 기록을 덮지 않고 새 source 실행 근거를 함께 보존한다.
+- 정상 poll 복구 뒤 남는 이전 ID 오류와 취소 재시도 성공 뒤 남는 오류를 실제 red 검사로 재현했다. 해결된 poll 오류만 지우며 별도 취소 실패는 보존한다. 새 명시적 취소 요청은 이전 요청 오류를 정리한다. 관련 inference renderer37 passed/0 skipped, 두 타입 검사 통과이다.
+- 추가 controlled browser lifecycle에서는 unavailable/empty·보정/검증 선택 해제·422 제출 실패·foreign cancel 거절·정확한 취소와 cache 재열기를 확인했다. 실제 worker 취소나 model 실행으로 대체하지 않는다. 첫 dirty 실행 기록을 보존하고 버튼별 원장에는 별도 clean 실행만 연결한다.

@@ -37,11 +37,18 @@ test('cached optimization from another dataset source is refused before candidat
 test('polling another optimization identity cannot expose its completion or approval prerequisites',async t=>{
  const old=Object.getOwnPropertyDescriptor(global,'localStorage');Object.defineProperty(global,'localStorage',{configurable:true,value:{getItem:()=> 'owned',setItem(){}}});t.after(()=>{if(old)Object.defineProperty(global,'localStorage',old);else delete global.localStorage;});
  const originalSet=global.setInterval,originalClear=global.clearInterval;let poll;global.setInterval=fn=>(poll=fn,1);global.clearInterval=()=>{};t.after(()=>{global.setInterval=originalSet;global.clearInterval=originalClear;});
- const h=harness(),options={package_dir:'/package',input_receipt:{source_dataset_path:'/source'}};let reads=0,reviews=0;
- const m=load('RuntimeOptimizationPanel.tsx',{...h.mocks,'../../stores/useProjectStore':{useProjectStore:fn=>fn({projectDir:'/project'})},'../../services/api':{api:{dataset:{getImages:async()=>({items:[]})}}},'../../services/runtimeDeploymentApi':{runtimeDeploymentApi:{capabilities:async()=>({openvino:{available:true,devices:['CPU']}}),job:async()=>({job_id:reads++?'foreign':'owned',status:reads===1?'running':'completed',options,error:null,result:null}),prerequisites:async()=>{reviews++;return{approval_revision_ids:{}};},heldout:async()=>{reviews++;return null;}}}});
+ const h=harness(),options={package_dir:'/package',input_receipt:{source_dataset_path:'/source'}};let reads=0,reviews=0,matching=false,cancelFails=true;
+ const m=load('RuntimeOptimizationPanel.tsx',{...h.mocks,'../../stores/useProjectStore':{useProjectStore:fn=>fn({projectDir:'/project'})},'../../services/api':{api:{dataset:{getImages:async()=>({items:[]})}}},'../../services/runtimeDeploymentApi':{runtimeDeploymentApi:{capabilities:async()=>({openvino:{available:true,devices:['CPU']}}),job:async()=>({job_id:reads++===0||matching?'owned':'foreign',status:reads===1?'running':matching?'running':'completed',options,error:null,result:null}),cancel:async()=>{if(cancelFails)throw new Error('controlled cancellation refused');return{job_id:'owned',status:'cancelled',options,error:null,result:null};},prerequisites:async()=>{reviews++;return{approval_revision_ids:{}};},heldout:async()=>{reviews++;return null;}}}});
  const render=()=>h.render(()=>m.RuntimeOptimizationPanel({packagePath:'/package',sourceFolder:'/source',task:'classification'}));render();await settle();render();assert.equal(typeof poll,'function');poll();await settle();let tree=render();await settle();tree=render();
  assert.equal(reviews,0);assert.ok(nodes(tree).some(n=>n.props.role==='alert'&&String(n.props.children).includes('ID')));
  assert.ok(nodes(tree).some(n=>n.props['aria-label']==='선택한 최적화 작업'&&JSON.stringify(n.props.children).includes('owned')));
+ matching=true;poll();await settle();tree=render();
+ assert.equal(nodes(tree).filter(n=>n.props.role==='alert').length,0,'a matching poll clears the resolved polling fault');
+ assert.equal(reviews,0);
+ nodes(tree).find(n=>n.type==='button'&&n.props.children==='변환 중단').props.onClick();await settle();poll();await settle();tree=render();
+ assert.ok(nodes(tree).some(n=>n.props.role==='alert'&&String(n.props.children).includes('controlled cancellation refused')),'successful polling preserves a separate cancellation fault');
+ cancelFails=false;nodes(tree).find(n=>n.type==='button'&&n.props.children==='변환 중단').props.onClick();await settle();tree=render();
+ assert.equal(nodes(tree).filter(n=>n.props.role==='alert').length,0,'successful explicit cancellation clears its previous request fault');
 });
 
 test('a late submitted optimization response cannot reappear after changing the dataset source',async t=>{

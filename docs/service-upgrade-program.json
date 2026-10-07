@@ -4491,6 +4491,13 @@
      "result": "Actual separated OpenVINO2026.4.1 Linux x64 cp311 offline pack:12 payload files,76,128,570 bytes; exact upstream wheels/license bytes. Base image had no OpenVINO. Inactive installation/replay/hash preservation, real Xeon CPU FP32/FP16 conversion and tiny full-flow heldout execution passed;125 related cases passed/0 skipped.",
      "scope": "Owned network-none read-only CPU container with selected disposable optional venv. No representative truth, INT8, other devices, publisher, native legal or independent acceptance. Both earlier qualification failures retained. Receipt SHA-256 d0776e853c062e2922d0c6444c6d0472847c0d91cdc7ac13c4fef8bf25460e40",
      "receipt": "docs/verification/receipts/2026-10-07-openvino-offline-pack-087b927.json"
+    },
+    {
+     "kind": "actual-separated-openvino-nncf-int8-linux-cpu-pack-qualification",
+     "source_sha": "e1ebb1691548d0008236d88a02bd77ae4438d240",
+     "result": "Actual separated OpenVINO2026.4.1/NNCF3.4.0 pack:64 files/127,569,415 bytes,22 pinned original wheels and40 original license/notice members independently byte-matched. Owned CPU network-none inactive install/replay and actual calibrated INT8/full-flow/OCR plus140 regressions pass/0 skipped. Three quantized operations; tiny heldout maxabs0.000689812 and measured speedup0.55626.",
+     "scope": "Isolated qualification only; no industrial truth, other hardware, real publisher, native legal, independent or release approval. Original preparation/audit failures retained. Receipt SHA-256 84bd35a757b227b79de49dcf24969a8373f9c6c3096f548f2c2531e71a39e102",
+     "receipt": "docs/verification/receipts/2026-10-07-openvino-int8-offline-pack-e1ebb16.json"
     }
    ],
    "file_actions": {
@@ -4515,7 +4522,7 @@
     "E07"
    ],
    "remaining": [
-    "Actual separate OpenVINO CPU offline pack distribution and controlled provider/precision/full-flow execution are now qualified. Other optional providers, supported hardware matrix, INT8/NNCF and representative heldout quality approval remain pending; this CPU control does not qualify native-library legal terms or the real publisher."
+    "Actual separate OpenVINO CPU FP32/FP16 and NNCF INT8 offline packs, original source/license bytes and controlled full-flow execution are now qualified. Other optional providers, supported hardware matrix and representative heldout quality approval remain pending; isolated CPU controls do not qualify native-library legal terms or the real publisher."
    ]
   },
   {

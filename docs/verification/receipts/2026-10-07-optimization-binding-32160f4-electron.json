@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+  "source_dirty": false,
+  "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+  "test_source_sha256": "7de69848995011f6e6e864c00fbd9c2d4e4136aced3d71b438b10f620d62bcf7",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8b2bc494aee8d71222e55971c0705bcc71e9086f2c971d19953c676811fd22df",
+  "harness_sha256": "68d1f25223243bfb1b49d36462c4aaa17adc0959997df32dcd03bb03cab0179b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Actual native Electron main/preload/renderer, CPU-to-IR conversion, same frozen two-image synthetic control, explicit fixture review, library reopen and owned managed IR upload/inference. Intentionally all-OK weights miss the NG input. No representative manufacturing quality, human authority, physical target, signed distribution or release acceptance.",
+  "teardown_sha256": "2f26e93e6ec0df5efd32b943664646d4bac90bfcb1c6b88c975ae57b256e5cdd",
+  "observed": {
+    "actual_native_app": true,
+    "actual_conversion": true,
+    "actual_managed_IR_inference": true,
+    "synthetic_control": true,
+    "quality_accepted": false,
+    "device_accepted": false,
+    "physical_target_verified": false,
+    "windows_excluded": true,
+    "source_package_model_input_hashes_preserved": true
+  }
+}

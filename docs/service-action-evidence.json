@@ -30,7 +30,7 @@
   "src/renderer/components/labeling/EvidenceEditReturn.tsx": "50877ef333bb8fb32d024b9446241bc4ab270d93e4e31d674a260f1800406343",
   "src/renderer/components/labeling/CandidateProviderControls.tsx": "1f2512051cbd189893f925821f86b300eda4ed25d0b4d7e68b8fab10e0daf2b0",
   "src/renderer/components/labeling/ModelAssistPanel.tsx": "27d386e4f53e09159bbbdc3713c80abbbd5fa6ae9dd9a80dd44c5581ed59febc",
-  "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "37a2a77bb583ab60ff658b0a16b9292c000e3c135877f2b683a981b7ec5db6f7",
+  "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "89ebe9a26ee74a9699705cd6d533301ad579bbb01a5f5a40fb0b5417d2adcfff",
   "src/renderer/components/inference/PackageLibraryPanel.tsx": "f4e6397f52beacccd17120c9868560c5b789069fbf0a3f5a81b48541c6c75b59",
   "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
   "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
@@ -7926,6 +7926,32 @@
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
           }
          ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\ub3c5\ub9bd \ud6c4\ubcf4 \ud328\ud0a4\uc9c0 \uc0dd\uc131",
+         "expected": "Convert an independent package with two explicitly selected synthetic OK/NG inputs.",
+         "observed": "Actual CPU-to-IR conversion completed with2/2 spatial/verdict parity. The intentionally all-OK fixture misses NG, so parity supplies no manufacturing quality approval. Original package/model/input hashes were preserved. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+          }
+         ]
         }
        ]
       },
@@ -7982,6 +8008,32 @@
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
           }
          ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\uac80\ud1a0 \ud6c4 \uc0c8 \uc2b9\uc778 \ud328\ud0a4\uc9c0 \uc0dd\uc131 \u00b7 \ubcc0\ud658 \uc804\uccb4 \ud750\ub984 \uac80\ud1a0 \uc800\uc7a5",
+         "expected": "Save separate precision and whole-flow reviews with explicit synthetic reviewer entries.",
+         "observed": "Actual native inputs and checkboxes generated separate runtime and flow review records for the same frozen two-image cohort. Synthetic permissive policy is control evidence, not human authority or manufacturing acceptance. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+          }
+         ]
         }
        ]
       },
@@ -8028,6 +8080,32 @@
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
           }
          ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\uac80\ud1a0 \ud6c4 \uc0c8 \uc2b9\uc778 \ud328\ud0a4\uc9c0 \uc0dd\uc131 \u00b7 \ubcc0\ud658 \uc804\uccb4 \ud750\ub984 \uac80\ud1a0 \uc800\uc7a5",
+         "expected": "Save separate precision and whole-flow reviews with explicit synthetic reviewer entries.",
+         "observed": "Actual native inputs and checkboxes generated separate runtime and flow review records for the same frozen two-image cohort. Synthetic permissive policy is control evidence, not human authority or manufacturing acceptance. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+          }
+         ]
         }
        ]
       }
@@ -8064,6 +8142,32 @@
           {
            "id": "screenshot-2",
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\uc0c8\ub85c\uace0\uce68 \u00b7 \ub2e4\uc2dc \uc5f4\uae30",
+         "expected": "Reopen the exact saved converted package and matching review.",
+         "observed": "Actual native library refreshed, reopened approved_runtime package and after reload displayed the saved review as current; API manifest and review hashes matched. No frozen distribution, signing or other Intel hardware acceptance is inferred. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
           }
          ]
         }
@@ -8107,6 +8211,32 @@
           {
            "id": "screenshot-2",
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\uc0c8\ub85c\uace0\uce68 \u00b7 \ub2e4\uc2dc \uc5f4\uae30",
+         "expected": "Reopen the exact saved converted package and matching review.",
+         "observed": "Actual native library refreshed, reopened approved_runtime package and after reload displayed the saved review as current; API manifest and review hashes matched. No frozen distribution, signing or other Intel hardware acceptance is inferred. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
           }
          ]
         }
@@ -8150,6 +8280,32 @@
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
           }
          ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\ubc30\ud3ec \uc900\ube44 \u00b7 \uc2b9\uc778 \ud328\ud0a4\uc9c0 \uc801\uc6a9",
+         "expected": "Apply the reviewed converted package to an owned OpenVINO CPU service.",
+         "observed": "Actual native service selected exact package and openvino:CPU, reached ready with matching manifest and separately submitted real image upload/inference completed. Original package/model/source files were immutable; owned service was stopped. GPU/iGPU/NPU, OS auto-start and physical deployment are unverified. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+          }
+         ]
         }
        ]
       },
@@ -8194,6 +8350,32 @@
           {
            "id": "screenshot-2",
            "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "32160f461da846037a0f9af60dca247e7392adc9",
+         "kind": "click",
+         "action": "\ubc30\ud3ec \uc900\ube44 \u00b7 \uc2b9\uc778 \ud328\ud0a4\uc9c0 \uc801\uc6a9",
+         "expected": "Apply the reviewed converted package to an owned OpenVINO CPU service.",
+         "observed": "Actual native service selected exact package and openvino:CPU, reached ready with matching manifest and separately submitted real image upload/inference completed. Original package/model/source files were immutable; owned service was stopped. GPU/iGPU/NPU, OS auto-start and physical deployment are unverified. Reexecuted at clean source32160f4 after job/source binding repair; no human quality or physical target acceptance.",
+         "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-07-optimization-binding-32160f4-electron.json",
+         "receipt_sha256": "6e8d9fdc48e510c39c9bd423471b81e559582d852651519be80f7f734caeee8f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cc2d497ce0f6379a079dcb540887fea14a4668ab9e56a0a0455de791d8c16eb9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e1cce396b23090f76cfb5e92158006726c1acfce71456a71f3b6a1930ac9ae03"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
           }
          ]
         }
