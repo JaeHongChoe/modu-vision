@@ -299,3 +299,11 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 부모가0으로 끝나도 관측한 자식이 실행 중이면 결과 게시를 거절하고 같은 취소 handle을 보존한다. 최초 identity·관측·정리·진단 읽기 실패도 확인 대기로 남긴다. 기록한 원래 자식의 종료만 확인된 경우에 한해 같은 handle을 다시 사용할 수 있다. 현재 source의 deadline/Flow/GAN/SDK/CLI/C++ 소비자22건과 실제 survivor 기록5개를 확인했다. 이 검증은 전체·탈출 계보 또는 durable lease 정리 수락이 아니다.
 
 compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검토하며 실제 설치에는 원래3개 pin과 CAS 해시만 전달한다. 현재 main49건과 타입3개가 통과했고 별도 private Node977건도 통과했다. 새 CI는 source20건과 tree13건을 명시적으로 선택한다. 별도 private CI51건·현재 CI 계약18건이 통과했으며 실제 compiled fixture를 선택한 것으로 세지 않는다. 실제 staged compiled adapter와 provisioned native 성공 경로는 계속 구현·검증한다. 부모69/13·필수11·수락0과 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-observed-group-and-compiled-review-3fcf851.json`.
+
+
+## 2026-10-08 실행 불확실 상태의 private 파일 보존
+
+- 소스 `ed0d25f`: Flow·GAN·OpenVINO에서 실제 관찰한 자식이 남아 있는데도 요청·캐시·후보 파일을 지우던 세 경로를 재현하고 수정했다. 독립 리뷰가 발견한 두 경로 교체 경쟁도 실패로 재현한 뒤 원래 폴더 FD에만 쓰기·정리를 묶었다.
+- 불확실한 실행은 파일을 보존한다. 확인된 결과 뒤에는 원래 FD 안의 항목만 정리하고 빈 루트는 남긴다. 경로를 다시 해석해 루트를 삭제하지 않는다. 복구 marker는 실행 시도 intent이며 실제 spawn 수락 근거로 세지 않는다.
+- 최종 private 관련 검사32개 통과·선택 OpenVINO 의존성1개 skip를 보존했다. 기존 별도 OpenVINO 인터프리터의 실제 변환·full-flow1개는 따로 통과했다. Root 통합 retention/서비스 CI29개 및 별도 source-lane18개가 통과했다. 각 실행의 정확한 소스·로그·XML·독립 리뷰 hash를 공개 receipt에 기록했다.
+- 기존69/13 부모 집계와575/874 action 집계는 그대로다. 전체 process-tree, native Windows, 실제 publisher/target, 대표 품질 및72시간 수락을 추가하지 않는다.

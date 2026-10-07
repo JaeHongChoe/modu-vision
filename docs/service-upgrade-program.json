@@ -4892,6 +4892,14 @@
           "receipt_sha256": "fe4896406b9c420360023d4cc57cadff7d6a498d189adbfb7b89e1eb54443891",
           "result": "Root22 deadline/SDK,49 main review and3 type gates passed. Private977 Node and51 source-only CI cases separately qualified; root18 CI contracts passed.",
           "scope": "Closed protocol2 main review only; actual staged compiled candidate, native provisioned startup, publisher and durable/whole-tree completion remain open."
+        },
+        {
+          "kind": "source-bound-workspace-retention-followup",
+          "source_sha": "ed0d25f6c2c7356e4929d107aaa91fb82073d3aa",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-workspace-retention-ed0d25f.json",
+          "receipt_sha256": "be3fae6924039cb2b3929562c35a90a83180eaf47aec54fa237a22f17ceb0e31",
+          "result": "Actual prior3 consumer workspace deletion and2 check-to-use races reproduced and fixed. Private32passed/1optional dependency skip; separate actual OpenVINO1passed. Root29retention/service CI and separate18source-lane cases passed.",
+          "scope": "POSIX original-directory FD-bound retention and contents-only confirmed cleanup. Controlled no-handle policy; no native Windows, durable/escaped-tree ownership, representative quality, target or full parent acceptance."
         }
       ],
       "file_actions": {
@@ -5905,6 +5913,14 @@
           "receipt_sha256": "fe4896406b9c420360023d4cc57cadff7d6a498d189adbfb7b89e1eb54443891",
           "result": "Root22 deadline/SDK,49 main review and3 type gates passed. Private977 Node and51 source-only CI cases separately qualified; root18 CI contracts passed.",
           "scope": "Bounded observed-group CPU and local SDK controls; full target/model/quality/Windows acceptance remain open."
+        },
+        {
+          "kind": "source-bound-workspace-retention-followup",
+          "source_sha": "ed0d25f6c2c7356e4929d107aaa91fb82073d3aa",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-workspace-retention-ed0d25f.json",
+          "receipt_sha256": "be3fae6924039cb2b3929562c35a90a83180eaf47aec54fa237a22f17ceb0e31",
+          "result": "Actual prior3 consumer workspace deletion and2 check-to-use races reproduced and fixed. Private32passed/1optional dependency skip; separate actual OpenVINO1passed. Root29retention/service CI and separate18source-lane cases passed.",
+          "scope": "POSIX original-directory FD-bound retention and contents-only confirmed cleanup. Controlled no-handle policy; no native Windows, durable/escaped-tree ownership, representative quality, target or full parent acceptance."
         }
       ],
       "file_actions": {

@@ -1,0 +1,98 @@
+{
+  "schema": "modu-vision.owned-workspace-retention/v1",
+  "source_sha": "ed0d25f6c2c7356e4929d107aaa91fb82073d3aa",
+  "source_files": {
+    "backend/engine/runtime_deadline.py": "92b4390b5ea8e7710a60f667d5bc7769f890a68253cddd9f1223a329d0107874",
+    "backend/engine/flow_package_runtime.py": "a209d889bc721c3865057704bef6d0ec6a85bb71a8c68dbb275a7d014bf421b2",
+    "backend/engine/gan_package_runtime.py": "8ab101eccb45d3bd3893dac735836fb9517e686ada0161cc503d6ff22d1195e9",
+    "backend/engine/openvino_runtime.py": "d91a59933c3959d6f66fbcb2a298d9bfc9138f1a2cfe3dd635a1ec01359a1b8e",
+    "backend/tests/test_runtime_workspace_retention.py": "921bef0172ac2f79045bf7d477f878253ac919dd6ce8c2882a2287d3e62b7dbc"
+  },
+  "ci_sha256": "61c95ff7c207905492008dd97dcb2a3b669959e5a044e3f419574df74d9132d1",
+  "scope": "POSIX original-directory handle-bound marker and contents-only confirmed cleanup in Flow/GAN/OpenVINO consumer workspaces. Empty original roots are retained deliberately; no re-resolved root path deletion.",
+  "actual_results": {
+    "private_related": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 32,
+      "elapsed_seconds": 94.88092616701033,
+      "source_inputs": 2128,
+      "source_unchanged": true,
+      "junit_sha256": "951bb3fb1fb8e7fd13738338095d817eeba409b315c9581a2462b3bc2a1985ec",
+      "log_sha256": "99962e8baf02bb488566ed4f4115bb5a33b7bc6583d744302d3a9938ef30dd6e",
+      "command_sha256": "29439d135e1ca7e8f283dc11a3cc009d8b15aa5918aec09989867f92c33f1ffb",
+      "source_before_sha256": "ceac7e7ba57acf091bd9ee087551ff6b48a9cc09210dbdd2c3f6d65ce8186447",
+      "source_after_sha256": "ceac7e7ba57acf091bd9ee087551ff6b48a9cc09210dbdd2c3f6d65ce8186447"
+    },
+    "separate_optional_openvino": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 1,
+      "elapsed_seconds": 32.22296483296668,
+      "source_inputs": 2128,
+      "source_unchanged": true,
+      "junit_sha256": "5bcca8a88394a6c74bf2ca17cc6f0be464baa2b8ccf92d4ca4996aac2ad056e2",
+      "log_sha256": "a3f2cfa6043ae405618d728cb8724a2034e58aba0d08c600821e86b8460f5156",
+      "command_sha256": "8cf0488f6b8762b1e6fcc3a9a46ea805e379712cebf67db43df17a16ecdd86cc",
+      "source_before_sha256": "ceac7e7ba57acf091bd9ee087551ff6b48a9cc09210dbdd2c3f6d65ce8186447",
+      "source_after_sha256": "ceac7e7ba57acf091bd9ee087551ff6b48a9cc09210dbdd2c3f6d65ce8186447"
+    },
+    "root_retention_and_service_ci": {
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 29,
+      "elapsed_seconds": 14.84172808402218,
+      "source_inputs": 2128,
+      "source_unchanged": true,
+      "junit_sha256": "481b3a8d4c5a1759811073dec467964f790b153869c5c4b00def39418a9fb4f8",
+      "log_sha256": "344392284e0da95119c21bf9b7172c41cb07a17ee7b5b8ee12fd178f778f7fe5",
+      "command_sha256": "8b699f09889591e0e39827c1cc4c666eb7feadd65785239d46ffdb01420e2cf5",
+      "source_before_sha256": "f14c4eed43c5b6e4acbd1bd20d40276fb5f5fa8e29746ac1c41ac2434ae12ecd",
+      "source_after_sha256": "f14c4eed43c5b6e4acbd1bd20d40276fb5f5fa8e29746ac1c41ac2434ae12ecd"
+    },
+    "separate_root_ci_lanes": {
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 18,
+      "junit_sha256": "1c06104f922f99869f333c5a939b8cdec34cc90c501ff5b4f4e544348b216849",
+      "log_sha256": "afb21448a42eb4884a9eb6612ea835678dc98fcbe5c58af644ced054f942ab23"
+    }
+  },
+  "retained_failure_logs": {
+    "runtime-workspace-retention-red.log": "337016b349816f43528c9688da74337e2a2b24aa78ea2ae47019b17fc2de3ca8",
+    "runtime-workspace-retention-race-red.log": "096d96c0ff01416395621ff4d38f8c413db8fe44fa05992a0b9a1b3b4e222a70"
+  },
+  "independent_review": {
+    "sha256": "bdbf147ca68954dec5ee731a1a1fb7204151e8ac23f12cc8de6272f1230bd5de",
+    "source_and_evidence_hashes_checked": 19,
+    "mismatches": 0,
+    "blocking_findings": 0,
+    "original_race_findings_fixed": true,
+    "reviewer_ran_tests": false
+  },
+  "limitations": [
+    "Controlled consumer payloads bind actual observed survivor handling, not their model quality.",
+    "Separate real GAN, local C++ SDK and optional OpenVINO execution gates are exact-source regression evidence.",
+    "Marker execution_attempt_started is wrapper intent before Popen, not independently confirmed spawn.",
+    "Uncertain results preserve full private request/cache/candidate bytes; incomplete cleanup or marker failure retains remaining bytes without replacing caller errors.",
+    "Cleanup through the original POSIX directory handle does not remove the empty root.",
+    "No-handle/unsupported cleanup refuses write/removal; native Windows remains unqualified.",
+    "No durable ownership, escaped-tree closure, publisher, target installer, hardware, human quality or 72-hour completion is inferred."
+  ],
+  "acceptance": {
+    "complete_process_tree_verified": false,
+    "publisher_approved": false,
+    "native_windows_verified": false,
+    "model_quality_approved": false,
+    "installed_target_verified": false,
+    "soak_72h_completed": false
+  }
+}
