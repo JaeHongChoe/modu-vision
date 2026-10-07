@@ -1,15 +1,14 @@
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {test,expect} from './fixtures/test';
+import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import type {Page} from '@playwright/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 const harness=require('./fixtures/harness.cjs');
 
-test('legacy fleet credentials migrate from the app with failure recovery and reopen',async({page,renderer,workspace,evidence})=>{
-  const call=async(route:string,body?:unknown)=>{
-    const response=await page.request.fetch(renderer.origin+route,{method:body?'POST':'GET',data:body});
-    expect(response.ok(),await response.text()).toBe(true);return response.json();
-  };
+type Api=(route:string,body?:unknown)=>Promise<any>;
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,call:Api,navigate:()=>Promise<unknown>,native:boolean){
   const project=await call('/api/project/create',{name:'Owned fleet credential migration',task:'classification'});
+  expect(path.resolve(project.project_dir).startsWith(path.resolve(workspace.root)+path.sep)).toBe(true);
   const unavailable=await harness.closedLoopbackUrl();
   const ids=['a'.repeat(32),'b'.repeat(32)];
   const seeded=JSON.parse(execFileSync(harness.resolvePython(),['-c',`
@@ -22,9 +21,9 @@ with item.connect() as db:
   db.execute('INSERT INTO targets VALUES(?,?,?,?)',(identifier,name,sys.argv[2],'controlled-legacy-agent-credential'))
 print(json.dumps({'targets':item.targets(),'owned_project':str(item.root.parent)}))
 `,project.project_dir,unavailable],{cwd:harness.REPO_ROOT,env:{...process.env,VISION_AI_STUDIO_USER_DATA_DIR:workspace.userData},encoding:'utf8'}).trim());
-  expect(path.resolve(seeded.owned_project).startsWith(path.resolve(workspace.projects)+path.sep)).toBe(true);
+  expect(path.resolve(seeded.owned_project).startsWith(path.resolve(workspace.root)+path.sep)).toBe(true);
   expect(seeded.targets.every((target:any)=>target.credential_storage==='legacy_project_database'&&!('token' in target))).toBe(true);
-  await installDesktopHostShim(page,renderer.port);await page.goto(renderer.url);
+  await navigate();
   const open=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();};
   await open();await page.getByLabel('현장 장비 선택',{exact:true}).selectOption(ids[0]);
   const section=page.getByRole('region',{name:'현장 장비 인증값 보관'});
@@ -37,10 +36,17 @@ print(json.dumps({'targets':item.targets(),'owned_project':str(item.root.parent)
   let posts=0;await page.route(migration,async route=>{posts++;await route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({detail:'Controlled secret store is temporarily unavailable'})});});
   await move.click();await expect(section.getByRole('alert')).toContainText('이동을 확인하지 못했습니다');await expect(reason).toHaveValue(entered);
   expect((await call('/api/fleet/targets')).targets[0].credential_storage).toBe('legacy_project_database');
+  await section.getByRole('button',{name:'인증값 보관 상태 다시 읽기',exact:true}).click();await expect(reason).toHaveValue(entered);await expect(move).toBeEnabled();
   await page.unroute(migration);
   // Lose the POST response after the real backend commits. The UI must recover
   // through the separate registered-target readback, without a second mutation.
-  await page.route(migration,async route=>{posts++;const result=await route.fetch();expect(result.ok()).toBe(true);await route.abort('failed');});
+  await page.route(migration,async route=>{
+    posts++;
+    // Forward through the actual renderer network path. Electron adds its
+    // process capability there; Playwright route.fetch is a different client.
+    const status=await page.evaluate(async({url,headers,body})=>{const result=await fetch(url+'?owned_response_loss=1',{method:'POST',headers,body});await result.text();return result.status;},{url:route.request().url(),headers:route.request().headers(),body:route.request().postData()});
+    expect(status).toBe(200);await route.abort('failed');
+  });
   await move.click();await expect(section.getByRole('status')).toHaveText('인증값 이동 확인됨');
   expect(posts).toBe(2);await expect(section.getByText('이 서버에 보관됩니다.',{exact:false})).toBeVisible();
   const rows=(await call('/api/fleet/targets')).targets;expect(rows[0].credential_storage).toBe('server_secret_v1');expect(rows[1].credential_storage).toBe('legacy_project_database');
@@ -54,9 +60,20 @@ print(json.dumps({'events':events,'credential_value_unchanged':True,'targets':it
 `,project.project_dir],{cwd:harness.REPO_ROOT,env:{...process.env,VISION_AI_STUDIO_USER_DATA_DIR:workspace.userData},encoding:'utf8'}).trim());
   expect(audit.events).toHaveLength(1);expect(audit.events[0].reason).toBe(entered);expect(audit.events[0].target_id).toBe(ids[0]);
   await page.unroute(migration);await page.reload();await open();await page.getByLabel('현장 장비 선택',{exact:true}).selectOption(ids[0]);
+  await section.getByRole('button',{name:'인증값 보관 상태 다시 읽기',exact:true}).click();
   await expect(section).toContainText('이 서버에 보관됩니다.');await expect(section.getByLabel('인증값 이동 사유',{exact:true})).toHaveCount(0);
   await page.setViewportSize({width:700,height:820});await page.getByLabel('현장 장비 선택',{exact:true}).selectOption(ids[1]);await expect(section).toContainText('프로젝트 안에 보관');
   const secondReason=section.getByLabel('인증값 이동 사유',{exact:true});await secondReason.fill('Keep the second configured target scoped to this selection');await secondReason.press('Tab');await expect(section.getByRole('button',{name:'인증값을 서버 저장소로 옮기기',exact:true})).toBeFocused();
   await section.scrollIntoViewIfNeeded();await evidence.screenshot(page,'fleet-credential-migration-narrow');
-  evidence.note('credential_migration',{audit,posts,agent_online_required:false,actual_backend:true,post_response_loss_reconciled:true,second_target_unchanged:true,native_windows:false});
+  evidence.note('credential_migration',{audit,posts,agent_online_required:false,actual_backend:true,post_response_loss_reconciled:true,second_target_unchanged:true,native_electron:native,native_windows:false});
+}
+
+test('legacy fleet credentials migrate from the app with failure recovery and reopen',async({page,renderer,workspace,evidence})=>{
+  const call:Api=async(route,body)=>{const response=await page.request.fetch(renderer.origin+route,{method:body?'POST':'GET',data:body});expect(response.ok(),await response.text()).toBe(true);return response.json();};
+  await installDesktopHostShim(page,renderer.port);await exercise(page,workspace,evidence,call,()=>page.goto(renderer.url),false);
+});
+test('native fleet credential migration and lost response recovery',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+  const status=await electronSession.waitForBackend(),page=electronSession.window;
+  const call:Api=(route,body)=>page.evaluate(async({port,route,body})=>{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});if(!response.ok)throw Error('Owned API '+response.status);return response.json();},{port:status.port,route,body});
+  await exercise(page,workspace,evidence,call,()=>page.reload(),true);
 });

@@ -260,7 +260,13 @@ def validate_remote(root, scopes, path, journal):
         raise ValueError('Remote label history cannot carry training-state authority')
     label_artifacts_present = operation == 'label' and any(p.exists() or p.is_symlink() for p in (
         output / 'label_results.json', output / 'remote_artifacts.json'))
-    if state != 'completed' and not label_artifacts_present:
+    train_artifacts_present = operation == 'train' and any(p.exists() or p.is_symlink() for p in (
+        output / 'best_model.pt', output / 'model_meta.json', output / 'remote_artifacts.json',
+        output / 'remote_received', output / 'remote_received_artifacts.json'))
+    # A failed/cancelled run may still have received an earlier epoch's model.
+    # Its original manifest and bytes need the same archival validation; a
+    # terminal failure is never a reason to skip their integrity checks.
+    if state != 'completed' and not (label_artifacts_present or train_artifacts_present):
         return
     manifest, _ = _read(root, output / 'remote_artifacts.json')
     if (manifest.get('protocol_version') != 1 or manifest.get('job_id') != identifier
@@ -281,7 +287,9 @@ def validate_remote(root, scopes, path, journal):
             raise ValueError('Remote received artifact size or checksum is invalid')
         with file.open('rb') as stream:
             checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
-        if checksum != row['sha256'] or (file.name == 'best_model.pt' and receipt.get('checkpoint_sha256') != checksum):
+        if checksum != row['sha256'] or (file.name == 'best_model.pt'
+                and (state == 'completed' or 'checkpoint_sha256' in receipt)
+                and receipt.get('checkpoint_sha256') != checksum):
             raise ValueError('Remote received artifact or completed receipt checksum changed')
     if 'relocation' in manifest:
         _validate_relocated_pair(root, output, journal, manifest, profile)
