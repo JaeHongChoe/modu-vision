@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+  "source_dirty": false,
+  "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+  "test_source_sha256": "1b9dd4d7f0293488807061ff4eab5d466239b0f6ca19a2f011a0803f7dcea547",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dabfa18257367ca8333eac89b7fb11277a20a4f176a46f9de708b2d0c2298928",
+  "harness_sha256": "58b76bfd3d5f923ca00cc0bd0d997cd76e065d22026e1f66776ed0342e3d303a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

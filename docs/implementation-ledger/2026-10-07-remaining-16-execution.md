@@ -133,3 +133,9 @@
 - Kernel peer PID와 immutable spec/namespace/lease/fence acknowledgment를 함께 확인한다. 다른 process의 가짜 응답·숫자1을 참으로 둔 응답·끝난 closure·변조된 원본을 거절한다. 현재 ledger의 취소는 원래 event를 사용하고, 후속 fence는 원래 publisher를 차단하며 준비 중 중단은 재실행 없이 forward finish한다.
 - Linux 첫39 passed/1 failed는 검사용 uvicorn 부재로 실제 학습 전 실패했다. 원본을 보존하고 보관 중인 정확한 offline wheel로 별도 검사용 venv를 보완했다. 최종 network-none/read-only/non-root/no-GPU container는 exit0/owned removed이며716개 선택 source bytes를 commit과 독립 대조했다.
 - 공개 receipt `2026-10-07-live-specialist-control-9bf7f1e.json`. 구형 실행에 원래 protocol acknowledgment를 만들어 주지 않으며 drain 요건을 유지한다. 실제 설치 대상·현장 품질·독립 수락은 pending이고 부모67/82·미완료15/82를 유지한다.
+
+## 추가 실행: 확인 당시 내용에 연결된 복구 보관함
+
+- Clean source483ddd9에서70 related checks와 browser2/Electron2 actual cases passed이다. 미리 확인한 내용·경로·root identity·현재 보호 목록·정책·mtime을 묶어 변경 시 이동 전 actual409로 거절한다. 직접 API의 기존 명시 요청은 호환되며 앱은 반드시 미리 확인한 SHA를 보낸다.
+- 빈 입력·잘못된 정책·원본 보호·저장 전 취소·재열기·기존 복원 대상 거절을 확인했다. 통신 오류503은 명시적 test fixture이며 실제 서버 정책과 원본 bytes가 바뀌지 않음을 확인한 뒤 직접 재시도했다. 새 미리 확인 뒤 정확한 payload를 이동·복원했고 기존 archive/fresh restore 회귀도 각각 통과했다.
+- 기존4 actions의 미검증21 scenarios를 근거와 연결해192 actions/390 verified/954 pending이다. 실제 source image hashes와 occupied target을 보존했고 영구 삭제나 quality approval을 수행하지 않았다. 부모67/82·미완료15/82·전체 수락0을 유지한다.

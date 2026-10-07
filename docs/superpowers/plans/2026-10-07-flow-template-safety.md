@@ -1,0 +1,9 @@
+# Execute pending template safety scenarios
+
+Continue S7-01/U010 with the existing S2-08 template contract, using an isolated owned project and synthetic untrained model checkpoints.
+
+1. Drive real whole-flow and selected-node save controls: empty/oversize name rejection, explicit controlled HTTP503, corrected save and exact library content after reopen. Abandon unsubmitted input and prove the saved library did not change.
+2. Drive whole-template mapping: empty/invalid explicit model/class binding, replacement confirmation cancellation, controlled HTTP503 and corrected real mapping. Compare saved draft, original version, source image and checkpoint hashes before/after. No training, activation, deployment or model-quality approval.
+3. Run committed-source browser and macOS Electron cases without retries. Bind retained request/body, disk and screenshot evidence only to the executed scenarios; retain Windows waiver and remaining parent/independent acceptance boundaries.
+
+The first actual browser case found that a legacy task-only sidecar leaves the catalog vocabulary unknown and permits an absent target class. Seven causal route checks reproduce nonexistent/malformed/conflicting checkpoint class acceptance. Resolve only the selected class-bearing completed model against the current source, use the restricted CPU checkpoint reader, validate original sidecar/payload consistency and reject unknown class identity before returning a mapped graph. Preserve pure legacy graph conversion and original artifacts; do not train or rewrite metadata.

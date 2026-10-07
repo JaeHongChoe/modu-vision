@@ -1,0 +1,66 @@
+{
+  "schema": "modu-vision.retention-preview-binding/v1",
+  "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+  "source_dirty": false,
+  "scope": "Project-owned reviewed movement and recoverable restoration; controlled HTTP503 is a simulated transport failure, not backend/model failure. No permanent deletion, model quality or full feature/parent acceptance.",
+  "related_tests": {
+    "passed": 70,
+    "failed": 0,
+    "skipped": 0,
+    "junit_sha256": "5d610c8f182a47a538032163878592de13674e38f96e70745db5a7bdee656707",
+    "log_sha256": "683ccea9b0d25448495a8c165c3defb77f1afb8ffe3d09403851bf2fe193d15c"
+  },
+  "gui_cases": [
+    {
+      "mode": "browser",
+      "case": "retention-preview-closure",
+      "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+      "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a"
+    },
+    {
+      "mode": "browser",
+      "case": "project-recovery-closure",
+      "receipt": "2026-10-07-project-recovery-closure-483ddd9-browser.json",
+      "receipt_sha256": "a8a9d1f34550a3016e2613cce267a3f9db87943c1eb34271d6ee50e2557d7212"
+    },
+    {
+      "mode": "electron",
+      "case": "project-recovery-closure",
+      "receipt": "2026-10-07-project-recovery-closure-483ddd9-electron.json",
+      "receipt_sha256": "5f70f9d328a2e9ba6627c64da1f823dddfe59a865d5ac63b615d1bfb00d2b1de"
+    },
+    {
+      "mode": "electron",
+      "case": "retention-preview-closure",
+      "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+      "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239"
+    }
+  ],
+  "review_binding": {
+    "scope_root_device_inode": true,
+    "project_scope": true,
+    "effective_policy": true,
+    "current_pin_set": true,
+    "selected_file_bytes": true,
+    "empty_directories": true,
+    "inode_replacements": true,
+    "all_entry_mtime_ns": true,
+    "locked_pre_move_check": true,
+    "stale_http_status": 409,
+    "original_bytes_preserved": true,
+    "explicit_new_preview_retry": true,
+    "original_api_without_preview_preserved": true
+  },
+  "retained_failures": {
+    "initial_missing_preview_contract": {
+      "failed": 11,
+      "log_sha256": "f1fefda63d917e98f39f315bcaab75ed4652ab48fb9cc5383c0b2c9a8c06a9e7"
+    },
+    "initial_fixture_errors_preserved": true,
+    "future_mtime_fixture_corrected_not_age_protection_relaxed": true
+  },
+  "review": "root_only",
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_acceptance": "pending"
+}

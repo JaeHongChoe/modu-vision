@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import pickle
 from pathlib import Path
 import tempfile
 import uuid
@@ -16,6 +17,8 @@ from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.flow_workspace import save_template, load_templates, map_template, compare_results, atomic_json
 from backend.engine.dicom_input import open_source_image
 from backend.engine.flow_debug_cache import checkpoint_files, check_checkpoint_files, file_sha256
+from backend.engine.flow_class_validation import _recorded_vocabulary, validate_recorded_flow_classes
+from backend.engine.specialized_models import flow_model_task, SPECIALIZED_TASKS, resolve_specialized_checkpoint
 
 router=APIRouter(prefix='/api/flow-workspace',tags=['flow-workspace'])
 MAX_COMPARISON_RECORD_BYTES=128*1024*1024
@@ -56,6 +59,34 @@ class TemplateMap(BaseModel):
     classes:dict[str,str|int]=Field(default_factory=dict)
 
 
+def _mapped_model_classes(node,project):
+    """Check only class-bearing mapped nodes against owned original artifacts."""
+    task=flow_model_task(node);job=node.data.model_job_id
+    if task in SPECIALIZED_TASKS:
+        _,metadata=resolve_specialized_checkpoint(project['models_dir'],job,task,project['source_dataset_dir'])
+        record={'task':task,'metadata':metadata}
+    else:
+        _,checkpoint,metadata,resolved_task,_,_=flows._resolve_job_artifacts(job,
+            source_dataset_path=project['source_dataset_dir'],source_task=task)
+        if resolved_task!=task or checkpoint.is_symlink():raise ValueError('Mapped checkpoint task or path changed')
+        # Never opt into arbitrary checkpoint globals or run an inference model.
+        payload=flows.torch.load(checkpoint,map_location='cpu',weights_only=True)
+        if not isinstance(payload,dict) or payload.get('task',task)!=task:
+            raise ValueError('Mapped checkpoint class metadata task is incompatible')
+        fields=('classes','class_names','class_ids','class_name')
+        original={'task':task,**{key:payload[key] for key in fields if key in payload}}
+        sidecar={'task':task,'metadata':metadata}
+        saved=_recorded_vocabulary(sidecar,node.id);actual=_recorded_vocabulary(original,node.id)
+        if any(saved[key]!=actual[key] for key in saved.keys() & actual.keys()):
+            raise ValueError('Mapped checkpoint and sidecar class records conflict')
+        # Older checkpoints with no class payload can still use a valid original
+        # sidecar. A missing identity in both cannot authorize a class mapping.
+        record={'task':task,'metadata':{**metadata,**{key:payload[key] for key in fields if key in payload}}}
+    if not _recorded_vocabulary(record,node.id).get('class_names'):
+        raise ValueError('Mapped model has no recorded class names; verify its original class record')
+    return record
+
+
 @router.get('/templates')
 def templates(request:Request): return {'templates':load_templates(_library(request))}
 
@@ -75,8 +106,10 @@ def import_template(template_id:str,req:TemplateMap,request:Request):
     catalog=flows.catalog_flowchart_models(project.get('source_dataset_dir') or project['dataset_dir'],request=request)
     try:
         graph=map_template(record,req.models,req.classes,catalog['models'])
+        validate_recorded_flow_classes(graph,lambda node:_mapped_model_classes(node,project))
         return {'kind':record['kind'],'pipeline':graph.model_dump(),'ports':record['ports']}
-    except (ValueError,TypeError) as exc: raise HTTPException(422,str(exc)) from exc
+    except (ValueError,TypeError,OSError,RuntimeError,KeyError,EOFError,pickle.UnpicklingError,HTTPException) as exc:
+        raise HTTPException(422,str(exc)) from exc
 
 
 @router.get('/image-info')

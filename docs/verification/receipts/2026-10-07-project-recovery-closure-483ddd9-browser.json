@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+  "source_dirty": false,
+  "test": "scripts/e2e/project-recovery-closure.spec.ts::project archive restores labels review records SQLite and recoverable retention into a fresh workspace",
+  "test_source_sha256": "e90d26c8d0f173f275c62e8afef5fdcac0bcdd695de4a511fb9a4947c3e93915",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dabfa18257367ca8333eac89b7fb11277a20a4f176a46f9de708b2d0c2298928",
+  "harness_sha256": "582a20b946121ade3886dc15d04814c5efb5f2d6e0f765c2da65c4cfbb218cbf",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1313fcb09655c72495823f94ff3f526c999c5b6f42842d06492c80e816c4a83b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6d84a06e46b13b72f7eb1a14304fd79865719f1b21b744de00f14fea49653314"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "5e88d4d97a9295d11e7d1a41f7f761bcb2780f44cbedc3b9c6221c1f7f59d505"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

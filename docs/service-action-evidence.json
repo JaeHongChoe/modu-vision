@@ -16362,20 +16362,248 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -16405,11 +16633,101 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "보존 정책 저장",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Negative/out-of-range days and zero quota disabled save. Blank optional quota saved null through actual backend. Controlled503 preserved saved policy; explicit retry succeeded. Unsaved17-day input was abandoned and reopened at saved7 days.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -16446,11 +16764,101 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -16480,20 +16888,248 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "이동 가능 여부 미리 확인",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty paths disabled preview; project bookkeeping was refused. Controlled503 left no move action. Closing the reviewed panel preserved bytes/trash0, reopening cleared transient preview, and fresh digest bound the actual later move request.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -16530,26 +17166,346 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "확인한 경로를 복구 보관함으로 이동",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: No preview disabled movement. Changed same-length bytes produced actual409 using the original digest before any trash insertion; controlled503 also preserved originals. Explicit fresh preview moved exactly one owned artifact, with exact payload hash and reopened saved trash state.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -16586,23 +17542,297 @@
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
           }
          ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "verified",
@@ -16630,6 +17860,50 @@
           {
            "id": "screenshot-2",
            "sha256": "61c609b3e0bdd9368f00e999149e73a2d10ad7d4abd4f71f81d6cb6136b47e8b"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "browser: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-browser.json",
+         "receipt_sha256": "88571deeb3307674b3cae31f4e82a4518fa45a4126791e889c13b002ff01a64a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "98b4c5599ae87da0adea7f5c945c7a108efd8d5412183fdd0a65fcf6481db720"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "729619529f6fec7c1e3c13e0cb5d58ea7383c9651a96803e8ec72c4004e1fdfc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+         "kind": "click",
+         "action": "원래 경로로 복원",
+         "expected": "Reviewed project-owned contents and saved policy are preserved across invalid inputs, cancellation, failed transport, reopen and explicit move/restore handoff.",
+         "observed": "electron: Empty/restored trash offered no restore. Reopened actual trash retained reviewed bytes. Occupied target returned actual conflict preserving both targets. Closing and controlled503 preserved payload. Explicit retry restored exact reviewed hash without deletion or overwriting the preserved occupied file.",
+         "reviewer": "Codex root actual clean-source request, disk hashes and owned teardown readback; independent and industrial acceptance pending",
+         "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+         "receipt": "2026-10-07-retention-preview-closure-483ddd9-electron.json",
+         "receipt_sha256": "306651b41ab82ef6a896dc5b09bdb699dfa43c4bb54f7ba4db72442904da3239",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
           }
          ]
         }

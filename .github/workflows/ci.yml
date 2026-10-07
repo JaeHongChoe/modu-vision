@@ -173,6 +173,7 @@ jobs:
           backend/tests/test_automated_trials.py
           backend/tests/test_service_s5_09.py
           backend/tests/test_retention_preview_binding.py
+          backend/tests/test_template_checkpoint_classes.py
           backend/tests/test_project_archive_runtime_locks.py
           backend/tests/test_service_s2_05_no_branch.py
           backend/tests/test_service_e02.py

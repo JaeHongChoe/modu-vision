@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "483ddd904fdfe768215d4a609fa4dc9ac9ea7bbc",
+  "source_dirty": false,
+  "test": "scripts/e2e/retention-preview-closure.spec.ts::native reviewed retention requires fresh preview and restores exact bytes after reopen",
+  "test_source_sha256": "1b9dd4d7f0293488807061ff4eab5d466239b0f6ca19a2f011a0803f7dcea547",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "0deeb0f96a57f7d4a46f5bb79d838eaf2b3af0844e83beaa39250cbfab603629",
+  "harness_sha256": "923239469e0e56a466889d9672e7fddefc43eb22262947100a4225abf1043df5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8cb85fedbb100cebf7c5a202d6f874cfcf21a5ccc581a0c2ea6baec6c93f66b3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c7fabca3119526210bad2b0b596f41827b927b30681ebe597d91235d72aa4d50"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
