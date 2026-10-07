@@ -29,10 +29,10 @@
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | pydicom·OpenVINO·CUDA12·CTC의 개별 범위 근거를 유지한다. Studio의 프로젝트별 비활성 설치·별도 pin·실제 변조 거절·재시도·재열기는 clean5284df6 browser2/native3, backend83, renderer907개로 검증했다. 자동 활성화·frozen/native 배포 조합·실 publisher·대표 품질은 별도 조건이다. |
-| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
+| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절을 검증했다. 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의594개 시나리오 검증,855개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의600개 시나리오 검증,849개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -361,3 +361,17 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 
 - clean `7d2e478` browser1/source Electron1이40.77초, retry 없이 통과하고2157개 입력이 동일했다. 같은 프로젝트에서 dialog를 명시적으로 닫고 다시 열어 유지된 담당·상태 필터로 실제 queue GET200을 갱신했다. 기존 이미지와 다른 row를 클릭한 뒤 실제 annotation GET200과 화면의 UUID·경로·내용 hash가 정확히 일치했다.
 - 원본·라벨·검수 기록 hash를 보존하고 UI mutation은 없었다. 같은 context의 재열기이며 앱 재시작 후 필터 영속화나 사람 정답 승인이 아니다. invalid filter는 계속 pending이다. 집계594verified/855pending, 원래82/156ID와 부모 구현69/13 및 전체 수락0을 유지한다.
+
+
+## 2026-10-08 라벨 가져오기 빈 입력·오류·충돌6개 검증
+
+- clean `f8332dd`에서 browser1/source Electron1가38.84초, retry 없이 통과하고2161개 입력이 동일했다. 폴더·미리보기 부재 시 버튼 비활성/no POST, 실제 경로 traversal422, 동시 metadata 수정 뒤 실제 stale revision409, 정확한 preview/apply POST503 이전의 dispatch 차단과 명시적 실제200 미리보기 재시도를 확인했다.
+- 합성 LabelMe 제안은 적용하지 않았다. fixture의 lot/revision 수정1개는 라벨·검수 변경과 분리해 정확한 workflow ledger1개만 변함을 확인하고 이후 전체 annotation bytes·원본 hash·버전 기록을 보존했다. 폴더 대화상자는 통제된 fixture 응답이며 사람의 OS-picker 사용 근거가 아니다.
+- 집계600verified/849pending, 부모 구현69verified/13pending이다. 설치·publisher·사람 품질·새 hosted CI·전체 부모 수락은 pending을 유지한다.
+
+
+## 2026-10-08 동일 compiled4 worker 실행 검증
+
+- 실제 compiled4 바이너리에서 A/OK·ROI1개·결함0개를 두 pointer 변경 전에 봉인하고 원래 installer 종료 이후 같은 receipt를 읽었다. 다른 parent의 capsule 재실행은 private bytes를 바꾸지 않고 거절했다. 1ms deadline은 기존 pair와 복구 기록을 보존하며 finish/abort 재실행을 거절했다.
+- 최초 cold missing-FD 호출은30초 제한을 넘겼다. 동일 소스·fixture·30초로 수행한 재시도가 통과했다. 최초3pass/1fail과 이후2pass를 각각 보존하고5개 고유 케이스 성공 관찰로 집계하며, 한 번의 전부 성공 실행이나 cold 시작 성능으로 표시하지 않는다.
+- root가339개 소스와335개 exported resource,11729개 artifact file·95개 link를 독립적으로 다시 읽었다. null prior pair·inert main인 임시 설치 fixture이며 실제 Electron/native bootstrap·전체 tree·실사용 설치·publisher·사람 품질·전체 수락을 대신하지 않는다. 부모 구현69/13은 유지한다.

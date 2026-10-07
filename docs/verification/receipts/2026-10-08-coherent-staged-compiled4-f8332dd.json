@@ -1,0 +1,96 @@
+{
+  "schema": "modu-vision.coherent-staged-compiled-worker/v1",
+  "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+  "source_scope": "Exact339 pinned backend/build/test resource bytes match root source; binary was built from private75af77 base plus frozen prerequisites, not an entire clean HEAD build.",
+  "artifact_build": {
+    "private_base_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
+    "binary_sha256": "9762b4a942423ee1dd7f08d3b8aa6341bacd04391796f3f73bbcbb8d9f787189",
+    "build_identity_sha256": "31ad39e9064824a79655b5e124e15896946af19d5a4e3f2cfa9fb786aafb5374",
+    "backend_release_sha256": "bd8fa0fb9eb79f5fc4c373ef46d1c089fdcd4a764a8a44f2ae41060322f6a4b0",
+    "inventory_sha256": "ca668e745ef8ab229dbac54c0313888def96be60dfad6707de09261990dbec31",
+    "supplier_manifest_sha256": "5a39f2eff216ea2ad395bbecb8b88572540b1c68d52e7bfddf7fc3660b0494f6",
+    "license_status": "collected",
+    "source_resources": 339,
+    "exported_resources": 335,
+    "regular_artifact_files": 11729,
+    "artifact_links": 95,
+    "all_pins_independently_rehashed": true
+  },
+  "results": {
+    "distinct_cases_with_successful_observations": 5,
+    "observed_test_outcomes": 6,
+    "retained_failed_observations": 1,
+    "skipped": 0,
+    "gates": [
+      {
+        "sha256": "3f137027fe68b913178ecb88c956ea98ed03f3158e44da4446dd86cd0bfc9fea",
+        "tests": "4",
+        "failures": "1",
+        "errors": "0",
+        "skipped": "0",
+        "time": "315.834"
+      },
+      {
+        "sha256": "f3354d509e95318f7a294f195e7a31a106b3bb6570fba8a71431a881b7cb5461",
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "151.610"
+      }
+    ],
+    "first_cold_missing_FD_launch_timeout_seconds": 30,
+    "same_case_retry_deadline_seconds": 30,
+    "retry_did_not_change_source_fixture_or_limit": true,
+    "production_CPU_deadline_seconds": 60,
+    "cold_start_performance_qualified": false
+  },
+  "actual_staged_math": {
+    "semantic_output": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "receipt_sha256": "44fdcfc62f4d44f86c6b592596065c84ccf139bf319dc7372ab4f3ff49c9c38b",
+    "requirement_sha256": "c54cbf0e35e9c8b4595b62f74f4accb2a49c8e09e07d5fe6d37ad1243f248664",
+    "semantic_output_sha256": "d1134e73f876152af4c027a921ae30b3ac1e321024c8b38ee15ad1b095276528",
+    "compiled_original_installer_and_candidate_worker": true,
+    "sealed_before_both_pointer_changes": true,
+    "post_cutover_and_original_installer_exit_readback_verified": true,
+    "foreign_parent_replay_refused_without_private_bytes_change": true,
+    "initial_prior_pointers": "null disposable fixture pair; not an installed live application upgrade"
+  },
+  "deadline_refusal": {
+    "deadline_ms": 1,
+    "original_pair_unchanged": true,
+    "attempt_retained": true,
+    "replay_and_abort_refused": true,
+    "worker_tree_exit_verified": false
+  },
+  "proof_hashes": {
+    "child_handoff": "ac7992f530a3b316b4627fd0ea13860884eb5de6ec7a83f8bcfec529dbf9003b",
+    "artifact_binding": "19d74afb14615aa6a621f7d8536053579519751d650e84ae83683dc98c361a74",
+    "root_independent_review": "86d1e4ce7e1a5a515d2e7366391a63edf7e02ad9ed0d1375b897893159690231",
+    "actual_positive": "2ec22c005ba709ecf8c4f361f68f947ecbcbbf577dbf9ed46c5d276f21493aa3",
+    "actual_deadline": "ae1485a38fc565eebd755d661a5544b015bfa6f3cb3eddc330e8d383ab97cd23"
+  },
+  "limits": [
+    "Disposable signed onedir with inert main; actual Electron startup is separate and remains incomplete.",
+    "Five distinct successful observations are not one all-green run: initial cold missing-FD timeout is preserved.",
+    "Direct owned handles and replay refusal do not establish complete process-tree exit.",
+    "Collected supplier/license text does not establish publisher identity or release approval."
+  ],
+  "acceptance": {
+    "candidate_main_launch_verified": false,
+    "native_application_verified": false,
+    "frozen_backend_verified": false,
+    "owned_backend_execution_origin_verified": false,
+    "worker_process_tree_exit_verified": false,
+    "model_quality_verified": false,
+    "release_ready": false
+  }
+}

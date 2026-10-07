@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+  "source_dirty": false,
+  "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+  "test_source_sha256": "76a39f2b6a2a4e7809ebe6bbca11c8905a53c1a6ea23e7898821421224b66ad8",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "14d2529ebbbf87021db3e25202537aea392a2b3a1681610c4d2157208dead697",
+  "harness_sha256": "9aef0e372b772dcb1b61160c8311fdeb8574880d09ff589a930f7ee97ecd744b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

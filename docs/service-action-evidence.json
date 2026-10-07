@@ -14596,13 +14596,223 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "No selected folder disables preview; no import POST or annotation change.",
+         "observed": "No selected folder disables preview; no import POST or annotation change."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "No selected folder disables preview; no import POST or annotation change.",
+         "observed": "No selected folder disables preview; no import POST or annotation change."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "Actual LabelMe path traversal preview returns422; proposals remain unapplied.",
+         "observed": "Actual LabelMe path traversal preview returns422; proposals remain unapplied."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "Actual LabelMe path traversal preview returns422; proposals remain unapplied.",
+         "observed": "Actual LabelMe path traversal preview returns422; proposals remain unapplied."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "Exact valid preview POST receives controlled503 before original dispatch; labels unchanged and explicit real200 preview retry succeeds.",
+         "observed": "Exact valid preview POST receives controlled503 before original dispatch; labels unchanged and explicit real200 preview retry succeeds."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "Exact valid preview POST receives controlled503 before original dispatch; labels unchanged and explicit real200 preview retry succeeds.",
+         "observed": "Exact valid preview POST receives controlled503 before original dispatch; labels unchanged and explicit real200 preview retry succeeds."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -14664,13 +14874,223 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "Without reviewed preview the apply button is disabled; no import POST or label mutation.",
+         "observed": "Without reviewed preview the apply button is disabled; no import POST or label mutation."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "Without reviewed preview the apply button is disabled; no import POST or label mutation.",
+         "observed": "Without reviewed preview the apply button is disabled; no import POST or label mutation."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "One separately recorded concurrent fixture metadata revision causes actual409 stale preview refusal; no label/review write.",
+         "observed": "One separately recorded concurrent fixture metadata revision causes actual409 stale preview refusal; no label/review write."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "One separately recorded concurrent fixture metadata revision causes actual409 stale preview refusal; no label/review write.",
+         "observed": "One separately recorded concurrent fixture metadata revision causes actual409 stale preview refusal; no label/review write."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::label exchange preview and apply empty invalid exact POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-browser.json",
+         "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "86af54a6af503d213a7f4d008cd73d5de90304bdee74b42c01e5796829954b07"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "eb4bfd7956f887631815bf1848f33e64cacf672e3b83a606439441bc2814f6bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7f6114b5bbdb0f473e116ce0f11d38f221c83faf14b4e3154ef15966134ada38"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "32bf27468416f66df6e0cc904e5d8dde2a642cc228462e2218ef5ee8640f1b26"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7e850fd94e4112196b1236524e02008f10b588a996f988bd8158bcd7a19ff618"
+          }
+         ],
+         "expected": "Fresh preview pins are submitted in exact apply POST; controlled503 before original dispatch preserves labels, masks, review and version history.",
+         "observed": "Fresh preview pins are submitted in exact apply POST; controlled503 before original dispatch preserves labels, masks, review and version history."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+         "kind": "click",
+         "action": "라벨 가져오기 미리보기·검토 적용의 빈 입력과 거절",
+         "reviewer": "Root independent frozen source/proof review and clean browser/source Electron replay; human picker, installed target, quality and whole parent pending",
+         "test": "scripts/e2e/label-exchange-import-controls.spec.ts::native label exchange preview and apply empty invalid POST errors preserve annotations",
+         "receipt": "2026-10-08-label-exchange-f8332dd-electron.json",
+         "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fc2e05c4af5f3ac8f4c2f6dd43df884cf3564e5563afd02b71c700ae4e615ff6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1cf7a3744e09f80fc1f61369f4bcb4bc13aa6d7a8dfcbd23347fe978ddf685de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1330aaa2bc411f64649532fcb89ced94081d916fbcd5a6e6f9c2b68e6713a826"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e8b7e095b658ebefd06d78707bc6e0e146bdce7ff3dd20be948f08317e9df7a5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "945b77456db367e56c4e8c9bdd3a0031cfc360934895d9ebf0cfe5a5c534fd6d"
+          }
+         ],
+         "expected": "Fresh preview pins are submitted in exact apply POST; controlled503 before original dispatch preserves labels, masks, review and version history.",
+         "observed": "Fresh preview pins are submitted in exact apply POST; controlled503 before original dispatch preserves labels, masks, review and version history."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"

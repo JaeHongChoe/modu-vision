@@ -1,0 +1,128 @@
+{
+  "schema": "modu-vision.label-exchange-clean-controls/v1",
+  "source_sha": "f8332dd0aa66dbe687b33524dead5b6f46a75024",
+  "source_file_sha256": "76a39f2b6a2a4e7809ebe6bbca11c8905a53c1a6ea23e7898821421224b66ad8",
+  "results": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 38.836886167002376,
+    "source_inputs": 2161,
+    "source_unchanged": true,
+    "clean_before_and_after": true
+  },
+  "cases": [
+    {
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-label-exchange-f8332dd-browser.json",
+      "receipt_sha256": "543616ef23eda945843bec31c836d411541889ef87b3720d1515751da877f75c",
+      "request_statuses": [
+        422,
+        503,
+        200,
+        409,
+        200,
+        503
+      ],
+      "empty_buttons_disabled_without_import_POST": true,
+      "real_traversal_422": true,
+      "real_stale_revision_apply_409": true,
+      "controlled_valid_POST_503_before_dispatch": true,
+      "explicit_real_preview_retry_200": true,
+      "controlled_metadata_revision_separate_from_labels": true,
+      "changed_metadata_file_count": 1,
+      "annotation_tree_unchanged_after_controlled_metadata_edit": true,
+      "source_images_versions_labels_reviews_preserved": true,
+      "human_folder_picker": false,
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 976,
+        "stoppedAt": "2026-10-07T23:02:22.997Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-label-exchange-f8332dd-electron.json",
+      "receipt_sha256": "9f3a7e050c7ea4e287257ca13a10d3cd29d9fc70a2946395aa0b8f65a9de30f5",
+      "request_statuses": [
+        422,
+        503,
+        200,
+        409,
+        200,
+        503
+      ],
+      "empty_buttons_disabled_without_import_POST": true,
+      "real_traversal_422": true,
+      "real_stale_revision_apply_409": true,
+      "controlled_valid_POST_503_before_dispatch": true,
+      "explicit_real_preview_retry_200": true,
+      "controlled_metadata_revision_separate_from_labels": true,
+      "changed_metadata_file_count": 1,
+      "annotation_tree_unchanged_after_controlled_metadata_edit": true,
+      "source_images_versions_labels_reviews_preserved": true,
+      "human_folder_picker": false,
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 59635,
+            "pid": 53596,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          53596
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "d28efc36fb6e840d485005142479ed633a15ede1887b3dc9a27b0f48a39dbc59",
+    "result.log": "9e339639114993faf4a119c838707f4bc54278296b0a96412793e1ad5ae3fb43",
+    "source-before.json": "7b38fd69385b6ef56abb2c61980bb3712688bda6a9b88fc9b92b779f9dc7fa93",
+    "source-after.json": "7b38fd69385b6ef56abb2c61980bb3712688bda6a9b88fc9b92b779f9dc7fa93"
+  },
+  "report_sha256": "14d2529ebbbf87021db3e25202537aea392a2b3a1681610c4d2157208dead697",
+  "global_teardown_sha256": "ac2ce1354d5f7596d10a0e69b1f5f11c10cf61576f7a091ae1ede3f1af2e825f",
+  "independent_review_sha256": "4acbed74b3b73363c721d16d28229b3ddeb3940f95f33fedb21e79d173b0bdc0",
+  "retained_fixture_reds": [
+    "Initial tree assertion counted deliberate metadata change as drift; narrowed to exactly one workflow ledger edit and all other bytes unchanged.",
+    "Second baseline preceded actual team-data default registration; completed existing team/readiness registration before baseline. No product or deadline change."
+  ],
+  "limitations": [
+    "Controlled native folder-dialog/browser bridge; no human OS-picker acceptance.",
+    "Synthetic LabelMe proposal never applied and is not human truth.",
+    "One explicit controlled metadata lot/revision edit is fixture setup; annotation/review writes remain absent.",
+    "Preview/apply503 are exact controlled valid POST transport errors with no original dispatch;422/409/200 are actual backend replies."
+  ],
+  "acceptance": {
+    "new_curated_scenarios": 6,
+    "model_inference": false,
+    "human_truth_or_quality": false,
+    "installed_target_or_OS_registration": false,
+    "publisher_or_release": false,
+    "hardware_or_whole_process_tree": false,
+    "whole_parent_accepted": false
+  }
+}
