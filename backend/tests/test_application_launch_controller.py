@@ -314,3 +314,14 @@ def test_readonly_inspection_refuses_a_valid_controller_transition_during_its_sn
         monkeypatch.setattr(controller,'_same_identity',race)
         with pytest.raises(ValueError,match='changed during read-only'):controller.inspect(args)
     finally:stop_fixture(owner)
+
+
+@pytest.fixture(autouse=True)
+def controlled_canary_publication(monkeypatch):
+    """Scope this legacy lifecycle fixture to controlled canary proof only.
+
+    Actual staged source CPU math is tested independently; these tests retain
+    their original signed-layout, admission and recovery assertions.
+    """
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)

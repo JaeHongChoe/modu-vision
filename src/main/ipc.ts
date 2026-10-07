@@ -5,7 +5,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import type { BackendSupervisor } from './supervisor';
 import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
 import {DistributionManager} from './distributionStatus';
-import {PortableUpdateManager} from './portableUpdate';
+import {PortableUpdateManager,validatedCanaryPins} from './portableUpdate';
 
 // Documents, images and report folders the studio produces. Executables,
 // scripts, shortcuts and application bundles are never opened from the renderer.
@@ -90,11 +90,11 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
     return selected?portable.select(selected):null;
   });
   ipcMain.handle('distribution:inspect-portable',event=>{authorizeShared(event);return portable.inspect();});
-  ipcMain.handle('distribution:preview-portable',async(event,channel)=>{
-    authorizeShared(event);await portable.ensureSupported();
+  ipcMain.handle('distribution:preview-portable',async(event,channel,canary)=>{
+    authorizeShared(event);const pins=validatedCanaryPins(canary);await portable.ensureSupported();
     if(!['stable','beta'].includes(channel))throw Error('Select a stable or beta channel');
     const selected=await choosePortable(event,{title:'portable 앱의 서명된 오프라인 릴리스 목록 선택',properties:['openFile'],filters:[{name:'Release manifest',extensions:['json']}]});
-    return selected?portable.preview(selected,channel):null;
+    return selected?portable.preview(selected,channel,pins):null;
   });
   ipcMain.handle('distribution:apply-portable',(event,id)=>{authorizeShared(event);return portable.apply(id);});
   ipcMain.handle('distribution:recover-portable',(event,action,expected)=>{authorizeShared(event);return portable.recover(action,expected);});

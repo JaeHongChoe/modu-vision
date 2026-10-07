@@ -168,7 +168,8 @@ def test_exact_native_cancel_follows_current_ledger_and_original_event(native_li
     assert not leases.list()
 
 
-def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monkeypatch):
+@pytest.mark.parametrize('review_race',['natural','heartbeat_after_preview'])
+def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monkeypatch,review_race):
     import subprocess,sys
     from fastapi.testclient import TestClient
     from PIL import Image
@@ -176,6 +177,13 @@ def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monk
     from backend.api import routes_ocr
     from backend.engine.job_store import JobStore
     from backend.engine.shared_scheduler import shared_leases
+    from backend.engine import specialist_training_queue as native_queue
+    admissions=[];reserve=native_queue.reserve
+    def capture_admission(*args,**kwargs):
+        admission,replay=reserve(*args,**kwargs)
+        if admission is not None:admissions.append(admission)
+        return admission,replay
+    monkeypatch.setattr(native_queue,'reserve',capture_admission)
     root,scopes,*_=owned(tmp_path);monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(root))
     app=create_app(project_dir=str(root/'projects'),shared_auth_dir=str(root/'auth'))
     client=TestClient(app,headers={'X-Vision-Token':app.state.api_token})
@@ -189,12 +197,13 @@ def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monk
     original={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in source.glob('*.png')}
     assert client.put('/api/project/update',json={'source_dataset_dir':str(source)}).status_code==200
     prepared=client.post('/api/ocr/prepare',json={'source_dataset_path':str(source),'samples':rows});assert prepared.status_code==200,prepared.text
-    entered=threading.Event();resume=threading.Event();calls=[];trainer=routes_ocr.train_ocr
+    entered=threading.Event();resume=threading.Event();calls=[];workers=[];checkpoint_deadline=[];trainer=routes_ocr.train_ocr
     def train(*args,**kwargs):
-        calls.append(True);callback=kwargs['on_progress']
+        calls.append(True);workers.append(threading.current_thread());callback=kwargs['on_progress']
         def progress(values):
             callback(values)
             if not entered.is_set():
+                checkpoint_deadline.append(time.monotonic()+12)
                 entered.set();assert resume.wait(12),'Owned checkpoint gate timed out'
         return trainer(*args,**{**kwargs,'on_progress':progress})
     monkeypatch.setattr(routes_ocr,'train_ocr',train)
@@ -206,14 +215,55 @@ def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monk
         assert entered.wait(10),'Actual trainer did not reach its first completed optimizer batch'
         descriptor=(output/'native_control_ready.json').read_bytes();ready=json.loads(descriptor)
         assert JobStore(root/scopes['ledger']).get(identifier).state=='running'
-        cmd=[sys.executable,'-m','backend.engine.global_migration']
-        plan=subprocess.run([*cmd,'preview-live','--root',str(root)],cwd=Path(__file__).parents[2],capture_output=True,text=True,timeout=5)
-        assert plan.returncode==0,plan.stderr
-        value=json.loads(plan.stdout);assert value['can_apply'],value['blockers']
-        result=subprocess.run([*cmd,'apply-live','--root',str(root),'--expected-source-sha256',value['source_sha256']],
-            cwd=Path(__file__).parents[2],capture_output=True,text=True,timeout=5)
-        assert result.returncode==0,result.stderr
-        migrated=json.loads(result.stdout);assert migrated['workers_relaunched']==0 and migrated['worker_count']==1
+        assert len(admissions)==1 and admissions[0].job_id==identifier
+        admission=admissions[0]
+        def control_identity():
+            attempts=admission.store.attempts(identifier)
+            claims=[row for row in admission.scheduler.leases.list() if row['job_id']==identifier]
+            assert len(attempts)==len(claims)==1
+            assert admission.store.get(identifier).state=='running'
+            return {'attempt':{key:value for key,value in attempts[0].items() if key!='lease_expires_ns'},
+                'reservation':{key:value for key,value in claims[0].items() if key!='expires'}}
+        original_control=control_identity()
+        original_pointers={name:(root/name).read_bytes() if (root/name).exists() else None
+            for name in ('global-active.json','application-active.json')}
+        assert original_pointers=={'global-active.json':None,'application-active.json':None}
+        cmd=[sys.executable,'-m','backend.engine.global_migration'];reviews=[];stale_refusals=[]
+        def invoke(*args):
+            remaining=checkpoint_deadline[0]-time.monotonic()
+            assert remaining>0,'Owned checkpoint review/apply budget exhausted'
+            return subprocess.run([*cmd,*args],cwd=Path(__file__).parents[2],capture_output=True,
+                text=True,timeout=min(5,remaining))
+        for review_number in range(3):
+            plan=invoke('preview-live','--root',str(root))
+            assert plan.returncode==0,plan.stdout+plan.stderr
+            value=json.loads(plan.stdout);assert value['can_apply'],value['blockers']
+            assert control_identity()==original_control
+            if review_race=='heartbeat_after_preview' and review_number==0:
+                # The real heartbeat keeps writing expiry while optimizer work
+                # waits. Reproduce that exact CAS race without muting the writer.
+                with admission._control_scope(),admission._ownership_lock:
+                    before_expiry=admission.store.attempts(identifier)[0]['lease_expires_ns']
+                    admission.lease=admission.scheduler.heartbeat(admission.lease)
+                    assert admission.store.attempts(identifier)[0]['lease_expires_ns']>before_expiry
+            result=invoke('apply-live','--root',str(root),'--expected-source-sha256',value['source_sha256'])
+            reviews.append({'source_sha256':value['source_sha256'],'returncode':result.returncode})
+            assert (output/'native_control_ready.json').read_bytes()==descriptor
+            assert control_identity()==original_control
+            if result.returncode==0:
+                migrated=json.loads(result.stdout)
+                break
+            assert result.returncode==1 and result.stderr=='',result.stdout+result.stderr
+            assert json.loads(result.stdout)=={'error':'Live source changed since preview','status':'refused'},result.stdout
+            stale_refusals.append(value['source_sha256'])
+            assert {name:(root/name).read_bytes() if (root/name).exists() else None
+                for name in original_pointers}==original_pointers
+            assert not (root/'.global-generations').exists() and not (root/'.global-migrations').exists()
+            assert original=={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in source.glob('*.png')}
+        else:pytest.fail('Three exact reviews were refused within the original checkpoint budget')
+        if review_race=='heartbeat_after_preview':assert stale_refusals
+        assert migrated['workers_relaunched']==0 and migrated['worker_count']==1
+        assert migrated['uncertain_reservations_cleared']==0
         frozen=(root/scopes['ledger']).read_bytes();resume.set()
         deadline=time.monotonic()+12
         while time.monotonic()<deadline:
@@ -246,8 +296,15 @@ def test_actual_cpu_ocr_training_completes_once_across_cli_cutover(tmp_path,monk
                 'attempt_count':len(attempts),'fencing_token':ready['attempt_fence'],'worker_relaunches':migrated['workers_relaunched'],
                 'model_sha256':receipt['checkpoint_sha256'],'original_inputs':original,'original_inputs_preserved':True,
                 'original_ledger_bytes_preserved':True,'private_endpoint_removed':True,'reservation_released':True,
-                'migration':migrated,'attempts':attempts,'files':records,'quality_approved':False},indent=2)+'\n')
-    finally:resume.set()
+                'migration':migrated,'attempts':attempts,'files':records,'review_race':review_race,
+                'review_attempts':reviews,'stale_review_refusals':stale_refusals,
+                'checkpoint_budget_s':12,'max_review_attempts':3,'quality_approved':False},indent=2)+'\n')
+    finally:
+        resume.set()
+        for worker in workers:
+            worker.join(12)
+            assert not worker.is_alive(),'Original owned OCR worker did not unwind'
+        client.close()
 
 
 @pytest.mark.parametrize('field,value',[

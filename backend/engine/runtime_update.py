@@ -70,12 +70,12 @@ def _unlinked(path):
 
 
 @contextmanager
-def _file(path,limit):
+def _file(path,limit,*,allow_empty=False):
     path=_unlinked(path)
     fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
     try:
         before=os.fstat(fd)
-        if not stat.S_ISREG(before.st_mode) or before.st_nlink!=1 or not 0<before.st_size<=limit:
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink!=1 or not (0 if allow_empty else 1)<=before.st_size<=limit:
             raise UpdateError('Update input is not a bounded unlinked regular file')
         with os.fdopen(fd,'rb',closefd=False) as reader:yield reader,before
         _unlinked(path);after=os.fstat(fd);current=path.stat()
@@ -94,7 +94,7 @@ def _read(path,limit=65536):
 
 def _check_file(path,row,*,copy_to=None):
     digest=hashlib.sha256();total=0
-    with _file(path,1024**3) as (reader,before):
+    with _file(path,1024**3,allow_empty=row.get('size')==0 and row.get('executable') is False) as (reader,before):
         if before.st_size!=row['size']:raise UpdateError('Update artifact size differs')
         writer=open(copy_to,'xb') if copy_to is not None else None
         try:
@@ -218,7 +218,7 @@ def verify_release(envelope_path,authority_path,pinned_authority_sha256,target):
 def _safe_path(value):
     if not isinstance(value,str) or not 0<len(value)<=240:raise UpdateError('Invalid portable application path')
     parts=value.split('/')
-    if any(not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_. -]{0,159}',p) or p.endswith(('.', ' '))
+    if any(p in ('.','..') or not re.fullmatch(r'[A-Za-z0-9_.@][A-Za-z0-9_. +@^\-]{0,159}',p) or p.endswith(('.', ' '))
             or re.match(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)',p,re.I) for p in parts):
         raise UpdateError('Unsafe portable application path')
     return value
@@ -307,17 +307,21 @@ def _native_layout(manifest):
             if not colors.get(child):colors[child]=1;stack.append((child,iter(graph[child])))
     return expected,directories
 
+MAX_APPLICATION_MEMBERS=20000
+MAX_APPLICATION_MANIFEST=8*1024**2
+
+
 def _portable(archive,release,*,destination=None):
     with _file(archive,1024**3) as (reader,_),zipfile.ZipFile(reader) as bundle:
         members=bundle.infolist();names=[m.filename for m in members]
-        if (not 1<len(members)<=10001 or len(names)!=len(set(n.casefold() for n in names))
+        if (not 1<len(members)<=MAX_APPLICATION_MEMBERS+1 or len(names)!=len(set(n.casefold() for n in names))
                 or sum(m.file_size for m in members)>4*1024**3):raise UpdateError('Invalid portable archive bounds or duplicates')
         for member in members:
             _safe_path(member.filename);mode=member.external_attr>>16
             if (member.is_dir() or member.flag_bits&1 or member.file_size>1024**3
                     or stat.S_IFMT(mode) not in (0,stat.S_IFREG,stat.S_IFLNK)):
                 raise UpdateError('Portable archive cannot contain special or encrypted files')
-        if ('portable-application.json' not in names or bundle.getinfo('portable-application.json').file_size>1024**2
+        if ('portable-application.json' not in names or bundle.getinfo('portable-application.json').file_size>MAX_APPLICATION_MANIFEST
                 or stat.S_IFMT(bundle.getinfo('portable-application.json').external_attr>>16)not in (0,stat.S_IFREG)):
             raise UpdateError('Portable application regular manifest missing or excessive')
         raw=bundle.read('portable-application.json');manifest=_json(raw)
@@ -326,12 +330,13 @@ def _portable(archive,release,*,destination=None):
         if type(manifest['schema_version'])is not int or manifest['schema_version']not in (1,2) or any(manifest[k]!=release[k] for k in ('version','platform','arch')):
             raise UpdateError('Portable application target/version differs from signed release')
         rows=manifest['files']
-        if not isinstance(rows,list) or not 0<len(rows)<=10000:raise UpdateError('Invalid portable application inventory')
+        if not isinstance(rows,list) or not 0<len(rows)<=MAX_APPLICATION_MEMBERS:raise UpdateError('Invalid portable application inventory')
         expected={};folded=set()
         for row in rows:
             _fields(row,{'path','sha256','size','executable'});name=_safe_path(row['path'])
             if (name=='portable-application.json' or name.casefold() in folded or not _hex(row['sha256'])
-                    or type(row['size'])is not int or not 0<row['size']<=1024**3 or type(row['executable'])is not bool):
+                    or type(row['size'])is not int or not 0<=row['size']<=1024**3 or type(row['executable'])is not bool
+                    or row['size']==0 and row['executable']):
                 raise UpdateError('Invalid portable application inventory')
             folded.add(name.casefold());expected[name]=row
         links,_=_native_layout(manifest) if native else ({},set())
@@ -443,11 +448,19 @@ class UpdatePlan:
     previous_database:dict|None
     previous_application:dict|None
     target:dict
+    canary:dict|None=None
+    canary_capability_sha256:str|None=None
+    canary_preflight:dict|None=None
 
 
-def plan_update(root,bundle,envelope,authority,*,pinned_authority_sha256,target):
+def plan_update(root,bundle,envelope,authority,*,pinned_authority_sha256,target,canary=None):
+    if canary is not None:
+        from backend.engine.staged_update_canary import validate_spec
+        canary=validate_spec(canary)
     root,owner=_root(root)
     with store_admission(root):
+        from backend.engine.staged_update_canary import review_spec
+        canary_capability_sha256=review_spec(root,canary) if canary is not None else None
         release,raw=verify_release(envelope,authority,pinned_authority_sha256,target)
         native={'Darwin':'darwin','Linux':'linux'}.get(platform.system())
         arch={'arm64':'arm64','aarch64':'arm64','x86_64':'x64','AMD64':'x64'}.get(platform.machine())
@@ -458,13 +471,15 @@ def plan_update(root,bundle,envelope,authority,*,pinned_authority_sha256,target)
             if target['current_version']!=old['release']['version']:raise UpdateError('Current application version differs from owned installation')
         _bundle(bundle,release)
         installer=next(row for row in release['artifacts'] if row['kind']=='installer')
-        _portable(Path(bundle)/installer['path'],release)
+        manifest,_=_portable(Path(bundle)/installer['path'],release)
+        from backend.engine.staged_update_canary import review_candidate
+        canary_preflight=review_candidate(root,manifest,canary,canary_capability_sha256)
         source=migration.preview_forward(root) if current else migration.preview(root)
         if not source['can_apply']:raise UpdateError('; '.join(source['blockers']))
         return UpdatePlan(str(root),str(_unlinked(bundle)),str(_unlinked(envelope)),str(_unlinked(authority)),
             pinned_authority_sha256,_sha(raw),release,release['compatibility']['runtime'],release['compatibility'],
             release['compatibility']['dataset_index'],tuple(row for row in release['artifacts'] if row['kind']=='runtime_pack'),
-            source['source_sha256'],current[1] if current else None,previous,dict(target))
+            source['source_sha256'],current[1] if current else None,previous,dict(target),canary,canary_capability_sha256,canary_preflight)
 
 
 def review_update(plan):
@@ -482,6 +497,7 @@ def review_update(plan):
         'artifact_bytes':sum(row['size'] for row in plan.app['artifacts']),
         'database_fence':plan.previous_database['fence'] if plan.previous_database else 0,
         'copied_session_policy':'revoked','application_started':False,
+        'preactivation_canary':plan.canary_preflight,
         'native_signature_acceptance':'unqualified','model_quality_acceptance':'required'}
 
 
@@ -529,7 +545,7 @@ def _intent(root,identifier):
     if not _hex(identifier,32):raise UpdateError('Invalid application update identity')
     directory=_unlinked(root/UPDATES/identifier);record=_json(_read(directory/'journal.json',1024**2))
     _,owner=_root(root)
-    if (record.get('schema_version')!=1 or record.get('installation_id')!=owner['installation_id']
+    if (not isinstance(record,dict) or type(record.get('schema_version')) is not int or record['schema_version'] not in (1,2) or record.get('installation_id')!=owner['installation_id']
             or record.get('update_id')!=identifier or record.get('application_generation')!=identifier
             or record.get('status') not in ('staged','database_prepared','committed','aborted')):
         raise UpdateError('Foreign or invalid application update intent')
@@ -544,7 +560,7 @@ def _validated_intent(root,identifier):
     installer=next(row for row in release['artifacts'] if row['kind']=='installer')
     manifest,manifest_sha=_portable(directory/'bundle'/installer['path'],release)
     generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
-    if _sha(_read(application/'portable-application.json',1024**2))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
+    if _sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
     links,directories=_native_layout(manifest) if manifest['schema_version']==2 else ({},set())
     expected={row['path'] for row in manifest['files']}|set(links)|{'portable-application.json'}
     actual=set()
@@ -584,7 +600,7 @@ def _pending(root,record):
 
 
 def _finish(root,identifier):
-    record,directory,_=_validated_intent(root,identifier)
+    record,directory,manifest=_validated_intent(root,identifier)
     if record['status']=='aborted':raise UpdateError('Aborted update cannot be activated')
     current=active_generation(root)
     if record['status']=='committed':
@@ -594,6 +610,9 @@ def _finish(root,identifier):
             raise UpdateError('Committed application/database pair changed; forward recovery required')
         _pending(root,record)
     else:
+        from backend.engine.staged_update_canary import ensure_verified,validate_spec
+        if record['schema_version']!=2:raise UpdateError('Legacy unfinished application update lacks required preactivation canary; abort or review a new update')
+        validate_spec(record.get('canary'))
         if record['migration_id'] is None and (current[1] if current else None)!=record['previous_database']:
             raise UpdateError('Database generation changed before update')
         if record['migration_id'] is not None and current and current[1]['generation_id']!=record['migration_id'] and current[1]!=record['previous_database']:
@@ -605,13 +624,19 @@ def _finish(root,identifier):
             def prepared(journal):
                 record.update(status='database_prepared',migration_id=journal['migration_id'])
                 _write(directory/'journal.json',record);_checkpoint('database_prepared')
+                ensure_verified(root,record,journal,manifest);_checkpoint('canary_verified')
             migrate=migration.advance if current else migration.apply
-            migrate(root,expected_source_sha256=record['source_sha256'],on_prepared=prepared)
-        else:migration.recover(root,record['migration_id'],action='finish')
+            migrate(root,expected_source_sha256=record['source_sha256'],on_prepared=prepared,application_update_id=identifier)
+        else:
+            _,database=migration._journal(root,record['migration_id'])
+            ensure_verified(root,record,database,manifest)
+            migration.recover(root,record['migration_id'],action='finish')
         current=active_generation(root)
         if current is None or current[1]['generation_id']!=record['migration_id']:raise UpdateError('Prepared database generation differs')
         record['database_pointer']=current[1]
         _write(directory/'journal.json',record);_checkpoint('after_database')
+        from backend.engine.staged_update_canary import require_publication
+        require_publication(root,migration._journal(root,record['migration_id'])[1])
         _write(root/ACTIVE,{'schema_version':1,'installation_id':record['installation_id'],'update_id':identifier,
             'application_generation':identifier,'database_pointer':current[1]})
         _checkpoint('after_application')
@@ -625,11 +650,17 @@ def _finish(root,identifier):
 def install_update(root,plan):
     root,owner=_root(root)
     if not isinstance(plan,UpdatePlan) or plan.root!=str(root):raise UpdateError('Update plan belongs to another installation')
+    from backend.engine.staged_update_canary import validate_spec
+    validate_spec(plan.canary)
+    if (not isinstance(plan.canary_preflight,dict) or plan.canary_preflight.get('status')!='source_ready'
+            or plan.canary_preflight.get('supported') is not True):
+        reason=plan.canary_preflight.get('reason') if isinstance(plan.canary_preflight,dict) else None
+        raise UpdateError('Preactivation canary '+str(reason or 'requires a newly reviewed supported source candidate'))
     with store_admission(root,exclusive=True):
         assert_quiescent(root)
         validate_attachment(root)
         fresh=plan_update(root,plan.bundle,plan.envelope,plan.authority,
-            pinned_authority_sha256=plan.authority_sha256,target=plan.target)
+            pinned_authority_sha256=plan.authority_sha256,target=plan.target,canary=plan.canary)
         if fresh!=plan:raise UpdateError('Update source or release changed since preview')
         total=sum(row['size'] for row in plan.app['artifacts'])
         if shutil.disk_usage(root).free<total*3+64*1024**2:raise UpdateError('Insufficient update staging reserve')
@@ -642,11 +673,13 @@ def install_update(root,plan):
         _portable(directory/'bundle'/installer['path'],plan.app,destination=generation/'application')
         migration._sync_directories(directory);migration._sync_directories(generation)
         migration._sync_directories(root/UPDATES,recursive=False);migration._sync_directories(root/GENERATIONS,recursive=False)
-        record={'schema_version':1,'installation_id':owner['installation_id'],'update_id':identifier,
+        record={'schema_version':2,'installation_id':owner['installation_id'],'update_id':identifier,
             'application_generation':identifier,'status':'staged','authority_path':plan.authority,
             'authority_sha256':plan.authority_sha256,'envelope_sha256':plan.envelope_sha256,'target':plan.target,
             'release':plan.app,'source_sha256':plan.source_sha256,'previous_database':plan.previous_database,
-            'previous_application':plan.previous_application,'migration_id':None,'database_pointer':None,'recovery_history':[]}
+            'previous_application':plan.previous_application,'migration_id':None,'database_pointer':None,'recovery_history':[],
+            'canary':dict(plan.canary),'canary_requirement_sha256':None,'canary_receipt_sha256':None}
+        record['canary_capability_sha256']=plan.canary_capability_sha256
         _write(directory/'journal.json',record)
         return _finish(root,identifier)
 
@@ -657,14 +690,23 @@ def recover_update(root,intent,*,action='finish'):
         assert_quiescent(root)
         record,directory,_=_validated_intent(root,intent)
         if action=='abort':
-            if record['migration_id'] is not None or record['status']!='staged':raise UpdateError('Database preparation already began; finish or forward recovery is required')
+            if record['status'] not in ('staged','database_prepared'):raise UpdateError('Applied database update requires finish or forward recovery')
             current=active_generation(root)
             if (current[1] if current else None)!=record['previous_database'] or _pointer(root)!=record['previous_application']:
                 raise UpdateError('Original application/database pair changed')
+            from backend.engine.staged_update_canary import assert_no_spawn_abort
+            assert_no_spawn_abort(root,record)
+            if record['migration_id'] is not None:
+                path,database=migration._journal(root,record['migration_id'])
+                database['application_update_id']=intent;migration.atomic_private_json(path,database)
+                migration._sync_directories(path.parent,recursive=False)
             _pending(root,record);record['status']='aborted';_write(directory/'journal.json',record)
             (root/PENDING).unlink();migration._sync_directories(root,recursive=False)
             return {'status':'aborted','update_id':intent,'staged_artifacts':'retained'}
         if action=='forward':
+            from backend.engine.staged_update_canary import validate_spec
+            if record['schema_version']!=2:raise UpdateError('Legacy application forward recovery requires a newly reviewed preactivation canary')
+            validate_spec(record.get('canary'))
             current=active_generation(root)
             # Only this update's current generation may be advanced. A foreign
             # database cutover is not adopted, even if its schema looks similar.
@@ -674,7 +716,8 @@ def recover_update(root,intent,*,action='finish'):
             if not source['can_apply']:raise UpdateError('; '.join(source['blockers']))
             record['recovery_history'].append({'migration_id':record['migration_id'],'database_pointer':current[1]})
             record.update(status='staged',source_sha256=source['source_sha256'],previous_database=current[1],
-                previous_application=_pointer(root),migration_id=None,database_pointer=None)
+                previous_application=_pointer(root),migration_id=None,database_pointer=None,
+                canary_requirement_sha256=None,canary_receipt_sha256=None)
             _write(directory/'journal.json',record)
         elif action!='finish':raise UpdateError('Select finish, forward or pre-database abort; rollback needs separately approved conversion')
         return _finish(root,intent)
@@ -697,7 +740,7 @@ def _launch_binding(root,authority,*,pinned_authority_sha256):
     return {'installation_id':owner['installation_id'],'update_id':pointer['update_id'],
         'application_generation':pointer['application_generation'],'database_pointer':pointer['database_pointer'],
         'database_generation_path':str(current[0]),'executable':str(executable),'executable_sha256':entrypoint['sha256'],
-        'application_manifest_sha256':_sha(_read(application/'portable-application.json',1024**2)),
+        'application_manifest_sha256':_sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST)),
         'source_sha256':record['source_sha256'],'envelope_sha256':record['envelope_sha256'],
         'authority_path':record['authority_path'],'authority_sha256':record['authority_sha256'],
         'version':record['release']['version'],
@@ -724,6 +767,7 @@ def main(argv=None):
         targets.add_argument('--target-file');targets.add_argument('--target-json')
         install.add_argument('--use-owned-version',action='store_true')
         if command=='install':install.add_argument('--expected-plan-sha256')
+        for name in ('canary-workspace-id','canary-project-id','canary-plan-sha256'):install.add_argument('--'+name)
     inspect=commands.add_parser('inspect')
     for name in ('root','authority','pinned-authority-sha256'):inspect.add_argument('--'+name,required=True)
     recover=commands.add_parser('recover');recover.add_argument('--root',required=True);recover.add_argument('--intent',required=True)
@@ -740,7 +784,10 @@ def main(argv=None):
                 target['current_version']=inspect_update(args.root,args.authority,
                     pinned_authority_sha256=args.pinned_authority_sha256)['version']
             plan=plan_update(args.root,args.bundle,args.envelope,args.authority,
-                pinned_authority_sha256=args.pinned_authority_sha256,target=target)
+                pinned_authority_sha256=args.pinned_authority_sha256,target=target,
+                canary={'workspace_id':args.canary_workspace_id,'project_id':args.canary_project_id,
+                        'plan_sha256':args.canary_plan_sha256}
+                    if any((args.canary_workspace_id,args.canary_project_id,args.canary_plan_sha256)) else None)
             review=review_update(plan)
             if args.command=='install':
                 if args.expected_plan_sha256 is not None and (not _hex(args.expected_plan_sha256) or args.expected_plan_sha256!=review['plan_sha256']):

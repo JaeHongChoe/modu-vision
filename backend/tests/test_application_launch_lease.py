@@ -566,3 +566,14 @@ def test_standalone_cli_exposes_diagnostics_without_creating_a_dead_supervisor_r
         '--pinned-authority-sha256', value['pinned_authority_sha256']], cwd=cwd, capture_output=True, text=True, timeout=20)
     assert refused.returncode == 2
     assert not (root/lease.ACTIVE_LEASE).exists() and not (root/lease.LEASES).exists()
+
+
+@pytest.fixture(autouse=True)
+def controlled_canary_publication(monkeypatch):
+    """Scope this legacy lifecycle fixture to controlled canary proof only.
+
+    Actual staged source CPU math is tested independently; these tests retain
+    their original signed-layout, admission and recovery assertions.
+    """
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)

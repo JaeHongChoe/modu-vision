@@ -6,10 +6,14 @@ from backend.tests.test_service_s6_04 import fixture, plan
 
 
 def args(root, value, command):
+    from backend.tests.test_staged_update_canary import CONTROL_SPEC
     return [command, '--root', str(root), '--bundle', str(value['directory']),
         '--envelope', str(value['envelope']), '--authority', str(value['authority']),
         '--pinned-authority-sha256', value['pinned_authority_sha256'],
-        '--target-json', json.dumps(value['target'])]
+        '--target-json', json.dumps(value['target']),
+        '--canary-workspace-id', CONTROL_SPEC['workspace_id'],
+        '--canary-project-id', CONTROL_SPEC['project_id'],
+        '--canary-plan-sha256', CONTROL_SPEC['plan_sha256']]
 
 
 def test_preview_is_read_only_and_install_requires_the_reviewed_source(tmp_path, capsys):
@@ -84,3 +88,14 @@ def test_cli_owned_version_comes_from_original_intent_not_renderer(tmp_path, cap
     assert review['current_version'] == '1.0.0' and review['version'] == '1.1.0'
     assert update.main(args(root, second, 'install') + ['--use-owned-version', '--expected-plan-sha256', review['plan_sha256']]) == 0
     assert json.loads(capsys.readouterr().out)['version'] == '1.1.0'
+
+
+@pytest.fixture(autouse=True)
+def controlled_canary_publication(monkeypatch):
+    """Scope this legacy lifecycle fixture to controlled canary proof only.
+
+    Actual staged source CPU math is tested independently; these tests retain
+    their original signed-layout, admission and recovery assertions.
+    """
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)

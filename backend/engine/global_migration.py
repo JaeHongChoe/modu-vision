@@ -182,7 +182,7 @@ def preview_forward(root):
         return _forward_view(root,owner,*current)
 
 
-def advance(root,*,expected_source_sha256,on_prepared=None):
+def advance(root,*,expected_source_sha256,on_prepared=None,application_update_id=None):
     """Preserve post-cutover writes in another drained current-schema generation.
 
     This is forward recovery, not a historical schema converter or live adoption.
@@ -211,6 +211,7 @@ def advance(root,*,expected_source_sha256,on_prepared=None):
             'source_inventory':before['inventory'],'target_sha256':seal['sealed_sha256'],
             'backup_inventory':_snapshot(backup)['inventory'],'previous_pointer':current[1],
             'fence':fence,'scopes':owner['scopes']}
+        if application_update_id is not None:record['application_update_id']=application_update_id
         atomic_private_json(directory/'journal.json',record);_sync_directories(directory)
         if on_prepared is not None:on_prepared(dict(record))
         _publish(root,owner,identifier,seal,fence=fence)
@@ -256,6 +257,11 @@ def _journal(root,identifier):
 
 
 def _publish(root,owner,identifier,seal,*,fence):
+    # This guard also covers direct CLI/API recovery. An app's callback alone
+    # cannot authorize a subsequently retried database publication.
+    from backend.engine.staged_update_canary import require_publication
+    journal=root/'.global-migrations'/identifier/'journal.json'
+    require_publication(root,_journal(root,identifier)[1] if journal.exists() else {})
     atomic_private_json(root/POINTER_FILE,{'schema_version':1,'installation_id':owner['installation_id'],
         'generation_id':identifier,'sealed_sha256':seal['sealed_sha256'],'fence':fence})
     _sync_directories(root,recursive=False)
@@ -319,7 +325,7 @@ def _resume_restore(root,owner,identifier,path,record,source):
     return {'status':'restored','generation_id':restored_id,'fence':fence}
 
 
-def apply(root,*,expected_source_sha256,on_prepared=None):
+def apply(root,*,expected_source_sha256,on_prepared=None,application_update_id=None):
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
         from backend.engine.application_launch_lease import assert_quiescent
@@ -344,6 +350,7 @@ def apply(root,*,expected_source_sha256,on_prepared=None):
             'source_sha256':before['source_sha256'],'source_inventory':before['inventory'],'target_sha256':seal['sealed_sha256'],
             'backup_inventory':backup_view['inventory'],'schema_conversions':before['schema_conversions'],
             'previous_pointer':previous[1] if previous else None,'fence':fence,'scopes':owner['scopes']}
+        if application_update_id is not None:journal['application_update_id']=application_update_id
         atomic_private_json(directory/'journal.json',journal);_sync_directories(directory)
         if on_prepared is not None:on_prepared(dict(journal))
         _publish(root,owner,identifier,seal,fence=fence)
@@ -362,6 +369,10 @@ def recover(root,identifier,*,action):
             from backend.engine.live_control_migration import recover_live
             return recover_live(root,identifier,action=action)
         if action not in {'finish','restore'}:raise GlobalMigrationError('Select finish or restore')
+        if record.get('application_update_id') is not None or (root/'application-update-pending.json').exists():
+            from backend.engine.staged_update_canary import require_publication
+            require_publication(root,record)
+            if action!='finish':raise GlobalMigrationError('Application-bound restore requires the reviewed update recovery policy')
         def source_view():
             if record.get('kind')!='forward':return preview(root)
             previous=record.get('previous_pointer') or {};prior=previous.get('generation_id')

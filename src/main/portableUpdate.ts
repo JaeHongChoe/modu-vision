@@ -6,10 +6,33 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {readTrustAuthority,readBoundedStableFile} from './releaseTrust';
 import {runPersistentController} from './persistentLaunch';
-import type {NativeSignature,PortableUpdateState,PortableUpdateReview,PortableRecoveryAction,PortableLaunchExpected,PortableLaunchState} from '../types/electron';
+import type {NativeSignature,PortableUpdateState,PortableUpdateReview,PortableRecoveryAction,PortableLaunchExpected,PortableLaunchState,PortableCanaryPins,PortableCanaryReview} from '../types/electron';
 
 const runFile=promisify(execFile),sha=(raw:Buffer)=>crypto.createHash('sha256').update(raw).digest('hex');
 const hex=(value:unknown,n=64)=>typeof value==='string'&&new RegExp(`^[0-9a-f]{${n}}$`).test(value);
+export function validatedCanaryPins(value:unknown):PortableCanaryPins {
+  if(!value||typeof value!=='object'||Array.isArray(value)
+    ||Object.keys(value).sort().join(',')!=='plan_sha256,project_id,workspace_id')throw Error('기준 이미지 검증 계획의 세 가지 pins를 지정하세요.');
+  const row=value as PortableCanaryPins;
+  if(!hex(row.workspace_id,32)||!hex(row.project_id,32)||!hex(row.plan_sha256))throw Error('기준 이미지 검증 계획의 ID와 해시가 올바르지 않습니다.');
+  return {workspace_id:row.workspace_id,project_id:row.project_id,plan_sha256:row.plan_sha256};
+}
+const canaryArgs=(pins:PortableCanaryPins)=>['--canary-workspace-id',pins.workspace_id,'--canary-project-id',pins.project_id,'--canary-plan-sha256',pins.plan_sha256];
+function reviewedCanary(value:unknown,pins:PortableCanaryPins):PortableCanaryReview {
+  const keys=['schema_version','protocol','required','policy','status','supported','pins','capability_sha256','candidate_runtime_source_sha256','reason','candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'];
+  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==keys.sort().join(','))throw Error('Invalid canary review response');
+  const row=value as PortableCanaryReview;
+  if(row.schema_version!==1||row.protocol!==1||row.required!==true||row.policy!=='same_reviewed_source_runtime_worker_v1'
+    ||!['source_ready','requires_target'].includes(row.status)||row.supported!==(row.status==='source_ready')
+    ||['candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'].some(k=>(row as any)[k]!==false))throw Error('Invalid canary review binding or acceptance claim');
+  const echoed=validatedCanaryPins(row.pins);
+  if(Object.keys(pins).some(k=>(echoed as any)[k]!==(pins as any)[k]))throw Error('Canary review differs from the selected independent pins');
+  if(row.status==='source_ready'){
+    if(!hex(row.capability_sha256)||!hex(row.candidate_runtime_source_sha256)||row.reason!==null)throw Error('Invalid ready canary capability');
+  }else if((row.capability_sha256!==null&&!hex(row.capability_sha256))||(row.candidate_runtime_source_sha256!==null&&!hex(row.candidate_runtime_source_sha256))
+    ||typeof row.reason!=='string'||!row.reason.trim()||row.reason.length>500)throw Error('Invalid unavailable canary reason');
+  return {...row,pins:echoed};
+}
 function launchRefusal(row:any):string|undefined{return row&&typeof row==='object'&&!Array.isArray(row)
   &&Object.keys(row).sort().join(',')==='error,schema_version,status'&&row.schema_version===1&&row.status==='refused'
   &&typeof row.error==='string'&&row.error.length>0&&row.error.length<=2048?row.error:undefined;}
@@ -44,7 +67,7 @@ export class PortableUpdateManager {
   readonly options:PortableUpdateOptions;
   private root:string|null=null;
   private busy=false;
-  private review:{id:string;manifest:string;channel:'stable'|'beta';sha:string}|null=null;
+  private review:{id:string;manifest:string;channel:'stable'|'beta';sha:string;canary:PortableCanaryPins;installable:boolean;reason:string|null}|null=null;
   private launchRequests=new Set<string>();
   constructor(options:PortableUpdateOptions){this.options=options;}
 
@@ -119,13 +142,14 @@ export class PortableUpdateManager {
 
   async inspect():Promise<PortableUpdateState>{return this.exclusive(()=>this.readback());}
 
-  async preview(manifest:string,channel:'stable'|'beta'):Promise<PortableUpdateReview>{return this.exclusive(async()=>{
+  async preview(manifest:string,channel:'stable'|'beta',canary:PortableCanaryPins):Promise<PortableUpdateReview>{return this.exclusive(async()=>{
     this.review=null;
     if(!['stable','beta'].includes(channel))throw Error('Select a stable or beta channel');
+    const pins=validatedCanaryPins(canary);
     manifest=unlinked(manifest);const trusted=await this.trusted();
     const target={platform:this.options.platform,arch:this.options.arch,channel,current_version:'0.0.0',origin:trusted.trust.allowed_origins[0]};
     const result=await this.command('preview',['--bundle',path.join(path.dirname(manifest),'artifacts'),'--envelope',manifest,
-      '--target-json',JSON.stringify(target),'--use-owned-version']);
+      '--target-json',JSON.stringify(target),'--use-owned-version',...canaryArgs(pins)]);
     if(result.status!=='reviewed'||!hex(result.plan_sha256)||!hex(result.source_sha256)||!hex(result.installation_id,32)
       ||result.authority_sha256!==trusted.authoritySHA||result.publisher!==trusted.trust.publisher||result.channel!==channel
       ||typeof result.version!=='string'||typeof result.current_version!=='string'||result.application_started!==false
@@ -133,18 +157,21 @@ export class PortableUpdateManager {
       ||(result.application_layout==='darwin-app/v2'&&this.options.platform!=='darwin')
       ||(result.application_layout==='portable/v1'&&result.application_link_count!==0)
       ||!['application_file_count','application_link_count','pack_count','artifact_bytes','database_fence'].every(k=>Number.isSafeInteger(result[k])&&result[k]>=0))throw Error('Invalid portable review response');
-    this.review={id:crypto.randomUUID(),manifest,channel,sha:result.plan_sha256};
-    return {...result,review_id:this.review.id,root:this.root!};
+    const preactivation=reviewedCanary(result.preactivation_canary,pins);
+    this.review={id:crypto.randomUUID(),manifest,channel,sha:result.plan_sha256,canary:pins,installable:preactivation.supported,reason:preactivation.reason};
+    return {...result,preactivation_canary:preactivation,installable:preactivation.supported,review_id:this.review.id,root:this.root!};
   });}
 
   async apply(reviewId:string):Promise<PortableUpdateState>{return this.exclusive(async()=>{
     const review=this.review;
     if(!review||typeof reviewId!=='string'||reviewId!==review.id)throw Error('Review the selected update again before installing');
+    if(!review.installable)throw Error(review.reason||'기준 이미지 검증을 실행할 수 있는 대상이 필요합니다.');
+    const pins=validatedCanaryPins(review.canary);
     // Consumed before the subprocess: a lost response cannot replay installation.
     this.review=null;const trusted=await this.trusted();
     const target={platform:this.options.platform,arch:this.options.arch,channel:review.channel,current_version:'0.0.0',origin:trusted.trust.allowed_origins[0]};
     const result=await this.command('install',['--bundle',path.join(path.dirname(review.manifest),'artifacts'),'--envelope',review.manifest,
-      '--target-json',JSON.stringify(target),'--use-owned-version','--expected-plan-sha256',review.sha]);
+      '--target-json',JSON.stringify(target),'--use-owned-version','--expected-plan-sha256',review.sha,...canaryArgs(pins)]);
     if(result.status!=='committed'||!hex(result.update_id,32))throw Error('Installation response is unconfirmed; read its state before recovery');
     return this.readback();
   });}

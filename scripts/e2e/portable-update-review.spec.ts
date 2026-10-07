@@ -8,6 +8,25 @@ import ts from 'typescript';
 import {test,expect} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 const harness=require('./fixtures/harness.cjs'),runFile=promisify(execFile);
+// Disposable publisher fixtures retain the original inert app entry point,
+// while the known-image worker imports the exact independently pinned backend.
+const sourceReleaseFixture=`
+import hashlib,zipfile
+from backend.engine import runtime_update as update
+def source_release(value):
+ archive=value['directory']/'application.zip'
+ with zipfile.ZipFile(archive) as reader:app=json.loads(reader.read('portable-application.json'))
+ files={'bin/app':b'#!/bin/sh\\nprintf "portable-qualified\\\\n"\\n'}
+ repository=Path.cwd()
+ for path in sorted((repository/'backend').rglob('*.py')):
+  if 'tests' not in path.relative_to(repository/'backend').parts:files[path.relative_to(repository).as_posix()]=path.read_bytes()
+ app['files']=[{'path':name,'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'executable':name=='bin/app'} for name,raw in files.items()]
+ with zipfile.ZipFile(archive,'w') as writer:
+  writer.writestr('portable-application.json',update._canonical(app))
+  for name,raw in files.items():writer.writestr(name,raw)
+ raw=archive.read_bytes();value['payload'].update(sha256=hashlib.sha256(raw).hexdigest(),size=len(raw))
+ value['payload']['artifacts'][0].update(sha256=value['payload']['sha256'],size=len(raw));value['sign'](value['payload'])
+`;
 function load(name='portableUpdate.ts'):any {
  const file=path.join(harness.REPO_ROOT,'src/main',name),m=new Module(file,module);m.filename=file;m.paths=(Module as any)._nodeModulePaths(path.dirname(file));
  const original=m.require.bind(m);m.require=(key:string)=>['./releaseTrust','./persistentLaunch'].includes(key)?load(key.slice(2)+'.ts'):original(key);
@@ -20,13 +39,13 @@ test('portable review binds actual signed bytes and preserves new writes through
 import json,sys,shutil
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
-from backend.tests.test_global_migration import owned
-from backend.tests.test_service_s6_04 import fixture
-temp=Path(sys.argv[1]);root,*_=owned(temp);value=fixture(temp)
+from backend.tests.test_staged_update_canary import source_candidate
+${sourceReleaseFixture}
+temp=Path(sys.argv[1]);root,value,proposal,project,reviewed=source_candidate(temp);source_release(value)
 signing=temp/'fixture-signing-key.der';signing.write_bytes(value['key'].private_bytes(serialization.Encoding.DER,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()));signing.chmod(0o600)
 release=temp/'release';release.mkdir();shutil.copytree(value['directory'],release/'artifacts')
 shutil.copyfile(value['envelope'],release/'release.json')
-print(json.dumps({'root':str(root),'authority':str(value['authority']),'manifest':str(release/'release.json')}))
+print(json.dumps({'root':str(root),'authority':str(value['authority']),'manifest':str(release/'release.json'),'canary':dict(proposal.canary)}))
 `,folder],{cwd:harness.REPO_ROOT,encoding:'utf8'}));
  const resources=path.join(folder,'resources');fs.mkdirSync(resources);fs.mkdirSync(path.join(resources,'backend_bin'));
  fs.copyFileSync(seeded.authority,path.join(resources,'release-trust.json'));
@@ -46,13 +65,13 @@ def interrupt(point):
  if point==boundary:os._exit(91)
 update._checkpoint=interrupt
 raise SystemExit(update.main(sys.argv[2:]))
-`,boundary,...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30000});}
-   return runFile(python,['-m','backend.engine.runtime_update',...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30000});}});
+`,boundary,...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:120000});}
+   return runFile(python,['-m','backend.engine.runtime_update',...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:120000});}});
  let cancelled=true;
  await page.exposeFunction('__portableDispatch',async(operation:string,args:any[])=>{
   if(operation==='select'){if(cancelled){cancelled=false;return null;}return manager.select(seeded.root);}
   if(operation==='inspect')return manager.inspect();
-  if(operation==='preview')return manager.preview(manifest,args[0]);
+  if(operation==='preview')return manager.preview(manifest,args[0],args[1]);
   if(operation==='apply')return manager.apply(args[0]);
   if(operation==='recover')return manager.recover(args[0],args[1]);
   throw Error('Unknown controlled operation');
@@ -62,20 +81,28 @@ raise SystemExit(update.main(sys.argv[2:]))
   const invoke=(operation:string,args:any[]=[]) => (window as any).__portableDispatch(operation,args);
   Object.assign((window as any).api,{
    getDistributionStatus:async()=>({app_version:'0.1.0',platform:'darwin',architecture:'arm64',signature:{status:'development',reason:'Controlled renderer; no native publisher acceptance',checked_at:'controlled'},update:{configured:false,configuration:null,status:'not_configured',release:null,automatic_update_available:false}}),
-   selectPortableUpdateHome:()=>invoke('select'),inspectPortableUpdate:()=>invoke('inspect'),previewPortableUpdate:(c:string)=>invoke('preview',[c]),applyPortableUpdate:(id:string)=>invoke('apply',[id]),recoverPortableUpdate:(a:string,expected:unknown)=>invoke('recover',[a,expected])});
+   selectPortableUpdateHome:()=>invoke('select'),inspectPortableUpdate:()=>invoke('inspect'),previewPortableUpdate:(c:string,pins:unknown)=>invoke('preview',[c,pins]),applyPortableUpdate:(id:string)=>invoke('apply',[id]),recoverPortableUpdate:(a:string,expected:unknown)=>invoke('recover',[a,expected])});
  });
  await page.goto(renderer.url);
  const created=await page.request.post(renderer.origin+'/api/project/create',{data:{name:'Portable update review controls',task:'classification'}});expect(created.ok()).toBe(true);
  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();
  const panel=page.getByRole('region',{name:'별도 portable 앱 업데이트'}),select=panel.getByRole('button',{name:'portable 설치 폴더 선택',exact:true});
+ const bindCanary=async()=>{
+  if(!await panel.getByLabel('검증 워크스페이스 ID',{exact:true}).isVisible())await panel.getByText('기준 이미지 검증 계획 연결',{exact:true}).click();
+  await panel.getByLabel('검증 워크스페이스 ID',{exact:true}).fill(seeded.canary.workspace_id);
+  await panel.getByLabel('검증 프로젝트 ID',{exact:true}).fill(seeded.canary.project_id);
+  await panel.getByLabel('검증 계획 해시',{exact:true}).fill(seeded.canary.plan_sha256);
+ };
  await select.click();await expect(panel.getByText('선택한 설치:',{exact:false})).toHaveCount(0);
  await select.click();await expect(panel).toContainText('버전 0.0.0');
+ await expect(panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true})).toBeDisabled();await bindCanary();
  await panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true}).click();await expect(panel).toContainText('0.0.0 → 1.0.0');
+ await expect(panel).toContainText('업데이트 전에 기준 이미지 검증을 실행할 준비가 됐습니다.');
  const apply=panel.getByRole('button',{name:'검토한 portable 업데이트 적용',exact:true}),confirm=panel.getByLabel('선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다',{exact:true});
  await expect(apply).toBeDisabled();await confirm.check();
  fs.writeFileSync(path.join(seeded.root,'projects/labels.json'),'new write after review');
  await apply.click();await expect(panel.getByRole('alert')).toContainText('review');await expect(apply).toHaveCount(0);expect(fs.existsSync(path.join(seeded.root,'application-active.json'))).toBe(false);
- await panel.getByRole('button',{name:'portable 상태 다시 읽기',exact:true}).click();await panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true}).click();await confirm.check();await apply.click();
+ await panel.getByRole('button',{name:'portable 상태 다시 읽기',exact:true}).click();await panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true}).click();await confirm.check();await apply.click();await expect(select).toBeEnabled({timeout:120000});
  await expect(panel).toContainText('앱·데이터 전환 확인됨');await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 1');
  const newUser=JSON.parse(execFileSync(python,['-c',`
 import json,sys
@@ -84,16 +111,22 @@ from backend.engine.shared_accounts import AccountStore
 root=Path(sys.argv[1]);user=AccountStore(root/'auth/accounts.sqlite').create_user('post-update-user','controlled-fixture-password-123')
 print(json.dumps({'id':user['id']}))
 `,seeded.root],{cwd:harness.REPO_ROOT,encoding:'utf8'}));
- await confirm.check();await panel.getByRole('button',{name:'새 쓰기 보존하며 복구',exact:true}).click();await expect(panel).toContainText('데이터 세대 2');
+ await confirm.check();await panel.getByRole('button',{name:'새 쓰기 보존하며 복구',exact:true}).click();await expect(select).toBeEnabled({timeout:120000});await expect(panel).toContainText('데이터 세대 2');
  const observed=JSON.parse(execFileSync(python,['-c',`
 import json,sys
 from pathlib import Path
 from backend.engine.shared_accounts import AccountStore
 from backend.engine.runtime_update import launch_plan
+from backend.engine import runtime_update as update,staged_update_canary as canary
 root=Path(sys.argv[1]);result=launch_plan(root,sys.argv[2],pinned_authority_sha256=sys.argv[3])
-print(json.dumps({'user_ids':[u['id'] for u in AccountStore(root/'auth/accounts.sqlite').users()], 'labels_preserved':(root/'projects/labels.json').read_bytes()==b'new write after review','version':result['version'],'database_fence':result['database_pointer']['fence'],'launch_argv':result['argv']}))
+record,_=update._intent(root,json.loads((root/update.ACTIVE).read_bytes())['update_id']);attempt=canary._directory(root,record)
+receipt=json.loads((attempt/canary.RECEIPT).read_bytes());proof=json.loads((attempt/'canary-result.json').read_bytes())
+print(json.dumps({'user_ids':[u['id'] for u in AccountStore(root/'auth/accounts.sqlite').users()], 'labels_preserved':(root/'projects/labels.json').read_bytes()==b'new write after review','version':result['version'],'database_fence':result['database_pointer']['fence'],'launch_argv':result['argv'],'canary_receipt':receipt,'canary_semantic_output':proof['semantic_output'],'canary_runtime_execution':proof['flow_result']['runtime_execution']}))
 `,seeded.root,path.join(resources,'release-trust.json'),hash(fs.readFileSync(path.join(resources,'release-trust.json')))],{cwd:harness.REPO_ROOT,encoding:'utf8'}));
  expect(observed.user_ids).toContain(newUser.id);expect(observed.labels_preserved).toBe(true);expect(observed.database_fence).toBe(2);
+ expect(observed.canary_receipt.status).toBe('verified');expect(observed.canary_receipt.execution_scope).toBe('staged_source_runtime_worker');
+ expect(observed.canary_semantic_output.recognized_texts).toEqual(['A']);expect(observed.canary_runtime_execution.device).toBe('cpu');expect(observed.canary_runtime_execution.cpu_threads).toBe(1);
+ for(const key of ['candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'])expect(observed.canary_receipt[key]).toBe(false);
  expect(execFileSync(observed.launch_argv[0],[],{encoding:'utf8'})).toBe('portable-qualified\n');
  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');
  await page.setViewportSize({width:700,height:850});await panel.scrollIntoViewIfNeeded();await evidence.screenshot(page,'portable-update-reopen-new-writes');
@@ -105,14 +138,16 @@ import json,sys,shutil
 from pathlib import Path
 from cryptography.hazmat.primitives.serialization import load_der_private_key
 from backend.tests.test_service_s6_04 import fixture
+${sourceReleaseFixture}
 temp=Path(sys.argv[1]);key=load_der_private_key((temp/'fixture-signing-key.der').read_bytes(),password=None)
-value=fixture(temp,version='1.1.0',key=key,authority=temp/'authority.json')
+value=fixture(temp,version='1.1.0',key=key,authority=temp/'authority.json');source_release(value)
 release=temp/'release-next';release.mkdir();shutil.copytree(value['directory'],release/'artifacts');shutil.copyfile(value['envelope'],release/'release.json')
 print(json.dumps({'manifest':str(release/'release.json')}))
 `,folder],{cwd:harness.REPO_ROOT,encoding:'utf8'}));manifest=next.manifest;
  for(const boundary of ['before_database','after_database']){
+  await bindCanary();
   await panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true}).click();await expect(panel).toContainText('1.0.0 → 1.1.0');await confirm.check();
-  interruptInstall=boundary;await apply.click();await expect(panel.getByRole('alert')).toBeVisible();
+  interruptInstall=boundary;await apply.click();await expect(select).toBeEnabled({timeout:120000});await expect(panel.getByRole('alert')).toBeVisible();
   await panel.getByRole('button',{name:'portable 상태 다시 읽기',exact:true}).click();await expect(panel).toContainText('중단된 업데이트 · 복구 필요');
   const abort=panel.getByRole('button',{name:'데이터 전환 전 설치 취소',exact:true});
   if(boundary==='before_database'){await expect(abort).toBeVisible();await expect(abort).toBeDisabled();await confirm.check();await abort.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');}
@@ -120,7 +155,7 @@ print(json.dumps({'manifest':str(release/'release.json')}))
  }
  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');
  await evidence.screenshot(page,'portable-update-interruption-finish-reopen');
- evidence.note('portable_update_review',{actual_main_manager:true,actual_python_signed_update_and_forward_recovery:true,commands,source_changed_after_review_refused:true,controlled_application_entrypoint_executed:true,new_user_preserved:true,labels_preserved:observed.labels_preserved,database_fence:observed.database_fence,pre_database_abort_reopens_prior_pair:true,post_database_finish_reopens_new_pair:true,post_database_abort_absent:true,controlled_child_exit_boundaries:['before_database','after_database'],physical_power_loss:false,native_signatures:'controlled output only; not real publisher acceptance',renderer_host:'browser with controlled bridge',native_electron:false,windows:false});
+ evidence.note('portable_update_review',{actual_main_manager:true,actual_python_signed_update_and_forward_recovery:true,commands,source_changed_after_review_refused:true,controlled_application_entrypoint_executed:true,new_user_preserved:true,labels_preserved:observed.labels_preserved,database_fence:observed.database_fence,pre_database_abort_reopens_prior_pair:true,post_database_finish_reopens_new_pair:true,post_database_abort_absent:true,controlled_child_exit_boundaries:['before_database','after_database'],actual_staged_source_cpu_canary:true,generated_ocr_checkpoint:true,canary_semantic_output:observed.canary_semantic_output,canary_runtime_execution:observed.canary_runtime_execution,physical_power_loss:false,native_signatures:'controlled output only; not real publisher acceptance',renderer_host:'browser with controlled bridge',native_electron:false,windows:false,model_quality_approved:false,release_ready:false});
 });
 
 test('native desktop refuses unprovisioned portable changes before opening a directory dialog',{tag:'@electron'},async({electronSession,evidence})=>{

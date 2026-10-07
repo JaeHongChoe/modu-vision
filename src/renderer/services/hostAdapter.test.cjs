@@ -40,3 +40,7 @@ test('S1-10: components never call the bridge directly (backend status in App an
    for(const match of text.matchAll(/window(?: as any\))?\.api\??\.(\w+)/g)){const allowed=(file.endsWith('App.tsx')&&/^(getBackendStatus|onBackendStatusChange|onBackendCrashed)$/.test(match[1]))
     ||(file.endsWith(path.join('services','api.ts'))&&match[1]==='getBackendPort')||(file.endsWith('WizardHeader.tsx')&&match[1]==='platform');if(!allowed)offenders.push(`${path.relative(root,file)}: ${match[0]}`);}}}};
  visit(root);assert.deepEqual(offenders,[]);});
+test('portable canary pins pass through the desktop host without widening the capability',()=>{
+ const pins={workspace_id:'1'.repeat(32),project_id:'2'.repeat(32),plan_sha256:'3'.repeat(64)},calls=[];
+ return withWindow({api:{previewPortableUpdate:async(...args)=>{calls.push(args);return null;}}},async()=>{const{host}=load();assert.equal(await host.updates.previewPortable('stable',pins),null);assert.deepEqual(calls,[['stable',pins]]);});
+});

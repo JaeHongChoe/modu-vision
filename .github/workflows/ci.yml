@@ -204,6 +204,16 @@ jobs:
           backend/tests/test_live_specialist_control.py
           backend/tests/test_local_training_process.py
           backend/tests/test_service_s6_04.py
+          backend/tests/test_staged_update_canary.py
+          backend/tests/test_application_launch_execution.py
+          backend/tests/test_application_launch_controller.py
+          backend/tests/test_application_launch_lease.py
+          backend/tests/test_application_launch_handshake.py
+          backend/tests/test_live_update_inspection.py
+          backend/tests/test_owned_launch_build_inventory.py
+          backend/tests/test_pyinstaller_command_boundary.py
+          backend/tests/test_migration_guard_writer_ownership.py
+          backend/tests/test_privileged_reader_ownership.py
           backend/tests/test_native_update_layout.py
           backend/tests/test_portable_update_review.py
           backend/tests/test_global_restore_recovery.py

@@ -23,7 +23,7 @@ export interface ElectronAPI {
   verifyOfflineUpdate:()=>Promise<ManualDelivery|null>;
   selectPortableUpdateHome:()=>Promise<PortableUpdateState|null>;
   inspectPortableUpdate:()=>Promise<PortableUpdateState>;
-  previewPortableUpdate:(channel:'stable'|'beta')=>Promise<PortableUpdateReview|null>;
+  previewPortableUpdate:(channel:'stable'|'beta',canary:PortableCanaryPins)=>Promise<PortableUpdateReview|null>;
   applyPortableUpdate:(reviewId:string)=>Promise<PortableUpdateState>;
   recoverPortableUpdate:(action:PortableRecoveryAction,expected:{installation_id:string;update_id:string})=>Promise<PortableUpdateState>;
   launchPortableUpdate:(expected:PortableLaunchExpected)=>Promise<PortableLaunchState>;
@@ -58,7 +58,9 @@ export type PortableRecoveryAction='finish'|'forward'|'abort';
 export interface PortableLaunchExpected {installation_id:string;update_id:string;database_fence:number}
 export interface PortableLaunchState extends PortableLaunchExpected {schema_version:1;root:string;status:'absent'|'reserved'|'starting'|'ready'|'recovery_required'|'exited';nonce:string|null;bootstrap_binding_verified:boolean;readiness:'unverified'|'authenticated_controller_binding_only';native_app_handshake_verified:false;backend_handshake_verified:false;actual_application_inference_verified:false;release_ready:false;reason?:string}
 export interface PortableUpdateState {status:'ready'|'committed'|'recovery_required';root:string;installation_id:string;version:string;update_id:string|null;database_fence:number;allowed_recovery:PortableRecoveryAction[];application_started:false;native_signature_acceptance:'unqualified';model_quality_acceptance:'required';launch_state?:PortableLaunchState}
-export interface PortableUpdateReview {status:'reviewed';root:string;review_id:string;installation_id:string;plan_sha256:string;source_sha256:string;envelope_sha256:string;authority_sha256:string;version:string;current_version:string;publisher:string;channel:'stable'|'beta';application_file_count:number;application_layout:'portable/v1'|'darwin-app/v2';application_link_count:number;pack_count:number;artifact_bytes:number;database_fence:number;copied_session_policy:'revoked';application_started:false}
+export interface PortableCanaryPins {workspace_id:string;project_id:string;plan_sha256:string}
+export interface PortableCanaryReview {schema_version:1;protocol:1;required:true;policy:'same_reviewed_source_runtime_worker_v1';status:'missing_pins'|'source_ready'|'requires_target';supported:boolean;pins:PortableCanaryPins|null;capability_sha256:string|null;candidate_runtime_source_sha256:string|null;reason:string|null;candidate_main_launch_verified:false;native_application_verified:false;frozen_backend_verified:false;owned_backend_execution_origin_verified:false;worker_process_tree_exit_verified:false;model_quality_verified:false;release_ready:false}
+export interface PortableUpdateReview {status:'reviewed';root:string;review_id:string;installation_id:string;plan_sha256:string;source_sha256:string;envelope_sha256:string;authority_sha256:string;version:string;current_version:string;publisher:string;channel:'stable'|'beta';application_file_count:number;application_layout:'portable/v1'|'darwin-app/v2';application_link_count:number;pack_count:number;artifact_bytes:number;database_fence:number;copied_session_policy:'revoked';application_started:false;preactivation_canary:PortableCanaryReview;installable:boolean}
 
 export interface SharedConnection {server_url:string;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}
 

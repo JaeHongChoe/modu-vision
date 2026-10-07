@@ -132,3 +132,14 @@ def test_native_directory_aliases_cannot_form_a_recursive_traversal_cycle(tmp_pa
  value=native(tmp_path,change)
  with pytest.raises(update.UpdateError,match='cycle|Cyclic'):
   update._portable(value['directory']/'application.zip',value['payload'])
+
+
+@pytest.fixture(autouse=True)
+def controlled_canary_publication(monkeypatch):
+    """Scope this legacy lifecycle fixture to controlled canary proof only.
+
+    Actual staged source CPU math is tested independently; these tests retain
+    their original signed-layout, admission and recovery assertions.
+    """
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)

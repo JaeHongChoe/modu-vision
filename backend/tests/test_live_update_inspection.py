@@ -62,3 +62,14 @@ def test_pending_pointer_appearing_before_shared_admission_refuses_without_readb
     monkeypatch.setattr(update, 'store_admission', race)
     with pytest.raises(ValueError, match='update|recovery'):
         update.inspect_update(root, value['authority'], pinned_authority_sha256=value['pinned_authority_sha256'])
+
+
+@pytest.fixture(autouse=True)
+def controlled_canary_publication(monkeypatch):
+    """Scope this legacy lifecycle fixture to controlled canary proof only.
+
+    Actual staged source CPU math is tested independently; these tests retain
+    their original signed-layout, admission and recovery assertions.
+    """
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)

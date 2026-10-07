@@ -2,6 +2,8 @@
 
 Signing keys and the tiny executable are controlled qualification fixtures;
 these tests do not establish a real publisher, OS installer or model approval.
+The test-only preactivation provider exercises durable guard/pointer shape;
+actual staged source CPU math is separately exercised in test_staged_update_canary.
 """
 import base64
 import hashlib
@@ -17,6 +19,12 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from backend.tests.test_global_migration import owned
+
+
+@pytest.fixture(autouse=True)
+def controlled_preactivation_guard(monkeypatch):
+    from backend.tests.test_staged_update_canary import controlled_proof
+    controlled_proof(monkeypatch)
 
 
 def canonical(value):
@@ -65,8 +73,9 @@ def fixture(tmp_path, *, version='1.0.0', key=None, authority=None, extra=None):
 
 def plan(root, value):
     from backend.engine.runtime_update import plan_update
+    from backend.tests.test_staged_update_canary import CONTROL_SPEC
     return plan_update(root, value['directory'], value['envelope'], value['authority'],
-        pinned_authority_sha256=value['pinned_authority_sha256'],target=value['target'])
+        pinned_authority_sha256=value['pinned_authority_sha256'],target=value['target'],canary=CONTROL_SPEC)
 
 
 def test_signed_offline_portable_install_launch_and_next_update(tmp_path):
@@ -172,8 +181,11 @@ def test_launch_refuses_changed_application_and_database_pointer(tmp_path):
     # A separate migration must never silently attach an otherwise valid app.
     with zipfile.ZipFile(value['directory']/'application.zip') as archive:executable.write_bytes(archive.read('bin/app'))
     executable.chmod(0o500)
-    global_migration.advance(root,expected_source_sha256=global_migration.preview_forward(root)['source_sha256'])
-    with pytest.raises(ValueError,match='database|generation|pair'):launch_plan(root,value['authority'],pinned_authority_sha256=value['pinned_authority_sha256'])
+    pointers={name:(root/name).read_bytes() for name in ('application-active.json','global-active.json')}
+    with pytest.raises(ValueError,match='canary'):
+        global_migration.advance(root,expected_source_sha256=global_migration.preview_forward(root)['source_sha256'])
+    assert {name:(root/name).read_bytes() for name in pointers}==pointers
+    assert launch_plan(root,value['authority'],pinned_authority_sha256=value['pinned_authority_sha256'])['database_pointer']==command['database_pointer']
 
 
 def test_control_link_cannot_redirect_update_writes(tmp_path):
@@ -195,11 +207,14 @@ def test_abrupt_subprocess_exit_keeps_recoverable_application_database_pair(tmp_
     script='''
 import json,os,sys
 from backend.engine import runtime_update as update
+from backend.tests.test_staged_update_canary import controlled_proof,CONTROL_SPEC
+from pytest import MonkeyPatch
+controlled_proof(MonkeyPatch())
 v=json.loads(sys.argv[1])
 def power_loss(point):
     if point==v['failure']:os._exit(17)
 update._checkpoint=power_loss
-proposal=update.plan_update(v['root'],v['directory'],v['envelope'],v['authority'],pinned_authority_sha256=v['pinned_authority_sha256'],target=v['target'])
+proposal=update.plan_update(v['root'],v['directory'],v['envelope'],v['authority'],pinned_authority_sha256=v['pinned_authority_sha256'],target=v['target'],canary=CONTROL_SPEC)
 update.install_update(v['root'],proposal)
 '''
     process=subprocess.run([sys.executable,'-c',script,json.dumps(arguments)],cwd=Path(__file__).resolve().parents[2],capture_output=True,text=True,timeout=30)
@@ -307,8 +322,10 @@ def test_direct_launcher_dispatch_uses_explicit_offline_update_cli(tmp_path):
         '--root',str(root),'--bundle',str(value['directory']),'--envelope',str(value['envelope']),
         '--authority',str(value['authority']),'--pinned-authority-sha256',value['pinned_authority_sha256'],
         '--target-file',str(target)],env=env,cwd=repository,capture_output=True,text=True,timeout=30)
-    assert result.returncode==0,result.stdout+result.stderr
-    assert json.loads(result.stdout)['status']=='committed'
+    assert result.returncode==2,result.stdout+result.stderr
+    refusal=json.loads(result.stdout)
+    assert refusal['status']=='refused' and 'canary' in refusal['error']
+    assert not (root/'application-active.json').exists() and not (root/'global-active.json').exists()
     assert 'fixture-password' not in result.stdout
 
 
