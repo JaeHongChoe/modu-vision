@@ -307,7 +307,7 @@ def validate_remote(root, scopes, path, journal):
         raise ValueError('Remote received model provenance differs from its launch or receipt')
 
 
-def journal_blockers(source_root, scopes, *, installation_root=None, live_jobs=frozenset()):
+def journal_blockers(source_root, scopes, *, installation_root=None, live_jobs=frozenset(),live_remote_jobs=frozenset()):
     """Inspect every declared index file before a drained generation is copied."""
     from backend.engine.global_migration import _read_db
     source_root = Path(source_root).absolute()
@@ -320,9 +320,10 @@ def journal_blockers(source_root, scopes, *, installation_root=None, live_jobs=f
         if index.is_symlink() or not index.is_dir():
             errors.append('Runtime '+kind+' recovery index must be an unlinked directory');continue
         entries.extend((kind,path) for path in sorted(index.iterdir()))
-    # The separate live migration validates these exact local entries, specs,
+    # The separate live migration validates these exact selected entries, specs,
     # processes, namespaces and fences before asking for terminal history.
-    entries=[(kind,path) for kind,path in entries if not (kind=='local' and path.stem in live_jobs)]
+    entries=[(kind,path) for kind,path in entries if not ((kind=='local' and path.stem in live_jobs)
+        or (kind=='remote' and path.stem in live_remote_jobs))]
     if len(entries) > 1000:
         return errors + ['Runtime history exceeds the bounded 1000-journal conversion']
     if not entries:return errors

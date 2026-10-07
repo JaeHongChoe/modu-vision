@@ -1,4 +1,4 @@
-"""Opt-in live basic workers in one owned POSIX installation; never relaunch.
+"""Opt-in live basic and SSH training observers in an owned POSIX installation.
 
 This path is deliberately separate from drained/historical migration. Compute
 outputs remain at their original registered paths. Only cooperative short
@@ -23,12 +23,22 @@ def validate_adoptions(value,installation_id):
     fields={'job_id','lease_owner','attempt_fence','attempt_number','owner_pid','owner_created_at',
         'owner_command_sha256','spec_sha256','output_dir','reserved','uncertain'}
     if (not isinstance(value,dict) or set(value)!={'protocol_version','installation_id','workers'}
-            or type(value['protocol_version']) is not int or value['protocol_version']!=1
+            or type(value['protocol_version']) is not int or value['protocol_version'] not in (1,2)
             or value['installation_id']!=installation_id or not isinstance(value['workers'],list)
             or not 1<=len(value['workers'])<=1000):raise ValueError('Invalid live adoption descriptor')
     seen=set()
     for row in value['workers']:
-        if (not isinstance(row,dict) or set(row)!=fields or not isinstance(row.get('job_id'),str)
+        expected=fields
+        if value['protocol_version']==2:
+            kind=row.get('worker_kind') if isinstance(row,dict) else None
+            if kind not in {'local_basic','remote_training'}:raise ValueError('Invalid live control worker kind')
+            expected=fields|{'worker_kind'}
+            if kind=='remote_training':
+                expected|={'remote_profile_sha256','remote_handle_sha256'}
+                if any(not isinstance(row.get(key),str) or not re.fullmatch('[a-f0-9]{64}',row[key])
+                       for key in ('remote_profile_sha256','remote_handle_sha256')):
+                    raise ValueError('Invalid remote live launch binding')
+        if (not isinstance(row,dict) or set(row)!=expected or not isinstance(row.get('job_id'),str)
                 or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}',row['job_id']) or row['job_id'] in seen
                 or not isinstance(row['lease_owner'],str) or not 1<=len(row['lease_owner'])<=256
                 or any(type(row[key]) is not int or row[key]<1 for key in ('attempt_fence','attempt_number','owner_pid'))
@@ -75,7 +85,11 @@ def journal_admission(journal):
         configured=os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR')
         if not configured or Path(configured).absolute()!=root:
             raise ValueError('Cooperative journal index differs from its original installation')
-        with maintenance_guard(root,wait=True):yield
+        with maintenance_guard(root,wait=True):
+            if 'control_owner' in journal:
+                from backend.engine.live_remote_control import remote_journal_fence
+                remote_journal_fence(root,journal)
+            yield
 
 
 class _ObserverStore:
@@ -133,9 +147,27 @@ def _inspect_workers(root,owner):
             if not isinstance(identifier,str) or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}',identifier):
                 raise ValueError('Live job identity is not canonical')
             if row['kind']!='training' or row['state'] not in {'running','stopping','detached','disconnected'} or row['source']!='api':
-                raise ValueError('Only an already launched current local basic job can participate')
+                raise ValueError('Only an already launched current training job can participate')
             output=Path(row['output_dir']);index=root/scopes['local_journals']/(identifier+'.json')
             if not output.is_absolute() or output!=output.resolve() or not output.is_relative_to(root):raise ValueError('Live output must stay in the original installation')
+            matches=[r for r in locations if output.is_relative_to(Path(r[3]))]
+            if len(matches)!=1:raise ValueError('Live output lacks its original registered project')
+            key,workspace,project,directory=matches[0]
+            metadata,_=_read(root,Path(directory)/'project.json')
+            active=[a for a in attempts if a['job_id']==identifier]
+            if len(active)!=1:raise ValueError('Live worker must have one open original attempt')
+            claims=[r for r in reservations if r['job_id']==identifier]
+            remote_index=root/scopes['remote_journals']/(identifier+'.json')
+            if remote_index.exists() or remote_index.is_symlink():
+                if index.exists() or index.is_symlink():raise ValueError('Live job has conflicting local and remote controls')
+                from backend.engine.live_remote_control import inspect_remote_worker
+                journal,carried=inspect_remote_worker(root,owner,row,active[0],claims)
+                if ((row['workspace_id'],row['project_key'],row['project_id'])!=(workspace,key,project)
+                        or metadata.get('id')!=project or output!=registered_model_output(metadata.get('models_dir',''),journal)
+                        or not Path(metadata.get('models_dir','')).is_relative_to(Path(directory))):
+                    raise ValueError('Live remote worker namespace or model directory differs')
+                workers.append(carried)
+                continue
             for path in (output,index,output/'local_job.json',output/'local_spec.json'):
                 if any(p.is_symlink() for p in (path,*path.parents)) or not path.exists():raise ValueError('Live controls are missing or linked')
             journal,index_raw=_read(root,index);spec_path=output/'local_spec.json';spec,spec_raw=_read(root,spec_path)
@@ -157,20 +189,13 @@ def _inspect_workers(root,owner):
                 'owner_pid':journal['owner_pid'],'owner_created_at':journal['owner_created_at'],
                 'owner_command_sha256':journal['owner_command_sha256']}
             if ready!=expected:raise ValueError('Worker has not acknowledged this cooperative control protocol and identity')
-            matches=[r for r in locations if output.is_relative_to(Path(r[3]))]
-            if len(matches)!=1:raise ValueError('Live output lacks its original registered project')
-            key,workspace,project,directory=matches[0]
-            metadata,_=_read(root,Path(directory)/'project.json')
             if ((row['workspace_id'],row['project_key'],row['project_id'])!=(workspace,key,project)
                     or metadata.get('id')!=project or output!=registered_model_output(metadata.get('models_dir',''),journal)
                     or not Path(metadata.get('models_dir','')).is_relative_to(Path(directory))):
                 raise ValueError('Live worker namespace or model directory differs')
-            active=[a for a in attempts if a['job_id']==identifier]
-            if len(active)!=1:raise ValueError('Live worker must have one open original attempt')
             process=_owned(journal);members=_owned_members(journal)
             if process is None or not members or process.pid not in {p.pid for p in members}:
                 raise ValueError('Live process identity/session/token could not be proven')
-            claims=[r for r in reservations if r['job_id']==identifier]
             if any(r['owner']!=spec['lease_owner'] or r['fence']!=active[0]['fencing_token'] or r['remote'] or r['app_schema']!=2 for r in claims):
                 raise ValueError('Live reservation owner/fence/protocol differs')
             if journal.get('status') not in {'running','launched','launching'}:
@@ -194,7 +219,10 @@ def _view(root,owner):
     workers,errors=_inspect_workers(root,owner)
     selected={r['job_id'] for r in workers};scopes=owner['scopes']
     live={scopes['ledger']:selected,scopes['leases']:selected}
-    live.update({scopes['local_journals']+'/'+identifier+'.json':{identifier} for identifier in selected})
+    remote={r['job_id'] for r in workers if r.get('worker_kind')=='remote_training'}
+    local=selected-remote
+    live.update({scopes['local_journals']+'/'+identifier+'.json':{identifier} for identifier in local})
+    live.update({scopes['remote_journals']+'/'+identifier+'.json':{identifier} for identifier in remote})
     outputs=[Path(r['output_dir']) for r in workers]
     files=[p for p in migration._files(root) if not any(p==d or p.is_relative_to(d) for d in outputs)]
     view=inventory(root,kind='owned_global_live',paths=files,live_jobs=live)
@@ -208,18 +236,20 @@ def _view(root,owner):
             from backend.remote.profiles import ProfileStore
             ProfileStore(path)._read()
     from backend.engine.terminal_runtime_history import journal_blockers
-    if not errors:errors+=journal_blockers(root,scopes,live_jobs=selected)
+    if not errors:errors+=journal_blockers(root,scopes,live_jobs=local,live_remote_jobs=remote)
     if not errors:errors+=migration._authority_blockers(root,scopes)
     if active_generation(root):errors.append('Initial live cutover only; an active generation must be drained before forward migration')
     if any((root/name).exists() for name in ('application-active.json','application-update-pending.json')):
         errors.append('App/DB paired installations require their own drained update transaction')
-    adoption={'protocol_version':1,'installation_id':owner['installation_id'],'workers':workers}
+    if remote:
+        workers=[r if r['job_id'] in remote else {**r,'worker_kind':'local_basic'} for r in workers]
+    adoption={'protocol_version':2 if remote else 1,'installation_id':owner['installation_id'],'workers':workers}
     if not errors:validate_adoptions(adoption,owner['installation_id'])
     source_hash=migration.digest({'inventory':view['source_snapshot']['sha256'],
         'owner_sha256':hashlib.sha256((root/migration.OWNER_FILE).read_bytes()).hexdigest(),'adoption':adoption})
     view.update(source_sha256=source_hash,installation_id=owner['installation_id'],live_adoptions=adoption,
         can_apply=not errors,blockers=sorted(set(errors)),schema_conversions={},
-        ownership_policy='same owned installation, proven cooperative current local workers only; no relaunch')
+        ownership_policy='same owned installation, positively proven cooperative current workers only; no relaunch')
     return view
 
 

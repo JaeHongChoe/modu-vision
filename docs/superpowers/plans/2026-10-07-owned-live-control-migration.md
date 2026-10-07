@@ -35,3 +35,10 @@
 4. Rebind only the existing training observer for a carried job/fence; verify later reattachment rejects it.
 5. Run an actual owned CPU CLI training across cutover plus failure, uncertainty, duplicate-launch and original-byte regressions.
 6. Inspect the diff, run related migration/training tests and publish scoped code and evidence. Keep unsupported remote/old protocol and external acceptance conditions pending.
+
+## Remote extension of the existing plan
+
+- Admit only a current API training attempt in this same owned POSIX installation. The immutable uploaded specification, registered credential-free profile and local observer acknowledgment must match the original project, actor, reservation and attempt fence.
+- Preview reads the actual remote worker identity and positively confirms liveness through the existing strict SSH transport. Docker's short worker hostname must resolve to the same full container ID and exact owned run name. Exited, unknown or mismatched workers remain blocked.
+- Carry the original reservation and uncertainty without launch, signal or cleanup. The cooperative remote journal and original ledger observer follow the sealed control generation. An ordinary later backend reattachment must already have a higher ledger fence and a fresh reservation owner; it can only observe the same remotely proven worker.
+- First run controlled identity/failure/reattachment tests and related local/remote regressions. Then execute a new bounded synthetic CPU job on the already authorized server across the actual cutover, checking remote identity, source data, once-only completion and frozen original stores. Keep specialist/old-protocol and physical acceptance distinct.

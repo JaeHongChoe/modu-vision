@@ -119,7 +119,8 @@ def _read_journal(output: Path, job_id: str) -> dict[str, Any]:
 
 
 def _save_journal(journal: dict[str, Any]) -> None:
-    with _JOURNAL_LOCK, store_admission(_journal_index()):
+    from backend.engine.live_control_migration import journal_admission
+    with _JOURNAL_LOCK, journal_admission(journal), store_admission(_journal_index()):
         output = Path(journal["output_dir"])
         path = output / "remote_job.json"
         # A cancellation can arrive from the API while the monitor holds its
@@ -582,6 +583,8 @@ def _transfer_and_launch(record: Any, profile: ComputeProfile, transport: SSHTra
     handle = transport.launch(profile, ['-m', 'backend.remote.worker', journal.get('operation', 'train'),
                                       '--spec', _remote_path(profile, job_id, 'spec.json')], job_id)
     journal.update(state='launched', remote_handle=handle)
+    from backend.engine.live_remote_control import acknowledge_remote_control
+    acknowledge_remote_control(journal)
     _save_journal(journal)
     record.phase = 'running'
     return True
@@ -609,6 +612,10 @@ def run_remote_training(
             journal = _read_journal(output, record.job_id)
             if journal.get("job_id") != record.job_id or ComputeProfile.model_validate(journal['profile']) != profile:
                 raise ValueError("Remote journal does not match this job and server")
+            recovered_observer=getattr(record,'_global_remote_recovery',None)
+            if recovered_observer is not None:
+                journal.update(control_owner=recovered_observer)
+                _save_journal(journal)
             record.dataset_path = journal["dataset_path"]
             if journal.get('state') == 'transferring':
                 launched = False
@@ -636,6 +643,9 @@ def run_remote_training(
                     "dataset_fingerprint": record.dataset_fingerprint,
                     "launch_spec": getattr(record, 'launch_spec', None) or {},
                 }
+            binding=getattr(record,'_global_remote_control',None)
+            if binding is not None and journal.get('operation')=='train':
+                journal.update(global_control_protocol=1,control_owner=binding)
             journal["state"] = "preparing"
             _save_journal(journal)
             record.phase = "preparing"

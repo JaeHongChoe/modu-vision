@@ -910,6 +910,9 @@ class TrainingJobManager:
             try:
                 if record.ledger is not None:
                     record.ledger.launched('remote')
+                    from backend.engine.live_remote_control import bind_remote_control,bind_remote_recovery
+                    record._global_remote_control=bind_remote_control(record,self._leases)
+                    record._global_remote_recovery=bind_remote_recovery(record,self._leases) if record._global_remote_control is None else None
                 with split_root_scope(record.split_manifest_root):
                     result = record.remote_runner(record)
                 state = result.get("status", "failed")
