@@ -1,0 +1,143 @@
+{
+  "schema": "modu-vision.source-capture-safety-controls/v1",
+  "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+  "actual_gui": [
+    {
+      "case": "derived-source-controls",
+      "mode": "browser",
+      "receipt": "2026-10-07-derived-source-controls-ba52900-browser.json",
+      "receipt_sha256": "75eb1029f880302b73a28dc7be6aa51dae12d888618137c1f043a4ce29d6ce37"
+    },
+    {
+      "case": "derived-source-controls",
+      "mode": "electron",
+      "receipt": "2026-10-07-derived-source-controls-ba52900-electron.json",
+      "receipt_sha256": "1ad6537d749fca266fc8216c8e51f7b925cfebaf9e854f7877f6bef66bd5685c"
+    },
+    {
+      "case": "capture-safety-controls",
+      "mode": "browser",
+      "receipt": "2026-10-07-capture-safety-controls-ba52900-browser.json",
+      "receipt_sha256": "b74b2a7049fd3cacbefe0c50e2febfeec1287f079f3c49b88ff01e92537e0626"
+    },
+    {
+      "case": "capture-safety-controls",
+      "mode": "electron",
+      "receipt": "2026-10-07-capture-safety-controls-ba52900-electron.json",
+      "receipt_sha256": "7b4bfafbba02f3e23d205ac9d87fbdda08b433d70afcae2951d748696c608201"
+    },
+    {
+      "case": "review-queue-handoff",
+      "mode": "browser",
+      "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
+      "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd"
+    },
+    {
+      "case": "review-queue-handoff",
+      "mode": "electron",
+      "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
+      "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65"
+    }
+  ],
+  "existing_pending_dimensions_verified": 10,
+  "new_curated_actions": 4,
+  "new_verified_dimensions": 26,
+  "unexecuted_new_dimensions": [
+    "capture-service-registration.invalid",
+    "capture-sampling-policy-save.handoff"
+  ],
+  "derived_observations": {
+    "derived-source-select": {
+      "empty": "No reviewed derived versions displayed the actual empty registry without selection buttons, retaining the original source. With a branch selected its selection button was disabled.",
+      "invalid": "Temporarily changing only the owned adopted image caused the actual derived-adoption GET to return409 with a changed-source warning. No project source PUT was emitted and the original selection remained. Exact original branch bytes were restored in finally before deliberate retry.",
+      "error": "A delayed controlled503 locked selection/return/refresh controls, displayed the explicit failure and emitted no project source PUT. All original images, split, actual saved annotation JSON and referenced masks, derived image, review and adoption record hashes stayed exact.",
+      "cancel": "Closing the panel before submitting selection emitted no source PUT. Reopening preserved the original selection and enabled only the applicable explicit selection.",
+      "reopen": "After deliberate successful selection, actual reload retained the reviewed branch source and correctly disabled its selection/enabled verified return; all protected file hashes remained exact."
+    },
+    "verified-original-return": {
+      "empty": "Verified return was disabled when the active source was already the original; an empty reviewed-version registry exposed no applicable return controls.",
+      "invalid": "Temporarily changing only the owned parent image caused the actual verified-parent GET to return409 with the parent-source/labels/split/policy-changed warning. No source PUT was emitted and the adopted branch remained selected. Exact parent bytes were restored before deliberate retry.",
+      "error": "A controlled503 when verifying parent provenance retained the selected branch and exact protected files without a project source PUT. Removing the explicit transport fixture and retrying returned only after actual provenance verification.",
+      "cancel": "Closing before submitting return preserved the selected branch and emitted no source write. Reopening retained the applicable return control.",
+      "reopen": "Deliberate verified return and actual reload retained the exact parent source, enabled future explicit branch selection and disabled further parent return. Original vector annotations, referenced masks, images, split and immutable branch/review records retained exact hashes; no training was submitted."
+    }
+  },
+  "capture_observations": {
+    "capture-service-registration": {
+      "success": "Six actual persisted, controlled synthetic service job records were explicitly registered. Captures retained source prediction, origin, UNKNOWN truth and separate failure/duplicate/review routing. The helper did not execute a model.",
+      "empty": "An empty job-ID input intentionally listed recent completed owned service records and registered all six; an initially empty intake displayed no candidates and created no index file.",
+      "error": "An explicit controlled503 before registration acceptance displayed failure and created no intake index. Removing the transport fixture and deliberately retrying produced the six records.",
+      "cancel": "Closing after typing an unsubmitted service job ID created no intake index; reopening did not register automatically.",
+      "reopen": "Actual reload after review, inactive adoption and policy saving retained the selected candidate row and saved version, source choice and exact intake index hash.",
+      "handoff": "The registered REVIEW capture was explicitly selected, reviewed and copied into a separate inactive version. Its source SHA matched the copied image; UNKNOWN truth, not_used usage and needs_review workflow remained, without training or source activation."
+    },
+    "capture-candidate-review": {
+      "success": "An explicitly typed fixture reviewer and note produced an actual saved adopt decision, advancing the candidate revision only once after deliberate retry; truth remained UNKNOWN.",
+      "empty": "An empty reviewer disabled the actual submit control and retained the exact intake index.",
+      "invalid": "A101-character reviewer reached the actual request validator and returned422 while the intake index SHA remained exact.",
+      "error": "A controlled503 retained exact bytes. A separate actual fixture reviewer then advanced the persisted revision with reject; stale UI adopt returned actual409 and preserved that writer SHA. Explicit refresh, row reselection and retry saved the next revision.",
+      "cancel": "Closing with an unsubmitted review note preserved the exact intake index; no review decision was accepted.",
+      "reopen": "Actual reload showed the saved adopt reviewer on the same candidate while keeping the final index bytes unchanged.",
+      "handoff": "Only the explicitly reviewed candidate became eligible for deliberate inactive adoption. Copy preserved its source SHA and UNKNOWN/not_used/needs_review states; no human quality approval or training was inferred."
+    },
+    "capture-inactive-adoption": {
+      "success": "An explicitly reviewed and selected capture created one separate owned inactive version whose image SHA matched its registered source. The original source selection was retained.",
+      "empty": "No selected eligible candidate disabled adoption. A selected candidate with a blank or whitespace-only version name also disabled submission without a version or index change.",
+      "invalid": "A201-character version name reached the actual validator and returned422 with no saved version and an exact retained intake index.",
+      "error": "A controlled503 displayed adoption failure with no version and unchanged index. Only removing the fixture and deliberately retrying created a version.",
+      "cancel": "Closing with an unsubmitted version name created no version and retained the index; reopening did not submit automatically.",
+      "reopen": "Actual reload displayed the saved inactive version and original source choice; final index and policy file SHAs remained exact.",
+      "handoff": "The copied image, record and original inputs were read back. activated=false, truth=UNKNOWN, usage=not_used and workflow=needs_review remained. No source update or training POST occurred."
+    },
+    "capture-sampling-policy-save": {
+      "success": "Explicitly saving the valid first policy created revision1; deliberately saving revision2/seed81 retained immutable history[1,2] and actual API/persisted agreement.",
+      "empty": "An empty JSON editor produced the actual parse error before any policy POST and created no policy file.",
+      "invalid": "A zero item budget reached the actual engine and returned409 with no policy file. After revision1, a stale proposed revision1 also returned409 preserving exact saved bytes; only deliberate revision2 was accepted.",
+      "error": "A controlled503 before policy acceptance displayed the failure and created no policy file. Removing the explicit fixture and deliberately retrying saved revision1.",
+      "cancel": "Closing with an unsubmitted seed99 created no policy file; reopening replaced the transient editor with the actual saved/default policy.",
+      "reopen": "Actual reload displayed revision2/seed81 exactly as the API policy JSON, retaining both immutable history entries and exact final policy hash. No new service-capture sampling under the saved policy was exercised."
+    }
+  },
+  "preserved_failed_fixture_attempts": [
+    {
+      "report_sha256": "d676506a821b9e14de9be34893d157038d61f6d6577c0dd19a46ea6e88c02bdf",
+      "teardown_sha256": "8c95a84708a3baf36ba9524221cdff3e7ee023e45bf6688bc742d116994c74df",
+      "stats": {
+        "startTime": "2026-10-07T10:57:50.717Z",
+        "duration": 44112.347,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 2,
+        "flaky": 0
+      },
+      "preserved": true
+    },
+    {
+      "report_sha256": "d32c97431af9fb385287d8334271d681f2cd335496dd65bc21e9742da73c7718",
+      "teardown_sha256": "199ee20a643c65011e1fdf5e5c36a072402e4f3f3d38a121dc41aa1dceeae247",
+      "stats": {
+        "startTime": "2026-10-07T10:59:20.709Z",
+        "duration": 25352.358,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "preserved": true
+    }
+  ],
+  "fixture_corrections": "Classification original labels may have no raster; preserve actual saved label JSON and referenced masks. Actual policy validation and derived source provenance refusal use409; preserve both original failures and exact no-write assertions rather than weakening product validation.",
+  "queue_replay": "Actual browser/Electron exact saved bbox[10,10,30,30], original evaluation identity/reload, unsaved advancement/training guards, strict approved-only readiness refusal, deliberate fixture policy change and exact queues/source/report preservation; no training or human approval submitted.",
+  "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred.",
+  "review": "root_only",
+  "parent_acceptance": "pending",
+  "prior_queue_evidence_rebound": {
+    "entries": 32,
+    "dimensions": 16,
+    "historic_source": "5743664021f1bb4e89b181fada97c4929f963c55",
+    "historic_entry_export_sha256": "1dfbe4ab2904e2dc4b56568063b058cfdd0ba78cee6310d0db4bbc8308e8c230",
+    "historical_public_receipts_retained": true,
+    "same_original_assertions_reexecuted": true,
+    "new_dimensions_added_by_rebinding": 0
+  }
+}

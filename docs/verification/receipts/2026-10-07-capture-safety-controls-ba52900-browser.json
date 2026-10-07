@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+  "source_dirty": false,
+  "test": "scripts/e2e/capture-safety-controls.spec.ts::capture registration review adoption and sampling preserve records through invalid error cancel conflict and reopen",
+  "test_source_sha256": "c1e0457757f5763a531d9928a488559b157d1c448043aea33e8622bd63e139bc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c63d5cb57d838fce226651f5d1d47ab264d17f86793634d393eb4857772741e8",
+  "harness_sha256": "1cd5157b3821d3df62d24cf1d205125f534692f827a05b6ea0137a74611549f7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "73042bd02756eca89280e7b855f8040479868a6b550517b7795521f93907b1f6"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0b9c1a035856134fc7bff8a595007165b80b7494d8e6835285f6fc53aead9dbe"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

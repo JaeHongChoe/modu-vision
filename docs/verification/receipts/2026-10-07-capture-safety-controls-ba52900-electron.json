@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+  "source_dirty": false,
+  "test": "scripts/e2e/capture-safety-controls.spec.ts::native capture registration review adoption and sampling preserve records through invalid error cancel conflict and reopen",
+  "test_source_sha256": "c1e0457757f5763a531d9928a488559b157d1c448043aea33e8622bd63e139bc",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c4e621662a9d4692d0b6a26560df9bd04399ef3f0b59d1f1c3d0b50c751c11b",
+  "harness_sha256": "101bf16b71b68b2a66ca09e0ede4b2ed266c2dc42dcd1c8a70262bd95d296084",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f1d7929968e199562ec17be4a73d7b1b508886ca1d73747f59865f067688ad95"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0af9a0449fcb5ca78ded70143b5c59a8db779588e943bbc2cafc4976b8f548a1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

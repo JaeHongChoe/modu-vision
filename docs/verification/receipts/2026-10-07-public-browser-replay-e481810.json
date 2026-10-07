@@ -1,0 +1,46 @@
+{
+  "schema": "modu-vision.public-browser-replay/v1",
+  "source_sha": "e4818106e6671a0cb445a8c4875643f0ad44131e",
+  "selection": "Actual public CI browser selection: --grep-invert @owned-model, two workers, retries0",
+  "actual_local_run": {
+    "startTime": "2026-10-07T10:40:10.699Z",
+    "duration": 1001856.287,
+    "expected": 181,
+    "skipped": 1,
+    "unexpected": 1,
+    "flaky": 0
+  },
+  "non_expected_cases": [
+    {
+      "file": "qa-app-flow.spec.ts",
+      "title": "app flow \u00b7 segmentation (UNet) on this computer: register data, train, abort, release, restart, evaluate, flow, inspect, reopen, export",
+      "status": "skipped"
+    },
+    {
+      "file": "review-queue-handoff.spec.ts",
+      "title": "saved queue returns to exact evaluation and gates training on saved data and policy",
+      "status": "unexpected"
+    }
+  ],
+  "report_sha256": "950b3e6abd5c3769fa7f763319236d0ff2c70223ea987dc8733fc2920e0d2255",
+  "teardown_sha256": "c190a3f217b277f507eda666ae136b899840c8a0a49c71a92624b41b0c5589b1",
+  "owned_teardown_clean": true,
+  "source_clean": true,
+  "initial_direct_exfat_attempt": {
+    "receipt_sha256": "eb446dd15265a154302cb1dcac9b8055b1ce02b8799a76c1ffddd9bfc28e46ad",
+    "reason": "External ExFAT filesystem SQLite readonly write failures; only exact owned suite runner interrupted and original failure artifacts retained. A separate new APFS sparse image on the authorized external disk passed write/WAL reopen preflight before the full replay. Existing soak was unchanged."
+  },
+  "correction_source": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+  "queue_failure": "The original trace records100% click during the current raw-image decode; initial Fit completed at250% before the pointer drag, yielding bbox23.2,23.2,31.2,31.2 rather than10,10,30,30. The fixture now waits for current image initial Fit before requesting1:1 and keeps the exact saved bbox assertion. No production validation was weakened.",
+  "targeted_actual_replay": {
+    "browser": 3,
+    "electron": 3,
+    "failed": 0,
+    "retry": 0,
+    "source_capture_receipt": "2026-10-07-source-capture-control-closure-ba52900.json",
+    "source_capture_receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be"
+  },
+  "whole_suite_success": false,
+  "latest_hosted_ci_success": false,
+  "quality_or_feature_acceptance": false
+}

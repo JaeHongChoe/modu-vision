@@ -1,0 +1,33 @@
+{
+  "schema": "modu-vision.soak-progress/v1",
+  "source_of_soak": "a184b1e",
+  "receipt_sha256": "a33a825930ed0321b27f567c924758d739b6d53b885390792fb0c1a8d0a9de0d",
+  "actual_same_process_identities": [
+    {
+      "pid": 96648,
+      "create_time": 1791300478.197693,
+      "status": "running"
+    },
+    {
+      "pid": 96637,
+      "create_time": 1791300478.132385,
+      "status": "sleeping"
+    },
+    {
+      "pid": 96873,
+      "create_time": 1791300601.228116,
+      "status": "sleeping"
+    }
+  ],
+  "status": "running",
+  "elapsed_seconds": 70742.788703333,
+  "cycles": 1176,
+  "completed": 1176,
+  "duplicate_requests": 1176,
+  "backpressure_refusals": 1176,
+  "requested_seconds": 259200.0,
+  "terminal_72h": false,
+  "prior_failed_attempt_aggregated": false,
+  "restart_or_interrupt": false,
+  "physical_device_or_quality_acceptance": false
+}

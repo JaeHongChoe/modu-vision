@@ -2836,6 +2836,14 @@
      "source_sha": "e14d36f5245e07f6e912b4e8d8f6bc2f10df3ea6",
      "result": "Immutable align/crop/rotate/brightness and coordinate transforms preserve text, directed headings and brush masks; unknown shapes and changed source/version/label/review bindings refuse. Explicit edit review creates a train-only branch preserving fixed test pixels and original explicit truth ancestry; separate normal label approval/inclusion, new snapshot, actual CPU baseline/candidate warm-start training, fixed16-test comparison, existing reapproval assessment and verified original return pass in actual Chrome/macOS development Electron. Baseline configured6 epochs (actual6 browser/5 native early stop); candidate1. Human representative attestation stays unchecked; no model quality approval issued. Corrected OBB/mask rotation capture, preserved optional bounded annotation text, and strict ancestor-cohort reapproval binding. Backend affected107, annotation130 and reapproval42 pass; renderer767 and production/E2E typechecks pass. Root readback SHA-2563ca6cd58f9409c394d9654b37f636ecd2e04faeda1acba7fe27abc5e305ba1a8 binds1397 frozen inputs/412 artifacts/two actual app cases.",
      "scope": "Owned synthetic local execution proves the software workflow. Independent/human review, representative calibration/quality, GPU, installed/physical target acceptance remain pending. Windows excluded. Warm-start is weight initialization, not exact optimizer resume."
+    },
+    {
+     "kind": "actual-clean-source-capture-controls",
+     "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+     "receipt": "docs/verification/receipts/2026-10-07-source-capture-control-closure-ba52900.json",
+     "receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be",
+     "result": "Actual browser3/Electron3 passed with retries0 and owned teardown. Ten existing pending derived-source dimensions and26 dimensions across four previously unlisted capture actions are evidenced; registration invalid and downstream policy application remain unexecuted.",
+     "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred."
     }
    ],
    "file_actions": {
@@ -2899,6 +2907,14 @@
      "scope": "All unchanged original software clauses composed and reviewed together in Task87. Controlled service results exercise software routing and do not establish representative captured/model/human quality. Independent review remains unavailable.",
      "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend. Windows tests excluded by the project owner; no new SSH/GPU/model execution.",
      "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    },
+    {
+     "kind": "actual-clean-source-capture-controls",
+     "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+     "receipt": "docs/verification/receipts/2026-10-07-source-capture-control-closure-ba52900.json",
+     "receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be",
+     "result": "Actual browser3/Electron3 passed with retries0 and owned teardown. Ten existing pending derived-source dimensions and26 dimensions across four previously unlisted capture actions are evidenced; registration invalid and downstream policy application remain unexecuted.",
+     "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred."
     }
    ],
    "file_actions": {
@@ -5477,6 +5493,14 @@
      "receipt_sha256": "121a8c1255353bae07e62e3636e19b7c1754b177afcf6f92b13225827f92496d",
      "result": "Actual browser1/Electron1 passed with no retry and owned teardown;4 actual owned CPU jobs each completed2/2epochs. Added the unlisted F018 action with7 exercised dimensions and exact preserved model/source hashes.",
      "scope": "Actual browser/Electron model-mark controls using4 independently executed owned short CPU jobs across both modes. Generated40-image inputs and actual2epoch execution do not establish representative model quality. No additional training, approval, activation, deployment, human truth, native publisher or independent acceptance was inferred."
+    },
+    {
+     "kind": "actual-clean-source-capture-controls",
+     "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+     "receipt": "docs/verification/receipts/2026-10-07-source-capture-control-closure-ba52900.json",
+     "receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be",
+     "result": "Actual browser3/Electron3 passed with retries0 and owned teardown. Ten existing pending derived-source dimensions and26 dimensions across four previously unlisted capture actions are evidenced; registration invalid and downstream policy application remain unexecuted.",
+     "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred."
     }
    ],
    "file_actions": {
@@ -5501,7 +5525,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "193 curated actions now have460 verified scenarios and891 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "197 curated actions have496 verified scenarios and883 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5637,6 +5661,14 @@
      "receipt_sha256": "d0facf67fde174a728a7e523d903bd181b69d3724d36084d0d701212be8520d4",
      "result": "Actual browser1/Electron1 passed with no retry and owned teardown. Twelve pending tag/flag/named-copy dimensions are separately evidenced; actual409 preserves a separate fixture actor write.",
      "scope": "Actual browser/Electron existing tag/flag/copy controls with source and full saved annotation byte preservation,422 flag refusal,409 concurrent preference refusal, explicit controlled503 transport failure/cancellation/correction/retry and reopened identity/CSS/JSON. No models were trained and fixture labels or actors are not human quality truth. No installer/publisher/Windows/physical device/independent acceptance was inferred."
+    },
+    {
+     "kind": "actual-clean-source-capture-controls",
+     "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+     "receipt": "docs/verification/receipts/2026-10-07-source-capture-control-closure-ba52900.json",
+     "receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be",
+     "result": "Actual browser3/Electron3 passed with retries0 and owned teardown. Ten existing pending derived-source dimensions and26 dimensions across four previously unlisted capture actions are evidenced; registration invalid and downstream policy application remain unexecuted.",
+     "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred."
     }
    ],
    "file_actions": {

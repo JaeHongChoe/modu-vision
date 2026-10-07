@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-source-controls.spec.ts::native derived source selection and verified return preserve bytes through empty invalid error cancel and reopen",
+  "test_source_sha256": "0f18ec1a43b06525d2e82298adf80f09c4d72bd556d1fff6736f97db178d0e81",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c4e621662a9d4692d0b6a26560df9bd04399ef3f0b59d1f1c3d0b50c751c11b",
+  "harness_sha256": "82127b2329a9f1795462ec711a0fe1d993ab522d7035d048ca72ebb058e0860a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "dd299fa3593c2baf129017897850282af2a6b20784f890bd83b5b63941afce15"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e1b403346795543f61dfb0e07f44d3967c28d220803548e960b8c55f3890b8db"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "fd5ee850f395395b4cb34e1ec30134b223e403db4dbe4f9d3e39bf1f2d0cde6f"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "73da9987d4d5889af672c1de0b7fc78754ede7d15b30445697648c9b7e98be69"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

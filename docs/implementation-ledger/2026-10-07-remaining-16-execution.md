@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 193개 curated action, 460개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 891개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 496개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 883개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 같은 연속 운전 18.51시간/1108 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 19.65시간/1176 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -204,3 +204,16 @@
 - Clean0084be0의 actual browser1/Electron1 passed이다. 모드별 격리 synthetic40 images에서 CPU/pretrained=false 학습2개가 각각2/2epochs 완료됐다. 모델 flag의 빈 선택·41자 actual422·미제출 취소·controlled503·별도 actor의 actual revision409·직접 새로 읽기/재시도·선택 모델의 빈 flag 제거·실제 재열기를 확인했다.
 - Best/Important와 두 번째 모델의 표시는 서로 분리됐고 tag/labelset 설정과 actual original checkpoint/meta/job receipts/source hashes가 유지됐다. Flag controls는 추가 학습·deployment write를 제출하지 않았고 active deployment는 null이다. Tiny 실제 학습은 대표 품질 승인이 아니다.
 - 누락됐던 F018의 curated action1개/실행한7 dimensions를 추가해193 actions/460 verified/891 pending이다. 새 action을 추가했으므로 기존 미실행 차원을 임의로 줄이지 않는다. Parent67/82·pending15/82·전체 수락0은 유지한다. Public receipt:completed-model-flag-closure-0084be0.
+
+## 추가 실행: 파생 원본 전환·실제 캡처 저장·검수 충돌·수집 정책
+
+- Cleanba52900의 actual browser3/Electron3 passed, retries0, owned teardown이다. 변경된 parent/derived source actual409·정확한 bytes 복구·미제출 취소·controlled503 잠금/재시도·reload source identity와 원래 vector annotations/실제 referenced masks/split/image/review record hashes를 확인했다. 기존F114 pending10차원을 채웠다.
+- 캡처는 실제 persisted synthetic service records6건이며 모델 실행 기록을 만들어낸 것이 아니다. 실제 reviewer101자/버전201자422, 별도 fixture actor의 actual409 충돌·직접 refresh/retry, UNKNOWN/not_used/needs_review의 inactive copy를 확인했다. 수집 정책은 빈JSON noPOST·budget0/옛revision actual409·cancel·controlled503·직접revision2/seed81·immutable history[1,2]·actual reopen JSON/hash를 확인했다. 새 정책 아래의 새 캡처 샘플링 실행은 아직 pending이다.
+- 큐의 원래 evaluation 복귀·unsaved annotation 보호·strict readiness 거절과 exact saved bbox[10,10,30,30]도 두 모드에서 재실행했다. 기존 whole-suite trace의 raw image 완료 전100% 클릭→완료 Fit250% 때문에 생긴 fixture 실패는 보존하고 실제 decode/Fit를 기다리게 했다. Product 검증 규칙은 완화하지 않았다.
+- 새4 curated actions26차원과 기존10차원으로197 actions/496 verified/883 pending이다. 새 등록invalid/정책 downstream은 미실행이며 부모67/82·pending15/82·전체 수락0을 유지한다. Public receipt:source-capture-control-closure-ba52900.
+
+## 추가 실행: 실제 public browser 전체 선택과 수정 replay
+
+- Cleane481810에서 CI와 같은 public selector183 cases를 실제 로컬 Chrome으로 실행했다.181 passed/1 failed/1 skipped/retries0이다. 최초 direct ExFAT attempt의 SQLite readonly 실패와 이후 별도 APFS write/WAL preflight를 보존했다. 실행 중인 기존72h scratch는 바꾸지 않았다.
+- 실패1건은 queue fixture의 decode/Fit 시점이다. 수정 후 cleanba52900 actual browser3/Electron3가 통과했고 같은 원래 queue assertions의16차원/32entries를 새 실제receipt에 재연결했다. 기존5743664 receipts와 원래action entries export는 보존했으며 재연결로 새 차원 수를 늘리지 않았다.
+- UNet app-flow skip은 통과로 세지 않는다. 기존 전체 선택을 수정 후 전체 성공으로 바꾸지 않으며 최신 hosted CI도 pending이다. Public receipt:public-browser-replay-e481810.
