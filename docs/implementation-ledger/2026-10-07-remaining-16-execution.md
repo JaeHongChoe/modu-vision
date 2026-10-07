@@ -4,7 +4,7 @@
 
 | ID | 작업 | 실제 완료한 부분 | 남은 조건 |
 |---|---|---|---|
-| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 독립 flow report의 모델·서버별 원본 검증 추가, 관련186개 통과 | 실행 중 worker/불확실 lease의 소유권·fence 이관 및 구형 프로토콜 |
+| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 독립 flow report의 모델·서버별 원본 검증 추가, 관련186개 통과 | 현재 local 기본 worker와 원격 학습 worker의 실제 live 이관 완료; specialist live·구형 프로토콜·native target 검증은 남음 |
 | S5-01 | 독립 검사 서비스 | 독립 프로세스·CPU 검사·owned start/stop/restart 및 Linux 격리 실행 | 실제 전용 계정·재부팅·장비 권한·GPU/camera 서비스 운용; Windows 실기 QA는 면제 |
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | sourcec2e7b6 hosted workflow success 재확인; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 178개 curated action, 327개 시나리오 검증; 최적화 입력·오류·취소·재열기8개 근거 추가 | 919개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 187개 curated action, 348개 시나리오 검증; modal keyboard·saved queue 실제 browser/Electron 근거 추가 | 961개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 13.81시간/827 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 15.55시간/931 cycles (2026-10-07 관찰); 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -106,3 +106,16 @@
 - clean source62b20cc의 browser2 passed/0 skipped/0 retry를 원장에 연결했다. 독립 후보4개·별도 취소4개 시나리오를 추가했으며, 새 취소 action도 목록에 포함해178 actions/327 verified/919 pending이다. Intentional422 외 page error/blocked loopback0, owned backend/port 종료 및 teardown leftovers0이다. 전체156개 기능 수락0과 부모67/82·미완료15/82는 유지한다.
 
 - GitHub hosted run37552989986은 exact sourcec2e7b6에서 전체 workflow success로 종료됐다. Run/job/step API 원본 해시를 보존했다. 이 API 관찰에서 테스트 수나1.1GB artifact 내부를 다시 추출하지 않았으며 최신62b20cc 및 이후 게시 소스의 CI 성공으로 옮겨 쓰지 않는다. 공개 receipt `2026-10-07-hosted-source-ci-c2e7b6.json`.
+
+
+## 추가 실행: 실제 live control 이관과 CUDA pack
+
+- sourcef8b24e8의 owned POSIX 기본 worker는 immutable ready acknowledgment와 원래 PID/create time/command/spec/fence를 증명한 경우에만 현재 generation의 ledger/lease/journal을 따른다. 실제12-epoch CPU 학습은 동일 worker·attempt로 한 번 완료됐고326 관련 검사가 통과했다. Carried lease에 신규 실행 권한을 주거나 불확실 예약을 지우지 않는다.
+- source1326b2c의 원격 학습은 원래 등록 profile·uploaded spec·양쪽 journal·실제 SSH identity·handle·observer를 함께 확인한다. 실제42번의 별도 network-none/read-only/no-GPU CPU 학습은 live cutover 뒤 같은 worker를 유지하고40epochs 요청 중 실제15epochs 뒤 기존 trainer의 patience4 정책으로 completed 상태가 됐다.713개 선택 source와48개 원본 PNG를 독립 byte 비교했으며 launch/attempt 각1, 실제 종료 확인 뒤 예약 해제, owned container removed이다.94 관련 및276 이력 회귀 검사가 통과했다. Specialist live와 구형 프로토콜은 별도 계약이 없으므로 전체 S1-08 완료로 세지 않는다.
+- sourcef8b24e8의 실제 browser2/Electron2 검사는 modal의 Delete/화살표/undo가 배경 라벨을 바꾸지 않는지와 닫은 뒤 정상 편집·저장·재열기를 확인했다. Saved queue는 오류/불일치/임계값 우선순위, invalid threshold422, 검토자 누락, skip/review 이력, 정확한 cursor 재열기와 원본 변경 거절을 확인했다. Curated187 actions/348 verified/961 pending, 기능 수락0이다. AST의1369 UI 선언은 실행 증거로 세지 않는다.
+- source dd163b7의 별도 NVIDIA pack은28 files/316132771 bytes/9 pinned wheels/17 original license members이다. 실제 L40S에서 FP32/FP16 각각80 CUDA kernel events와 CPU 실행0을 관찰했다.2 heldout tensors 및 known image는 원본 해시를 유지하고 최대 오차는 FP32 2.98e-8, FP16 0이다.27 related checks pass/0skip이며 inactive install·재설치 해시와 owned container 종료를 확인했다. CUDA/cuDNN은 기존 immutable qualification image에서 제공하며 pack에 native library를 새로 묶지 않는다. Tiny controls는 현장 품질·Studio job·native legal/publisher 승인이 아니다.
+- 이전 CI sourceec127afd는 CPU 단계 성공 뒤 browser165 passed/1 failed/1 skipped로 끝났다. 실패는 파생 데이터의 재학습·비교 후 승인 패널에서 후보 assessment가 보이지 않는 경로이다. 동일 현행 소스의 로컬 focused browser는 통과했지만 CI의 원본 화면과 error context에서 기준·후보가 뒤집힌 것을 확인했다. 늦게 갱신된 추천 모델이 수동 선택을 덮는 경로를2개 red 검사로 재현했고, 수동 선택·비운 선택·임계값을 보존하고 사라진 모델은 거절하도록 수정했다. 관련 renderer54 passed이다. 전체 archive/큰 trace의 검증을 주장하지 않는다. 최신 전체 CI 성공으로 바꾸어 기록하지 않는다.
+- 독립72시간 운전은 같은 PID/create time에서15.55h/931 cycles, duplicate/backpressure 각931까지 계속 진행 중이다. 전체72시간 종료·실 target 측정은 미완료이며 이전 시도와 합산하거나 재시작하지 않았다.
+- 공개 receipt: `2026-10-07-live-local-control-f8b24e8.json`, `2026-10-07-live-remote-control-1326b2c.json`, `2026-10-07-nvidia-cuda12-offline-pack-dd163b7.json`, modal/queue f8b24e8 browser/electron 각각. Root 검토이며 독립 리뷰는 agent 실행 한도로 미실행이다.
+
+- 저장 검토 큐의 추가 source/queue 선택·margin422·원래 평가 복귀·미저장 라벨 guard·실제 검수 policy gate와 학습 미제출 경로는 exploratory browser/Electron 각1개에서 통과했다. 새 비교 수동 선택과 실제 CPU 비교 및 기존 파생 데이터 재학습은 exploratory browser2개 통과이다. 커밋된 소스로 별도 재실행하며 이 dirty 실행을 clean action 근거로 쓰지 않는다.

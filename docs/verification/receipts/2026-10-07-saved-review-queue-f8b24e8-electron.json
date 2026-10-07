@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+  "test_source_sha256": "621a5eb57bbe09513b8b3b6737d546c39fc7ffb46ba1cd7cb71a14d90c2b0dc1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "79ef68893b1b3512587b198ed91acbcfab4ec001a758e5b19bebc184a6e4a574",
+  "harness_sha256": "2e917ad92b3b655857e77d7c4ad248f998e190e24dd7177dbefe67e8fd6f29c8",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

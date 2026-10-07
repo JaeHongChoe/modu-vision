@@ -12338,7 +12338,916 @@
   },
   {
    "id": "U015",
-   "actions": [],
+   "actions": [
+    {
+     "id": "saved-queue-create",
+     "label": "우선순위 큐 저장",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "browser: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "electron: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "browser: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "electron: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "browser: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "electron: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "browser: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "electron: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "browser: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Create only from a saved origin; invalid threshold returns422 and no queue; priority and saved cursor remain.",
+         "observed": "electron: Empty origin disabled create; threshold2 returned422 with no queue, then0.5 cleared error and saved priority400/200/100. Reload retained cursor3/revision4 and exact reviewer history. Controlled reports do not approve labels.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-threshold",
+     "label": "검토 큐 임계값",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "browser: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "electron: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "browser: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "electron: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "browser: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Entered threshold is sent exactly and rejected out-of-range values can be corrected.",
+         "observed": "electron: Entered2 returned422 without a queue; corrected0.5 succeeded and cleared the resolved error.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-open",
+     "label": "현재 항목 열기",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Open the selected current queue image without replacing priority or cursor.",
+         "observed": "browser: Actual current-item button opened first error.png; subsequent skip/review history preserved exact source paths and order.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Open the selected current queue image without replacing priority or cursor.",
+         "observed": "electron: Actual current-item button opened first error.png; subsequent skip/review history preserved exact source paths and order.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-review-next",
+     "label": "검토 완료 · 다음",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "browser: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "electron: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "browser: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "electron: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "browser: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "electron: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "browser: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Reviewer is required; completion advances only the queue and persists history; completed queues cannot advance.",
+         "observed": "electron: Missing reviewer kept cursor0; entered operator was persisted for reviewed disagreement.png; cursor3 disabled Review and exact history survived reload. Dataset label approval was not created.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-skip-next",
+     "label": "보류 · 다음",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "browser: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "electron: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "browser: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "electron: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "browser: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Skip retains actor and path; finished queues cannot advance and saved progress reopens.",
+         "observed": "electron: Two skips and one review retained exact actor/path order, cursor3/revision4; completed Skip button disabled and exact history survived reload.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-selected-reopen",
+     "label": "저장 검토 큐 선택",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Reload restores the saved selected queue and its exact cursor.",
+         "observed": "browser: Reloaded combobox retained queue ID and cursor3/revision4; no manual alternate-queue selection was exercised.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Reload restores the saved selected queue and its exact cursor.",
+         "observed": "electron: Reloaded combobox retained queue ID and cursor3/revision4; no manual alternate-queue selection was exercised.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-stale-origin",
+     "label": "원래 평가·비교로 돌아가기",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Changed source images cannot resume an old queue or return through its origin button.",
+         "observed": "browser: An owned synthetic source change displayed source-image-changed and disabled origin return; restored original bytes and reload recovered the exact saved queue. Positive origin return remains pending.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-browser.json",
+         "receipt_sha256": "16a68174038f7f242ddf2597971d00499dff866a7fa6b8fca0e85b413f88c2a5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "133ceab17f4ecb15aecc4d9dab1e133c4ff8de9be6e0cef99d3a4fd1c42feee9"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Changed source images cannot resume an old queue or return through its origin button.",
+         "observed": "electron: An owned synthetic source change displayed source-image-changed and disabled origin return; restored original bytes and reload recovered the exact saved queue. Positive origin return remains pending.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/review-queue-content.spec.ts::native saved review queue preserves priority cursor and reviewer without approving labels",
+         "receipt": "2026-10-07-saved-review-queue-f8b24e8-electron.json",
+         "receipt_sha256": "a2524f15739497748267670b6fc00c95a437ed70cb5b1277707209859e020175",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-prepare-training",
+     "label": "수정·검수 데이터로 학습 준비",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
    "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
   },
   {
@@ -12815,6 +13724,148 @@
           {
            "id": "screenshot-0",
            "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "modal-keyboard-edit-isolation",
+     "label": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+     "source": "src/renderer/components/labeling/LabelingCanvas.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "browser: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-browser.json",
+         "receipt_sha256": "e4c0c57596b7287b2b3ff34631d99d92a221ad6761e95e0f8f1118d072b1f163",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d8188432d5e02c1e60b2234b886c7198b2434c101ec3e0279c12445d1d53d588"
+          }
+         ]
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "electron: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::native modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-electron.json",
+         "receipt_sha256": "bdb868fd91740a6e3ea9a31ee51f10e0b0ebb8b055601e08996e7c72f5e5f17d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "63fbbf9284646c1f6964f5d905700b02d708347e9ffd46d4e79e767c3537046d"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "browser: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-browser.json",
+         "receipt_sha256": "e4c0c57596b7287b2b3ff34631d99d92a221ad6761e95e0f8f1118d072b1f163",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d8188432d5e02c1e60b2234b886c7198b2434c101ec3e0279c12445d1d53d588"
+          }
+         ]
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "electron: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::native modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-electron.json",
+         "receipt_sha256": "bdb868fd91740a6e3ea9a31ee51f10e0b0ebb8b055601e08996e7c72f5e5f17d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "63fbbf9284646c1f6964f5d905700b02d708347e9ffd46d4e79e767c3537046d"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "browser: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-browser.json",
+         "receipt_sha256": "e4c0c57596b7287b2b3ff34631d99d92a221ad6761e95e0f8f1118d072b1f163",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d8188432d5e02c1e60b2234b886c7198b2434c101ec3e0279c12445d1d53d588"
+          }
+         ]
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+         "kind": "click",
+         "action": "모달 중 ArrowRight/Delete/Ctrl+Z/Ctrl+Y와 Escape",
+         "expected": "Dialog keyboard cannot change selected background annotation; Escape restores focus and editing resumes.",
+         "observed": "electron: Four modal keys retained one saved bbox and clean editor. Escape restored opener focus; after closing, ArrowRight changed bbox20,20,70,60 to21,20,71,60; Delete/undo/save/reload retained exact annotations and original image SHA.",
+         "reviewer": "Codex root actual clean-source case and content review; independent, human quality, device and full feature acceptance pending",
+         "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::native modal keyboard cannot edit the selected background annotation",
+         "receipt": "2026-10-07-modal-keyboard-f8b24e8-electron.json",
+         "receipt_sha256": "bdb868fd91740a6e3ea9a31ee51f10e0b0ebb8b055601e08996e7c72f5e5f17d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "63fbbf9284646c1f6964f5d905700b02d708347e9ffd46d4e79e767c3537046d"
           }
          ]
         }

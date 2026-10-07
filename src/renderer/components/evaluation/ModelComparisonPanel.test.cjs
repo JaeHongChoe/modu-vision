@@ -8,9 +8,9 @@ function fixture(config={}){
  const react={useState(value){const i=index++;if(!(i in slots))slots[i]=value;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;dirty=true;}];},useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},useEffect(fn,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=fn();});}}};
  const file=path.join(__dirname,'ModelComparisonPanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
  const models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'}];
- m.require=n=>n==='react'?react:n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async()=>({models}),listComparisons:async()=>({comparisons:config.report?[config.report]:[]}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
+ m.require=n=>n==='react'?react:n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async()=>({models:config.models||models}),listComparisons:async()=>({comparisons:config.report?[config.report]:[]}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
- function render(){index=0;dirty=false;tree=m.exports.ModelComparisonPanel({projectDir:'/project',sourceFolder:'/source',task:'classification',preferredJobId:'candidate',preferredParentJobId:'incumbent',language:'ko'});effects.splice(0).forEach(f=>f());}
+ function render(){index=0;dirty=false;tree=m.exports.ModelComparisonPanel({projectDir:'/project',sourceFolder:'/source',task:'classification',preferredJobId:'candidate',preferredParentJobId:'incumbent',language:'ko',...config.props});effects.splice(0).forEach(f=>f());}
  async function settle(){for(let i=0;i<8;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}}
  return{compute,calls,urls,settle,render,defer(){pending=true;},resolve(){resolveCreate({job_id:'stale-request',status:'completed'});},all:()=>nodes(tree),change:async(label,value)=>{const n=nodes(tree).find(n=>n.props?.['aria-label']===label);assert(n,label);n.props.onChange({target:{value}});await settle();},run:async()=>{const n=nodes(tree).find(n=>n.type==='button'&&nodes(n).some(child=>[child.props?.children].flat().includes('동일 test 이미지로 비교')));assert(n);await n.props.onClick();await settle();}};
 }
@@ -141,4 +141,33 @@ test('a fresh task-center handoff discards an older pending review return',async
  const second=fixture(config);await second.settle();assert.equal(second.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,fresh.job_id);
  assert.equal(config.origin,null);assert.equal(second.calls.length,0);
  }finally{storage.restore();}
+});
+
+
+test('late preferred-model updates cannot reverse manually selected baseline and candidate',async()=>{
+ const config={props:{preferredJobId:'incumbent',preferredParentJobId:null}};const f=fixture(config);await f.settle();
+ await f.change('비교 기준 모델','incumbent');await f.change('후보 모델','candidate');
+ config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+ config.props.preferredParentJobId=null;f.render();await f.settle();await f.run();
+ assert.equal(f.calls[0].incumbent_job_id,'incumbent');assert.equal(f.calls[0].candidate_job_id,'candidate');
+});
+test('an explicitly cleared manual candidate stays empty after a recommendation update',async()=>{
+ const config={props:{preferredJobId:'candidate'}};const f=fixture(config);await f.settle();await f.change('후보 모델','');
+ config.props.preferredJobId='incumbent';f.render();await f.settle();
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'');
+});
+
+test('manual model choices cannot leak to a different data source',async()=>{
+ const config={props:{sourceFolder:'/source'}};const f=fixture(config);await f.settle();await f.change('후보 모델','');
+ config.props.sourceFolder='/other-source';f.render();await f.settle();assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'candidate');
+});
+test('a disappeared manual model refuses rather than substituting a recommendation',async()=>{
+ const config={props:{preferredJobId:'candidate'}};const f=fixture(config);await f.settle();await f.change('후보 모델','candidate');
+ config.models=[{job_id:'incumbent',task:'classification'}];config.props.preferredJobId='incumbent';f.render();await f.settle();
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'');assert(f.all().some(n=>n.props?.role==='alert'&&textOf(n).includes('수동으로 선택한 비교 모델')));await f.run();assert.equal(f.calls.length,0);
+});
+
+test('late recommendation reload preserves the manually selected pair threshold',async()=>{
+ const config={props:{preferredJobId:'candidate'}};const f=fixture(config);await f.settle();await f.change('비교 기준 모델','incumbent');await f.change('후보 모델','candidate');await f.change('비교 후보 임계값',.37);
+ config.props.preferredJobId='incumbent';f.render();await f.settle();assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 후보 임계값').props.value,.37);
 });

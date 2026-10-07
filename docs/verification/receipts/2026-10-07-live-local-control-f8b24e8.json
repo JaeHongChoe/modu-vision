@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "kind": "owned-cooperative-posix-live-local-control-cutover",
+  "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+  "checkout_dirty_at_execution": false,
+  "verification": {
+    "tests": 326,
+    "failed": 0,
+    "skipped": 0,
+    "xml_sha256": "d53d7c74b892fa9a4082a3e8bc684540c11e513dcd758c8386cacdfed33ce39e",
+    "new_live_control_tests": 26,
+    "scope": "Local basic-worker live cutover and scheduler/history/update regression"
+  },
+  "actual_owned_cpu_control": {
+    "epochs": 12,
+    "pid_create_time_command_spec_fence_attempt_preserved": true,
+    "worker_relaunch_count": 0,
+    "uncertainty_cleared": false,
+    "duplicate_execution_grants_refused": true,
+    "cached_carried_lease_cannot_grant_or_change_fence": true,
+    "terminal_completion_recorded_once": true
+  },
+  "remaining": [
+    "Live remote and specialist worker protocols",
+    "Older live-worker adoption",
+    "Actual target installation and independent review"
+  ],
+  "parent_acceptance": "pending",
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Owned same-installation cooperative local basic workers only; no unrelated workers signalled or relaunched"
+}

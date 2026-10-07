@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "kind": "actual-isolated-offline-onnx-cuda12-pack-qualification",
+  "source_sha": "dd163b7db6e6667d372ce480c09ba8256be00df4",
+  "source_inputs": {
+    "files_independently_matched_to_commit": 714,
+    "checkout_dirty_at_export": true,
+    "scope": "Selected committed Python inputs independently byte-compared; unrelated receipt/registry edits remain unstaged",
+    "binding_sha256": "6db36295d0676257d3c021b47450307d09649ec8ce728ecefde1d68e04d4cf7a"
+  },
+  "pack": {
+    "inventory_sha256": "3429b175fa1efdc4e98c59c74c93b1ec599bf7e941f42b2bc6932e18b220e991",
+    "file_count": 28,
+    "payload_bytes": 316132771,
+    "wheels": 9,
+    "original_license_files": 17,
+    "license_bytes_independently_verified": true,
+    "installed_inactive": true,
+    "installation_replay_identical": true,
+    "installed_payload_hashes_preserved": true,
+    "bundled_cuda_cudnn_libraries": false,
+    "cuda_cudnn_source": "Exact immutable qualification base image only"
+  },
+  "execution": {
+    "actual_cuda": true,
+    "physical_device": "NVIDIA L40S",
+    "torch_version": "2.6.0+cu126",
+    "torch_cuda_version": "12.6",
+    "onnxruntime_version": "1.20.2",
+    "driver_version": "580.173.02",
+    "cuda_device_count": 1,
+    "original_artifact_bytes_preserved": true,
+    "precision_controls": [
+      {
+        "precision": "fp32",
+        "heldout_tensor_count": 2,
+        "known_image_count": 1,
+        "max_absolute_error": 2.9802322387695312e-08,
+        "argmax_mismatch_count": 0,
+        "registered_providers": [
+          "CUDAExecutionProvider",
+          "CPUExecutionProvider"
+        ],
+        "node_execution_providers": [
+          "CUDAExecutionProvider"
+        ],
+        "profile_kernel_count": 80,
+        "profile_sha256": "9b587db21d7b5951a2e2f60985b0d896031e490da996e7e6935fef3c98f963aa",
+        "artifact_sha256": "97bb2ab5ce36cc263940981cf36806100af433b129cbd81470980ffcb0b8b2d4",
+        "warmup_count": 3,
+        "timing_iterations": 10,
+        "median_seconds": 5.519506521522999e-05,
+        "p95_seconds": 7.177002262324094e-05,
+        "cpu_fallback_disabled": true
+      },
+      {
+        "precision": "fp16",
+        "heldout_tensor_count": 2,
+        "known_image_count": 1,
+        "max_absolute_error": 0.0,
+        "argmax_mismatch_count": 0,
+        "registered_providers": [
+          "CUDAExecutionProvider",
+          "CPUExecutionProvider"
+        ],
+        "node_execution_providers": [
+          "CUDAExecutionProvider"
+        ],
+        "profile_kernel_count": 80,
+        "profile_sha256": "ed3fcf58a829a90c93fbfc5d50fde7b51d668b8c98a1cf1209a17ddaa503dcde",
+        "artifact_sha256": "d5ccddd89a6c44d01842882d05c4556a6e155823288839b4d3192cd3bf53ba77",
+        "warmup_count": 3,
+        "timing_iterations": 10,
+        "median_seconds": 5.329307168722153e-05,
+        "p95_seconds": 5.7552685029804705e-05,
+        "cpu_fallback_disabled": true
+      }
+    ],
+    "known_image_sha256": "1c27a76376aa1c4feb39dbb2891edfab3b751488dabc4bc9bccadfbac326df08"
+  },
+  "isolation": {
+    "network": "none",
+    "read_only_root": true,
+    "ports_published": false,
+    "numeric_nonroot_user": true,
+    "all_capabilities_dropped": true,
+    "no_new_privileges": true,
+    "maximum_ort_arena_bytes": 268435456,
+    "base_image_sha256": "e8fdbc13b6fcda4523c5fd93d3c8177588d1346e09df39ff60c87346f327c46b",
+    "container_exit_code": 0,
+    "owned_container_removed": true
+  },
+  "verification": {
+    "pytest": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "log_sha256": "1d250bb2c75a6b0506012ed0923538eeba68b03c694efce1a007add87ea898fd",
+    "junit_sha256": "f41b0e6b2ca815fa416c09000e658a8560d93618c2fb553c94f2eed3cc9daf31",
+    "runtime_receipt_sha256": "7a7b1a95148dd9030c395ac965192dc60bed61203c9b1b9d11c429d0f95b6c40",
+    "byte_audit_sha256": "5b7041258abfe51e93f6eacd69f8c7efc9d17f29a453766f320eae662d0e521b",
+    "reviewer": "Codex executing reviewer; no independent agent review"
+  },
+  "retained_failures": [
+    "qualification launcher parsing",
+    "base ONNX/protobuf incompatibility",
+    "base cuDNN library discovery",
+    "registered-provider list confused with actual execution",
+    "qualification pytest harness absent"
+  ],
+  "scope": "Synthetic heldout tensors and tiny control graphs only; this is separate from Studio training, representative quality and native package acceptance",
+  "acceptance": {
+    "quality_approved": false,
+    "studio_job_verified": false,
+    "physical_service_accepted": false,
+    "publisher_signed": false,
+    "native_legal_approved": false,
+    "release_approved": false
+  }
+}

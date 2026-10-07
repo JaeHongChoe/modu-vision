@@ -94,6 +94,17 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
   const reportChoice = useRef(0);
+  // Recommendations may arrive after an operator has chosen the model pair.
+  // Preserve each explicit choice (including an empty choice) only in this
+  // source/target/handoff scope; a late recommendation must not reverse it.
+  const modelSelectionScope = `${scopeKey}\0${handedSelection || ''}`;
+  const manualModels = useRef<{scope:string;incumbent?:string;candidate?:string}>({scope:modelSelectionScope});
+  const chooseModel = (side:'incumbent'|'candidate',id:string) => {
+    manualModels.current = {...(manualModels.current.scope===modelSelectionScope
+      ? manualModels.current : {scope:modelSelectionScope}),[side]:id};
+    if(side==='incumbent')setIncumbentId(id);else setCandidateId(id);
+    setError(current=>current?.startsWith('수동으로 선택한 비교 모델')?null:current);
+  };
   const [models, setModels] = useState<ModelComparisonModel[]>([]);
   const [records, setRecords] = useState<ModelComparisonRecord[]>([]);
   const [incumbentId, setIncumbentId] = useState('');
@@ -122,13 +133,15 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
 
   useEffect(() => {
     let active = true;
+    const keepManualPair=manualModels.current.scope===modelSelectionScope
+      && (manualModels.current.incumbent!==undefined||manualModels.current.candidate!==undefined);
+    if(manualModels.current.scope!==modelSelectionScope)manualModels.current={scope:modelSelectionScope};
     const choice = ++reportChoice.current;
     imageChoice.current++;setImageEvidence(null);
     setEditBusy(false);setEditError('');
-    setModels([]);
+    if(!keepManualPair)setModels([]);
     setRecords([]);
-    setIncumbentId('');
-    setCandidateId('');
+    if(!keepManualPair){setIncumbentId('');setCandidateId('');}
     setReport(null);
     setReportScope('');
     setError(null);
@@ -181,9 +194,15 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       const candidate = catalog.models.find((model) => model.job_id === preferredJobId)?.job_id || '';
       const parent = catalog.models.find((model) => model.job_id === preferredParentJobId)?.job_id || '';
       const initial = parent && candidate && parent !== candidate ? parent : candidate || catalog.models[0]?.job_id || '';
-      setIncumbentId(initial);
-      setCandidateId(candidate && candidate !== initial ? candidate
-        : catalog.models.find((model) => model.job_id !== initial)?.job_id || '');
+      const manual=manualModels.current.scope===modelSelectionScope?manualModels.current:null;
+      const stillAvailable=(id:string)=>!id||catalog.models.some(model=>model.job_id===id);
+      const missingManual=manual&&(['incumbent','candidate'] as const).some(side=>manual[side]!==undefined&&!stillAvailable(manual[side]!));
+      const nextIncumbent=manual?.incumbent!==undefined?(stillAvailable(manual.incumbent)?manual.incumbent:''):initial;
+      const nextCandidate=manual?.candidate!==undefined?(stillAvailable(manual.candidate)?manual.candidate:''):
+        candidate&&candidate!==nextIncumbent?candidate:catalog.models.find(model=>model.job_id!==nextIncumbent)?.job_id||'';
+      setIncumbentId(nextIncumbent);
+      setCandidateId(nextCandidate);
+      if(missingManual)setError('수동으로 선택한 비교 모델을 현재 목록에서 찾지 못했습니다. 기준·후보 모델을 직접 다시 선택하세요.');
     }).catch((cause) => {
       if (active && currentScope.current === scopeKey) setError(errorMessage(cause));
     }).finally(() => {
@@ -386,7 +405,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             <label className="min-w-0 space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? '비교 기준 모델 (수동 선택)' : 'Baseline model (manual)'}</span>
               <select aria-label={isKo ? '비교 기준 모델' : 'Baseline model'} value={incumbentId}
-                onChange={(event) => setIncumbentId(event.target.value)} disabled={isRunning || isLoading}
+                onChange={(event) => chooseModel('incumbent',event.target.value)} disabled={isRunning || isLoading}
                 className="w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5 text-slate-100">
                 <option value="">{isKo ? '모델 선택' : 'Select model'}</option>
                 {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}
@@ -395,7 +414,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
             <label className="min-w-0 space-y-1 text-[11px] text-slate-300">
               <span>{isKo ? '후보 모델' : 'Candidate model'}</span>
               <select aria-label={isKo ? '후보 모델' : 'Candidate model'} value={candidateId}
-                onChange={(event) => setCandidateId(event.target.value)} disabled={isRunning || isLoading}
+                onChange={(event) => chooseModel('candidate',event.target.value)} disabled={isRunning || isLoading}
                 className="w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5 text-slate-100">
                 <option value="">{isKo ? '모델 선택' : 'Select model'}</option>
                 {models.map((model) => <option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}

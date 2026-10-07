@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard cannot edit the selected background annotation",
+  "test_source_sha256": "6a8e72938eaec48ad39782fc2f797a8cd17f5fe354732e16be5cc3e3b5780de6",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5adb448e4d837b51c79f48283edb2a10813baf92666a31630dd3c62cefde332b",
+  "harness_sha256": "ae5094777d3b6aaf69072fa6d22b674ca78ec5ace4a997d20c6ce598e628e27f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d8188432d5e02c1e60b2234b886c7198b2434c101ec3e0279c12445d1d53d588"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

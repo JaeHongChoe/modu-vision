@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "source_sha": "1326b2cba48ea0ae822346e4f43a575bd5ce105b",
+  "selected_source_file_count": 713,
+  "selected_source_inputs_match_commit": true,
+  "checkout_dirty": true,
+  "actual_remote_training": true,
+  "device": "cpu",
+  "synthetic_png_count": 48,
+  "source_images_preserved": true,
+  "remote_worker_identity_preserved": true,
+  "one_launch_one_attempt": true,
+  "uncertainty_preserved_at_cutover": true,
+  "original_controls_preserved": true,
+  "worker_exit_confirmed": true,
+  "reservation_released_after_exit": true,
+  "owned_container_removed": true,
+  "container_network": "none",
+  "read_only_root": true,
+  "caps_dropped": "ALL",
+  "max_runtime_seconds": 180,
+  "transaction": {
+    "status": "applied",
+    "kind": "live",
+    "migration_id": "2575563311df4038a9cd3c92de1cc310",
+    "fence": 1,
+    "worker_count": 1,
+    "workers_relaunched": 0,
+    "uncertain_reservations_cleared": 0,
+    "session_policy": "copied sessions revoked"
+  },
+  "raw_artifact_sha256": {
+    "receipt.json": "77c6a2b8a82084644276562200def88c3f81f258202204dce3cc98982e53a363",
+    "source-binding.json": "139cf963e66d1128d634b9c24905560bca451b87464826e77cabc1eb69d24b50",
+    "remote-identity-before.json": "2158d0aa5d40cb8165ffb6bda70142af48a69f230506a1f335c6d6d665670e5d",
+    "remote-identity-after.json": "2158d0aa5d40cb8165ffb6bda70142af48a69f230506a1f335c6d6d665670e5d",
+    "qualification-isolation.json": "a27bdf0b1079df1a7fb58c79ecc59953f03cc1a5916c5b473e61656f554dd355",
+    "cutover-observations.json": "48dfcc8c3860af897b834ff77d7126207c50e04bb27979dccddd58aa594486a0",
+    "job_receipt.json": "e5ff0f007d2946f25203513daa90fcb92a1a23d87325d8d76aba15d18a176033",
+    "model_meta.json": "06d1f6be2708d25b09032b5f69d82ad0cdb1d7eb6917d2ee31b22edf530af2f2",
+    "training_state_receipt.json": "9c191d5f6109a51325ab3d02883d11238ffb18b973b934709f1865df8a256d23"
+  },
+  "quality_approved": false,
+  "release_approved": false,
+  "independent_review": false,
+  "remaining_limits": [
+    "Old live protocol and specialist workers are not adopted by this receipt.",
+    "Dedicated target service, device permissions, native publisher and physical faults remain separate."
+  ],
+  "training": {
+    "requested_epochs": 40,
+    "completed_epochs": 15,
+    "effective_patience": 4,
+    "status": "completed",
+    "scope": "Original trainer termination policy; not a claim that all40 requested epochs ran."
+  }
+}

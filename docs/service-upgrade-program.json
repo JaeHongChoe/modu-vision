@@ -1114,6 +1114,22 @@
      "receipt": "2026-10-07-portable-flow-history-087b927.json",
      "receipt_sha256": "219f7276dc6d7fe754b80ac5759136f1277a6281c562e8d52546b2d49aaca277",
      "scope": "Actual portable flow archive production via controlled local transport; read-only original binding validation through owned drained cutover/forward. No remote machine connected, learned quality granted or worker authority adopted."
+    },
+    {
+     "kind": "owned-current-local-live-control-cutover",
+     "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+     "result": "Current POSIX basic worker follows sealed original owner/spec/PID creation time/command/fence through global store cutover without relaunch. One actual12-epoch CPU run completes once, duplicate execution grants refuse, carried uncertainty remains reserved;326 related tests pass/0 skipped.",
+     "scope": "Original scopes freeze; forward finish preserves new generation writes. Cooperative owned protocol only; older and specialist live protocols, native target and independent acceptance remain pending.",
+     "receipt": "docs/verification/receipts/2026-10-07-live-local-control-f8b24e8.json",
+     "receipt_sha256": "b0542183dd27569c14dae91ca2f2ef156759f8880b1b3c68486d63948cb2e9d8"
+    },
+    {
+     "kind": "actual-current-remote-live-control-cutover",
+     "source_sha": "1326b2cba48ea0ae822346e4f43a575bd5ce105b",
+     "result": "Actual isolated SSH CPU worker retains exact remote identity/spec/profile/handle through live cutover; one launch and one attempt, uncertainty preserved at cutover, exit confirmed then reservation released. Original48 synthetic PNG and713 selected source files byte-verified. Remote/local combined94 and related276 tests pass; fresh higher-fence observer excludes old journal writes. Original trainer completed15 epochs of40 requested with effective patience4; no claim of40 completed epochs.",
+     "scope": "Owned POSIX current remote-training protocol only; original control files and output location preserved. No old protocol or specialist adoption, unrelated worker signal, GPU use, quality grant or independent review.",
+     "receipt": "docs/verification/receipts/2026-10-07-live-remote-control-1326b2c.json",
+     "receipt_sha256": "fec5a04cff936e9111cdb3ae5c0a57bfd122cd8452ac25d2c7bb9d9bb5366436"
     }
    ],
    "file_actions": {
@@ -1141,7 +1157,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_08.py",
    "remaining": [
-    "Live owned-worker and uncertain-lease adoption with proved identity/fence and older unsupported protocols remain pending. Independent portable flow-report history adapters are now implemented and executed against producer-generated original archives; no worker launch/adoption or quality grant occurs.",
+    "Current positively owned local basic and SSH remote-training live control cutover are implemented and executed. Older unsupported live protocols and specialist workers still require their own immutable acknowledgment and proven identity/fence contracts; native target and independent acceptance remain pending.",
     "Ended current-protocol local/remote training, label, epoch and six specialist task histories are byte-bound. Seven remote-operation archive types now preserve original per-run journals and received artifact manifests through owned drained cutover/forward recovery. A missing original journal, unknown launch ownership or changed output refuses migration."
    ]
   },
@@ -4498,6 +4514,14 @@
      "result": "Actual separated OpenVINO2026.4.1/NNCF3.4.0 pack:64 files/127,569,415 bytes,22 pinned original wheels and40 original license/notice members independently byte-matched. Owned CPU network-none inactive install/replay and actual calibrated INT8/full-flow/OCR plus140 regressions pass/0 skipped. Three quantized operations; tiny heldout maxabs0.000689812 and measured speedup0.55626.",
      "scope": "Isolated qualification only; no industrial truth, other hardware, real publisher, native legal, independent or release approval. Original preparation/audit failures retained. Receipt SHA-256 84bd35a757b227b79de49dcf24969a8373f9c6c3096f548f2c2531e71a39e102",
      "receipt": "docs/verification/receipts/2026-10-07-openvino-int8-offline-pack-e1ebb16.json"
+    },
+    {
+     "kind": "actual-offline-nvidia-cuda12-pack-qualification",
+     "source_sha": "dd163b7db6e6667d372ce480c09ba8256be00df4",
+     "result": "Separate ONNX Runtime GPU1.20.2 CUDA12 pack28 files/316132771 bytes,9 original wheels and17 exact license/notice members. Offline inactive install/replay and actual L40S FP32/FP16 execution pass;80 CUDA kernel events per precision, no CPU node execution,2 heldout tensors each, known image and original bytes preserved.27 regressions pass/0 skipped.",
+     "scope": "Exact immutable base image supplies CUDA/cuDNN; these native libraries are not bundled in this pack. Tiny synthetic controls are not representative quality, Studio jobs, native legal, publisher or release acceptance. All earlier qualification failures retained.",
+     "receipt": "docs/verification/receipts/2026-10-07-nvidia-cuda12-offline-pack-dd163b7.json",
+     "receipt_sha256": "004eaa953aa605da2612f09d4dc7ebedbb3be8f616321e01bfb989e93d611f84"
     }
    ],
    "file_actions": {
@@ -4522,7 +4546,7 @@
     "E07"
    ],
    "remaining": [
-    "Actual separate OpenVINO CPU FP32/FP16 and NNCF INT8 offline packs, original source/license bytes and controlled full-flow execution are now qualified. Other optional providers, supported hardware matrix and representative heldout quality approval remain pending; isolated CPU controls do not qualify native-library legal terms or the real publisher."
+    "Separate OpenVINO CPU FP32/FP16, NNCF INT8 and ONNX CUDA12 FP32/FP16 packs now have source/license-byte and actual isolated execution evidence. Optional OCR distribution, other devices, native-library legal/publisher decisions and representative heldout quality remain pending."
    ]
   },
   {
@@ -5182,6 +5206,18 @@
      "result": "Two clean-source browser cases passed/0 skipped/0 retry. Four independent-candidate scenarios and four exact-cancel scenarios now reference actual clicked renderer controls, retained screenshots and controlled responses. Previous native source32160f4 real conversion/review/reopen/service execution is separately retained.",
      "scope": "Root scoped review only. HTTP lifecycle controls do not prove actual conversion or worker cancellation. Expected422 console error retained. Native manufacturing quality, physical devices, independent and release acceptance remain pending.",
      "receipt": "docs/verification/receipts/2026-10-07-optimization-lifecycle-62b20cc-browser.json"
+    },
+    {
+     "kind": "clean-modal-keyboard-and-saved-queue-content-controls",
+     "source_sha": "f8b24e8916ebec8e4d06099eebb2950b37ec9cb1",
+     "result": "Two clean browser and two clean native Electron cases verify real modal keyboard isolation/draw/save/reload and actual saved queue priorities, invalid threshold, missing reviewer refusal, cursor/history/reopen and stale source refusal. Current curated187 actions/348 verified/961 pending; AST inventory156 records/274 UI files/1369 declarations is an inventory only.",
+     "scope": "Controlled saved reports are not model predictions or human label approval. Zero features accepted. Root review only; full action/shortcut/runtime-generated coverage, representative truth and target acceptance remain pending.",
+     "receipts": [
+      "docs/verification/receipts/2026-10-07-modal-keyboard-f8b24e8-browser.json",
+      "docs/verification/receipts/2026-10-07-modal-keyboard-f8b24e8-electron.json",
+      "docs/verification/receipts/2026-10-07-saved-review-queue-f8b24e8-browser.json",
+      "docs/verification/receipts/2026-10-07-saved-review-queue-f8b24e8-electron.json"
+     ]
     }
    ],
    "file_actions": {
@@ -5204,7 +5240,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "Curated178 actions have327 verified and919 pending individual scenarios with zero accepted features; this is not the exhaustive156-feature button/menu/shortcut inventory.",
+    "Curated187 actions have348 verified and961 pending individual scenarios with zero accepted features. Separate AST inventory finds1369 UI declarations across274 source files; declaration counts are not clicked behavior or full156-feature acceptance.",
     "Complete every unlisted/runtime-generated action and remaining success/empty/invalid/error/cancel/reopen/handoff scenario with actual source-bound execution; retain independent review, human truth and target qualifications separately."
    ]
   },
