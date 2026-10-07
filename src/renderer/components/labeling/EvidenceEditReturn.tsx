@@ -1,4 +1,4 @@
-import {useState,useSyncExternalStore} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
 import {useComputeStore} from '../../stores/useComputeStore';
@@ -14,39 +14,41 @@ export function EvidenceEditReturn(){
   const scope=evaluationOriginScope(project.project?.id,project.project?.source_dataset_dir||'',project.task,
     project.project?.active_labelset_id||'default',{...compute,apiTransportIdentity:getApiPersistenceIdentity()});
   const editScope=evidenceEditScope(scope,getProjectContext()?.actor_id);
-  useSyncExternalStore(subscribeEvidenceEdit,()=>evidenceEditSnapshot(localStorage,editScope));
+  const snapshot=useSyncExternalStore(subscribeEvidenceEdit,()=>evidenceEditSnapshot(localStorage,editScope));
+  const authority=getProjectContextGeneration(),editorMounted=useRef(true);
+  useEffect(()=>{editorMounted.current=true;return()=>{editorMounted.current=false;};},[]);
   const origin=readEvidenceEdit(localStorage,editScope),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{setBusy(false);setError('');},[editScope,authority,compute.transportRevision,snapshot]);
+  const same=()=>{
+    const state=useProjectStore.getState(),currentCompute=useComputeStore.getState();
+    const currentScope=evaluationOriginScope(state.project?.id,state.project?.source_dataset_dir||'',state.task,
+      state.project?.active_labelset_id||'default',{...currentCompute,apiTransportIdentity:getApiPersistenceIdentity()});
+    return authority===getProjectContextGeneration()&&compute.transportRevision===currentCompute.transportRevision
+      &&editScope===evidenceEditScope(currentScope,getProjectContext()?.actor_id)
+      &&snapshot===evidenceEditSnapshot(localStorage,editScope);
+  };
   if(!origin)return null;
   const reopen=async()=>{
-    if(isDirty||isSaving||busy)return;
-    const authority=getProjectContextGeneration(),transport=compute.transportRevision;
-    const same=()=>{
-      const state=useProjectStore.getState(),currentCompute=useComputeStore.getState();
-      return authority===getProjectContextGeneration()&&transport===currentCompute.transportRevision
-        &&scope===evaluationOriginScope(state.project?.id,state.project?.source_dataset_dir||'',state.task,
-          state.project?.active_labelset_id||'default',{...currentCompute,apiTransportIdentity:getApiPersistenceIdentity()});
-    };
+    const sameEditor=()=>editorMounted.current&&useProjectStore.getState().activeStep===2&&same();
+    if(isDirty||isSaving||busy||!sameEditor())return;
     setBusy(true);setError('');
     try{
-      const updated=await openEvidenceLabeling(origin,{sameContext:same,mode:getProjectContext()?.mode||'local',actor:useAnnotationStore.getState().reviewerName,task:useProjectStore.getState().task,
+      const updated=await openEvidenceLabeling(origin,{sameContext:sameEditor,mode:getProjectContext()?.mode||'local',actor:useAnnotationStore.getState().reviewerName,task:useProjectStore.getState().task,
         metadata:()=>datasetWorkflow.image(origin.file_path),workspace:()=>teamDataApi.workspace(),
-        open:(id,path,expected)=>useProjectStore.getState().openImageForLabeling(id,path,{...expected,isCurrent:same})});
-      if(same())rememberEvidenceEdit(localStorage,editScope,updated);
-    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}finally{if(same())setBusy(false);}
+        open:(id,path,expected)=>useProjectStore.getState().openImageForLabeling(id,path,{...expected,isCurrent:sameEditor})});
+      if(sameEditor())rememberEvidenceEdit(localStorage,editScope,updated);
+    }catch(cause){if(sameEditor())setError(cause instanceof Error?cause.message:String(cause));}finally{if(sameEditor())setBusy(false);}
   };
   const returnToComparison=async()=>{
-    if(isDirty||isSaving||busy)return;
+    if(isDirty||isSaving||busy||!same())return;
     setBusy(true);setError('');
     try{
       const state=useProjectStore.getState();
-      const current=evaluationOriginScope(state.project?.id,state.project?.source_dataset_dir||'',state.task,
-        state.project?.active_labelset_id||'default',{...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});
-      if(current!==scope)return;
       rememberReviewOrigin(localStorage,scope,origin.comparison_id,origin.image_id,origin.file_path,'comparison',
         {product_filter:origin.product_filter,lot_filter:origin.lot_filter});
       await state.setStep(4);
-      if(useProjectStore.getState().activeStep===4)clearEvidenceEdit(localStorage,editScope);
-    }catch(cause){setError(cause instanceof Error?cause.message:String(cause));}finally{setBusy(false);}
+      if(same()&&useProjectStore.getState().activeStep===4)clearEvidenceEdit(localStorage,editScope);
+    }catch(cause){if(same())setError(cause instanceof Error?cause.message:String(cause));}finally{if(same())setBusy(false);}
   };
   return <section aria-label="판정 근거에서 시작한 라벨 편집" className="shrink-0 border-b border-cyan-800 bg-cyan-950/30 px-4 py-2 text-xs">
     <p>현재 라벨 편집 · {origin.labelset_id} · 확인한 수정 버전 {origin.revision} · {origin.image_id}</p>

@@ -32,6 +32,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   });
   if (startupUrl) await page.goto(startupUrl); else await page.reload();
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText('Comparison handoff fixture');
+  await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(1).click();
+  await expect(page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'})).toHaveCount(0);
   await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(3).click();
   const panel = page.getByRole('region', {name: '현행과 후보 모델 비교'});
   await panel.getByLabel('비교 기준 모델', {exact: true}).selectOption('job_fixture_incumbent');
@@ -174,6 +176,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await expect(page.getByRole('button',{name:'Mark as Normal (OK)',exact:true})).toBeEnabled();
   await page.getByRole('button',{name:'Mark as Normal (OK)',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
+  await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:'Save Changes',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeEnabled();
   const afterLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
@@ -182,9 +185,42 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(afterLabels.metadata.content_hash).toBe(editRow.image_sha256);
   await page.reload();
   await expect(editReturn).toContainText(editRow.image_id);
-  await editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true}).click();
+  const reopen=editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true});
+  const originSnapshot=()=>page.evaluate(()=>JSON.stringify(Object.entries(localStorage).filter(([key])=>key.startsWith('modu-evidence-edit:')).sort()));
+  const storedOrigin=await originSnapshot();
+  const metadataRoute='**/api/dataset/metadata/image?*';
+  const exactMetadata=(url:string)=>new URL(url).searchParams.get('image_path')===editRow.file_path;
+  await page.route(metadataRoute,r=>exactMetadata(r.request().url())?r.fulfill({status:503,json:{detail:'Controlled current-label metadata unavailable'}}):r.continue());
+  await reopen.click();await expect(editReturn.getByRole('alert')).toContainText('Controlled current-label metadata unavailable');
+  await expect(reopen).toBeEnabled();expect(await originSnapshot()).toBe(storedOrigin);
+  expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
+  await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
+  await page.unroute(metadataRoute);await reopen.click();
+  await expect(editReturn.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
+
+  // Deliberately defer the first genuine metadata read. Leaving and returning
+  // to the same editor cancels this request; no late label read or navigation.
+  const capturedMetadata=await api(`/api/dataset/metadata/image?image_path=${encodeURIComponent(editRow.file_path)}`);
+  let release!:()=>void,metadataStarted=false,metadataReleased=false,metadataReads=0,annotationReads=0;
+  const held=new Promise<void>(resolve=>{release=resolve;});
+  const countAnnotation=(r:any)=>{if(r.method()==='GET'&&new URL(r.url()).pathname===`/api/annotations/${editRow.image_id}`)annotationReads++;};
+  page.on('request',countAnnotation);
+  await page.route(metadataRoute,async r=>{if(!exactMetadata(r.request().url())){await r.continue();return;}metadataReads++;metadataStarted=true;await held;await r.fulfill({status:200,json:capturedMetadata});metadataReleased=true;});
+  const beforeCancelledOrigin=await originSnapshot();await reopen.click();await expect.poll(()=>metadataStarted).toBe(true);await expect(reopen).toBeDisabled();
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();
+  await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
+  await expect(editReturn).toContainText(editRow.image_id);await expect(reopen).toBeEnabled();const readsBeforeRelease=annotationReads;
+  release();await expect.poll(()=>metadataReleased).toBe(true);await page.waitForTimeout(300);
+  expect(metadataReads).toBe(1);expect(annotationReads).toBe(readsBeforeRelease);expect(await originSnapshot()).toBe(beforeCancelledOrigin);await expect(editReturn.getByRole('alert')).toHaveCount(0);
+  await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
+  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  evidence.note('evidence_label_reopen_boundaries',{image_id:editRow.image_id,current_revision:capturedMetadata.revision,
+    controlled_metadata_failure:503,error_keeps_origin_and_annotations:true,deliberate_retry:true,
+    leave_and_reenter_same_stage_cancels_old_request:true,cancelled_metadata_reads:metadataReads,
+    cancelled_late_annotation_reads:annotationReads-readsBeforeRelease,new_editor_not_busy:true,new_deliberate_request_succeeds:true});
   await editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true}).click();
   await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
   await expect(panel.getByLabel('모델 비교 제품 필터')).toHaveValue('(미지정)');
@@ -192,6 +228,10 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await expect(panel.locator('[data-comparison-image].ring-cyan-400')).toHaveAttribute('data-comparison-image',editRow.file_path);
   expect(crypto.createHash('sha256').update(JSON.stringify(await api(`/api/evaluation/model-comparisons/${secondJob.report_id}${query}`))).digest('hex')).toBe(beforeReportSha);
   await evidence.screenshot(page,native?'native-evidence-label-return':'browser-evidence-label-return');
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
+  await expect(editReturn).toHaveCount(0);expect(await originSnapshot()).toBe('[]');
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();
+  await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
   evidence.note('evidence_labeling',{comparison_id:secondJob.report_id,image_id:editRow.image_id,image_path:editRow.file_path,
     captured_hash:editRow.image_sha256,labelset_id:report.labelset_id,before_revision:beforeLabels.metadata.revision,after_revision:afterLabels.metadata.revision,
     historical_report_sha256:beforeReportSha,normal_label_saved:true,dirty_return_refused:true,reopened_current_label:true,
