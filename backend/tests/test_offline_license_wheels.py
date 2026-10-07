@@ -162,3 +162,20 @@ def test_supplier_provenance_is_part_of_build_identity_and_compiler_is_snapshott
     assert supplied['license_supplier']['manifest_sha256']==hashlib.sha256(manifest.read_bytes()).hexdigest()
     assert 'scripts/build_backend_binary.py' in {r['path'] for r in supplied['resources']}
     assert '--exclude-module=sitecustomize' in builder.pyinstaller_command(root,tmp_path/'output','Darwin')
+
+
+def test_direct_script_execution_resolves_offline_suppliers_without_repository_pythonpath(tmp_path):
+    import os,subprocess,sys
+    from pathlib import Path
+    manifest,_=upstream(tmp_path);root=Path(__file__).resolve().parents[2]
+    script="""
+import runpy,sys
+values=runpy.run_path(sys.argv[1]);function=values['dependency_inventory']
+function.__globals__['DEPENDENCIES']=()
+function.__globals__['check_pyinstaller']=lambda:False
+result=function(values['ROOT_DIR'],supplier_manifest=sys.argv[2])
+assert len(result['license_supplier']['archives'])==1
+"""
+    result=subprocess.run([sys.executable,'-c',script,str(root/'scripts/build_backend_binary.py'),str(manifest)],
+        cwd=tmp_path,env={**os.environ,'PYTHONPATH':''},capture_output=True,text=True,timeout=30)
+    assert result.returncode==0,result.stderr
