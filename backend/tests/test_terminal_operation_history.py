@@ -3,6 +3,7 @@ import hashlib
 import json
 import uuid
 import pytest
+from backend.tests.test_remote_coordinator import bounded_fake_foundation
 from backend.tests.test_terminal_remote_history import remote_history, digest
 
 

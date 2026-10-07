@@ -246,19 +246,28 @@ def test_process_creation_identity_recovers_only_a_confirmed_exited_owner(tmp_pa
     assert store.get(ref.id).state=='interrupted' and not leases.list()
 
 
-def test_owned_heartbeat_keeps_lease_valid_and_closes_after_completion(tmp_path):
+def test_owned_heartbeat_keeps_lease_valid_and_closes_after_completion(tmp_path,monkeypatch):
     from backend.engine.specialist_training_queue import NativeAdmission
     from backend.engine.job_scheduler import JobScheduler
     from backend.engine.job_store import JobStore
     from backend.engine.shared_scheduler import ResourceLeases
     from backend.contracts.context import ProjectContext
-    store=JobStore(tmp_path/'ledger');leases=ResourceLeases(tmp_path/'leases',lease_seconds=.12)
+    # Observe actual renewal instead of relying on a 120ms wall-clock window
+    # during a loaded hosted run. Expired/stale-fence cases are separate tests.
+    store=JobStore(tmp_path/'ledger');leases=ResourceLeases(tmp_path/'leases',lease_seconds=5)
     ref=store.submit(ProjectContext(workspace_id='w',project_id='p',actor_id='a',mode='local'),'p','specialist_training',{},job_id='native')
     scheduler=JobScheduler(store,leases);scheduler.enqueue(ref.id,ref.revision,resources={'host':'local-compute'})
     owner=NativeAdmission(store,scheduler,ref.id,tmp_path/'native','a',threading.Event())
+    renewed=threading.Event();observed=[];refresh=scheduler.heartbeat
+    def trace(lease):
+        result=refresh(lease);observed.append((lease,result,leases.list()[0]['expires'],time.time()))
+        if len(observed)>=2:renewed.set()
+        return result
+    monkeypatch.setattr(scheduler,'heartbeat',trace)
     published=[]
     with owner.scope():
-        time.sleep(.35)
+        assert renewed.wait(15), 'Owned worker did not renew its real ledger/resource lease twice'
+        assert all(after.expires_at>before.expires_at and expiry>at for before,after,expiry,at in observed)
         assert leases.list()[0]['expires']>time.time() and store.get(ref.id).state=='running'
         owner.complete(lambda:published.append(True))
     assert published==[True] and store.get(ref.id).state=='completed' and not leases.list()
