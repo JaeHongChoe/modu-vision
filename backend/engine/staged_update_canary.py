@@ -54,6 +54,31 @@ def validate_spec(value):
     return dict(value)
 
 
+def validate_ready_review(value,spec,capability_sha256):
+    """Ready describes a closed reviewed capability, never new caller authority."""
+    u=_update();fields={'schema_version','protocol','required','policy','status','supported','pins',
+        'capability_sha256','candidate_runtime_source_sha256','reason',*FLAGS}
+    if isinstance(value,dict) and value.get('protocol')==2:fields.add('worker_binding')
+    if (not isinstance(value,dict) or set(value)!=fields or type(value.get('schema_version')) is not int
+            or value['schema_version']!=1 or type(value.get('protocol')) is not int
+            or (value['protocol'],value.get('policy'),value.get('status')) not in
+                ((1,'same_reviewed_source_runtime_worker_v1','source_ready'),(2,'same_reviewed_frozen_runtime_worker_v1','frozen_ready'))
+            or value.get('required') is not True or value.get('supported') is not True or value.get('reason') is not None
+            or value.get('pins')!=validate_spec(spec) or value.get('capability_sha256')!=capability_sha256
+            or not u._hex(capability_sha256) or not u._hex(value.get('candidate_runtime_source_sha256'))
+            or any(value.get(name) is not False for name in FLAGS)):
+        raise CanaryError('Invalid closed ready canary review; review explicit pins and a supported candidate again')
+    if value['protocol']==2:
+        from backend.engine.staged_canary_frozen_execution import BINDING_FIELDS
+        binding=value.get('worker_binding')
+        if (not isinstance(binding,dict) or set(binding)!=BINDING_FIELDS or type(binding.get('protocol')) is not int
+                or binding['protocol']!=1 or binding.get('runtime_source_sha256')!=value['candidate_runtime_source_sha256']
+                or any(not u._hex(binding.get(name)) for name in BINDING_FIELDS-{'protocol','executable_path','build_receipt_path'})):
+            raise CanaryError('Invalid ready compiled canary worker binding')
+        for name in ('executable_path','build_receipt_path'):u._safe_path(binding[name])
+    return value
+
+
 def _execution():
     try:
         from backend.engine import application_launch_execution
@@ -87,7 +112,11 @@ def _candidate_rows(manifest):
     return rows,u._sha(u._canonical(rows))
 
 
-def review_candidate(root,manifest,spec,capability_sha256):
+def review_candidate(root,manifest,spec,capability_sha256,*,archive=None):
+    if (manifest.get('schema_version')==2 or getattr(sys,'frozen',False)
+            or any(row['path'].split('/')[-1]=='backend-release.json' for row in manifest['files'])):
+        from backend.engine.staged_canary_frozen_execution import review_candidate as review_frozen
+        return review_frozen(root,manifest,spec,capability_sha256,archive=archive)
     value={'schema_version':1,'protocol':1,'required':True,'policy':'same_reviewed_source_runtime_worker_v1',
         'status':'missing_pins','supported':False,'pins':spec,'capability_sha256':capability_sha256,
         'candidate_runtime_source_sha256':None,'reason':'Supply explicit trusted known-image workspace, project and plan SHA-256 pins',
@@ -138,7 +167,7 @@ def expected_requirement(root,record,database,manifest):
             or database.get('source_sha256')!=record['source_sha256']
             or database.get('previous_pointer')!=record['previous_database']):
         raise CanaryError('Staged canary database/update authority differs')
-    return {'schema_version':1,'kind':'staged_update_canary_requirement',
+    value={'schema_version':1,'kind':'staged_update_canary_requirement',
         'root_identity':owner['root_identity'],'installation_id':record['installation_id'],
         'update_id':record['update_id'],'application_generation':record['application_generation'],
         'migration_id':database['migration_id'],'source_sha256':record['source_sha256'],
@@ -149,6 +178,14 @@ def expected_requirement(root,record,database,manifest):
         'application_manifest_sha256':u._sha(u._canonical(manifest)),
         'canary':spec,'canary_capability_sha256':record['canary_capability_sha256'],
         'execution_policy':'staged_source_runtime_worker'}
+    if record.get('canary_execution_protocol',1)==2:
+        from backend.engine.staged_canary_frozen_execution import requirement
+        value=requirement(root,record,manifest,value)
+        if value['worker_binding']!=record.get('canary_worker_binding'):
+            raise CanaryError('Reviewed staged compiled worker binding changed')
+    elif record.get('canary_execution_protocol',1)!=1:
+        raise CanaryError('Unknown staged canary execution protocol')
+    return value
 
 
 def _source_and_target(root,record,database):
@@ -174,6 +211,9 @@ def _source_and_target(root,record,database):
 
 
 def validate_receipt(root,record,database,manifest):
+    if record.get('canary_execution_protocol',1)==2:
+        from backend.engine.staged_canary_frozen_execution import validate_receipt as validate_frozen
+        return validate_frozen(root,record,database,manifest)
     u=_update();directory=_directory(root,record)
     expected_members={REQUIREMENT,INTENT,RECEIPT,'canary-result.json','private'}
     _capsule_members(directory,expected_members)
@@ -315,7 +355,7 @@ def _checkpoint(point):
 def _worker_environment(home,cache,scratch):
     return {'PATH':os.defpath,'LANG':'C.UTF-8','PYTHONNOUSERSITE':'1','PYTHONDONTWRITEBYTECODE':'1',
         'HF_HUB_OFFLINE':'1','TRANSFORMERS_OFFLINE':'1','OMP_NUM_THREADS':'1','MKL_NUM_THREADS':'1','CUDA_VISIBLE_DEVICES':'','NVIDIA_VISIBLE_DEVICES':'none',
-        'HF_DATASETS_OFFLINE':'1','HOME':str(home),'USERPROFILE':str(home),'XDG_CACHE_HOME':str(cache),
+        'HF_DATASETS_OFFLINE':'1','HOME':str(home),'CFFIXED_USER_HOME':str(home),'USERPROFILE':str(home),'XDG_CACHE_HOME':str(cache),
         'XDG_CONFIG_HOME':str(home/'config'),'TORCH_HOME':str(cache/'torch'),'HF_HOME':str(cache/'huggingface'),
         'HUGGINGFACE_HUB_CACHE':str(cache/'huggingface/hub'),'TRANSFORMERS_CACHE':str(cache/'transformers'),
         'MPLCONFIGDIR':str(cache/'matplotlib'),'TMPDIR':str(scratch),'TMP':str(scratch),'TEMP':str(scratch),
@@ -410,7 +450,10 @@ def ensure_verified(root,record,database,manifest):
     if not (directory/RECEIPT).exists():
         if (directory/INTENT).exists():
             raise CanaryError('Canary execution already attempted without sealed proof; retain recovery ownership')
-        execute_source_candidate(root,record,database,manifest,sha)
+        if expected['schema_version']==2:
+            from backend.engine.staged_canary_frozen_execution import execute_candidate
+            execute_candidate(root,record,database,manifest,sha)
+        else:execute_source_candidate(root,record,database,manifest,sha)
     _,receipt_sha=_document(directory/RECEIPT)
     if record.get('canary_receipt_sha256') not in (None,receipt_sha):
         raise CanaryError('Retained canary receipt bytes changed')

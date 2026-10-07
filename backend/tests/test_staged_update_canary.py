@@ -27,7 +27,7 @@ CONTROL_SPEC={'workspace_id':'1'*32,'project_id':'2'*32,'plan_sha256':'3'*64}
 CONTROL_CAPABILITY_SHA='0'*64
 
 
-def control_preflight(root,manifest,spec,capability_sha):
+def control_preflight(root,manifest,spec,capability_sha,*,archive=None):
     from backend.engine.staged_update_canary import FLAGS
     return {'schema_version':1,'protocol':1,'required':True,'policy':'same_reviewed_source_runtime_worker_v1',
         'status':'source_ready','supported':True,'pins':spec,'capability_sha256':capability_sha,
@@ -606,7 +606,16 @@ def test_actual_canary_partial_publication_never_runs_a_second_worker(tmp_path,m
     'Owned CPU.app/Contents/Resources/backend/_internal/bokeh/server/static/.eslintrc.js',
     'Owned CPU.app/Contents/Resources/backend/_internal/bokeh/server/static/js/@microsoft/fast.js',
     'Owned CPU.app/Contents/Resources/backend/_internal/bokeh/server/static/js/fast-components@2.30.6.js',
-    'Owned CPU.app/Contents/Resources/backend/_internal/bokeh/server/static/js/carto@^9.0.20.js'])
+    'Owned CPU.app/Contents/Resources/backend/_internal/bokeh/server/static/js/carto@^9.0.20.js',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (GPU).app/Contents/Info.plist',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (GPU).app/Contents/MacOS/Electron Helper (GPU)',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (GPU).app/Contents/PkgInfo',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Plugin).app/Contents/Info.plist',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Plugin).app/Contents/MacOS/Electron Helper (Plugin)',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Plugin).app/Contents/PkgInfo',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Renderer).app/Contents/Info.plist',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Renderer).app/Contents/MacOS/Electron Helper (Renderer)',
+    'Owned Native.app/Contents/Frameworks/Electron Helper (Renderer).app/Contents/PkgInfo'])
 def test_actual_compiled_ordinary_dot_and_plus_names_remain_hash_bound_archive_members(tmp_path,name):
     from backend.engine import runtime_update as update
     def change(manifest,files):
@@ -617,7 +626,10 @@ def test_actual_compiled_ordinary_dot_and_plus_names_remain_hash_bound_archive_m
 
 
 @pytest.mark.parametrize('name',['.','..','','/absolute','a//b','a/./b','a/../b','a\\b','a:b',
-    'a/b.','a/b ','a/CON','a/nul.txt','a/COM1','a/LPT9.data','a/'+('x'*161),'x'*241])
+    'a/b.','a/b ','a/CON','a/nul.txt','a/COM1','a/LPT9.data','a/'+('x'*161),'x'*241,
+    '(leading)/file','a/(leading)','/root(escape)','a/../Electron Helper (GPU)',
+    'a/./Electron Helper (GPU)','a/Electron Helper (GPU)\\escape',
+    'a/Electron Helper (GPU):escape','a/Electron Helper (GPU).','a/Electron Helper (GPU) '])
 def test_portable_ordinary_name_support_keeps_unsafe_path_boundaries(name):
     from backend.engine import runtime_update as update
     with pytest.raises(ValueError):update._safe_path(name)

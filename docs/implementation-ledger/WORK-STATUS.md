@@ -348,3 +348,10 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 실제 새 category 선택 상태를 접근성에도 표시하도록 기존 Boolean의 aria-pressed 한 줄을 추가했다. 원래 라벨·mask·검수 기록·이미지 hash는 보존하고 annotation 저장은 하지 않았다.
 - 실제 hosted `0b7501a` 실패 trace에서 comparison POST가 없음을 확인했다. 후보 화면 hydration 중 catalog refresh가 클릭 시 버튼을 잠시 비활성화했다. 정확한 후보 job 표시·모델 쌍·전체 test/로컬CPU·활성 버튼을 먼저 기다리고 기존10초 응답/95초 학습/65초 비교 제한을 유지했다. 실제 원본/CPU warm-start 학습, 동일16개 고정 test 비교, 원본 복귀를 root clean source에서 다시 수행하고 기존25개 근거 참조만 새 실행 기록으로 갱신했다.
 - 집계592verified/857pending, 부모 구현69verified/13pending을 유지한다. 새 hosted CI·사람 품질·설치·publisher·장비·전체 부모 수락으로 표시하지 않는다.
+
+
+## 2026-10-08 staged compiled worker와 Electron resource 경로 보정
+
+- 고정 compiled worker의 인증·단회 anonymous transport·입력 및 runtime/resource hash를 활성화 pointer 변경 전에 확인하고, 불확실한 실행은 원래 intent와 ownership을 남긴다. source229개 및 CI selector 계약20개가 통과했다. 명시적 source selector21개를 공개 CPU CI에 추가했다.
+- 이전 exact compiled artifact에서는 실제 A/OK 기준 이미지1개와 거절4개가 통과했다. 최초 pointer가 비어 있던 합성 검증이며, 기존 설치 앱의 업그레이드·전체 process-tree 종료·품질 수락이 아니다.
+- 실제 Electron Helper(GPU/Plugin/Renderer)의 정상 괄호 resource 경로9개가 거절된 원인을 확인해 경로 parser만 좁게 보정했다. traversal·reserved name·namespace·link/hash 검사는 유지했다. 보정된 compiled artifact와 실제 native positive 실행은 후속 receipt로 구분한다.

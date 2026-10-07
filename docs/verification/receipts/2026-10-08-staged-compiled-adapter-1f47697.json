@@ -1,0 +1,89 @@
+{
+  "schema": "modu-vision.staged-compiled-adapter-source/v1",
+  "base_sha": "1f47697f8d568ec21e0dddbab3dc7e1b9d648e0a",
+  "source_files": {
+    "backend/engine/staged_canary_frozen_execution.py": "43edcd00f4cd6847b94e61dc77d9095c96aeecf97f677bbda830163568ab0a1d",
+    "backend/engine/staged_update_canary.py": "cf3b0dfc842e525a336b7aed40b4f67be9fd3fd9056cc4c5ae566159315589e1",
+    "backend/engine/runtime_update.py": "31d9347433bfa7587903d3cba156cf7df7366fc80aa3c72f3c93cfe32db14039",
+    "scripts/frozen_backend_entry.py": "4080ff729a59faabd70327fe4954a0f5f43b0885b343766ec7b686fce3318da1",
+    "scripts/build_backend_binary.py": "f5bc63011be50d183ab102f77efed308035c9ef4bdee966b900322464a2a413e",
+    "backend/tests/test_staged_update_canary.py": "9f290cec924427fe4e065d9ba71d060f548eec3eac41f56995e6224f406bf123",
+    "backend/tests/test_staged_canary_frozen_execution.py": "7afde41c74658692587182c772274f13d578a5161acb8a3db3c722bba20a89c5"
+  },
+  "root_source_results": {
+    "passed": 229,
+    "failed": 0,
+    "skipped": 0,
+    "selected_source_cases": 213,
+    "path_member_cases": 16,
+    "source_inputs": 2155,
+    "source_unchanged": true,
+    "dirty_exact_file_pins": true,
+    "same_claimed_source_map_before_and_after": true
+  },
+  "ci_selection": {
+    "added_explicit_source_function_selectors": 21,
+    "actual_compiled_run_functions_not_selected_on_hosted_source_lane": 3,
+    "CI_contract_cases_passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "workflow_sha256": "ad7e9430e9886e605a0f2dcda19000e9e38f6616e0ebe28a04582e3139f90c0c"
+  },
+  "proof_hashes": {
+    "receipt.json": "1ffc1cb9311e3d7289668691900ee5d1f1e96e23130e6e84c43d654b5f0aa1a4",
+    "source.xml": "5b6887eef79d3de9c393422c6a3caf8edd73220d4dd36d0c981e01e9ddcf3074",
+    "path-members.xml": "377b6c52886ae3082a23ffc906adb6d32e21c990995570c8b18288eca78c7fb3",
+    "ci-selectors.xml": "0194fa04822ef87cd134b0435ee5e0ddf116cc6c3b81ecf3ff91af31da748341",
+    "source-before.json": "e5d83348dd4b39bddd655d5f1520d115f557f5c304ba357c6ecc08f2be3268a2",
+    "source-after.json": "e5d83348dd4b39bddd655d5f1520d115f557f5c304ba357c6ecc08f2be3268a2"
+  },
+  "independent_review_sha256": {
+    "seven_file_adapter": "1d8c72d6d3e75e8240cfd891091c6808cb82524d10d07bc3b61be404d4353637",
+    "electron_archive_parser": "e9083ab019140ab295acc9f4f8a159e460ce83ed008d760a3f51515b111b808e"
+  },
+  "previous_exact_compiled_artifact": {
+    "executable_sha256": "f05d8f8f6e6aac5d5be1aeb3dd8345c55dfbac2ca59c13ffe917cd54664ed9db",
+    "build_identity_sha256": "485d89c539639bf9e46fb7c844f2ff0f7d6ffad59fee5a75c0a5473efd569e8c",
+    "source_parser_precedes_parentheses_correction": true,
+    "actual_passed": 5,
+    "positive_cases": 1,
+    "refusal_cases": 4,
+    "known_image_semantics": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "both_pointers_changed_only_after_math_seal": true,
+    "positive_original_pointers_were_null": true,
+    "post_cutover_readback_verified": true,
+    "foreign_parent_replay_refused": true,
+    "source_runtime_sha256": "12ff54b0694a1cc35cda6ac0c80adb7b363439ddf118e45b3ab8728419a62f3a",
+    "proof_sha256": "e9b8132482e053531f5dbcddb40a7fa78159dac595c9528bedb93011b273ce26",
+    "positive_xml_sha256": "edb4b341be460285dcebf254716596f01c39fd114208ebc5384905b7a4edbf48",
+    "negative_xml_sha256": "6ae93c754331d04a1ffc26d3a82eab4df2d693b9793a8c57f4920bcdc3ad8d43"
+  },
+  "changes": [
+    "Authenticate installer-owned anonymous transport and exact staged compiled worker before semantic imports; preserve incomplete attempt intent and fixed original ownership on uncertainty.",
+    "Normalize only the pinned frozen MPL runtime hook private empty directory into derived worker cache; original descriptors and exact boundary checks remain.",
+    "Accept nine ordinary Electron Helper parenthesized resource paths while retaining traversal, reserved-name, root, separator, namespace, link and hash restrictions."
+  ],
+  "limitations": [
+    "Prior compiled five-case result applies to its exact earlier parser and resource artifact. Corrected compiled artifact and actual Electron launch remain separate qualifications.",
+    "Controlled positive uses initially absent pointers and synthetic A/OK truth; not existing live installed-app upgrade or representative model quality.",
+    "Original Popen child cleanup does not prove complete process-tree exit.",
+    "No target home adoption, OS installer/service registration, publisher/signing or external deployment."
+  ],
+  "acceptance": {
+    "actual_native_application_verified": false,
+    "installed_target_verified": false,
+    "complete_process_tree_verified": false,
+    "model_quality_approved": false,
+    "publisher_approved": false,
+    "release_ready": false,
+    "whole_parent_accepted": false
+  }
+}

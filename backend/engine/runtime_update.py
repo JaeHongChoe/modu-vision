@@ -218,7 +218,7 @@ def verify_release(envelope_path,authority_path,pinned_authority_sha256,target):
 def _safe_path(value):
     if not isinstance(value,str) or not 0<len(value)<=240:raise UpdateError('Invalid portable application path')
     parts=value.split('/')
-    if any(p in ('.','..') or not re.fullmatch(r'[A-Za-z0-9_.@][A-Za-z0-9_. +@^\-]{0,159}',p) or p.endswith(('.', ' '))
+    if any(p in ('.','..') or not re.fullmatch(r'[A-Za-z0-9_.@][A-Za-z0-9_. +@^\-()]{0,159}',p) or p.endswith(('.', ' '))
             or re.match(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)',p,re.I) for p in parts):
         raise UpdateError('Unsafe portable application path')
     return value
@@ -473,7 +473,8 @@ def plan_update(root,bundle,envelope,authority,*,pinned_authority_sha256,target,
         installer=next(row for row in release['artifacts'] if row['kind']=='installer')
         manifest,_=_portable(Path(bundle)/installer['path'],release)
         from backend.engine.staged_update_canary import review_candidate
-        canary_preflight=review_candidate(root,manifest,canary,canary_capability_sha256)
+        canary_preflight=review_candidate(root,manifest,canary,canary_capability_sha256,
+            archive=Path(bundle)/installer['path'])
         source=migration.preview_forward(root) if current else migration.preview(root)
         if not source['can_apply']:raise UpdateError('; '.join(source['blockers']))
         return UpdatePlan(str(root),str(_unlinked(bundle)),str(_unlinked(envelope)),str(_unlinked(authority)),
@@ -650,12 +651,15 @@ def _finish(root,identifier):
 def install_update(root,plan):
     root,owner=_root(root)
     if not isinstance(plan,UpdatePlan) or plan.root!=str(root):raise UpdateError('Update plan belongs to another installation')
-    from backend.engine.staged_update_canary import validate_spec
+    from backend.engine.staged_update_canary import validate_spec,validate_ready_review
     validate_spec(plan.canary)
-    if (not isinstance(plan.canary_preflight,dict) or plan.canary_preflight.get('status')!='source_ready'
+    if (not isinstance(plan.canary_preflight,dict)
+            or (plan.canary_preflight.get('protocol'),plan.canary_preflight.get('status'),plan.canary_preflight.get('policy')) not in
+                ((1,'source_ready','same_reviewed_source_runtime_worker_v1'),(2,'frozen_ready','same_reviewed_frozen_runtime_worker_v1'))
             or plan.canary_preflight.get('supported') is not True):
         reason=plan.canary_preflight.get('reason') if isinstance(plan.canary_preflight,dict) else None
         raise UpdateError('Preactivation canary '+str(reason or 'requires a newly reviewed supported source candidate'))
+    validate_ready_review(plan.canary_preflight,plan.canary,plan.canary_capability_sha256)
     with store_admission(root,exclusive=True):
         assert_quiescent(root)
         validate_attachment(root)
@@ -680,6 +684,8 @@ def install_update(root,plan):
             'previous_application':plan.previous_application,'migration_id':None,'database_pointer':None,'recovery_history':[],
             'canary':dict(plan.canary),'canary_requirement_sha256':None,'canary_receipt_sha256':None}
         record['canary_capability_sha256']=plan.canary_capability_sha256
+        record['canary_execution_protocol']=plan.canary_preflight['protocol']
+        record['canary_worker_binding']=plan.canary_preflight.get('worker_binding')
         _write(directory/'journal.json',record)
         return _finish(root,identifier)
 

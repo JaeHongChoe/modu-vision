@@ -50,6 +50,12 @@ OWNED_APPLICATION_CPU_RESOURCES = OWNED_APPLICATION_LAUNCH_RESOURCES + (
     'backend/engine/runtime_deadline.py',
     'backend/engine/process_isolation.py',
 )
+OWNED_STAGED_CANARY_PROTOCOL = 'owned_staged_canary_cpu_execution_protocol'
+OWNED_STAGED_CANARY_RESOURCES = OWNED_APPLICATION_CPU_RESOURCES + (
+    'backend/engine/staged_canary_frozen_execution.py',
+    'backend/engine/staged_update_canary.py', 'backend/engine/runtime_update.py',
+    'backend/engine/global_migration.py', 'backend/engine/migration_guard.py',
+)
 
 # Names are distribution/module pairs because wheel and import names differ.
 DEPENDENCIES = (
@@ -172,6 +178,26 @@ def _owned_cpu_protocol_available(root, resources):
     except (ValueError, SyntaxError, OSError, StopIteration): return False
 
 
+def _owned_staged_canary_protocol_available(root, resources):
+    """The fixed staged role is separate from ordinary committed execution."""
+    if not _owned_cpu_protocol_available(root, resources): return False
+    try:
+        pins=_launch_protocol_resources(resources,OWNED_STAGED_CANARY_RESOURCES)
+        for name,digest in pins.items():
+            source=Path(root)/name
+            if source.is_symlink() or not source.is_file() or sha256(source)!=digest:return False
+        tree=ast.parse((Path(root)/OWNED_APPLICATION_LAUNCH_RESOURCES[0]).read_bytes())
+        shape=lambda node:ast.dump(node,include_attributes=False)
+        guard=ast.parse("if __name__ == '__main__': pass").body[0].test
+        worker=ast.parse("""if len(sys.argv)>1 and sys.argv[1]=='--owned-staged-canary-cpu-worker':
+    from backend.engine.staged_canary_frozen_execution import frozen_worker_main
+    raise SystemExit(frozen_worker_main(sys.argv[2:]))
+""").body[0]
+        entry=next(node for node in tree.body if isinstance(node,ast.If) and shape(node.test)==shape(guard))
+        return [i for i,node in enumerate(entry.body) if shape(node)==shape(worker)]==[3]
+    except (ValueError,SyntaxError,OSError,StopIteration):return False
+
+
 def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
     from packaging.requirements import Requirement
     root = Path(root)
@@ -213,6 +239,8 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
         inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL] = 1
     if _owned_cpu_protocol_available(root, inventory['resources']):
         inventory[OWNED_APPLICATION_CPU_PROTOCOL] = 1
+    if _owned_staged_canary_protocol_available(root, inventory['resources']):
+        inventory[OWNED_STAGED_CANARY_PROTOCOL] = 1
     if supplier_manifest is not None:
         from scripts.package_license_texts import _supplier_licenses,_read
         source=Path(supplier_manifest).absolute();suppliers=_supplier_licenses(source)
@@ -223,6 +251,11 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
 
 
 def validate_inventory(inventory):
+    if OWNED_STAGED_CANARY_PROTOCOL in inventory:
+        if (type(inventory[OWNED_STAGED_CANARY_PROTOCOL]) is not int or inventory[OWNED_STAGED_CANARY_PROTOCOL]!=1
+                or type(inventory.get(OWNED_APPLICATION_CPU_PROTOCOL)) is not int or inventory[OWNED_APPLICATION_CPU_PROTOCOL]!=1):
+            raise ValueError('Invalid staged canary worker protocol')
+        _launch_protocol_resources(inventory.get('resources'),OWNED_STAGED_CANARY_RESOURCES)
     if OWNED_APPLICATION_CPU_PROTOCOL in inventory:
         if (type(inventory[OWNED_APPLICATION_CPU_PROTOCOL]) is not int
                 or inventory[OWNED_APPLICATION_CPU_PROTOCOL] != 1

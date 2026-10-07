@@ -207,6 +207,27 @@ jobs:
           backend/tests/test_local_training_process.py
           backend/tests/test_service_s6_04.py
           backend/tests/test_staged_update_canary.py
+          backend/tests/test_staged_canary_frozen_execution.py::test_current_exact_build_advertises_separate_staged_worker_protocol
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_capability_requires_early_fixed_dispatch_and_exact_resources
+          backend/tests/test_staged_canary_frozen_execution.py::test_compiled_metadata_binding_is_derived_and_closed_without_acceptance
+          backend/tests/test_staged_canary_frozen_execution.py::test_candidate_capability_and_resource_drift_refuse
+          backend/tests/test_staged_canary_frozen_execution.py::test_fixed_staged_descriptor_refuses_unknown_numbers
+          backend/tests/test_staged_canary_frozen_execution.py::test_source_process_cannot_claim_compiled_staged_worker
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_parser_rejects_arbitrary_paths_before_inventory
+          backend/tests/test_staged_canary_frozen_execution.py::test_anonymous_transport_is_not_inherited_by_further_children
+          backend/tests/test_staged_canary_frozen_execution.py::test_worker_cannot_treat_unlocked_installation_as_parent_exclusive
+          backend/tests/test_staged_canary_frozen_execution.py::test_exclusive_probe_is_supplemental_and_exact
+          backend/tests/test_staged_canary_frozen_execution.py::test_original_installer_identity_rejects_changed_birth_command_and_parent
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_math_never_borrows_a_post_cutover_pointer
+          backend/tests/test_staged_canary_frozen_execution.py::test_an_unsealed_or_extra_staged_request_refuses_before_mutation
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_proof_cannot_claim_origin_or_quality
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_transport_has_no_named_ipc_or_network_authority
+          backend/tests/test_staged_canary_frozen_execution.py::test_unrecognized_private_capsule_activity_cannot_be_ignored
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_worker_derives_the_same_private_foundation_home_without_caller_authority
+          backend/tests/test_staged_canary_frozen_execution.py::test_pinned_frozen_mpl_hook_is_confined_before_fixed_environment_restore
+          backend/tests/test_staged_canary_frozen_execution.py::test_released_semantic_import_boundary_is_after_private_worker_admission
+          backend/tests/test_staged_canary_frozen_execution.py::test_staged_compiled_attempt_intent_blocks_crash_retry_without_spawning
+          backend/tests/test_staged_canary_frozen_execution.py::test_install_coerced_review_schema_refuses_before_staging
           backend/tests/test_application_launch_execution.py
           backend/tests/test_application_launch_controller.py
           backend/tests/test_application_launch_lease.py

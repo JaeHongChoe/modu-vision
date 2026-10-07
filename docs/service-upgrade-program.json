@@ -4956,6 +4956,14 @@
           "receipt_sha256": "2a8925fa3c84f5a5550213f5b3e7e94d38ca331f7c3f311e6ca3107a9c10d50b",
           "result": "Root43 related lease/environment cases passed without skips,2131 source files unchanged. Private12 final source/OS lookup cases also passed. Original4 missing/unsafe-home failures and actual macOS Foundation home mismatch retained and corrected.",
           "scope": "Derived retained private POSIX home/env at the existing owned launch boundary. No actual Electron, frozen backend, global CPU device, complete tree, hostile same-UID continuous containment, installer/publisher or whole-parent acceptance."
+        },
+        {
+          "kind": "authenticated-staged-compiled-worker-and-electron-resource-path-source",
+          "source_sha": "1f47697f8d568ec21e0dddbab3dc7e1b9d648e0a",
+          "receipt": "docs/verification/receipts/2026-10-08-staged-compiled-adapter-1f47697.json",
+          "receipt_sha256": "5cfef78f80666070d773238e9834f831c9110b857ab954f056560064ed18ffc7",
+          "result": "Exact composed source root229 passed plusCI selection20 passed. Pre-correction compiled artifact5 passed A/OK staged math and refusal cases. Coherent corrected artifact and actual Electron positive run remain separate.",
+          "scope": "No installed target, complete process-tree, publisher, quality or whole-parent acceptance."
         }
       ],
       "file_actions": {
