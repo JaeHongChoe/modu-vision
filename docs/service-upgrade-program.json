@@ -1690,6 +1690,14 @@
      "reference": "docs/implementation-ledger/2026-10-06-remaining-parent-execution.md",
      "result": "Task133: typed rules now include required detector class counts and explicit missing/excess NG without invented ROIs; untrained/incomplete remains REVIEW; model class save checks and original pixel bounds; unverified mm cannot produce a qualified physical verdict.",
      "scope": "Actual trained YOLO Chrome/Electron scenarios2pass, required-object API/related112pass and16 dedicated count controls, current broad backend664pass/renderer827pass/types/build. Existing typed chain/Blob/predicate/merge controls retained. Manufacturing quality/calibration hardware/Windows actual acceptance remain separate."
+    },
+    {
+     "kind": "actual-flow-raster-origin-controls",
+     "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+     "receipt": "docs/verification/receipts/2026-10-07-flow-raster-origin-closure-b8f0d45.json",
+     "receipt_sha256": "1012abdef68116ac5b539c2770e1c9752d09f8a3d1c94b904dde8f4f5d1d3e77",
+     "result": "33 focused/896 full renderer-main passed and actual browser/native origin controls plus raster regressions each2 pass; exact source lineage and prior fixture failure retained.",
+     "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5036,6 +5044,14 @@
      "receipt_sha256": "a45ec804d87fe73184562294b31d35c77fa90dde1d7b0360d2c879488a14588b",
      "result": "Actual older hosted15b9043 CPU2564 pass/1 notice fail/7 skip; current generated notice bytes are the already qualified5e96e5e repair.",
      "scope": "Preserved original old hosted failure only; no newest hosted success inferred."
+    },
+    {
+     "kind": "exact-hosted-source-ci-observation",
+     "source_sha": "e4818106e6671a0cb445a8c4875643f0ad44131e",
+     "receipt": "docs/verification/receipts/2026-10-07-hosted-source-ci-e481810.json",
+     "receipt_sha256": "64ac35f153af75067dba60c34543427e74a881d4ec39421ce9d66b3ab991e7b6",
+     "result": "Actual GitHub workflow37609087737 completed success; every source job step succeeded including CPU contracts/baseline/browser/build/types/notice preservation.",
+     "scope": "Exact hosted source workflow success from GitHub run/job/step API. Does not qualify newer commits, authentic-weight/native/hardware/human/independent/signed release acceptance. Large hosted artifact was not downloaded or independently extracted by this observation."
     }
    ],
    "file_actions": {
@@ -5078,8 +5094,8 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
-    "The newest candidate requires complete hosted-source CI success. Local macOS replay and exact optional-provider execution are recorded separately and do not substitute for hosted Linux/Windows execution.",
-    "Retain original prior CI failure histories and current local notice failure; its generated notice repair62 cases pass. Older queued runs are preserved."
+    "The newest published candidate still requires complete hosted-source CI success. Exact e481810 hosted success and current local/component/native cases are retained separately.",
+    "Retain prior CI failures, local baseline failure and its actual notice repair. Older queued/running executions are preserved; their source success is not reassigned to later commits."
    ]
   },
   {
@@ -5573,6 +5589,14 @@
      "receipt_sha256": "f195c9bcccc66e865c4565aec5042108027f49db2f7f3c5b7a31074c0c30595f",
      "result": "Clean browser1/native1 passed retry0;9 existing pending dimensions verified using actual HUD source coordinates, UI cancellation, controlled503 and explicit retry/reload exact labels.",
      "scope": "Owned generated256px input; actual user pointer/keyboard/save/reload controls and authoritative label readback.503 is explicitly controlled transport, not a real backend fault. No model execution, representative human truth, Windows, publisher, physical device, whole-feature or independent acceptance."
+    },
+    {
+     "kind": "actual-flow-raster-origin-controls",
+     "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+     "receipt": "docs/verification/receipts/2026-10-07-flow-raster-origin-closure-b8f0d45.json",
+     "receipt_sha256": "1012abdef68116ac5b539c2770e1c9752d09f8a3d1c94b904dde8f4f5d1d3e77",
+     "result": "33 focused/896 full renderer-main passed and actual browser/native origin controls plus raster regressions each2 pass; exact source lineage and prior fixture failure retained.",
+     "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5597,7 +5621,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "197 curated actions have529 verified scenarios and850 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "197 curated actions have530 verified scenarios and849 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5789,6 +5813,14 @@
      "receipt_sha256": "f195c9bcccc66e865c4565aec5042108027f49db2f7f3c5b7a31074c0c30595f",
      "result": "Clean browser1/native1 passed retry0;9 existing pending dimensions verified using actual HUD source coordinates, UI cancellation, controlled503 and explicit retry/reload exact labels.",
      "scope": "Owned generated256px input; actual user pointer/keyboard/save/reload controls and authoritative label readback.503 is explicitly controlled transport, not a real backend fault. No model execution, representative human truth, Windows, publisher, physical device, whole-feature or independent acceptance."
+    },
+    {
+     "kind": "actual-flow-raster-origin-controls",
+     "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+     "receipt": "docs/verification/receipts/2026-10-07-flow-raster-origin-closure-b8f0d45.json",
+     "receipt_sha256": "1012abdef68116ac5b539c2770e1c9752d09f8a3d1c94b904dde8f4f5d1d3e77",
+     "result": "33 focused/896 full renderer-main passed and actual browser/native origin controls plus raster regressions each2 pass; exact source lineage and prior fixture failure retained.",
+     "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
     }
    ],
    "file_actions": {

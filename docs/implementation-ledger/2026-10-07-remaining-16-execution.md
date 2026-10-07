@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 529개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 850개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 530개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 849개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -264,3 +264,15 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 - 실제 bbox를 저장한 뒤 polygon 저장을 명시적503으로 거절했다. 서버의 기존 baseline JSON SHA는 그대로였고 두 번째 미저장 shape도 유지됐다. 직접 재시도만 새 revision을 썼고 bbox20,20,70,60·polygon120,30/180,30/150,80 및 reload의 exact 두 annotation을 확인했다. 원본 PNG SHA가 같고 모델·학습을 실행하지 않았다.
 - 오류로 바뀐 버튼 이름과1:1 resize pan을 잘못 가정한 초기 fixture 실패4개는 원본 report/trace와 함께 보존했다. Production을 바꾸거나 좌표 기대값을 느슨하게 하지 않았다. Root가 actual native 실패/재열기 화면을 읽었고 owned backend/Electron·port 종료를 확인했다.
 - 기존 pending9차원만 채워197 actions/529 verified/850 pending이다. 전체 부모67/82·미완료15/82·전체 수락0 및 Windows 면제를 유지한다. Public receipts:2026-10-07-annotation-draft-boundaries-9880a31-browser/electron.json, annotation-draft-closure-9880a31.json.
+
+## 추가 실행: 플로우 결과와 저장 A/B 미리보기 주소 경계
+
+- 실제 component red5로 외부 master/ROI/A-B 주소 표시를 재현하고 snapshot bytes만 허용하도록 교정했다. 기존 dataset thumbnail은 제한된 relative API 경로만 허용한다. 관련33 passed이며 전체 renderer/main896 passed/0skip이다. 처음 full894 pass/2fail은 새 모듈을 읽지 못한 fixture이며 exact helper 연결 뒤 통과했다. 원본 실패 로그는 보존했다.
+- Clean d5e0b86 browser2/native2에서 actual CPU flow·두 버전 A/B 및 기존 저장 ROI mask/map·node output 회귀가 통과했다. 별도 clean b8f0d45 browser1/native1에서 snapshot decode와 실제 보이는 A/B screenshot까지 확인했다. 원래 소스별 receipt를 유지하고 중복 GUI 실행 수를 고유 feature 수로 더하지 않는다.
+- Captured authenticated 응답에만 외부 주소를 넣었고 실제 page의 foreign request0, original 이미지 SHA·authoritative history JSON·physical comparison JSON SHA 불변이다. Exact stored raster 복구·재열기를 확인했다. 합성 untrained PaDiM fixture는 품질 승인이 아니다.
+- 기존 invalid1차원만 채워197 actions/530 verified/849 pending이다. 부모67/82·미완료15/82·전체 수락0을 유지하며 실행 source·fixture 원문·teardown을 보존한다. Public receipt:2026-10-07-flow-raster-origin-closure-b8f0d45.json.
+
+## 추가 실행: exact e481810 hosted CI 완료
+
+- GitHub workflow37609087737은 sourcee481810에서 completed/success이다. 실제 run/job/step API 원문과 해시를 보존했고 source gate·type/build·CPU·core baseline·browser·license inventory·evidence preservation 단계가 모두 success임을 읽었다.
+- 이 API 관찰은 테스트 수나 큰 artifact 내부 bytes를 새로 추출하지 않았다. 현재560f44e 및 이후 변경의 전체 CI 성공으로 바꾸지 않는다. 신규 published source gate는 별도이며 부모15건을 완료 처리하지 않았다. Public receipt:2026-10-07-hosted-source-ci-e481810.json.

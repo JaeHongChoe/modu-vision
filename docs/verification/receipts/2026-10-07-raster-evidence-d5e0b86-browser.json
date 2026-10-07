@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d5e0b86e0f551c43dd1e424ac93b542907a1de2b",
+  "source_dirty": false,
+  "test": "scripts/e2e/raster-evidence.spec.ts::stored ROI mask and heatmap match CPU inspection and exact node output",
+  "test_source_sha256": "3e9b9ce8782ec97b60e5c0a3660a9c9aa6c9370efabd0c36f453d42d0e52edef",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c5557a92fac928369c3bc59cfd968d34b87969b0518b058449726da5189c9641",
+  "harness_sha256": "4f688f33f4b8aa76d03bd8c9675e54e94887317b900a0cbacd2acb97f81a895d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a74aec1bd3272df1275e1c8707de6e063c4a1df9b3c3f424b28adf03354ffce1"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f767bad38f061804bc4f1d4427a71a44a158664d4442fb97ff3d7576251a3817"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

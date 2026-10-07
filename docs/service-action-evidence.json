@@ -2,7 +2,7 @@
  "schema_version": 1,
  "kind": "curated_action_evidence_not_complete_feature_acceptance",
  "sources": {
-  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6647d8f35e3c3e238e7f9b0ab0227d0fc41e076ff30fd0aa370feac6166d9449",
+  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "0467c9126211c365e25581db03cd1528d4ac803579b4a8fecb3fae785304ca45",
   "src/renderer/components/flowchart/FlowchartStudio.tsx": "d97e820cfaadeb22b1b04a3becfe46a6d7996230fc5a1638a29a89c580f90288",
   "src/renderer/components/flowchart/FlowDraftControls.tsx": "73419cd61ad9babe4be683ea3e6ffcf2d2ba9e35034ffe3be98bf16451cb89f9",
   "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
@@ -54,7 +54,8 @@
   "src/renderer/components/runtime/PortableUpdatePanel.tsx": "938dcde621ba4e3d1a6863a00afcfeb0b1bff3823a56eb2a076327dc50d3e96a",
   "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "cf0c49e1cb75377c37351424ba3f536db39b3c55bdd05c6c4e39aa45bcfac248",
   "src/renderer/components/dataset/CaptureIntakePanel.tsx": "7021606464274e98970014a0a18bc8b273a22db2e7f2436f6ad163eef4770b36",
-  "src/renderer/components/inference/BatchInspectionPanel.tsx": "febedf6aec0ec0bbcd12af0439b0e210ced6f613576791955ce657a3e91d2b34"
+  "src/renderer/components/inference/BatchInspectionPanel.tsx": "febedf6aec0ec0bbcd12af0439b0e210ced6f613576791955ce657a3e91d2b34",
+  "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3"
  },
  "records": [
   {
@@ -8483,7 +8484,69 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+         "kind": "click",
+         "action": "저장 비교 결과 · 고정 모델·입력 근거",
+         "expected": "Saved comparison preview admits only inline raster bytes, refusing external stored addresses while preserving exact stored history and original identity.",
+         "observed": "browser: Explicit controlled external snapshot addresses in the authenticated captured saved A/B history were not admitted as images or requested externally. The immutable saved comparison envelope and original source files stayed exact.",
+         "reviewer": "Codex root actual browser/native case, authoritative readback/hash and native decoded-image screenshots; independent/human acceptance pending",
+         "test": "scripts/e2e/flow-raster-origin.spec.ts::flow result and stored A B comparison refuse persisted external raster addresses",
+         "receipt": "2026-10-07-flow-raster-origin-b8f0d45-browser.json",
+         "receipt_sha256": "2b90c60e6f59c43850dbe0b5dca3fcd7d43e21686352f993d0a35646cec48bf0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cae5bbab03eba6e8fa5471a90b43d44c65a219e95bb59e5e66d427359e4a9ef6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "779628b31ed0102e32f5a184926f7cb12d6ea0bbace6fac78a6d2a0e318459bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4f699dca27597b3c94a61d9211e72a998313ff6d0b58e685034f41df1cccb0cb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b8347ea14064825c2087450d0fe7cfeadcff72f05958e6dc99ef11606145c752"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+         "kind": "click",
+         "action": "저장 비교 결과 · 고정 모델·입력 근거",
+         "expected": "Saved comparison preview admits only inline raster bytes, refusing external stored addresses while preserving exact stored history and original identity.",
+         "observed": "electron: Explicit controlled external snapshot addresses in the authenticated captured saved A/B history were not admitted as images or requested externally. The immutable saved comparison envelope and original source files stayed exact.",
+         "reviewer": "Codex root actual browser/native case, authoritative readback/hash and native decoded-image screenshots; independent/human acceptance pending",
+         "test": "scripts/e2e/flow-raster-origin.spec.ts::native flow and A B stored preview origin boundaries preserve exact saved reports",
+         "receipt": "2026-10-07-flow-raster-origin-b8f0d45-electron.json",
+         "receipt_sha256": "37982721a91c08772a4090767efdf6c739bc7832af9c47b3a8bf8df38d845edc",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fdb7a405b99e2c8f71c63c9a3aa74ad1ad49be4c9dbfdbf927f21221bc7522ca"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "911fad904579b79c2429644622b42c66b56434070d5ab5cada775d149e671b54"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "52ca416ef851227aed5b0484bf040f79309ea5dcbd96c5e727f759b3731ee974"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ad225bebde3d07a5532fa8b3d9671ce3b181e9d2af9ddefdeef002dfe97eefd5"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
@@ -8513,6 +8576,66 @@
           {
            "id": "screenshot-1",
            "sha256": "f5018f4eb3e3fc625260218e1c42daa8d812741203ca343ce19afd8484104873"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+         "kind": "click",
+         "action": "저장 비교 결과 · 고정 모델·입력 근거",
+         "expected": "Saved comparison preview admits only inline raster bytes, refusing external stored addresses while preserving exact stored history and original identity.",
+         "observed": "browser: After a valid captured response was restored, actual saved A/B selection reopened the exact two CPU snapshots, decoded them and retained comparison ID/hash and all original file hashes. No new comparison, training or quality approval was submitted by the reopens.",
+         "reviewer": "Codex root actual browser/native case, authoritative readback/hash and native decoded-image screenshots; independent/human acceptance pending",
+         "test": "scripts/e2e/flow-raster-origin.spec.ts::flow result and stored A B comparison refuse persisted external raster addresses",
+         "receipt": "2026-10-07-flow-raster-origin-b8f0d45-browser.json",
+         "receipt_sha256": "2b90c60e6f59c43850dbe0b5dca3fcd7d43e21686352f993d0a35646cec48bf0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cae5bbab03eba6e8fa5471a90b43d44c65a219e95bb59e5e66d427359e4a9ef6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "779628b31ed0102e32f5a184926f7cb12d6ea0bbace6fac78a6d2a0e318459bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4f699dca27597b3c94a61d9211e72a998313ff6d0b58e685034f41df1cccb0cb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b8347ea14064825c2087450d0fe7cfeadcff72f05958e6dc99ef11606145c752"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+         "kind": "click",
+         "action": "저장 비교 결과 · 고정 모델·입력 근거",
+         "expected": "Saved comparison preview admits only inline raster bytes, refusing external stored addresses while preserving exact stored history and original identity.",
+         "observed": "electron: After a valid captured response was restored, actual saved A/B selection reopened the exact two CPU snapshots, decoded them and retained comparison ID/hash and all original file hashes. No new comparison, training or quality approval was submitted by the reopens.",
+         "reviewer": "Codex root actual browser/native case, authoritative readback/hash and native decoded-image screenshots; independent/human acceptance pending",
+         "test": "scripts/e2e/flow-raster-origin.spec.ts::native flow and A B stored preview origin boundaries preserve exact saved reports",
+         "receipt": "2026-10-07-flow-raster-origin-b8f0d45-electron.json",
+         "receipt_sha256": "37982721a91c08772a4090767efdf6c739bc7832af9c47b3a8bf8df38d845edc",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fdb7a405b99e2c8f71c63c9a3aa74ad1ad49be4c9dbfdbf927f21221bc7522ca"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "911fad904579b79c2429644622b42c66b56434070d5ab5cada775d149e671b54"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "52ca416ef851227aed5b0484bf040f79309ea5dcbd96c5e727f759b3731ee974"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ad225bebde3d07a5532fa8b3d9671ce3b181e9d2af9ddefdeef002dfe97eefd5"
           }
          ]
         }

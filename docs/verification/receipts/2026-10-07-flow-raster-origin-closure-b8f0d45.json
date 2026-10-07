@@ -1,0 +1,71 @@
+{
+  "schema": "modu-vision.flow-raster-origin-closure/v1",
+  "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+  "actual_gui_cases": 4,
+  "scope_lineage": "New actual origin controls browser/native are clean b8f0d45; existing actual inspection/node raster regression browser/native are clean d5e0b86. Production components are byte-identical between those sources; receipts retain their exact original sources.",
+  "selected_source_sha256": {
+    "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3",
+    "src/renderer/components/flowchart/IntermediateCropDrawer.test.cjs": "47bd7bc5994aa2dc798e3c18c026ae30dd46bb2d4945bc889212f4400bdab9e6",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "0467c9126211c365e25581db03cd1528d4ac803579b4a8fecb3fae785304ca45",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.test.cjs": "663190502e35a7ef3dfd1fbc3800ef54c3487cfc4b5cdfe6ec29b26f1660bb9c",
+    "src/renderer/components/flowchart/flowTestSetBrowser.test.cjs": "73dcd56dd4293ac024d571741c61c7f9dcbba93e6dc1809223bce544751e1d38",
+    "src/renderer/components/inference/inspectionImage.ts": "1d729f2c05af44b60b40061e4a3395a4be3b25577218d25e0bb1f20dcdeee5a0",
+    "src/renderer/components/inference/inspectionImage.test.cjs": "b7067661ed3265a4ce7a2f9e66f96763e296c6a4ec5390435cb5814b521831de"
+  },
+  "red_product_assertions": 5,
+  "focused_components_passed": 33,
+  "renderer_main_passed": 896,
+  "renderer_main_failed": 0,
+  "renderer_main_skipped": 0,
+  "renderer_main_lineage": "Executed before b8f0d45 code commit with the exact selected committed renderer/main bytes independently checked here. d5e0b86 full run894 pass/2fixture module-loader fail is retained and not recorded as passing.",
+  "product_e2e_types": "passed",
+  "log_sha256": {
+    "flow-raster-admission-red.log": "5e4d7c0a2d835689ac3ba192605c16925e440ee3ec8d108f479f0540e6fe8ad7",
+    "flow-raster-admission-red-exact.log": "afb2b34e8702b7a269a4dccc906f17b2c240d04c60a055bff47eaeac90b8a57e",
+    "flow-raster-final-components.log": "c2364edbe89c85f7000142b15554295769dcdfa61d6d81503ebaf48f640c71a0",
+    "flow-raster-full-renderer.log": "9ba89ddb78513129d003f724f5d89dfe9b6d5ff0c4a9370360b7bae7c9656449",
+    "flow-raster-full-renderer-final.log": "b0b6a01c84e07598371cd3673519769ecc1469af6933ad8f71b55f1e356f8bdf",
+    "flow-raster-final-types.log": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+    "flow-raster-visual-e2e-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "receipts": [
+    {
+      "case": "flow-raster-origin",
+      "mode": "browser",
+      "receipt": "2026-10-07-flow-raster-origin-b8f0d45-browser.json",
+      "receipt_sha256": "2b90c60e6f59c43850dbe0b5dca3fcd7d43e21686352f993d0a35646cec48bf0"
+    },
+    {
+      "case": "flow-raster-origin",
+      "mode": "electron",
+      "receipt": "2026-10-07-flow-raster-origin-b8f0d45-electron.json",
+      "receipt_sha256": "37982721a91c08772a4090767efdf6c739bc7832af9c47b3a8bf8df38d845edc"
+    },
+    {
+      "case": "raster-evidence",
+      "mode": "browser",
+      "receipt": "2026-10-07-raster-evidence-d5e0b86-browser.json",
+      "receipt_sha256": "93fafd23f5655e698f4f8eebd8f05dadbabd5de3ef9e1570a988568ad2122506"
+    },
+    {
+      "case": "raster-evidence",
+      "mode": "electron",
+      "receipt": "2026-10-07-raster-evidence-d5e0b86-electron.json",
+      "receipt_sha256": "67baaf88eb5eec1be354d546fc53120f49865706ebc715437f2b3a1c9738a87b"
+    }
+  ],
+  "observed": [
+    "Actual CPU single-image flow and two-version comparison generated real snapshot bytes.",
+    "Explicit clones of authenticated recorded responses supplied invalid external master/ROI/A-B preview addresses without mutating stored data.",
+    "Actual browser/native page issued zero foreign image requests, displayed refusal and recovered the exact admitted raster bytes.",
+    "Original image file hashes, authoritative history JSON and physical saved comparison JSON hash remained exact.",
+    "Final native image readback includes both actually decoded A/B snapshots after scrolling into view; initial above-fold screenshot is preserved."
+  ],
+  "root_visual_readback": true,
+  "existing_pending_dimensions_verified": 1,
+  "actions": 197,
+  "verified_scenarios": 530,
+  "pending_scenarios": 849,
+  "parent_pending": 15,
+  "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
+}

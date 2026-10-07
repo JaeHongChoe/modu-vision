@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b8f0d456832851e4142c4bb2d7050412a0cea887",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-raster-origin.spec.ts::flow result and stored A B comparison refuse persisted external raster addresses",
+  "test_source_sha256": "43bba089825a5dddcd4062cefa8a86b7eef3603ce45ae83ef61f4c2d729533e4",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "fed270bdbf186e6f34e4c2fcd28e21e4b549aef1993591bf6e948b4760777900",
+  "harness_sha256": "e12fe7d054bfb296911fd6e6693762d50d1406a38d202fe9c5a23e20c46fee61",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cae5bbab03eba6e8fa5471a90b43d44c65a219e95bb59e5e66d427359e4a9ef6"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "779628b31ed0102e32f5a184926f7cb12d6ea0bbace6fac78a6d2a0e318459bb"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "4f699dca27597b3c94a61d9211e72a998313ff6d0b58e685034f41df1cccb0cb"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "b8347ea14064825c2087450d0fe7cfeadcff72f05958e6dc99ef11606145c752"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
