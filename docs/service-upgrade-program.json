@@ -5137,6 +5137,14 @@
           "receipt_sha256": "fc0cb93686d4d83e26b6734d72334ac3962888119165dc8eb7562bc2c1a942df",
           "result": "152 related outcomes passed with2 existing Windows-native skips;7 generated schema contracts and renderer/main type checks passed. Earlier full hosted failures retained.",
           "scope": "Local exact source and unchanged backend lineage only; newest published full hosted CI remains pending."
+        },
+        {
+          "kind": "actual-owned-runtime-startup-and-csharp",
+          "source_sha": "94118fb9bf7f543fca709dd9bf80514c12415797",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-package-startup-94118fb.json",
+          "receipt_sha256": "356791c4bccaab2b866e1e886cf89ea43c419d9cf668840a255671715f59d2b2",
+          "result": "17 current related cases passed with2 initial gates; missing compiler was provisioned privately and the C# case then passed on the same unchanged source.18 distinct passed cases, Linux loader remains unavailable.",
+          "scope": "Actual controlled CPU graph and host C++/C# SDK/deadline execution; no installed-native, GPU, Windows, quality, immutable-release or whole-feature acceptance."
         }
       ],
       "file_actions": {
@@ -5335,6 +5343,14 @@
           "result": "Exact0640405: Linux37228930318 executes21 and Windows37228932174 executes20 SDK/batch cases with zero skips/errors/failures, actual Python/C++/C# whole-DAG/schema/deadline/cancel/reuse/integrity/CLI behavior. Current backend/native inputs also execute two actual authenticated loopback HTTP inspections, generated OpenAPI route readback, source/image/package hashes, durable event/export readback and re-open the identical two records in a new owned OS process. Both owned HTTP services are reaped. Installation/runtime dependencies remain documented as CPython-backed.",
           "scope": "Both S6-08 software implementation clauses have controlled actual execution evidence; implementation only is reconciled. Independent review, every other parent acceptance dimension and installed target/SCM/device/model-quality approval remain pending. Existing8917 receipts stay retained; 15 feature cells append newer source-bound evidence without changing their states.",
           "platform": "Hosted Linux x64/Windows Server2025 native SDKs and actual macOS CPU headless REST; not installed Windows11/field acceptance"
+        },
+        {
+          "kind": "actual-owned-runtime-startup-and-csharp",
+          "source_sha": "94118fb9bf7f543fca709dd9bf80514c12415797",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-package-startup-94118fb.json",
+          "receipt_sha256": "356791c4bccaab2b866e1e886cf89ea43c419d9cf668840a255671715f59d2b2",
+          "result": "17 current related cases passed with2 initial gates; missing compiler was provisioned privately and the C# case then passed on the same unchanged source.18 distinct passed cases, Linux loader remains unavailable.",
+          "scope": "Actual controlled CPU graph and host C++/C# SDK/deadline execution; no installed-native, GPU, Windows, quality, immutable-release or whole-feature acceptance."
         }
       ],
       "file_actions": {
@@ -6010,6 +6026,14 @@
           "receipt_sha256": "b1428cf4080d50e28130d7ad760404b4af0f5f50e96b0cf8edd3b59bff109af9",
           "result": "Current integrated matrix61 and focused44 pass without failures/skips; all35 original required selectors and full parameter case identities retained across10 fault scenarios. Parent pytest filtering reproduced then excluded from the child runner. Independent original/delta reviews passed.",
           "scope": "Implementation only: controlled transport, injected CPU MemoryError and disk classifications, real owned CLI/lease/SQLite/HTTP and controlled-authority POSIX portable pair recovery. No actual allocator/physical-network exhaustion, installed target, publisher signing or whole-parent acceptance; other8 gates pending."
+        },
+        {
+          "kind": "actual-owned-runtime-startup-and-csharp",
+          "source_sha": "94118fb9bf7f543fca709dd9bf80514c12415797",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-package-startup-94118fb.json",
+          "receipt_sha256": "356791c4bccaab2b866e1e886cf89ea43c419d9cf668840a255671715f59d2b2",
+          "result": "17 current related cases passed with2 initial gates; missing compiler was provisioned privately and the C# case then passed on the same unchanged source.18 distinct passed cases, Linux loader remains unavailable.",
+          "scope": "Actual controlled CPU graph and host C++/C# SDK/deadline execution; no installed-native, GPU, Windows, quality, immutable-release or whole-feature acceptance."
         }
       ],
       "file_actions": {

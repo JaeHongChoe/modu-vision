@@ -1,0 +1,90 @@
+{
+  "schema": "modu-vision.owned-package-startup-isolation/v1",
+  "source_sha": "94118fb9bf7f543fca709dd9bf80514c12415797",
+  "source_bindings": {
+    "backend/engine/flow_package_runtime.py": "f0065b40730da01b1cc4efed401163be202bfaeb1e970c6df0b6ee02173db4bd",
+    "backend/tests/test_flow_export_release.py": "24ba964c470ac26c06af31da74e7a8020b1adb60c72eff579513f68f159b48b7",
+    "backend/tests/test_runtime_deadline_sdk.py": "4ff8c3fc72256a193076541d9d4fd6d0153382bc2515167a45a7dab43e22d4d6"
+  },
+  "independent_handoff_freeze_sha256": "7ac52638c1f19171863ba4048a07d0b6ca3dbc5a46a015cde8fe00dfbf86e2ea",
+  "unchanged_tracked_source_inputs": 2104,
+  "actual_related_gate": {
+    "outcomes": 19,
+    "passed": 17,
+    "failures": 0,
+    "errors": 0,
+    "gated": [
+      {
+        "test": "test_csharp_pinvoke_calls_the_same_native_executor",
+        "reason": "A .NET 8 SDK is required for the C# compilation gate"
+      },
+      {
+        "test": "test_local_dlopen_host_can_import_python_extensions",
+        "reason": "Linux shared-library loader contract"
+      }
+    ]
+  },
+  "later_csharp_gate": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "source_unchanged": true,
+    "actual_host": "macOS arm64",
+    "actual_compilation_and_full_graph_pinvoke": true,
+    "actual_cpu_reference_semantics_match": true,
+    "actual_owned_deadline_termination": true,
+    "SDK_version": "8.0.425",
+    "SDK_asset_url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.425/dotnet-sdk-8.0.425-osx-arm64.tar.gz",
+    "SDK_official_sha512": "d42156be70b489236479a415536013a89a9fd6eaca57d5716a7017612fcc65bdb459068973d7cffd6fe710f2799af8bee95b2046ba032762d47df176f5c4a7d6",
+    "private_runtime_not_system_install": true
+  },
+  "distinct_passed_cases": 18,
+  "remaining_gated_case": "test_local_dlopen_host_can_import_python_extensions requires a Linux host; no macOS execution reassigned to Linux.",
+  "actual_owned_cpu_startup": {
+    "result": "NG",
+    "isolated": 1,
+    "no_user_site": 1,
+    "no_package_startup_hook": true,
+    "controlled_secret_plugin_startup_keys_inherited": [],
+    "configured_offline_flags": {
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1",
+      "HF_DATASETS_OFFLINE": "1"
+    },
+    "cpu_threads": 1,
+    "private_cwd_home_cache": true,
+    "all259_package_file_bytes_unchanged": true,
+    "exact_vendored_runtime_sha256": "f0065b40730da01b1cc4efed401163be202bfaeb1e970c6df0b6ee02173db4bd",
+    "owned_temporary_directory_removed": true
+  },
+  "retained_primary": {
+    "flow-isolation-current.xml": "07e8805274798e74be1d6baaa16a4ad881b01e12a5c54bc2f55879abadd5896b",
+    "flow-isolation-current.log": "71c990247f216e3843ede678ef688475ae9ae76eecc5d84c395cf9ccc6d24836",
+    "flow-isolation-source-before.json": "dab647774cce603de4da458f8cdcb15b9dd50537f28137f08826cd98b9cabcb2",
+    "flow-isolation-source-after.json": "dab647774cce603de4da458f8cdcb15b9dd50537f28137f08826cd98b9cabcb2",
+    "csharp-current.xml": "c51c192661a39515bd4cca6101af1e3310a1902d72775e5622f9f0bb811e2ca5",
+    "csharp-current.log": "5dc65eaddd9dc3e33c5c575256aa4733b239b51c14ba01a9cd999e46998510ce",
+    "csharp-source-before.json": "dab647774cce603de4da458f8cdcb15b9dd50537f28137f08826cd98b9cabcb2",
+    "csharp-source-after.json": "dab647774cce603de4da458f8cdcb15b9dd50537f28137f08826cd98b9cabcb2",
+    "dotnet-sdk-pin.json": "18f93a5999772662424fecdd2412d69c036d521a4324ef5a7d4cf628cb243d2a"
+  },
+  "retained_reproductions": {
+    "red.log": "9eb9aa59d68c6533db7bdd3d15bc6b7c8e08bd690aec2f6e05ca414c15ab75d0",
+    "red.xml": "e943ef31407031f253b0c5e2f16b256d42838e1af200e09698a8bb962207852f",
+    "red-owned-worker-probe.json": "50da525235990a86520a98b0cbc7fe779a7f00efc1250776068183b6726077b3",
+    "red-unlisted-startup-executed": "f06b806a78bc9511ac356d125912502b17677c6f5535118670560d2820ee7a35",
+    "red-command.log": "ffe219630f6b7eaba0b36ab2d0b59e5d4bb2b39c9d51aba8a2090b058e817245",
+    "red-offline.log": "27b80a9f59a86994eec925b70564e80b53ea3a6b473cdf05cc8dad7b5f679b0b",
+    "red-offline.xml": "2f8293e4f8731f7fc7ef1b7262f5045c0e94ac892dfce4d3703f3ad0530264f1"
+  },
+  "limitations": [
+    "Actual CPU graph uses controlled model/image fixtures; quality and real manufacturing cohort acceptance remain pending.",
+    "C# execution is actual macOS arm64; Linux loader, Windows native, GPU and installed application acceptance remain pending.",
+    "Frozen worker argument selection remains a stub contract; no frozen native positive inference claim.",
+    "Owned generic worker startup is fixed; arbitrary manual interpreter startup before calling the supplied script is outside this worker-launch contract.",
+    "All-byte preservation applies to the isolated CPU startup case; no global immutable execution or full process-tree proof inferred.",
+    "No authority, publisher, user permissions, release, original72-hour run or unrelated process changed."
+  ],
+  "release_ready": false,
+  "model_quality_approved": false
+}

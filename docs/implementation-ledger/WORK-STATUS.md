@@ -259,3 +259,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 공개 CI 실패 원인 수정과 로컬 재검증 · 52d3c3a
 
 이전 공개 CI0c84e66의2건 및 c15df8d의6건 실패를 보존했다. retry 시험의 전역 mock 간섭, preparation 정리 중 lease 유지에 대한 오래된 시험 기대, child session 공통 규약, runtime pack API 자동 생성 타입 누락을 수정했다. 실제 현재 소스의 관련152건과 타입 생성7건, renderer/main 타입 검사가 통과했다. Windows native2건 skip은 통과가 아니다. 관련154-outcome 실행 소스4b66d9b 뒤의 유일한 코드는 자동 생성 타입7줄이며 backend/test hash는 동일하다. 전체 hosted CI 최신 HEAD 성공이나 release 완료로 바꾸지 않는다. 근거: `../verification/receipts/2026-10-08-current-source-ci-remediation-52d3c3a.json`.
+
+## 패키지 worker 시작 격리와 실제 C# 실행 · 94118fb
+
+실제 CPU 실행에서 package의 미등록 sitecustomize와 부모의 비밀·plugin 환경 상속을 재현해 수정했다. 소스 worker는 -I/-B·전용 bytecode prefix·임시 cwd/home/cache·제한된 환경을 쓰며 기존 offline 설정을 유지한다. 현재 소스에서17건 통과·2건 환경 gate였고, 공식 hash를 확인한.NET8 SDK를 외장 임시 공간에 준비한 뒤 C# compile/PInvoke CPU 전체 graph·reference parity·deadline 종료1건도 통과했다. 중복 없는 통과18건이며 Linux loader는 이 macOS에서 실행했다고 바꾸지 않는다. 기존72시간 worker·GPU·권한·release 상태는 변경하지 않았다. 원래 부모69/13·요청 필요11·종합 수락0은 유지한다. 근거: `../verification/receipts/2026-10-08-owned-package-startup-94118fb.json`.
