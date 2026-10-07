@@ -293,3 +293,9 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 설치 화면의 명시적 canary pin 연결과 근거 갱신 · 75af77c
 
 기존 native layout 화면 시험은 새 기준 이미지 pin 입력을 포함하도록 갱신했다. 실제 clean-source 브라우저에서 한 번 실행해 통과했고 채널 불일치, 취소·재열기, 확인하지 않은 설치 차단, 서명된 내부 링크 변조 거절과 원래 라벨 보존을 다시 확인했다. canary 게시 자체는 이 사례의 통제된 fixture이며 실제 수학 실행이나 native 설치 수락으로 계산하지 않는다. 새 spec을 먼저 게시한 hosted run37681211730은 이전 GUI 근거의 spec 해시 불일치8건으로 중단됐다. 실제 새 실행 근거로8개 참조를 갱신했고 기존 실패 기록은 보존했다. 부모69/13·필수11·종합 수락0 및 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-portable-native-layout-75af77c-browser.json`.
+
+## 남아 있는 실행의 소유권 보존과 compiled 검토 응답 · 3fcf851
+
+부모가0으로 끝나도 관측한 자식이 실행 중이면 결과 게시를 거절하고 같은 취소 handle을 보존한다. 최초 identity·관측·정리·진단 읽기 실패도 확인 대기로 남긴다. 기록한 원래 자식의 종료만 확인된 경우에 한해 같은 handle을 다시 사용할 수 있다. 현재 source의 deadline/Flow/GAN/SDK/CLI/C++ 소비자22건과 실제 survivor 기록5개를 확인했다. 이 검증은 전체·탈출 계보 또는 durable lease 정리 수락이 아니다.
+
+compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검토하며 실제 설치에는 원래3개 pin과 CAS 해시만 전달한다. 현재 main49건과 타입3개가 통과했고 별도 private Node977건도 통과했다. 새 CI는 source20건과 tree13건을 명시적으로 선택한다. 별도 private CI51건·현재 CI 계약18건이 통과했으며 실제 compiled fixture를 선택한 것으로 세지 않는다. 실제 staged compiled adapter와 provisioned native 성공 경로는 계속 구현·검증한다. 부모69/13·필수11·수락0과 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-observed-group-and-compiled-review-3fcf851.json`.

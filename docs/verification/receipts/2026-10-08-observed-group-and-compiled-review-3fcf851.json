@@ -1,0 +1,132 @@
+{
+  "schema": "modu-vision.observed-group-and-compiled-canary-review/v1",
+  "source_sha": "3fcf8515eb867c5fbf266db94c78cd397a29b14c",
+  "source_bindings": {
+    "backend/engine/runtime_deadline.py": "849d44e85fa45abe046b5e913016080a0f5a688c9870177ec18da5d36787db23",
+    "backend/tests/test_runtime_deadline_tree.py": "6037bdfe45d905f7a24411b62868f30aa545f1ae41651486a2bdeedaec17e802",
+    "src/main/portableUpdate.ts": "2eca4f10c56827e6bee88f1c205677f9f5dc43a7795bbf19f5ed0e24d8794cd4",
+    "src/main/portableUpdate.test.cjs": "9535ab30ed28315f3f7e856e41ec9fc5b1be832d66e04f4438f2a51606b41b96",
+    "src/types/electron.d.ts": "257370d3bc4dadbdd72ed74884bb7145344f489668b0f4cdaf44b8810e9d1b76",
+    ".github/workflows/ci.yml": "a9445a8498c6dc25226c86bd90ab4bf752080e2574004ef9ca2beae832c552f8"
+  },
+  "root_deadline_gate": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 130.7090697090025,
+    "source_inputs_unchanged": 2126,
+    "xml_sha256": "fc687f229d630fa028f2d16fc181e46349a66f511e12da23aaa7de02f4ea2145",
+    "command_sha256": "104344a7a8f16ca4e564e90f0be4a382ba8f9ba7911a9362283d1556280faa06",
+    "scope": "Current sealed runtime plus owned Flow/GAN survivor refusal, SDK/Python/CLI/C++ cancellation consumers. Local compiled C++ SDK is not a packaged application or Windows qualification."
+  },
+  "actual_owned_survivor_receipts": [
+    {
+      "receipt_sha256": "ecc495f06b55baaa24ae4408114a69c2821a45a47338b8cc81e05ff057754108",
+      "status": "uncertain",
+      "effective_returncode": 1,
+      "leader_returncode": 0,
+      "observed_activity_after_return": true,
+      "known_member_reconciled": true,
+      "owned_cooperative_exit": true,
+      "cached_group_signal_attempted": false,
+      "whole_tree_exit_verified": false
+    },
+    {
+      "receipt_sha256": "655217641017f9a476528e2faf255e5411b11be23bee4debf3ff23a4781cd890",
+      "status": "uncertain",
+      "effective_returncode": 1,
+      "leader_returncode": 0,
+      "observed_activity_after_return": true,
+      "known_member_reconciled": true,
+      "owned_cooperative_exit": true,
+      "cached_group_signal_attempted": false,
+      "whole_tree_exit_verified": false
+    },
+    {
+      "receipt_sha256": "e993665414e2561b32a140b0e3ac5f97af4fa13e51b26c80a7232e992705f47b",
+      "status": "uncertain",
+      "effective_returncode": 1,
+      "leader_returncode": 0,
+      "observed_activity_after_return": true,
+      "known_member_reconciled": false,
+      "owned_cooperative_exit": true,
+      "cached_group_signal_attempted": false,
+      "whole_tree_exit_verified": false
+    },
+    {
+      "receipt_sha256": "8b5b63988be10056386d59444cbf4715ba746cb8191664def893cc390cfe3d5f",
+      "status": "uncertain",
+      "effective_returncode": 1,
+      "leader_returncode": 0,
+      "observed_activity_after_return": true,
+      "known_member_reconciled": true,
+      "owned_cooperative_exit": true,
+      "cached_group_signal_attempted": false,
+      "whole_tree_exit_verified": false
+    },
+    {
+      "receipt_sha256": "f348c5eaf7a23bd97112a4b3e105f12d757475dba6b007f0d4ea2f4704ca5631",
+      "status": "uncertain",
+      "effective_returncode": 1,
+      "leader_returncode": 0,
+      "observed_activity_after_return": true,
+      "known_member_reconciled": true,
+      "owned_cooperative_exit": true,
+      "cached_group_signal_attempted": false,
+      "whole_tree_exit_verified": false
+    }
+  ],
+  "runtime_freeze_sha256": "0d017f7dc3524555202cd9d69a8a3e713b4d018aed8494c9c8ffb9d5147245d9",
+  "runtime_independent_review_sha256": "bb16727dabdc5f60a88c5c56df4f2f87902e4cf126ed7a45e3afb66c01a06599",
+  "root_review_ui_gate": {
+    "focused_passed": 49,
+    "failed": 0,
+    "skipped": 0,
+    "types_exit_codes": [
+      0,
+      0,
+      0
+    ],
+    "source_inputs_unchanged": 2126,
+    "command_sha256": "955a3f83fa0051e61220c86921bb6de44e76b89139c0a8c2e359a8266615c55e",
+    "private_separate_full_node_passed": 977,
+    "full_node_log_sha256": "afcbb17b11d1ee11020f3ed59201955f45e408ed9de2a26d2d96ad412c6b110c",
+    "full_node_is_same_root_whole_suite": false,
+    "independent_review_sha256": "941041bb6644809f1ef244d0aa51218790e8c55f601bd3f5985a51991005ed1f"
+  },
+  "ci_selection_gate": {
+    "private_exact_source_cases_passed": 51,
+    "skipped": 0,
+    "groups": {
+      "runtime_tree_source": 13,
+      "frozen_boundary_source": 20,
+      "source_lane_contracts": 18
+    },
+    "root_lane_contracts_passed": 18,
+    "root_xml_sha256": "693c3b8845134b0d9fd1c456f89634ef5061952fdb04d8fa6ecb19f08c3d1883",
+    "freeze_sha256": "faf0e2b51a60bde6c4ad08523362a4cd9654d37777c18a3e48da034d1812f6ad",
+    "independent_review_sha256": "6881c770508f467f4f5df6c32c9a79e3ebff70b00779168a0fe7f9e4e76d2448",
+    "source_only_selector_additions": 9,
+    "compiled_actual_cases_selected": false,
+    "hosted_execution_verified": false
+  },
+  "implementation": "Original live process/session authority guards termination. Observed survivors, identity/capture/cleanup/read failures retain the same cancellable handle and refuse zero-code publication; known positive identity exits alone may reconcile. Compiled canary UI accepts the closed protocol2 descriptor while install consumes only independently selected three pins and stored plan CAS. Descriptor paths never become executable authority.",
+  "limits": [
+    "Process-local observed-group quarantine does not clear durable application leases or verify escaped/complete trees.",
+    "Windows uses original retained process handle only; native Windows and descendant/Job Object qualification remain unverified.",
+    "UI fixtures supply controlled responses; the staged compiled adapter is still a separate active implementation.",
+    "The22 root backend,49 root review UI,977 private Node,51 private CI and18 root CI cases are distinct gates with declared exact source bindings, not one new complete hosted result."
+  ],
+  "acceptance": {
+    "staged_compiled_candidate_verified": false,
+    "provisioned_native_application_verified": false,
+    "whole_process_tree_exit_verified": false,
+    "real_publisher_approved": false,
+    "human_model_quality_approved": false,
+    "release_ready": false
+  },
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0
+}

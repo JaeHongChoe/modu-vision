@@ -4884,6 +4884,14 @@
           "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
           "result": "Actual clean-source browser replay passed once with zero retries; eight existing action references refreshed to the exact new spec bytes.",
           "scope": "Exact clean committed-source browser case: real main manager, signed schema2/links, controlled source CLI canary publication, inert fixture entrypoint, channel/refusal/cancel/reopen controls. No actual canary math, generated checkpoint, provisioned native application, OS installer, real publisher, whole-tree, human quality or release acceptance."
+        },
+        {
+          "kind": "source-bound-followup",
+          "source_sha": "3fcf8515eb867c5fbf266db94c78cd397a29b14c",
+          "receipt": "docs/verification/receipts/2026-10-08-observed-group-and-compiled-review-3fcf851.json",
+          "receipt_sha256": "fe4896406b9c420360023d4cc57cadff7d6a498d189adbfb7b89e1eb54443891",
+          "result": "Root22 deadline/SDK,49 main review and3 type gates passed. Private977 Node and51 source-only CI cases separately qualified; root18 CI contracts passed.",
+          "scope": "Closed protocol2 main review only; actual staged compiled candidate, native provisioned startup, publisher and durable/whole-tree completion remain open."
         }
       ],
       "file_actions": {
@@ -5889,6 +5897,14 @@
           "receipt_sha256": "6cb3848a0c1b8e7348e43334f1a36173a2c8e2f528f96f856cbc67ceb43d33d7",
           "result": "Actual1 browser case passed in8.8minutes with13screenshots and owned teardown. First job aborted/released; second job completed12epochs36steps. Same-model evaluation, saved ROI[8,8,56,56]/class branch,8-image batch/history reopen and independent-process one-image CPU package parity observed.",
           "scope": "Actual screen-driven browser register/train/abort/release/restart/evaluate/fixed-ROI/class-branch/save/run/node-inspector/batch/reload/export flow, actual backend and CPU model. Browser desktop-folder shim only; no Electron native, GPU, representative quality, human approval, physical-device, real publisher or independent acceptance."
+        },
+        {
+          "kind": "source-bound-followup",
+          "source_sha": "3fcf8515eb867c5fbf266db94c78cd397a29b14c",
+          "receipt": "docs/verification/receipts/2026-10-08-observed-group-and-compiled-review-3fcf851.json",
+          "receipt_sha256": "fe4896406b9c420360023d4cc57cadff7d6a498d189adbfb7b89e1eb54443891",
+          "result": "Root22 deadline/SDK,49 main review and3 type gates passed. Private977 Node and51 source-only CI cases separately qualified; root18 CI contracts passed.",
+          "scope": "Bounded observed-group CPU and local SDK controls; full target/model/quality/Windows acceptance remain open."
         }
       ],
       "file_actions": {
