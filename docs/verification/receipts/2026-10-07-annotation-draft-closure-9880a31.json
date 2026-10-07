@@ -1,0 +1,83 @@
+{
+  "schema": "modu-vision.annotation-draft-boundaries/v1",
+  "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+  "actual_gui_cases": 2,
+  "actual_modes": [
+    "browser",
+    "electron"
+  ],
+  "retry_count": 0,
+  "existing_pending_dimensions_verified": 9,
+  "actions": 197,
+  "verified_scenarios": 529,
+  "pending_scenarios": 850,
+  "observed": {
+    "vector-bbox-draw": {
+      "invalid": "Actual zero-area pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+      "cancel": "Escape during an actual positive-area pointer drag followed by pointer release discarded the draft with no save request or annotation."
+    },
+    "vector-obb-draw": {
+      "invalid": "Actual zero-area rotated-box pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+      "cancel": "Escape during an actual rotated-box pointer drag followed by pointer release discarded the draft with no save request or annotation."
+    },
+    "vector-polygon-draw": {
+      "invalid": "Enter with only two actual source-pixel vertices did not create or save a polygon. Source coordinates were independently read from the actual canvas HUD.",
+      "cancel": "Escape discarded an actual three-vertex draft. A later Enter did not complete or save the discarded geometry; authoritative annotations remained empty."
+    },
+    "vector-delete-undo": {
+      "empty": "On an actual empty image Delete, Control+Z and Control+Y did not create a shape or dirty save control and issued no save request."
+    },
+    "save-annotation": {
+      "reopen": "Actual explicit retry after a controlled503 saved the original bbox[20,20,70,60] and polygon[[120,30],[180,30],[150,80]]. Actual reload showed both annotations and authoritative API content matched the retried geometry exactly.",
+      "handoff": "Controlled503 preserved the complete saved baseline JSON hash and unsaved second shape. Only deliberate retry wrote the new revision; the exact original bbox survived and reload retained both shapes. Original source image SHA was unchanged, no training/model execution or human truth approval occurred."
+    }
+  },
+  "receipts": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+      "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+      "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d"
+    }
+  ],
+  "retained_fixture_failures": [
+    {
+      "source_sha": "92ab5b7fc5fdc6fc580288b8c8d8e734c65b0704",
+      "mode": "browser",
+      "report_sha256": "b842806ec85189deef1ec0deb66ca822620713e56b4071451aac01c824cc8709",
+      "teardown_sha256": "aa77ea3ece3d3e454b71d8ca91bbd1c9d64db9ff768213965a03003ac0243526",
+      "cause": "Fixture selected the old accessible Save Changes text after the actual save error changed it. Production had a stable save-button identity and was unchanged."
+    },
+    {
+      "source_sha": "92ab5b7fc5fdc6fc580288b8c8d8e734c65b0704",
+      "mode": "electron",
+      "report_sha256": "9ac44f7655d5a67a60f75f36ef5ce2568b1fdcbc9e3d2df52fb1e95985664e19",
+      "teardown_sha256": "a9d5d8706c7f6709638890d3a8b0e3247ed4363e8a8ba80da285268e64faceb6",
+      "cause": "Fixture selected the old accessible Save Changes text after the actual save error changed it. Production had a stable save-button identity and was unchanged."
+    },
+    {
+      "source_sha": "5b52a237c2b10e28e09f15c5d9f42503dc8927b8",
+      "mode": "browser",
+      "report_sha256": "ab5cf073e04de128af92187d613398aeae669dfa53704254082ce149a8ad39cf",
+      "teardown_sha256": "e48c9a8025785de4505fae5798a159a719d40a5671eea0e6df57204726f478b2",
+      "cause": "Fixture assumed image recentered after toolbar-height resize although1:1 intentionally preserves pan. Actual saved y coordinates28/78 were retained. Explicit1:1 reset and independent actual HUD coordinate checks repaired fixture without loosening exact geometry assertions."
+    },
+    {
+      "source_sha": "5b52a237c2b10e28e09f15c5d9f42503dc8927b8",
+      "mode": "electron",
+      "report_sha256": "834059aef0a3829a2b9c54523acfcd1ce68a162a1b2ddf2b7d43817d96f06645",
+      "teardown_sha256": "8148f7844a7da27548fc89f1d6c8ea5d333d626068548d277b47252838c0203b",
+      "cause": "Fixture assumed image recentered after toolbar-height resize although1:1 intentionally preserves pan. Actual saved y coordinates28/78 were retained. Explicit1:1 reset and independent actual HUD coordinate checks repaired fixture without loosening exact geometry assertions."
+    }
+  ],
+  "root_visual_readback": [
+    "Native actual503 message with original bbox and second unsaved polygon still present",
+    "Native actual reload with Saved and both exact annotations"
+  ],
+  "scope": "Owned generated256px input; actual user pointer/keyboard/save/reload controls and authoritative label readback.503 is explicitly controlled transport, not a real backend fault. No model execution, representative human truth, Windows, publisher, physical device, whole-feature or independent acceptance.",
+  "parent_pending": 15
+}

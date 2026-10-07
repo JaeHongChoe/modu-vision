@@ -3249,10 +3249,118 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Actual explicit retry after a controlled503 saved the original bbox[20,20,70,60] and polygon[[120,30],[180,30],[150,80]]. Actual reload showed both annotations and authoritative API content matched the retried geometry exactly.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Actual explicit retry after a controlled503 saved the original bbox[20,20,70,60] and polygon[[120,30],[180,30],[150,80]]. Actual reload showed both annotations and authoritative API content matched the retried geometry exactly.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Controlled503 preserved the complete saved baseline JSON hash and unsaved second shape. Only deliberate retry wrote the new revision; the exact original bbox survived and reload retained both shapes. Original source image SHA was unchanged, no training/model execution or human truth approval occurred.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "라벨 저장",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Controlled503 preserved the complete saved baseline JSON hash and unsaved second shape. Only deliberate retry wrote the new revision; the exact original bbox survived and reload retained both shapes. Original source image SHA was unchanged, no training/model execution or human truth approval occurred.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -24682,13 +24790,121 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Actual zero-area pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Actual zero-area pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Escape during an actual positive-area pointer drag followed by pointer release discarded the draft with no save request or annotation.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Escape during an actual positive-area pointer drag followed by pointer release discarded the draft with no save request or annotation.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -24750,13 +24966,121 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Enter with only two actual source-pixel vertices did not create or save a polygon. Source coordinates were independently read from the actual canvas HUD.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Enter with only two actual source-pixel vertices did not create or save a polygon. Source coordinates were independently read from the actual canvas HUD.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Escape discarded an actual three-vertex draft. A later Enter did not complete or save the discarded geometry; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Escape discarded an actual three-vertex draft. A later Enter did not complete or save the discarded geometry; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -24818,13 +25142,121 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Actual zero-area rotated-box pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Actual zero-area rotated-box pointer input created no annotation, dirty save control or save request; authoritative annotations remained empty.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: Escape during an actual rotated-box pointer drag followed by pointer release discarded the draft with no save request or annotation.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: Escape during an actual rotated-box pointer drag followed by pointer release discarded the draft with no save request or annotation.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -24883,7 +25315,61 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "browser: On an actual empty image Delete, Control+Z and Control+Y did not create a shape or dirty save control and issued no save request.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
+         "receipt_sha256": "8840740f5e534ccc5b76ad2ed1c74ec96b76084d07d7af77380a296563f7c8c8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4423aac82993bba899bb925ebe94c0a2aab5caa381b06a036654d5314a161fc9"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "abbdfc9e3bfd55266f6a72ad0a313c7b202a51133479ce0b59cc2924eeddbd3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8fd6c1ff2747c6e7f8353720a3adabf3a1d1c84e67eb04de9a9fde93e8cc1109"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "The executed draft control preserves authoritative saved labels through invalid input, cancellation, explicit failure/retry or exact reopening.",
+         "observed": "electron: On an actual empty image Delete, Control+Z and Control+Y did not create a shape or dirty save control and issued no save request.",
+         "reviewer": "Codex root actual clean-source browser/native UI, API bytes, original hashes and native screenshot readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
+         "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
+         "receipt_sha256": "cbe44b18860d6a2850faed68a6e572d9ef814bd5e08a2e8461106f3e6713d52d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4653ce06e009b88abb13acbc894f4473277c50fd2e156896bb06bd2f14c213f2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "694c103e4ec9c4cfcfbe1e65d809e3b289ddbd82304a2c58538ab7e1743fc58e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6ea9ac3f7aa4a610051171e7e7e9a53050a32c6c2d0d056d5d1ca16db7f3be41"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"

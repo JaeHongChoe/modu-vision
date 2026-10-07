@@ -5565,6 +5565,14 @@
      "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
      "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
      "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
+    },
+    {
+     "kind": "actual-annotation-draft-boundaries",
+     "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+     "receipt": "docs/verification/receipts/2026-10-07-annotation-draft-closure-9880a31.json",
+     "receipt_sha256": "f195c9bcccc66e865c4565aec5042108027f49db2f7f3c5b7a31074c0c30595f",
+     "result": "Clean browser1/native1 passed retry0;9 existing pending dimensions verified using actual HUD source coordinates, UI cancellation, controlled503 and explicit retry/reload exact labels.",
+     "scope": "Owned generated256px input; actual user pointer/keyboard/save/reload controls and authoritative label readback.503 is explicitly controlled transport, not a real backend fault. No model execution, representative human truth, Windows, publisher, physical device, whole-feature or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5589,7 +5597,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "197 curated actions have520 verified scenarios and859 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "197 curated actions have529 verified scenarios and850 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5773,6 +5781,14 @@
      "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
      "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
      "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
+    },
+    {
+     "kind": "actual-annotation-draft-boundaries",
+     "source_sha": "9880a312787bcc82ae6d48a550514aa165e9b2b4",
+     "receipt": "docs/verification/receipts/2026-10-07-annotation-draft-closure-9880a31.json",
+     "receipt_sha256": "f195c9bcccc66e865c4565aec5042108027f49db2f7f3c5b7a31074c0c30595f",
+     "result": "Clean browser1/native1 passed retry0;9 existing pending dimensions verified using actual HUD source coordinates, UI cancellation, controlled503 and explicit retry/reload exact labels.",
+     "scope": "Owned generated256px input; actual user pointer/keyboard/save/reload controls and authoritative label readback.503 is explicitly controlled transport, not a real backend fault. No model execution, representative human truth, Windows, publisher, physical device, whole-feature or independent acceptance."
     }
    ],
    "file_actions": {

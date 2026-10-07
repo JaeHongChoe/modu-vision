@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 520개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 859개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 529개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 850개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -257,3 +257,10 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 - Clean7edd21f actual browser1/native Electron1 passed, retry0, owned teardown이다. 인증된 actual CPU 검사1장의 저장 run과 원본 read 응답을 보존한 뒤 명시적 transport fixture로만 깨진 PNG·빈 raster·외부 주소를 재생했다. 원본/overlay decoder 오류·조작 잠금·valid layer 복구, keyboard25–800%/pan30·pointer45/25·Fit reset·ROI/opacity·Escape·실제 재열기의 같은 run/version/imageSHA와 exact source bytes를 확인했다.
 - 실제 main preview·row thumbnail·ROI card까지 foreign request0, inspection/training/write0이다. 모든 original file hashes와 직접 인증된 authoritative run/original JSON SHA가 같았다. Root가 native 오류/base 보존/재열린 original screenshot을 읽었다. 기존 CPU raster/flow browser/Electron2 pass는 정확한925b48c에 연결하며 최종ROI source로 재사용하지 않는다.
 - 기존 pending14차원만 승격해197 actions/520 verified/859 pending이다. Error 상태에서 바로 닫기 차원은 실행하지 않아 pending 유지한다. 생성 이미지·untrained feature 통계 checkpoint는 대표 품질이 아니며 부모67/15·전체 수락0·Windows 면제를 유지한다. 원래 red/fixture 실패/crop 외부 요청 trace와 owned teardown은 보존했다.
+
+## 추가 실행: 라벨 초안 취소·오류 뒤 명시적 재시도
+
+- Clean9880a31 actual browser1/native Electron1 passed, retry0이다. 빈 이미지의 Delete/undo/redo·zero-area bbox/OBB·드래그 중 Escape·두 점 polygon Enter·세 점 polygon Escape에서 annotation/dirty save/저장 요청이 없었다. 실제 HUD에서 source 좌표를 읽었다.
+- 실제 bbox를 저장한 뒤 polygon 저장을 명시적503으로 거절했다. 서버의 기존 baseline JSON SHA는 그대로였고 두 번째 미저장 shape도 유지됐다. 직접 재시도만 새 revision을 썼고 bbox20,20,70,60·polygon120,30/180,30/150,80 및 reload의 exact 두 annotation을 확인했다. 원본 PNG SHA가 같고 모델·학습을 실행하지 않았다.
+- 오류로 바뀐 버튼 이름과1:1 resize pan을 잘못 가정한 초기 fixture 실패4개는 원본 report/trace와 함께 보존했다. Production을 바꾸거나 좌표 기대값을 느슨하게 하지 않았다. Root가 actual native 실패/재열기 화면을 읽었고 owned backend/Electron·port 종료를 확인했다.
+- 기존 pending9차원만 채워197 actions/529 verified/850 pending이다. 전체 부모67/82·미완료15/82·전체 수락0 및 Windows 면제를 유지한다. Public receipts:2026-10-07-annotation-draft-boundaries-9880a31-browser/electron.json, annotation-draft-closure-9880a31.json.
