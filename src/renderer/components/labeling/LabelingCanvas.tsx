@@ -707,14 +707,15 @@ export const LabelingCanvas: React.FC = () => {
   // -------------------------------------------------------------
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Guard against typing inside input, textarea, contenteditable, or ARIA textbox
-      const target = e.target as HTMLElement | null;
+      // Modal and editable controls own their keys; do not edit the canvas behind them.
+      const target = e.target instanceof HTMLElement ? e.target : null;
       if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable ||
-          target.getAttribute('role') === 'textbox')
+        e.defaultPrevented ||
+        e.isComposing ||
+        document.querySelector('[role="dialog"][aria-modal="true"]') ||
+        (target &&
+          (target.isContentEditable ||
+            target.closest('input, textarea, select, [role="textbox"], [role="dialog"]')))
       ) {
         return;
       }

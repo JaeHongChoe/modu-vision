@@ -111,6 +111,8 @@ class TrainingLedgerLink:
 
     def __init__(self, store: JobStore, job_id: str):
         self.store, self.job_id, self.fencing_token = store, job_id, None
+        from backend.engine.live_control_migration import cooperative_observer_store
+        self.store = cooperative_observer_store(store,job_id,lambda:self.fencing_token)
         self._shutdown_noted = False
         self._reattached = False
         self._claim = None

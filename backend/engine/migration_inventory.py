@@ -37,7 +37,7 @@ def owned_file_snapshot(path):
             raise ValueError(f'Unsupported or unreadable SQLite migration source: {path.name}') from exc
 
 
-def inventory(root, *, kind='project', paths=None):
+def inventory(root, *, kind='project', paths=None, live_jobs=None):
     root=Path(root).expanduser()
     if not root.is_dir() or any(p.is_symlink() for p in (root,*root.parents)):
         raise ValueError('Migration inventory requires an unlinked owned directory')
@@ -48,6 +48,7 @@ def inventory(root, *, kind='project', paths=None):
         if path.is_symlink():raise ValueError(f'Migration cannot follow linked artifact {relative.as_posix()}')
         if not path.is_file():continue
         if path.name.endswith(('-wal','-shm','-journal')) and _sqlite_file(path.with_name(path.name.rsplit('-',1)[0])):continue
+        allowed=(live_jobs or {}).get(relative.as_posix(),frozenset())
         row={'path':relative.as_posix(),'bytes':path.stat().st_size}
         with owned_file_snapshot(path) as copied:
             row.update(bytes=copied.stat().st_size,sha256=hashlib.sha256(copied.read_bytes()).hexdigest())
@@ -65,12 +66,17 @@ def inventory(root, *, kind='project', paths=None):
                         count=conn.execute(f'select count(*) from {quoted}').fetchone()[0]
                         row['tables'][table]={'count':count,'columns':columns}
                         if table in {'jobs','local_jobs','remote_jobs'} and 'state' in columns:
-                            states=[(str(r[0]),r[1]) for r in conn.execute(f'select state,count(*) from {quoted} group by state')]
+                            states=([(str(r['state']),1) for r in conn.execute(f'select * from {quoted}')
+                                    if not ('id' in columns and r['id'] in allowed)] if allowed else
+                                    [(str(r[0]),r[1]) for r in conn.execute(f'select state,count(*) from {quoted} group by state')])
                             if any(state not in _TERMINAL and count for state,count in states):blockers.append(f'Drain active jobs in {relative.as_posix()}:{table}; worker ownership is not adopted')
-                        if table in {'leases','resource_leases'} and count:
+                        if table in {'leases','resource_leases'} and count and (not allowed or 'job_id' not in columns
+                                or any(r['job_id'] not in allowed for r in conn.execute(f'select * from {quoted}'))):
                             blockers.append(f'Resolve resource leases in {relative.as_posix()}:{table}; uncertain/copied ownership cannot activate')
-                        if table=='attempts' and 'ended_ns' in columns and conn.execute(f'select count(*) from {quoted} where ended_ns is null').fetchone()[0]:
-                            blockers.append(f'Reconcile open fenced job attempts in {relative.as_posix()} before migration')
+                        if table=='attempts' and 'ended_ns' in columns:
+                            open_unknown=(any(r['job_id'] not in allowed for r in conn.execute(f'select * from {quoted} where ended_ns is null'))
+                                if allowed and 'job_id' in columns else conn.execute(f'select count(*) from {quoted} where ended_ns is null').fetchone()[0])
+                            if open_unknown:blockers.append(f'Reconcile open fenced job attempts in {relative.as_posix()} before migration')
             elif path.suffix=='.json':
                 try:value=json.loads(copied.read_bytes())
                 except (ValueError,UnicodeError):
@@ -91,7 +97,7 @@ def inventory(root, *, kind='project', paths=None):
                     row['schema_version']=value['schema_version'] if type(value['schema_version']) is int else 'unsupported'
                 if path.name in {'local_jobs.json','remote_jobs.json','local_job.json','remote_job.json'} or relative.parts[0] in {'local_jobs','remote_jobs'}:
                     records=[value] if isinstance(value,dict) and 'job_id' in value else value.values() if isinstance(value,dict) else value if isinstance(value,list) else []
-                    if any(isinstance(r,dict) and r.get('status',r.get('state')) not in _TERMINAL for r in records):
+                    if any(isinstance(r,dict) and r.get('job_id') not in allowed and r.get('status',r.get('state')) not in _TERMINAL for r in records):
                         blockers.append(f'Drain jobs in {relative.as_posix()}; no worker adoption')
                 if path.name in {'runtime-state.json','service.json','worker.json','runtime_process.json'} and isinstance(value,dict) and any(value.get(key) for key in ('pid','process_id','worker_id','process_identity')):
                     blockers.append(f'Runtime worker ownership in {relative.as_posix()} requires explicit shutdown/reconciliation')

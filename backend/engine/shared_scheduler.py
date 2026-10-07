@@ -12,10 +12,11 @@ from backend.engine.global_store_paths import resolve_store_path, store_admissio
 
 
 class ResourceLeases:
-    def __init__(self, path, *, owner=None, lease_seconds=30):
+    def __init__(self, path, *, owner=None, lease_seconds=30, cooperative=False):
         self.path = resolve_store_path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         self.owner = owner or f'{os.getpid()}:{uuid.uuid4().hex}'
         self.lease_seconds = lease_seconds
+        self.cooperative = cooperative
         with self.connect() as conn:
             conn.execute('CREATE TABLE IF NOT EXISTS leases(job_id TEXT PRIMARY KEY,host TEXT,selector TEXT,owner TEXT,expires REAL,remote INTEGER,uncertain INTEGER DEFAULT 0)')
             columns={row[1] for row in conn.execute('PRAGMA table_info(leases)')}
@@ -31,8 +32,11 @@ class ResourceLeases:
                         if 'duplicate column' not in str(exc):raise
             conn.execute('CREATE TABLE IF NOT EXISTS devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))')
     @contextmanager
-    def connect(self, timeout=10):
-        with store_admission(self.path):
+    def connect(self, timeout=10, *, execution_grant=False):
+        from backend.engine.live_control_migration import lease_admission
+        with lease_admission(self) if self.cooperative else store_admission(self.path):
+            if execution_grant and getattr(self,'_live_continuation',False):
+                raise ValueError('Live lease continuation cannot grant execution or change fences; restart the store')
             conn = sqlite3.connect(self.path, timeout=timeout); conn.row_factory = sqlite3.Row
             try:
                 use_wal(conn, timeout)
@@ -128,7 +132,7 @@ class ResourceLeases:
             return self._available(conn,host,selector,0,False,skip_expired=True)
 
     def acquire(self, job_id, host, selector='all', *, remote=False,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None):
-        with self.connect() as conn:
+        with self.connect(execution_grant=True) as conn:
             conn.execute('BEGIN IMMEDIATE')
             # A fenced row belongs to a ledger attempt: it never expires into free capacity (expiry makes it uncertain).
             conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<? AND fence IS NULL', (time.time(),))
@@ -152,7 +156,7 @@ class ResourceLeases:
 
     def acquire_for_job(self,job_id,host,selector='all',*,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None,timeout=10):
         """Reserve devices for a scheduler claim: (acquired, blocking rows). The row is fenced after the ledger claim."""
-        with self.connect(timeout) as conn:
+        with self.connect(timeout,execution_grant=True) as conn:
             conn.execute('BEGIN IMMEDIATE')
             conn.execute('DELETE FROM leases WHERE remote=0 AND uncertain=0 AND expires<? AND fence IS NULL', (time.time(),))
             row=conn.execute('SELECT * FROM leases WHERE job_id=?',(job_id,)).fetchone()
@@ -167,12 +171,12 @@ class ResourceLeases:
             return True,[]
 
     def stamp_fence(self,job_id,fence):
-        with self.connect() as conn:
+        with self.connect(execution_grant=True) as conn:
             return conn.execute('UPDATE leases SET fence=? WHERE job_id=? AND owner=?',(fence,job_id,self.owner)).rowcount==1
 
     def adopt_fenced(self,job_id,fence):
         """A restarted owner takes the reservation over under the attempt's new fence."""
-        with self.connect() as conn:
+        with self.connect(execution_grant=True) as conn:
             return conn.execute('UPDATE leases SET owner=?,fence=?,expires=?,uncertain=0 WHERE job_id=?',
                                 (self.owner,fence,time.time()+self.lease_seconds,job_id)).rowcount==1
 
@@ -190,7 +194,7 @@ class ResourceLeases:
 
     def restamp_fence(self,job_id,fence):
         """A reattached attempt carries its new fence onto the reservation; the owner (the worker's heartbeat) is kept."""
-        with self.connect() as conn:
+        with self.connect(execution_grant=True) as conn:
             return conn.execute('UPDATE leases SET fence=?,uncertain=0,app_schema=2 WHERE job_id=? AND remote=0',(fence,job_id)).rowcount==1
 
     def mark_uncertain_local(self,job_id):
@@ -204,7 +208,7 @@ class ResourceLeases:
             conn.execute('DELETE FROM leases WHERE job_id=? AND owner=? AND fence IS NULL',(job_id,self.owner))
     def adopt(self, job_id):
         # Remote ownership changes only for expired leases, after durable journal recovery.
-        with self.connect() as conn:
+        with self.connect(execution_grant=True) as conn:
             conn.execute('BEGIN IMMEDIATE')
             row = conn.execute('SELECT * FROM leases WHERE job_id=?', (job_id,)).fetchone()
             if row is None: return True
@@ -234,7 +238,9 @@ def shared_leases():
     # One app-wide database, independent of the selected project.
     user_data = Path(os.environ.get('VISION_AI_STUDIO_USER_DATA_DIR', str(Path.home()/'.modu-vision')))
     path = Path(os.environ.get('VISION_RESOURCE_LEASE_DB', str(user_data/'resource_leases.sqlite3')))
-    return ResourceLeases(path)
+    from backend.engine.global_store_paths import owned_root
+    root,_=owned_root(path)
+    return ResourceLeases(path,cooperative=root is not None and os.name!='nt')
 
 
 @contextmanager

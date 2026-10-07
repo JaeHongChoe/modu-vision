@@ -49,7 +49,8 @@ def _index():
 
 
 def _save(journal):
-    with _LOCK, store_admission(_index()):
+    from backend.engine.live_control_migration import journal_admission
+    with _LOCK, journal_admission(journal), store_admission(_index()):
         root = Path(journal['output_dir'])
         path = root / 'local_job.json'
         if path.is_file():
@@ -485,7 +486,11 @@ def _spec(record, overrides, device, split_root, leases):
     lease_path=leases.path
     installation,owner=owned_root(lease_path)
     if installation is not None:lease_path=installation/owner['scopes']['leases']
-    return {'protocol_version': 1, 'job_id': record.job_id, 'task': record.task, 'preset': record.preset,
+    if installation is not None and getattr(leases,'cooperative',False) and record.ledger is not None:
+        if not leases.stamp_fence(record.job_id,record.ledger.fencing_token):
+            raise ValueError('Owned live worker reservation could not bind its original attempt fence')
+    return {'protocol_version': 1, 'global_control_protocol': 1 if installation is not None and getattr(leases,'cooperative',False) else None,
+            'job_id': record.job_id, 'task': record.task, 'preset': record.preset,
             'dataset_path': str(Path(record.dataset_path).resolve()), 'output_dir': str(Path(record.output_dir).resolve()),
             'config_overrides': overrides or {}, 'device': device, 'split_manifest_root': split_root,
             'warm_start': parent, 'dataset_binding': record.dataset_binding,
@@ -543,6 +548,7 @@ def run_owned_training(record, callback, *, config_overrides, device, split_mani
                'owner_command_sha256': command_sha256(command), 'owner_token': token,
                'owner_session': child.pid, 'owner_username': psutil.Process(child.pid).username(),
                'owner_boot_id': _boot_id(), 'optimizer_resume': False}
+    journal['global_control_protocol'] = json.loads(spec_path.read_bytes()).get('global_control_protocol')
     try:
         _save(journal)
         child.stdin.write((record.job_id + '\n').encode())
@@ -694,7 +700,19 @@ def execute_basic(spec_path):
     event = threading.Event()
     stop = threading.Event()
     trainer = None
-    leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'])
+    leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'], cooperative=spec.get('global_control_protocol')==1)
+    if spec.get('global_control_protocol')==1:
+        installation,owner=owned_root(spec['lease_path'])
+        if installation is None or Path(spec['lease_path'])!=installation/owner['scopes']['leases']:
+            raise ValueError('Cooperative worker requires its original owned lease store')
+        if _index()!=resolve_store_path(installation/owner['scopes']['local_journals']):
+            raise ValueError('Cooperative worker index differs from its original installation')
+        process=psutil.Process(os.getpid())
+        atomic_private_json(root/'local_control_ready.json',{'protocol_version':1,
+            'installation_id':owner['installation_id'],'job_id':spec['job_id'],
+            'spec_sha256':digest,'lease_owner':spec['lease_owner'],
+            'owner_pid':process.pid,'owner_created_at':process.create_time(),
+            'owner_command_sha256':command_sha256(process.cmdline())})
     def watch():
         while not stop.wait(.05):
             try:

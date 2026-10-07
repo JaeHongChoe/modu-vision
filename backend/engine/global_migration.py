@@ -351,6 +351,9 @@ def recover(root,identifier,*,action):
     with store_admission(root,exclusive=True):
         path,record=_journal(root,identifier);current=active_generation(root)
         if record['installation_id']!=owner['installation_id']:raise GlobalMigrationError('Foreign migration journal')
+        if record.get('kind')=='live':
+            from backend.engine.live_control_migration import recover_live
+            return recover_live(root,identifier,action=action)
         if action not in {'finish','restore'}:raise GlobalMigrationError('Select finish or restore')
         def source_view():
             if record.get('kind')!='forward':return preview(root)
@@ -425,10 +428,10 @@ def main(argv=None):
     import argparse
     parser=argparse.ArgumentParser(description=__doc__)
     commands=parser.add_subparsers(dest='command',required=True)
-    for command in ('initialize','preview','apply','preview-forward','advance','recover'):
+    for command in ('initialize','preview','apply','preview-forward','advance','preview-live','apply-live','recover'):
         item=commands.add_parser(command);item.add_argument('--root',required=True)
         if command=='initialize':item.add_argument('--scopes-file',required=True)
-        elif command in ('apply','advance'):item.add_argument('--expected-source-sha256',required=True)
+        elif command in ('apply','advance','apply-live'):item.add_argument('--expected-source-sha256',required=True)
         elif command=='recover':item.add_argument('--migration-id',required=True);item.add_argument('--action',choices=('finish','restore'),required=True)
     args=parser.parse_args(argv)
     try:
@@ -437,6 +440,12 @@ def main(argv=None):
         elif args.command=='preview-forward':result=preview_forward(args.root)
         elif args.command=='apply':result=apply(args.root,expected_source_sha256=args.expected_source_sha256)
         elif args.command=='advance':result=advance(args.root,expected_source_sha256=args.expected_source_sha256)
+        elif args.command=='preview-live':
+            from backend.engine.live_control_migration import preview_live
+            result=preview_live(args.root)
+        elif args.command=='apply-live':
+            from backend.engine.live_control_migration import apply_live
+            result=apply_live(args.root,expected_source_sha256=args.expected_source_sha256)
         else:result=recover(args.root,args.migration_id,action=args.action)
     except (ValueError,OSError,TypeError,sqlite3.Error) as exc:
         print(json.dumps({'status':'refused','error':str(exc)},sort_keys=True));return 1

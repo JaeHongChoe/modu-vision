@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
 import json,os
+import hashlib
 from pathlib import Path
 from backend.engine.migration_guard import maintenance_guard,exclusive_admitted
 
@@ -59,6 +60,15 @@ def active_generation(root):
     if data.get('schema_version')!=1 or data.get('installation_id')!=record['installation_id'] or data.get('generation_id')!=identifier:
         raise ValueError('Global generation ownership is invalid')
     if data.get('sealed_sha256')!=record.get('sealed_sha256'):raise ValueError('Global generation seal differs from pointer')
+    adoption=data.get('live_adoptions')
+    if adoption is not None:
+        from backend.engine.live_control_migration import validate_adoptions
+        validate_adoptions(adoption,record['installation_id'])
+        bound=hashlib.sha256(json.dumps(adoption,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        if record.get('live_adoptions_sha256')!=bound:
+            raise ValueError('Live control adoption differs from its published pointer')
+    elif record.get('live_adoptions_sha256') is not None:
+        raise ValueError('Live control adoption seal is missing')
     return generation,record
 
 

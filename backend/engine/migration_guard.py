@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from contextvars import ContextVar
 import os
+import time
 from pathlib import Path
 
 
@@ -41,10 +42,12 @@ def _windows_admission(handle, exclusive):
 
 
 @contextmanager
-def maintenance_guard(root, *, exclusive=False):
+def maintenance_guard(root, *, exclusive=False, wait=False):
     root=Path(root).expanduser()
     if not root.is_dir() or any(path.is_symlink() for path in (root,*root.parents)):
         raise ValueError('Maintenance admission requires an existing unlinked project')
+    if wait and (exclusive or os.name=='nt'):
+        raise ValueError('Cooperative waiting supports only POSIX shared writer admission')
     key=str(root.resolve())
     for prior in _HELD.get():
         if prior['key']==key and prior['active'] and (not exclusive or prior['exclusive']):
@@ -60,7 +63,14 @@ def maintenance_guard(root, *, exclusive=False):
                 unlock=_windows_admission(handle,exclusive)
             else:
                 import fcntl
-                fcntl.flock(handle.fileno(),(fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)|fcntl.LOCK_NB)
+                deadline=time.monotonic()+10
+                while True:
+                    try:
+                        fcntl.flock(handle.fileno(),(fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)|fcntl.LOCK_NB)
+                        break
+                    except BlockingIOError:
+                        if not wait or time.monotonic()>=deadline:raise
+                        time.sleep(.01)
             held=True
         except OSError as exc:raise ValueError('Project writers or migration hold maintenance admission; retry after drain') from exc
         ownership={'key':key,'active':True,'exclusive':exclusive}
