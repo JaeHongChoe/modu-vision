@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
-import type {Page} from '@playwright/test';
+import type {Page,Route} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 const harness=require('./fixtures/harness.cjs');
@@ -22,10 +22,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(fixture.metadata_rows).toBe(100_000);expect(fixture.actual_images).toBe(3);expect(fixture.verified_all).toBe(false);
  await api('/api/project/update',{source_dataset_dir:fixture.source_root},'PUT');
  const original=[...workspace.images.map(row=>({path:row.path,sha256:row.sha256})),...fixture.source_hashes];
- const pages:any[]=[],requests:any[]=[],pending:Promise<void>[]=[],prohibited:string[]=[],pageErrors:string[]=[];
+ const pages:any[]=[],failures:any[]=[],requests:any[]=[],pending:Promise<void>[]=[],prohibited:string[]=[],pageErrors:string[]=[];
  page.on('pageerror',error=>pageErrors.push(error.message));
  page.on('request',request=>{const u=new URL(request.url());if(u.pathname==='/api/dataset/library/images')requests.push({q:u.searchParams.get('q'),cursor:u.searchParams.get('cursor'),limit:Number(u.searchParams.get('limit'))});if(request.method()==='POST'&&/\/(training\/start|compute\/jobs|train)$/.test(u.pathname))prohibited.push(u.pathname);});
- page.on('response',response=>{const u=new URL(response.url());if(u.pathname!=='/api/dataset/library/images')return;pending.push((async()=>{const body=await response.json();pages.push({q:u.searchParams.get('q'),state:u.searchParams.get('state'),cursor:u.searchParams.get('cursor'),limit:Number(u.searchParams.get('limit')),status:response.status(),...body});})());});
+ page.on('response',response=>{const u=new URL(response.url());if(u.pathname!=='/api/dataset/library/images')return;pending.push((async()=>{const body=await response.json();const row={q:u.searchParams.get('q'),state:u.searchParams.get('state'),cursor:u.searchParams.get('cursor'),limit:Number(u.searchParams.get('limit')),status:response.status(),...body};(response.ok()?pages:failures).push(row);})());});
  const navigate=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('button',{name:/05.*플로우차트/}).click();await page.getByRole('button',{name:'이미지 변경...'}).click();};
  await navigate();const picker=page.getByRole('dialog',{name:'검사 대상 이미지 선택'}),grid=picker.getByRole('list',{name:'데이터 버전 이미지'}),search=picker.getByLabel('이미지 검색',{exact:true});
  await expect(grid.getByRole('listitem').first()).toBeVisible();
@@ -62,11 +62,73 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  evidence.note('missing_source_click_observation',{row:missing.items[0],actual_thumbnail:missingThumbnail,picker_text:await picker.textContent(),saved_tail:saved[0]});
  await expect(picker).toContainText('선택: metadata/entry-099999.png');await expect(picker.getByRole('alert')).toContainText('검사 대상으로 선택할 수 없습니다.');
  await evidence.screenshot(page,`${native?'native':'browser'}-100k-missing-source-refused`);
+ maximumDom=Math.max(maximumDom,await grid.evaluate(element=>(element as any).__scaleRows.maximum));
+ // Controlled transport responses exercise the actual fetch/error and close guards.
+ // They are not an outage of the owned backend, which stays healthy for teardown.
+ const remembered=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu.inspectionImage.v2:')).map(([key,value])=>({key,value:JSON.parse(value)})));
+ const failingQuery='entry-000000.png',lateQuery='entry-000359.png';
+ const transportAlert=picker.getByRole('alert').filter({hasText:'Controlled metadata picker transport failure'});
+ const matchQuery=(q:string)=>(u:URL)=>u.pathname==='/api/dataset/library/images'&&u.searchParams.get('q')===q;
+ const failedMatch=matchQuery(failingQuery),failedHandler=async(route:Route)=>route.fulfill({status:503,json:{detail:'Controlled metadata picker transport failure'}});
+ await page.route(failedMatch,failedHandler);
+ try {
+  await search.fill(failingQuery);await expect(transportAlert).toBeVisible();
+  await expect(grid.getByRole('listitem')).toHaveCount(0);await expect(picker).toContainText('선택: metadata/entry-099999.png');
+  expect(await remembered()).toEqual(saved);
+  await evidence.screenshot(page,`${native?'native':'browser'}-100k-transport-failure`);
+ } finally {await page.unroute(failedMatch,failedHandler);}
+ await picker.getByRole('button',{name:'다시 불러오기',exact:true}).click();
+ await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid).toContainText(failingQuery);await expect(transportAlert).toBeHidden();
+ await grid.getByRole('listitem').click();await expect(picker).toContainText('선택: metadata/entry-000000.png');
+ expect(await remembered()).toEqual(saved); // A pending choice is not a confirmed handoff.
+ let releaseLate!:()=>void;
+ const gate=new Promise<void>(resolve=>{releaseLate=resolve;}),lateMatch=matchQuery(lateQuery);
+ let heldRequest:string|null=null,lateFulfilled=false;
+ const lateHandler=async(route:Route)=>{heldRequest=route.request().url();await gate;await route.fulfill({status:409,json:{detail:'Controlled late response from closed metadata picker'}});lateFulfilled=true;};
+ await page.route(lateMatch,lateHandler);
+ try {
+  await search.fill(lateQuery);await expect.poll(()=>heldRequest).not.toBeNull();
+  await expect(picker).toContainText('불러오는 중');await picker.getByTitle('닫기 (Esc)',{exact:true}).click();await expect(picker).toBeHidden();
+  expect(await remembered()).toEqual(saved);
+  // Reopen before releasing the old reply: a stale callback must not replace
+  // this new library with the legacy unavailable-revision path.
+  await page.getByRole('button',{name:'이미지 변경...'}).click();await expect(picker).toBeVisible();
+  await expect(grid.getByRole('listitem').first()).toBeVisible();await observeDom();await expect(picker).toContainText('선택: metadata/entry-099999.png');
+  const lateResponse=page.waitForResponse(response=>response.url()===heldRequest&&response.status()===409);
+  releaseLate();await lateResponse;await expect.poll(()=>lateFulfilled).toBe(true);
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  await expect(picker.getByRole('button',{name:'검증된 데이터 버전',exact:true})).toBeVisible();
+  await expect(picker.getByRole('alert')).toBeHidden();await expect(grid.getByRole('listitem').first()).toBeVisible();
+  await expect(picker).toContainText('선택: metadata/entry-099999.png');expect(await remembered()).toEqual(saved);
+  await evidence.screenshot(page,`${native?'native':'browser'}-100k-cancel-late-response-guarded`);
+ } finally {releaseLate();await page.unroute(lateMatch,lateHandler);}
+ maximumDom=Math.max(maximumDom,await grid.evaluate(element=>(element as any).__scaleRows.maximum));
+ await picker.getByRole('button',{name:'선택 확정'}).click();await expect(picker).toBeHidden();
+ const identity=page.getByRole('region',{name:'플로우 식별 정보'});
+ await expect(identity).toContainText(fixture.tail.path);
+ await page.getByRole('tab',{name:'테스트',exact:true}).click();
+ const flowTest=page.getByRole('tabpanel',{name:'테스트',exact:true});await expect(flowTest).toBeVisible();
+ await flowTest.getByText('다음 검사 이미지 미리보기',{exact:true}).click();
+ const preview=flowTest.getByAltText('다음 검사 이미지 원본 보기',{exact:true});await expect(preview).toBeVisible();
+ await expect.poll(()=>preview.evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBe(32);
+ const previewUrl=await preview.getAttribute('src');expect(previewUrl).toBeTruthy();
+ expect(new URL(previewUrl!,page.url()).searchParams.get('file_path')).toBe(fixture.tail.path);
+ const previewResponse=await page.request.get(new URL(previewUrl!,page.url()).href);expect(previewResponse.ok()).toBe(true);
+ const previewBytes=await previewResponse.body(),previewSha=crypto.createHash('sha256').update(previewBytes).digest('hex');
+ // The thumbnail is JPEG, so its bytes differ from the original PNG. Decode
+ // both independently to verify the actual downstream pixels and source hash.
+ const previewProof=JSON.parse(execFileSync(harness.resolvePython(),['-c','import hashlib,io,json,sys;from pathlib import Path;from PIL import Image;p=Path(sys.argv[1]);s=Image.open(p).convert("RGB");v=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert("RGB");print(json.dumps({"source_sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"source_size":s.size,"preview_size":v.size,"source_rgb":s.getpixel((16,16)),"preview_rgb":v.getpixel((16,16))}))',fixture.tail.path],{input:previewBytes,encoding:'utf8',timeout:10_000}).trim());
+ expect(previewProof.source_sha256).toBe(fixture.tail.sha256);expect(previewProof.preview_size).toEqual([32,32]);expect(previewProof.source_size).toEqual([32,32]);
+ for(let channel=0;channel<3;channel++)expect(Math.abs(previewProof.preview_rgb[channel]-previewProof.source_rgb[channel])).toBeLessThanOrEqual(3);
+ expect(await remembered()).toEqual(saved);await expect(flowTest.getByRole('button',{name:'선택 이미지 검사',exact:true})).toBeDisabled();
+ await evidence.screenshot(page,`${native?'native':'browser'}-100k-exact-identity-handoff`);
+ evidence.note('metadata_scale_picker_pending_dimensions',{action:'U030.metadata-scale-picker',error:{controlled_http_status:503,query:failingQuery,visible_error:'Controlled metadata picker transport failure',explicit_retry_succeeded:true,confirmed_selection_unchanged:true},cancel:{query:lateQuery,held_request:heldRequest,closed_before_late_response:true,controlled_late_status:409,reopened_library_remained_available:true,unconfirmed_selection_discarded:true,confirmed_selection_unchanged:true},handoff:{image_uuid:saved[0].value.imageUuid,relative_path:saved[0].value.relativePath,sha256:saved[0].value.sha256,file_path:fixture.tail.path,preview_url:previewUrl,actual_preview_sha256:previewSha,previewProof,actual_preview_width:32,downstream_panel:'FlowchartStudio test image preview',inspection_executed:false},actual_browser_source_ui:true,controlled_transport_fixture:true,metadata_only:true,metadata_rows:100_000,actual_images:3,model_quality_approved:false,target_execution_verified:false});
  await Promise.all(pending);expect(pages.every(row=>row.items.length<=120&&row.limit<=120&&row.status===200)).toBe(true);expect(requests.every(row=>row.limit<=120)).toBe(true);
- maximumDom=Math.max(maximumDom,await grid.evaluate(element=>(element as any).__scaleRows.maximum));expect(maximumDom).toBeLessThanOrEqual(120);
+ expect(failures.map(row=>({q:row.q,status:row.status}))).toEqual([{q:failingQuery,status:503},{q:lateQuery,status:409}]);
+ expect(maximumDom).toBeLessThanOrEqual(120);
  for(const row of original)expect(digest(row.path)).toBe(row.sha256);
  expect(pageErrors).toEqual([]);expect(prohibited).toEqual([]);
- evidence.note('scale_library_qualification',{metadata_only:true,metadata_rows:fixture.metadata_rows,actual_images:fixture.actual_images,fixture,three_keyset_pages:first.map(row=>({cursor:row.cursor,next_cursor:row.next_cursor,first:row.items[0].relative_path,last:row.items.at(-1).relative_path,rows:row.items.length})),maximum_dom_rows:maximumDom,maximum_response_rows:Math.max(...pages.map(row=>row.items.length)),requests,saved,missing_thumbnail:missingThumbnail,source_hashes:original,source_unchanged:true,page_errors:pageErrors,prohibited,actual_ui_and_backend:true,actual_model_inference:false,model_quality_approved:false,target_tact_qualified:false,soak_72h_completed:false});
+ evidence.note('scale_library_qualification',{metadata_only:true,metadata_rows:fixture.metadata_rows,actual_images:fixture.actual_images,fixture,three_keyset_pages:first.map(row=>({cursor:row.cursor,next_cursor:row.next_cursor,first:row.items[0].relative_path,last:row.items.at(-1).relative_path,rows:row.items.length})),maximum_dom_rows:maximumDom,maximum_response_rows:Math.max(...pages.map(row=>row.items.length)),requests,controlled_failures:failures,saved,missing_thumbnail:missingThumbnail,source_hashes:original,source_unchanged:true,page_errors:pageErrors,prohibited,actual_ui_and_backend:true,actual_model_inference:false,model_quality_approved:false,target_tact_qualified:false,soak_72h_completed:false});
 }
 
 test('100k metadata pages through the actual library picker and restores the exact tail image',async({page,request,renderer,workspace,evidence})=>{
