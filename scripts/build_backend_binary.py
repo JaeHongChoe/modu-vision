@@ -56,7 +56,7 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def dependency_inventory(root: Path) -> dict:
+def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
     from packaging.requirements import Requirement
     root = Path(root)
     normalize=lambda name:name.lower().replace('_','-')
@@ -81,7 +81,7 @@ def dependency_inventory(root: Path) -> dict:
                      if not {'tests', '__pycache__', '.pytest_cache'}.intersection(path.parts))
     resources = sorted(set(path for path, _ in export_resource_files(root)) | set(sources)
                        | {root / 'scripts' / 'frozen_backend_entry.py',root/'requirements.txt',
-                          root/'scripts/package_license_texts.py',root/'scripts/license_inventory.py'})
+                          root/'scripts/package_license_texts.py',root/'scripts/license_inventory.py',root/'scripts/build_backend_binary.py'})
     inventory = {'schema_version': 1, 'platform': platform.system(), 'architecture': platform.machine(),
                  'python_version': platform.python_version(), 'dependencies': dependencies,
                  'compiler': {'name': 'PyInstaller', 'version': importlib.metadata.version('pyinstaller') if check_pyinstaller() else None},
@@ -91,6 +91,11 @@ def dependency_inventory(root: Path) -> dict:
                              'inference_requires_exported_package_weights': True,
                              'hardware_prerequisites': ['CUDA driver for CUDA targets', 'Compatible camera/PLC SDK and device permissions'],
                              'optional_features_unavailable': [row['module'] for row in dependencies if not row['required'] and not row['available']]}}
+    if supplier_manifest is not None:
+        from scripts.package_license_texts import _supplier_licenses,_read
+        source=Path(supplier_manifest).absolute();suppliers=_supplier_licenses(source)
+        inventory['license_supplier']={'manifest_sha256':hashlib.sha256(_read(source,source.parent,1024*1024)).hexdigest(),
+                                       'archives':[suppliers[key][1] for key in sorted(suppliers)]}
     inventory['build_identity_sha256'] = hashlib.sha256(json.dumps(inventory, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     return inventory
 
@@ -128,7 +133,7 @@ def pyinstaller_command(root: Path, output: Path, target: str) -> list[str]:
     # Global scientific environments may contain notebook/GUI/browser tooling.
     # They are not backend dependencies and can drag multi-GB SDKs into hooks.
     for module in ('IPython','notebook','jupyterlab','nbconvert','PyQt5','PyQt6','PySide2','PySide6',
-                   'playwright','altair','bokeh','streamlit','tensorflow','keras','pytest'):
+                   'playwright','altair','bokeh','streamlit','tensorflow','keras','pytest','sitecustomize'):
         command.append('--exclude-module='+module)
     for module in ('uvicorn.logging', 'uvicorn.loops.auto', 'uvicorn.protocols.http.auto',
                    'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'python_multipart',
@@ -202,7 +207,7 @@ def check_pyinstaller():
     except ImportError:
         return False
 
-def build_binary(output=OUTPUT_DIR, *, accept=True):
+def build_binary(output=OUTPUT_DIR, *, accept=True, supplier_manifest=None):
     print("=" * 70)
     print(" Vision AI Studio: Python Backend Native Binary Compiler")
     print("=" * 70)
@@ -217,7 +222,7 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
         print("    pip install pyinstaller")
         sys.exit(1)
 
-    inventory = dependency_inventory(ROOT_DIR)
+    inventory = dependency_inventory(ROOT_DIR,supplier_manifest=supplier_manifest)
     validate_inventory(inventory)
     output.mkdir(parents=True, exist_ok=True)
     (output / '.build').mkdir(exist_ok=True)
@@ -240,8 +245,12 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
     binary_dir = output / 'vision_ai_backend'
     if str(ROOT_DIR) not in sys.path:sys.path.insert(0,str(ROOT_DIR))
     from scripts.package_license_texts import collect_frozen_licenses
+    if supplier_manifest is not None and sha256(supplier_manifest)!=inventory['license_supplier']['manifest_sha256']:
+        raise ValueError('Offline license supplier manifest changed during compilation')
     license_texts = collect_frozen_licenses(binary_dir, output/'.build/work/vision_ai_backend/PYZ-00.toc',
-                                          binary_dir/'third_party_licenses')
+                                          binary_dir/'third_party_licenses',supplier_manifest=supplier_manifest)
+    if supplier_manifest is not None and sha256(supplier_manifest)!=inventory['license_supplier']['manifest_sha256']:
+        raise ValueError('Offline license supplier manifest changed during collection')
     executable = binary_dir / ('vision_ai_backend.exe' if platform.system() == 'Windows' else 'vision_ai_backend')
     release = {'schema_version': 1, 'executable': executable.name, 'executable_sha256': sha256(executable),
                'inventory': inventory, 'signature_status': 'unverified', 'acceptance': None}
@@ -266,5 +275,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build a native backend on its actual target OS')
     parser.add_argument('--output', type=Path, default=OUTPUT_DIR)
     parser.add_argument('--skip-acceptance', action='store_true', help='Build only; release hooks will require separate acceptance')
+    parser.add_argument('--license-supplier-manifest',type=Path,help='Explicit offline hash-pinned vendor archives or immutable upstream license inputs; no package is installed')
     args = parser.parse_args()
-    build_binary(args.output, accept=not args.skip_acceptance)
+    build_binary(args.output, accept=not args.skip_acceptance,supplier_manifest=args.license_supplier_manifest)

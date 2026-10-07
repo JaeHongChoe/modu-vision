@@ -146,7 +146,12 @@ def _operation_journal_path(context: RemoteJobContext, operation: str, spec: dic
 
 
 def _save_operation(path: Path, journal: dict[str, Any]) -> None:
+    op_id=journal.get('op_id')
+    if not isinstance(op_id,str) or not re.fullmatch(r'op_[0-9a-f]{32}',op_id):
+        raise ArtifactValidationError('Operation journal run identity is invalid')
     _atomic_json(path, journal)
+    # Keep prior run journals when a deliberate rerun replaces the lookup index.
+    _atomic_json(path.parent/op_id/'operation_journal.json',journal)
 
 
 
@@ -529,6 +534,8 @@ def _run_remote_operation_artifacts(
                     or any(part in ("", ".", "..") for part in relative.split("/"))
                     or "\\" in relative):
                 raise ArtifactValidationError(f"Remote {operation} artifact path is unsafe")
+            if relative in downloads:
+                raise ArtifactValidationError(f"Remote {operation} artifact path is duplicated")
             if (not isinstance(entry.get("size"), int) or entry["size"] <= 0
                     or not isinstance(entry.get("sha256"), str) or len(entry["sha256"]) != 64):
                 raise ArtifactValidationError(f"Remote {operation} artifact metadata is invalid")
@@ -555,6 +562,11 @@ def _run_remote_operation_artifacts(
             destination.parent.mkdir(parents=True, exist_ok=True)
             os.replace(staged, destination)
             published[relative] = destination
+        # Retain the exact received manifest after verifying every output. A
+        # later archival migration can bind bytes without reconnecting a server.
+        _atomic_json(local_dir/'operation_artifacts.json',{
+            'schema':'modu-vision.remote-operation-archive/v1','op_id':op_id,
+            'spec_sha256':_sha256(local_dir/'spec.json'),'manifest':manifest})
         journal["state"] = "completed"
         _save_operation(journal_path, journal)
         return published

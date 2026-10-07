@@ -253,6 +253,8 @@ def validate_remote(root, scopes, path, journal):
             or receipt.get('task') != journal['task'] or receipt.get('output_dir') != str(output)
             or receipt.get('compute_profile_id') != profile.id):
         raise ValueError('Remote terminal receipt differs from its original job/profile')
+    from backend.engine.terminal_operation_history import validate_operations
+    validate_operations(root, output, journal)
     if operation == 'train':
         _validate_remote_epoch(root, output, journal)
     elif any(p.exists() or p.is_symlink() for p in (
